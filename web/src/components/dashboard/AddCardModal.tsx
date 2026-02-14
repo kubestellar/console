@@ -245,6 +245,32 @@ const CARD_CATALOG = {
   ],
 } as const
 
+// Maps CARD_CATALOG category names to i18n keys in cards:categories.*
+const CATEGORY_LOCALE_KEYS: Record<string, string> = {
+  'Cluster Admin': 'clusterAdmin',
+  'Cluster Health': 'clusterHealth',
+  'Workloads': 'workloads',
+  'Compute': 'compute',
+  'Storage': 'storage',
+  'Network': 'network',
+  'GitOps': 'gitops',
+  'ArgoCD': 'argocd',
+  'Operators': 'operators',
+  'Namespaces': 'namespaces',
+  'Security & Events': 'securityEvents',
+  'Live Trends': 'trends',
+  'AI Agents': 'aiAgents',
+  'AI Assistant': 'aiAssistant',
+  'Alerting': 'alerting',
+  'Cost Management': 'costManagement',
+  'Security Posture': 'securityPosture',
+  'Data Compliance': 'dataCompliance',
+  'Workload Detection': 'workloadDetection',
+  'Arcade': 'arcade',
+  'Utilities': 'utilities',
+  'Misc': 'misc',
+}
+
 interface CardSuggestion {
   type: string
   title: string
@@ -885,6 +911,8 @@ function CardPreview({ card }: { card: HoveredCard }) {
 
 export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = [] }: AddCardModalProps) {
   const { t } = useTranslation()
+  // Cross-namespace lookup for dynamic card keys (template literals can't be statically typed)
+  const tCard = t as (key: string, defaultValue?: string) => string
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<'ai' | 'browse'>('browse')
   const [showCardFactory, setShowCardFactory] = useState(false)
@@ -1122,7 +1150,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                           onClick={() => toggleCategory(category)}
                           className="flex-1 px-3 py-2 text-left text-sm font-medium text-foreground flex items-center justify-between"
                         >
-                          <span>{category}</span>
+                          <span>{CATEGORY_LOCALE_KEYS[category] ? tCard(`cards:categories.${CATEGORY_LOCALE_KEYS[category]}`, category) : category}</span>
                           <span className="text-xs text-muted-foreground">
                             {cards.length} {t('dashboard.addCard.cards')} {expandedCategories.has(category) ? '▼' : '▶'}
                           </span>
@@ -1174,11 +1202,11 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="text-sm">{visualizationIcons[card.visualization]}</span>
                                   <span className="text-xs font-medium text-foreground truncate">
-                                    {card.title}
+                                    {tCard(`cards:titles.${card.type}`, card.title)}
                                   </span>
                                 </div>
                                 <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {wrapAbbreviations(card.description)}
+                                  {wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}
                                 </p>
                                 {isAlreadyAdded && (
                                   <span className="text-xs text-muted-foreground">{t('dashboard.addCard.added')}</span>
@@ -1236,10 +1264,10 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     <div className="mt-3 space-y-2">
                       <div>
                         <h3 className="text-sm font-medium text-foreground">
-                          {hoveredCard.title}
+                          {tCard(`cards:titles.${hoveredCard.type}`, hoveredCard.title)}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {wrapAbbreviations(hoveredCard.description)}
+                          {wrapAbbreviations(tCard(`cards:descriptions.${hoveredCard.type}`, hoveredCard.description))}
                         </p>
                       </div>
 
@@ -1304,12 +1332,12 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               <p className="text-xs text-muted-foreground mb-2">{t('dashboard.addCard.tryAsking')}</p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  'Show me GPU utilization and availability',
-                  'What pods are having issues?',
-                  'Helm releases and chart versions',
-                  'Namespace quotas and RBAC',
-                  'Operator status and CRDs',
-                  'Kustomize and GitOps status',
+                  t('dashboard.addCard.exampleGpuUtil'),
+                  t('dashboard.addCard.examplePodIssues'),
+                  t('dashboard.addCard.exampleHelmReleases'),
+                  t('dashboard.addCard.exampleNamespaceQuotas'),
+                  t('dashboard.addCard.exampleOperatorStatus'),
+                  t('dashboard.addCard.exampleKustomizeGitOps'),
                 ].map((example) => (
                   <button
                     key={example}
@@ -1348,14 +1376,14 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                       <div className="flex items-center gap-2 mb-1">
                         <span>{visualizationIcons[card.visualization]}</span>
                         <span className="text-sm font-medium text-foreground">
-                          {card.title}
+                          {tCard(`cards:titles.${card.type}`, card.title)}
                         </span>
                         {isAlreadyAdded && (
                           <span className="text-xs text-muted-foreground">{t('dashboard.addCard.alreadyAdded')}</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {wrapAbbreviations(card.description)}
+                        {wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}
                       </p>
                       <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground capitalize">
                         {card.visualization}

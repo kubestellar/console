@@ -269,7 +269,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
-            {filteredClusters.length} clusters
+            {t('resourceTree.clustersCount', { count: filteredClusters.length })}
           </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -312,12 +312,12 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
 
         <div className="flex flex-wrap gap-1.5">
           {[
-            { id: 'all' as TreeLens, label: 'All', icon: Layers },
-            { id: 'issues' as TreeLens, label: 'Issues', icon: AlertTriangle, count: totalIssueCounts.total },
-            { id: 'nodes' as TreeLens, label: 'Nodes', icon: Server },
-            { id: 'workloads' as TreeLens, label: 'Workloads', icon: Box },
-            { id: 'storage' as TreeLens, label: 'Storage', icon: HardDrive },
-            { id: 'network' as TreeLens, label: 'Network', icon: Network },
+            { id: 'all' as TreeLens, label: t('resourceTree.lensAll'), icon: Layers },
+            { id: 'issues' as TreeLens, label: t('resourceTree.lensIssues'), icon: AlertTriangle, count: totalIssueCounts.total },
+            { id: 'nodes' as TreeLens, label: t('resourceTree.lensNodes'), icon: Server },
+            { id: 'workloads' as TreeLens, label: t('resourceTree.lensWorkloads'), icon: Box },
+            { id: 'storage' as TreeLens, label: t('resourceTree.lensStorage'), icon: HardDrive },
+            { id: 'network' as TreeLens, label: t('resourceTree.lensNetwork'), icon: Network },
           ].map(lens => (
             <button
               key={lens.id}
@@ -346,7 +346,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
           {/* Clusters Root */}
           <TreeNode
             id="clusters"
-            label="Clusters"
+            label={t('resourceTree.clusters')}
             icon={Database}
             iconColor="text-cyan-400"
             count={filteredClusters.length}
@@ -372,7 +372,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                   icon={Server}
                   iconColor="text-blue-400"
                   statusIndicator={cluster.healthy ? 'healthy' : 'error'}
-                  badge={cluster.nodeCount ? `${cluster.nodeCount} nodes` : undefined}
+                  badge={cluster.nodeCount ? t('resourceTree.nodesCount', { count: cluster.nodeCount }) : undefined}
                   badgeColor="bg-secondary text-muted-foreground"
                   onClick={() => drillToCluster(cluster.name)}
                   onToggle={(expanding) => {
@@ -393,7 +393,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                   {clusterExpanded && !hasData && loadingClusters.has(cluster.name) && (
                     <div className="flex items-center gap-2 px-2 py-1.5 ml-8 text-xs text-muted-foreground">
                       <RefreshCw className="w-3 h-3 animate-spin" />
-                      Loading resources...
+                      {t('resourceTree.loadingResources')}
                     </div>
                   )}
 
@@ -401,7 +401,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                   {(activeLens === 'all' || activeLens === 'nodes' || activeLens === 'issues') && clusterExpanded && hasData && clusterData.nodes.length > 0 && (
                     <TreeNode
                       id={`${clusterId}:nodes`}
-                      label="Nodes"
+                      label={t('resourceTree.nodes')}
                       icon={Server}
                       iconColor="text-green-400"
                       count={clusterData.nodes.length}
@@ -432,7 +432,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                   {clusterExpanded && hasData && activeLens !== 'nodes' && visibleNs.length > 0 && (
                     <TreeNode
                       id={`${clusterId}:namespaces`}
-                      label="Namespaces"
+                      label={t('resourceTree.namespaces')}
                       icon={Folder}
                       iconColor="text-purple-400"
                       count={visibleNs.length}
@@ -482,7 +482,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showDeployments && (
                               <TreeNode
                                 id={`${nsId}:deployments`}
-                                label="Deployments"
+                                label={t('resourceTree.deployments')}
                                 icon={ResourceIcon.deployment}
                                 iconColor="text-green-400"
                                 count={nsData.deployments.length}
@@ -537,7 +537,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showPods && (
                               <TreeNode
                                 id={`${nsId}:pods`}
-                                label="Pods"
+                                label={t('resourceTree.pods')}
                                 icon={ResourceIcon.pod}
                                 iconColor="text-teal-400"
                                 count={nsData.pods.length}
@@ -569,7 +569,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showServices && (
                               <TreeNode
                                 id={`${nsId}:services`}
-                                label="Services"
+                                label={t('resourceTree.services')}
                                 icon={ResourceIcon.service}
                                 iconColor="text-blue-400"
                                 count={nsData.services.length}
@@ -599,7 +599,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showPVCs && (
                               <TreeNode
                                 id={`${nsId}:pvcs`}
-                                label="PVCs"
+                                label={t('resourceTree.pvcs')}
                                 icon={ResourceIcon.pvc}
                                 iconColor="text-emerald-400"
                                 count={nsData.pvcs.length}
@@ -629,7 +629,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showConfigMaps && (
                               <TreeNode
                                 id={`${nsId}:configmaps`}
-                                label="ConfigMaps"
+                                label={t('resourceTree.configMaps')}
                                 icon={ResourceIcon.configmap}
                                 iconColor="text-orange-400"
                                 count={nsData.configmaps.length}
@@ -644,7 +644,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     label={cm.name}
                                     icon={ResourceIcon.configmap}
                                     iconColor="text-orange-400"
-                                    badge={`${cm.dataCount} keys`}
+                                    badge={t('resourceTree.keysCount', { count: cm.dataCount })}
                                     badgeColor="bg-orange-500/20 text-orange-400"
                                     indent={5}
                                     expandedNodes={expandedNodes}
@@ -658,7 +658,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showSecrets && (
                               <TreeNode
                                 id={`${nsId}:secrets`}
-                                label="Secrets"
+                                label={t('resourceTree.secrets')}
                                 icon={ResourceIcon.secret}
                                 iconColor="text-red-400"
                                 count={nsData.secrets.length}
@@ -687,7 +687,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showServiceAccounts && (
                               <TreeNode
                                 id={`${nsId}:serviceaccounts`}
-                                label="ServiceAccounts"
+                                label={t('resourceTree.serviceAccounts')}
                                 icon={ResourceIcon.serviceaccount}
                                 iconColor="text-cyan-400"
                                 count={nsData.serviceaccounts.length}
@@ -714,7 +714,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showJobs && (
                               <TreeNode
                                 id={`${nsId}:jobs`}
-                                label="Jobs"
+                                label={t('resourceTree.jobs')}
                                 icon={ResourceIcon.job}
                                 iconColor="text-amber-400"
                                 count={nsData.jobs.length}
@@ -747,7 +747,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showHPAs && (
                               <TreeNode
                                 id={`${nsId}:hpas`}
-                                label="HPAs"
+                                label={t('resourceTree.hpas')}
                                 icon={ResourceIcon.hpa}
                                 iconColor="text-violet-400"
                                 count={nsData.hpas.length}
@@ -776,7 +776,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showReplicaSets && (
                               <TreeNode
                                 id={`${nsId}:replicasets`}
-                                label="ReplicaSets"
+                                label={t('resourceTree.replicaSets')}
                                 icon={ResourceIcon.replicaset}
                                 iconColor="text-indigo-400"
                                 count={nsData.replicasets.length}
@@ -808,7 +808,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showStatefulSets && (
                               <TreeNode
                                 id={`${nsId}:statefulsets`}
-                                label="StatefulSets"
+                                label={t('resourceTree.statefulSets')}
                                 icon={ResourceIcon.statefulset}
                                 iconColor="text-blue-400"
                                 count={nsData.statefulsets.length}
@@ -840,7 +840,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showDaemonSets && (
                               <TreeNode
                                 id={`${nsId}:daemonsets`}
-                                label="DaemonSets"
+                                label={t('resourceTree.daemonSets')}
                                 icon={ResourceIcon.daemonset}
                                 iconColor="text-teal-400"
                                 count={nsData.daemonsets.length}
@@ -872,7 +872,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showCronJobs && (
                               <TreeNode
                                 id={`${nsId}:cronjobs`}
-                                label="CronJobs"
+                                label={t('resourceTree.cronJobs')}
                                 icon={ResourceIcon.cronjob}
                                 iconColor="text-amber-400"
                                 count={nsData.cronjobs.length}
@@ -887,7 +887,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     label={cj.name}
                                     icon={ResourceIcon.cronjob}
                                     iconColor={cj.suspend ? 'text-gray-400' : 'text-amber-400'}
-                                    badge={cj.suspend ? 'Suspended' : cj.schedule}
+                                    badge={cj.suspend ? t('resourceTree.suspended') : cj.schedule}
                                     badgeColor={cj.suspend ? 'bg-gray-500/20 text-gray-400' : 'bg-amber-500/20 text-amber-400'}
                                     indent={5}
                                     expandedNodes={expandedNodes}
@@ -901,7 +901,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showIngresses && (
                               <TreeNode
                                 id={`${nsId}:ingresses`}
-                                label="Ingresses"
+                                label={t('resourceTree.ingresses')}
                                 icon={ResourceIcon.ingress}
                                 iconColor="text-sky-400"
                                 count={nsData.ingresses.length}
@@ -916,7 +916,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     label={ing.name}
                                     icon={ResourceIcon.ingress}
                                     iconColor="text-sky-400"
-                                    badge={ing.hosts.length > 0 ? ing.hosts.join(', ') : ing.class || 'No host'}
+                                    badge={ing.hosts.length > 0 ? ing.hosts.join(', ') : ing.class || t('resourceTree.noHost')}
                                     badgeColor="bg-sky-500/20 text-sky-400"
                                     indent={5}
                                     expandedNodes={expandedNodes}
@@ -930,7 +930,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                             {showNetworkPolicies && (
                               <TreeNode
                                 id={`${nsId}:networkpolicies`}
-                                label="NetworkPolicies"
+                                label={t('resourceTree.networkPolicies')}
                                 icon={ResourceIcon.networkpolicy}
                                 iconColor="text-rose-400"
                                 count={nsData.networkpolicies.length}
@@ -945,7 +945,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     label={np.name}
                                     icon={ResourceIcon.networkpolicy}
                                     iconColor="text-rose-400"
-                                    badge={np.policyTypes.join(', ') || 'No types'}
+                                    badge={np.policyTypes.join(', ') || t('resourceTree.noTypes')}
                                     badgeColor="bg-rose-500/20 text-rose-400"
                                     indent={5}
                                     expandedNodes={expandedNodes}
@@ -966,7 +966,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                       onClick={() => drillToCluster(cluster.name)}
                       className="flex items-center gap-2 px-2 py-1.5 ml-8 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded transition-colors"
                     >
-                      View cluster details →
+                      {t('resourceTree.viewClusterDetails')}
                     </button>
                   )}
                 </TreeNode>
@@ -976,7 +976,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
 
           {filteredClusters.length === 0 && (
             <div className="text-center text-muted-foreground text-sm py-8">
-              No clusters match the current filter
+              {t('resourceTree.noClustersMatch')}
             </div>
           )}
         </div>

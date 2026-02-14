@@ -79,8 +79,8 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
 
   const doStartHealthCheck = () => {
     startMission({
-      title: 'Cluster Health Check',
-      description: 'Comprehensive health analysis across all clusters',
+      title: t('healthCheck.missionTitle'),
+      description: t('healthCheck.missionDescription'),
       type: 'troubleshoot',
       initialPrompt: `Please perform a comprehensive health check of my Kubernetes infrastructure.
 
@@ -154,7 +154,7 @@ Please provide:
               healthScore >= 60 ? 'text-yellow-400' :
               'text-red-400'
             )}>{healthScore}%</div>
-            <div className="text-[10px] text-muted-foreground">Health</div>
+            <div className="text-[10px] text-muted-foreground">{t('healthCheck.health')}</div>
           </div>
         </div>
       </div>
@@ -170,7 +170,7 @@ Please provide:
             const healthyCluster = clusters.find(c => c.healthy && c.reachable !== false)
             if (healthyCluster) drillToCluster(healthyCluster.name)
           }}
-          title={`${healthyClusters} healthy cluster${healthyClusters !== 1 ? 's' : ''} - Click to view`}
+          title={t('healthCheck.healthyClusterTooltip', { count: healthyClusters })}
         >
           <div className="text-lg font-bold text-green-400">{healthyClusters}</div>
           <div className="text-[10px] text-muted-foreground">{t('common.healthy')}</div>
@@ -184,7 +184,7 @@ Please provide:
             const unhealthyCluster = clusters.find(c => !c.healthy && c.reachable !== false)
             if (unhealthyCluster) drillToCluster(unhealthyCluster.name)
           }}
-          title={`${unhealthyClusters} unhealthy cluster${unhealthyClusters !== 1 ? 's' : ''} - Click to view`}
+          title={t('healthCheck.unhealthyClusterTooltip', { count: unhealthyClusters })}
         >
           <div className="text-lg font-bold text-orange-400">{unhealthyClusters}</div>
           <div className="text-[10px] text-muted-foreground">{t('common.unhealthy')}</div>
@@ -198,7 +198,7 @@ Please provide:
             const unreachableCluster = clusters.find(c => c.reachable === false)
             if (unreachableCluster) drillToCluster(unreachableCluster.name)
           }}
-          title={`${unreachableClusters} offline cluster${unreachableClusters !== 1 ? 's' : ''} - Click to view`}
+          title={t('healthCheck.offlineClusterTooltip', { count: unreachableClusters })}
         >
           <div className="text-lg font-bold text-yellow-400">{unreachableClusters}</div>
           <div className="text-[10px] text-muted-foreground">{t('common.offline')}</div>
@@ -214,11 +214,11 @@ Please provide:
               drillToPod(podIssues[0].cluster, podIssues[0].namespace, podIssues[0].name)
             }
           }}
-          title={`${totalIssues} issue${totalIssues !== 1 ? 's' : ''} detected - Click to view first issue`}
+          title={t('healthCheck.issuesTooltip', { count: totalIssues })}
         >
           <div className="flex items-center gap-2 text-xs text-orange-400">
             <AlertCircle className="w-3 h-3" />
-            {totalIssues} issues detected
+            {t('healthCheck.issuesDetected', { count: totalIssues })}
           </div>
         </div>
       )}
@@ -237,12 +237,12 @@ Please provide:
         {runningHealthMission ? (
           <>
             <Clock className="w-4 h-4 animate-pulse" />
-            Analyzing...
+            {t('healthCheck.analyzing')}
           </>
         ) : (
           <>
             <Play className="w-4 h-4" />
-            Full Health Check
+            {t('healthCheck.fullHealthCheck')}
           </>
         )}
       </button>

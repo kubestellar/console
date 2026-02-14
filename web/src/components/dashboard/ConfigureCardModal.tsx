@@ -698,10 +698,10 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
     if (changes.length === 0) {
       // Couldn't understand - suggest creating a new card
       setAiError(
-        `I couldn't understand that request. Try describing what you want to see, like:\n` +
-        `• "Show warning events from vllm-d cluster"\n` +
-        `• "Show pods with issues in kube-system"\n` +
-        `• "Track deployments in production"`
+        `${t('cardConfig.aiError')}\n` +
+        `• "${t('cardConfig.aiErrorExample1')}"\n` +
+        `• "${t('cardConfig.aiErrorExample2')}"\n` +
+        `• "${t('cardConfig.aiErrorExample3')}"`
       )
     } else {
       // Track token usage for AI config modification (estimate ~300 tokens for parsing)
@@ -794,7 +794,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               {/* Dynamic config fields */}
               {fields.map((field) => (
                 <div key={field.key}>
-                  <label className="block text-sm text-muted-foreground mb-1">{field.label}</label>
+                  <label className="block text-sm text-muted-foreground mb-1">{t(`cardConfig.fieldLabels.${field.key}`, field.label)}</label>
                   {field.type === 'cluster' ? (
                     <select
                       value={(config[field.key] as string) || ''}
@@ -867,7 +867,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{behavior.label}</p>
+                      <p className="text-sm font-medium text-foreground">{t(`cardConfig.behaviorLabels.${behavior.key}`, behavior.label)}</p>
                       <p className="text-xs text-muted-foreground">{behavior.description}</p>
                     </div>
                   </div>
@@ -973,12 +973,12 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               <div className="text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">{t('dashboard.configure.examplePrompts')}</p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li>"Show only warnings from the vllm-d cluster"</li>
-                  <li>"Alert me when critical issues appear"</li>
-                  <li>"Prioritize unhealthy clusters and enable sounds"</li>
-                  <li>"Filter to namespace: production, show max 20 items"</li>
-                  <li>"Group events by cluster and enable pagination"</li>
-                  <li>"Title: Production Alerts"</li>
+                  <li>"{t('cardConfig.examplePrompts.showWarnings')}"</li>
+                  <li>"{t('cardConfig.examplePrompts.alertCritical')}"</li>
+                  <li>"{t('cardConfig.examplePrompts.prioritizeUnhealthy')}"</li>
+                  <li>"{t('cardConfig.examplePrompts.filterNamespace')}"</li>
+                  <li>"{t('cardConfig.examplePrompts.groupEvents')}"</li>
+                  <li>"{t('cardConfig.examplePrompts.setTitle')}"</li>
                 </ul>
               </div>
             </div>

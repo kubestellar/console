@@ -324,14 +324,14 @@ export function NetworkUtils() {
               <WifiOff className="w-4 h-4 text-red-400" />
             )}
             <span className={`text-sm ${networkInfo.online ? 'text-green-400' : 'text-red-400'}`}>
-              {networkInfo.online ? 'Online' : 'Offline'}
+              {networkInfo.online ? t('networkUtils.online') : t('networkUtils.offline')}
             </span>
           </div>
           {networkInfo.effectiveType && (
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>{networkInfo.effectiveType.toUpperCase()}</span>
               {networkInfo.downlink && <span>{networkInfo.downlink} Mbps</span>}
-              {networkInfo.rtt && <span>RTT: {networkInfo.rtt}ms</span>}
+              {networkInfo.rtt && <span>{t('networkUtils.rtt')}: {networkInfo.rtt}ms</span>}
             </div>
           )}
         </div>
@@ -351,7 +351,7 @@ export function NetworkUtils() {
               {tab === 'ping' && <Activity className="w-3 h-3 inline mr-1" />}
               {tab === 'ports' && <Server className="w-3 h-3 inline mr-1" />}
               {tab === 'info' && <Globe className="w-3 h-3 inline mr-1" />}
-              {tab}
+              {t(`networkUtils.${tab}`)}
             </button>
           ))}
         </div>
@@ -366,7 +366,7 @@ export function NetworkUtils() {
                 value={hostInput}
                 onChange={(e) => setHostInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addHost('ping')}
-                placeholder="Host or URL"
+                placeholder={t('networkUtils.hostOrUrl')}
                 className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <button
@@ -390,12 +390,12 @@ export function NetworkUtils() {
                 {continuousPing ? (
                   <>
                     <Square className="w-4 h-4" />
-                    Stop
+                    {t('networkUtils.stop')}
                   </>
                 ) : (
                   <>
                     <Play className="w-4 h-4" />
-                    Start
+                    {t('networkUtils.start')}
                   </>
                 )}
               </button>
@@ -404,7 +404,7 @@ export function NetworkUtils() {
                 value={pingInterval}
                 onChange={(e) => setPingInterval(Number(e.target.value))}
                 className="px-2 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                title="Ping interval"
+                title={t('networkUtils.pingInterval')}
               >
                 {PING_INTERVALS.map(({ value, label }) => (
                   <option key={value} value={value}>
@@ -416,7 +416,7 @@ export function NetworkUtils() {
                 onClick={pingAllHosts}
                 disabled={isPinging || continuousPing}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 rounded disabled:opacity-50"
-                title="Ping once"
+                title={t('networkUtils.pingOnce')}
               >
                 {isPinging ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -460,12 +460,12 @@ export function NetworkUtils() {
                           <AlertTriangle className="w-3 h-3 text-muted-foreground" />
                         )}
                         <span className={getStatusColor(latest?.latency ?? null, latest?.status || '')}>
-                          {latest?.latency != null ? `${latest.latency}ms` : latest?.status || 'Not tested'}
+                          {latest?.latency != null ? `${latest.latency}ms` : latest?.status || t('networkUtils.notTested')}
                         </span>
                       </div>
                       {avg !== null && (
                         <span className="text-muted-foreground">
-                          Avg: {avg}ms
+                          {t('networkUtils.avgLatency', { avg })}
                         </span>
                       )}
                       {results.length > 0 && (
@@ -500,7 +500,7 @@ export function NetworkUtils() {
 
               {pingHosts.length === 0 && (
                 <div className="text-center text-sm text-muted-foreground py-8">
-                  No hosts configured. Add a host above.
+                  {t('networkUtils.noHosts')}
                 </div>
               )}
             </div>
@@ -515,14 +515,14 @@ export function NetworkUtils() {
                 type="text"
                 value={hostInput}
                 onChange={(e) => setHostInput(e.target.value)}
-                placeholder="Host"
+                placeholder={t('networkUtils.host')}
                 className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <input
                 type="number"
                 value={portInput}
                 onChange={(e) => setPortInput(e.target.value)}
-                placeholder="Port"
+                placeholder={t('networkUtils.port')}
                 className="w-20 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <button
@@ -538,16 +538,15 @@ export function NetworkUtils() {
               <div className="p-4 rounded-lg bg-secondary/20 border border-border/50 text-center">
                 <Server className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground mb-2">
-                  Port scanning requires backend support
+                  {t('networkUtils.portScanTitle')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Browser security prevents direct port checks.
-                  A backend API endpoint would be needed for this feature.
+                  {t('networkUtils.portScanBrowserSecurity')}
                 </p>
 
                 {portHosts.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    <p className="text-xs text-muted-foreground">Saved port checks:</p>
+                    <p className="text-xs text-muted-foreground">{t('networkUtils.savedPortChecks')}</p>
                     {portHosts.map(({ host, port }) => (
                       <div key={`${host}:${port}`} className="flex items-center justify-between px-3 py-2 bg-secondary/30 rounded">
                         <span className="text-sm">{host}:{port}</span>
@@ -572,30 +571,30 @@ export function NetworkUtils() {
             <div className="p-3 rounded-lg bg-secondary/20 border border-border/50">
               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                 <Wifi className="w-4 h-4" />
-                Connection Info
+                {t('networkUtils.connectionInfo')}
               </h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('common.status')}</span>
                   <span className={networkInfo.online ? 'text-green-400' : 'text-red-400'}>
-                    {networkInfo.online ? 'Online' : 'Offline'}
+                    {networkInfo.online ? t('networkUtils.online') : t('networkUtils.offline')}
                   </span>
                 </div>
                 {networkInfo.effectiveType && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Connection Type</span>
+                    <span className="text-muted-foreground">{t('networkUtils.connectionType')}</span>
                     <span>{networkInfo.effectiveType.toUpperCase()}</span>
                   </div>
                 )}
                 {networkInfo.downlink !== undefined && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Downlink</span>
+                    <span className="text-muted-foreground">{t('networkUtils.downlink')}</span>
                     <span>{networkInfo.downlink} Mbps</span>
                   </div>
                 )}
                 {networkInfo.rtt !== undefined && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">RTT</span>
+                    <span className="text-muted-foreground">{t('networkUtils.rtt')}</span>
                     <span>{networkInfo.rtt} ms</span>
                   </div>
                 )}
@@ -605,34 +604,33 @@ export function NetworkUtils() {
             <div className="p-3 rounded-lg bg-secondary/20 border border-border/50">
               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                Browser Info
+                {t('networkUtils.browserInfo')}
               </h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">User Agent</span>
+                  <span className="text-muted-foreground">{t('networkUtils.userAgent')}</span>
                 </div>
                 <p className="text-xs text-muted-foreground break-all">
                   {navigator.userAgent}
                 </p>
                 <div className="flex justify-between mt-2">
-                  <span className="text-muted-foreground">Language</span>
+                  <span className="text-muted-foreground">{t('networkUtils.language')}</span>
                   <span>{navigator.language}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Platform</span>
+                  <span className="text-muted-foreground">{t('networkUtils.platform')}</span>
                   <span>{navigator.platform}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cookies Enabled</span>
-                  <span>{navigator.cookieEnabled ? 'Yes' : 'No'}</span>
+                  <span className="text-muted-foreground">{t('networkUtils.cookiesEnabled')}</span>
+                  <span>{navigator.cookieEnabled ? t('networkUtils.yes') : t('networkUtils.no')}</span>
                 </div>
               </div>
             </div>
 
             <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
               <p className="text-xs text-blue-400">
-                <strong>Note:</strong> Full network diagnostics (traceroute, DNS lookup, port scanning)
-                require backend API support due to browser security restrictions.
+                <strong>Note:</strong> {t('networkUtils.diagnosticsNote')}
               </p>
             </div>
           </div>

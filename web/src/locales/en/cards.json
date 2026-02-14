@@ -418,7 +418,11 @@
     "gpu": "GPU",
     "mlai": "ML/AI",
     "benchmarks": "Benchmarks",
-    "prow": "PROW CI"
+    "prow": "PROW CI",
+    "clusterAdmin": "Cluster Admin",
+    "clusterHealth": "Cluster Health",
+    "namespaces": "Namespaces",
+    "securityEvents": "Security & Events"
   },
   "addCard": {
     "title": "Add Card",
