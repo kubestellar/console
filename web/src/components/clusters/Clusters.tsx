@@ -291,7 +291,7 @@ Start by running diagnostic commands to understand what's happening.`,
                   disabled={logsLoading}
                   className="text-xs px-2 py-1 rounded bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-50"
                 >
-                  {logsLoading ? 'Loading...' : 'Refresh'}
+                  {logsLoading ? t('common.loading') : t('common.refresh')}
                 </button>
               </div>
               {logsLoading && <div className="text-muted-foreground">Loading logs...</div>}
@@ -319,6 +319,7 @@ interface NamespaceResourcesProps {
 type ResourceKind = 'Pod' | 'Deployment' | 'Service' | 'Job' | 'HPA' | 'ConfigMap' | 'Secret'
 
 function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps) {
+  const { t } = useTranslation()
   const { pods, isLoading: podsLoading } = usePods(clusterName, namespace, 'name', 100)
   const { deployments, isLoading: deploymentsLoading } = useDeployments(clusterName, namespace)
   const { services, isLoading: servicesLoading } = useServices(clusterName, namespace)
@@ -582,7 +583,7 @@ function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps)
                       data: resource.data
                     })}
                     className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="View details"
+                    title={t('common.viewDetails')}
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>

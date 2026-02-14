@@ -233,7 +233,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
           onClick={handleRefresh}
           disabled={isRefreshing}
           className="p-1 rounded hover:bg-secondary transition-colors"
-          title="Refresh"
+          title={t('common.refresh')}
         >
           {isRefreshing
             ? <Loader2 className="w-3.5 h-3.5 text-green-400 animate-spin" />

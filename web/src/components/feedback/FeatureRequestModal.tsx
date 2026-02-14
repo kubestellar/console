@@ -382,7 +382,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   }}
                   disabled={isRefreshing}
                   className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
-                  title="Refresh"
+                  title={t('common.refresh')}
                 >
                   <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
                   Refresh

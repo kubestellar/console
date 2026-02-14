@@ -165,7 +165,7 @@ export function ResourceMarshall() {
             )}
           >
             <option value="">
-              {nsLoading ? 'Loading...' : 'Select namespace...'}
+              {nsLoading ? t('common.loading') : 'Select namespace...'}
             </option>
             {namespaces.map(ns => (
               <option key={ns} value={ns}>{ns}</option>
@@ -186,7 +186,7 @@ export function ResourceMarshall() {
             )}
           >
             <option value="">
-              {wlLoading ? 'Loading...' : 'Select workload...'}
+              {wlLoading ? t('common.loading') : 'Select workload...'}
             </option>
             {workloads?.map(w => (
               <option key={`${w.type}-${w.name}`} value={w.name}>

@@ -139,6 +139,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
   onRemove: (item: MarketplaceItem) => void
   isInstalled: boolean
 }) {
+  const { t } = useTranslation()
   const [installing, setInstalling] = useState(false)
   const [removing, setRemoving] = useState(false)
 
@@ -295,7 +296,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
                 onClick={handleRemove}
                 disabled={removing}
                 className="flex items-center gap-1 px-2 py-1 text-[10px] text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
-                title="Remove"
+                title={t('common.remove')}
               >
                 {removing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               </button>

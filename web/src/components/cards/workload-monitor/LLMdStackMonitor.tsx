@@ -595,7 +595,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           onClick={handleRefresh}
           disabled={isRefreshing}
           className="p-1 rounded hover:bg-secondary transition-colors"
-          title="Refresh"
+          title={t('common.refresh')}
         >
           {isRefreshing
             ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />

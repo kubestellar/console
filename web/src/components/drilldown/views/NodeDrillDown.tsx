@@ -131,7 +131,7 @@ Start by checking node events and conditions.`,
             <button
               onClick={() => copyCommand(`kubectl --context ${clusterShort} describe node ${nodeName}`, 'describe')}
               className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-              title="Copy command"
+              title={t('drilldown.tooltips.copyCommand')}
             >
               {copied === 'describe' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
             </button>
@@ -143,7 +143,7 @@ Start by checking node events and conditions.`,
             <button
               onClick={() => copyCommand(`kubectl --context ${clusterShort} get events --field-selector involvedObject.name=${nodeName}`, 'events')}
               className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-              title="Copy command"
+              title={t('drilldown.tooltips.copyCommand')}
             >
               {copied === 'events' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
             </button>
@@ -156,7 +156,7 @@ Start by checking node events and conditions.`,
               <button
                 onClick={() => copyCommand(`kubectl --context ${clusterShort} uncordon ${nodeName}`, 'uncordon')}
                 className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-                title="Copy command"
+                title={t('drilldown.tooltips.copyCommand')}
               >
                 {copied === 'uncordon' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
               </button>
@@ -169,7 +169,7 @@ Start by checking node events and conditions.`,
             <button
               onClick={() => copyCommand(`kubectl --context ${clusterShort} get node ${nodeName} -o jsonpath='{.status.conditions}'`, 'conditions')}
               className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-              title="Copy command"
+              title={t('drilldown.tooltips.copyCommand')}
             >
               {copied === 'conditions' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
             </button>

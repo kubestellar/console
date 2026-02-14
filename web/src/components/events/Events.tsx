@@ -256,7 +256,7 @@ export function Events() {
 
   return (
     <DashboardPage
-      title="Events"
+      title={t('common.events')}
       subtitle="Cluster events and activity across your infrastructure"
       icon="Activity"
       storageKey={EVENTS_CARDS_KEY}

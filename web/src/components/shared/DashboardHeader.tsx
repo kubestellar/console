@@ -139,7 +139,7 @@ export function DashboardHeader({
             onClick={onRefresh}
             disabled={isFetching}
             className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-            title="Refresh data"
+            title={t('common.refreshClusterData')}
           >
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>

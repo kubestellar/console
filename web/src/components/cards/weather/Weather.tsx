@@ -429,7 +429,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                             removeSavedLocation(location.id)
                           }}
                           className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                          title="Remove"
+                          title={t('common.remove')}
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>

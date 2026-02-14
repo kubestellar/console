@@ -192,7 +192,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
                 (!selectedCluster || nsLoading) && 'opacity-50 cursor-not-allowed',
               )}
             >
-              <option value="">{nsLoading ? 'Loading...' : 'Select namespace...'}</option>
+              <option value="">{nsLoading ? t('common.loading') : 'Select namespace...'}</option>
               {namespaces.map(ns => (
                 <option key={ns} value={ns}>{ns}</option>
               ))}
@@ -209,7 +209,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
                 (!selectedNamespace || wlLoading) && 'opacity-50 cursor-not-allowed',
               )}
             >
-              <option value="">{wlLoading ? 'Loading...' : 'Select workload...'}</option>
+              <option value="">{wlLoading ? t('common.loading') : 'Select workload...'}</option>
               {workloads?.map(w => (
                 <option key={`${w.type}-${w.name}`} value={w.name}>
                   {w.name} ({w.type})
@@ -260,7 +260,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
               onClick={refetch}
               disabled={isRefreshing}
               className="p-1 rounded hover:bg-secondary transition-colors"
-              title="Refresh"
+              title={t('common.refresh')}
             >
               {isRefreshing
                 ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />

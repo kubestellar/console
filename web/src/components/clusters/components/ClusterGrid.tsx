@@ -171,7 +171,7 @@ const FullClusterCard = memo(function FullClusterCard({
                     unreachable ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30' :
                     'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
-                  title={spinning ? 'Refreshing...' : unreachable ? 'Retry connection' : 'Refresh cluster data'}
+                  title={spinning ? t('common.refreshing') : unreachable ? 'Retry connection' : 'Refresh cluster data'}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} />
                 </button>
@@ -290,7 +290,7 @@ const FullClusterCard = memo(function FullClusterCard({
           )}
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Source: {cluster.source || 'kubeconfig'}</span>
-            <span title="View details"><ChevronRight className="w-4 h-4 text-primary" /></span>
+            <span title={t('common.viewDetails')}><ChevronRight className="w-4 h-4 text-primary" /></span>
           </div>
         </div>
       </div>
@@ -307,6 +307,7 @@ const ListClusterCard = memo(function ListClusterCard({
   onSelectCluster,
   onRefreshCluster,
 }: Omit<ClusterCardProps, 'layoutMode' | 'isConnected' | 'onRenameCluster'>) {
+  const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
   const unreachable = isClusterUnreachable(cluster)
   const hasCachedData = cluster.nodeCount !== undefined && cluster.nodeCount > 0
@@ -437,7 +438,7 @@ const ListClusterCard = memo(function ListClusterCard({
                   unreachable ? 'text-yellow-400 hover:bg-yellow-500/20' :
                   'text-muted-foreground hover:bg-secondary hover:text-foreground'
                 }`}
-                title={spinning ? 'Refreshing...' : 'Refresh'}
+                title={spinning ? t('common.refreshing') : t('common.refresh')}
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} />
               </button>

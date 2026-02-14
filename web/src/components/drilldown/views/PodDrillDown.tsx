@@ -1256,7 +1256,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               title="Refresh all pod data"
             >
               <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-              <span className="text-sm">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+              <span className="text-sm">{isRefreshing ? t('common.refreshing') : t('common.refresh')}</span>
             </button>
           )}
         </div>
@@ -1458,7 +1458,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                                 <button
                                   onClick={() => undoLabelChange(key)}
                                   className="p-1 rounded hover:bg-secondary/50 text-yellow-400"
-                                  title="Undo change"
+                                  title={t('drilldown.tooltips.undoChange')}
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -1467,7 +1467,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                                 <button
                                   onClick={() => handleLabelRemove(key)}
                                   className="p-1 rounded hover:bg-red-500/20 text-red-400"
-                                  title="Remove label"
+                                  title={t('drilldown.tooltips.removeLabel')}
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
@@ -1622,7 +1622,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                                   <button
                                     onClick={() => undoAnnotationChange(key)}
                                     className="p-1 rounded hover:bg-secondary/50 text-yellow-400"
-                                    title="Undo change"
+                                    title={t('drilldown.tooltips.undoChange')}
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -1631,7 +1631,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                                   <button
                                     onClick={() => handleAnnotationRemove(key)}
                                     className="p-1 rounded hover:bg-red-500/20 text-red-400"
-                                    title="Remove annotation"
+                                    title={t('drilldown.tooltips.removeAnnotation')}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </button>

@@ -180,7 +180,7 @@ export function EventsDrillDown({ data }: Props) {
             <button
               onClick={copyCommand}
               className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-              title="Copy command"
+              title={t('drilldown.tooltips.copyCommand')}
             >
               {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
             </button>
@@ -267,7 +267,7 @@ export function EventsDrillDown({ data }: Props) {
               <button
                 onClick={copyCommand}
                 className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-                title="Copy command"
+                title={t('drilldown.tooltips.copyCommand')}
               >
                 {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
               </button>

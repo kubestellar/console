@@ -176,7 +176,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
 }
 
 export function FeatureRequestList() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { requests, isLoading, error, loadRequests, submitFeedback } = useFeatureRequests()
 
   const handleFeedback = async (requestId: string, type: FeedbackType, comment?: string) => {
@@ -227,7 +227,7 @@ export function FeatureRequestList() {
         <button
           onClick={() => loadRequests()}
           className="p-1 rounded hover:bg-secondary/50 text-muted-foreground"
-          title="Refresh"
+          title={t('common.refresh')}
         >
           <RefreshCw className="w-4 h-4" />
         </button>

@@ -412,7 +412,7 @@ Please:
                   <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <GitBranch className="w-4 h-4" />
-                      <span>Chart: {chartName || releaseInfo?.chart || 'Loading...'}</span>
+                      <span>Chart: {chartName || releaseInfo?.chart || t('common.loading')}</span>
                     </div>
                     {(chartVersion || releaseInfo?.app_version) && (
                       <div className="flex items-center gap-1.5">

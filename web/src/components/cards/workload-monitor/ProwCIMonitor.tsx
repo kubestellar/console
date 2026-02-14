@@ -218,7 +218,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
           onClick={refetch}
           disabled={isRefreshing}
           className="p-1 rounded hover:bg-secondary transition-colors"
-          title="Refresh"
+          title={t('common.refresh')}
         >
           {isRefreshing
             ? <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />

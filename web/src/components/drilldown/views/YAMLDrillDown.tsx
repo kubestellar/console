@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function YAMLDrillDown({ data }: Props) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
@@ -93,7 +93,7 @@ export function YAMLDrillDown({ data }: Props) {
           <button
             onClick={fetchYAML}
             className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors"
-            title="Refresh"
+            title={t('common.refresh')}
           >
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
