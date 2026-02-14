@@ -38,52 +38,54 @@ export function useNightlyE2EData() {
     persist: true,
     refreshInterval: REFRESH_INTERVAL_MS,
     fetcher: async () => {
-      // Try backend proxy first (uses server-side GitHub token)
-      try {
-        const res = await fetch('/api/nightly-e2e/runs', {
-          headers: {
-            ...getAuthHeaders(),
-            Accept: 'application/json',
-          },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (data.guides && data.guides.length > 0) {
-            const hasAnyRuns = data.guides.some(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (g: any) => g.runs && g.runs.length > 0
-            )
-            if (hasAnyRuns) {
-              // Map backend response to frontend types
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const guides: NightlyGuideStatus[] = data.guides.map((g: any) => ({
-                guide: g.guide,
-                acronym: g.acronym,
-                platform: g.platform,
-                repo: g.repo,
-                workflowFile: g.workflowFile,
-                runs: (g.runs ?? []).map(
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (r: any) => ({
-                    id: r.id,
-                    status: r.status,
-                    conclusion: r.conclusion,
-                    createdAt: r.createdAt,
-                    updatedAt: r.updatedAt,
-                    htmlUrl: r.htmlUrl,
-                    runNumber: r.runNumber,
-                  })
-                ),
-                passRate: g.passRate,
-                trend: g.trend,
-                latestConclusion: g.latestConclusion,
-              }))
-              return { guides, isDemo: false }
+      // Try authenticated endpoint first, then public fallback
+      const endpoints = ['/api/nightly-e2e/runs', '/api/public/nightly-e2e/runs']
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            headers: {
+              ...(endpoint.includes('/public/') ? {} : getAuthHeaders()),
+              Accept: 'application/json',
+            },
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (data.guides && data.guides.length > 0) {
+              const hasAnyRuns = data.guides.some(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (g: any) => g.runs && g.runs.length > 0
+              )
+              if (hasAnyRuns) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const guides: NightlyGuideStatus[] = data.guides.map((g: any) => ({
+                  guide: g.guide,
+                  acronym: g.acronym,
+                  platform: g.platform,
+                  repo: g.repo,
+                  workflowFile: g.workflowFile,
+                  runs: (g.runs ?? []).map(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (r: any) => ({
+                      id: r.id,
+                      status: r.status,
+                      conclusion: r.conclusion,
+                      createdAt: r.createdAt,
+                      updatedAt: r.updatedAt,
+                      htmlUrl: r.htmlUrl,
+                      runNumber: r.runNumber,
+                    })
+                  ),
+                  passRate: g.passRate,
+                  trend: g.trend,
+                  latestConclusion: g.latestConclusion,
+                }))
+                return { guides, isDemo: false }
+              }
             }
           }
+        } catch {
+          // Endpoint unavailable — try next
         }
-      } catch {
-        // Backend unavailable — fall through to demo
       }
 
       return { guides: DEMO_DATA, isDemo: true }
