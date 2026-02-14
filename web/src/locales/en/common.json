@@ -116,10 +116,6 @@
       "colorBlindModeDesc": "Use icons and patterns instead of colors alone"
     }
   },
-  "dashboard": {
-    "title": "Dashboard",
-    "subtitle": "Your personalized multi-cluster overview"
-  },
   "filters": {
     "allClusters": "All Clusters",
     "clusterFilter": "Cluster Filter",
