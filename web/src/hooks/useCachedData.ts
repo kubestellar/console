@@ -1451,6 +1451,7 @@ export function useCachedWorkloads(
  * Fetch security issues via kubectlProxy - scans pods for security misconfigurations
  */
 async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: string, onProgress?: (partial: SecurityIssue[]) => void): Promise<SecurityIssue[]> {
+  if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
 
@@ -1739,7 +1740,7 @@ export const coreFetchers = {
     return pods.sort((a, b) => (b.restarts || 0) - (a.restarts || 0)).slice(0, 100)
   },
   podIssues: async (): Promise<PodIssue[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       const issues = await fetchPodIssuesViaAgent()
       return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
     }
@@ -1755,7 +1756,7 @@ export const coreFetchers = {
     return data.events || []
   },
   deploymentIssues: async (): Promise<DeploymentIssue[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       const deployments = await fetchDeploymentsViaAgent()
       return deployments
         .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
@@ -1776,7 +1777,7 @@ export const coreFetchers = {
     return []
   },
   deployments: async (): Promise<Deployment[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       return fetchDeploymentsViaAgent()
     }
     const token = getToken()
@@ -1790,7 +1791,7 @@ export const coreFetchers = {
     return data.services || []
   },
   securityIssues: async (): Promise<SecurityIssue[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       try {
         const issues = await fetchSecurityIssuesViaKubectl()
         if (issues.length > 0) return issues
