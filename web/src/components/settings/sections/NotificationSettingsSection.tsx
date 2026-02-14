@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bell, Mail, Slack, Check, X } from 'lucide-react'
 import { useNotificationAPI } from '../../../hooks/useNotificationAPI'
 import { NotificationConfig } from '../../../types/alerts'
@@ -29,6 +30,7 @@ function saveConfig(config: NotificationConfig): void {
 }
 
 export function NotificationSettingsSection() {
+  const { t } = useTranslation()
   const [config, setConfig] = useState<NotificationConfig>(loadConfig())
   const [testResult, setTestResult] = useState<{ type: string; success: boolean; message: string } | null>(null)
   const { testNotification, isLoading } = useNotificationAPI()
@@ -41,7 +43,7 @@ export function NotificationSettingsSection() {
 
   const handleTestSlack = async () => {
     if (!config.slackWebhookUrl) {
-      setTestResult({ type: 'slack', success: false, message: 'Please configure Slack webhook URL first' })
+      setTestResult({ type: 'slack', success: false, message: t('settings.notifications.slack.configureFirst') })
       return
     }
 
@@ -51,19 +53,19 @@ export function NotificationSettingsSection() {
         slackWebhookUrl: config.slackWebhookUrl,
         slackChannel: config.slackChannel,
       })
-      setTestResult({ type: 'slack', success: true, message: 'Test notification sent successfully!' })
+      setTestResult({ type: 'slack', success: true, message: t('settings.notifications.slack.testSuccess') })
     } catch (error) {
       setTestResult({
         type: 'slack',
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to send test notification',
+        message: error instanceof Error ? error.message : t('settings.notifications.slack.testFailed'),
       })
     }
   }
 
   const handleTestEmail = async () => {
     if (!config.emailSMTPHost || !config.emailFrom || !config.emailTo) {
-      setTestResult({ type: 'email', success: false, message: 'Please configure all required email fields first' })
+      setTestResult({ type: 'email', success: false, message: t('settings.notifications.email.configureFirst') })
       return
     }
 
@@ -77,12 +79,12 @@ export function NotificationSettingsSection() {
         emailUsername: config.emailUsername,
         emailPassword: config.emailPassword,
       })
-      setTestResult({ type: 'email', success: true, message: 'Test email sent successfully!' })
+      setTestResult({ type: 'email', success: true, message: t('settings.notifications.email.testSuccess') })
     } catch (error) {
       setTestResult({
         type: 'email',
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to send test email',
+        message: error instanceof Error ? error.message : t('settings.notifications.email.testFailed'),
       })
     }
   }
@@ -94,25 +96,25 @@ export function NotificationSettingsSection() {
           <Bell className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">Alert Notifications</h2>
-          <p className="text-sm text-muted-foreground">Configure notification channels</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.notifications.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.notifications.subtitle')}</p>
         </div>
       </div>
 
       <p className="text-sm text-muted-foreground mb-6">
-        Configure notification channels for alert delivery. Alerts will be sent to all enabled channels.
+        {t('settings.notifications.description')}
       </p>
 
       {/* Slack Configuration */}
       <div className="space-y-4 mb-6">
         <div className="flex items-center gap-2 pb-2 border-b border-border">
           <Slack className="w-4 h-4 text-foreground" />
-          <h3 className="text-sm font-medium text-foreground">Slack Integration</h3>
+          <h3 className="text-sm font-medium text-foreground">{t('settings.notifications.slack.title')}</h3>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Webhook URL *
+            {t('settings.notifications.slack.webhookUrl')}
           </label>
           <input
             type="text"
@@ -122,13 +124,13 @@ export function NotificationSettingsSection() {
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Create a webhook in your Slack workspace settings
+            {t('settings.notifications.slack.webhookHint')}
           </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Channel (optional)
+            {t('settings.notifications.slack.channel')}
           </label>
           <input
             type="text"
@@ -138,7 +140,7 @@ export function NotificationSettingsSection() {
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Override the default channel configured in webhook
+            {t('settings.notifications.slack.channelHint')}
           </p>
         </div>
 
@@ -147,7 +149,7 @@ export function NotificationSettingsSection() {
           disabled={isLoading}
           className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
         >
-          {isLoading ? 'Testing...' : 'Test Slack Notification'}
+          {isLoading ? t('settings.notifications.slack.testing') : t('settings.notifications.slack.testNotification')}
         </button>
 
         {testResult && testResult.type === 'slack' && (
@@ -172,13 +174,13 @@ export function NotificationSettingsSection() {
       <div className="space-y-4 mb-6">
         <div className="flex items-center gap-2 pb-2 border-b border-border">
           <Mail className="w-4 h-4 text-foreground" />
-          <h3 className="text-sm font-medium text-foreground">Email Integration</h3>
+          <h3 className="text-sm font-medium text-foreground">{t('settings.notifications.email.title')}</h3>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              SMTP Host *
+              {t('settings.notifications.email.smtpHost')}
             </label>
             <input
               type="text"
@@ -191,7 +193,7 @@ export function NotificationSettingsSection() {
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              SMTP Port
+              {t('settings.notifications.email.smtpPort')}
             </label>
             <input
               type="number"
@@ -205,7 +207,7 @@ export function NotificationSettingsSection() {
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            From Address *
+            {t('settings.notifications.email.fromAddress')}
           </label>
           <input
             type="email"
@@ -218,7 +220,7 @@ export function NotificationSettingsSection() {
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            To Address(es) *
+            {t('settings.notifications.email.toAddresses')}
           </label>
           <input
             type="text"
@@ -228,14 +230,14 @@ export function NotificationSettingsSection() {
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Comma-separated list of email addresses
+            {t('settings.notifications.email.toHint')}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Username
+              {t('settings.notifications.email.username')}
             </label>
             <input
               type="text"
@@ -248,7 +250,7 @@ export function NotificationSettingsSection() {
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Password
+              {t('settings.notifications.email.password')}
             </label>
             <input
               type="password"
@@ -265,7 +267,7 @@ export function NotificationSettingsSection() {
           disabled={isLoading}
           className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
         >
-          {isLoading ? 'Testing...' : 'Test Email Notification'}
+          {isLoading ? t('settings.notifications.email.testing') : t('settings.notifications.email.testNotification')}
         </button>
 
         {testResult && testResult.type === 'email' && (
@@ -289,8 +291,7 @@ export function NotificationSettingsSection() {
       {/* Info Box */}
       <div className="mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
         <p className="text-sm text-blue-400">
-          💡 <strong>Tip:</strong> Configure notification channels here, then add them to specific alert rules in the Alert Rules editor.
-          Each rule can have multiple notification channels with different configurations.
+          {t('settings.notifications.tip')}
         </p>
       </div>
     </div>

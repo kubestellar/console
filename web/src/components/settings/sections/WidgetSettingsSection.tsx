@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Monitor, Download, Copy, Check, ExternalLink, Smartphone, Globe, Apple, Chrome } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 
@@ -368,6 +369,7 @@ const WIDGET_OPTIONS: WidgetOption[] = [
 ]
 
 export function WidgetSettingsSection() {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [downloaded, setDownloaded] = useState(false)
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null)
@@ -401,8 +403,8 @@ export function WidgetSettingsSection() {
           <Monitor className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">Desktop Widget</h2>
-          <p className="text-sm text-muted-foreground">Monitor clusters from your desktop</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.widget.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.widget.subtitle')}</p>
         </div>
       </div>
 
@@ -471,7 +473,7 @@ export function WidgetSettingsSection() {
         <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 space-y-4">
           <div className="flex items-center gap-2 text-blue-400">
             <Globe className="w-4 h-4" />
-            <span className="font-medium text-sm">Browser Widget Setup</span>
+            <span className="font-medium text-sm">{t('settings.widget.browserSetup')}</span>
           </div>
 
           <a
@@ -481,7 +483,7 @@ export function WidgetSettingsSection() {
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            Open Widget Page
+            {t('settings.widget.openWidgetPage')}
           </a>
 
           <div className="space-y-3 text-xs text-muted-foreground">
@@ -506,7 +508,7 @@ export function WidgetSettingsSection() {
         <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20 space-y-4">
           <div className="flex items-center gap-2 text-purple-400">
             <Smartphone className="w-4 h-4" />
-            <span className="font-medium text-sm">Übersicht Widget Setup</span>
+            <span className="font-medium text-sm">{t('settings.widget.ubersichtSetup')}</span>
           </div>
 
           <div className="flex gap-2">
@@ -515,7 +517,7 @@ export function WidgetSettingsSection() {
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition-colors"
             >
               {downloaded ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-              {downloaded ? 'Downloaded!' : 'Download Widget'}
+              {downloaded ? t('settings.widget.downloaded') : t('settings.widget.downloadWidget')}
             </button>
             <button
               onClick={handleCopy}
@@ -527,12 +529,12 @@ export function WidgetSettingsSection() {
           </div>
 
           <div className="space-y-2 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Installation steps:</p>
+            <p className="font-medium text-foreground">{t('settings.widget.installSteps')}</p>
             <ol className="list-decimal list-inside space-y-1 pl-1">
-              <li>Download the widget file above</li>
-              <li>Move to <code className="bg-secondary px-1 rounded text-[10px]">{widgetPath}</code></li>
-              <li>Ensure kc-agent is running on port 8585</li>
-              <li>Restart Übersicht</li>
+              <li>{t('settings.widget.step1')}</li>
+              <li>{t('settings.widget.step2', { path: widgetPath })}</li>
+              <li>{t('settings.widget.step3')}</li>
+              <li>{t('settings.widget.step4')}</li>
             </ol>
           </div>
 
@@ -542,7 +544,7 @@ export function WidgetSettingsSection() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-purple-400 hover:underline"
           >
-            Get Übersicht for macOS <ExternalLink className="w-3 h-3" />
+            {t('settings.widget.getUbersicht')} <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       )}
@@ -550,7 +552,7 @@ export function WidgetSettingsSection() {
       {/* Widget Preview */}
       {selectedWidget && (
         <div className="mt-4 p-4 rounded-lg bg-gray-900/50 border border-border">
-          <div className="text-xs text-muted-foreground mb-3">Widget Preview</div>
+          <div className="text-xs text-muted-foreground mb-3">{t('settings.widget.widgetPreview')}</div>
           <div className="flex justify-center">
             <div
               style={{
@@ -595,7 +597,7 @@ export function WidgetSettingsSection() {
             </div>
           </div>
           <div className="text-center mt-3 text-xs text-muted-foreground">
-            Draggable • Click stats to open console • Auto-refreshes every 30s
+            {t('settings.widget.previewDesc')}
           </div>
         </div>
       )}
@@ -603,7 +605,7 @@ export function WidgetSettingsSection() {
       {/* Collapsed state hint */}
       {!selectedWidget && (
         <p className="text-xs text-center text-muted-foreground mt-2">
-          Select a widget type above to see installation options
+          {t('settings.widget.selectWidget')}
         </p>
       )}
     </div>

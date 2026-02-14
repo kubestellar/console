@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Container, RefreshCw, Plus, Trash2, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
 
 export function LocalClustersSection() {
+  const { t } = useTranslation()
   const {
     installedTools,
     clusters,
@@ -37,7 +39,7 @@ export function LocalClustersSection() {
   }
 
   const handleDelete = async (tool: string, name: string) => {
-    if (!confirm(`Delete cluster "${name}"? This cannot be undone.`)) return
+    if (!confirm(t('settings.localClusters.deleteConfirm', { name }))) return
     await deleteCluster(tool, name)
   }
 
@@ -77,8 +79,8 @@ export function LocalClustersSection() {
             <Container className={`w-5 h-5 ${isConnected && installedTools.length > 0 ? 'text-purple-400' : 'text-muted-foreground'}`} />
           </div>
           <div>
-            <h2 className="text-lg font-medium text-foreground">Local Clusters</h2>
-            <p className="text-sm text-muted-foreground">Create and manage local Kubernetes clusters</p>
+            <h2 className="text-lg font-medium text-foreground">{t('settings.localClusters.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('settings.localClusters.subtitle')}</p>
           </div>
         </div>
         {isConnected && (
@@ -98,10 +100,10 @@ export function LocalClustersSection() {
         <div className="p-4 rounded-lg bg-secondary/50 border border-border">
           <div className="flex items-center gap-2 text-muted-foreground">
             <AlertCircle className="w-5 h-5" />
-            <span>Connect the local agent to manage local clusters</span>
+            <span>{t('settings.localClusters.connectAgent')}</span>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            The local agent can detect and manage kind, k3d, and minikube clusters on your machine.
+            {t('settings.localClusters.agentDesc')}
           </p>
         </div>
       )}
@@ -111,10 +113,10 @@ export function LocalClustersSection() {
         <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-2 text-orange-400">
             <AlertCircle className="w-5 h-5" />
-            <span className="font-medium">No cluster tools detected</span>
+            <span className="font-medium">{t('settings.localClusters.noToolsDetected')}</span>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Install one of these tools to create local clusters:
+            {t('settings.localClusters.installTools')}
           </p>
           <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
             <li><code className="px-1 bg-secondary rounded">brew install kind</code> - Kubernetes in Docker</li>
@@ -129,7 +131,7 @@ export function LocalClustersSection() {
         <>
           {/* Detected Tools */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Detected Tools</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('settings.localClusters.detectedTools')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {installedTools.map((tool) => (
                 <div
@@ -152,7 +154,7 @@ export function LocalClustersSection() {
           <div className="mb-6 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
             <h3 className="text-sm font-medium text-purple-400 mb-3 flex items-center gap-2">
               <Plus className="w-4 h-4" />
-              Create New Cluster
+              {t('settings.localClusters.createNew')}
             </h3>
             <div className="flex flex-col sm:flex-row gap-3">
               <select
@@ -160,7 +162,7 @@ export function LocalClustersSection() {
                 onChange={(e) => setSelectedTool(e.target.value)}
                 className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               >
-                <option value="">Select tool...</option>
+                <option value="">{t('settings.localClusters.selectTool')}</option>
                 {installedTools.map((tool) => (
                   <option key={tool.name} value={tool.name}>
                     {getToolIcon(tool.name)} {tool.name} - {getToolDescription(tool.name)}
@@ -182,12 +184,12 @@ export function LocalClustersSection() {
                 {isCreating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Creating...
+                    {t('settings.localClusters.creating')}
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4" />
-                    Create
+                    {t('settings.localClusters.create')}
                   </>
                 )}
               </button>
@@ -211,11 +213,11 @@ export function LocalClustersSection() {
           {/* Existing Clusters */}
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              Local Clusters ({clusters.length})
+              {t('settings.localClusters.localClustersCount', { count: clusters.length })}
             </h3>
             {clusters.length === 0 ? (
               <p className="text-sm text-muted-foreground p-4 bg-secondary/30 rounded-lg">
-                No local clusters found. Create one above to get started.
+                {t('settings.localClusters.noClusters')}
               </p>
             ) : (
               <div className="space-y-2">

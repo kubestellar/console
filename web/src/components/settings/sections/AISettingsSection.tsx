@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Cpu } from 'lucide-react'
 import { AIMode } from '../../../hooks/useAIMode'
 
@@ -8,6 +9,7 @@ interface AISettingsSectionProps {
 }
 
 export function AISettingsSection({ mode, setMode, description }: AISettingsSectionProps) {
+  const { t } = useTranslation()
   return (
     <div id="ai-mode-settings" className="glass rounded-xl p-6">
       <div className="flex items-center gap-3 mb-4">
@@ -15,14 +17,14 @@ export function AISettingsSection({ mode, setMode, description }: AISettingsSect
           <Cpu className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">AI Usage Mode</h2>
-          <p className="text-sm text-muted-foreground">Balance between AI assistance and direct kubectl</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.aiMode.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.aiMode.subtitle')}</p>
         </div>
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <span id="ai-mode-low" className="text-sm text-muted-foreground w-20">Low AI</span>
+          <span id="ai-mode-low" className="text-sm text-muted-foreground w-20">{t('settings.aiMode.lowAI')}</span>
           <input
             type="range"
             min="0"
@@ -43,7 +45,7 @@ export function AISettingsSection({ mode, setMode, description }: AISettingsSect
               [&::-webkit-slider-thumb]:rounded-full
               [&::-webkit-slider-thumb]:cursor-pointer"
           />
-          <span id="ai-mode-high" className="text-sm text-muted-foreground w-20 text-right">High AI</span>
+          <span id="ai-mode-high" className="text-sm text-muted-foreground w-20 text-right">{t('settings.aiMode.highAI')}</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -61,9 +63,9 @@ export function AISettingsSection({ mode, setMode, description }: AISettingsSect
                 {m}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {m === 'low' && 'Direct kubectl, minimal tokens'}
-                {m === 'medium' && 'AI for analysis, kubectl for data'}
-                {m === 'high' && 'Full AI assistance'}
+                {m === 'low' && t('settings.aiMode.lowDesc')}
+                {m === 'medium' && t('settings.aiMode.mediumDesc')}
+                {m === 'high' && t('settings.aiMode.highDesc')}
               </p>
             </button>
           ))}

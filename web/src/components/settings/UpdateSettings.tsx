@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Download,
   RefreshCw,
@@ -14,20 +15,8 @@ import {
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import type { UpdateChannel } from '../../types/updates'
 
-const CHANNEL_OPTIONS: { value: UpdateChannel; label: string; description: string }[] = [
-  {
-    value: 'stable',
-    label: 'Stable (Weekly releases)',
-    description: 'Recommended for production use',
-  },
-  {
-    value: 'unstable',
-    label: 'Unstable (Nightly releases)',
-    description: 'Latest features, may be unstable',
-  },
-]
-
 export function UpdateSettings() {
+  const { t } = useTranslation()
   const {
     currentVersion,
     commitHash,
@@ -40,6 +29,19 @@ export function UpdateSettings() {
     lastChecked,
     forceCheck,
   } = useVersionCheck()
+
+  const CHANNEL_OPTIONS: { value: UpdateChannel; label: string; description: string }[] = [
+    {
+      value: 'stable',
+      label: t('settings.updates.stable'),
+      description: t('settings.updates.stableDesc'),
+    },
+    {
+      value: 'unstable',
+      label: t('settings.updates.unstable'),
+      description: t('settings.updates.unstableDesc'),
+    },
+  ]
 
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
@@ -57,12 +59,12 @@ export function UpdateSettings() {
   }
 
   const formatLastChecked = () => {
-    if (!lastChecked) return 'Never'
+    if (!lastChecked) return t('settings.updates.never')
     const now = Date.now()
     const diff = now - lastChecked
-    if (diff < 60000) return 'Just now'
-    if (diff < 3600000) return `${Math.floor(diff / 60000)} minutes ago`
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`
+    if (diff < 60000) return t('settings.updates.justNow')
+    if (diff < 3600000) return t('settings.updates.minutesAgo', { count: Math.floor(diff / 60000) })
+    if (diff < 86400000) return t('settings.updates.hoursAgo', { count: Math.floor(diff / 3600000) })
     return new Date(lastChecked).toLocaleDateString()
   }
 
@@ -84,9 +86,9 @@ export function UpdateSettings() {
             />
           </div>
           <div>
-            <h2 className="text-lg font-medium text-foreground">System Updates</h2>
+            <h2 className="text-lg font-medium text-foreground">{t('settings.updates.title')}</h2>
             <p className="text-sm text-muted-foreground">
-              Check for and install console updates
+              {t('settings.updates.subtitle')}
             </p>
           </div>
         </div>
@@ -96,14 +98,14 @@ export function UpdateSettings() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
-          Check Now
+          {t('settings.updates.checkNow')}
         </button>
       </div>
 
       {/* Channel Selector */}
       <div className="mb-4">
         <label className="block text-sm text-muted-foreground mb-2">
-          Update Channel
+          {t('settings.updates.updateChannel')}
         </label>
         <div className="relative">
           <button
@@ -154,7 +156,7 @@ export function UpdateSettings() {
       {!currentVersion.includes('nightly') && !currentVersion.includes('weekly') && currentVersion !== 'unknown' && (
         <div className="p-3 rounded-lg mb-4 bg-yellow-500/10 border border-yellow-500/20">
           <p className="text-xs text-yellow-400">
-            Running development version. Set <code className="px-1 py-0.5 rounded bg-secondary">VITE_APP_VERSION</code> to test update detection.
+            {t('settings.updates.devVersion', { envVar: 'VITE_APP_VERSION' })}
           </p>
         </div>
       )}
@@ -171,7 +173,7 @@ export function UpdateSettings() {
       >
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Current Version</span>
+            <span className="text-sm text-muted-foreground">{t('settings.updates.currentVersion')}</span>
             <span className="text-sm font-mono text-foreground">
               {currentVersion}
               {commitHash !== 'unknown' && (
@@ -180,19 +182,19 @@ export function UpdateSettings() {
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Latest Available</span>
+            <span className="text-sm text-muted-foreground">{t('settings.updates.latestAvailable')}</span>
             <span className="text-sm font-mono text-foreground">
               {isChecking ? (
-                <span className="text-muted-foreground">Checking...</span>
+                <span className="text-muted-foreground">{t('settings.updates.checking')}</span>
               ) : latestRelease ? (
                 latestRelease.tag
               ) : (
-                <span className="text-muted-foreground">Unknown</span>
+                <span className="text-muted-foreground">{t('settings.updates.unknown')}</span>
               )}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Status</span>
+            <span className="text-sm text-muted-foreground">{t('settings.updates.status')}</span>
             <span
               className={`text-sm font-medium ${
                 hasUpdate
@@ -203,14 +205,14 @@ export function UpdateSettings() {
               }`}
             >
               {error
-                ? 'Error checking updates'
+                ? t('settings.updates.errorChecking')
                 : hasUpdate
-                  ? 'Update available'
-                  : 'Up to date'}
+                  ? t('settings.updates.updateAvailable')
+                  : t('settings.updates.upToDate')}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Last Checked</span>
+            <span className="text-sm text-muted-foreground">{t('settings.updates.lastChecked')}</span>
             <span className="text-sm text-muted-foreground">{formatLastChecked()}</span>
           </div>
         </div>
@@ -229,7 +231,7 @@ export function UpdateSettings() {
             ) : (
               <ChevronDown className="w-4 h-4" />
             )}
-            Release Notes
+            {t('settings.updates.releaseNotes')}
           </button>
           {showReleaseNotes && (
             <div className="mt-2 p-4 rounded-lg bg-secondary/30 border border-border">
@@ -242,7 +244,7 @@ export function UpdateSettings() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 mt-3 text-sm text-primary hover:underline"
               >
-                View on GitHub
+                {t('settings.updates.viewOnGithub')}
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -253,23 +255,23 @@ export function UpdateSettings() {
       {/* Update Instructions */}
       {hasUpdate && (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-foreground">How to Update</h3>
+          <h3 className="text-sm font-medium text-foreground">{t('settings.updates.howToUpdate')}</h3>
 
           {/* Web Console */}
           <div className="p-4 rounded-lg bg-secondary/30 border border-border">
             <div className="flex items-center gap-2 mb-2">
               <Globe className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium text-foreground">Web Console</span>
+              <span className="text-sm font-medium text-foreground">{t('settings.updates.webConsole')}</span>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Refresh your browser to load the latest version.
+              {t('settings.updates.webConsoleDesc')}
             </p>
             <button
               onClick={() => window.location.reload()}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600"
             >
               <RefreshCw className="w-4 h-4" />
-              Refresh Browser
+              {t('settings.updates.refreshBrowser')}
             </button>
           </div>
 
@@ -277,10 +279,10 @@ export function UpdateSettings() {
           <div className="p-4 rounded-lg bg-secondary/30 border border-border">
             <div className="flex items-center gap-2 mb-2">
               <Terminal className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium text-foreground">Local Agent</span>
+              <span className="text-sm font-medium text-foreground">{t('settings.updates.localAgentUpdate')}</span>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Update via Homebrew to get the latest agent features.
+              {t('settings.updates.localAgentDesc')}
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
@@ -291,7 +293,7 @@ export function UpdateSettings() {
                 className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600"
               >
                 <Copy className="w-4 h-4" />
-                {copiedCommand === 'brew' ? 'Copied!' : 'Copy'}
+                {copiedCommand === 'brew' ? t('settings.updates.copied') : t('settings.updates.copy')}
               </button>
             </div>
           </div>
@@ -301,11 +303,11 @@ export function UpdateSettings() {
             <div className="flex items-center gap-2 mb-2">
               <Ship className="w-4 h-4 text-purple-400" />
               <span className="text-sm font-medium text-foreground">
-                Cluster Deployment
+                {t('settings.updates.clusterDeployment')}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Update your Helm release to the latest chart version.
+              {t('settings.updates.clusterDeploymentDesc')}
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
@@ -316,7 +318,7 @@ export function UpdateSettings() {
                 className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
               >
                 <Copy className="w-4 h-4" />
-                {copiedCommand === 'helm' ? 'Copied!' : 'Copy'}
+                {copiedCommand === 'helm' ? t('settings.updates.copied') : t('settings.updates.copy')}
               </button>
             </div>
           </div>

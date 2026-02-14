@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Database, RefreshCw, Check, X, AlertCircle, Loader2 } from 'lucide-react'
 import { usePersistence, type PersistenceConfig, type ClusterHealth } from '../../../hooks/usePersistence'
 import { useClusters } from '../../../hooks/mcp/clusters'
@@ -9,6 +10,7 @@ interface ClusterInfo {
 }
 
 export function PersistenceSection() {
+  const { t } = useTranslation()
   const {
     config,
     status,
@@ -84,9 +86,9 @@ export function PersistenceSection() {
             <Database className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h2 className="text-lg font-medium text-foreground">Deploy Persistence</h2>
+            <h2 className="text-lg font-medium text-foreground">{t('settings.persistence.title')}</h2>
             <p className="text-sm text-muted-foreground">
-              Store workloads, groups, and deployments as Kubernetes CRs
+              {t('settings.persistence.subtitle')}
             </p>
           </div>
         </div>
@@ -97,7 +99,7 @@ export function PersistenceSection() {
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
           >
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync Now'}
+            {syncing ? t('settings.persistence.syncing') : t('settings.persistence.syncNow')}
           </button>
         )}
       </div>
@@ -111,9 +113,9 @@ export function PersistenceSection() {
       {/* Enable/Disable Toggle */}
       <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 mb-4">
         <div>
-          <p className="text-sm font-medium text-foreground">Enable Persistence</p>
+          <p className="text-sm font-medium text-foreground">{t('settings.persistence.enablePersistence')}</p>
           <p className="text-xs text-muted-foreground">
-            Store Deploy dashboard state as Custom Resources
+            {t('settings.persistence.enableDesc')}
           </p>
         </div>
         <button
@@ -136,7 +138,7 @@ export function PersistenceSection() {
           {/* Primary Cluster */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Primary Cluster
+              {t('settings.persistence.primaryCluster')}
             </label>
             <div className="flex gap-2">
               <select
@@ -144,7 +146,7 @@ export function PersistenceSection() {
                 onChange={e => setLocalConfig(prev => ({ ...prev, primaryCluster: e.target.value }))}
                 className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
               >
-                <option value="">Select a cluster...</option>
+                <option value="">{t('settings.persistence.selectCluster')}</option>
                 {clusters.map((cluster: ClusterInfo) => (
                   <option key={cluster.name} value={cluster.name}>
                     {cluster.name}
@@ -156,12 +158,12 @@ export function PersistenceSection() {
                 disabled={!localConfig.primaryCluster || testing}
                 className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 disabled:opacity-50"
               >
-                {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
+                {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.persistence.test')}
               </button>
             </div>
             {testResult && testResult.cluster === localConfig.primaryCluster && (
               <p className={`text-xs mt-1 ${testResult.success ? 'text-green-500' : 'text-red-500'}`}>
-                {testResult.success ? 'Connection successful' : 'Connection failed'}
+                {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
               </p>
             )}
           </div>
@@ -169,7 +171,7 @@ export function PersistenceSection() {
           {/* Sync Mode */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Sync Mode
+              {t('settings.persistence.syncMode')}
             </label>
             <div className="flex gap-2">
               <button
@@ -180,7 +182,7 @@ export function PersistenceSection() {
                     : 'bg-secondary border-border text-muted-foreground'
                 }`}
               >
-                Primary Only
+                {t('settings.persistence.primaryOnly')}
               </button>
               <button
                 onClick={() => setLocalConfig(prev => ({ ...prev, syncMode: 'active-passive' }))}
@@ -190,13 +192,13 @@ export function PersistenceSection() {
                     : 'bg-secondary border-border text-muted-foreground'
                 }`}
               >
-                Active-Passive
+                {t('settings.persistence.activePassive')}
               </button>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {localConfig.syncMode === 'active-passive'
-                ? 'Failover to secondary cluster if primary is unavailable'
-                : 'Only sync to primary cluster'}
+                ? t('settings.persistence.failoverDesc')
+                : t('settings.persistence.primaryOnlyDesc')}
             </p>
           </div>
 
@@ -204,7 +206,7 @@ export function PersistenceSection() {
           {localConfig.syncMode === 'active-passive' && (
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Secondary Cluster (Failover)
+                {t('settings.persistence.secondaryCluster')}
               </label>
               <div className="flex gap-2">
                 <select
@@ -212,7 +214,7 @@ export function PersistenceSection() {
                   onChange={e => setLocalConfig(prev => ({ ...prev, secondaryCluster: e.target.value }))}
                   className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
                 >
-                  <option value="">Select a cluster...</option>
+                  <option value="">{t('settings.persistence.selectCluster')}</option>
                   {clusters
                     .filter((c: ClusterInfo) => c.name !== localConfig.primaryCluster)
                     .map((cluster: ClusterInfo) => (
@@ -226,12 +228,12 @@ export function PersistenceSection() {
                   disabled={!localConfig.secondaryCluster || testing}
                   className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 disabled:opacity-50"
                 >
-                  {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
+                  {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.persistence.test')}
                 </button>
               </div>
               {testResult && testResult.cluster === localConfig.secondaryCluster && (
                 <p className={`text-xs mt-1 ${testResult.success ? 'text-green-500' : 'text-red-500'}`}>
-                  {testResult.success ? 'Connection successful' : 'Connection failed'}
+                  {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
                 </p>
               )}
             </div>
@@ -240,7 +242,7 @@ export function PersistenceSection() {
           {/* Namespace */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Namespace
+              {t('settings.persistence.namespace')}
             </label>
             <input
               type="text"
@@ -250,25 +252,25 @@ export function PersistenceSection() {
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Namespace where console CRs will be stored
+              {t('settings.persistence.namespaceHint')}
             </p>
           </div>
 
           {/* Status */}
           {isEnabled && (
             <div className="p-4 rounded-lg bg-secondary/30">
-              <h3 className="text-sm font-medium text-foreground mb-2">Status</h3>
+              <h3 className="text-sm font-medium text-foreground mb-2">{t('settings.persistence.status')}</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Primary Cluster</span>
+                  <span className="text-muted-foreground">{t('settings.persistence.primaryCluster')}</span>
                   <div className="flex items-center gap-2">
                     {getHealthIcon(status.primaryHealth)}
-                    <span className="text-foreground">{config.primaryCluster || 'Not set'}</span>
+                    <span className="text-foreground">{config.primaryCluster || t('settings.persistence.notSet')}</span>
                   </div>
                 </div>
                 {config.secondaryCluster && (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Secondary Cluster</span>
+                    <span className="text-muted-foreground">{t('settings.persistence.secondaryCluster')}</span>
                     <div className="flex items-center gap-2">
                       {getHealthIcon(status.secondaryHealth || 'unknown')}
                       <span className="text-foreground">{config.secondaryCluster}</span>
@@ -276,17 +278,17 @@ export function PersistenceSection() {
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Active Cluster</span>
+                  <span className="text-muted-foreground">{t('settings.persistence.activeCluster')}</span>
                   <span className="text-foreground">
-                    {status.activeCluster || 'None'}
+                    {status.activeCluster || t('settings.persistence.none')}
                     {status.failoverActive && (
-                      <span className="ml-2 text-xs text-yellow-500">(Failover)</span>
+                      <span className="ml-2 text-xs text-yellow-500">{t('settings.persistence.failover')}</span>
                     )}
                   </span>
                 </div>
                 {status.message && (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Message</span>
+                    <span className="text-muted-foreground">{t('settings.persistence.message')}</span>
                     <span className="text-foreground">{status.message}</span>
                   </div>
                 )}
@@ -302,7 +304,7 @@ export function PersistenceSection() {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
               >
                 <Check className="w-4 h-4" />
-                Save Changes
+                {t('settings.persistence.saveChanges')}
               </button>
             </div>
           )}
@@ -312,8 +314,7 @@ export function PersistenceSection() {
       {/* Info about kubectl */}
       <div className="mt-4 p-4 rounded-lg bg-secondary/30">
         <p className="text-sm text-muted-foreground">
-          When enabled, you can use <code className="px-1 py-0.5 rounded bg-secondary text-foreground">kubectl</code> to
-          manage workloads, groups, and deployments. Changes made via kubectl will automatically sync to the UI.
+          {t('settings.persistence.kubectlHint')}
         </p>
         <div className="mt-2 text-xs text-muted-foreground font-mono">
           kubectl get managedworkloads,clustergroups,workloaddeployments -n {localConfig.namespace}

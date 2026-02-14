@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Moon, Sun, Check, Palette, ChevronDown } from 'lucide-react'
 import type { Theme } from '../../../lib/themes'
 import { themeGroups } from '../../../lib/themes'
@@ -11,6 +12,7 @@ interface ThemeSectionProps {
 }
 
 export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeSectionProps) {
+  const { t } = useTranslation()
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false)
 
   return (
@@ -20,8 +22,8 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
           <Palette className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">Appearance</h2>
-          <p className="text-sm text-muted-foreground">Choose your theme - inspired by oh-my-zsh</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.theme.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.theme.subtitle')}</p>
         </div>
       </div>
 
@@ -60,7 +62,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
 
         {/* Theme Selector Dropdown */}
         <div className="relative z-20">
-          <label className="block text-sm text-muted-foreground mb-2">Select Theme</label>
+          <label className="block text-sm text-muted-foreground mb-2">{t('settings.theme.selectTheme')}</label>
           <button
             onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
             className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
@@ -78,7 +80,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
               </div>
               <span>{currentTheme.name}</span>
               {currentTheme.author && (
-                <span className="text-xs text-muted-foreground">by {currentTheme.author}</span>
+                <span className="text-xs text-muted-foreground">{t('settings.theme.byAuthor', { author: currentTheme.author })}</span>
               )}
             </div>
             <ChevronDown className={`w-4 h-4 transition-transform ${themeDropdownOpen ? 'rotate-180' : ''}`} />
@@ -148,7 +150,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
 
         {/* Quick Theme Buttons */}
         <div>
-          <label className="block text-sm text-muted-foreground mb-2">Quick Select</label>
+          <label className="block text-sm text-muted-foreground mb-2">{t('settings.theme.quickSelect')}</label>
           <div className="grid grid-cols-4 gap-2">
             {['kubestellar', 'batman', 'dracula', 'nord', 'tokyo-night', 'cyberpunk', 'matrix', 'kubestellar-light'].map((tid) => {
               const t = themes.find((th) => th.id === tid)

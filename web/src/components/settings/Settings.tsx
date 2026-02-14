@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
@@ -34,60 +35,63 @@ import {
 } from './sections'
 import { cn } from '../../lib/cn'
 
-const SYNC_DISPLAY: Record<SyncStatus, { icon: typeof CheckCircle; label: string; className: string }> = {
-  idle:    { icon: CheckCircle, label: 'Synced',        className: 'text-muted-foreground' },
-  saving:  { icon: Loader2,     label: 'Saving...',     className: 'text-yellow-400' },
-  saved:   { icon: CheckCircle, label: 'Saved to file', className: 'text-green-400' },
-  error:   { icon: AlertCircle, label: 'Save failed',   className: 'text-red-400' },
-  offline: { icon: WifiOff,     label: 'Local only',    className: 'text-muted-foreground' },
+// Labels are filled at render time via t()
+const SYNC_ICONS: Record<SyncStatus, { icon: typeof CheckCircle; className: string }> = {
+  idle:    { icon: CheckCircle, className: 'text-muted-foreground' },
+  saving:  { icon: Loader2,     className: 'text-yellow-400' },
+  saved:   { icon: CheckCircle, className: 'text-green-400' },
+  error:   { icon: AlertCircle, className: 'text-red-400' },
+  offline: { icon: WifiOff,     className: 'text-muted-foreground' },
 }
 
 // Define settings navigation structure with groups
+// Labels use i18n keys resolved at render time
 const SETTINGS_NAV = [
   {
-    group: 'AI & Intelligence',
+    groupKey: 'settings.groups.aiIntelligence',
     items: [
-      { id: 'ai-mode-settings', label: 'AI Mode', icon: Cpu },
-      { id: 'prediction-settings', label: 'Predictions', icon: TrendingUp },
-      { id: 'agent-settings', label: 'Local Agent', icon: Plug },
-      { id: 'api-keys-settings', label: 'API Keys', icon: Key },
-      { id: 'token-usage-settings', label: 'Token Usage', icon: Coins },
+      { id: 'ai-mode-settings', labelKey: 'settings.nav.aiMode', icon: Cpu },
+      { id: 'prediction-settings', labelKey: 'settings.nav.predictions', icon: TrendingUp },
+      { id: 'agent-settings', labelKey: 'settings.nav.localAgent', icon: Plug },
+      { id: 'api-keys-settings', labelKey: 'settings.nav.apiKeys', icon: Key },
+      { id: 'token-usage-settings', labelKey: 'settings.nav.tokenUsage', icon: Coins },
     ],
   },
   {
-    group: 'Integrations',
+    groupKey: 'settings.groups.integrations',
     items: [
-      { id: 'github-token-settings', label: 'GitHub', icon: Github },
-      { id: 'widget-settings', label: 'Desktop Widget', icon: LayoutGrid },
-      { id: 'persistence-settings', label: 'Deploy Persistence', icon: Database },
+      { id: 'github-token-settings', labelKey: 'settings.nav.github', icon: Github },
+      { id: 'widget-settings', labelKey: 'settings.nav.desktopWidget', icon: LayoutGrid },
+      { id: 'persistence-settings', labelKey: 'settings.nav.deployPersistence', icon: Database },
     ],
   },
   {
-    group: 'User & Alerts',
+    groupKey: 'settings.groups.userAlerts',
     items: [
-      { id: 'profile-settings', label: 'Profile', icon: User },
-      { id: 'notifications-settings', label: 'Notifications', icon: Bell },
+      { id: 'profile-settings', labelKey: 'settings.nav.profile', icon: User },
+      { id: 'notifications-settings', labelKey: 'settings.nav.notifications', icon: Bell },
     ],
   },
   {
-    group: 'Appearance',
+    groupKey: 'settings.groups.appearance',
     items: [
-      { id: 'theme-settings', label: 'Theme', icon: Palette },
-      { id: 'accessibility-settings', label: 'Accessibility', icon: Eye },
+      { id: 'theme-settings', labelKey: 'settings.nav.theme', icon: Palette },
+      { id: 'accessibility-settings', labelKey: 'settings.nav.accessibility', icon: Eye },
     ],
   },
   {
-    group: 'Utilities',
+    groupKey: 'settings.groups.utilities',
     items: [
-      { id: 'settings-backup', label: 'Backup & Sync', icon: HardDrive },
-      { id: 'local-clusters-settings', label: 'Local Clusters', icon: Container },
-      { id: 'permissions-settings', label: 'Permissions', icon: Shield },
-      { id: 'system-updates-settings', label: 'Updates', icon: Download },
+      { id: 'settings-backup', labelKey: 'settings.nav.backupSync', icon: HardDrive },
+      { id: 'local-clusters-settings', labelKey: 'settings.nav.localClusters', icon: Container },
+      { id: 'permissions-settings', labelKey: 'settings.nav.permissions', icon: Shield },
+      { id: 'system-updates-settings', labelKey: 'settings.nav.updates', icon: Download },
     ],
   },
 ]
 
 export function Settings() {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const { user, refreshUser, isLoading: isUserLoading } = useAuth()
@@ -163,32 +167,41 @@ export function Settings() {
     }
   }
 
-  const sync = SYNC_DISPLAY[syncStatus]
+  const SYNC_LABELS: Record<SyncStatus, string> = {
+    idle: t('settings.syncStatus.synced'),
+    saving: t('settings.syncStatus.saving'),
+    saved: t('settings.syncStatus.savedToFile'),
+    error: t('settings.syncStatus.saveFailed'),
+    offline: t('settings.syncStatus.localOnly'),
+  }
+  const sync = SYNC_ICONS[syncStatus]
   const SyncIcon = sync.icon
+  const syncLabel = SYNC_LABELS[syncStatus]
 
   return (
     <div data-testid="settings-page" className="pt-16 max-w-6xl mx-auto flex gap-6">
       {/* Settings restored toast */}
       {showRestoredToast && (
         <div className="fixed top-20 right-4 z-50 bg-green-500/20 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg text-sm shadow-lg backdrop-blur-sm animate-in slide-in-from-right">
-          Settings restored from backup file
+          {t('settings.restoredFromBackup')}
         </div>
       )}
       {/* Sidebar Navigation */}
       <nav className="hidden lg:block w-56 shrink-0">
         <div className="sticky top-20 space-y-4">
           <div className="mb-4">
-            <h1 data-testid="settings-title" className="text-xl font-bold text-foreground">Settings</h1>
-            <p className="text-sm text-muted-foreground">Configure console preferences</p>
+            <h1 data-testid="settings-title" className="text-xl font-bold text-foreground">{t('settings.title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('settings.subtitle')}</p>
             <div className={cn('flex items-center gap-1.5 mt-2 text-xs', sync.className)}>
               <SyncIcon className={cn('w-3.5 h-3.5', syncStatus === 'saving' && 'animate-spin')} />
-              <span>{sync.label}</span>
+              <span>{syncLabel}</span>
             </div>
           </div>
           {SETTINGS_NAV.map((group) => (
-            <div key={group.group}>
+            <div key={group.groupKey}>
               <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 px-2">
-                {group.group}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {t(group.groupKey as any)}
               </h3>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
@@ -206,7 +219,8 @@ export function Settings() {
                       )}
                     >
                       <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-purple-400' : 'text-muted-foreground')} />
-                      <span className="truncate">{item.label}</span>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      <span className="truncate">{t(item.labelKey as any)}</span>
                     </button>
                   )
                 })}
@@ -220,18 +234,18 @@ export function Settings() {
       <div ref={contentRef} className="flex-1 min-w-0">
         {/* Mobile Header */}
         <div className="lg:hidden mb-6">
-          <h1 data-testid="settings-title-mobile" className="text-2xl font-bold text-foreground">Settings</h1>
-          <p className="text-muted-foreground">Configure console preferences and AI usage</p>
+          <h1 data-testid="settings-title-mobile" className="text-2xl font-bold text-foreground">{t('settings.title')}</h1>
+          <p className="text-muted-foreground">{t('settings.subtitle')}</p>
           <div className={cn('flex items-center gap-1.5 mt-2 text-xs', sync.className)}>
             <SyncIcon className={cn('w-3.5 h-3.5', syncStatus === 'saving' && 'animate-spin')} />
-            <span>{sync.label}</span>
+            <span>{syncLabel}</span>
           </div>
         </div>
 
         {/* AI & Intelligence Group */}
         <div className="mb-8">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 px-1">
-            AI & Intelligence
+            {t('settings.groups.aiIntelligence')}
           </h2>
           <div className="space-y-6">
             <AISettingsSection mode={mode} setMode={setMode} description={description} />
@@ -249,7 +263,7 @@ export function Settings() {
         {/* Integrations Group */}
         <div className="mb-8">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 px-1">
-            Integrations
+            {t('settings.groups.integrations')}
           </h2>
           <div className="space-y-6">
             <GitHubTokenSection forceVersionCheck={forceVersionCheck} />
@@ -261,7 +275,7 @@ export function Settings() {
         {/* User & Alerts Group */}
         <div className="mb-8">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 px-1">
-            User & Alerts
+            {t('settings.groups.userAlerts')}
           </h2>
           <div className="space-y-6">
             <ProfileSection
@@ -277,7 +291,7 @@ export function Settings() {
         {/* Appearance Group */}
         <div className="mb-8">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 px-1">
-            Appearance
+            {t('settings.groups.appearance')}
           </h2>
           <div className="space-y-6">
             <ThemeSection
@@ -300,7 +314,7 @@ export function Settings() {
         {/* Utilities Group */}
         <div className="mb-8">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 px-1">
-            Utilities
+            {t('settings.groups.utilities')}
           </h2>
           <div className="space-y-6">
             <SettingsBackupSection

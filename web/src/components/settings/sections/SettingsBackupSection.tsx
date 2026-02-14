@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { HardDrive, Check, Loader2, AlertCircle, WifiOff, Download, Upload, Shield } from 'lucide-react'
 import type { SyncStatus } from '../../../hooks/usePersistedSettings'
 
@@ -37,6 +38,7 @@ export function SettingsBackupSection({
   onExport,
   onImport,
 }: SettingsBackupSectionProps) {
+  const { t } = useTranslation()
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
@@ -72,7 +74,7 @@ export function SettingsBackupSection({
       setImportSuccess(true)
       setTimeout(() => setImportSuccess(false), 3000)
     } catch {
-      setImportError('Failed to import settings. Check that the file is a valid backup.')
+      setImportError(t('settings.backup.importFailed'))
     } finally {
       setImporting(false)
       // Reset file input so the same file can be re-selected
@@ -87,8 +89,8 @@ export function SettingsBackupSection({
           <HardDrive className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">Backup & Sync</h2>
-          <p className="text-sm text-muted-foreground">Settings persisted to disk — survives cache clears and upgrades</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.backup.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.backup.subtitle')}</p>
         </div>
       </div>
 
@@ -107,14 +109,14 @@ export function SettingsBackupSection({
             </div>
             <div className="flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">AES-256 encrypted</span>
+              <span className="text-xs text-muted-foreground">{t('settings.backup.encrypted')}</span>
             </div>
           </div>
         </div>
 
         {/* File Path */}
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-muted-foreground">File location</span>
+          <span className="text-xs text-muted-foreground">{t('settings.backup.fileLocation')}</span>
           <code className="text-xs text-muted-foreground font-mono bg-secondary/50 px-2 py-0.5 rounded">
             {filePath}
           </code>
@@ -132,7 +134,7 @@ export function SettingsBackupSection({
             ) : (
               <Download className="w-4 h-4" />
             )}
-            Export Backup
+            {t('settings.backup.exportBackup')}
           </button>
           <button
             onClick={handleImportClick}
@@ -144,7 +146,7 @@ export function SettingsBackupSection({
             ) : (
               <Upload className="w-4 h-4" />
             )}
-            Import Backup
+            {t('settings.backup.importBackup')}
           </button>
           <input
             ref={fileInputRef}
@@ -160,14 +162,12 @@ export function SettingsBackupSection({
           <p className="text-xs text-red-400 px-1">{importError}</p>
         )}
         {importSuccess && (
-          <p className="text-xs text-green-400 px-1">Settings imported successfully</p>
+          <p className="text-xs text-green-400 px-1">{t('settings.backup.importSuccess')}</p>
         )}
 
         {/* Info text */}
         <p className="text-xs text-muted-foreground/70 px-1">
-          API keys, tokens, and credentials are AES-256-GCM encrypted at rest.
-          Non-sensitive preferences (theme, AI mode) are stored in plaintext for easy reading.
-          Exported backups retain encryption — they can only be imported on machines with the same encryption key.
+          {t('settings.backup.securityNote')}
         </p>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Save, Coins, RefreshCw } from 'lucide-react'
 import type { TokenUsage } from '../../../hooks/useTokenUsage'
 
@@ -9,6 +10,7 @@ interface TokenUsageSectionProps {
 }
 
 export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUsageSectionProps) {
+  const { t } = useTranslation()
   const [tokenLimit, setTokenLimit] = useState(usage.limit)
   const [warningThreshold, setWarningThreshold] = useState(usage.warningThreshold * 100)
   const [criticalThreshold, setCriticalThreshold] = useState(usage.criticalThreshold * 100)
@@ -32,8 +34,8 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUs
             <Coins className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h2 className="text-lg font-medium text-foreground">Token Usage</h2>
-            <p className="text-sm text-muted-foreground">Configure AI token limits and alerts</p>
+            <h2 className="text-lg font-medium text-foreground">{t('settings.tokens.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('settings.tokens.subtitle')}</p>
           </div>
         </div>
         <button
@@ -41,7 +43,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUs
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50"
         >
           <RefreshCw className="w-4 h-4" />
-          Reset Usage
+          {t('settings.tokens.resetUsage')}
         </button>
       </div>
 
@@ -49,9 +51,9 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUs
         {/* Current usage */}
         <div className="p-4 rounded-lg bg-secondary/30">
           <div className="flex justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Current Usage</span>
+            <span className="text-sm text-muted-foreground">{t('settings.tokens.currentUsage')}</span>
             <span className="text-sm font-mono text-foreground">
-              {usage.used.toLocaleString()} / {usage.limit.toLocaleString()} tokens
+              {usage.used.toLocaleString()} / {usage.limit.toLocaleString()} {t('settings.tokens.tokensLabel')}
             </span>
           </div>
           <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -65,7 +67,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUs
         {/* Settings */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="token-limit" className="block text-sm text-muted-foreground mb-1">Monthly Limit</label>
+            <label htmlFor="token-limit" className="block text-sm text-muted-foreground mb-1">{t('settings.tokens.monthlyLimit')}</label>
             <input
               id="token-limit"
               type="number"
@@ -76,7 +78,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUs
             />
           </div>
           <div>
-            <label htmlFor="warning-threshold" className="block text-sm text-muted-foreground mb-1">Warning at (%)</label>
+            <label htmlFor="warning-threshold" className="block text-sm text-muted-foreground mb-1">{t('settings.tokens.warningAt')}</label>
             <input
               id="warning-threshold"
               type="number"
@@ -89,7 +91,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUs
             />
           </div>
           <div>
-            <label htmlFor="critical-threshold" className="block text-sm text-muted-foreground mb-1">Critical at (%)</label>
+            <label htmlFor="critical-threshold" className="block text-sm text-muted-foreground mb-1">{t('settings.tokens.criticalAt')}</label>
             <input
               id="critical-threshold"
               type="number"
@@ -108,7 +110,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage }: TokenUs
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
         >
           <Save className="w-4 h-4" />
-          {saved ? 'Saved!' : 'Save Token Settings'}
+          {saved ? t('settings.tokens.saved') : t('settings.tokens.saveSettings')}
         </button>
       </div>
     </div>
