@@ -308,6 +308,7 @@ function LoadingState({
 
 /**
  * Icon lookup map for common icon names
+ * Supports kebab-case icon names (e.g., 'info', 'alert-triangle', 'check-circle')
  */
 const ICON_MAP: Record<string, LucideIcon> = {
   info: Info,
@@ -319,7 +320,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 /**
- * Get icon component by name
+ * Get icon component by name (case-insensitive, kebab-case format)
  */
 function getIconComponent(iconName?: string): LucideIcon {
   if (!iconName?.trim()) return Info
