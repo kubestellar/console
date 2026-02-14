@@ -20,7 +20,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Synchronous fallback prevents flash during React transitions
   const isDemoMode = isDemoModeHook || getDemoMode()
   const [isOpen, setIsOpen] = useState(false)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // CLI-based agents (bob, claude-code) should be hidden when not available
@@ -222,7 +222,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           <div className="border-t border-border">
             <button
               onClick={() => {
-                setShowSettingsModal(true)
+                setIsSettingsOpen(true)
                 setIsOpen(false)
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -234,7 +234,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         </div>
       )}
     </div>
-    {!isDemoMode && <APIKeySettings isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />}
+    {!isDemoMode && <APIKeySettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />}
     </>
   )
 }

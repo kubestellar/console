@@ -213,7 +213,7 @@ export function StatsOverview({
   showConfigButton = true,
 }: StatsOverviewProps) {
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType, configKey)
-  const [showConfig, setShowConfig] = useState(false)
+  const [isConfigOpen, setIsConfigOpen] = useState(false)
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
 
@@ -269,7 +269,7 @@ export function StatsOverview({
       {/* Configure button */}
       {showConfigButton && (
         <button
-          onClick={() => setShowConfig(true)}
+          onClick={() => setIsConfigOpen(true)}
           className="absolute -top-8 right-0 p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
           title="Configure stats"
         >
@@ -308,8 +308,8 @@ export function StatsOverview({
 
       {/* Config modal */}
       <StatsConfigModal
-        isOpen={showConfig}
-        onClose={() => setShowConfig(false)}
+        isOpen={isConfigOpen}
+        onClose={() => setIsConfigOpen(false)}
         blocks={blocks}
         onSave={saveBlocks}
         defaultBlocks={defaultBlocks}

@@ -164,7 +164,7 @@ export function StatsOverview({
   // Show skeleton during mode switching for smooth transitions
   const effectiveIsLoading = isLoading || forceLoadingForOffline || isModeSwitching
   const effectiveHasData = forceLoadingForOffline ? false : hasData
-  const [showConfig, setShowConfig] = useState(false)
+  const [isConfigOpen, setIsConfigOpen] = useState(false)
 
   // Manage collapsed state with localStorage persistence
   const storageKey = collapsedStorageKey || `kubestellar-${dashboardType}-stats-collapsed`
@@ -229,7 +229,7 @@ export function StatsOverview({
         </div>
         {showConfigButton && isExpanded && (
           <button
-            onClick={() => setShowConfig(true)}
+            onClick={() => setIsConfigOpen(true)}
             className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
             title="Configure stats"
           >
@@ -260,8 +260,8 @@ export function StatsOverview({
 
       {/* Config modal */}
       <StatsConfigModal
-        isOpen={showConfig}
-        onClose={() => setShowConfig(false)}
+        isOpen={isConfigOpen}
+        onClose={() => setIsConfigOpen(false)}
         blocks={blocks}
         onSave={saveBlocks}
         defaultBlocks={defaultBlocks}
