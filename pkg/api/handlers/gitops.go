@@ -546,10 +546,23 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	}
 	operatorCacheMu.RUnlock()
 
-	// Cache miss — fetch from cluster
-	operators := h.fetchOperatorsFromCluster(ctx, cluster)
+	// Cache miss — fetch from cluster with retry for transient errors
+	operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
+	if err != nil {
+		// Retry once for transient errors (HTTP/2 stream errors, connection resets)
+		if ctx.Err() == nil {
+			log.Printf("Retrying operator fetch for cluster %s after transient error", cluster)
+			time.Sleep(2 * time.Second)
+			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+		}
+	}
 
-	// Store in cache (even empty results, to avoid re-querying clusters with no OLM)
+	if err != nil {
+		// Fetch failed — do NOT cache so next request retries
+		return []Operator{}
+	}
+
+	// Store in cache (including empty results for clusters without OLM)
 	operatorCacheMu.Lock()
 	operatorCacheData[cacheKey] = &operatorCacheEntry{
 		operators: operators,
@@ -561,10 +574,11 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 }
 
 // fetchOperatorsFromCluster queries a cluster for CSVs using kubectl -o json.
+// Returns (operators, nil) on success or (nil, error) on failure.
 // This is slow for large clusters (90-180s for 1000+ CSVs) but the result is
 // cached by getOperatorsForCluster.
-func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster string) []Operator {
-	args := []string{"get", "csv", "-A", "-o", "json"}
+func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster string) ([]Operator, error) {
+	args := []string{"get", "csv", "-A", "-o", "json", "--request-timeout=0"}
 	if cluster != "" {
 		args = append([]string{"--context", cluster}, args...)
 	}
@@ -580,7 +594,7 @@ func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster 
 		} else {
 			log.Printf("kubectl get csv timed out for cluster %s", cluster)
 		}
-		return []Operator{}
+		return nil, err
 	}
 
 	// Parse only the fields we need from the JSON output
@@ -602,7 +616,7 @@ func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster 
 
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		log.Printf("failed to parse operators JSON for cluster %s: %v", cluster, err)
-		return []Operator{}
+		return nil, err
 	}
 
 	operators := make([]Operator, 0, len(result.Items))
@@ -621,7 +635,7 @@ func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster 
 		})
 	}
 
-	return operators
+	return operators, nil
 }
 
 // ListOperatorSubscriptions returns OLM subscriptions across clusters
