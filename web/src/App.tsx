@@ -56,6 +56,7 @@ const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ defa
 const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
 const AIAgents = lazy(() => import('./components/aiagents/AIAgents').then(m => ({ default: m.AIAgents })))
 const LLMdBenchmarks = lazy(() => import('./components/llmd-benchmarks/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
+const ClusterAdmin = lazy(() => import('./components/cluster-admin/ClusterAdmin').then(m => ({ default: m.ClusterAdmin })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
 const Marketplace = lazy(() => import('./components/marketplace/Marketplace').then(m => ({ default: m.Marketplace })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
@@ -99,6 +100,7 @@ if (typeof window !== 'undefined') {
       () => import('./components/aiml/AIML'),
       () => import('./components/aiagents/AIAgents'),
       () => import('./components/llmd-benchmarks/LLMdBenchmarks'),
+      () => import('./components/cluster-admin/ClusterAdmin'),
       () => import('./components/cicd/CICD'),
       () => import('./components/marketplace/Marketplace'),
     ]
@@ -585,6 +587,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                   <LLMdBenchmarks />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cluster-admin"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                  <ClusterAdmin />
               </Layout>
             </ProtectedRoute>
           }

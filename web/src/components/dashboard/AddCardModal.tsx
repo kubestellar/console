@@ -51,6 +51,20 @@ function wrapAbbreviations(text: string): ReactNode {
 
 // Card catalog - all available cards organized by category
 const CARD_CATALOG = {
+  'Cluster Admin': [
+    { type: 'control_plane_health', title: 'Control Plane Health', description: 'API server, scheduler, controller manager, etcd status per cluster', visualization: 'status' },
+    { type: 'predictive_health', title: 'Predictive Health', description: 'AI-powered resource exhaustion predictions and trend analysis', visualization: 'timeseries' },
+    { type: 'node_debug', title: 'Node Debug', description: 'Run diagnostics on nodes — disk, memory, network, and process checks', visualization: 'table' },
+    { type: 'node_conditions', title: 'Node Conditions', description: 'DiskPressure, MemoryPressure, PIDPressure with cordon/uncordon/drain actions', visualization: 'table' },
+    { type: 'admission_webhooks', title: 'Admission Webhooks', description: 'Mutating and validating webhook inventory with failure policies', visualization: 'table' },
+    { type: 'dns_health', title: 'DNS Health', description: 'CoreDNS pod status and health across clusters', visualization: 'status' },
+    { type: 'etcd_status', title: 'etcd Status', description: 'etcd member health, version, and restart counts', visualization: 'status' },
+    { type: 'network_policies', title: 'Network Policies', description: 'Network policy coverage analysis by namespace', visualization: 'donut' },
+    { type: 'rbac_explorer', title: 'RBAC Explorer', description: 'Cross-cluster RBAC risk analysis — find over-privileged accounts', visualization: 'table' },
+    { type: 'maintenance_windows', title: 'Maintenance Windows', description: 'Schedule and track cluster maintenance windows', visualization: 'events' },
+    { type: 'cluster_changelog', title: 'Cluster Changelog', description: 'Audit trail of changes across clusters from events', visualization: 'events' },
+    { type: 'quota_heatmap', title: 'Quota Heatmap', description: 'Resource quota usage heatmap across namespaces', visualization: 'gauge' },
+  ],
   'Cluster Health': [
     { type: 'cluster_health', title: 'Cluster Health', description: 'Health status of all clusters', visualization: 'status' },
     { type: 'cluster_metrics', title: 'Cluster Metrics', description: 'CPU, memory, and pod metrics over time', visualization: 'timeseries' },

@@ -35,6 +35,7 @@ export type DashboardStatsType =
   | 'operators'
   | 'deploy'
   | 'ai-agents'
+  | 'cluster-admin'
 
 /**
  * Default stat blocks for the Clusters dashboard
@@ -284,6 +285,20 @@ export const KAGENTI_STAT_BLOCKS: StatBlockConfig[] = [
 ]
 
 /**
+ * Default stat blocks for the Cluster Admin dashboard
+ */
+export const CLUSTER_ADMIN_STAT_BLOCKS: StatBlockConfig[] = [
+  { id: 'clusters', name: 'Clusters', icon: 'Server', visible: true, color: 'purple' },
+  { id: 'healthy', name: 'Healthy', icon: 'CheckCircle2', visible: true, color: 'green' },
+  { id: 'degraded', name: 'Degraded', icon: 'AlertTriangle', visible: true, color: 'orange' },
+  { id: 'offline', name: 'Offline', icon: 'WifiOff', visible: true, color: 'red' },
+  { id: 'nodes', name: 'Nodes', icon: 'Box', visible: true, color: 'cyan' },
+  { id: 'warnings', name: 'Warnings', icon: 'AlertCircle', visible: true, color: 'yellow' },
+  { id: 'pod_issues', name: 'Pod Issues', icon: 'AlertOctagon', visible: true, color: 'red' },
+  { id: 'alerts_firing', name: 'Alerts', icon: 'Bell', visible: true, color: 'orange' },
+]
+
+/**
  * Get all stat blocks across all dashboard types
  */
 export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
@@ -305,6 +320,7 @@ export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
     ...OPERATORS_STAT_BLOCKS,
     ...DEPLOY_STAT_BLOCKS,
     ...KAGENTI_STAT_BLOCKS,
+    ...CLUSTER_ADMIN_STAT_BLOCKS,
   ]
 
   // Deduplicate by ID
@@ -368,6 +384,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return DEPLOY_STAT_BLOCKS
     case 'ai-agents':
       return AI_AGENTS_STAT_BLOCKS
+    case 'cluster-admin':
+      return CLUSTER_ADMIN_STAT_BLOCKS
     default:
       return []
   }

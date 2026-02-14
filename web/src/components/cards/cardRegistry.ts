@@ -171,6 +171,21 @@ const KagentiSecurity = lazy(() => _kagentiBundle.then(m => ({ default: m.Kagent
 const KagentiSecurityPosture = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurityPosture })))
 const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiTopology })))
 
+// Cluster admin cards — share one chunk via barrel import
+const _clusterAdminBundle = import('./cluster-admin-bundle')
+const PredictiveHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.PredictiveHealth })))
+const NodeDebug = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NodeDebug })))
+const ControlPlaneHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.ControlPlaneHealth })))
+const NodeConditions = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NodeConditions })))
+const AdmissionWebhooks = lazy(() => _clusterAdminBundle.then(m => ({ default: m.AdmissionWebhooks })))
+const DNSHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.DNSHealth })))
+const EtcdStatus = lazy(() => _clusterAdminBundle.then(m => ({ default: m.EtcdStatus })))
+const NetworkPolicyCoverage = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NetworkPolicyCoverage })))
+const RBACExplorer = lazy(() => _clusterAdminBundle.then(m => ({ default: m.RBACExplorer })))
+const MaintenanceWindows = lazy(() => _clusterAdminBundle.then(m => ({ default: m.MaintenanceWindows })))
+const ClusterChangelog = lazy(() => _clusterAdminBundle.then(m => ({ default: m.ClusterChangelog })))
+const QuotaHeatmap = lazy(() => _clusterAdminBundle.then(m => ({ default: m.QuotaHeatmap })))
+
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
 
@@ -374,6 +389,20 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kagenti_security_posture: KagentiSecurityPosture,
   kagenti_topology: KagentiTopology,
 
+  // Cluster admin cards
+  predictive_health: PredictiveHealth,
+  node_debug: NodeDebug,
+  control_plane_health: ControlPlaneHealth,
+  node_conditions: NodeConditions,
+  admission_webhooks: AdmissionWebhooks,
+  dns_health: DNSHealth,
+  etcd_status: EtcdStatus,
+  network_policies: NetworkPolicyCoverage,
+  rbac_explorer: RBACExplorer,
+  maintenance_windows: MaintenanceWindows,
+  cluster_changelog: ClusterChangelog,
+  quota_heatmap: QuotaHeatmap,
+
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
   kvcache_monitor: KVCacheMonitor,
@@ -476,6 +505,10 @@ export const DEMO_DATA_CARDS = new Set([
   // LLM-d benchmark dashboard cards — all now use live data via useCachedBenchmarkReports()
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
+  // Cluster admin cards - demo until backend endpoints exist
+  'admission_webhooks',
+  'etcd_status',
+  'rbac_explorer',
   // Kagenti cards - demo until kagenti-operator is installed on clusters
   'kagenti_status',
   'kagenti_agent_fleet',
@@ -516,6 +549,9 @@ export const DEMO_EXEMPT_CARDS = new Set([
   'kube_craft',
   'kube_doom',
   'dynamic_card',
+  // Cluster admin cards - no demo/live concept
+  'maintenance_windows',
+  'node_debug',
 ])
 
 /**
@@ -645,6 +681,19 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   throughput_comparison: () => import('./llmd'),
   performance_timeline: () => import('./llmd'),
   resource_utilization: () => import('./llmd'),
+  // Cluster admin — all share one chunk via barrel
+  predictive_health: () => import('./cluster-admin-bundle'),
+  node_debug: () => import('./cluster-admin-bundle'),
+  control_plane_health: () => import('./cluster-admin-bundle'),
+  node_conditions: () => import('./cluster-admin-bundle'),
+  admission_webhooks: () => import('./cluster-admin-bundle'),
+  dns_health: () => import('./cluster-admin-bundle'),
+  etcd_status: () => import('./cluster-admin-bundle'),
+  network_policies: () => import('./cluster-admin-bundle'),
+  rbac_explorer: () => import('./cluster-admin-bundle'),
+  maintenance_windows: () => import('./cluster-admin-bundle'),
+  cluster_changelog: () => import('./cluster-admin-bundle'),
+  quota_heatmap: () => import('./cluster-admin-bundle'),
   // Kagenti AI Agents — all share one chunk via barrel
   kagenti_status: () => import('./KagentiStatusCard'),
   kagenti_agent_fleet: () => import('./kagenti'),
@@ -748,6 +797,14 @@ export const LIVE_DATA_CARDS = new Set([
   'cluster_health_monitor',
   // Nightly E2E status card
   'nightly_e2e_status',
+  // Cluster admin cards with live data
+  'control_plane_health',
+  'node_conditions',
+  'dns_health',
+  'network_policies',
+  'cluster_changelog',
+  'predictive_health',
+  'quota_heatmap',
   // Kagenti AI agent cards
   'kagenti_status',
   'kagenti_agent_fleet',
@@ -831,6 +888,20 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   throughput_comparison: 12,
   performance_timeline: 12,
   resource_utilization: 12,
+
+  // Cluster admin cards
+  predictive_health: 8,
+  node_debug: 6,
+  control_plane_health: 4,
+  node_conditions: 6,
+  admission_webhooks: 6,
+  dns_health: 4,
+  etcd_status: 4,
+  network_policies: 6,
+  rbac_explorer: 6,
+  maintenance_windows: 6,
+  cluster_changelog: 6,
+  quota_heatmap: 8,
 
   // Event dashboard cards
   event_summary: 6,

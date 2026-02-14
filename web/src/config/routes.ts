@@ -57,6 +57,9 @@ export const ROUTES = {
   AI_ML: '/ai-ml',
   CI_CD: '/ci-cd',
   
+  // Persona dashboards
+  CLUSTER_ADMIN: '/cluster-admin',
+
   // Marketplace
   MARKETPLACE: '/marketplace',
 
