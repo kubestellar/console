@@ -244,7 +244,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
               onClick={e => e.stopPropagation()}
             >
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                Login Required
+                {t('feedback.loginRequired')}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Please login with GitHub to submit feedback, request updates, or close requests.
@@ -260,7 +260,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   onClick={handleLoginRedirect}
                   className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors"
                 >
-                  Login with GitHub
+                  {t('feedback.loginWithGitHub')}
                 </button>
               </div>
             </div>
@@ -272,11 +272,11 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
       <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-foreground">
-            Feedback
+            {t('feedback.feedback')}
           </h2>
           {!canPerformActions && (
             <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/20 text-amber-400 uppercase tracking-wider">
-              Demo
+              {t('feedback.demo')}
             </span>
           )}
         </div>
@@ -299,7 +299,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Submit Feedback
+              {t('feedback.submit')}
             </button>
             <button
               onClick={() => setActiveTab('updates')}
@@ -309,7 +309,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Updates
+              {t('feedback.updates')}
               {unreadCount > 0 && (
                 <span className="min-w-5 h-5 px-1 text-xs rounded-full bg-purple-500 text-white flex items-center justify-center">
                   {unreadCount}
@@ -348,7 +348,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Queue ({requests.length})
+                  {t('feedback.queue')} ({requests.length})
                 </button>
                 <button
                   onClick={() => setUpdatesSubTab('activity')}
@@ -358,7 +358,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Activity
+                  {t('feedback.activity')}
                   {unreadCount > 0 && (
                     <span className="min-w-4 h-4 px-1 text-[10px] rounded-full bg-purple-500 text-white flex items-center justify-center">
                       {unreadCount}
@@ -799,7 +799,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                 <Sparkles className="w-6 h-6 text-green-400" />
               </div>
               <h3 className="text-lg font-medium text-foreground mb-2">
-                Request Submitted!
+                {t('feedback.requestSubmitted')}
               </h3>
               <p className="text-sm text-muted-foreground mb-2">
                 Your request has been submitted for review.
@@ -835,7 +835,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                     }`}
                   >
                     <Bug className="w-4 h-4" />
-                    Bug Report
+                    {t('feedback.bugReport')}
                   </button>
                   <button
                     type="button"
@@ -847,7 +847,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                     }`}
                   >
                     <Sparkles className="w-4 h-4" />
-                    Feature Request
+                    {t('feedback.featureRequest')}
                   </button>
                 </div>
 
@@ -932,7 +932,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Submitting...
+                    {t('feedback.submitting')}
                   </>
                 ) : (
                   'Submit'

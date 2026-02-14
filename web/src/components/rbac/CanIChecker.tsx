@@ -88,7 +88,7 @@ const COMMON_RESOURCES = [
 ]
 
 export function CanIChecker() {
-  const { t } = useTranslation()
+  const { t } = useTranslation('common')
   const { clusters: rawClusters } = useClusters()
   const clusters = rawClusters.map(c => c.name)
   const { checkPermission, checking, result, error, reset } = useCanI()
@@ -178,8 +178,8 @@ export function CanIChecker() {
           <Shield className="w-5 h-5 text-blue-400" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">Permission Checker</h2>
-          <p className="text-sm text-muted-foreground">Check if you can perform actions on cluster resources</p>
+          <h2 className="text-lg font-medium text-foreground">{t('rbac.permissionChecker')}</h2>
+          <p className="text-sm text-muted-foreground">{t('rbac.permissionCheckerDesc')}</p>
         </div>
       </div>
 
@@ -187,7 +187,7 @@ export function CanIChecker() {
         {/* Cluster Selection */}
         <div>
           <label htmlFor="cluster-select" className="block text-sm font-medium text-foreground mb-1">
-            Cluster
+            {t('rbac.cluster')}
           </label>
           <div className="relative">
             <select
@@ -208,7 +208,7 @@ export function CanIChecker() {
         {/* Verb Selection */}
         <div>
           <label htmlFor="verb-select" className="block text-sm font-medium text-foreground mb-1">
-            Action (Verb)
+            {t('rbac.actionVerb')}
           </label>
           <div className="relative">
             <select
@@ -221,7 +221,7 @@ export function CanIChecker() {
               {COMMON_VERBS.map((v) => (
                 <option key={v} value={v}>{v}</option>
               ))}
-              <option value="custom">Custom...</option>
+              <option value="custom">{t('rbac.custom')}</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>
@@ -230,7 +230,7 @@ export function CanIChecker() {
               type="text"
               value={customVerb}
               onChange={(e) => setCustomVerb(e.target.value)}
-              placeholder="Enter custom verb"
+              placeholder={t('rbac.enterCustomVerb')}
               className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
               data-testid="can-i-custom-verb"
             />
@@ -240,7 +240,7 @@ export function CanIChecker() {
         {/* Resource Selection */}
         <div>
           <label htmlFor="resource-select" className="block text-sm font-medium text-foreground mb-1">
-            Resource
+            {t('rbac.resource')}
           </label>
           <div className="relative">
             <select
@@ -253,7 +253,7 @@ export function CanIChecker() {
               {COMMON_RESOURCES.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
-              <option value="custom">Custom...</option>
+              <option value="custom">{t('rbac.custom')}</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>
@@ -262,7 +262,7 @@ export function CanIChecker() {
               type="text"
               value={customResource}
               onChange={(e) => setCustomResource(e.target.value)}
-              placeholder="Enter custom resource"
+              placeholder={t('rbac.enterCustomResource')}
               className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
               data-testid="can-i-custom-resource"
             />
@@ -272,7 +272,7 @@ export function CanIChecker() {
         {/* Namespace (optional) */}
         <div>
           <label htmlFor="namespace-select" className="block text-sm font-medium text-foreground mb-1">
-            Namespace <span className="text-muted-foreground">(optional, leave empty for cluster-scoped)</span>
+            {t('rbac.namespace')} <span className="text-muted-foreground">{t('rbac.namespaceHint')}</span>
           </label>
           <div className="relative">
             <select
@@ -282,7 +282,7 @@ export function CanIChecker() {
               className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-namespace"
             >
-              <option value="">All namespaces (cluster-scoped)</option>
+              <option value="">{t('rbac.allNamespacesClusterScoped')}</option>
               {availableNamespaces.map((ns) => (
                 <option key={ns} value={ns}>{ns}</option>
               ))}
@@ -290,14 +290,14 @@ export function CanIChecker() {
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>
           {availableNamespaces.length === 0 && selectedCluster && (
-            <p className="mt-1 text-xs text-muted-foreground">Loading namespaces...</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('rbac.loadingNamespaces')}</p>
           )}
         </div>
 
         {/* API Group - dropdown with common groups */}
         <div>
           <label htmlFor="api-group-select" className="block text-sm font-medium text-foreground mb-1">
-            API Group <span className="text-muted-foreground">(auto-detected for common resources)</span>
+            {t('rbac.apiGroup')} <span className="text-muted-foreground">{t('rbac.apiGroupHint')}</span>
           </label>
           <div className="relative">
             <select
@@ -309,14 +309,14 @@ export function CanIChecker() {
             >
               <option value="">
                 {resource !== 'custom' && RESOURCE_API_GROUPS[resource] !== undefined
-                  ? `Auto-detect: ${RESOURCE_API_GROUPS[resource] || '(core API)'}`
-                  : 'Auto-detect from resource'
+                  ? `${t('rbac.autoDetect')}: ${RESOURCE_API_GROUPS[resource] || t('rbac.coreAPI')}`
+                  : t('rbac.autoDetectFromResource')
                 }
               </option>
               {COMMON_API_GROUPS.map((group) => (
                 <option key={group.value || 'core'} value={group.value}>{group.label}</option>
               ))}
-              <option value="custom">Custom...</option>
+              <option value="custom">{t('rbac.custom')}</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>
@@ -325,7 +325,7 @@ export function CanIChecker() {
               type="text"
               value={customApiGroup}
               onChange={(e) => setCustomApiGroup(e.target.value)}
-              placeholder="Enter custom API group"
+              placeholder={t('rbac.enterCustomApiGroup')}
               className="mt-2 w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
               data-testid="can-i-custom-api-group"
             />
@@ -335,7 +335,7 @@ export function CanIChecker() {
         {/* User Groups - multi-select dropdown for OpenShift and RBAC */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            User Groups <span className="text-muted-foreground">(optional, for group-based RBAC)</span>
+            {t('rbac.userGroups')} <span className="text-muted-foreground">{t('rbac.userGroupsHint')}</span>
           </label>
 
           {/* Selected groups display */}
@@ -398,11 +398,11 @@ export function CanIChecker() {
               disabled={!customUserGroup.trim()}
               className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add
+              {t('rbac.add')}
             </button>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add groups to check permissions via group bindings (common in OpenShift)
+            {t('rbac.addGroupsDesc')}
           </p>
         </div>
 
@@ -412,7 +412,7 @@ export function CanIChecker() {
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          {showAdvanced ? '- Hide' : '+ Show'} advanced options
+          {showAdvanced ? t('rbac.hideAdvanced') : t('rbac.showAdvanced')}
         </button>
 
         {showAdvanced && (
@@ -439,12 +439,12 @@ export function CanIChecker() {
             {checking ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Checking...
+                {t('rbac.checking')}
               </>
             ) : (
               <>
                 <Shield className="w-4 h-4" />
-                Check Permission
+                {t('rbac.checkPermission')}
               </>
             )}
           </button>
@@ -454,7 +454,7 @@ export function CanIChecker() {
               className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors"
               data-testid="can-i-reset"
             >
-              Reset
+              {t('rbac.reset')}
             </button>
           )}
         </div>
@@ -473,22 +473,22 @@ export function CanIChecker() {
               {result.allowed ? (
                 <>
                   <Check className="w-5 h-5 text-green-500" />
-                  <span className="font-medium text-green-500">Allowed</span>
+                  <span className="font-medium text-green-500">{t('rbac.allowed')}</span>
                 </>
               ) : (
                 <>
                   <X className="w-5 h-5 text-red-500" />
-                  <span className="font-medium text-red-500">Denied</span>
+                  <span className="font-medium text-red-500">{t('rbac.denied')}</span>
                 </>
               )}
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              You {result.allowed ? 'can' : 'cannot'}{' '}
+              {t(result.allowed ? 'rbac.youCan' : 'rbac.youCannot')}{' '}
               <code className="px-1 py-0.5 rounded bg-secondary">{verb === 'custom' ? customVerb : verb}</code>{' '}
               <code className="px-1 py-0.5 rounded bg-secondary">{resource === 'custom' ? customResource : resource}</code>
               {namespace && (
                 <>
-                  {' '}in namespace <code className="px-1 py-0.5 rounded bg-secondary">{namespace}</code>
+                  {' '}{t('rbac.inNamespace')} <code className="px-1 py-0.5 rounded bg-secondary">{namespace}</code>
                 </>
               )}
             </p>
@@ -514,10 +514,10 @@ export function CanIChecker() {
           <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-yellow-500" />
-              <span className="font-medium text-yellow-500">No clusters available</span>
+              <span className="font-medium text-yellow-500">{t('rbac.noClustersAvailable')}</span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Connect to a cluster to check permissions.
+              {t('rbac.connectToCluster')}
             </p>
           </div>
         )}

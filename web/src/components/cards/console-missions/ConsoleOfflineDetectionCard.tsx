@@ -213,7 +213,7 @@ function generatePredictionId(type: string, name: string, cluster?: string): str
 
 // Card 4: Predictive Health Monitor - Detect issues, predict failures, group by root cause
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { startMission, missions } = useMissions()
   const { nodes: gpuNodes, isLoading } = useGPUNodes()
   const { issues: podIssues } = usePodIssues()
@@ -862,7 +862,7 @@ Please:
         >
           <div className="text-xl font-bold text-foreground">{offlineNodes.length}</div>
           <div className={cn('text-[10px]', offlineNodes.length > 0 ? 'text-red-400' : 'text-green-400')}>
-            Offline
+            {t('cards:consoleOfflineDetection.offline')}
           </div>
         </div>
         <div
@@ -881,7 +881,7 @@ Please:
         >
           <div className="text-xl font-bold text-foreground">{gpuIssues.length}</div>
           <div className={cn('text-[10px]', gpuIssues.length > 0 ? 'text-yellow-400' : 'text-green-400')}>
-            GPU Issues
+            {t('cards:consoleOfflineDetection.gpuIssues')}
           </div>
         </div>
         <div
@@ -921,7 +921,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
             'text-[10px] flex items-center gap-1',
             totalPredicted > 0 ? 'text-blue-400' : 'text-green-400'
           )}>
-            Predicted
+            {t('cards:consoleOfflineDetection.predicted')}
             <Info className="w-3 h-3 opacity-60" />
           </div>
         </div>
@@ -959,7 +959,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
         <CardSearchInput
           value={search}
           onChange={setSearch}
-          placeholder={t('common.searchIssues')}
+          placeholder={t('common:common.searchIssues')}
           className="flex-1"
         />
         {/* View mode toggle - only show if there are grouped items */}
@@ -1111,7 +1111,7 @@ TASK:
             {rootCauseGroups.length === 0 && (
               <div className="flex items-center justify-center h-full text-sm text-muted-foreground py-4">
                 <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
-                {search || localClusterFilter.length > 0 ? 'No matching items' : 'All nodes & GPUs healthy'}
+                {search || localClusterFilter.length > 0 ? t('common:common.noMatchingItems') : t('cards:consoleOfflineDetection.allHealthy')}
               </div>
             )}
           </>
@@ -1142,14 +1142,14 @@ TASK:
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium text-foreground truncate">{node.name}</span>
                     <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-red-500/20 text-red-400 rounded">
-                      {rootCause?.cause || 'Offline'}
+                      {rootCause?.cause || t('cards:consoleOfflineDetection.offline')}
                     </span>
                     {node.cluster && (
                       <ClusterBadge cluster={node.cluster} size="sm" />
                     )}
                   </div>
                   <div className="text-red-400 truncate mt-0.5">
-                    {rootCause?.details || (node.unschedulable ? 'Cordoned' : node.status)}
+                    {rootCause?.details || (node.unschedulable ? t('common:common.cordoned') : node.status)}
                   </div>
                 </div>
                 {/* Item action buttons */}

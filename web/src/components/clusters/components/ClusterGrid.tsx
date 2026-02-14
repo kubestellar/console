@@ -148,7 +148,7 @@ const FullClusterCard = memo(function FullClusterCard({
               {initialLoading ? (
                 <StatusIndicator status="loading" size="lg" showLabel={false} />
               ) : isTokenExpired(cluster) ? (
-                <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center" title="Token Expired - re-authenticate to access this cluster">
+                <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center" title={t('common.tokenExpired')}>
                   <KeyRound className="w-4 h-4 text-red-400" />
                 </div>
               ) : unreachable ? (
@@ -171,7 +171,7 @@ const FullClusterCard = memo(function FullClusterCard({
                     unreachable ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30' :
                     'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
-                  title={spinning ? t('common.refreshing') : unreachable ? 'Retry connection' : 'Refresh cluster data'}
+                  title={spinning ? t('common.refreshing') : unreachable ? t('common.retryConnection') : t('common.refreshClusterData')}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} />
                 </button>
@@ -203,7 +203,7 @@ const FullClusterCard = memo(function FullClusterCard({
                   <button
                     onClick={(e) => { e.stopPropagation(); onRenameCluster() }}
                     className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0"
-                    title="Rename context"
+                    title={t('common.renameContext')}
                   >
                     <Pencil className="w-3 h-3" />
                   </button>
@@ -233,7 +233,7 @@ const FullClusterCard = memo(function FullClusterCard({
           </div>
           <div className="flex flex-wrap items-start justify-end gap-1 flex-shrink-0">
             {cluster.isCurrent && (
-              <span className="flex items-center px-1.5 py-0.5 rounded bg-primary/20 text-primary" title="Current kubectl context">
+              <span className="flex items-center px-1.5 py-0.5 rounded bg-primary/20 text-primary" title={t('common.currentContext')}>
                 <Star className="w-3.5 h-3.5 fill-current" />
               </span>
             )}
@@ -558,10 +558,12 @@ export const ClusterGrid = memo(function ClusterGrid({
   onRefreshCluster,
   layoutMode = 'grid',
 }: ClusterGridProps) {
+  const { t } = useTranslation()
+
   if (clusters.length === 0) {
     return (
       <div className="text-center py-12 mb-6">
-        <p className="text-muted-foreground">No clusters match the current filter</p>
+        <p className="text-muted-foreground">{t('cluster.noClustersMatchFilter')}</p>
       </div>
     )
   }

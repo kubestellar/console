@@ -1197,13 +1197,13 @@ Please proceed step by step and ask for confirmation before making any changes.`
   }
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'labels', label: 'Labels', icon: Tag },
-    { id: 'related', label: 'Related', icon: Layers },
-    { id: 'describe', label: 'Describe', icon: FileText },
-    { id: 'logs', label: 'Logs', icon: Terminal },
-    { id: 'events', label: 'Events', icon: Zap },
-    { id: 'yaml', label: 'YAML', icon: Code },
+    { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
+    { id: 'labels', label: t('drilldown.tabs.labels'), icon: Tag },
+    { id: 'related', label: t('drilldown.tabs.related'), icon: Layers },
+    { id: 'describe', label: t('drilldown.tabs.describe'), icon: FileText },
+    { id: 'logs', label: t('drilldown.tabs.logs'), icon: Terminal },
+    { id: 'events', label: t('drilldown.tabs.events'), icon: Zap },
+    { id: 'yaml', label: t('drilldown.tabs.yaml'), icon: Code },
   ]
 
   const labelEntries = Object.entries(labels || {})
@@ -1253,7 +1253,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               onClick={refreshAll}
               disabled={isRefreshing}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-              title="Refresh all pod data"
+              title={t('drilldown.actions.refreshAllPodData')}
             >
               <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
               <span className="text-sm">{isRefreshing ? t('common.refreshing') : t('common.refresh')}</span>
@@ -1296,7 +1296,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               {podStatusLoading ? (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-card/50 border border-border">
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground">Fetching pod status...</span>
+                  <span className="text-sm text-muted-foreground">{t('drilldown.status.fetchingPodStatus')}</span>
                 </div>
               ) : podStatusOutput ? (
                 <pre className="p-3 rounded-lg bg-black/50 border border-border overflow-x-auto text-xs text-foreground font-mono">
@@ -1338,13 +1338,13 @@ Please proceed step by step and ask for confirmation before making any changes.`
               <div className="p-4 rounded-lg bg-secondary/30 border border-border text-center">
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                  <p className="text-muted-foreground">Analyzing pod health...</p>
+                  <p className="text-muted-foreground">{t('drilldown.status.analyzingPodHealth')}</p>
                 </div>
               </div>
             ) : (
               <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-                <p className="text-green-400 font-medium">Pod is healthy</p>
-                <p className="text-xs text-muted-foreground mt-1">No issues detected</p>
+                <p className="text-green-400 font-medium">{t('drilldown.status.podHealthy')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('drilldown.empty.noIssuesDetected')}</p>
               </div>
             )}
 
@@ -1356,7 +1356,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Zap className="w-4 h-4 text-amber-400" />
-                  Recent Events
+                  {t('drilldown.tabs.recentEvents')}
                 </h3>
                 <button
                   onClick={() => setActiveTab('events')}
@@ -1380,7 +1380,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           {describeLoading && !labels && !annotations ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Loading labels and annotations...</span>
+              <span className="ml-2 text-muted-foreground">{t('drilldown.status.loadingLabels')}</span>
             </div>
           ) : (
             <>
@@ -1397,9 +1397,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
                       >
                         {showAllLabels ? (
-                          <>Show less <ChevronUp className="w-3 h-3" /></>
+                          <>{t('drilldown.actions.showLess')} <ChevronUp className="w-3 h-3" /></>
                         ) : (
-                          <>Show all <ChevronDown className="w-3 h-3" /></>
+                          <>{t('drilldown.actions.showAll')} <ChevronDown className="w-3 h-3" /></>
                         )}
                       </button>
                     )}
@@ -1409,7 +1409,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 font-medium"
                       >
                         <Pencil className="w-3 h-3" />
-                        Edit Labels
+                        {t('drilldown.actions.editLabels')}
                       </button>
                     )}
                   </div>
@@ -1510,14 +1510,14 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         ) : (
                           <Save className="w-4 h-4" />
                         )}
-                        Save Changes
+                        {t('drilldown.actions.saveChanges')}
                       </button>
                       <button
                         onClick={cancelLabelEdit}
                         disabled={labelSaving}
                         className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm hover:bg-secondary/80 disabled:opacity-50"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
@@ -1545,13 +1545,13 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   </div>
                 ) : (
                   <div className="p-4 rounded-lg bg-card/50 border border-border text-muted-foreground text-center">
-                    No labels
+                    {t('drilldown.empty.noLabels')}
                     {agentConnected && (
                       <button
                         onClick={() => setEditingLabels(true)}
                         className="block mx-auto mt-2 text-xs text-primary hover:text-primary/80"
                       >
-                        Add labels
+                        {t('drilldown.actions.addLabels')}
                       </button>
                     )}
                   </div>
@@ -1571,9 +1571,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
                       >
                         {showAllAnnotations ? (
-                          <>Show less <ChevronUp className="w-3 h-3" /></>
+                          <>{t('drilldown.actions.showLess')} <ChevronUp className="w-3 h-3" /></>
                         ) : (
-                          <>Show all <ChevronDown className="w-3 h-3" /></>
+                          <>{t('drilldown.actions.showAll')} <ChevronDown className="w-3 h-3" /></>
                         )}
                       </button>
                     )}
@@ -1583,7 +1583,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 font-medium"
                       >
                         <Pencil className="w-3 h-3" />
-                        Edit Annotations
+                        {t('drilldown.actions.editAnnotations')}
                       </button>
                     )}
                   </div>
@@ -1686,14 +1686,14 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         ) : (
                           <Save className="w-4 h-4" />
                         )}
-                        Save Changes
+                        {t('drilldown.actions.saveChanges')}
                       </button>
                       <button
                         onClick={cancelAnnotationEdit}
                         disabled={annotationSaving}
                         className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm hover:bg-secondary/80 disabled:opacity-50"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
@@ -1720,13 +1720,13 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   </div>
                 ) : (
                   <div className="p-4 rounded-lg bg-card/50 border border-border text-muted-foreground text-center">
-                    No annotations
+                    {t('drilldown.empty.noAnnotations')}
                     {agentConnected && (
                       <button
                         onClick={() => setEditingAnnotations(true)}
                         className="block mx-auto mt-2 text-xs text-primary hover:text-primary/80"
                       >
-                        Add annotations
+                        {t('drilldown.actions.addAnnotations')}
                       </button>
                     )}
                   </div>
@@ -1742,7 +1742,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           {relatedLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Discovering related resources...</span>
+              <span className="ml-2 text-muted-foreground">{t('drilldown.status.discoveringRelated')}</span>
             </div>
           ) : (
             <>
@@ -2006,7 +2006,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                       <span className="font-semibold">{podName}</span>
                       <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/30 text-cyan-300">current</span>
                     </div>
-                    <p className="text-muted-foreground text-sm mt-3">No related resources discovered</p>
+                    <p className="text-muted-foreground text-sm mt-3">{t('drilldown.empty.noRelatedResourcesDiscovered')}</p>
                   </div>
                 )}
               </div>
@@ -2028,7 +2028,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               {!agentConnected && ownerChain.length === 0 && configMaps.length === 0 && secrets.length === 0 && !serviceAccount && (
                 <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
                   <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Connect the local agent to discover related resources</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentRelated')}</p>
                 </div>
               )}
             </>
@@ -2051,9 +2051,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                 >
                   {copiedField === 'describe' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> Copied</>
+                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
                   ) : (
-                    <><Copy className="w-3 h-3" /> Copy</>
+                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
                   )}
                 </button>
               </div>
@@ -2066,16 +2066,16 @@ Please proceed step by step and ask for confirmation before making any changes.`
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
               <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view kubectl describe output</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentDescribe')}</p>
             </div>
           ) : (
             <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">Failed to fetch describe output</p>
+              <p className="text-muted-foreground">{t('drilldown.empty.failedFetchDescribe')}</p>
               <button
                 onClick={() => fetchDescribe(true)}
                 className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
               >
-                Retry
+                {t('common.retry')}
               </button>
             </div>
           )}
@@ -2104,9 +2104,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                 >
                   {copiedField === 'logs' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> Copied</>
+                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
                   ) : (
-                    <><Copy className="w-3 h-3" /> Copy</>
+                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
                   )}
                 </button>
               </div>
@@ -2119,16 +2119,16 @@ Please proceed step by step and ask for confirmation before making any changes.`
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
               <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view pod logs</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentLogs')}</p>
             </div>
           ) : (
             <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">No logs available or pod has no output</p>
+              <p className="text-muted-foreground">{t('drilldown.empty.noLogsAvailable')}</p>
               <button
                 onClick={() => { fetchLogs(true) }}
                 className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
               >
-                Retry
+                {t('common.retry')}
               </button>
             </div>
           )}
@@ -2157,9 +2157,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                 >
                   {copiedField === 'events' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> Copied</>
+                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
                   ) : (
-                    <><Copy className="w-3 h-3" /> Copy</>
+                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
                   )}
                 </button>
               </div>
@@ -2172,16 +2172,16 @@ Please proceed step by step and ask for confirmation before making any changes.`
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
               <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view events</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentEvents')}</p>
             </div>
           ) : (
             <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">No events found for this pod</p>
+              <p className="text-muted-foreground">{t('drilldown.empty.noEventsFound', { resource: 'pod' })}</p>
               <button
                 onClick={() => fetchEvents(true)}
                 className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
               >
-                Retry
+                {t('common.retry')}
               </button>
             </div>
           )}
@@ -2210,9 +2210,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                 >
                   {copiedField === 'yaml' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> Copied</>
+                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
                   ) : (
-                    <><Copy className="w-3 h-3" /> Copy</>
+                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
                   )}
                 </button>
               </div>
@@ -2225,16 +2225,16 @@ Please proceed step by step and ask for confirmation before making any changes.`
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
               <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view YAML</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentYaml')}</p>
             </div>
           ) : (
             <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">Failed to fetch YAML</p>
+              <p className="text-muted-foreground">{t('drilldown.empty.failedFetchYaml')}</p>
               <button
                 onClick={() => fetchYaml(true)}
                 className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
               >
-                Retry
+                {t('common.retry')}
               </button>
             </div>
           )}
@@ -2297,7 +2297,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                     <Stethoscope className="w-4 h-4" />
                     <Sparkles className="absolute -top-0.5 -right-0.5 w-2 h-2 text-purple-400 animate-pulse" />
                   </div>
-                  <span>{aiAnalysis ? 'Re-analyze' : 'Diagnose'}</span>
+                  <span>{aiAnalysis ? t('drilldown.actions.reAnalyze') : t('drilldown.actions.diagnose')}</span>
                 </>
               )}
             </button>
@@ -2359,7 +2359,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   <Trash2 className="w-4 h-4" />
                   <span>{t('drilldown.actions.deletePod')}</span>
                   {isManagedPod && (
-                    <span className="text-xs text-red-400/60">(will be recreated)</span>
+                    <span className="text-xs text-red-400/60">{t('drilldown.status.willBeRecreated')}</span>
                   )}
                 </>
               )}

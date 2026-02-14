@@ -115,7 +115,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
       <BaseModal.Header
-        title="Export Desktop Widget"
+        title={t('widgets.exportDesktopWidget')}
         icon={Download}
         onClose={onClose}
       />
@@ -131,7 +131,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}
           >
-            Templates
+            {t('widgets.templates')}
           </button>
           <button
             onClick={() => setActiveTab('card')}
@@ -141,7 +141,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}
           >
-            Single Card
+            {t('widgets.singleCard')}
           </button>
           <button
             onClick={() => setActiveTab('stats')}
@@ -151,7 +151,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}
           >
-            Stat Blocks
+            {t('widgets.statBlocks')}
           </button>
         </div>
 
@@ -211,7 +211,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             {/* Configuration */}
             <div className="mt-4 pt-4 border-t border-border space-y-3">
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">API Endpoint</label>
+                <label className="block text-xs text-muted-foreground mb-1">{t('widgets.apiEndpoint')}</label>
                 <input
                   type="text"
                   value={apiEndpoint}
@@ -221,7 +221,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Refresh Interval (seconds)
+                  {t('widgets.refreshInterval')}
                 </label>
                 <input
                   type="number"
@@ -242,7 +242,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 onClick={() => setShowCode(!showCode)}
                 className="text-xs text-purple-400 hover:text-purple-300"
               >
-                {showCode ? 'Hide Code' : 'Show Code'}
+                {showCode ? t('widgets.hideCode') : t('widgets.showCode')}
               </button>
             </div>
 
@@ -286,7 +286,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             rel="noopener noreferrer"
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
           >
-            Get Übersicht <ExternalLink className="w-3 h-3" />
+            {t('widgets.getUebersicht')} <ExternalLink className="w-3 h-3" />
           </a>
           <div className="flex gap-2">
             <button
@@ -303,7 +303,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
               className="px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 rounded flex items-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
-              Download {filename}
+              {t('widgets.downloadFilename', { filename })}
             </button>
           </div>
         </div>
