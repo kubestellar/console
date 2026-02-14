@@ -26,7 +26,11 @@
     "filter": "Filter",
     "sort": "Sort",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "restore": "Restore",
+    "skip": "Skip",
+    "signOut": "Sign Out",
+    "viewDetails": "View Details"
   },
   "buttons": {
     "addCard": "Add Card",
@@ -45,6 +49,8 @@
     "sinceFocus": "Since last focus:",
     "clusterStatus": "Cluster Status",
     "healthy": "Healthy",
+    "unhealthy": "Unhealthy",
+    "offline": "Offline",
     "warning": "Warning",
     "critical": "Critical",
     "swappingTo": "Swapping to \"{{cardName}}\" in 30s"
@@ -62,7 +68,19 @@
   "sidebar": {
     "snoozedCards": "Snoozed Cards",
     "noSnoozedCards": "No snoozed card swaps",
-    "snoozeExpires": "Expires {{time}}"
+    "snoozeExpires": "Expires {{time}}",
+    "removeFromSidebar": "Remove from sidebar",
+    "doubleClickRename": "Double-click to rename",
+    "snoozedItems": "Snoozed Items",
+    "noSnoozedItems": "No snoozed items",
+    "snoozedItemsHint": "Snooze cards or suggestions to see them here",
+    "snoozedActions": "Snoozed Actions",
+    "snoozedRecommendations": "Snoozed Recommendations",
+    "snoozedSwaps": "Snoozed Swaps",
+    "readyToSwap": "Ready to swap",
+    "ready": "Ready",
+    "activeViewers": "{{count}} active viewer",
+    "activeViewers_plural": "{{count}} active viewers"
   },
   "settings": {
     "title": "Settings",
@@ -123,6 +141,17 @@
     "selectAll": "Select All",
     "noClusters": "No clusters available"
   },
+  "profile": {
+    "email": "Email:",
+    "slack": "Slack:",
+    "role": "Role:",
+    "coins": "Coins:",
+    "language": "Language:",
+    "noEmail": "No email set",
+    "notSet": "Not set",
+    "notConnected": "Not connected",
+    "defaultRole": "User"
+  },
   "language": {
     "select": "Select Language"
   },
@@ -173,9 +202,21 @@
     "connectingToAgent": "Connecting to agent...",
     "noAgentsAvailable": "No AI agents available"
   },
+  "navbar": {
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu",
+    "themeToggle": "Theme: {{theme}} (click to toggle)",
+    "moreOptions": "More options"
+  },
   "feedback": {
     "share": "Share",
-    "shareOnLinkedIn": "Share on LinkedIn"
+    "shareOnLinkedIn": "Share on LinkedIn",
+    "feedback": "Feedback",
+    "plusCoins": "+Coins"
+  },
+  "update": {
+    "available": "Update Available",
+    "availableTag": "Update available: {{tag}}"
   },
   "drilldown": {
     "customView": "Custom view",

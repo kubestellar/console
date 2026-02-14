@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 // NOTE: Wildcard import is required for dynamic icon resolution
 // Sidebar items are configured with icon names as strings (from sidebar config)
@@ -23,6 +24,7 @@ export function Sidebar() {
   const { deduplicatedClusters } = useClusters()
   const dashboardContext = useDashboardContextOptional()
   const { viewerCount, hasError: viewersError } = useActiveUsers()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -246,7 +248,7 @@ export function Sidebar() {
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
               isCollapsed ? 'justify-center p-3' : 'px-3 py-2'
             )}
-            title={isCollapsed ? item.name : (item.isCustom && item.href.startsWith('/custom-dashboard/') ? 'Double-click to rename' : undefined)}
+            title={isCollapsed ? item.name : (item.isCustom && item.href.startsWith('/custom-dashboard/') ? t('sidebar.doubleClickRename') : undefined)}
           >
             {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
             {!isCollapsed && <span className="flex-1 truncate">{item.name}</span>}
@@ -257,7 +259,7 @@ export function Sidebar() {
                     role="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id) }}
                     className="p-0.5 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
-                    title="Remove from sidebar"
+                    title={t('sidebar.removeFromSidebar')}
                   >
                     <X className="w-3.5 h-3.5" />
                   </span>
@@ -335,7 +337,7 @@ export function Sidebar() {
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-purple-500/50 hover:bg-purple-500/10 transition-all duration-200"
             >
               <Plus className="w-4 h-4" />
-              <span className="text-sm">Add Card</span>
+              <span className="text-sm">{t('buttons.addCard')}</span>
             </button>
           </div>
         )}
@@ -344,7 +346,7 @@ export function Sidebar() {
         {config.showClusterStatus && !isCollapsed && (
           <div data-testid="sidebar-cluster-status" className="mt-6 p-4 rounded-lg bg-secondary/30">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-              Cluster Status
+              {t('labels.clusterStatus')}
             </h4>
             <div className="space-y-2">
               <button
@@ -353,7 +355,7 @@ export function Sidebar() {
               >
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
                   <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                  Healthy
+                  {t('labels.healthy')}
                 </span>
                 <span className="text-sm font-medium text-green-400">{healthyClusters}</span>
               </button>
@@ -363,7 +365,7 @@ export function Sidebar() {
               >
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
                   <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                  Unhealthy
+                  {t('labels.unhealthy')}
                 </span>
                 <span className="text-sm font-medium text-orange-400">{unhealthyClusters}</span>
               </button>
@@ -373,7 +375,7 @@ export function Sidebar() {
               >
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
                   <WifiOff className="w-3.5 h-3.5 text-yellow-400" />
-                  Offline
+                  {t('labels.offline')}
                 </span>
                 <span className="text-sm font-medium text-yellow-400">{unreachableClusters}</span>
               </button>
@@ -386,7 +388,7 @@ export function Sidebar() {
           <div className="mt-4 flex items-center justify-end">
             <div
               className="flex items-center gap-1 px-2 text-muted-foreground/60"
-              title={`${viewerCount} active viewer${viewerCount !== 1 ? 's' : ''}`}
+              title={t('sidebar.activeViewers', { count: viewerCount })}
             >
               <User className={cn('w-3 h-3', viewersError && 'text-red-400')} />
               <span className="text-[10px] tabular-nums">
