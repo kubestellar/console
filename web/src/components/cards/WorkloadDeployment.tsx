@@ -24,6 +24,7 @@ import { useCachedWorkloads } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useTranslation } from 'react-i18next'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -363,6 +364,7 @@ interface WorkloadDeploymentProps {
 }
 
 export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
+  const { t: _t } = useTranslation()
   const [typeFilter, setTypeFilter] = useState<WorkloadType | 'All'>('All')
   const [statusFilter, setStatusFilter] = useState<WorkloadStatus | 'All'>('All')
   const [selectedWorkload, setSelectedWorkload] = useState<Workload | null>(null)

@@ -7,6 +7,7 @@ import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceImport, ServiceImportType } from '../../types/mcs'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useTranslation } from 'react-i18next'
 
 // Demo data for MCS ServiceImports
 const DEMO_IMPORTS: ServiceImport[] = [
@@ -349,6 +350,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
 }
 
 export function ServiceImports(props: ServiceImportsProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="ServiceImports">
       <ServiceImportsInternal {...props} />

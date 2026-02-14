@@ -3,6 +3,7 @@ import { useKagentiAgents } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
 import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards'
 import { Skeleton } from '../../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 interface KagentiAgentFleetProps {
   config?: { cluster?: string }
@@ -27,6 +28,7 @@ function StatusBadge({ status }: { status: string }) {
 type SortField = 'name' | 'status' | 'framework' | 'cluster'
 
 export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
+  const { t: _t } = useTranslation()
   const {
     data: agents,
     isLoading,

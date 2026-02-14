@@ -7,8 +7,10 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
+import { useTranslation } from 'react-i18next'
 
 export function NetworkOverview() {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { services, isLoading: servicesLoading, consecutiveFailures, isFailed } = useCachedServices()
 

@@ -9,6 +9,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'type' | 'name' | 'namespace' | 'ports'
 
@@ -46,6 +47,7 @@ function getTypeColor(type: string) {
 }
 
 export function ServiceStatus() {
+  const { t: _t } = useTranslation()
   const {
     services,
     isLoading: hookLoading,

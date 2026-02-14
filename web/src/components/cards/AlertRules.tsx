@@ -18,6 +18,7 @@ import {
   CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type SortField = 'name' | 'severity' | 'enabled'
 
@@ -36,6 +37,7 @@ const ALERT_SORT_COMPARATORS = {
 }
 
 export function AlertRulesCard() {
+  const { t: _t } = useTranslation()
   const { rules, createRule, updateRule, toggleRule, deleteRule } = useAlertRules()
   const [showEditor, setShowEditor] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)

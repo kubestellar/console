@@ -6,6 +6,7 @@ import { Pagination } from '../ui/Pagination'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'restarts' | 'name' | 'cpu' | 'memory' | 'gpu'
 
@@ -60,6 +61,7 @@ const getEffectiveMemory = (pod: { memoryUsageBytes?: number; memoryRequestBytes
 }
 
 export function TopPods({ config }: TopPodsProps) {
+  const { t: _t } = useTranslation()
   const clusterConfig = config?.cluster
   const namespaceConfig = config?.namespace
   const { drillToPod } = useDrillDownActions()

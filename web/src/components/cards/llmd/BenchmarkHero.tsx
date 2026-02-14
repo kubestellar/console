@@ -16,6 +16,7 @@ import {
   getModelShort,
   CONFIG_COLORS,
 } from '../../../lib/llmd/benchmarkMockData'
+import { useTranslation } from 'react-i18next'
 
 const TIME_RANGE_OPTIONS = [
   { value: '30d', label: '30 days' },
@@ -90,6 +91,7 @@ function HeroMetric({
 }
 
 export function BenchmarkHero() {
+  const { t: _t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
   useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })

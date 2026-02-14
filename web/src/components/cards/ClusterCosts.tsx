@@ -7,6 +7,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
@@ -181,6 +182,7 @@ const SORT_COMPARATORS = {
 }
 
 export function ClusterCosts({ config }: ClusterCostsProps) {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()

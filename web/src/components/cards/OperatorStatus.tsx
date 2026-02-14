@@ -18,6 +18,7 @@ import {
   CardPaginationFooter,
   CardAIActions,
 } from '../../lib/cards/CardComponents'
+import { useTranslation } from 'react-i18next'
 
 interface OperatorStatusProps {
   config?: {
@@ -315,6 +316,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
 }
 
 export function OperatorStatus(props: OperatorStatusProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="OperatorStatus">
       <OperatorStatusInternal {...props} />

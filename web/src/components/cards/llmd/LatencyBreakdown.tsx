@@ -21,6 +21,7 @@ import {
   getFilterOptions,
   type ScalingPoint,
 } from '../../../lib/llmd/benchmarkDataUtils'
+import { useTranslation } from 'react-i18next'
 
 type MetricTab = 'ttftP50Ms' | 'tpotP50Ms' | 'p99LatencyMs' | 'itlP50Ms' | 'requestLatencyMs'
 
@@ -62,6 +63,7 @@ function CustomTooltip({ active, payload, label, unit }: {
 }
 
 export function LatencyBreakdown() {
+  const { t: _t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),

@@ -6,8 +6,10 @@ import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
 import { useChartFilters } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 export function EventSummary() {
+  const { t: _t } = useTranslation()
   const {
     events,
     isLoading,

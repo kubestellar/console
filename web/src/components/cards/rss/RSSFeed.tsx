@@ -16,6 +16,7 @@ import {
   parseRSSFeed, stripHTML, decodeHTMLEntities,
   isValidThumbnail, normalizeRedditLink, formatTimeAgo,
 } from './RSSParser'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'date' | 'title'
 
@@ -1381,6 +1382,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 }
 
 export function RSSFeed(props: RSSFeedProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="RSSFeed">
       <RSSFeedInternal {...props} />

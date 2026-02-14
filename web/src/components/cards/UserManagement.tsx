@@ -23,6 +23,7 @@ import {
 import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -61,6 +62,7 @@ const SA_COMPARATORS: Record<SASortBy, (a: { name: string; namespace: string; cl
 }
 
 export function UserManagement({ config: _config }: UserManagementProps) {
+  const { t: _t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabType>('clusterUsers')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')

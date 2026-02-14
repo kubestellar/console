@@ -20,6 +20,7 @@ import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 type SortField = 'name' | 'status' | 'type' | 'cluster'
 type StatusFilter = 'all' | 'healthy' | 'degraded' | 'unhealthy'
@@ -105,6 +106,7 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
 

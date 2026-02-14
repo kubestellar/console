@@ -9,9 +9,11 @@ import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Card 3: Cluster Health Check - Overall health assessment
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
+  const { t: _t } = useTranslation()
   const { startMission, missions } = useMissions()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { issues: allPodIssues } = useCachedPodIssues()

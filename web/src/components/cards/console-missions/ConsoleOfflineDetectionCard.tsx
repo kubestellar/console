@@ -16,6 +16,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import type { PredictedRisk, TrendDirection } from '../../../types/predictions'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../../lib/cards/CardComponents'
 import { ClusterBadge } from '../../ui/ClusterBadge'
+import { useTranslation } from 'react-i18next'
 
 // ============================================================================
 // Unified Item Type for all card items
@@ -212,6 +213,7 @@ function generatePredictionId(type: string, name: string, cluster?: string): str
 
 // Card 4: Predictive Health Monitor - Detect issues, predict failures, group by root cause
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
+  const { t: _t } = useTranslation()
   const { startMission, missions } = useMissions()
   const { nodes: gpuNodes, isLoading } = useGPUNodes()
   const { issues: podIssues } = usePodIssues()

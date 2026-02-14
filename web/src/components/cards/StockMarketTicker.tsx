@@ -12,6 +12,7 @@ import {
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
+import { useTranslation } from 'react-i18next'
 
 // Stock search result interface
 interface StockSearchResult {
@@ -516,6 +517,7 @@ function StockRow({
 }
 
 export function StockMarketTicker({ config }: StockMarketTickerProps) {
+  const { t: _t } = useTranslation()
   const symbols = config?.symbols || DEFAULT_SYMBOLS
   const dataSource = config?.dataSource || 'Yahoo Finance'
 

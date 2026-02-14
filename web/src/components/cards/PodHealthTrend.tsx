@@ -16,6 +16,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards'
 import { isDemoMode } from '../../lib/demoMode'
+import { useTranslation } from 'react-i18next'
 
 interface HealthPoint {
   time: string
@@ -34,6 +35,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 ]
 
 export function PodHealthTrend() {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { issues, isLoading: issuesLoading } = useCachedPodIssues()
 

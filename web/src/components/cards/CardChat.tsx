@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, Sparkles, Loader2, Bot, User, Copy, CheckCircle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
+import { useTranslation } from 'react-i18next'
 
 export interface ChatMessage {
   id: string
@@ -74,6 +75,7 @@ export function CardChat({
   onSendMessage,
   onApplyAction,
 }: CardChatProps) {
+  const { t: _t } = useTranslation()
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)

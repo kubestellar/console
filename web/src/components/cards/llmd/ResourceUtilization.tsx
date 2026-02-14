@@ -19,6 +19,7 @@ import {
   getFilterOptions,
   CONFIG_TYPE_COLORS,
 } from '../../../lib/llmd/benchmarkDataUtils'
+import { useTranslation } from 'react-i18next'
 
 type MetricMode = 'throughput' | 'ttftP50Ms' | 'tpotP50Ms' | 'p99LatencyMs'
 
@@ -60,6 +61,7 @@ function CustomTooltip({ active, payload }: {
 }
 
 export function ResourceUtilization() {
+  const { t: _t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),

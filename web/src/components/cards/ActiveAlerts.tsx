@@ -20,6 +20,7 @@ import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Format relative time
 function formatRelativeTime(dateString: string): string {
@@ -39,6 +40,7 @@ function formatRelativeTime(dateString: string): string {
 type SortField = 'severity' | 'time'
 
 export function ActiveAlerts() {
+  const { t: _t } = useTranslation()
   const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 

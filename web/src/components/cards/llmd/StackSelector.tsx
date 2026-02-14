@@ -9,6 +9,7 @@ import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
+import { useTranslation } from 'react-i18next'
 
 const STATUS_COLORS = {
   healthy: 'bg-green-500',
@@ -199,6 +200,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
 })
 
 export function StackSelector() {
+  const { t: _t } = useTranslation()
   const stackContext = useOptionalStack()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')

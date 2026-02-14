@@ -12,6 +12,7 @@ import {
   CardAIActions,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface KustomizationStatusProps {
   config?: {
@@ -69,6 +70,7 @@ function getDemoKustomizations(): Kustomization[] {
 }
 
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
+  const { t: _t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')

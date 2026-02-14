@@ -4,6 +4,7 @@ import { useCardData } from '../../../lib/cards/cardHooks'
 import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { DEMO_NOTEBOOKS, useDemoData } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type Notebook = typeof DEMO_NOTEBOOKS[number]
 type SortByOption = 'name' | 'user' | 'status'
@@ -19,6 +20,7 @@ interface MLNotebooksProps {
 }
 
 export function MLNotebooks({ config: _config }: MLNotebooksProps) {
+  const { t } = useTranslation()
   const { data: notebooks, isLoading } = useDemoData(DEMO_NOTEBOOKS)
 
   useCardLoadingState({
@@ -119,7 +121,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
               <th className="text-left py-2">Notebook</th>
               <th className="text-left py-2">User</th>
               <th className="text-right py-2">Resources</th>
-              <th className="text-right py-2">Status</th>
+              <th className="text-right py-2">{t('common.status')}</th>
             </tr>
           </thead>
           <tbody>

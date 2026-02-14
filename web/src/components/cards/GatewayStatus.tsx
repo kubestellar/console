@@ -9,6 +9,7 @@ import {
 } from '../../lib/cards'
 import { K8S_DOCS } from '../../config/externalApis'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Gateway status types
 type GatewayStatusType = 'Programmed' | 'Accepted' | 'Pending' | 'NotAccepted' | 'Unknown'
@@ -159,6 +160,7 @@ interface GatewayStatusProps {
 }
 
 export function GatewayStatus({ config: _config }: GatewayStatusProps) {
+  const { t: _t } = useTranslation()
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false

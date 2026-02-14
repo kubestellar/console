@@ -3,6 +3,7 @@ import { Bot, Hammer, Wrench, Server } from 'lucide-react'
 import { useKagentiAgents, useKagentiBuilds, useKagentiTools } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { Skeleton } from '../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 interface KagentiStatusCardProps {
   config?: {
@@ -42,6 +43,7 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
 }
 
 export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
+  const { t: _t } = useTranslation()
   const {
     data: agents,
     isLoading: agentsLoading,

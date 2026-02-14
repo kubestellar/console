@@ -6,8 +6,10 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 export function StorageOverview() {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { pvcs, isLoading: pvcsLoading, consecutiveFailures, isFailed } = usePVCs()
 

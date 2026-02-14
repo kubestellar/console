@@ -9,6 +9,7 @@ import {
   CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface HelmReleaseStatusProps {
   config?: {
@@ -40,6 +41,7 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
+  const { t: _t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
   const { drillToHelm } = useDrillDownActions()
 

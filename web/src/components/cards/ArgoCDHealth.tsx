@@ -2,6 +2,7 @@ import { CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle }
 import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDHealth } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
@@ -16,6 +17,7 @@ const healthConfig = {
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
+  const { t: _t } = useTranslation()
   const {
     stats,
     total,

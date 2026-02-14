@@ -16,6 +16,7 @@ import {
   CardPaginationFooter,
 } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useTranslation } from 'react-i18next'
 
 interface ArgoCDApplicationsProps {
   config?: {
@@ -334,6 +335,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 }
 
 export function ArgoCDApplications(props: ArgoCDApplicationsProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="ArgoCDApplications">
       <ArgoCDApplicationsInternal {...props} />

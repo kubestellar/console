@@ -13,6 +13,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import type { MonitorIssue, MonitoredResource, ResourceHealthStatus } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterHealthMonitorProps {
   config?: Record<string, unknown>
@@ -42,6 +43,7 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorProps) {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { issues: allPodIssues, isLoading: podsLoading, refetch: refetchPods } = useCachedPodIssues()
   const { issues: allDeployIssues, isLoading: deploysLoading, refetch: refetchDeploys } = useCachedDeploymentIssues()

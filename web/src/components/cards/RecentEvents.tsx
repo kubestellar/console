@@ -9,6 +9,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
+import { useTranslation } from 'react-i18next'
 
 const ONE_HOUR_MS = 60 * 60 * 1000
 
@@ -24,6 +25,7 @@ function getMinutesAgo(timestamp: string | undefined): string {
 }
 
 export function RecentEvents() {
+  const { t: _t } = useTranslation()
   const {
     events,
     isLoading,

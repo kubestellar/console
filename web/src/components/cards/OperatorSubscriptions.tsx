@@ -16,6 +16,7 @@ import {
   CardControlsRow,
   CardPaginationFooter,
 } from '../../lib/cards/CardComponents'
+import { useTranslation } from 'react-i18next'
 
 interface OperatorSubscriptionsProps {
   config?: {
@@ -48,6 +49,7 @@ const FILTER_CONFIG = {
 }
 
 export function OperatorSubscriptions({ config: _config }: OperatorSubscriptionsProps) {
+  const { t: _t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 

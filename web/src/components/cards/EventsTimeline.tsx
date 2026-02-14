@@ -15,6 +15,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 interface TimePoint {
   time: string
@@ -78,6 +79,7 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 }
 
 export function EventsTimeline() {
+  const { t: _t } = useTranslation()
   const {
     events,
     isLoading: hookLoading,

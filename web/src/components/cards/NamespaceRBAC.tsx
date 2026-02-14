@@ -10,6 +10,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../li
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useTranslation } from 'react-i18next'
 
 interface NamespaceRBACProps {
   config?: {
@@ -381,6 +382,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
 }
 
 export function NamespaceRBAC(props: NamespaceRBACProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="NamespaceRBAC">
       <NamespaceRBACInternal {...props} />

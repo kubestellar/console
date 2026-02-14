@@ -5,6 +5,7 @@ import {
   AlertTriangle, Loader2
 } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Types
 interface PingResult {
@@ -62,6 +63,7 @@ const DEFAULT_HOSTS = [
 ]
 
 export function NetworkUtils() {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
   const [isInitialized, setIsInitialized] = useState(false)
   useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized })
@@ -574,7 +576,7 @@ export function NetworkUtils() {
               </h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status</span>
+                  <span className="text-muted-foreground">{t('common.status')}</span>
                   <span className={networkInfo.online ? 'text-green-400' : 'text-red-400'}>
                     {networkInfo.online ? 'Online' : 'Offline'}
                   </span>

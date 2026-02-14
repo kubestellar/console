@@ -6,6 +6,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { useTranslation } from 'react-i18next'
 
 interface CRDHealthProps {
   config?: {
@@ -35,6 +36,7 @@ const SORT_OPTIONS = [
 const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1, Established: 2 }
 
 export function CRDHealth({ config: _config }: CRDHealthProps) {
+  const { t: _t } = useTranslation()
   const { isLoading, deduplicatedClusters } = useClusters()
 
   const [filterGroup, setFilterGroup] = useState<string>('')

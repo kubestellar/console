@@ -28,6 +28,7 @@ import {
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useTranslation } from 'react-i18next'
 
 interface MissionsProps {
   config?: Record<string, unknown>
@@ -140,6 +141,7 @@ const SORT_OPTIONS: { value: SortByOption; label: string }[] = [
 const CLUSTER_FILTER_KEY = 'kubestellar-card-filter:deployment-missions-clusters'
 
 export function Missions(_props: MissionsProps) {
+  const { t: _t } = useTranslation()
   const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
   const { deduplicatedClusters, isLoading } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()

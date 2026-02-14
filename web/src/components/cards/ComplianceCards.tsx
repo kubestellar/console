@@ -5,6 +5,7 @@
 
 import { AlertTriangle, AlertCircle } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -12,6 +13,7 @@ interface CardConfig {
 
 // Falco Runtime Security Card
 export function FalcoAlerts({ config: _config }: CardConfig) {
+  const { t: _t } = useTranslation()
   // Integration approach: Detect Falco installation via K8s API, query Falco alerts from its API/CRDs
   // UI already displays integration notice with install guide when Falco is not detected
   const demoAlerts = [

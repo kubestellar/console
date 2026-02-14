@@ -11,8 +11,10 @@ import { TreeNode } from './TreeRenderer'
 import { ResourceIcon, SORT_OPTIONS } from './types'
 import { buildNamespaceResources, getVisibleNamespaces, getIssueCounts, getPodsForDeployment } from './TreeBuilder'
 import type { ClusterResourceTreeProps, TreeLens, SortByOption, NamespaceResources, ClusterDataCache } from './types'
+import { useTranslation } from 'react-i18next'
 
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToCluster, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
@@ -305,7 +307,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
         <CardSearchInput
           value={searchFilter}
           onChange={setSearchFilter}
-          placeholder="Search resources..."
+          placeholder={t('common.searchResources')}
         />
 
         <div className="flex flex-wrap gap-1.5">

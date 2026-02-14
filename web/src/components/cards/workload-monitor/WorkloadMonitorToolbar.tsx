@@ -1,6 +1,7 @@
 import { Search, List, GitBranch } from 'lucide-react'
 import { CardControls } from '../../ui/CardControls'
 import type { MonitorViewMode, ResourceCategory, ResourceHealthStatus } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface ToolbarProps {
   search: string
@@ -47,6 +48,7 @@ export function WorkloadMonitorToolbar({
   limit,
   onLimitChange,
 }: ToolbarProps) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-2 mb-3">
       {/* Top row: summary + controls */}
@@ -124,7 +126,7 @@ export function WorkloadMonitorToolbar({
           type="text"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search resources..."
+          placeholder={t('common.searchResources')}
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
       </div>

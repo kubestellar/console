@@ -10,6 +10,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import type { SortDirection } from '../../lib/cards/cardHooks'
 import type { Deployment } from '../../hooks/useMCP'
+import { useTranslation } from 'react-i18next'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -72,6 +73,7 @@ const SORT_COMPARATORS: Record<SortByOption, (a: Deployment, b: Deployment) => n
 }
 
 export function DeploymentProgress({ config }: DeploymentProgressProps) {
+  const { t: _t } = useTranslation()
   const cluster = config?.cluster
   const namespace = config?.namespace
   const {

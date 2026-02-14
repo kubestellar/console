@@ -15,6 +15,7 @@ import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 import { useCardLoadingState, useCardDemoState } from '../../cards/CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 const SORT_OPTIONS = [
   { value: 'state', label: 'State' },
@@ -67,6 +68,7 @@ const TYPE_BADGE: Record<string, string> = {
 }
 
 export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
+  const { t: _t } = useTranslation()
   // Check if we should use demo data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 

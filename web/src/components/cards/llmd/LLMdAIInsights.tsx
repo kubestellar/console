@@ -11,6 +11,7 @@ import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
+import { useTranslation } from 'react-i18next'
 
 const INSIGHT_ICONS = {
   optimization: Lightbulb,
@@ -315,6 +316,7 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
 }
 
 export function LLMdAIInsights() {
+  const { t: _t } = useTranslation()
   const stackContext = useOptionalStack()
   const { shouldUseDemoData, showDemoBadge, reason } = useCardDemoState({ requires: 'stack' })
 

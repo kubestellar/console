@@ -14,6 +14,7 @@ import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -131,6 +132,7 @@ function saveRepos(repos: string[]) {
 }
 
 export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
+  const { t: _t } = useTranslation()
   const ghConfig = config as GitHubCIConfig | undefined
 
   // Repo configuration

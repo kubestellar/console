@@ -7,6 +7,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface OverlayComparisonProps {
   config?: {
@@ -22,6 +23,7 @@ interface OverlayDiff {
 }
 
 export function OverlayComparison({ config }: OverlayComparisonProps) {
+  const { t: _t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToKustomization } = useDrillDownActions()

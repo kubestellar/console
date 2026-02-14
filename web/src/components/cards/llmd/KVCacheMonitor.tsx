@@ -15,6 +15,7 @@ import { HorseshoeGauge } from './shared/HorseshoeGauge'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useCardExpanded } from '../CardWrapper'
+import { useTranslation } from 'react-i18next'
 
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
@@ -243,6 +244,7 @@ function InfoSparkline({ data, color, width = 100, height = 30 }: { data: number
 }
 
 export function KVCacheMonitor() {
+  const { t: _t } = useTranslation()
   const stackContext = useOptionalStack()
   const [stats, setStats] = useState<KVCacheStats[]>([])
   const [viewMode, setViewMode] = useState<'gauges' | 'horseshoe' | 'heatmap'>('gauges')

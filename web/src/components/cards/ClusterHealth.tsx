@@ -10,6 +10,7 @@ import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable, isClusterTokenExpired } from '../clusters/utils'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Console URL generation for cloud providers
 function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
@@ -75,6 +76,7 @@ const CLUSTER_SORT_COMPARATORS = {
 
 
 export function ClusterHealth() {
+  const { t: _t } = useTranslation()
   const {
     deduplicatedClusters: rawClusters,
     isLoading: isLoadingHook,

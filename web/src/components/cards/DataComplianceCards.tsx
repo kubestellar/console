@@ -8,6 +8,7 @@
 import { Shield, CheckCircle2, AlertTriangle, Clock, AlertCircle } from 'lucide-react'
 import { useCertManager } from '../../hooks/useCertManager'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -15,6 +16,7 @@ interface CardConfig {
 
 // HashiCorp Vault - Secrets Management Card
 export function VaultSecrets({ config: _config }: CardConfig) {
+  const { t: _t } = useTranslation()
   const demoData = {
     status: 'unsealed',
     secrets: 156,

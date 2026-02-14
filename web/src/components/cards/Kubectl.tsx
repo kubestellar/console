@@ -4,6 +4,7 @@ import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface CommandHistoryItem {
   id: string
@@ -22,6 +23,7 @@ interface YAMLManifest {
 }
 
 export function Kubectl() {
+  const { t: _t } = useTranslation()
   const { execute } = useKubectl()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [selectedContext, setSelectedContext] = useState<string>('')

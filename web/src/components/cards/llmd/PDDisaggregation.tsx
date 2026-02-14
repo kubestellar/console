@@ -13,6 +13,7 @@ import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useCardExpanded } from '../CardWrapper'
+import { useTranslation } from 'react-i18next'
 
 interface ServerStats {
   id: string
@@ -174,6 +175,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
 }
 
 export function PDDisaggregation() {
+  const { t: _t } = useTranslation()
   const stackContext = useOptionalStack()
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })

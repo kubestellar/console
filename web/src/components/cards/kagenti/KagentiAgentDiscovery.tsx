@@ -4,6 +4,7 @@ import { useKagentiCards } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
 import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards'
 import { Skeleton } from '../../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 interface KagentiAgentDiscoveryProps {
   config?: { cluster?: string }
@@ -12,6 +13,7 @@ interface KagentiAgentDiscoveryProps {
 type SortField = 'name' | 'cluster'
 
 export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
+  const { t: _t } = useTranslation()
   const {
     data: cards,
     isLoading,

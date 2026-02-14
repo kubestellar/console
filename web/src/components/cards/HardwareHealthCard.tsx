@@ -8,6 +8,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory, type DeviceCounts } from '../../hooks/useCachedData'
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
+import { useTranslation } from 'react-i18next'
 
 // Sort field options
 type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType'
@@ -61,6 +62,7 @@ function getDeviceLabel(deviceType: string): string {
 type ViewMode = 'alerts' | 'inventory'
 
 export function HardwareHealthCard() {
+  const { t: _t } = useTranslation()
   // Use cached hook — persists to IndexedDB, survives navigation, handles demo mode
   const {
     data: hwData,

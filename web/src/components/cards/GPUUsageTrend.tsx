@@ -15,6 +15,7 @@ import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface GPUDataPoint {
   time: string
@@ -40,6 +41,7 @@ function normalizeClusterName(cluster: string): string {
 }
 
 export function GPUUsageTrend() {
+  const { t: _t } = useTranslation()
   const {
     nodes: gpuNodes,
     isLoading: hookLoading,

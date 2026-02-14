@@ -4,6 +4,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -47,6 +48,7 @@ const STORAGE_KEY = 'cluster-metrics-history'
 const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes TTL
 
 export function ClusterMetrics() {
+  const { t: _t } = useTranslation()
   const { isLoading, deduplicatedClusters } = useClusters()
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cpu')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')

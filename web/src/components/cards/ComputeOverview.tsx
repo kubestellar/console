@@ -7,8 +7,10 @@ import { formatStat, formatMemoryStat } from '../../lib/formatStats'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
+import { useTranslation } from 'react-i18next'
 
 export function ComputeOverview() {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()

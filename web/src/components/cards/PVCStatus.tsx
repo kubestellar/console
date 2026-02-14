@@ -7,6 +7,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'capacity' | 'age'
 
@@ -67,6 +68,7 @@ function getStatusColor(status: string) {
 }
 
 export function PVCStatus() {
+  const { t: _t } = useTranslation()
   const { pvcs, isLoading, error, consecutiveFailures, isFailed } = usePVCs()
   const { drillToPVC } = useDrillDownActions()
 

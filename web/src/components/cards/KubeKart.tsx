@@ -4,6 +4,7 @@ import { Play, RotateCcw, Pause, Trophy, Flag, Timer, Gauge } from 'lucide-react
 
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -61,6 +62,7 @@ const COLORS = {
 const KART_NAMES = ['Pod Racer', 'Node Runner', 'Cluster Cruiser', 'Service Sprinter']
 
 export function KubeKart() {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)

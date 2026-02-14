@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { DEP_CATEGORIES, getIconForKind } from '../../../lib/resourceCategories'
 import type { MonitoredResource, ResourceCategory } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface TreeProps {
   resources: MonitoredResource[]
@@ -44,6 +45,7 @@ function groupByCategory(resources: MonitoredResource[]) {
 }
 
 export function WorkloadMonitorTree({ resources, onResourceClick }: TreeProps) {
+  const { t: _t } = useTranslation()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(DEP_CATEGORIES.map(c => c.label)))
   const groups = groupByCategory(resources)
 

@@ -13,6 +13,7 @@ import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useCardExpanded } from '../CardWrapper'
+import { useTranslation } from 'react-i18next'
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -497,6 +498,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
 }
 
 export function EPPRouting() {
+  const { t: _t } = useTranslation()
   const stackContext = useOptionalStack()
   const [hoveredLink, setHoveredLink] = useState<string | null>(null)
   const [showParticles, setShowParticles] = useState(true)

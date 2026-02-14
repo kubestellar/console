@@ -1,6 +1,7 @@
 import { TrendingDown, AlertTriangle, ExternalLink, AlertCircle, PieChart, ChevronRight } from 'lucide-react'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface KubecostOverviewProps {
   config?: {
@@ -35,6 +36,7 @@ const DEMO_RECOMMENDATIONS = [
 ]
 
 export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
+  const { t: _t } = useTranslation()
   const { drillToCost } = useDrillDownActions()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
 

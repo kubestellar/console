@@ -32,6 +32,7 @@ import {
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
@@ -111,6 +112,7 @@ function relativeTime(iso: string): string {
 // ============================================================================
 
 export function ClusterGroups(_props: ClusterGroupsProps) {
+  const { t: _t } = useTranslation()
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()

@@ -18,6 +18,7 @@ import {
   CardAIActions,
   type SortDirection,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -75,6 +76,7 @@ const FILTER_CONFIG = {
 }
 
 export function DeploymentStatus() {
+  const { t: _t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
   const {
     deployments: allDeployments,

@@ -10,6 +10,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface GPUInventoryProps {
   config?: Record<string, unknown>
@@ -34,6 +35,7 @@ const GPU_SORT_COMPARATORS: Record<SortByOption, (a: GPUNode, b: GPUNode) => num
 }
 
 export function GPUInventory({ config }: GPUInventoryProps) {
+  const { t: _t } = useTranslation()
   const cluster = config?.cluster as string | undefined
   const {
     nodes: rawNodes,

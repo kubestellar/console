@@ -16,6 +16,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
 import { useAIMode } from '../../../hooks/useAIMode'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
+import { useTranslation } from 'react-i18next'
 
 const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
 
@@ -586,6 +587,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
 }
 
 export function NightlyE2EStatus() {
+  const { t: _t } = useTranslation()
   const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useNightlyE2EData()
   const { shouldSummarize } = useAIMode()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)

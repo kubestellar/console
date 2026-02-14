@@ -3,12 +3,14 @@ import { Skeleton } from '../ui/Skeleton'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useArgoCDSyncStatus } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ArgoCDSyncStatusProps {
   config?: Record<string, unknown>
 }
 
 export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
+  const { t: _t } = useTranslation()
   // Local cluster filter
   const {
     localClusterFilter,

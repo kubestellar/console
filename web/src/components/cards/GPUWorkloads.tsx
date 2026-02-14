@@ -10,6 +10,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import type { PodInfo } from '../../hooks/useMCP'
+import { useTranslation } from 'react-i18next'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -57,6 +58,7 @@ function normalizeClusterName(cluster: string): string {
 
 
 export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
+  const { t: _t } = useTranslation()
   const {
     nodes: gpuNodes,
     isLoading: gpuLoading,

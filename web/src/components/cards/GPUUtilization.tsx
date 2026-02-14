@@ -18,6 +18,7 @@ import {
 } from 'recharts'
 import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useTranslation } from 'react-i18next'
 
 interface GPUPoint {
   time: string
@@ -36,6 +37,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
 ]
 
 export function GPUUtilization() {
+  const { t: _t } = useTranslation()
   const {
     nodes: gpuNodes,
     isLoading: hookLoading,

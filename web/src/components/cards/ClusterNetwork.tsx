@@ -4,6 +4,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterNetworkProps {
   config?: {
@@ -12,6 +13,7 @@ interface ClusterNetworkProps {
 }
 
 export function ClusterNetwork({ config }: ClusterNetworkProps) {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
 

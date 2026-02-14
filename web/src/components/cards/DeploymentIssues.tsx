@@ -12,6 +12,7 @@ import {
   CardControlsRow, CardListItem, CardPaginationFooter,
   CardAIActions,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'cluster'
 
@@ -250,6 +251,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
 }
 
 export function DeploymentIssues(props: DeploymentIssuesProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="DeploymentIssues">
       <DeploymentIssuesInternal {...props} />

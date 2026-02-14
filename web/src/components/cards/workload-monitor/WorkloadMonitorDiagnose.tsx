@@ -15,6 +15,7 @@ import { useState } from 'react'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
 import type { MonitoredResource, MonitorIssue, DiagnoseRepairPhase, RepairRisk } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface DiagnoseProps {
   resources: MonitoredResource[]
@@ -55,6 +56,7 @@ export function WorkloadMonitorDiagnose({
   repairable,
   workloadContext,
 }: DiagnoseProps) {
+  const { t: _t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Types
 type Difficulty = 'easy' | 'medium' | 'hard' | 'expert'
@@ -208,6 +209,7 @@ function isComplete(board: Cell[][], solution: number[][]): boolean {
 }
 
 export function SudokuGame({ config: _config }: SudokuGameProps) {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null)
   const [pencilMode, setPencilMode] = useState(false)

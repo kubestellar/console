@@ -14,6 +14,7 @@ import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useCardExpanded } from '../CardWrapper'
+import { useTranslation } from 'react-i18next'
 
 type ViewMode = 'default' | 'horseshoe'
 
@@ -563,6 +564,7 @@ interface MetricsHistoryData {
 }
 
 export function LLMdFlow() {
+  const { t: _t } = useTranslation()
   const stackContext = useOptionalStack()
   const [serverMetrics, setServerMetrics] = useState<ServerMetrics[]>([])
   const [selectedNode, setSelectedNode] = useState<string | null>(null)

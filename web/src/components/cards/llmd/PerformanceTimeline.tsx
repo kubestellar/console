@@ -15,6 +15,7 @@ import {
   getFilterOptions,
 } from '../../../lib/llmd/benchmarkDataUtils'
 import type { BenchmarkReport } from '../../../lib/llmd/benchmarkMockData'
+import { useTranslation } from 'react-i18next'
 
 type MetricMode = 'throughput' | 'ttft' | 'p99' | 'tpot'
 
@@ -55,6 +56,7 @@ function getColor(value: number, min: number, max: number, higherBetter: boolean
 }
 
 export function PerformanceTimeline() {
+  const { t: _t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),

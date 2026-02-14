@@ -21,6 +21,7 @@ import {
   getFilterOptions,
   type ExperimentGroup,
 } from '../../../lib/llmd/benchmarkDataUtils'
+import { useTranslation } from 'react-i18next'
 
 interface ChartRow {
   qps: number
@@ -51,6 +52,7 @@ function CustomTooltip({ active, payload, label }: {
 }
 
 export function ThroughputComparison() {
+  const { t: _t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),

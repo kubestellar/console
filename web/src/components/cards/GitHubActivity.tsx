@@ -11,6 +11,7 @@ import {
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import type { SortDirection } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 // Types for GitHub activity data
 interface GitHubPR {
@@ -509,6 +510,7 @@ export interface GitHubActivityRef {
 }
 
 export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubActivityConfig }>(function GitHubActivity({ config }, ref) {
+  const { t: _t } = useTranslation()
   const [viewMode, setViewMode] = useState<ViewMode>('prs')
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>(config?.timeRange || '30d')
 

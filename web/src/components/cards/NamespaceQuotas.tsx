@@ -24,6 +24,7 @@ import {
   CardPaginationFooter,
   type SortDirection,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 interface NamespaceQuotasProps {
   config?: {
@@ -106,6 +107,7 @@ function QuotaModal({
   editingQuota?: ResourceQuota | null
   isLoading: boolean
 }) {
+  const { t } = useTranslation()
   const [cluster, setCluster] = useState(editingQuota?.cluster || (selectedCluster !== 'all' ? selectedCluster : ''))
   const [namespace, setNamespace] = useState(editingQuota?.namespace || (selectedNamespace !== 'all' ? selectedNamespace : ''))
   const [name, setName] = useState(editingQuota?.name || '')
@@ -183,7 +185,7 @@ function QuotaModal({
 
           {/* Cluster selector */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">Cluster</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.cluster')}</label>
             <select
               value={cluster}
               onChange={(e) => {
@@ -202,7 +204,7 @@ function QuotaModal({
 
           {/* Namespace selector */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">Namespace</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.namespace')}</label>
             <select
               value={namespace}
               onChange={(e) => setNamespace(e.target.value)}
@@ -333,6 +335,7 @@ function QuotaModal({
 }
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'all')

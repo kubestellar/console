@@ -10,6 +10,7 @@ import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import type { ProwJob } from '../../../hooks/useProw'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ProwHistoryProps {
   config?: Record<string, unknown>
@@ -32,6 +33,7 @@ const STATE_ORDER: Record<string, number> = {
 }
 
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
+  const { t: _t } = useTranslation()
   // Check if we should use demo data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 

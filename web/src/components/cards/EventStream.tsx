@@ -11,6 +11,7 @@ import {
   CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'time' | 'count' | 'type'
 
@@ -229,6 +230,7 @@ function EventStreamInternal() {
 }
 
 export function EventStream() {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="EventStream">
       <EventStreamInternal />

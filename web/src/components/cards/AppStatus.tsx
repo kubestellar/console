@@ -13,6 +13,7 @@ import {
   CardPaginationFooter,
   CardAIActions,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'clusters'
 
@@ -50,6 +51,7 @@ interface AppData {
 }
 
 export function AppStatus(_props: AppStatusProps) {
+  const { t: _t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
   const { deployments, isLoading, isFailed, consecutiveFailures } = useCachedDeployments()
 

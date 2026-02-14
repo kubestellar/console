@@ -6,8 +6,10 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { Skeleton } from '../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 export function ResourceUsage() {
+  const { t: _t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
   const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()

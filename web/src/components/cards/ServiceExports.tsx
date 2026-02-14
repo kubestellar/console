@@ -10,6 +10,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceExport, ServiceExportStatus } from '../../types/mcs'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Demo data for MCS ServiceExports
 const DEMO_EXPORTS: ServiceExport[] = [
@@ -116,6 +117,7 @@ interface ServiceExportsProps {
 }
 
 export function ServiceExports({ config: _config }: ServiceExportsProps) {
+  const { t: _t } = useTranslation()
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false

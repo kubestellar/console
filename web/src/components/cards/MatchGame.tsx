@@ -7,6 +7,7 @@ import {
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Kubernetes/Cloud themed icons for matching
 const CARD_ICONS = [
@@ -46,6 +47,7 @@ const DIFFICULTY_CONFIG = {
 }
 
 export function MatchGame(_props: CardComponentProps) {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')

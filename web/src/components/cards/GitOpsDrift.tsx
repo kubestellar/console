@@ -8,6 +8,7 @@ import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData, CardClusterFilter, CardSearchInput } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
 
@@ -55,6 +56,7 @@ const severityColors = {
 }
 
 export function GitOpsDrift({ config }: GitOpsDriftProps) {
+  const { t: _t } = useTranslation()
   const cluster = config?.cluster
   const namespace = config?.namespace
 

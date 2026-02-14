@@ -3,6 +3,7 @@ import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-rea
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Board is 8x8, pieces only on dark squares
 const BOARD_SIZE = 8
@@ -406,6 +407,7 @@ function saveGameState(state: SavedGameState) {
 }
 
 export function Checkers(_props: CardComponentProps) {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)

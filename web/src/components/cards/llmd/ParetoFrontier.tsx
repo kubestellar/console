@@ -21,6 +21,7 @@ import {
   getModelShort,
   type ParetoPoint,
 } from '../../../lib/llmd/benchmarkMockData'
+import { useTranslation } from 'react-i18next'
 
 // ---------------------------------------------------------------------------
 // Chart presets — each defines X-axis, Y-axis, title, and optional info pills
@@ -228,6 +229,7 @@ interface ParetoFrontierProps {
 }
 
 export function ParetoFrontier({ config }: ParetoFrontierProps) {
+  const { t: _t } = useTranslation()
   const chartRef = useRef<ReactECharts>(null)
 
   // ---- Data ----

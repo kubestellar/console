@@ -8,6 +8,7 @@ import { useLLMdClusters } from './shared'
 import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import type { LLMdModel } from '../../../hooks/useLLMd'
 import { useCardLoadingState } from '../CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'name' | 'namespace' | 'cluster' | 'status'
 
@@ -23,6 +24,7 @@ interface LLMModelsProps {
 }
 
 export function LLMModels({ config: _config }: LLMModelsProps) {
+  const { t } = useTranslation()
   // Dynamically discover LLM-d clusters instead of using static list
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
@@ -164,9 +166,9 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
             <thead>
               <tr className="text-xs text-muted-foreground border-b border-border/50">
                 <th className="text-left py-2">Model</th>
-                <th className="text-left py-2">Namespace</th>
-                <th className="text-left py-2">Cluster</th>
-                <th className="text-right py-2">Status</th>
+                <th className="text-left py-2">{t('common.namespace')}</th>
+                <th className="text-left py-2">{t('common.cluster')}</th>
+                <th className="text-right py-2">{t('common.status')}</th>
               </tr>
             </thead>
             <tbody>
