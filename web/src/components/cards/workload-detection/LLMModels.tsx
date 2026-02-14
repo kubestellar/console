@@ -78,7 +78,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
       case 'stopped':
         return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400">Stopped</span>
       case 'error':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">Error</span>
+        return <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">{t('common.error')}</span>
       default:
         return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400">{status}</span>
     }

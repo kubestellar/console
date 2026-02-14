@@ -139,7 +139,7 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search namespaces..."
+        placeholder={t('common.searchNamespaces')}
         className="mb-3"
       />
 

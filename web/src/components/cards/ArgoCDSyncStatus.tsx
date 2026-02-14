@@ -10,7 +10,7 @@ interface ArgoCDSyncStatusProps {
 }
 
 export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   // Local cluster filter
   const {
     localClusterFilter,
@@ -184,7 +184,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
         <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-foreground">Unknown</span>
+            <span className="text-sm text-foreground">{t('common.unknown')}</span>
           </div>
           <span className="text-sm font-bold text-gray-400">{stats.unknown}</span>
         </div>

@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next'
 
 // Card 3: Cluster Health Check - Overall health assessment
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { startMission, missions } = useMissions()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { issues: allPodIssues } = useCachedPodIssues()
@@ -173,7 +173,7 @@ Please provide:
           title={`${healthyClusters} healthy cluster${healthyClusters !== 1 ? 's' : ''} - Click to view`}
         >
           <div className="text-lg font-bold text-green-400">{healthyClusters}</div>
-          <div className="text-[10px] text-muted-foreground">Healthy</div>
+          <div className="text-[10px] text-muted-foreground">{t('common.healthy')}</div>
         </div>
         <div
           className={cn(

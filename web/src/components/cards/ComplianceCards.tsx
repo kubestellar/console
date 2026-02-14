@@ -67,6 +67,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
 // Trivy Vulnerability Scanner Card
 export function TrivyScan({ config: _config }: CardConfig) {
+  const { t } = useTranslation()
   // Integration approach: Query VulnerabilityReport CRDs from Trivy Operator
   // UI already displays integration notice with install guide when Trivy is not detected
   const demoVulns = {
@@ -100,7 +101,7 @@ export function TrivyScan({ config: _config }: CardConfig) {
       <div className="grid grid-cols-2 gap-2">
         <div className="p-2 rounded-lg bg-red-500/10 text-center">
           <p className="text-xl font-bold text-red-400">{demoVulns.critical}</p>
-          <p className="text-xs text-muted-foreground">Critical</p>
+          <p className="text-xs text-muted-foreground">{t('common.critical')}</p>
         </div>
         <div className="p-2 rounded-lg bg-orange-500/10 text-center">
           <p className="text-xl font-bold text-orange-400">{demoVulns.high}</p>

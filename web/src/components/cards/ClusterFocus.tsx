@@ -15,7 +15,7 @@ interface ClusterFocusProps {
 }
 
 export function ClusterFocus({ config }: ClusterFocusProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const selectedCluster = config?.cluster
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
@@ -155,7 +155,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         >
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-muted-foreground">Nodes</span>
+            <span className="text-xs text-muted-foreground">{t('common.nodes')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{cluster?.nodeCount || 0}</span>
         </div>
@@ -163,7 +163,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div className="p-3 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2 mb-1">
             <Box className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-muted-foreground">Pods</span>
+            <span className="text-xs text-muted-foreground">{t('common.pods')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{cluster?.podCount || 0}</span>
         </div>

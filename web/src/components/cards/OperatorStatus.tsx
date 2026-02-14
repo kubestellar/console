@@ -53,6 +53,7 @@ const FILTER_CONFIG = {
 }
 
 function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
+  const { t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
@@ -231,11 +232,11 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center">
               <span className="text-lg font-bold text-green-400">{statusCounts.succeeded}</span>
-              <p className="text-xs text-muted-foreground">Running</p>
+              <p className="text-xs text-muted-foreground">{t('common.running')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-red-500/10 text-center">
               <span className="text-lg font-bold text-red-400">{statusCounts.failed}</span>
-              <p className="text-xs text-muted-foreground">Failed</p>
+              <p className="text-xs text-muted-foreground">{t('common.failed')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-blue-500/10 text-center">
               <span className="text-lg font-bold text-blue-400">{statusCounts.other}</span>

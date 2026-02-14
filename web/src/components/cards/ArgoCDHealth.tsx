@@ -17,7 +17,7 @@ const healthConfig = {
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const {
     stats,
     total,
@@ -95,7 +95,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
       <div className="flex items-center justify-center gap-4 mb-4 p-4 rounded-lg bg-secondary/30">
         <div className="text-center">
           <p className="text-3xl font-bold text-foreground">{healthyPercent.toFixed(0)}%</p>
-          <p className="text-xs text-muted-foreground">Healthy</p>
+          <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
         </div>
         <div className="w-px h-12 bg-border" />
         <div className="text-center">

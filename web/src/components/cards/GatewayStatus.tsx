@@ -160,7 +160,7 @@ interface GatewayStatusProps {
 }
 
 export function GatewayStatus({ config: _config }: GatewayStatusProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -295,7 +295,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search gateways..."
+        placeholder={t('common.searchGateways')}
         className="mb-3"
       />
 

@@ -73,7 +73,7 @@ const SORT_COMPARATORS: Record<SortByOption, (a: Deployment, b: Deployment) => n
 }
 
 export function DeploymentProgress({ config }: DeploymentProgressProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const cluster = config?.cluster
   const namespace = config?.namespace
   const {
@@ -239,7 +239,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
         <CardSearchInput
           value={filters.search}
           onChange={handleSearchChange}
-          placeholder="Search deployments..."
+          placeholder={t('common.searchDeployments')}
         />
 
         <div className="flex items-center gap-1 flex-wrap">

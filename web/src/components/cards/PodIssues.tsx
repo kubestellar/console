@@ -30,7 +30,7 @@ const getIssueIcon = (status: string): { icon: typeof MemoryStick; tooltip: stri
 }
 
 export function PodIssues() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const {
     issues: rawIssues,
     isLoading: hookLoading,
@@ -160,7 +160,7 @@ export function PodIssues() {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search issues..."
+        placeholder={t('common.searchIssues')}
         className="mb-3"
       />
 

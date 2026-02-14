@@ -76,7 +76,7 @@ const FILTER_CONFIG = {
 }
 
 export function DeploymentStatus() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
   const {
     deployments: allDeployments,
@@ -256,7 +256,7 @@ export function DeploymentStatus() {
         <CardSearchInput
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search deployments..."
+          placeholder={t('common.searchDeployments')}
         />
 
         <div className="flex items-center gap-1 flex-wrap">

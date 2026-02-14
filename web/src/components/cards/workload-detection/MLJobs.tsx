@@ -27,7 +27,7 @@ interface MLJobsProps {
 }
 
 export function MLJobs({ config: _config }: MLJobsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
 
   useCardLoadingState({
@@ -123,7 +123,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search jobs..."
+        placeholder={t('common.searchJobs')}
         className="mb-2"
       />
 

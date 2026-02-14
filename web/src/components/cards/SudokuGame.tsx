@@ -209,7 +209,7 @@ function isComplete(board: Cell[][], solution: number[][]): boolean {
 }
 
 export function SudokuGame({ config: _config }: SudokuGameProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null)
   const [pencilMode, setPencilMode] = useState(false)
@@ -592,7 +592,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
             className={`flex-1 flex items-center justify-center gap-1 ${controlButtonSize} rounded bg-secondary/50 hover:bg-secondary transition-colors`}
           >
             <Save className={iconSize} />
-            <span className={isMaximized ? 'inline' : 'hidden sm:inline'}>Save</span>
+            <span className={isMaximized ? 'inline' : 'hidden sm:inline'}>{t('common.save')}</span>
           </button>
         </div>
       </div>

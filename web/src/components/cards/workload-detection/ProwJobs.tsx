@@ -154,10 +154,10 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
             <option value="all">All States</option>
-            <option value="success">Success</option>
+            <option value="success">{t('common.success')}</option>
             <option value="failure">Failure</option>
-            <option value="running">Running</option>
-            <option value="pending">Pending</option>
+            <option value="running">{t('common.running')}</option>
+            <option value="pending">{t('common.pending')}</option>
           </select>
           <CardControls
             limit={itemsPerPage}
@@ -179,7 +179,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search jobs..."
+        placeholder={t('common.searchJobs')}
         className="mb-2"
       />
 

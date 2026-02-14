@@ -68,7 +68,7 @@ function getStatusColor(status: string) {
 }
 
 export function PVCStatus() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { pvcs, isLoading, error, consecutiveFailures, isFailed } = usePVCs()
   const { drillToPVC } = useDrillDownActions()
 
@@ -212,7 +212,7 @@ export function PVCStatus() {
       <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/50 text-center">
           <div className="text-lg font-bold text-foreground">{stats.total}</div>
-          <div className="text-xs text-muted-foreground">Total</div>
+          <div className="text-xs text-muted-foreground">{t('common.total')}</div>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 text-center">
           <div className="text-lg font-bold text-green-400">{stats.bound}</div>
@@ -220,11 +220,11 @@ export function PVCStatus() {
         </div>
         <div className="p-2 rounded-lg bg-yellow-500/10 text-center">
           <div className="text-lg font-bold text-yellow-400">{stats.pending}</div>
-          <div className="text-xs text-muted-foreground">Pending</div>
+          <div className="text-xs text-muted-foreground">{t('common.pending')}</div>
         </div>
         <div className="p-2 rounded-lg bg-red-500/10 text-center">
           <div className="text-lg font-bold text-red-400">{stats.failed}</div>
-          <div className="text-xs text-muted-foreground">Failed</div>
+          <div className="text-xs text-muted-foreground">{t('common.failed')}</div>
         </div>
       </div>
 

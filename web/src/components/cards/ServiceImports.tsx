@@ -113,6 +113,7 @@ interface ServiceImportsProps {
 }
 
 function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
+  const { t } = useTranslation()
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -252,7 +253,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalImports}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">Healthy</p>
+          <p className="text-[10px] text-green-400">{t('common.healthy')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.withEndpoints}</p>
         </div>
         <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center">

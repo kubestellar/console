@@ -106,7 +106,7 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
 
@@ -676,7 +676,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           <CardSearchInput
             value={search}
             onChange={(v) => { setSearch(v); setCurrentPage(1) }}
-            placeholder="Search components..."
+            placeholder={t('common.searchComponents')}
             className="mb-3"
           />
 
@@ -794,7 +794,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           <CardSearchInput
             value={issueSearch}
             onChange={(v) => { setIssueSearch(v); setIssueCurrentPage(1) }}
-            placeholder="Search issues..."
+            placeholder={t('common.searchIssues')}
             className="mb-3"
           />
 

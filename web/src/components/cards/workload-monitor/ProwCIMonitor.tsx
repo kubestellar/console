@@ -68,7 +68,7 @@ const TYPE_BADGE: Record<string, string> = {
 }
 
 export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   // Check if we should use demo data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
@@ -234,15 +234,15 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-red-400">{stats.failed}</p>
-          <p className="text-[10px] text-muted-foreground">Failed</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.failed')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-blue-400">{stats.running}</p>
-          <p className="text-[10px] text-muted-foreground">Running</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.running')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-yellow-400">{stats.pending}</p>
-          <p className="text-[10px] text-muted-foreground">Pending</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.pending')}</p>
         </div>
       </div>
 
@@ -263,7 +263,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search jobs..."
+        placeholder={t('common.searchJobs')}
         className="mb-2"
       />
 

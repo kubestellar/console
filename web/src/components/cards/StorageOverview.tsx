@@ -9,7 +9,7 @@ import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useTranslation } from 'react-i18next'
 
 export function StorageOverview() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { pvcs, isLoading: pvcsLoading, consecutiveFailures, isFailed } = usePVCs()
 
@@ -206,7 +206,7 @@ export function StorageOverview() {
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Clock className="w-3 h-3 text-yellow-400" />
-            <span className="text-xs text-yellow-400">Pending</span>
+            <span className="text-xs text-yellow-400">{t('common.pending')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{formatStat(stats.pendingPVCs)}</span>
         </div>
@@ -222,7 +222,7 @@ export function StorageOverview() {
         >
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span className="text-xs text-red-400">Failed</span>
+            <span className="text-xs text-red-400">{t('common.failed')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{formatStat(stats.failedPVCs)}</span>
         </div>

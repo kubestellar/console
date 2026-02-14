@@ -43,7 +43,7 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { issues: allPodIssues, isLoading: podsLoading, refetch: refetchPods } = useCachedPodIssues()
   const { issues: allDeployIssues, isLoading: deploysLoading, refetch: refetchDeploys } = useCachedDeploymentIssues()
@@ -245,7 +245,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-foreground">{stats.totalNodes}</p>
-          <p className="text-[10px] text-muted-foreground">Nodes</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.nodes')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-red-400">{stats.totalPodIssues}</p>

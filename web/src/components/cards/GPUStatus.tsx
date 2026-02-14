@@ -200,7 +200,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search GPU clusters..."
+        placeholder={t('common.searchGPUClusters')}
         className="mb-2"
       />
 

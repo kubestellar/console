@@ -61,7 +61,7 @@ const getEffectiveMemory = (pod: { memoryUsageBytes?: number; memoryRequestBytes
 }
 
 export function TopPods({ config }: TopPodsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const clusterConfig = config?.cluster
   const namespaceConfig = config?.namespace
   const { drillToPod } = useDrillDownActions()
@@ -201,7 +201,7 @@ export function TopPods({ config }: TopPodsProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search pods..."
+        placeholder={t('common.searchPods')}
         className="mb-3"
       />
 

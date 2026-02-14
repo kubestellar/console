@@ -93,7 +93,7 @@ const getSeverityColor = (severity: string) => {
 }
 
 export function SecurityIssues({ config }: SecurityIssuesProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
@@ -281,7 +281,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search issues..."
+        placeholder={t('common.searchIssues')}
         className="mb-3"
       />
 

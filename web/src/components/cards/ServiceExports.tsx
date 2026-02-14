@@ -117,7 +117,7 @@ interface ServiceExportsProps {
 }
 
 export function ServiceExports({ config: _config }: ServiceExportsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -274,11 +274,11 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalExports}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">Ready</p>
+          <p className="text-[10px] text-green-400">{t('common.ready')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.readyCount}</p>
         </div>
         <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-          <p className="text-[10px] text-amber-400">Pending</p>
+          <p className="text-[10px] text-amber-400">{t('common.pending')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.pendingCount}</p>
         </div>
       </div>

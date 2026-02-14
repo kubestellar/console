@@ -50,7 +50,7 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 }
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { pods: allPods, isLoading: podsLoading } = useAllPods()
   const { drillToGPUNamespace } = useDrillDownActions()
@@ -206,7 +206,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search namespaces..."
+        placeholder={t('common.searchNamespaces')}
         className="mb-4"
       />
 

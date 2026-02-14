@@ -40,7 +40,7 @@ function formatRelativeTime(dateString: string): string {
 type SortField = 'severity' | 'time'
 
 export function ActiveAlerts() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
@@ -265,7 +265,7 @@ export function ActiveAlerts() {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search alerts..."
+        placeholder={t('common.searchAlerts')}
       />
 
       {/* Stats Row */}
@@ -273,14 +273,14 @@ export function ActiveAlerts() {
         <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span className="text-xs text-red-400">Critical</span>
+            <span className="text-xs text-red-400">{t('common.critical')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{stats.critical}</span>
         </div>
         <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-orange-400" />
-            <span className="text-xs text-orange-400">Warning</span>
+            <span className="text-xs text-orange-400">{t('common.warning')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{stats.warning}</span>
         </div>

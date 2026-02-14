@@ -36,7 +36,7 @@ const SORT_OPTIONS = [
 const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1, Established: 2 }
 
 export function CRDHealth({ config: _config }: CRDHealthProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { isLoading, deduplicatedClusters } = useClusters()
 
   const [filterGroup, setFilterGroup] = useState<string>('')
@@ -280,7 +280,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
             </div>
             <div className="p-2 rounded-lg bg-green-500/10 text-center">
               <span className="text-lg font-bold text-green-400">{healthyCount}</span>
-              <p className="text-xs text-muted-foreground">Healthy</p>
+              <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
             </div>
             <div className="p-2 rounded-lg bg-red-500/10 text-center">
               <span className="text-lg font-bold text-red-400">{unhealthyCount}</span>

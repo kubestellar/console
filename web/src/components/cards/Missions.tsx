@@ -141,7 +141,7 @@ const SORT_OPTIONS: { value: SortByOption; label: string }[] = [
 const CLUSTER_FILTER_KEY = 'kubestellar-card-filter:deployment-missions-clusters'
 
 export function Missions(_props: MissionsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
   const { deduplicatedClusters, isLoading } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -320,7 +320,7 @@ export function Missions(_props: MissionsProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search missions..."
+        placeholder={t('common.searchMissions')}
         className="mb-2 shrink-0"
       />
 

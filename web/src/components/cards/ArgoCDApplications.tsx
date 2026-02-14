@@ -59,6 +59,7 @@ const ARGO_SORT_COMPARATORS = {
 }
 
 function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
+  const { t } = useTranslation()
   const {
     applications: allApps,
     isLoading,
@@ -249,7 +250,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              onClick={() => setSelectedFilter('all')}>
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
-          <p className="text-xs text-muted-foreground">Healthy</p>
+          <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-red-500/10 cursor-pointer hover:bg-red-500/20"
              onClick={() => setSelectedFilter('unhealthy')}>

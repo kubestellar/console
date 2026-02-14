@@ -35,7 +35,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 ]
 
 export function PodHealthTrend() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { issues, isLoading: issuesLoading } = useCachedPodIssues()
 
@@ -291,7 +291,7 @@ export function PodHealthTrend() {
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20" title={hasReachableClusters ? `${currentStats.healthy} healthy pods` : 'No reachable clusters'}>
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">Healthy</span>
+            <span className="text-xs text-green-400">{t('common.healthy')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{hasReachableClusters ? currentStats.healthy : '-'}</span>
         </div>
@@ -305,7 +305,7 @@ export function PodHealthTrend() {
         <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={hasReachableClusters ? `${currentStats.pending} pending pods` : 'No reachable clusters'}>
           <div className="flex items-center gap-1.5 mb-1">
             <Clock className="w-3 h-3 text-yellow-400" />
-            <span className="text-xs text-yellow-400">Pending</span>
+            <span className="text-xs text-yellow-400">{t('common.pending')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{hasReachableClusters ? currentStats.pending : '-'}</span>
         </div>
@@ -405,7 +405,7 @@ export function PodHealthTrend() {
       <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-center gap-4 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-green-500/60" />
-          <span className="text-muted-foreground">Healthy</span>
+          <span className="text-muted-foreground">{t('common.healthy')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-orange-500/60" />
@@ -413,7 +413,7 @@ export function PodHealthTrend() {
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-yellow-500/60" />
-          <span className="text-muted-foreground">Pending</span>
+          <span className="text-muted-foreground">{t('common.pending')}</span>
         </div>
       </div>
     </div>

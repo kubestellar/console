@@ -213,7 +213,7 @@ function generatePredictionId(type: string, name: string, cluster?: string): str
 
 // Card 4: Predictive Health Monitor - Detect issues, predict failures, group by root cause
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { startMission, missions } = useMissions()
   const { nodes: gpuNodes, isLoading } = useGPUNodes()
   const { issues: podIssues } = usePodIssues()
@@ -959,7 +959,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
         <CardSearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Search issues..."
+          placeholder={t('common.searchIssues')}
           className="flex-1"
         />
         {/* View mode toggle - only show if there are grouped items */}

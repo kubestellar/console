@@ -34,7 +34,7 @@ const SORT_OPTIONS = [
 ]
 
 export function WarningEvents() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const {
     events,
     isLoading,
@@ -171,7 +171,7 @@ export function WarningEvents() {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search warnings..."
+        placeholder={t('common.searchWarnings')}
       />
 
       {/* Warning events list */}

@@ -22,6 +22,7 @@ const SORT_OPTIONS = [
 ]
 
 function EventStreamInternal() {
+  const { t } = useTranslation()
   // Fetch more events from API to enable pagination (using cached data hook)
   const {
     events: rawEvents,
@@ -165,7 +166,7 @@ function EventStreamInternal() {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search events..."
+        placeholder={t('common.searchEvents')}
         className="mb-3"
       />
 

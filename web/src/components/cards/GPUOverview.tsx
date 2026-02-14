@@ -22,7 +22,7 @@ const SORT_OPTIONS = [
 ]
 
 export function GPUOverview({ config: _config }: GPUOverviewProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const {
     nodes: rawNodes,
     isLoading: hookLoading,
@@ -221,7 +221,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search GPU types..."
+        placeholder={t('common.searchGPUTypes')}
         className="mb-3"
       />
 

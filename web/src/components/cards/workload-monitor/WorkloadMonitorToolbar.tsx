@@ -92,7 +92,7 @@ export function WorkloadMonitorToolbar({
             <option value="config">Config</option>
             <option value="networking">Networking</option>
             <option value="scaling">Scaling</option>
-            <option value="storage">Storage</option>
+            <option value="storage">{t('common.storage')}</option>
             <option value="crd">CRDs</option>
             <option value="admission">Admission</option>
           </select>
@@ -103,8 +103,8 @@ export function WorkloadMonitorToolbar({
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
             <option value="all">All Status</option>
-            <option value="healthy">Healthy</option>
-            <option value="degraded">Degraded</option>
+            <option value="healthy">{t('common.healthy')}</option>
+            <option value="degraded">{t('common.degraded')}</option>
             <option value="unhealthy">Unhealthy</option>
             <option value="missing">Missing</option>
           </select>

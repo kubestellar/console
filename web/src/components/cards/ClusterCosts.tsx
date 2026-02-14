@@ -182,7 +182,7 @@ const SORT_COMPARATORS = {
 }
 
 export function ClusterCosts({ config }: ClusterCostsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
@@ -559,12 +559,12 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               </div>
               <div className="grid grid-cols-3 gap-2 mb-2">
                 <div className="p-2 rounded bg-secondary/50">
-                  <p className="text-muted-foreground mb-0.5">CPU</p>
+                  <p className="text-muted-foreground mb-0.5">{t('common.cpu')}</p>
                   <p className="text-foreground font-medium">${cpuCost.toFixed(3)}/hr</p>
                   <p className="text-[10px] text-muted-foreground">per vCPU</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/50">
-                  <p className="text-muted-foreground mb-0.5">Memory</p>
+                  <p className="text-muted-foreground mb-0.5">{t('common.memory')}</p>
                   <p className="text-foreground font-medium">${memoryCost.toFixed(4)}/hr</p>
                   <p className="text-[10px] text-muted-foreground">per GB</p>
                 </div>
@@ -626,7 +626,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search clusters..."
+        placeholder={t('common.searchClusters')}
         className="mb-3"
       />
 

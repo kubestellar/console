@@ -200,7 +200,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
 })
 
 export function StackSelector() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const stackContext = useOptionalStack()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -444,7 +444,7 @@ export function StackSelector() {
                   <input
                     ref={searchInputRef}
                     type="text"
-                    placeholder="Search stacks..."
+                    placeholder={t('common.searchStacks')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-900/50 border border-slate-700 rounded focus:outline-none focus:border-slate-600 text-white placeholder-slate-500"
