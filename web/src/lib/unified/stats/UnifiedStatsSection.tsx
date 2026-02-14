@@ -35,7 +35,7 @@ export function UnifiedStatsSection({
   })
 
   // Configuration modal state
-  const [showConfig, setShowConfig] = useState(false)
+  const [isConfigOpen, setIsConfigOpen] = useState(false)
   const [customBlocks, setCustomBlocks] = useState<UnifiedStatBlockConfig[] | null>(null)
 
   // Determine visible blocks
@@ -162,7 +162,7 @@ export function UnifiedStatsSection({
         {/* Configure button */}
         {config.showConfigButton !== false && isExpanded && (
           <button
-            onClick={() => setShowConfig(true)}
+            onClick={() => setIsConfigOpen(true)}
             className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
             title="Configure stats"
           >
@@ -187,10 +187,10 @@ export function UnifiedStatsSection({
       )}
 
       {/* Configuration modal placeholder */}
-      {showConfig && (
+      {isConfigOpen && (
         <StatsConfigModal
-          isOpen={showConfig}
-          onClose={() => setShowConfig(false)}
+          isOpen={isConfigOpen}
+          onClose={() => setIsConfigOpen(false)}
           blocks={customBlocks || config.blocks}
           onSave={saveBlocks}
           defaultBlocks={config.blocks}

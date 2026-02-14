@@ -75,8 +75,8 @@ export function UnifiedDashboard({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Modal state
-  const [showAddCardModal, setShowAddCardModal] = useState(false)
-  const [showConfigureCardModal, setShowConfigureCardModal] = useState(false)
+  const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
+  const [isConfigureCardModalOpen, setIsConfigureCardModalOpen] = useState(false)
   const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
 
   // Persist cards to localStorage when they change
@@ -110,7 +110,7 @@ export function UnifiedDashboard({
         config: card.config || {},
         title: card.title,
       })
-      setShowConfigureCardModal(true)
+      setIsConfigureCardModalOpen(true)
     }
   }, [cards])
 
@@ -125,7 +125,7 @@ export function UnifiedDashboard({
 
   // Handle add card
   const handleAddCard = useCallback(() => {
-    setShowAddCardModal(true)
+    setIsAddCardModalOpen(true)
   }, [])
 
   // Handle adding cards from AddCardModal
@@ -145,7 +145,7 @@ export function UnifiedDashboard({
       }))
       return [...prev, ...additions]
     })
-    setShowAddCardModal(false)
+    setIsAddCardModalOpen(false)
   }, [])
 
   // Handle saving card configuration
@@ -161,7 +161,7 @@ export function UnifiedDashboard({
           : card
       )
     )
-    setShowConfigureCardModal(false)
+    setIsConfigureCardModalOpen(false)
     setCardToEdit(null)
   }, [])
 
@@ -300,18 +300,18 @@ export function UnifiedDashboard({
 
       {/* Add Card Modal */}
       <AddCardModal
-        isOpen={showAddCardModal}
-        onClose={() => setShowAddCardModal(false)}
+        isOpen={isAddCardModalOpen}
+        onClose={() => setIsAddCardModalOpen(false)}
         onAddCards={handleAddCards}
         existingCardTypes={cards.map((c) => c.cardType)}
       />
 
       {/* Configure Card Modal */}
       <ConfigureCardModal
-        isOpen={showConfigureCardModal}
+        isOpen={isConfigureCardModalOpen}
         card={cardToEdit}
         onClose={() => {
-          setShowConfigureCardModal(false)
+          setIsConfigureCardModalOpen(false)
           setCardToEdit(null)
         }}
         onSave={handleSaveCardConfig}
