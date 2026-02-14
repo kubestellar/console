@@ -230,8 +230,6 @@ export function registerAllDemoGenerators() {
   ]
 
   registerDemoDataBatch(entries)
-
-  console.log(`[UnifiedDemo] Registered ${entries.length} demo data generators`)
 }
 
 // Export individual generators for direct use

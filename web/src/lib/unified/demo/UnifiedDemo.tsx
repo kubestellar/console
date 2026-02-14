@@ -97,7 +97,6 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
         clearTimeout(switchTimeoutRef.current)
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDemoMode])
 
   // Trigger initial data load ONCE when provider mounts
@@ -108,7 +107,6 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
       initialLoadTriggeredRef.current = true
       // Short delay to allow hooks to register their refetch functions
       const timeoutId = setTimeout(() => {
-        console.log('[UnifiedDemo] Triggering initial data load')
         triggerAllRefetches()
       }, 100)
       return () => clearTimeout(timeoutId)

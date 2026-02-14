@@ -192,7 +192,6 @@ export function useServices(cluster?: string, namespace?: string) {
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
-        console.log(`[useServices] Fetching for ${cluster} using context: ${kubectlContext}`)
 
         // Add timeout to prevent hanging
         const svcPromise = kubectlProxy.getServices(kubectlContext, namespace)
@@ -202,7 +201,6 @@ export function useServices(cluster?: string, namespace?: string) {
         const svcData = await Promise.race([svcPromise, timeoutPromise])
 
         if (svcData && svcData.length >= 0) {
-          console.log(`[useServices] Got ${svcData.length} services for ${cluster}`)
           const now = new Date()
           // Map to Service format
           const mappedServices: Service[] = svcData.map(s => ({
@@ -227,7 +225,6 @@ export function useServices(cluster?: string, namespace?: string) {
           }
           return
         }
-        console.log(`[useServices] No data returned for ${cluster}, trying API`)
       } catch (err) {
         console.error(`[useServices] kubectl proxy failed for ${cluster}:`, err)
       }
@@ -541,7 +538,5 @@ if (typeof window !== 'undefined') {
       networkingSharedState = { ...networkingSharedState, isResetting: false }
       notifyNetworkingSubscribers()
     }, 0)
-
-    console.log('[Networking] Cache cleared for mode transition')
   })
 }

@@ -181,7 +181,6 @@ export function useSlackNotification() {
       try {
         // Note: In production, this should go through a backend proxy to avoid CORS
         // For now, we'll just log the intended payload
-        console.log('Slack notification payload:', payload)
         // await fetch(webhook.webhookUrl, {
         //   method: 'POST',
         //   headers: { 'Content-Type': 'application/json' },

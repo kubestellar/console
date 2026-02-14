@@ -57,7 +57,6 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Retry connection when dropdown is opened and agents are empty
   useEffect(() => {
     if (isOpen && agents.length === 0 && !agentsLoading && !isDemoMode) {
-      console.log('[AgentSelector] Dropdown opened with no agents, attempting reconnect...')
       connectToAgent()
     }
   }, [isOpen, agents.length, agentsLoading, isDemoMode, connectToAgent])
