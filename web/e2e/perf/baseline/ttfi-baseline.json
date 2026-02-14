@@ -1,0 +1,24 @@
+{
+  "budgets": {
+    "live-cold": {
+      "max_ttfi_ms": 5000,
+      "max_p95_ms": 1500,
+      "max_timeout_count": 36
+    },
+    "live-warm": {
+      "max_ttfi_ms": 4000,
+      "max_p95_ms": 1200,
+      "max_timeout_count": 18
+    },
+    "demo-cold": {
+      "max_ttfi_ms": 2500,
+      "max_p95_ms": 800,
+      "max_timeout_count": 2
+    },
+    "demo-warm": {
+      "max_ttfi_ms": 2500,
+      "max_p95_ms": 900,
+      "max_timeout_count": 1
+    }
+  }
+}

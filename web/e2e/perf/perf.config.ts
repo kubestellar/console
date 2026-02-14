@@ -23,7 +23,7 @@ function getWebServer() {
       command: `npm run dev -- --port ${DEV_PORT}`,
       url: `http://localhost:${DEV_PORT}`,
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 420_000,
     }
   }
 
@@ -32,7 +32,7 @@ function getWebServer() {
     command: `npm run build && npx vite preview --port ${PREVIEW_PORT}`,
     url: `http://localhost:${PREVIEW_PORT}`,
     reuseExistingServer: true,
-    timeout: 180_000,
+    timeout: 420_000,
   }
 }
 
@@ -40,7 +40,7 @@ const port = useDevServer ? DEV_PORT : PREVIEW_PORT
 
 export default defineConfig({
   testDir: '.',
-  timeout: 120_000,
+  timeout: 900_000,
   expect: { timeout: 30_000 },
   retries: 0,
   workers: 1,

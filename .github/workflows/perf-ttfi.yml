@@ -1,0 +1,70 @@
+name: Performance TTFI Gate
+
+on:
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'web/**'
+      - 'scripts/perf-test.sh'
+      - '.github/workflows/perf-ttfi.yml'
+  workflow_dispatch:
+
+env:
+  CI: true
+
+jobs:
+  all-cards-ttfi:
+    name: All Cards TTFI (Hard Gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run all-card TTFI suite
+        run: npm run test:e2e:perf:ttfi
+
+      - name: Compare against baseline (hard fail)
+        run: node e2e/perf/compare-ttfi.mjs
+
+      - name: Upload TTFI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ttfi-artifacts
+          path: |
+            web/e2e/test-results/ttfi-report.json
+            web/e2e/test-results/ttfi-summary.md
+            web/e2e/test-results/ttfi-regression.md
+            web/perf-report/
+          retention-days: 14
+
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "## All-Card TTFI Gate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "e2e/test-results/ttfi-summary.md" ]; then
+            cat e2e/test-results/ttfi-summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "e2e/test-results/ttfi-regression.md" ]; then
+            cat e2e/test-results/ttfi-regression.md >> $GITHUB_STEP_SUMMARY
+          fi

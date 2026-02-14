@@ -63,6 +63,7 @@ const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').the
 const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => ({ default: m.UnifiedCardTest })))
 const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m => ({ default: m.UnifiedStatsTest })))
 const UnifiedDashboardTest = lazy(() => import('./pages/UnifiedDashboardTest').then(m => ({ default: m.UnifiedDashboardTest })))
+const AllCardsPerfTest = lazy(() => import('./pages/AllCardsPerfTest').then(m => ({ default: m.AllCardsPerfTest })))
 
 // Prefetch all lazy route chunks after initial page load.
 // Batched to avoid overwhelming the Vite dev server with simultaneous
@@ -276,6 +277,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                   <CustomDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/__perf/all-cards"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AllCardsPerfTest />
               </Layout>
             </ProtectedRoute>
           }
