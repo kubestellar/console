@@ -516,6 +516,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/nodes/stream", mcpHandlers.GetNodesStream)
 	api.Get("/mcp/gpu-nodes/stream", mcpHandlers.GetGPUNodesStream)
 	api.Get("/mcp/events/warnings/stream", mcpHandlers.GetWarningEventsStream)
+	api.Get("/mcp/jobs/stream", mcpHandlers.GetJobsStream)
+	api.Get("/mcp/configmaps/stream", mcpHandlers.GetConfigMapsStream)
+	api.Get("/mcp/secrets/stream", mcpHandlers.GetSecretsStream)
+	api.Get("/mcp/nvidia-operators/stream", mcpHandlers.GetNVIDIAOperatorStatusStream)
 
 	// GitOps routes (drift detection and sync)
 	// SECURITY: All GitOps routes require authentication in both dev and production modes

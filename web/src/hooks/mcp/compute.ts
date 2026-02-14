@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { api } from '../../lib/api'
+import { fetchSSE } from '../../lib/sseClient'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
@@ -174,17 +175,36 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       }
     }
 
-    // If agent didn't work (not just "returned 0 nodes"), try backend API as fallback
+    // If agent didn't work (not just "returned 0 nodes"), try SSE streaming then REST
     if (!agentSucceeded && token && !isDemoMode()) {
       try {
-        const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
-        newNodes = data.nodes || []
+        // Try SSE streaming first for progressive rendering
+        const sseResult = await fetchSSE<GPUNode>({
+          url: '/api/mcp/gpu-nodes/stream',
+          params: Object.fromEntries(params.entries()),
+          itemsKey: 'nodes',
+          onClusterData: (_cluster, items) => {
+            if (items.length > 0) {
+              newNodes = [...newNodes, ...items]
+              updateGPUNodeCache({
+                nodes: [...newNodes],
+                isLoading: false,
+                isRefreshing: true,
+              })
+            }
+          },
+        })
+        newNodes = sseResult
       } catch {
-        // Both failed, will fall through to error handling
-        if (gpuNodeCache.nodes.length === 0) {
-          throw new Error('Both local agent and backend failed')
+        // SSE failed, try REST fallback
+        try {
+          const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
+          newNodes = data.nodes || []
+        } catch {
+          if (gpuNodeCache.nodes.length === 0) {
+            throw new Error('Both SSE and REST failed')
+          }
         }
-        // If we have cached data, just keep it
       }
     }
 
@@ -572,9 +592,37 @@ export function useNVIDIAOperators(cluster?: string) {
   const refetch = useCallback(async () => {
     setIsLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      const { data } = await api.get<{ operators?: NVIDIAOperatorStatus[], operator?: NVIDIAOperatorStatus }>(`/api/mcp/nvidia-operators?${params}`)
+      const params: Record<string, string> = {}
+      if (cluster) params.cluster = cluster
+
+      // Try SSE streaming first
+      const token = localStorage.getItem('token')
+      if (token && token !== 'demo-token') {
+        try {
+          const accumulated: NVIDIAOperatorStatus[] = []
+          const result = await fetchSSE<NVIDIAOperatorStatus>({
+            url: '/api/mcp/nvidia-operators/stream',
+            params,
+            itemsKey: 'operators',
+            onClusterData: (_clusterName, items) => {
+              accumulated.push(...items)
+              setOperators([...accumulated])
+              setIsLoading(false)
+            },
+          })
+          setOperators(result)
+          setError(null)
+          setIsLoading(false)
+          return
+        } catch {
+          // SSE failed, fall through to REST
+        }
+      }
+
+      // REST fallback
+      const urlParams = new URLSearchParams()
+      if (cluster) urlParams.append('cluster', cluster)
+      const { data } = await api.get<{ operators?: NVIDIAOperatorStatus[], operator?: NVIDIAOperatorStatus }>(`/api/mcp/nvidia-operators?${urlParams}`)
       if (data.operators) {
         setOperators(data.operators)
       } else if (data.operator) {
@@ -583,8 +631,7 @@ export function useNVIDIAOperators(cluster?: string) {
         setOperators([])
       }
       setError(null)
-    } catch (err) {
-      // Don't show error - NVIDIA operators are optional
+    } catch {
       setError(null)
       setOperators([])
     } finally {

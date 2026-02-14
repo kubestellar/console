@@ -89,7 +89,7 @@ func streamClusters(
 			}(cl.Name)
 		}
 
-		waitWithDeadline(&wg, maxResponseDeadline)
+		wg.Wait()
 
 		writeSSEEvent(w, "done", fiber.Map{
 			"totalClusters":     totalClusters,
@@ -330,5 +330,83 @@ func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 		clusterTimeout: 15 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetWarningEvents(ctx, cluster, namespace, 50)
+	})
+}
+
+// GetJobsStream streams jobs per cluster via SSE.
+func (h *MCPHandlers) GetJobsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "jobs", getDemoJobs())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "jobs",
+		clusterTimeout: 15 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetJobs(ctx, cluster, namespace)
+	})
+}
+
+// GetConfigMapsStream streams configmaps per cluster via SSE.
+func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "configmaps", getDemoConfigMaps())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "configmaps",
+		clusterTimeout: 15 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetConfigMaps(ctx, cluster, namespace)
+	})
+}
+
+// GetSecretsStream streams secrets per cluster via SSE.
+func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "secrets", getDemoSecrets())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "secrets",
+		clusterTimeout: 15 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetSecrets(ctx, cluster, namespace)
+	})
+}
+
+// GetNVIDIAOperatorStatusStream streams NVIDIA operator status per cluster via SSE.
+func (h *MCPHandlers) GetNVIDIAOperatorStatusStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "operators", getDemoNVIDIAOperatorStatus())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "operators",
+		clusterTimeout: 15 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, cluster)
+		if err != nil {
+			return nil, err
+		}
+		if status.GPUOperator == nil && status.NetworkOperator == nil {
+			return nil, fmt.Errorf("no NVIDIA operators on cluster %s", cluster)
+		}
+		return status, nil
 	})
 }

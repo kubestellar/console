@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
+import { fetchSSE } from '../../lib/sseClient'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
@@ -1096,6 +1097,32 @@ export function useJobs(cluster?: string, namespace?: string) {
         }
       } catch {
         // Fall through to API
+      }
+    }
+    // Try SSE streaming first for progressive rendering
+    const token = localStorage.getItem('token')
+    if (token && token !== 'demo-token') {
+      try {
+        const sseParams: Record<string, string> = {}
+        if (cluster) sseParams.cluster = cluster
+        if (namespace) sseParams.namespace = namespace
+        const accumulated: Job[] = []
+        const result = await fetchSSE<Job>({
+          url: '/api/mcp/jobs/stream',
+          params: sseParams,
+          itemsKey: 'jobs',
+          onClusterData: (_clusterName, items) => {
+            accumulated.push(...items)
+            setJobs([...accumulated])
+            setIsLoading(false)
+          },
+        })
+        setJobs(result)
+        setError(null)
+        setIsLoading(false)
+        return
+      } catch {
+        // SSE failed, fall through to REST
       }
     }
     try {

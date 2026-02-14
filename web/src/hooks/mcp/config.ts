@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
+import { fetchSSE } from '../../lib/sseClient'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
@@ -48,6 +49,32 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
         }
       } catch {
         // Fall through to API
+      }
+    }
+    // Try SSE streaming for progressive display
+    const token = localStorage.getItem('token')
+    if (token && token !== 'demo-token') {
+      try {
+        const sseParams: Record<string, string> = {}
+        if (cluster) sseParams.cluster = cluster
+        if (namespace) sseParams.namespace = namespace
+        const accumulated: ConfigMap[] = []
+        const result = await fetchSSE<ConfigMap>({
+          url: '/api/mcp/configmaps/stream',
+          params: sseParams,
+          itemsKey: 'configmaps',
+          onClusterData: (_clusterName, items) => {
+            accumulated.push(...items)
+            setConfigMaps([...accumulated])
+            setIsLoading(false)
+          },
+        })
+        setConfigMaps(result)
+        setError(null)
+        setIsLoading(false)
+        return
+      } catch {
+        // SSE failed, fall through to REST
       }
     }
     try {
@@ -129,6 +156,32 @@ export function useSecrets(cluster?: string, namespace?: string) {
         }
       } catch {
         // Fall through to API
+      }
+    }
+    // Try SSE streaming for progressive display
+    const token = localStorage.getItem('token')
+    if (token && token !== 'demo-token') {
+      try {
+        const sseParams: Record<string, string> = {}
+        if (cluster) sseParams.cluster = cluster
+        if (namespace) sseParams.namespace = namespace
+        const accumulated: Secret[] = []
+        const result = await fetchSSE<Secret>({
+          url: '/api/mcp/secrets/stream',
+          params: sseParams,
+          itemsKey: 'secrets',
+          onClusterData: (_clusterName, items) => {
+            accumulated.push(...items)
+            setSecrets([...accumulated])
+            setIsLoading(false)
+          },
+        })
+        setSecrets(result)
+        setError(null)
+        setIsLoading(false)
+        return
+      } catch {
+        // SSE failed, fall through to REST
       }
     }
     try {
