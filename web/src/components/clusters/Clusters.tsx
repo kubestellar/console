@@ -198,10 +198,10 @@ Start by running diagnostic commands to understand what's happening.`,
               <button
                 onClick={handleRepairPod}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
-                title="Launch AI repair mission"
+                title={t('cluster.launchAIRepairMission')}
               >
                 <Wrench className="w-4 h-4" />
-                Repair Pod
+                {t('cluster.repairPod')}
               </button>
             )}
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -216,20 +216,20 @@ Start by running diagnostic commands to understand what's happening.`,
             onClick={() => setActiveTab('describe')}
             className={`px-3 py-1.5 rounded-t text-sm flex items-center gap-1.5 ${activeTab === 'describe' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <FileText className="w-4 h-4" />Describe
+            <FileText className="w-4 h-4" />{t('drilldown.tabs.describe')}
           </button>
           <button
             onClick={() => setActiveTab('labels')}
             className={`px-3 py-1.5 rounded-t text-sm flex items-center gap-1.5 ${activeTab === 'labels' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <Info className="w-4 h-4" />Labels & Annotations
+            <Info className="w-4 h-4" />{t('cluster.labelsAndAnnotations')}
           </button>
           {resource.kind === 'Pod' && (
             <button
               onClick={() => setActiveTab('logs')}
               className={`px-3 py-1.5 rounded-t text-sm flex items-center gap-1.5 ${activeTab === 'logs' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              <Terminal className="w-4 h-4" />Logs
+              <Terminal className="w-4 h-4" />{t('drilldown.tabs.logs')}
             </button>
           )}
         </div>
@@ -294,10 +294,10 @@ Start by running diagnostic commands to understand what's happening.`,
                   {logsLoading ? t('common.loading') : t('common.refresh')}
                 </button>
               </div>
-              {logsLoading && <div className="text-muted-foreground">Loading logs...</div>}
+              {logsLoading && <div className="text-muted-foreground">{t('cluster.loadingLogs')}</div>}
               {logsError && <div className="text-red-400">{logsError}</div>}
               {!logsLoading && !logsError && !logs && (
-                <div className="text-muted-foreground">No logs available</div>
+                <div className="text-muted-foreground">{t('cluster.noLogsAvailable')}</div>
               )}
               {!logsLoading && logs && (
                 <pre className="whitespace-pre-wrap break-all text-foreground">{logs}</pre>
@@ -898,15 +898,15 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             {isUnreachable ? (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 text-yellow-400" title="Offline - check network connection">
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 text-yellow-400" title={t('cluster.offline')}>
                 <WifiOff className="w-4 h-4" />
               </span>
             ) : isHealthy ? (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/20 text-green-400" title="Healthy">
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/20 text-green-400" title={t('cluster.healthy')}>
                 <CheckCircle className="w-4 h-4" />
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/20 text-orange-400" title="Unhealthy">
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/20 text-orange-400" title={t('cluster.unhealthy')}>
                 <AlertTriangle className="w-4 h-4" />
               </span>
             )}
@@ -915,7 +915,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
               <button
                 onClick={() => onRename(clusterName)}
                 className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-                title="Rename cluster"
+                title={t('cluster.renameCluster')}
               >
                 <Pencil className="w-4 h-4" />
               </button>
@@ -934,7 +934,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
             className={`p-4 rounded-lg bg-card/50 border text-left transition-colors ${
               !isUnreachable ? 'border-border hover:border-primary/50 hover:bg-card/70 cursor-pointer' : 'border-border cursor-default'
             } ${showNodeDetails ? 'border-primary/50 bg-card/70' : ''}`}
-            title={!isUnreachable ? 'Click to view node details' : undefined}
+            title={!isUnreachable ? t('cluster.clickToViewNodeDetails') : undefined}
           >
             <div className="text-2xl font-bold text-foreground">{!isUnreachable ? (health?.nodeCount || 0) : '-'}</div>
             <div className="text-sm text-muted-foreground flex items-center gap-1">
@@ -949,7 +949,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
             className={`p-4 rounded-lg bg-card/50 border text-left transition-colors ${
               !isUnreachable ? 'border-border hover:border-primary/50 hover:bg-card/70 cursor-pointer' : 'border-border cursor-default'
             } ${showPodsByNamespace ? 'border-primary/50 bg-card/70' : ''}`}
-            title={!isUnreachable ? 'Click to view workloads by namespace' : undefined}
+            title={!isUnreachable ? t('cluster.clickToViewWorkloads') : undefined}
           >
             <div className="text-sm text-muted-foreground flex items-center gap-1 mb-1">
               Workloads
@@ -979,7 +979,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
           <div className="p-4 rounded-lg bg-card/50 border border-border">
             <div className="text-2xl font-bold text-foreground">{!isUnreachable ? clusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0) : '-'}</div>
             <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
-            <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} allocated` : ''}</div>
+            <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} ${t('cluster.allocated')}` : ''}</div>
           </div>
         </div>
 
@@ -1026,14 +1026,14 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                   onClick={() => setShowAllNamespaces(!showAllNamespaces)}
                   className="w-full p-2 text-sm text-primary hover:bg-card/30 transition-colors border-t border-border/30"
                 >
-                  {showAllNamespaces ? 'Show less' : `Show all ${namespaceStats.length} namespaces`}
+                  {showAllNamespaces ? t('cluster.showLess') : t('cluster.showAllNamespaces', { count: namespaceStats.length })}
                 </button>
               )}
             </div>
             {nsLoading && (
               <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                Loading namespace data...
+                {t('cluster.loadingNamespaceData')}
               </div>
             )}
           </div>
@@ -1367,7 +1367,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
 }
 
 export function Clusters() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
@@ -1685,8 +1685,8 @@ export function Clusters() {
     <div data-testid="clusters-page" className="pt-16">
       {/* Header */}
       <DashboardHeader
-        title="My Clusters"
-        subtitle="Manage your Kubernetes clusters"
+        title={t('navigation.clusters')}
+        subtitle={t('cluster.subtitle')}
         icon={<Server className="w-6 h-6 text-purple-400" />}
         isFetching={isFetching}
         onRefresh={triggerRefresh}
@@ -1912,7 +1912,7 @@ export function Clusters() {
                       deleteClusterGroup(group.id)
                     }}
                     className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                    title="Delete group"
+                    title={t('cluster.deleteGroup')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

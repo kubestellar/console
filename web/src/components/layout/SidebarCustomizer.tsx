@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Plus,
   Trash2,
@@ -54,6 +55,7 @@ interface SortableItemProps {
 }
 
 function SortableItem({ item, onRemove, renderIcon }: SortableItemProps) {
+  const { t } = useTranslation(['common', 'cards'])
   const {
     attributes,
     listeners,
@@ -95,7 +97,7 @@ function SortableItem({ item, onRemove, renderIcon }: SortableItemProps) {
         <button
           onClick={() => onRemove(item.id)}
           className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
-          title="Remove from sidebar"
+          title={t('sidebar.removeFromSidebar')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -165,6 +167,7 @@ interface SidebarCustomizerProps {
 }
 
 export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
+  const { t } = useTranslation(['common', 'cards'])
   const navigate = useNavigate()
   const {
     config,
@@ -296,9 +299,9 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
 
     if (sortedPaths.length > 0) {
       generateFromBehavior(sortedPaths)
-      setGenerationResult(`Analyzed ${navHistory.length} page visits. Sidebar updated based on your most visited pages.`)
+      setGenerationResult(t('sidebar.customizer.analyzed', { count: navHistory.length }))
     } else {
-      setGenerationResult('Not enough navigation data yet. Keep using the console and try again later!')
+      setGenerationResult(t('sidebar.customizer.notEnoughData'))
     }
 
     setIsGenerating(false)
@@ -373,8 +376,8 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     <>
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
       <BaseModal.Header
-        title="Customize Sidebar"
-        description="Add, remove, or reorder menu items"
+        title={t('sidebar.customizer.title')}
+        description={t('sidebar.customizer.description')}
         icon={LayoutDashboard}
         onClose={onClose}
         showBack={false}
@@ -388,21 +391,21 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
             >
               <Plus className="w-4 h-4" />
-              Add Item
+              {t('sidebar.customizer.addItem')}
             </button>
             <button
               onClick={() => setIsCreateDashboardOpen(true)}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30"
             >
               <FolderPlus className="w-4 h-4" />
-              New Dashboard
+              {t('sidebar.customizer.newDashboard')}
             </button>
             <button
               onClick={resetToDefault}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-foreground"
             >
               <RotateCcw className="w-4 h-4" />
-              Reset
+              {t('sidebar.customizer.reset')}
             </button>
             <button
               onClick={handleGenerateFromBehavior}
@@ -414,7 +417,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               ) : (
                 <Sparkles className="w-4 h-4" />
               )}
-              {isGenerating ? 'Analyzing...' : 'Generate from Behavior'}
+              {isGenerating ? t('sidebar.customizer.analyzing') : t('sidebar.customizer.generateFromBehavior')}
             </button>
           </div>
 
@@ -433,7 +436,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
           {/* Add Item Form - Inline checklist (no dropdown) */}
           {showAddForm && (
             <div className="mb-6 p-4 rounded-lg bg-secondary/30 border border-border/50">
-              <h3 className="text-sm font-medium text-foreground mb-3">Add Dashboards to Sidebar</h3>
+              <h3 className="text-sm font-medium text-foreground mb-3">{t('sidebar.customizer.addDashboards')}</h3>
 
               {/* Search filter */}
               <div className="mb-3">
@@ -443,7 +446,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                     type="text"
                     value={routeSearch}
                     onChange={(e) => setRouteSearch(e.target.value)}
-                    placeholder="Filter dashboards..."
+                    placeholder={t('sidebar.customizer.filterDashboards')}
                     className="w-full pl-8 pr-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-border"
                   />
                 </div>
@@ -466,7 +469,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                   if (filteredCategories.length === 0) {
                     return (
                       <div className="py-4 text-center text-sm text-muted-foreground">
-                        No dashboards found matching "{routeSearch}"
+                        {t('sidebar.customizer.noDashboardsFound', { query: routeSearch })}
                       </div>
                     )
                   }
@@ -515,7 +518,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                                   : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
                               )}
                             >
-                              {allCategorySelected ? 'Deselect All' : 'Select All'}
+                              {allCategorySelected ? t('sidebar.customizer.deselectAll') : t('sidebar.customizer.selectAll')}
                             </button>
                           )}
                         </div>
@@ -559,7 +562,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                                     {route.name}
                                   </span>
                                   {isAlreadyAdded && (
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex-shrink-0 ml-auto">Added</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex-shrink-0 ml-auto">{t('sidebar.customizer.added')}</span>
                                   )}
                                 </div>
                               </button>
@@ -576,13 +579,13 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               {selectedKnownRoutes.size > 0 && (
                 <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    {selectedKnownRoutes.size} dashboard{selectedKnownRoutes.size !== 1 ? 's' : ''} selected
+                    {t('sidebar.customizer.dashboardsSelected', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
                   </span>
                   <button
                     onClick={() => setSelectedKnownRoutes(new Set())}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Clear selection
+                    {t('sidebar.customizer.clearSelection')}
                   </button>
                 </div>
               )}
@@ -600,8 +603,8 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               ) : (
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               )}
-              <span className="text-sm font-medium text-foreground">Primary Navigation</span>
-              <span className="text-xs text-muted-foreground">({config.primaryNav.length} items)</span>
+              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.primaryNavigation')}</span>
+              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.itemsCount', { count: config.primaryNav.length })})</span>
             </button>
             {expandedSection === 'primary' && renderItemList(config.primaryNav, 'primary')}
           </div>
@@ -617,8 +620,8 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               ) : (
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               )}
-              <span className="text-sm font-medium text-foreground">Secondary Navigation</span>
-              <span className="text-xs text-muted-foreground">({config.secondaryNav.length} items)</span>
+              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.secondaryNavigation')}</span>
+              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.itemsCount', { count: config.secondaryNav.length })})</span>
             </button>
             {expandedSection === 'secondary' && renderItemList(config.secondaryNav, 'secondary')}
           </div>
@@ -635,9 +638,9 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               )}
               <LayoutDashboard className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">Dashboard Cards</span>
+              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.dashboardCards')}</span>
               <span className="text-xs text-muted-foreground">
-                ({dashboardsWithCards.reduce((sum, d) => sum + (d.cards?.length || 0), 0)} cards)
+                ({t('sidebar.customizer.cardsCount', { count: dashboardsWithCards.reduce((sum, d) => sum + (d.cards?.length || 0), 0) })})
               </span>
             </button>
             {expandedSection === 'dashboards' && (
@@ -645,11 +648,11 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                 {isLoadingDashboards ? (
                   <div className="flex items-center gap-2 p-3 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Loading dashboards...</span>
+                    <span className="text-sm">{t('sidebar.customizer.loadingDashboards')}</span>
                   </div>
                 ) : dashboardsWithCards.length === 0 ? (
                   <div className="p-3 text-sm text-muted-foreground">
-                    No dashboards found
+                    {t('sidebar.customizer.noDashboards')}
                   </div>
                 ) : (
                   dashboardsWithCards.map((dashboard) => (
@@ -659,7 +662,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                         {dashboard.name}
                         {dashboard.is_default && (
                           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-                            Default
+                            {t('sidebar.customizer.default')}
                           </span>
                         )}
                       </div>
@@ -682,7 +685,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                         </div>
                       ) : (
                         <div className="pl-5 text-xs text-muted-foreground">
-                          No cards in this dashboard
+                          {t('sidebar.customizer.noCardsInDashboard')}
                         </div>
                       )}
                     </div>
@@ -704,8 +707,8 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               )}
               <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">Available Templates</span>
-              <span className="text-xs text-muted-foreground">({DASHBOARD_TEMPLATES.length} templates)</span>
+              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.availableTemplates')}</span>
+              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.templates', { count: DASHBOARD_TEMPLATES.length })})</span>
             </button>
             {expandedSection === 'templates' && (
               <div className="space-y-2 pl-2">
@@ -736,7 +739,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                             </div>
                             {isInSidebar ? (
                               <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400 whitespace-nowrap">
-                                Added
+                                {t('sidebar.customizer.added')}
                               </span>
                             ) : (
                               <button
@@ -750,7 +753,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                                 }}
                                 className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 whitespace-nowrap"
                               >
-                                Add
+                                {t('sidebar.customizer.add')}
                               </button>
                             )}
                           </div>
@@ -767,8 +770,8 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
           <div className="p-4 rounded-lg bg-secondary/30 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-foreground">Cluster Status Panel</h3>
-                <p className="text-xs text-muted-foreground">Show cluster health summary in sidebar</p>
+                <h3 className="text-sm font-medium text-foreground">{t('sidebar.customizer.clusterStatusPanel')}</h3>
+                <p className="text-xs text-muted-foreground">{t('sidebar.customizer.showClusterHealth')}</p>
               </div>
               <button
                 onClick={toggleClusterStatus}
@@ -794,8 +797,8 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               onChange={(e) => setNewItemTarget(e.target.value as 'primary' | 'secondary')}
               className="px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
             >
-              <option value="primary">Primary Nav</option>
-              <option value="secondary">Secondary Nav</option>
+              <option value="primary">{t('sidebar.customizer.primaryNav')}</option>
+              <option value="secondary">{t('sidebar.customizer.secondaryNav')}</option>
             </select>
             <div className="flex-1" />
             <button
@@ -803,7 +806,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Add {selectedKnownRoutes.size} Dashboard{selectedKnownRoutes.size !== 1 ? 's' : ''}
+              {t('sidebar.customizer.addCount', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
             </button>
           </>
         ) : (
@@ -813,7 +816,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               onClick={onClose}
               className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
             >
-              Close
+              {t('common.close')}
             </button>
           </>
         )}

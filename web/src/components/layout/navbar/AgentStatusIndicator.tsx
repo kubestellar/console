@@ -5,8 +5,10 @@ import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { useDemoMode, isDemoModeForced, getDemoMode } from '../../../hooks/useDemoMode'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { cn } from '../../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 export function AgentStatusIndicator() {
+  const { t } = useTranslation(['common'])
   const { status: agentStatus, health: agentHealth, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
   const { status: backendStatus, isConnected: isBackendConnected, isInClusterMode } = useBackendHealth()
   const { isDemoMode: isDemoModeHook, toggleDemoMode } = useDemoMode()
@@ -121,18 +123,18 @@ export function AgentStatusIndicator() {
   const backendIssue = !showAsDemoMode && !isBackendConnected && backendStatus !== 'connecting'
 
   const pillStyle = showAsDemoMode
-    ? { bg: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20', dot: 'bg-purple-400', label: 'Demo', Icon: Box, title: 'Demo Mode - showing sample data' }
+    ? { bg: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20', dot: 'bg-purple-400', label: t('agent.demoMode'), Icon: Box, title: t('agent.demoModeTitle') }
     : stableDegraded
-    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'Degraded', Icon: Wifi, title: `Local Agent degraded (${dataErrorCount} errors)` }
+    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: t('agent.degraded'), Icon: Wifi, title: t('agent.degradedTitle', { count: dataErrorCount }) }
     : stableConnected && backendIssue
-    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'AI', Icon: Wifi, title: 'Backend API unavailable' }
+    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: t('agent.aiLabel'), Icon: Wifi, title: t('agent.backendUnavailable') }
     : stableConnected
-    ? { bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20', dot: 'bg-green-400', label: 'AI', Icon: Wifi, title: 'Local Agent connected' }
+    ? { bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20', dot: 'bg-green-400', label: t('agent.aiLabel'), Icon: Wifi, title: t('agent.localAgentConnected') }
     : stableStatus === 'connecting'
-    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'AI', Icon: Wifi, title: 'Connecting to agent...' }
+    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: t('agent.aiLabel'), Icon: Wifi, title: t('agent.connecting') }
     : isInClusterMode
-    ? { bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20', dot: 'bg-blue-400', label: 'Cluster', Icon: Server, title: 'In-cluster mode - using ServiceAccount' }
-    : { bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20', dot: 'bg-red-400', label: 'Offline', Icon: WifiOff, title: 'Local Agent disconnected' }
+    ? { bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20', dot: 'bg-blue-400', label: t('agent.cluster'), Icon: Server, title: t('agent.inClusterModeTitle') }
+    : { bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20', dot: 'bg-red-400', label: t('agent.offline'), Icon: WifiOff, title: t('agent.localAgentDisconnected') }
 
   return (
     <div className="relative" ref={agentRef}>
@@ -156,7 +158,7 @@ export function AgentStatusIndicator() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Box className="w-4 h-4 text-purple-400" />
-                <span className="text-sm font-medium text-foreground">Demo Mode</span>
+                <span className="text-sm font-medium text-foreground">{t('agent.demoMode')}</span>
               </div>
               <button
                 onClick={() => {
@@ -182,8 +184,8 @@ export function AgentStatusIndicator() {
             </div>
             <p className="text-xs text-muted-foreground mt-1.5">
               {isDemoMode
-                ? 'Showing sample data with all cloud providers'
-                : 'Enable to view demo data without agent connection'
+                ? t('agent.demoModeShowingSample')
+                : t('agent.enableToViewDemo')
               }
             </p>
           </div>
@@ -196,7 +198,7 @@ export function AgentStatusIndicator() {
                 isDemoMode ? 'bg-gray-400' : isDegraded ? 'bg-yellow-400' : isConnected ? 'bg-green-400' : agentStatus === 'connecting' ? 'bg-yellow-400' : isInClusterMode ? 'bg-blue-400' : 'bg-red-400'
               )} />
               <span className={cn('text-sm font-medium', isDemoMode ? 'text-muted-foreground' : 'text-foreground')}>
-                {isDemoMode ? 'Local Agent: Bypassed' : isDegraded ? 'Local Agent: Degraded' : isConnected ? 'Local Agent: Connected' : agentStatus === 'connecting' ? 'Local Agent: Connecting...' : isInClusterMode ? 'Cluster Mode' : 'Local Agent: Disconnected'}
+                {isDemoMode ? t('agent.localAgentBypassed') : isDegraded ? t('agent.localAgentDegraded') : isConnected ? t('agent.localAgentConnectedLabel') : agentStatus === 'connecting' ? t('agent.localAgentConnecting') : isInClusterMode ? t('agent.clusterMode') : t('agent.localAgentDisconnectedLabel')}
               </span>
               {isConnected && agentHealth?.version && agentHealth.version !== 'demo' && (
                 <span className="text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -206,19 +208,19 @@ export function AgentStatusIndicator() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {isDemoMode
-                ? 'Agent connection bypassed in demo mode'
+                ? t('agent.agentBypassedInDemo')
                 : isDegraded
-                ? `Connected but experiencing data errors (${dataErrorCount} in last minute)`
+                ? t('agent.connectedButErrors', { count: dataErrorCount })
                 : isConnected
-                ? `Connected to local agent at 127.0.0.1:8585`
+                ? t('agent.connectedToLocalAgent')
                 : isInClusterMode
-                ? 'Using in-cluster ServiceAccount (read-only)'
-                : 'Unable to connect to local agent'
+                ? t('agent.usingInClusterService')
+                : t('agent.unableToConnect')
               }
             </p>
             {!isDemoMode && isDegraded && lastDataError && (
               <p className="text-xs text-yellow-400 mt-1">
-                Last error: {lastDataError}
+                {t('agent.lastError', { error: lastDataError })}
               </p>
             )}
           </div>
@@ -232,24 +234,24 @@ export function AgentStatusIndicator() {
                   isBackendConnected ? 'bg-green-400' : backendStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
                 )} />
                 <span className="text-sm font-medium text-foreground">
-                  Backend API: {isBackendConnected ? 'Connected' : backendStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                  {isBackendConnected ? t('agent.backendApiConnected') : backendStatus === 'connecting' ? t('agent.backendApiConnecting') : t('agent.backendApiDisconnected')}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {isBackendConnected
-                  ? 'Connected to backend API at localhost:8080'
+                  ? t('agent.connectedToBackend')
                   : backendStatus === 'connecting'
-                  ? 'Checking backend connection...'
-                  : 'Unable to connect to backend API'
+                  ? t('agent.checkingBackend')
+                  : t('agent.unableToConnectBackend')
                 }
               </p>
             </div>
           )}
 
           <div className="p-2 max-h-48 overflow-y-auto">
-            <div className="text-xs text-muted-foreground px-2 py-1 font-medium">Connection Log</div>
+            <div className="text-xs text-muted-foreground px-2 py-1 font-medium">{t('agent.connectionLog')}</div>
             {connectionEvents.length === 0 ? (
-              <div className="text-xs text-muted-foreground text-center py-4">No events yet</div>
+              <div className="text-xs text-muted-foreground text-center py-4">{t('agent.noEventsYet')}</div>
             ) : (
               <div className="space-y-1">
                 {connectionEvents.slice(0, 20).map((event, i) => (
@@ -280,18 +282,18 @@ export function AgentStatusIndicator() {
           <div className="p-3 border-t border-border bg-secondary/20">
             <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-2">
               <Server className="w-3 h-3 text-purple-400" />
-              Install Local Agent
+              {t('agent.installLocalAgent')}
             </h4>
             <p className="text-xs text-muted-foreground mb-2">
-              The Local Agent enables real-time cluster data and kubectl operations.
+              {t('agent.localAgentDesc')}
             </p>
             <div className="bg-black/50 rounded p-2 font-mono text-[11px] text-green-400 mb-2 space-y-1">
-              <div className="text-muted-foreground"># Install via Homebrew</div>
-              <code className="block">brew tap kubestellar/tap</code>
-              <code className="block">brew install kc-agent</code>
+              <div className="text-muted-foreground">{t('agent.installViaHomebrew')}</div>
+              <code className="block">{t('agent.tapKubestellar')}</code>
+              <code className="block">{t('agent.installKcAgent')}</code>
             </div>
             <p className="text-[10px] text-muted-foreground">
-              Visit{' '}
+              {t('agent.visitGithub')}{' '}
               <a
                 href="https://github.com/kubestellar/homebrew-tap"
                 target="_blank"
@@ -300,7 +302,7 @@ export function AgentStatusIndicator() {
               >
                 github.com/kubestellar/homebrew-tap
               </a>
-              {' '}for more information.
+              {' '}{t('agent.forMoreInfo')}
             </p>
           </div>
         </div>

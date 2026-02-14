@@ -248,7 +248,8 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
 // Default stock symbols to track (keeping for backwards compatibility)
 
 // Market status
-function getMarketStatus(): { isOpen: boolean; statusText: string } {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getMarketStatus(t: (...args: any[]) => string): { isOpen: boolean; statusText: string } {
   const now = new Date()
   const hour = now.getHours()
   const minutes = now.getMinutes()
@@ -256,18 +257,18 @@ function getMarketStatus(): { isOpen: boolean; statusText: string } {
 
   // Weekend
   if (day === 0 || day === 6) {
-    return { isOpen: false, statusText: 'Market Closed - Weekend' }
+    return { isOpen: false, statusText: t('stockMarket.marketClosedWeekend') }
   }
 
   // Weekday hours (9:30 AM - 4:00 PM EST)
   // Simple approximation without timezone handling
   const isMarketHours = (hour === 9 && minutes >= 30) || (hour > 9 && hour < 16)
   if (isMarketHours) {
-    return { isOpen: true, statusText: 'Market Open' }
+    return { isOpen: true, statusText: t('stockMarket.marketOpen') }
   } else if (hour >= 4 && hour < 9) {
-    return { isOpen: false, statusText: 'Pre-Market' }
+    return { isOpen: false, statusText: t('stockMarket.preMarket') }
   } else {
-    return { isOpen: false, statusText: 'After Hours' }
+    return { isOpen: false, statusText: t('stockMarket.afterHours') }
   }
 }
 
@@ -420,6 +421,7 @@ function StockRow({
   isFavorite: boolean
   canRemove: boolean
 }) {
+  const { t } = useTranslation(['cards', 'common'])
   const isPositive = stock.change >= 0
 
   return (
@@ -432,7 +434,7 @@ function StockRow({
             onToggleFavorite()
           }}
           className="p-1 rounded hover:bg-accent transition-colors"
-          title={isFavorite ? 'Unfavorite' : 'Favorite'}
+          title={isFavorite ? t('stockMarket.unfavorite') : t('stockMarket.favorite')}
         >
           <Star
             className={`w-3 h-3 ${isFavorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
@@ -445,7 +447,7 @@ function StockRow({
               onRemove()
             }}
             className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-            title="Remove from list"
+            title={t('stockMarket.removeFromList')}
           >
             <X className="w-3 h-3" />
           </button>
@@ -486,27 +488,27 @@ function StockRow({
         <div className="px-3 pb-3 pt-1 bg-accent/30 border-t border-border/30">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Open:</span>
+              <span className="text-muted-foreground">{t('stockMarket.open')}:</span>
               <span className="font-medium">${stock.dayOpen.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">High:</span>
+              <span className="text-muted-foreground">{t('stockMarket.high')}:</span>
               <span className="font-medium">${stock.dayHigh.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Low:</span>
+              <span className="text-muted-foreground">{t('stockMarket.low')}:</span>
               <span className="font-medium">${stock.dayLow.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Volume:</span>
+              <span className="text-muted-foreground">{t('stockMarket.volume')}:</span>
               <span className="font-medium">{formatVolume(stock.volume)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Mkt Cap:</span>
+              <span className="text-muted-foreground">{t('stockMarket.mktCap')}:</span>
               <span className="font-medium">{formatLargeNumber(stock.marketCap)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">52W Range:</span>
+              <span className="text-muted-foreground">{t('stockMarket.fiftyTwoWeekRange')}:</span>
               <span className="font-medium text-xs">${stock.week52Low.toFixed(0)} - ${stock.week52High.toFixed(0)}</span>
             </div>
           </div>
@@ -517,7 +519,7 @@ function StockRow({
 }
 
 export function StockMarketTicker({ config }: StockMarketTickerProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const symbols = config?.symbols || DEFAULT_SYMBOLS
   const dataSource = config?.dataSource || 'Yahoo Finance'
 
@@ -695,7 +697,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     })
   }
 
-  const marketStatus = getMarketStatus()
+  const marketStatus = getMarketStatus(t)
 
   // Calculate portfolio summary
   const portfolioSummary = useMemo(() => {
@@ -722,9 +724,9 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
               <button
                 onClick={() => setUseLiveData(!useLiveData)}
                 className="text-xs px-2 py-0.5 rounded bg-accent hover:bg-accent/80 transition-colors"
-                title={useLiveData ? 'Using live data' : 'Using demo data'}
+                title={useLiveData ? t('stockMarket.usingLiveData') : t('stockMarket.usingDemoData')}
               >
-                {useLiveData ? '🔴 Live' : '🟢 Demo'}
+                {useLiveData ? t('stockMarket.liveButton') : t('stockMarket.demoButton')}
               </button>
             </div>
           </div>
@@ -750,7 +752,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
             <SearchIcon className="w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search stocks by symbol or name..."
+              placeholder={t('stockMarket.searchPlaceholder')}
               value={stockSearchInput}
               onChange={(e) => setStockSearchInput(e.target.value)}
               onKeyDown={(e) => {
@@ -791,7 +793,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
                   </div>
                   <div className="text-xs text-muted-foreground">{result.region}</div>
                   {activeSymbols.includes(result.symbol) && (
-                    <span className="text-xs text-green-500 ml-2">Added</span>
+                    <span className="text-xs text-green-500 ml-2">{t('stockMarket.added')}</span>
                   )}
                 </button>
               ))}
@@ -804,17 +806,17 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       {/* Portfolio summary */}
       <div className="grid grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
         <div className="text-center">
-          <div className="text-muted-foreground">Avg Change</div>
+          <div className="text-muted-foreground">{t('stockMarket.avgChange')}</div>
           <div className={`font-semibold ${portfolioSummary.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {portfolioSummary.avgChange >= 0 ? '+' : ''}{portfolioSummary.avgChange.toFixed(2)}%
           </div>
         </div>
         <div className="text-center border-l border-r border-border/30">
-          <div className="text-muted-foreground">Gainers</div>
+          <div className="text-muted-foreground">{t('stockMarket.gainers')}</div>
           <div className="font-semibold text-green-500">{portfolioSummary.gainers}</div>
         </div>
         <div className="text-center">
-          <div className="text-muted-foreground">Losers</div>
+          <div className="text-muted-foreground">{t('stockMarket.losers')}</div>
           <div className="font-semibold text-red-500">{portfolioSummary.losers}</div>
         </div>
       </div>
@@ -844,9 +846,9 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       {/* Footer with pagination and data source */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
         <div className="text-xs text-muted-foreground flex items-center gap-1">
-          <span>Data from {dataSource}</span>
-          {useLiveData && <span className="text-green-500">(Live)</span>}
-          {!useLiveData && <span className="text-muted-foreground">(Demo)</span>}
+          <span>{t('stockMarket.dataFrom', { source: dataSource })}</span>
+          {useLiveData && <span className="text-green-500">{t('stockMarket.liveLabel')}</span>}
+          {!useLiveData && <span className="text-muted-foreground">{t('stockMarket.demoLabel')}</span>}
         </div>
 
         <CardPaginationFooter

@@ -76,7 +76,7 @@ const CLUSTER_SORT_COMPARATORS = {
 
 
 export function ClusterHealth() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const {
     deduplicatedClusters: rawClusters,
     isLoading: isLoadingHook,
@@ -222,8 +222,8 @@ export function ClusterHealth() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No clusters configured</p>
-        <p className="text-xs mt-1">Add clusters to your kubeconfig to get started</p>
+        <p className="text-sm">{t('clusterHealth.noClustersConfigured')}</p>
+        <p className="text-xs mt-1">{t('clusterHealth.addClustersPrompt')}</p>
       </div>
     )
   }
@@ -233,8 +233,8 @@ export function ClusterHealth() {
       {/* Header with controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400" title={`${rawClusters.length} total clusters configured`}>
-            {rawClusters.length} clusters
+          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400" title={t('clusterHealth.totalClustersTitle', { count: rawClusters.length })}>
+            {rawClusters.length} {t('clusterHealth.clustersLabel')}
           </span>
         </div>
         <CardControlsRow
@@ -270,37 +270,37 @@ export function ClusterHealth() {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder={t('common.searchClusters')}
+        placeholder={t('common:common.searchClusters')}
         className="mb-4"
       />
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20" title={`${healthyClusters} clusters are healthy and responding`}>
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-green-400">{t('common.healthy')}</span>
+            <span className="text-xs text-green-400">{t('common:common.healthy')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{healthyClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20" title={`${unhealthyClusters} clusters are reachable but have issues`}>
+        <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
           <div className="flex items-center gap-2 mb-1">
             <AlertTriangle className="w-4 h-4 text-orange-400" />
-            <span className="text-xs text-orange-400">{t('common.unhealthy')}</span>
+            <span className="text-xs text-orange-400">{t('common:common.unhealthy')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20" title={`${tokenExpiredClusters} clusters have expired/invalid credentials - re-authenticate`}>
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20" title={t('clusterHealth.authErrorTooltip', { count: tokenExpiredClusters })}>
           <div className="flex items-center gap-2 mb-1">
             <KeyRound className="w-4 h-4 text-red-400" />
-            <span className="text-xs text-red-400">Auth Error</span>
+            <span className="text-xs text-red-400">{t('clusterHealth.authErrorLabel')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{tokenExpiredClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={`${networkOfflineClusters} clusters cannot be contacted - check network/VPN`}>
+        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={t('clusterHealth.offlineTooltip', { count: networkOfflineClusters })}>
           <div className="flex items-center gap-2 mb-1">
             <WifiOff className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs text-yellow-400">{t('common.offline')}</span>
+            <span className="text-xs text-yellow-400">{t('common:common.offline')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{networkOfflineClusters}</span>
         </div>
@@ -321,21 +321,21 @@ export function ClusterHealth() {
           const providerLabel = getProviderLabel(provider)
           const consoleUrl = getConsoleUrl(provider, cluster.name, cluster.server)
           const statusTooltip = clusterLoading
-            ? 'Checking cluster health...'
+            ? t('clusterHealth.checkingHealth')
             : cluster.healthy
-              ? `Cluster is healthy with ${cluster.nodeCount || 0} nodes and ${cluster.podCount || 0} pods`
+              ? t('clusterHealth.clusterHealthy', { nodes: cluster.nodeCount || 0, pods: cluster.podCount || 0 })
               : clusterTokenExpired
-                ? 'Token expired - re-authenticate to access cluster'
+                ? t('clusterHealth.tokenExpired')
                 : clusterUnreachable
-                  ? 'Offline - check network connection'
-                  : cluster.errorMessage || 'Cluster has issues - click to view details'
+                  ? t('clusterHealth.offlineCheckNetwork')
+                  : cluster.errorMessage || t('clusterHealth.clusterHasIssues')
           return (
             <div
               key={cluster.name}
               data-tour={idx === 0 ? 'drilldown' : undefined}
               className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex items-center justify-between'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50`}
               onClick={() => setSelectedCluster(cluster.name)}
-              title={`Click to view details for ${cluster.name}`}
+              title={t('clusterHealth.clickViewDetails', { name: cluster.name })}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1" title={statusTooltip}>
                 {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, orange triangle for degraded */}
@@ -368,19 +368,19 @@ export function ClusterHealth() {
                 )}
               </div>
               <div className={`flex items-center ${isMobile ? 'gap-2 pl-6 flex-wrap' : 'gap-3 shrink-0'} text-xs text-muted-foreground`}>
-                <span title={clusterLoading ? 'Checking...' : !clusterUnreachable ? `${cluster.nodeCount || 0} worker nodes in cluster` : 'Offline - check network connection'}>
-                  {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.nodeCount || 0) : '-'} nodes
+                <span title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.nodesInCluster', { count: cluster.nodeCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
+                  {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.nodeCount || 0) : '-'} {t('common:common.nodes').toLowerCase()}
                 </span>
                 {!clusterLoading && !clusterUnreachable && (cluster.cpuCores || 0) > 0 && (
-                  <span title={`${cluster.cpuCores} total CPU cores available`}>{cluster.cpuCores} CPUs</span>
+                  <span title={t('clusterHealth.totalCpuCores', { count: cluster.cpuCores })}>{cluster.cpuCores} {t('common:common.cpus')}</span>
                 )}
-                <span title={clusterLoading ? 'Checking...' : !clusterUnreachable ? `${cluster.podCount || 0} pods running in cluster` : 'Offline - check network connection'}>
-                  {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.podCount || 0) : '-'} pods
+                <span title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.podsRunning', { count: cluster.podCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
+                  {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.podCount || 0) : '-'} {t('common:common.pods').toLowerCase()}
                 </span>
                 {!clusterLoading && !clusterUnreachable && (gpuByCluster[cluster.name] || 0) > 0 && (
-                  <span className="flex items-center gap-1 text-purple-400" title={`${gpuByCluster[cluster.name]} GPUs available for workloads`}>
+                  <span className="flex items-center gap-1 text-purple-400" title={t('clusterHealth.gpusAvailable', { count: gpuByCluster[cluster.name] })}>
                     <Cpu className="w-3 h-3" />
-                    {gpuByCluster[cluster.name]} GPUs
+                    {gpuByCluster[cluster.name]} {t('common:common.gpus')}
                   </span>
                 )}
                 {/* AI Diagnose & Repair for unhealthy/offline clusters */}
@@ -416,41 +416,41 @@ export function ClusterHealth() {
 
       {/* Footer totals */}
       <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-        <span title="Total worker nodes across all filtered clusters">{totalNodes} total nodes</span>
-        {totalCPUs > 0 && <span title="Total CPU cores across all filtered clusters">{totalCPUs} CPUs</span>}
+        <span title={t('clusterHealth.totalNodesTitle')}>{totalNodes} {t('clusterHealth.totalNodes')}</span>
+        {totalCPUs > 0 && <span title={t('clusterHealth.totalCpusTitle')}>{totalCPUs} {t('common:common.cpus')}</span>}
         {totalGPUs > 0 && (
-          <span className="flex items-center gap-1 text-purple-400" title={`${assignedGPUs} GPUs assigned out of ${totalGPUs} total`}>
+          <span className="flex items-center gap-1 text-purple-400" title={t('clusterHealth.totalGpusTitle', { assigned: assignedGPUs, total: totalGPUs })}>
             <Cpu className="w-3 h-3" />
-            {assignedGPUs}/{totalGPUs} GPUs
+            {assignedGPUs}/{totalGPUs} {t('common:common.gpus')}
           </span>
         )}
-        <span title="Total pods running across all filtered clusters">{totalPods} total pods</span>
+        <span title={t('clusterHealth.totalPodsTitle')}>{totalPods} {t('clusterHealth.totalPods')}</span>
       </div>
 
       {error && (
-        <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20" title="Check your kubeconfig and network connectivity">
+        <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20" title={t('clusterHealth.checkKubeconfigNetwork')}>
           <div className="text-xs text-yellow-400">
-            Unable to connect to clusters - showing demo data
+            {t('clusterHealth.unableToConnect')}
           </div>
         </div>
       )}
 
       {/* Show token expired clusters summary if any */}
       {!error && tokenExpiredClusters > 0 && (
-        <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20" title="Re-authenticate to restore access to these clusters">
+        <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20" title={t('clusterHealth.reauthenticateToRestore')}>
           <div className="flex items-center gap-1.5 text-xs text-red-400">
             <KeyRound className="w-3 h-3" />
-            {tokenExpiredClusters} cluster(s) have expired credentials - re-authenticate
+            {t('clusterHealth.clustersExpiredCredentials', { count: tokenExpiredClusters })}
           </div>
         </div>
       )}
 
       {/* Show network offline clusters summary if any */}
       {!error && networkOfflineClusters > 0 && (
-        <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20" title="Check network connectivity and VPN status">
+        <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20" title={t('clusterHealth.checkNetworkVpn')}>
           <div className="flex items-center gap-1.5 text-xs text-yellow-400">
             <WifiOff className="w-3 h-3" />
-            {networkOfflineClusters} cluster(s) offline - check network connection
+            {t('clusterHealth.clustersOfflineNetwork', { count: networkOfflineClusters })}
           </div>
         </div>
       )}

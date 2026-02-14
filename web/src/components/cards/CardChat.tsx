@@ -75,7 +75,7 @@ export function CardChat({
   onSendMessage,
   onApplyAction,
 }: CardChatProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -131,7 +131,7 @@ export function CardChat({
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
       <BaseModal.Header
-        title="Chat with Card"
+        title={t('cardChat.chatWithCard')}
         description={cardTitle}
         icon={Bot}
         onClose={onClose}
@@ -145,13 +145,13 @@ export function CardChat({
             <div className="text-center py-8">
               <Bot className="w-12 h-12 text-purple-400 mx-auto mb-4 opacity-50" />
               <p className="text-muted-foreground mb-4">
-                Ask me anything about this card. I can help you:
+                {t('cardChat.askMeAnything')}
               </p>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>Modify what data is shown</li>
-                <li>Drill down into specific items</li>
-                <li>Explain what you're seeing</li>
-                <li>Set up alerts and behaviors</li>
+                <li>{t('cardChat.modifyData')}</li>
+                <li>{t('cardChat.drillDown')}</li>
+                <li>{t('cardChat.explainSeen')}</li>
+                <li>{t('cardChat.setupAlerts')}</li>
               </ul>
             </div>
           )}
@@ -184,7 +184,7 @@ export function CardChat({
                       onClick={() => onApplyAction?.(message.action)}
                       className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-300 hover:bg-green-500/30"
                     >
-                      Apply: {message.action.type.replace('_', ' ')}
+                      {t('cardChat.apply')}: {message.action.type.replace('_', ' ')}
                     </button>
                   </div>
                 )}
@@ -222,7 +222,7 @@ export function CardChat({
               <div className="bg-secondary/50 rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                  <span className="text-sm text-muted-foreground">Thinking...</span>
+                  <span className="text-sm text-muted-foreground">{t('cardChat.thinking')}</span>
                 </div>
               </div>
             </div>
@@ -255,7 +255,7 @@ export function CardChat({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a question or give a command..."
+                placeholder={t('cardChat.askOrCommand')}
                 className="w-full px-4 py-3 pr-12 rounded-xl bg-secondary border border-border text-foreground text-sm resize-none h-12 max-h-32"
                 rows={1}
                 disabled={isLoading}

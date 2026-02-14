@@ -346,10 +346,10 @@ Labels:       app=${resourceName.split('-')[0]}
             </div>
             <div>
               <h2 className="font-semibold text-foreground">
-                {activeTab === 'ai' ? 'AI Remediation' : 'Shell'} Console
+                {activeTab === 'ai' ? t('remediation.title') : t('remediation.shellTitle')}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {resourceType}: {resourceName}
+                {t('remediation.resourceType', { type: resourceType, name: resourceName })}
               </p>
             </div>
           </div>
@@ -373,7 +373,7 @@ Labels:       app=${resourceName.split('-')[0]}
             )}
           >
             <Sparkles className="w-4 h-4" />
-            AI Analysis
+            {t('remediation.aiAnalysis')}
           </button>
           <button
             onClick={() => {
@@ -388,7 +388,7 @@ Labels:       app=${resourceName.split('-')[0]}
             )}
           >
             <Terminal className="w-4 h-4" />
-            Shell
+            {t('remediation.shell')}
           </button>
         </div>
 
@@ -401,13 +401,13 @@ Labels:       app=${resourceName.split('-')[0]}
                 {isLoadingInitialData ? (
                   <>
                     <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin opacity-50" />
-                    <p>Gathering diagnostic data...</p>
+                    <p>{t('remediation.gatheringData')}</p>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Click "Start Remediation" to begin AI analysis</p>
-                    <p className="text-xs mt-2">Claude will analyze the issue and suggest fixes</p>
+                    <p>{t('remediation.clickStart')}</p>
+                    <p className="text-xs mt-2">{t('remediation.claudeWillAnalyze')}</p>
                   </>
                 )}
               </div>
@@ -482,10 +482,10 @@ Labels:       app=${resourceName.split('-')[0]}
               {/* Shell output */}
               {logs.filter(l => l.type === 'command' || l.type === 'output' || l.type === 'error').length === 0 ? (
                 <div className="text-muted-foreground">
-                  <p className="mb-2">Welcome to the shell. Context:</p>
-                  <p className="text-xs">Cluster: <span className="text-green-400">{cluster}</span></p>
-                  <p className="text-xs">Namespace: <span className="text-green-400">{namespace}</span></p>
-                  <p className="text-xs mt-4">Type kubectl commands or use the quick actions above.</p>
+                  <p className="mb-2">{t('remediation.welcomeShell')}</p>
+                  <p className="text-xs">{t('remediation.clusterContext')} <span className="text-green-400">{cluster}</span></p>
+                  <p className="text-xs">{t('remediation.namespaceContext')} <span className="text-green-400">{namespace}</span></p>
+                  <p className="text-xs mt-4">{t('remediation.typeKubectl')}</p>
                 </div>
               ) : (
                 logs.filter(l => l.type === 'command' || l.type === 'output' || l.type === 'error').map(log => (
@@ -530,7 +530,7 @@ Labels:       app=${resourceName.split('-')[0]}
                     className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-colors disabled:opacity-50"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    <span>Retry Command</span>
+                    <span>{t('remediation.retryCommand')}</span>
                   </button>
                 )}
               </div>
@@ -543,7 +543,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 value={shellCommand}
                 onChange={(e) => setShellCommand(e.target.value)}
                 onKeyDown={handleShellKeyDown}
-                placeholder="Enter kubectl command..."
+                placeholder={t('remediation.enterCommand')}
                 disabled={isExecuting}
                 className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
                 autoFocus
@@ -570,7 +570,7 @@ Labels:       app=${resourceName.split('-')[0]}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground transition-colors"
                   >
                     <Play className="w-4 h-4" />
-                    Start Remediation
+                    {t('remediation.startRemediation')}
                   </button>
                 )}
                 {isRunning && (
@@ -580,30 +580,28 @@ Labels:       app=${resourceName.split('-')[0]}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-foreground transition-colors"
                     >
                       {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                      {isPaused ? 'Resume' : 'Pause'}
+                      {isPaused ? t('remediation.resume') : t('remediation.pause')}
                     </button>
                     <button
                       onClick={stopRemediation}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-foreground transition-colors"
                     >
                       <X className="w-4 h-4" />
-                      Stop
+                      {t('remediation.stop')}
                     </button>
                   </>
                 )}
                 {isComplete && (
                   <div className="flex items-center gap-2 text-green-400">
                     <CheckCircle className="w-5 h-5" />
-                    <span>Analysis Complete</span>
+                    <span>{t('remediation.analysisComplete')}</span>
                   </div>
                 )}
               </>
             )}
             {activeTab === 'shell' && (
               <div className="text-xs text-muted-foreground">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-card border border-border">↑</kbd>
-                <kbd className="px-1.5 py-0.5 rounded bg-card border border-border ml-1">↓</kbd>
-                <span className="ml-1">for command history</span>
+                {t('remediation.commandHistory')}
               </div>
             )}
           </div>
@@ -613,7 +611,7 @@ Labels:       app=${resourceName.split('-')[0]}
               onClick={copyLogs}
               disabled={logs.length === 0}
               className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
-              title="Copy logs"
+              title={t('remediation.copyLogs')}
             >
               <Copy className="w-4 h-4" />
             </button>
@@ -621,7 +619,7 @@ Labels:       app=${resourceName.split('-')[0]}
               onClick={downloadLogs}
               disabled={logs.length === 0}
               className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
-              title="Download logs"
+              title={t('remediation.downloadLogs')}
             >
               <Download className="w-4 h-4" />
             </button>

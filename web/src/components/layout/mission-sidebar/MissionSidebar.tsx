@@ -22,8 +22,10 @@ import { AgentIcon } from '../../agent/AgentIcon'
 import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { MissionChat } from './MissionChat'
+import { useTranslation } from 'react-i18next'
 
 export function MissionSidebar() {
+  const { t } = useTranslation(['common'])
   const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission } = useMissions()
   const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
@@ -91,7 +93,7 @@ export function MissionSidebar() {
         <button
           onClick={expandSidebar}
           className="p-2 hover:bg-secondary rounded transition-colors mb-4"
-          title="Expand sidebar"
+          title={t('missionSidebar.expandSidebar')}
         >
           <PanelRightOpen className="w-5 h-5 text-muted-foreground" />
         </button>
@@ -150,7 +152,7 @@ export function MissionSidebar() {
       <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5" />
-          <h2 className="font-semibold text-foreground text-sm md:text-base">AI Missions</h2>
+          <h2 className="font-semibold text-foreground text-sm md:text-base">{t('missionSidebar.aiMissions')}</h2>
           {needsAttention > 0 && (
             <span className="px-1.5 py-0.5 text-xs bg-purple-500/20 text-purple-400 rounded-full">
               {needsAttention}
@@ -173,7 +175,7 @@ export function MissionSidebar() {
                 ? "bg-primary text-primary-foreground"
                 : "hover:bg-secondary text-muted-foreground hover:text-foreground"
             )}
-            title="Start new mission"
+            title={t('missionSidebar.startNewMission')}
           >
             <MessageSquarePlus className="w-4 h-4" />
           </button>
@@ -184,7 +186,7 @@ export function MissionSidebar() {
               onClick={() => setFontSize(prev => prev === 'base' ? 'sm' : prev === 'lg' ? 'base' : 'sm')}
               disabled={fontSize === 'sm'}
               className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-30"
-              title="Decrease font size"
+              title={t('missionSidebar.decreaseFontSize')}
             >
               <Minus className="w-3 h-3 text-muted-foreground" />
             </button>
@@ -193,7 +195,7 @@ export function MissionSidebar() {
               onClick={() => setFontSize(prev => prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'lg')}
               disabled={fontSize === 'lg'}
               className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-30"
-              title="Increase font size"
+              title={t('missionSidebar.increaseFontSize')}
             >
               <Plus className="w-3 h-3 text-muted-foreground" />
             </button>
@@ -203,7 +205,7 @@ export function MissionSidebar() {
             <button
               onClick={() => setFullScreen(false)}
               className="p-1 hover:bg-secondary rounded transition-colors"
-              title="Exit full screen"
+              title={t('missionSidebar.exitFullScreen')}
             >
               <Minimize2 className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -212,14 +214,14 @@ export function MissionSidebar() {
               <button
                 onClick={() => setFullScreen(true)}
                 className="p-1 hover:bg-secondary rounded transition-colors"
-                title="Full screen"
+                title={t('missionSidebar.fullScreen')}
               >
                 <Maximize2 className="w-5 h-5 text-muted-foreground" />
               </button>
               <button
                 onClick={minimizeSidebar}
                 className="p-1 hover:bg-secondary rounded transition-colors"
-                title="Minimize sidebar"
+                title={t('missionSidebar.minimizeSidebar')}
               >
                 <PanelRightClose className="w-5 h-5 text-muted-foreground" />
               </button>
@@ -228,7 +230,7 @@ export function MissionSidebar() {
           <button
             onClick={closeSidebar}
             className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Close sidebar"
+            title={t('missionSidebar.closeSidebar')}
           >
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
@@ -243,7 +245,7 @@ export function MissionSidebar() {
               ref={newMissionInputRef}
               value={newMissionPrompt}
               onChange={(e) => setNewMissionPrompt(e.target.value)}
-              placeholder="What would you like help with? (e.g., 'Find pods with high memory usage' or 'Explain why my deployment is failing')"
+              placeholder={t('missionSidebar.newMissionPlaceholder')}
               className="w-full min-h-[80px] p-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && newMissionPrompt.trim()) {
@@ -260,7 +262,7 @@ export function MissionSidebar() {
             />
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-muted-foreground">
-                {isMobile ? 'Tap send' : 'Cmd+Enter to submit'}
+                {isMobile ? t('missionSidebar.tapSend') : t('missionSidebar.cmdEnterSubmit')}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -270,7 +272,7 @@ export function MissionSidebar() {
                   }}
                   className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Cancel
+                  {t('missionSidebar.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -289,7 +291,7 @@ export function MissionSidebar() {
                   className="flex items-center gap-1 px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3 h-3" />
-                  Start
+                  {t('missionSidebar.start')}
                 </button>
               </div>
             </div>
@@ -300,9 +302,9 @@ export function MissionSidebar() {
       {missions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-12 h-12 opacity-50 mb-4" />
-          <p className="text-muted-foreground">No active missions</p>
+          <p className="text-muted-foreground">{t('missionSidebar.noActiveMissions')}</p>
           <p className="text-xs text-muted-foreground/70 mt-1">
-            Start a mission from any card's AI action
+            {t('missionSidebar.startMissionPrompt')}
           </p>
           {!showNewMission && (
             <button
@@ -313,7 +315,7 @@ export function MissionSidebar() {
               className="mt-4 flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               <MessageSquarePlus className="w-4 h-4" />
-              Start Custom Mission
+              {t('missionSidebar.startCustomMission')}
             </button>
           )}
         </div>
@@ -329,7 +331,7 @@ export function MissionSidebar() {
               className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border flex-shrink-0"
             >
               <ChevronLeft className="w-3 h-3" />
-              Back to missions ({missions.length})
+              {t('missionSidebar.backToMissions', { count: missions.length })}
             </button>
           )}
           <MissionChat mission={activeMission} isFullScreen={isFullScreen} fontSize={fontSize} onToggleFullScreen={() => setFullScreen(true)} />
@@ -360,6 +362,7 @@ export function MissionSidebar() {
 
 // Toggle button for the sidebar (shown when sidebar is closed)
 export function MissionSidebarToggle() {
+  const { t } = useTranslation(['common'])
   const { missions, isSidebarOpen, openSidebar, selectedAgent } = useMissions()
   const { isMobile } = useMobile()
 
@@ -398,18 +401,18 @@ export function MissionSidebarToggle() {
           ? 'bg-purple-500 text-white animate-pulse'
           : 'bg-card border border-border text-foreground hover:bg-secondary'
       )}
-      title="Open AI Missions"
+      title={t('missionSidebar.openAIMissions')}
     >
       <AgentIcon provider={getAgentProvider(selectedAgent)} className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
       {runningCount > 0 && (
         <Loader2 className={isMobile ? 'w-3 h-3 animate-spin' : 'w-4 h-4 animate-spin'} />
       )}
       {needsAttention > 0 ? (
-        <span className={isMobile ? 'text-xs font-medium' : 'text-sm font-medium'}>{needsAttention} needs attention</span>
+        <span className={isMobile ? 'text-xs font-medium' : 'text-sm font-medium'}>{t('missionSidebar.needsAttention', { count: needsAttention })}</span>
       ) : missions.length > 0 ? (
-        <span className={isMobile ? 'text-xs' : 'text-sm'}>{missions.length} mission{missions.length !== 1 ? 's' : ''}</span>
+        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.missionCount', { count: missions.length })}</span>
       ) : (
-        <span className={isMobile ? 'text-xs' : 'text-sm'}>AI Missions</span>
+        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.aiMissions')}</span>
       )}
       <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && 'rotate-[-90deg]')} />
     </button>

@@ -78,12 +78,12 @@ interface SecurityIssuesProps {
   config?: Record<string, unknown>
 }
 
-const getIssueIcon = (issue: string): { icon: typeof Shield; tooltip: string } => {
-  if (issue.includes('Privileged')) return { icon: Shield, tooltip: 'Privileged container - Has elevated permissions that could compromise host security' }
-  if (issue.includes('root')) return { icon: User, tooltip: 'Running as root - Container runs with root privileges' }
-  if (issue.includes('network') || issue.includes('Network')) return { icon: Network, tooltip: 'Host network access - Container shares host network namespace' }
-  if (issue.includes('PID')) return { icon: Server, tooltip: 'Host PID namespace - Container can see host processes' }
-  return { icon: AlertTriangle, tooltip: 'Security issue detected - Review container configuration' }
+const getIssueIcon = (issue: string, t: (key: string) => string): { icon: typeof Shield; tooltip: string } => {
+  if (issue.includes('Privileged')) return { icon: Shield, tooltip: t('securityIssues.privilegedContainer') }
+  if (issue.includes('root')) return { icon: User, tooltip: t('securityIssues.runningAsRoot') }
+  if (issue.includes('network') || issue.includes('Network')) return { icon: Network, tooltip: t('securityIssues.hostNetworkAccess') }
+  if (issue.includes('PID')) return { icon: Server, tooltip: t('securityIssues.hostPidNamespace') }
+  return { icon: AlertTriangle, tooltip: t('securityIssues.securityIssueDetected') }
 }
 
 const getSeverityColor = (severity: string) => {
@@ -93,7 +93,7 @@ const getSeverityColor = (severity: string) => {
 }
 
 export function SecurityIssues({ config }: SecurityIssuesProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
@@ -221,11 +221,11 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
         <div className="flex items-center justify-end mb-3">
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3" title="Security scan passed">
+          <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3" title={t('securityIssues.securityScanPassed')}>
             <Shield className="w-6 h-6 text-green-400" />
           </div>
-          <p className="text-foreground font-medium">No security issues</p>
-          <p className="text-sm text-muted-foreground">All pods pass security checks</p>
+          <p className="text-foreground font-medium">{t('securityIssues.noSecurityIssues')}</p>
+          <p className="text-sm text-muted-foreground">{t('securityIssues.allPodsPass')}</p>
         </div>
       </div>
     )
@@ -237,13 +237,13 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {highCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${highCount} high severity security issues requiring immediate attention`}>
-              {highCount} high
+            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={t('securityIssues.highSeverityTitle', { count: highCount })}>
+              {highCount} {t('securityIssues.highLabel')}
             </span>
           )}
           {mediumCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400" title={`${mediumCount} medium severity security issues`}>
-              {mediumCount} med
+            <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400" title={t('securityIssues.mediumSeverityTitle', { count: mediumCount })}>
+              {mediumCount} {t('securityIssues.medLabel')}
             </span>
           )}
           {localClusterFilter.length > 0 && (
@@ -281,14 +281,14 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common.searchIssues')}
+        placeholder={t('common:common.searchIssues')}
         className="mb-3"
       />
 
       {/* Issues list */}
       <div className="flex-1 space-y-3 overflow-y-auto min-h-card-content">
         {issues.map((issue: SecurityIssue, idx: number) => {
-          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue)
+          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue, t as unknown as (key: string) => string)
           const colors = getSeverityColor(issue.severity)
 
           return (
@@ -296,7 +296,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
               key={`${issue.name}-${issue.issue}-${idx}`}
               className={`p-3 rounded-lg ${colors.bg} border ${colors.border} cursor-pointer hover:opacity-80 transition-opacity`}
               onClick={() => handleIssueClick(issue)}
-              title={`Click to view pod ${issue.name} with security issue: ${issue.issue}`}
+              title={t('securityIssues.clickViewPod', { name: issue.name, issue: issue.issue })}
             >
               <div className="flex items-start gap-3 group">
                 <div className={`p-2 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>

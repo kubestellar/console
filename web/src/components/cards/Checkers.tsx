@@ -407,7 +407,7 @@ function saveGameState(state: SavedGameState) {
 }
 
 export function Checkers(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -679,15 +679,15 @@ export function Checkers(_props: CardComponentProps) {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Box className="w-3 h-3 text-blue-400" />
-            You
+            {t('checkers.you')}
           </span>
-          <span>vs</span>
+          <span>{t('checkers.vs')}</span>
           <span className="flex items-center gap-1">
             <Server className="w-3 h-3 text-orange-400" />
-            AI
+            {t('checkers.ai')}
           </span>
           <span className="text-yellow-400">
-            W:{highScore.wins} L:{highScore.losses}
+            {t('checkers.wins')}:{highScore.wins} {t('checkers.losses')}:{highScore.losses}
           </span>
         </div>
 
@@ -698,14 +698,14 @@ export function Checkers(_props: CardComponentProps) {
             className="text-xs bg-secondary border border-border rounded px-1.5 py-1"
             disabled={moveCount > 0 && !gameOver}
           >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+            <option value="easy">{t('checkers.easy')}</option>
+            <option value="medium">{t('checkers.medium')}</option>
+            <option value="hard">{t('checkers.hard')}</option>
           </select>
           <button
             onClick={newGame}
             className="p-1.5 rounded hover:bg-secondary"
-            title="New Game"
+            title={t('checkers.newGame')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -717,17 +717,17 @@ export function Checkers(_props: CardComponentProps) {
         {isThinking ? (
           <span className="flex items-center justify-center gap-1 text-orange-400">
             <Loader2 className="w-3 h-3 animate-spin" />
-            AI is thinking...
+            {t('checkers.aiThinking')}
           </span>
         ) : gameOver ? (
           <span className={gameOver === 'pods' ? 'text-blue-400' : 'text-orange-400'}>
-            {gameOver === 'pods' ? 'You win!' : 'AI wins!'}
+            {gameOver === 'pods' ? t('checkers.youWin') : t('checkers.aiWins')}
           </span>
         ) : mustContinueJump ? (
-          <span className="text-yellow-400">Continue jumping!</span>
+          <span className="text-yellow-400">{t('checkers.continueJumping')}</span>
         ) : (
           <span className={currentPlayer === 'pods' ? 'text-blue-400' : 'text-orange-400'}>
-            {currentPlayer === 'pods' ? 'Your turn' : "AI's turn"}
+            {currentPlayer === 'pods' ? t('checkers.yourTurn') : t('checkers.aisTurn')}
           </span>
         )}
       </div>
@@ -801,17 +801,17 @@ export function Checkers(_props: CardComponentProps) {
           <div className="text-center p-6 bg-card rounded-xl border border-border shadow-lg">
             <Trophy className={`w-12 h-12 mx-auto mb-3 ${gameOver === 'pods' ? 'text-blue-400' : 'text-orange-400'}`} />
             <h3 className="text-xl font-bold text-foreground mb-2">
-              {gameOver === 'pods' ? 'You Won!' : 'AI Wins!'}
+              {gameOver === 'pods' ? t('checkers.youWon') : t('checkers.aiWinsExclaim')}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {moveCount} moves played
+              {moveCount} {t('checkers.movesPlayed')}
             </p>
             <button
               onClick={newGame}
               className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg mx-auto hover:bg-purple-500/30"
             >
               <Play className="w-4 h-4" />
-              Play Again
+              {t('checkers.playAgain')}
             </button>
           </div>
         </div>

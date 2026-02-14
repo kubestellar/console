@@ -229,7 +229,7 @@ interface ParetoFrontierProps {
 }
 
 export function ParetoFrontier({ config }: ParetoFrontierProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const chartRef = useRef<ReactECharts>(null)
 
   // ---- Data ----
@@ -353,7 +353,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     if (modelFilter !== 'all') parts.push(modelFilter)
     if (frameworkFilter !== 'all') parts.push(frameworkFilter)
     if (seqLenFilter !== 'all') parts.push(seqLenFilter)
-    return parts.length > 0 ? parts.join(' \u2022 ') : 'All configurations'
+    return parts.length > 0 ? parts.join(' \u2022 ') : t('paretoFrontier.allConfigurations')
   }, [modelFilter, seqLenFilter, frameworkFilter])
 
   // ---- ECharts option ----
@@ -493,11 +493,11 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     <div className="h-full flex flex-col" style={{ padding: '12px 14px 8px' }}>
       {/* Dropdown filters row */}
       <div className="flex items-end gap-3 mb-2 flex-shrink-0 flex-wrap">
-        <FilterDropdown label="Model" value={modelFilter} onChange={setModelFilter} options={filterOptions.models} />
-        <FilterDropdown label="ISL / OSL" value={seqLenFilter} onChange={setSeqLenFilter} options={filterOptions.seqLens} />
-        <FilterDropdown label="Framework" value={frameworkFilter} onChange={setFrameworkFilter} options={filterOptions.frameworks} />
+        <FilterDropdown label={t('paretoFrontier.model')} value={modelFilter} onChange={setModelFilter} options={filterOptions.models} />
+        <FilterDropdown label={t('paretoFrontier.islOsl')} value={seqLenFilter} onChange={setSeqLenFilter} options={filterOptions.seqLens} />
+        <FilterDropdown label={t('paretoFrontier.framework')} value={frameworkFilter} onChange={setFrameworkFilter} options={filterOptions.frameworks} />
         <FilterDropdown
-          label="Y-Axis Metric"
+          label={t('paretoFrontier.yAxisMetric')}
           value={chartKey}
           onChange={setChartKey}
           options={Object.keys(CHART_PRESETS)}
@@ -516,14 +516,14 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
           <button
             onClick={handleDownload}
             className="p-1.5 rounded border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-            title="Download PNG"
+            title={t('paretoFrontier.downloadPng')}
           >
             <Download size={12} />
           </button>
           <button
             onClick={handleResetZoom}
             className="p-1.5 rounded border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-            title="Reset zoom"
+            title={t('paretoFrontier.resetZoom')}
           >
             <RotateCcw size={12} />
           </button>
@@ -571,7 +571,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
                   className={`flex items-center gap-1.5 w-full text-left px-1 py-0.5 rounded text-[11px] hover:bg-secondary/60 transition-opacity ${
                     hidden ? 'opacity-25' : ''
                   }`}
-                  title={`${hidden ? 'Show' : 'Hide'} ${hw}`}
+                  title={`${hidden ? t('common:common.show') : t('common:common.hide')} ${hw}`}
                 >
                   <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-foreground truncate">{hw}</span>
@@ -581,7 +581,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
             {frontier.length > 1 && !hideNonOptimal && (
               <div className="flex items-center gap-1.5 px-1 py-0.5 text-[10px]">
                 <span className="text-red-400">- -</span>
-                <span className="text-muted-foreground/60">Pareto Frontier</span>
+                <span className="text-muted-foreground/60">{t('paretoFrontier.paretoFrontier')}</span>
               </div>
             )}
           </div>
@@ -591,21 +591,21 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
             onClick={resetFilters}
             className="text-[10px] text-muted-foreground hover:text-foreground px-1 py-0.5 text-left transition-colors"
           >
-            Reset filter &rarr;|
+            {t('paretoFrontier.resetFilter')} &rarr;|
           </button>
 
           {/* Toggle controls */}
           <div className="border-t border-border/50 mt-1 pt-1.5 space-y-1 flex-shrink-0">
-            <Toggle label="Hide Non-Optimal" active={hideNonOptimal} onChange={setHideNonOptimal} />
-            <Toggle label="Hide Labels" active={hideLabels} onChange={setHideLabels} />
-            <Toggle label="High Contrast" active={highContrast} onChange={setHighContrast} />
+            <Toggle label={t('paretoFrontier.hideNonOptimal')} active={hideNonOptimal} onChange={setHideNonOptimal} />
+            <Toggle label={t('paretoFrontier.hideLabels')} active={hideLabels} onChange={setHideLabels} />
+            <Toggle label={t('paretoFrontier.highContrast')} active={highContrast} onChange={setHighContrast} />
           </div>
         </div>
       </div>
 
       {/* Bottom hint */}
       <p className="text-center text-[9px] text-muted-foreground/50 mt-1 flex-shrink-0">
-        Scroll to zoom &middot; Drag to pan &middot; Double-click to reset
+        {t('paretoFrontier.scrollToPan')}
       </p>
     </div>
   )
@@ -630,7 +630,7 @@ function FilterDropdown({
   optionLabels?: Record<string, string>
   noAllOption?: boolean
 }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[10px] text-muted-foreground font-medium">{label}</span>
@@ -639,7 +639,7 @@ function FilterDropdown({
         onChange={e => onChange(e.target.value)}
         className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-foreground min-w-[100px]"
       >
-        {!noAllOption && <option value="all">{t('common.all')}</option>}
+        {!noAllOption && <option value="all">{t('common:common.all')}</option>}
         {options.map(o => (
           <option key={o} value={o}>{optionLabels?.[o] ?? o}</option>
         ))}

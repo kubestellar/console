@@ -33,6 +33,7 @@ interface InsightCardProps {
 }
 
 function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const Icon = INSIGHT_ICONS[insight.type]
   const colors = SEVERITY_COLORS[insight.severity]
 
@@ -78,7 +79,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
             >
               {/* Recommendation */}
               <div className="mb-3">
-                <div className="text-xs font-medium text-white mb-1">Recommendation</div>
+                <div className="text-xs font-medium text-white mb-1">{t('llmdAIInsights.recommendation')}</div>
                 <p className="text-xs text-muted-foreground">{insight.recommendation}</p>
               </div>
 
@@ -109,7 +110,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
 /**
  * Generate real insights based on the selected stack's state
  */
-function generateStackInsights(stack: LLMdStack): AIInsight[] {
+function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: any) => string): AIInsight[] {
   const insights: AIInsight[] = []
   const now = new Date()
 
@@ -119,9 +120,9 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
       id: 'stack-degraded',
       type: 'anomaly',
       severity: 'warning',
-      title: 'Stack Health Degraded',
-      description: `The ${stack.name} stack is in a degraded state. Some components may not be functioning optimally.`,
-      recommendation: 'Check pod status and logs for failing components. Look for resource constraints or configuration issues.',
+      title: t ? t('llmdAIInsights.stackHealthDegraded') : 'Stack Health Degraded',
+      description: t ? t('llmdAIInsights.stackDegraded', { name: stack.name }) : `The ${stack.name} stack is in a degraded state. Some components may not be functioning optimally.`,
+      recommendation: t ? t('llmdAIInsights.stackDegradedRec') : 'Check pod status and logs for failing components. Look for resource constraints or configuration issues.',
       metrics: {
         'Total Replicas': stack.totalReplicas,
         'Ready': stack.readyReplicas,
@@ -134,9 +135,9 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
       id: 'stack-unhealthy',
       type: 'anomaly',
       severity: 'critical',
-      title: 'Stack Unhealthy',
-      description: `The ${stack.name} stack is unhealthy. Critical components are not running.`,
-      recommendation: 'Immediate investigation required. Check pod events, resource quotas, and node availability.',
+      title: t ? t('llmdAIInsights.stackUnhealthy') : 'Stack Unhealthy',
+      description: t ? t('llmdAIInsights.stackUnhealthyDesc', { name: stack.name }) : `The ${stack.name} stack is unhealthy. Critical components are not running.`,
+      recommendation: t ? t('llmdAIInsights.stackUnhealthyRec') : 'Immediate investigation required. Check pod events, resource quotas, and node availability.',
       metrics: {
         'Total Replicas': stack.totalReplicas,
         'Ready': stack.readyReplicas,
@@ -152,9 +153,9 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
       id: 'missing-gateway',
       type: 'capacity',
       severity: 'warning',
-      title: 'No Gateway Configured',
-      description: 'This stack has no gateway component. External traffic routing may not be properly configured.',
-      recommendation: 'Deploy an Istio Gateway or Envoy ingress to handle external inference requests.',
+      title: t ? t('llmdAIInsights.noGatewayConfigured') : 'No Gateway Configured',
+      description: t ? t('llmdAIInsights.noGatewayDesc') : 'This stack has no gateway component. External traffic routing may not be properly configured.',
+      recommendation: t ? t('llmdAIInsights.noGatewayRec') : 'Deploy an Istio Gateway or Envoy ingress to handle external inference requests.',
       timestamp: now,
     })
   }
@@ -165,9 +166,9 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
       id: 'no-autoscaler',
       type: 'optimization',
       severity: 'info',
-      title: 'Manual Scaling Configured',
-      description: 'This stack does not have an autoscaler. Replicas must be scaled manually.',
-      recommendation: 'Consider enabling Variant Autoscaling (WVA) or HPA for automatic scaling based on load.',
+      title: t ? t('llmdAIInsights.manualScaling') : 'Manual Scaling Configured',
+      description: t ? t('llmdAIInsights.manualScalingDesc') : 'This stack does not have an autoscaler. Replicas must be scaled manually.',
+      recommendation: t ? t('llmdAIInsights.manualScalingRec') : 'Consider enabling Variant Autoscaling (WVA) or HPA for automatic scaling based on load.',
       metrics: {
         'Current Replicas': stack.totalReplicas,
         'Autoscaler': 'None',
@@ -185,9 +186,9 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
           id: 'low-autoscaler-headroom',
           type: 'capacity',
           severity: 'warning',
-          title: 'Limited Scaling Headroom',
-          description: `Autoscaler is at ${currentReplicas}/${maxReplicas} replicas. Limited capacity for traffic spikes.`,
-          recommendation: 'Consider increasing maxReplicas to allow for traffic bursts, or optimize resource usage.',
+          title: t ? t('llmdAIInsights.limitedHeadroom') : 'Limited Scaling Headroom',
+          description: t ? t('llmdAIInsights.limitedHeadroomDesc', { current: currentReplicas, max: maxReplicas }) : `Autoscaler is at ${currentReplicas}/${maxReplicas} replicas. Limited capacity for traffic spikes.`,
+          recommendation: t ? t('llmdAIInsights.limitedHeadroomRec') : 'Consider increasing maxReplicas to allow for traffic bursts, or optimize resource usage.',
           metrics: {
             'Current': currentReplicas,
             'Max': maxReplicas,
@@ -316,7 +317,7 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
 }
 
 export function LLMdAIInsights() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
   const { shouldUseDemoData, showDemoBadge, reason } = useCardDemoState({ requires: 'stack' })
 
@@ -335,7 +336,7 @@ export function LLMdAIInsights() {
     }
 
     if (stackContext?.selectedStack) {
-      return generateStackInsights(stackContext.selectedStack)
+      return generateStackInsights(stackContext.selectedStack, t as unknown as (key: string, options?: any) => string)
     }
 
     return []
@@ -411,7 +412,7 @@ export function LLMdAIInsights() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Brain size={18} className="text-purple-400" />
-          <span className="font-medium text-white">AI Insights</span>
+          <span className="font-medium text-white">{t('llmdAIInsights.aiInsights')}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -423,7 +424,7 @@ export function LLMdAIInsights() {
           {showDemoBadge && (
             <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded flex items-center gap-1">
               <Sparkles size={10} />
-              Demo
+              {t('common:common.demo')}
             </span>
           )}
         </div>
@@ -432,7 +433,7 @@ export function LLMdAIInsights() {
       {/* Summary */}
       <div className="flex items-center gap-4 mb-4 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Insights:</span>
+          <span className="text-muted-foreground">{t('llmdAIInsights.insights')}:</span>
           <span className="text-white font-mono">{insightCounts.total}</span>
         </div>
         {insightCounts.warning > 0 && (
@@ -456,8 +457,8 @@ export function LLMdAIInsights() {
             <Settings2 size={32} className="text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
               {reason === 'stack-not-selected'
-                ? 'Select a stack to see insights'
-                : 'No insights available'}
+                ? t('llmdAIInsights.selectStackToSee')
+                : t('llmdAIInsights.noInsightsAvailable')}
             </p>
           </div>
         ) : (
@@ -476,7 +477,7 @@ export function LLMdAIInsights() {
       <div className="border-t border-slate-700 pt-3">
         <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
           <MessageSquare size={12} />
-          <span>Ask about your stack</span>
+          <span>{t('llmdAIInsights.askAboutStack')}</span>
         </div>
 
         {/* Chat history */}
@@ -502,7 +503,7 @@ export function LLMdAIInsights() {
             type="text"
             value={chatInput}
             onChange={e => setChatInput(e.target.value)}
-            placeholder="e.g., How should I scale my prefill servers?"
+            placeholder={t('llmdAIInsights.scalePlaceholder')}
             className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
           />
           <button

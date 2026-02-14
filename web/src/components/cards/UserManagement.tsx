@@ -34,21 +34,28 @@ type ConsoleUserSortBy = 'name' | 'role' | 'email'
 type OpenShiftUserSortBy = 'name' | 'kind'
 type SASortBy = 'name' | 'namespace'
 
-const CONSOLE_USER_SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'role' as const, label: 'Role' },
-  { value: 'email' as const, label: 'Email' },
-]
+// Sort options defined in component to access t()
+function getConsoleUserSortOptions(t: (key: string) => string) {
+  return [
+    { value: 'name' as const, label: t('common:common.name') },
+    { value: 'role' as const, label: t('common:common.role') },
+    { value: 'email' as const, label: t('userManagement.email') },
+  ]
+}
 
-const OPENSHIFT_USER_SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Username' },
-  { value: 'kind' as const, label: 'Full Name' },
-]
+function getOpenShiftUserSortOptions(t: (key: string) => string) {
+  return [
+    { value: 'name' as const, label: t('userManagement.username') },
+    { value: 'kind' as const, label: t('userManagement.fullName') },
+  ]
+}
 
-const SA_SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'namespace' as const, label: 'Namespace' },
-]
+function getSASortOptions(t: (key: string) => string) {
+  return [
+    { value: 'name' as const, label: t('common:common.name') },
+    { value: 'namespace' as const, label: t('common:common.namespace') },
+  ]
+}
 
 // Sort comparators for each tab
 const OPENSHIFT_USER_COMPARATORS: Record<OpenShiftUserSortBy, (a: OpenShiftUser, b: OpenShiftUser) => number> = {
@@ -62,7 +69,7 @@ const SA_COMPARATORS: Record<SASortBy, (a: { name: string; namespace: string; cl
 }
 
 export function UserManagement({ config: _config }: UserManagementProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const [activeTab, setActiveTab] = useState<TabType>('clusterUsers')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
@@ -259,9 +266,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     : activeTab === 'serviceAccounts' ? setSaItemsPerPage
     : setConsoleUserItemsPerPage
 
-  const activeSortOptions = activeTab === 'clusterUsers' ? OPENSHIFT_USER_SORT_OPTIONS
-    : activeTab === 'serviceAccounts' ? SA_SORT_OPTIONS
-    : CONSOLE_USER_SORT_OPTIONS
+  const activeSortOptions = activeTab === 'clusterUsers' ? getOpenShiftUserSortOptions(t as unknown as (key: string) => string)
+    : activeTab === 'serviceAccounts' ? getSASortOptions(t as unknown as (key: string) => string)
+    : getConsoleUserSortOptions(t as unknown as (key: string) => string)
 
   const isAdmin = currentUser?.role === 'admin'
 
@@ -273,10 +280,10 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   }, [activeTab, openshiftUserTotalItems, saTotalItems, consoleUserTotalItems])
 
   const currentTabLabel = useMemo(() => {
-    if (activeTab === 'clusterUsers') return 'cluster users'
-    if (activeTab === 'serviceAccounts') return 'service accounts'
-    return 'console users'
-  }, [activeTab])
+    if (activeTab === 'clusterUsers') return t('userManagement.clusterUsers')
+    if (activeTab === 'serviceAccounts') return t('userManagement.serviceAccounts')
+    return t('userManagement.consoleUsers')
+  }, [activeTab, t])
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
@@ -287,7 +294,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return
+    if (!confirm(t('userManagement.confirmDelete'))) return
     try {
       await deleteUser(userId)
     } catch (error) {
@@ -332,8 +339,8 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No users</p>
-        <p className="text-xs mt-1">Users and service accounts will appear here</p>
+        <p className="text-sm">{t('userManagement.noUsers')}</p>
+        <p className="text-xs mt-1">{t('userManagement.usersWillAppear')}</p>
       </div>
     )
   }
@@ -392,9 +399,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
         value={activeFilters.search}
         onChange={activeFilters.setSearch}
         placeholder={
-          activeTab === 'clusterUsers' ? 'Search cluster users...' :
-          activeTab === 'serviceAccounts' ? 'Search service accounts...' :
-          'Search console users...'
+          activeTab === 'clusterUsers' ? t('userManagement.searchClusterUsers') :
+          activeTab === 'serviceAccounts' ? t('userManagement.searchServiceAccounts') :
+          t('userManagement.searchConsoleUsers')
         }
         className="mb-2 flex-shrink-0"
       />
@@ -410,7 +417,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          Cluster Users
+          {t('userManagement.clusterUsers')}
         </button>
         <button
           onClick={() => setActiveTab('serviceAccounts')}
@@ -421,7 +428,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          Service Accounts
+          {t('userManagement.serviceAccounts')}
         </button>
         <button
           onClick={() => setActiveTab('console')}
@@ -432,7 +439,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          Console Users
+          {t('userManagement.consoleUsers')}
         </button>
       </div>
 
@@ -545,6 +552,8 @@ function ConsoleUsersTab({
   onDeleteUser,
   getRoleBadgeClass,
 }: ConsoleUsersTabProps) {
+  const { t } = useTranslation(['cards', 'common'])
+
   // Only show spinner if loading AND no users to display
   if (isLoading && users.length === 0) {
     return (
@@ -558,7 +567,7 @@ function ConsoleUsersTab({
     return (
       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
         <Users className="w-8 h-8 mb-2 opacity-50" />
-        <p className="text-sm">No users found</p>
+        <p className="text-sm">{t('userManagement.noUsersFound')}</p>
       </div>
     )
   }
@@ -598,7 +607,7 @@ function ConsoleUsersTab({
                 )}
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {isCurrentUser ? `${user.github_login} (you)` : user.github_login}
+                    {isCurrentUser ? `${user.github_login} (${t('userManagement.you')})` : user.github_login}
                   </p>
                   {user.email && (
                     <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -657,7 +666,7 @@ function ConsoleUsersTab({
                   <button
                     onClick={() => onDeleteUser(user.id)}
                     className="p-1.5 rounded text-red-400 hover:bg-red-500/10"
-                    title="Delete user"
+                    title={t('common:actions.delete')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -690,17 +699,18 @@ function ClusterUsersTab({
   showClusterBadge,
   onDrillToUser,
 }: ClusterUsersTabProps) {
+  const { t } = useTranslation(['cards', 'common'])
   return (
     <div className="space-y-3">
       {/* Cluster selector - now filters locally */}
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Filter by Cluster</label>
+        <label className="block text-xs text-muted-foreground mb-1">{t('userManagement.filterByCluster')}</label>
         <select
           value={selectedCluster}
           onChange={(e) => setSelectedCluster(e.target.value)}
           className="w-full px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-xs"
         >
-          <option value="">All clusters</option>
+          <option value="">{t('common:filters.allClusters')}</option>
           {clusters.map((c) => (
             <option key={c.name} value={c.name}>
               {c.name}
@@ -717,7 +727,7 @@ function ClusterUsersTab({
       ) : users.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
           <Users className="w-6 h-6 mb-1 opacity-50" />
-          <p className="text-xs">No users found</p>
+          <p className="text-xs">{t('userManagement.noUsersFound')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -743,7 +753,7 @@ function ClusterUsersTab({
               </div>
               {user.identities && user.identities.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Identity: {user.identities[0]}
+                  {t('userManagement.identity')}: {user.identities[0]}
                 </p>
               )}
               {user.groups && user.groups.length > 0 && (
@@ -799,12 +809,14 @@ function ServiceAccountsTab({
   showClusterBadge,
   onDrillToServiceAccount,
 }: ServiceAccountsTabProps) {
+  const { t } = useTranslation(['cards', 'common'])
+
   return (
     <div className="space-y-3">
       {/* Cluster and Namespace selectors - now filter locally */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Filter by Cluster</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t('userManagement.filterByCluster')}</label>
           <select
             value={selectedCluster}
             onChange={(e) => {
@@ -813,7 +825,7 @@ function ServiceAccountsTab({
             }}
             className="w-full px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-xs"
           >
-            <option value="">All clusters</option>
+            <option value="">{t('common:filters.allClusters')}</option>
             {clusters.map((c) => (
               <option key={c.name} value={c.name}>
                 {c.name}
@@ -822,13 +834,13 @@ function ServiceAccountsTab({
           </select>
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Filter by Namespace</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t('userManagement.filterByNamespace')}</label>
           <select
             value={selectedNamespace}
             onChange={(e) => setSelectedNamespace(e.target.value)}
             className="w-full px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-xs"
           >
-            <option value="">All namespaces</option>
+            <option value="">{t('userManagement.allNamespaces')}</option>
             {namespaces.map((ns) => (
               <option key={ns} value={ns}>
                 {ns}
@@ -846,7 +858,7 @@ function ServiceAccountsTab({
       ) : serviceAccounts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
           <Key className="w-6 h-6 mb-1 opacity-50" />
-          <p className="text-xs">No service accounts found</p>
+          <p className="text-xs">{t('userManagement.noServiceAccountsFound')}</p>
         </div>
       ) : (
         <div className="space-y-2">

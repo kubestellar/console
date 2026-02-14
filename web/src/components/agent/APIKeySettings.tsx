@@ -45,7 +45,7 @@ const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = 
 }
 
 export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const [keysStatus, setKeysStatus] = useState<KeyStatus[]>([])
   const [configPath, setConfigPath] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -78,17 +78,17 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       setError(null)
       const response = await fetch(`${KC_AGENT_URL}/settings/keys`)
       if (!response.ok) {
-        throw new Error('Failed to fetch key status')
+        throw new Error(t('agent.failedToFetchKeyStatus'))
       }
       const data: KeysStatusResponse = await response.json()
       setKeysStatus(data.keys)
       setConfigPath(data.configPath)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect to agent')
+      setError(err instanceof Error ? err.message : t('agent.failedToConnect'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (isOpen) {
@@ -109,7 +109,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.message || 'Failed to save key')
+        throw new Error(data.message || t('agent.failedToSaveKey'))
       }
 
       // Success - refresh status and close edit mode
@@ -118,7 +118,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       setShowKey(false)
       await fetchKeysStatus()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save key')
+      setError(err instanceof Error ? err.message : t('agent.failedToSaveKey'))
     } finally {
       setSaving(false)
     }
@@ -133,12 +133,12 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.message || 'Failed to delete key')
+        throw new Error(data.message || t('agent.failedToDeleteKey'))
       }
 
       await fetchKeysStatus()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete key')
+      setError(err instanceof Error ? err.message : t('agent.failedToDeleteKey'))
     } finally {
       setSaving(false)
     }
@@ -160,7 +160,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
       <BaseModal.Header
-        title="API Key Settings"
+        title={t('agent.apiKeySettings')}
         icon={Key}
         onClose={onClose}
         showBack={false}
@@ -176,13 +176,13 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
               <div className="p-3 rounded-full bg-orange-500/20 w-fit mx-auto mb-4">
                 <Plug className="w-8 h-8 text-orange-400" />
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">Local Agent Required</h3>
+              <h3 className="text-lg font-medium text-foreground mb-2">{t('agent.localAgentRequired')}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Install and start the local agent to configure API keys.
+                {t('agent.installAgentPrompt')}
               </p>
 
               <div className="bg-secondary/50 rounded-lg p-4 mb-4">
-                <p className="text-xs text-muted-foreground mb-2">Run this command to install:</p>
+                <p className="text-xs text-muted-foreground mb-2">{t('agent.runInstallCommand')}</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 px-3 py-2 rounded bg-background font-mono text-sm text-foreground text-left overflow-x-auto">
                     {INSTALL_COMMAND}
@@ -192,7 +192,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                     className="shrink-0 flex items-center gap-1 px-3 py-2 rounded bg-primary text-primary-foreground text-sm hover:bg-primary/80"
                   >
                     <Copy className="w-4 h-4" />
-                    {copied ? 'Copied!' : 'Copy'}
+                    {copied ? t('actions.copied') : t('actions.copy')}
                   </button>
                 </div>
               </div>
@@ -201,7 +201,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                 onClick={fetchKeysStatus}
                 className="text-sm text-primary hover:underline"
               >
-                Retry Connection
+                {t('agent.retryConnection')}
               </button>
             </div>
           ) : (
@@ -212,12 +212,12 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                   title={error}
                 >
                   {error.includes('not_found_error')
-                    ? 'API key validation failed - the model may not be available for your account'
+                    ? t('agent.validationFailedModel')
                     : error.includes('invalid_api_key') || error.includes('authentication')
-                    ? 'Invalid API key - please check and try again'
+                    ? t('agent.invalidApiKey')
                     : error.includes('rate_limit')
-                    ? 'Rate limit exceeded - please try again later'
-                    : 'Failed to validate API key - hover for details'}
+                    ? t('agent.rateLimitExceeded')
+                    : t('agent.failedToValidate')}
                 </div>
               )}
 
@@ -240,25 +240,25 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                               {key.valid === true ? (
                                 <span className="flex items-center gap-1 text-xs text-green-500">
                                   <Check className="w-3 h-3" />
-                                  Working
+                                  {t('agent.working')}
                                 </span>
                               ) : key.valid === false ? (
                                 <span className="flex items-center gap-1 text-xs text-destructive">
                                   <AlertCircle className="w-3 h-3" />
-                                  Invalid
+                                  {t('agent.invalid')}
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <Check className="w-3 h-3" />
-                                  Configured
+                                  {t('agent.configured')}
                                 </span>
                               )}
                               {key.source === 'env' && (
-                                <span className="text-xs text-muted-foreground">(from env)</span>
+                                <span className="text-xs text-muted-foreground">({t('agent.fromEnv')})</span>
                               )}
                             </>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Not configured</span>
+                            <span className="text-xs text-muted-foreground">{t('agent.notConfigured')}</span>
                           )}
                         </div>
                       </div>
@@ -270,7 +270,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           onClick={() => handleDeleteKey(key.provider)}
                           disabled={saving}
                           className="p-1.5 hover:bg-destructive/20 rounded transition-colors text-muted-foreground hover:text-destructive"
-                          title="Remove key"
+                          title={t('agent.removeKey')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -280,7 +280,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
-                        title="Get API key"
+                        title={t('agent.getApiKey')}
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
@@ -295,7 +295,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           type={showKey ? 'text' : 'password'}
                           value={newKeyValue}
                           onChange={(e) => setNewKeyValue(e.target.value)}
-                          placeholder={PROVIDER_INFO[key.provider]?.placeholder || 'Enter API key'}
+                          placeholder={PROVIDER_INFO[key.provider]?.placeholder || t('agent.enterApiKey')}
                           className="w-full px-3 py-2 pr-10 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                           autoFocus
                         />
@@ -316,7 +316,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           {saving ? (
                             <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                           ) : (
-                            'Save & Validate'
+                            t('agent.saveAndValidate')
                           )}
                         </button>
                         <button
@@ -324,7 +324,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           disabled={saving}
                           className="px-3 py-1.5 bg-secondary text-secondary-foreground text-sm rounded-lg hover:bg-secondary/80"
                         >
-                          Cancel
+                          {t('actions.cancel')}
                         </button>
                       </div>
                     </div>
@@ -339,13 +339,13 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           : 'bg-secondary hover:bg-secondary/80 text-foreground'
                       )}
                     >
-                      {key.configured ? 'Update Key' : 'Add Key'}
+                      {key.configured ? t('agent.updateKey') : t('agent.addKey')}
                     </button>
                   )}
 
                   {key.source === 'env' && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Key is set via environment variable. Modify the environment to change it.
+                      {t('agent.envVariableNote')}
                     </p>
                   )}
                 </div>
@@ -353,7 +353,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
 
               {configPath && (
                 <p className="text-xs text-muted-foreground text-center mt-4">
-                  Keys saved to: <code className="bg-secondary px-1 rounded">{configPath}</code>
+                  {t('agent.keysSavedTo')}: <code className="bg-secondary px-1 rounded">{configPath}</code>
                 </p>
               )}
             </div>
@@ -362,7 +362,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
 
       <BaseModal.Footer>
         <p className="text-xs text-muted-foreground text-center flex-1">
-          API keys are stored securely on your local machine and never sent to our servers.
+          {t('agent.securityNote')}
         </p>
       </BaseModal.Footer>
     </BaseModal>

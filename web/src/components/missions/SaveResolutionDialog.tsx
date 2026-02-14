@@ -153,7 +153,7 @@ export function SaveResolutionDialog({
   onClose,
   onSaved,
 }: SaveResolutionDialogProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { saveResolution } = useResolutions()
 
   // Auto-detect issue signature from mission content
@@ -241,15 +241,15 @@ export function SaveResolutionDialog({
   const handleSave = async () => {
     // Validate
     if (!title.trim()) {
-      setError('Title is required')
+      setError(t('dashboard.missions.titleRequired'))
       return
     }
     if (!issueType.trim()) {
-      setError('Issue type is required')
+      setError(t('dashboard.missions.issueTypeRequired'))
       return
     }
     if (!summary.trim()) {
-      setError('Summary is required')
+      setError(t('dashboard.missions.summaryRequired'))
       return
     }
 
@@ -284,7 +284,7 @@ export function SaveResolutionDialog({
       onSaved?.()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save resolution')
+      setError(err instanceof Error ? err.message : t('dashboard.missions.failedToSave'))
     } finally {
       setIsSaving(false)
     }
@@ -299,7 +299,7 @@ export function SaveResolutionDialog({
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Save className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold text-foreground">{t('common.saveResolution')}</h2>
+            <h2 className="font-semibold text-foreground">{t('dashboard.missions.saveResolution')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -314,8 +314,8 @@ export function SaveResolutionDialog({
           <div className="flex items-center gap-3 p-4 bg-primary/10 border-b border-primary/20">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <div>
-              <p className="text-sm font-medium text-foreground">{t('common.generatingAISummary')}</p>
-              <p className="text-xs text-muted-foreground">Creating a reusable problem/solution pair</p>
+              <p className="text-sm font-medium text-foreground">{t('dashboard.missions.generatingAISummary')}</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.missions.creatingReusablePair')}</p>
             </div>
           </div>
         )}
@@ -332,7 +332,7 @@ export function SaveResolutionDialog({
               className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 rounded transition-colors"
             >
               <RefreshCw className="w-3 h-3" />
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -343,7 +343,7 @@ export function SaveResolutionDialog({
           {!isGenerating && !aiError && summary && (
             <div className="flex items-center gap-2 text-xs text-primary">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>AI-generated summary - review and edit as needed</span>
+              <span>{t('dashboard.missions.aiGeneratedReview')}</span>
             </div>
           )}
 
@@ -351,13 +351,13 @@ export function SaveResolutionDialog({
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
               <FileText className="w-4 h-4 text-muted-foreground" />
-              Title
+              {t('dashboard.missions.title')}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Fix OOM in payment service"
+              placeholder={t('dashboard.missions.titlePlaceholder')}
               disabled={isGenerating}
               className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
             />
@@ -368,26 +368,26 @@ export function SaveResolutionDialog({
             <div>
               <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
                 <Tag className="w-4 h-4 text-muted-foreground" />
-                Issue Type
+                {t('dashboard.missions.issueType')}
               </label>
               <input
                 type="text"
                 value={issueType}
                 onChange={(e) => setIssueType(e.target.value)}
-                placeholder="e.g., CrashLoopBackOff"
+                placeholder={t('dashboard.missions.issueTypePlaceholder')}
                 disabled={isGenerating}
                 className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">
-                Resource Kind
+                {t('dashboard.missions.resourceKind')}
               </label>
               <input
                 type="text"
                 value={resourceKind}
                 onChange={(e) => setResourceKind(e.target.value)}
-                placeholder="e.g., Pod, Deployment"
+                placeholder={t('dashboard.missions.resourceKindPlaceholder')}
                 disabled={isGenerating}
                 className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
@@ -397,12 +397,12 @@ export function SaveResolutionDialog({
           {/* Summary (Problem & Solution) */}
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">
-              Problem & Solution
+              {t('dashboard.missions.problemAndSolution')}
             </label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder={isGenerating ? "Generating..." : "Describe the problem and how it was fixed..."}
+              placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.problemSolutionPlaceholder')}
               rows={4}
               disabled={isGenerating}
               className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
@@ -413,7 +413,7 @@ export function SaveResolutionDialog({
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
               <ListOrdered className="w-4 h-4 text-muted-foreground" />
-              Remediation Steps
+              {t('dashboard.missions.remediationSteps')}
             </label>
             <div className="space-y-2">
               {steps.map((step, index) => (
@@ -423,7 +423,7 @@ export function SaveResolutionDialog({
                     type="text"
                     value={step}
                     onChange={(e) => handleStepChange(index, e.target.value)}
-                    placeholder={isGenerating ? "Generating..." : "Step description..."}
+                    placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.stepPlaceholder')}
                     disabled={isGenerating}
                     className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                   />
@@ -443,7 +443,7 @@ export function SaveResolutionDialog({
                 disabled={isGenerating}
                 className="text-xs text-primary hover:text-primary/80 ml-7 disabled:opacity-50"
               >
-                + Add step
+                {t('dashboard.missions.addStep')}
               </button>
             </div>
           </div>
@@ -452,12 +452,12 @@ export function SaveResolutionDialog({
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
               <Code className="w-4 h-4 text-muted-foreground" />
-              YAML/Config Snippets (optional)
+              {t('dashboard.missions.yamlConfig')}
             </label>
             <textarea
               value={yaml}
               onChange={(e) => setYaml(e.target.value)}
-              placeholder={isGenerating ? "Generating..." : "Paste relevant YAML configuration..."}
+              placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.yamlPlaceholder')}
               rows={4}
               disabled={isGenerating}
               className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
@@ -467,7 +467,7 @@ export function SaveResolutionDialog({
           {/* Visibility */}
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              Visibility
+              {t('dashboard.missions.visibility')}
             </label>
             <div className="flex gap-3">
               <button
@@ -482,7 +482,7 @@ export function SaveResolutionDialog({
                 )}
               >
                 <Save className="w-4 h-4" />
-                <span className="text-sm">{t('common.savePrivate')}</span>
+                <span className="text-sm">{t('dashboard.missions.private')}</span>
               </button>
               <button
                 onClick={() => setVisibility('shared')}
@@ -496,7 +496,7 @@ export function SaveResolutionDialog({
                 )}
               >
                 <Share2 className="w-4 h-4" />
-                <span className="text-sm">{t('common.shareToOrg')}</span>
+                <span className="text-sm">{t('dashboard.missions.shareToOrg')}</span>
               </button>
             </div>
           </div>
@@ -518,14 +518,14 @@ export function SaveResolutionDialog({
             className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4" />
-            Regenerate
+            {t('dashboard.missions.regenerate')}
           </button>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Cancel
+              {t('actions.cancel')}
             </button>
             <button
               onClick={handleSave}
@@ -537,7 +537,7 @@ export function SaveResolutionDialog({
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4" />
-                  Save Resolution
+                  {t('dashboard.missions.saveResolution')}
                 </>
               )}
             </button>

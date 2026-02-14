@@ -128,7 +128,7 @@ export function DeployConfirmDialog({
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
       {/* Header */}
       <BaseModal.Header
-        title="Confirm Deployment"
+        title={t('deploy.confirmDeployment')}
         icon={Rocket}
         onClose={onClose}
       />
@@ -139,7 +139,7 @@ export function DeployConfirmDialog({
           {/* Workload info */}
           <div className="rounded-lg bg-card/50 border border-border p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Workload</span>
+              <span className="text-sm text-muted-foreground">{t('deploy.workload')}</span>
               <span className="text-sm font-medium text-foreground">
                 {workloadName}
                 {data?.kind && (
@@ -167,7 +167,7 @@ export function DeployConfirmDialog({
             </div>
             {groupName && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Group</span>
+                <span className="text-sm text-muted-foreground">{t('deploy.group')}</span>
                 <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{groupName}</span>
               </div>
             )}
@@ -177,7 +177,7 @@ export function DeployConfirmDialog({
           {isLoading && (
             <div className="flex items-center justify-center py-6 gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-              <span className="text-sm text-muted-foreground">Resolving dependencies...</span>
+              <span className="text-sm text-muted-foreground">{t('deploy.resolvingDependencies')}</span>
             </div>
           )}
 
@@ -186,9 +186,9 @@ export function DeployConfirmDialog({
             <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm text-yellow-400 font-medium">Could not resolve dependencies</p>
+                <p className="text-sm text-yellow-400 font-medium">{t('deploy.couldNotResolve')}</p>
                 <p className="text-xs text-yellow-400/70 mt-0.5">{error.message}</p>
-                <p className="text-xs text-muted-foreground mt-1">You can still deploy — dependencies will be resolved during deployment.</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('deploy.canStillDeploy')}</p>
               </div>
             </div>
           )}
@@ -198,8 +198,8 @@ export function DeployConfirmDialog({
             <div>
               <div className="text-sm text-muted-foreground mb-2">
                 {totalDeps > 0
-                  ? `This will deploy ${totalDeps} dependent resource${totalDeps !== 1 ? 's' : ''}:`
-                  : 'No additional dependencies detected.'}
+                  ? t('deploy.willDeployDeps', { count: totalDeps })
+                  : t('deploy.noDependencies')}
               </div>
 
               {groups.map(group => {
@@ -235,7 +235,7 @@ export function DeployConfirmDialog({
                               <span className="text-muted-foreground w-24 truncate shrink-0">{dep.kind}</span>
                               <span className="text-foreground truncate flex-1">{dep.name}</span>
                               {dep.optional && (
-                                <span className="text-[10px] text-yellow-500 shrink-0">optional</span>
+                                <span className="text-[10px] text-yellow-500 shrink-0">{t('deploy.optional')}</span>
                               )}
                             </div>
                           )
@@ -269,7 +269,7 @@ export function DeployConfirmDialog({
             onClick={onClose}
             className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={onConfirm}
@@ -279,7 +279,7 @@ export function DeployConfirmDialog({
             )}
           >
             <Rocket className="w-4 h-4" />
-            Deploy to {targetClusters.length} cluster{targetClusters.length !== 1 ? 's' : ''}
+            {t('deploy.deployToCluster', { count: targetClusters.length })}
           </button>
         </div>
       </BaseModal.Footer>

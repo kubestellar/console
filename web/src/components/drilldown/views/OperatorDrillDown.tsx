@@ -294,10 +294,10 @@ Please:
   const PhaseIcon = phaseStyle.icon
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'csv', label: 'CSV Details', icon: FileText },
-    { id: 'crds', label: 'CRDs', icon: Package },
-    { id: 'ai', label: 'AI Analysis', icon: Stethoscope },
+    { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
+    { id: 'csv', label: t('drilldown.tabs.csvDetails'), icon: FileText },
+    { id: 'crds', label: t('drilldown.tabs.crds'), icon: Package },
+    { id: 'ai', label: t('drilldown.tabs.aiAnalysis'), icon: Stethoscope },
   ]
 
   return (
@@ -414,14 +414,14 @@ Please:
 
             {/* Subscription Info */}
             <div className="p-4 rounded-lg border border-border bg-card/50">
-              <h4 className="text-sm font-medium text-foreground mb-3">Subscription</h4>
+              <h4 className="text-sm font-medium text-foreground mb-3">{t('drilldown.operator.subscription')}</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Name:</span>
+                  <span className="text-muted-foreground">{t('drilldown.operator.name')}</span>
                   <span className="ml-2 text-foreground">{subscriptionName || operatorName}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Channel:</span>
+                  <span className="text-muted-foreground">{t('drilldown.operator.channel')}</span>
                   <span className="ml-2 text-foreground">{channel || 'default'}</span>
                 </div>
                 <div>
@@ -429,7 +429,7 @@ Please:
                   <span className="ml-2 text-foreground">{source || 'Unknown'}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Source NS:</span>
+                  <span className="text-muted-foreground">{t('drilldown.operator.sourceNs')}</span>
                   <span className="ml-2 text-foreground">{sourceNamespace || 'Unknown'}</span>
                 </div>
               </div>
@@ -445,7 +445,7 @@ Please:
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="text-2xl font-bold text-foreground">{operatorCRDs?.length || '-'}</div>
-                <div className="text-xs text-muted-foreground">CRDs</div>
+                <div className="text-xs text-muted-foreground">{t('drilldown.tabs.crds')}</div>
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="text-sm font-mono text-foreground truncate">{csvInfo?.version || '-'}</div>
@@ -456,7 +456,7 @@ Please:
             {/* Links */}
             {csvInfo?.links && csvInfo.links.length > 0 && (
               <div className="p-4 rounded-lg border border-border bg-card/50">
-                <h4 className="text-sm font-medium text-foreground mb-3">Links</h4>
+                <h4 className="text-sm font-medium text-foreground mb-3">{t('drilldown.operator.links')}</h4>
                 <div className="flex flex-wrap gap-2">
                   {csvInfo.links.map((link, i) => (
                     <a
@@ -478,7 +478,7 @@ Please:
 
         {activeTab === 'csv' && (
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">ClusterServiceVersion Details</h4>
+            <h4 className="text-sm font-medium text-foreground">{t('drilldown.operator.csvDetails')}</h4>
             {csvLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -520,7 +520,7 @@ Please:
 
                 {csvInfo.maintainers && csvInfo.maintainers.length > 0 && (
                   <div className="p-4 rounded-lg border border-border bg-card/50">
-                    <h5 className="text-sm font-medium text-foreground mb-2">Maintainers</h5>
+                    <h5 className="text-sm font-medium text-foreground mb-2">{t('drilldown.operator.maintainers')}</h5>
                     <div className="space-y-1">
                       {csvInfo.maintainers.map((m, i) => (
                         <div key={i} className="text-sm text-muted-foreground">
@@ -533,7 +533,7 @@ Please:
 
                 {csvInfo.installModes && (
                   <div className="p-4 rounded-lg border border-border bg-card/50">
-                    <h5 className="text-sm font-medium text-foreground mb-2">Install Modes</h5>
+                    <h5 className="text-sm font-medium text-foreground mb-2">{t('drilldown.operator.installModes')}</h5>
                     <div className="flex flex-wrap gap-2">
                       {csvInfo.installModes.map((mode) => (
                         <span
@@ -545,7 +545,7 @@ Please:
                               : 'bg-red-500/20 text-red-400'
                           )}
                         >
-                          {mode.type}: {mode.supported ? 'Yes' : 'No'}
+                          {mode.type}: {mode.supported ? t('drilldown.operator.yes') : t('drilldown.operator.no')}
                         </span>
                       ))}
                     </div>
@@ -555,7 +555,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>CSV information not available</p>
+                <p>{t('drilldown.operator.csvNotAvailable')}</p>
               </div>
             )}
           </div>
@@ -563,7 +563,7 @@ Please:
 
         {activeTab === 'crds' && (
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">Owned CRDs ({operatorCRDs?.length || 0})</h4>
+            <h4 className="text-sm font-medium text-foreground">{t('drilldown.operator.ownedCRDs', { count: operatorCRDs?.length || 0 })}</h4>
             {crdsLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -593,7 +593,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No CRDs found</p>
+                <p>{t('drilldown.operator.noCRDs')}</p>
               </div>
             )}
           </div>
@@ -604,7 +604,7 @@ Please:
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <ConsoleAIIcon className="w-5 h-5" />
-                AI Analysis
+                {t('drilldown.ai.title')}
               </h4>
               <button
                 onClick={handleDiagnose}
@@ -612,15 +612,15 @@ Please:
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
               >
                 <Stethoscope className="w-4 h-4" />
-                Analyze Operator
+                {t('drilldown.operator.analyzeOperator')}
               </button>
             </div>
 
             {!isAgentConnected ? (
               <div className="text-center py-12 text-muted-foreground">
                 <ConsoleAIIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>AI agent not connected</p>
-                <p className="text-xs mt-1">Configure the local agent in Settings to enable AI analysis</p>
+                <p>{t('drilldown.ai.notConnected')}</p>
+                <p className="text-xs mt-1">{t('drilldown.ai.configureAgent')}</p>
               </div>
             ) : aiAnalysisLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -633,8 +633,8 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Click "Analyze Operator" to get AI-powered analysis</p>
-                <p className="text-xs mt-1">AI will analyze the operator and suggest improvements</p>
+                <p>{t('drilldown.operator.clickAnalyze')}</p>
+                <p className="text-xs mt-1">{t('drilldown.operator.analyzeHint')}</p>
               </div>
             )}
           </div>
