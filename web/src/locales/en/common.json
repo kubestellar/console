@@ -219,7 +219,6 @@
     "condition": "Condition"
   },
   "prowJobs": {
-    "allTypes": "All Types",
     "periodic": "Periodic",
     "presubmit": "Presubmit",
     "postsubmit": "Postsubmit"

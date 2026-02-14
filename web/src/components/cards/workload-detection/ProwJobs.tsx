@@ -142,7 +142,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             onChange={(e) => setTypeFilter(e.target.value as ProwJob['type'] | 'all')}
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
-            <option value="all">{t('prowJobs.allTypes')}</option>
+            <option value="all">{t('selectors.allTypes')}</option>
             <option value="periodic">{t('prowJobs.periodic')}</option>
             <option value="presubmit">{t('prowJobs.presubmit')}</option>
             <option value="postsubmit">{t('prowJobs.postsubmit')}</option>
