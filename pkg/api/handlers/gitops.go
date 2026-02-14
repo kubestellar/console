@@ -367,10 +367,12 @@ type OperatorSubscription struct {
 	Cluster             string `json:"cluster,omitempty"`
 }
 
-// Operator/subscription timeouts — CSV queries can take 26s+ for large clusters
+// Operator/subscription timeouts — CSV queries take 90-100s for clusters with
+// 1000+ CSVs (e.g. vllm-d has 1381 CSVs). The jsonpath extraction in kubectl
+// is the bottleneck, not network transfer.
 const (
-	operatorPerClusterTimeout     = 60 * time.Second
-	operatorRestOverallTimeout    = 120 * time.Second
+	operatorPerClusterTimeout     = 180 * time.Second
+	operatorRestOverallTimeout    = 200 * time.Second
 	subscriptionPerClusterTimeout = 30 * time.Second
 	helmStreamPerClusterTimeout   = 30 * time.Second
 )
@@ -490,13 +492,13 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 				operators := h.getOperatorsForCluster(ctx, clusterName)
 				mu.Lock()
 				completedClusters++
-				if len(operators) > 0 {
-					writeSSEEvent(w, "cluster_data", fiber.Map{
-						"cluster":   clusterName,
-						"operators": operators,
-						"source":    "k8s",
-					})
-				}
+				// Always send cluster_data — even for empty clusters so the
+				// frontend sees progress and knows the stream is alive.
+				writeSSEEvent(w, "cluster_data", fiber.Map{
+					"cluster":   clusterName,
+					"operators": operators,
+					"source":    "k8s",
+				})
 				mu.Unlock()
 			}(cl.Name)
 		}
@@ -676,13 +678,11 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 				subs := h.getSubscriptionsForCluster(ctx, clusterName)
 				mu.Lock()
 				completedClusters++
-				if len(subs) > 0 {
-					writeSSEEvent(w, "cluster_data", fiber.Map{
-						"cluster":       clusterName,
-						"subscriptions": subs,
-						"source":        "k8s",
-					})
-				}
+				writeSSEEvent(w, "cluster_data", fiber.Map{
+					"cluster":       clusterName,
+					"subscriptions": subs,
+					"source":        "k8s",
+				})
 				mu.Unlock()
 			}(cl.Name)
 		}
@@ -811,13 +811,11 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 				releases := h.getHelmReleasesForCluster(ctx, clusterName)
 				mu.Lock()
 				completedClusters++
-				if len(releases) > 0 {
-					writeSSEEvent(w, "cluster_data", fiber.Map{
-						"cluster":  clusterName,
-						"releases": releases,
-						"source":   "k8s",
-					})
-				}
+				writeSSEEvent(w, "cluster_data", fiber.Map{
+					"cluster":  clusterName,
+					"releases": releases,
+					"source":   "k8s",
+				})
 				mu.Unlock()
 			}(cl.Name)
 		}
