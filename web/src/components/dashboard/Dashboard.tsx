@@ -19,6 +19,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
+import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
@@ -110,6 +111,7 @@ export function Dashboard() {
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
   const { showToast } = useToast()
+  const { t } = useTranslation()
   const { recordCardRemoved, recordCardAdded, recordCardReplaced, recordCardConfigured } = useCardHistory()
 
   // Cluster data for refresh functionality and stats - most cards depend on this
@@ -809,8 +811,8 @@ export function Dashboard() {
     <div data-testid="dashboard-page" className="pt-16">
       {/* Header */}
       <DashboardHeader
-        title="Dashboard"
-        subtitle="Multi-cluster overview and resource monitoring"
+        title={t('dashboard.title')}
+        subtitle={t('dashboard.subtitle')}
         isFetching={isFetching}
         onRefresh={() => triggerRefresh()}
         autoRefresh={autoRefresh}
@@ -851,16 +853,15 @@ export function Dashboard() {
         <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
           <div className="flex-1">
-            <span className="text-sm text-yellow-300 font-medium">Demo Data in Use</span>
+            <span className="text-sm text-yellow-300 font-medium">{t('dashboard.demoData.title')}</span>
             <span className="text-sm text-yellow-400/80 ml-2">
-              {demoDataCardCount} card{demoDataCardCount !== 1 ? 's are' : ' is'} displaying simulated data.
-              Look for the <span className="px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-xs">Demo</span> badge in the card header.
+              {t('dashboard.demoData.description', { count: demoDataCardCount })}
             </span>
           </div>
           <button
             onClick={() => setDemoBannerDismissed(true)}
             className="p-1 rounded hover:bg-yellow-500/20 text-yellow-400/70 hover:text-yellow-400 transition-colors"
-            title="Dismiss"
+            title={t('dashboard.recommendations.dismiss')}
           >
             <X className="w-4 h-4" />
           </button>
