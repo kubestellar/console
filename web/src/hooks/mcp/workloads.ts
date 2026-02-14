@@ -298,24 +298,31 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
         setIsLoading(true)
       }
     }
+    // Use SSE streaming for progressive multi-cluster data
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      const url = `/api/mcp/pods?${params}`
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
 
-      // Use direct fetch to bypass the global circuit breaker
-      const token = localStorage.getItem('token')
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers })
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-      const data = await response.json() as { pods: PodInfo[] }
-      let sortedPods = data.pods || []
+      const allPods = await fetchSSE<PodInfo>({
+        url: '/api/mcp/pods/stream',
+        params: sseParams,
+        itemsKey: 'pods',
+        onClusterData: (_clusterName, items) => {
+          // Progressive update — show data as it arrives
+          setPods(prev => {
+            const merged = [...prev, ...items]
+            const sorted = sortBy === 'restarts'
+              ? merged.sort((a, b) => b.restarts - a.restarts)
+              : merged.sort((a, b) => a.name.localeCompare(b.name))
+            return sorted.slice(0, limit)
+          })
+          setIsLoading(false)
+        },
+      })
 
-      // Sort by restarts (descending) or name
+      // Final sort & cache with all pods
+      let sortedPods = allPods
       if (sortBy === 'restarts') {
         sortedPods = sortedPods.sort((a, b) => b.restarts - a.restarts)
       } else {
@@ -327,7 +334,6 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       podsCache = { data: sortedPods, timestamp: now, key: cacheKey }
       savePodsCacheToStorage()
 
-      // Limit results for display
       setPods(sortedPods.slice(0, limit))
       setError(null)
       setLastUpdated(now)
@@ -343,11 +349,8 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       }
     } finally {
       setIsLoading(false)
-      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setTimeout(() => {
-          setIsRefreshing(false)
-        }, MIN_REFRESH_INDICATOR_MS)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
       } else {
         setIsRefreshing(false)
       }
@@ -439,15 +442,23 @@ export function useAllPods(cluster?: string, namespace?: string) {
         setIsLoading(true)
       }
     }
+    // Use SSE streaming for progressive multi-cluster data
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ pods: PodInfo[] }>(`/api/mcp/pods?${params}`)
-      const allPods = data.pods || []
-      const now = new Date()
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
 
-      // Update module-level cache with all pods
+      const allPods = await fetchSSE<PodInfo>({
+        url: '/api/mcp/pods/stream',
+        params: sseParams,
+        itemsKey: 'pods',
+        onClusterData: (_clusterName, items) => {
+          setPods(prev => [...prev, ...items])
+          setIsLoading(false)
+        },
+      })
+
+      const now = new Date()
       podsCache = { data: allPods, timestamp: now, key: cacheKey }
       savePodsCacheToStorage()
 
@@ -455,7 +466,6 @@ export function useAllPods(cluster?: string, namespace?: string) {
       setError(null)
       setLastUpdated(now)
     } catch (err) {
-      // Keep stale data on error, fallback to demo data if no cache
       if (!silent && !podsCache) {
         setError('Failed to fetch pods')
         setPods(getDemoAllPods().filter(p =>
@@ -578,19 +588,13 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     }
 
     // Try kubectl proxy first when cluster is specified (for cluster-specific issues)
-    let agentSucceeded = false
     if (cluster && !isAgentUnavailable()) {
       try {
-        // Look up the cluster's context for kubectl commands
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
         const podIssuesData = await kubectlProxy.getPodIssues(kubectlContext, namespace)
-        agentSucceeded = true // Agent worked, even if it returned empty array
         const now = new Date()
-
-        // Update module-level cache
         podIssuesCache = { data: podIssuesData, timestamp: now, key: cacheKey }
-
         setIssues(podIssuesData)
         setError(null)
         setLastUpdated(now)
@@ -604,48 +608,47 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         }
         return
       } catch {
-        // kubectl proxy failed, fall through to API only if agent unavailable
+        // kubectl proxy failed, fall through to SSE
       }
     }
 
-    // Only fall back to REST API if agent didn't work (not just "returned empty")
-    if (!agentSucceeded) {
-      try {
-        const params = new URLSearchParams()
-        if (cluster) params.append('cluster', cluster)
-        if (namespace) params.append('namespace', namespace)
-        const { data } = await api.get<{ issues: PodIssue[] }>(`/api/mcp/pod-issues?${params}`)
-        const newData = data.issues || []
-        const now = new Date()
+    // Use SSE streaming for progressive multi-cluster data
+    try {
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
 
-        // Update module-level cache
-        podIssuesCache = { data: newData, timestamp: now, key: cacheKey }
+      const allIssues = await fetchSSE<PodIssue>({
+        url: '/api/mcp/pod-issues/stream',
+        params: sseParams,
+        itemsKey: 'issues',
+        onClusterData: (_clusterName, items) => {
+          setIssues(prev => [...prev, ...items])
+          setIsLoading(false)
+        },
+      })
 
-        setIssues(newData)
-        setError(null)
-        setLastUpdated(now)
-        setConsecutiveFailures(0)
-        setLastRefresh(now)
-      } catch {
-        // Keep stale data, only use demo if no cached data
-        setConsecutiveFailures(prev => prev + 1)
-        setLastRefresh(new Date())
-        if (!silent && !podIssuesCache) {
-          setError('Failed to fetch pod issues')
-          // Don't use demo data - show empty instead to avoid confusion
-          setIssues([])
-        }
+      const now = new Date()
+      podIssuesCache = { data: allIssues, timestamp: now, key: cacheKey }
+      setIssues(allIssues)
+      setError(null)
+      setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
+    } catch {
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
+      if (!silent && !podIssuesCache) {
+        setError('Failed to fetch pod issues')
+        setIssues([])
       }
-    }
-    // Always update loading states
-    setIsLoading(false)
-    // Keep isRefreshing true for minimum time so user can see it, then reset
-    if (!silent) {
-      setTimeout(() => {
+    } finally {
+      setIsLoading(false)
+      if (!silent) {
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
         setIsRefreshing(false)
-      }, MIN_REFRESH_INDICATOR_MS)
-    } else {
-      setIsRefreshing(false)
+      }
     }
   }, [cluster, namespace, cacheKey])
 
@@ -747,24 +750,30 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
         setIsLoading(true)
       }
     }
+    // Use SSE streaming for progressive multi-cluster data
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ issues: DeploymentIssue[] }>(`/api/mcp/deployment-issues?${params}`)
-      const newData = data.issues || []
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
+
+      const allIssues = await fetchSSE<DeploymentIssue>({
+        url: '/api/mcp/deployment-issues/stream',
+        params: sseParams,
+        itemsKey: 'issues',
+        onClusterData: (_clusterName, items) => {
+          setIssues(prev => [...prev, ...items])
+          setIsLoading(false)
+        },
+      })
+
       const now = new Date()
-
-      // Update module-level cache
-      deploymentIssuesCache = { data: newData, timestamp: now, key: cacheKey }
-
-      setIssues(newData)
+      deploymentIssuesCache = { data: allIssues, timestamp: now, key: cacheKey }
+      setIssues(allIssues)
       setError(null)
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
     } catch (err) {
-      // Keep stale data, only use demo if no cached data
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !deploymentIssuesCache) {
@@ -773,11 +782,8 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       }
     } finally {
       setIsLoading(false)
-      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setTimeout(() => {
-          setIsRefreshing(false)
-        }, MIN_REFRESH_INDICATOR_MS)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
       } else {
         setIsRefreshing(false)
       }
@@ -1099,38 +1105,21 @@ export function useJobs(cluster?: string, namespace?: string) {
         // Fall through to API
       }
     }
-    // Try SSE streaming first for progressive rendering
-    const token = localStorage.getItem('token')
-    if (token && token !== 'demo-token') {
-      try {
-        const sseParams: Record<string, string> = {}
-        if (cluster) sseParams.cluster = cluster
-        if (namespace) sseParams.namespace = namespace
-        const accumulated: Job[] = []
-        const result = await fetchSSE<Job>({
-          url: '/api/mcp/jobs/stream',
-          params: sseParams,
-          itemsKey: 'jobs',
-          onClusterData: (_clusterName, items) => {
-            accumulated.push(...items)
-            setJobs([...accumulated])
-            setIsLoading(false)
-          },
-        })
-        setJobs(result)
-        setError(null)
-        setIsLoading(false)
-        return
-      } catch {
-        // SSE failed, fall through to REST
-      }
-    }
+    // Use SSE streaming for progressive multi-cluster data
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ jobs: Job[] }>(`/api/mcp/jobs?${params}`)
-      setJobs(data.jobs || [])
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
+      const result = await fetchSSE<Job>({
+        url: '/api/mcp/jobs/stream',
+        params: sseParams,
+        itemsKey: 'jobs',
+        onClusterData: (_clusterName, items) => {
+          setJobs(prev => [...prev, ...items])
+          setIsLoading(false)
+        },
+      })
+      setJobs(result)
       setError(null)
     } catch {
       setError('Failed to fetch jobs')

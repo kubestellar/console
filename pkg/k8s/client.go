@@ -771,6 +771,30 @@ func (m *MultiClusterClient) DeduplicatedClusters(ctx context.Context) ([]Cluste
 	return result, nil
 }
 
+// HealthyClusters returns deduplicated clusters split into two lists:
+// healthy/unknown clusters (safe to query) and offline clusters (skip to avoid
+// blocking on timeouts). Clusters with no cached health data are treated as
+// healthy (unknown = try them). This prevents spawning goroutines for clusters
+// known to be unreachable, eliminating 15-30s timeout waste per offline cluster.
+func (m *MultiClusterClient) HealthyClusters(ctx context.Context) (healthy []ClusterInfo, offline []ClusterInfo, err error) {
+	all, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, cl := range all {
+		if h, ok := m.healthCache[cl.Context]; ok && !h.Reachable {
+			offline = append(offline, cl)
+		} else {
+			// Reachable or unknown (no cache entry) — try it
+			healthy = append(healthy, cl)
+		}
+	}
+	return healthy, offline, nil
+}
+
 // isBetterClusterName returns true if candidate is a better (more user-friendly)
 // name than current. Prefers shorter names without slashes or port numbers.
 func isBetterClusterName(candidate, current string) bool {

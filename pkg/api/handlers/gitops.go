@@ -164,7 +164,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "releases": []HelmRelease{}})
 		}
@@ -246,7 +246,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "kustomizations": []Kustomization{}})
 		}
@@ -407,7 +407,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	// Query all clusters in parallel — operators are slow, so we wait for all
 	// (no maxResponseDeadline; SSE streaming is preferred for UI)
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "operators": []Operator{}})
 		}
@@ -479,7 +479,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		return nil
 	}
 
-	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -667,7 +667,7 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "subscriptions": []OperatorSubscription{}})
 		}
@@ -734,7 +734,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		return nil
 	}
 
-	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -867,7 +867,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 		return nil
 	}
 
-	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

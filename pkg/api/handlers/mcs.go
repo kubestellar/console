@@ -92,7 +92,7 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
 
-	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

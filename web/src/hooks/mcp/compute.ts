@@ -485,55 +485,27 @@ export function useNodes(cluster?: string) {
       }
     }
 
-    // Fall back to REST API
+    // Use SSE streaming for progressive multi-cluster data
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      const url = `/api/mcp/nodes?${params}`
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
 
-      // Skip API calls in demo mode
-      if (isDemoMode()) {
-        // Try to construct basic node info from cluster cache (from health checks)
-        const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
-        if (cachedCluster && cachedCluster.nodeCount && cachedCluster.nodeCount > 0) {
-          console.log(`[useNodes] Using cluster cache data for ${cluster}: ${cachedCluster.nodeCount} nodes`)
-          // Create placeholder nodes from health data
-          const placeholderNodes: NodeInfo[] = [{
-            name: `${cluster}-nodes`,
-            cluster: cluster || '',
-            status: 'Ready',
-            roles: ['worker'],
-            kubeletVersion: '',
-            cpuCapacity: cachedCluster.cpuCores ? `${cachedCluster.cpuCores}` : '0',
-            memoryCapacity: cachedCluster.memoryGB ? `${cachedCluster.memoryGB}Gi` : '0',
-            podCapacity: '110',
-            conditions: [],
-            unschedulable: false,
-          }]
-          setNodes(placeholderNodes)
-        } else {
-          setNodes([])
-        }
-        setIsLoading(false)
-        return
-      }
+      const allNodes = await fetchSSE<NodeInfo>({
+        url: '/api/mcp/nodes/stream',
+        params: sseParams,
+        itemsKey: 'nodes',
+        onClusterData: (_clusterName, items) => {
+          setNodes(prev => [...prev, ...items])
+          setIsLoading(false)
+        },
+      })
 
-      // Use direct fetch to bypass the global circuit breaker
-      const token = localStorage.getItem('token')
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers })
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-      const data = await response.json() as { nodes: NodeInfo[] }
-      setNodes(data.nodes || [])
+      setNodes(allNodes)
       setError(null)
-    } catch (err) {
-      // On any error, try to use cluster cache data as last resort
+    } catch {
+      // On error, try cluster cache as fallback
       const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
       if (cachedCluster && cachedCluster.nodeCount && cachedCluster.nodeCount > 0) {
-        console.log(`[useNodes] Using cluster cache fallback for ${cluster}: ${cachedCluster.nodeCount} nodes`)
         const placeholderNodes: NodeInfo[] = [{
           name: `${cluster}-nodes`,
           cluster: cluster || '',
@@ -549,7 +521,6 @@ export function useNodes(cluster?: string) {
         setNodes(placeholderNodes)
         setError(null)
       } else {
-        // Don't show error at dashboard level
         setError(null)
         setNodes([])
       }

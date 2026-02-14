@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
+import { fetchSSE } from '../../lib/sseClient'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
@@ -146,49 +147,35 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       }
     }
 
-    // Fall back to REST API
+    // Use SSE streaming for progressive multi-cluster data
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      params.append('limit', limit.toString())
-      const url = `/api/mcp/events?${params}`
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
+      sseParams.limit = limit.toString()
 
-      // Use direct fetch with shared AbortController signal
-      const token = localStorage.getItem('token')
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 10000) // 10 second timeout
+      const allEvents = await fetchSSE<ClusterEvent>({
+        url: '/api/mcp/events/stream',
+        params: sseParams,
+        itemsKey: 'events',
+        signal,
+        onClusterData: (_clusterName, items) => {
+          setEvents(prev => [...prev, ...items].slice(0, limit))
+          setIsLoading(false)
+        },
+      })
 
-      const response = await fetch(url, { method: 'GET', headers, signal })
-      clearTimeout(timeoutId)
-      // console.log('[useEvents] Fetch completed with status:', response.status)
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-      const data = await response.json() as { events: ClusterEvent[] }
-      const newData = data.events || []
+      if (!isMountedRef.current) return
       const now = new Date()
-
-      // Update module-level cache
-      eventsCache = { data: newData, timestamp: now, key: cacheKey }
-
-      setEvents(newData)
+      eventsCache = { data: allEvents.slice(0, limit), timestamp: now, key: cacheKey }
+      setEvents(allEvents.slice(0, limit))
       setError(null)
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-      // console.log('[useEvents] Data updated successfully')
     } catch (err) {
-      // Ignore abort errors (expected on unmount or when a new request supersedes)
-      if (err instanceof Error && err.name === 'AbortError') {
-        return
-      }
-      console.error('[useEvents] Failed to fetch events:', err)
-      // Only update state if still mounted
+      if (err instanceof Error && err.name === 'AbortError') return
       if (!isMountedRef.current) return
-      // Keep stale data, only use demo if no cached data
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !eventsCache) {
@@ -196,17 +183,10 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         setEvents(getDemoEvents())
       }
     } finally {
-      // Only update state if still mounted
       if (!isMountedRef.current) return
-      // console.log('[useEvents] Finally block started')
       setIsLoading(false)
-      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        // console.log('[useEvents] Scheduling isRefreshing=false after 500ms')
-        setTimeout(() => {
-          // console.log('[useEvents] Setting isRefreshing=false')
-          setIsRefreshing(false)
-        }, MIN_REFRESH_INDICATOR_MS)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
       } else {
         setIsRefreshing(false)
       }
@@ -312,65 +292,57 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
         setIsLoading(true)
       }
     }
-    try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      params.append('limit', limit.toString())
-      const url = `/api/mcp/events/warnings?${params}`
-
-      // In demo mode, use demo data
-      if (isDemoMode()) {
-        const demoWarnings = getDemoEvents().filter(e =>
-          e.type === 'Warning' &&
-          (!cluster || e.cluster === cluster) &&
-          (!namespace || e.namespace === namespace)
-        ).slice(0, limit)
-        setEvents(demoWarnings)
-        const now = new Date()
-        setLastUpdated(now)
-        setError(null)
-        setIsLoading(false)
-        if (!silent) {
-          setIsRefreshing(true)
-          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-        } else {
-          setIsRefreshing(false)
-        }
-        return
-      }
-
-      // Use direct fetch to bypass the global circuit breaker
-      const token = localStorage.getItem('token')
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers })
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-      const data = await response.json() as { events: ClusterEvent[] }
-      const newData = data.events || []
+    // In demo mode, use demo data
+    if (isDemoMode()) {
+      const demoWarnings = getDemoEvents().filter(e =>
+        e.type === 'Warning' &&
+        (!cluster || e.cluster === cluster) &&
+        (!namespace || e.namespace === namespace)
+      ).slice(0, limit)
+      setEvents(demoWarnings)
       const now = new Date()
+      setLastUpdated(now)
+      setError(null)
+      setIsLoading(false)
+      if (!silent) {
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
+      return
+    }
 
-      // Update module-level cache
-      warningEventsCache = { data: newData, timestamp: now, key: cacheKey }
+    // Use SSE streaming for progressive multi-cluster data
+    try {
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
+      sseParams.limit = limit.toString()
 
-      setEvents(newData)
+      const allEvents = await fetchSSE<ClusterEvent>({
+        url: '/api/mcp/events/warnings/stream',
+        params: sseParams,
+        itemsKey: 'events',
+        onClusterData: (_clusterName, items) => {
+          setEvents(prev => [...prev, ...items].slice(0, limit))
+          setIsLoading(false)
+        },
+      })
+
+      const now = new Date()
+      warningEventsCache = { data: allEvents.slice(0, limit), timestamp: now, key: cacheKey }
+      setEvents(allEvents.slice(0, limit))
       setError(null)
       setLastUpdated(now)
-    } catch (err) {
-      // Keep stale data, only use demo if no cached data
+    } catch {
       if (!silent && !warningEventsCache) {
         setError('Failed to fetch warning events')
         setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
       }
     } finally {
       setIsLoading(false)
-      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setTimeout(() => {
-          setIsRefreshing(false)
-        }, MIN_REFRESH_INDICATOR_MS)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
       } else {
         setIsRefreshing(false)
       }
