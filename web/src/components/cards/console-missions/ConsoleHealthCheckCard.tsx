@@ -10,6 +10,10 @@ import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
+import {
+  useCardData, commonComparators,
+  CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
+} from '../../../lib/cards'
 
 type ViewMode = 'summary' | 'issues'
 
@@ -26,11 +30,33 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 const DEFAULT_COLOR = { bg: 'bg-muted', text: 'text-muted-foreground' }
 
+interface CombinedIssue {
+  id: string
+  kind: 'Pod' | 'Deployment'
+  name: string
+  namespace: string
+  cluster: string
+  status: string
+  details: string[]
+  restarts?: number
+  replicas?: string
+}
+
+type SortByOption = 'status' | 'name' | 'restarts' | 'cluster' | 'kind'
+
+const SORT_OPTIONS = [
+  { value: 'status' as const, label: 'Status' },
+  { value: 'name' as const, label: 'Name' },
+  { value: 'restarts' as const, label: 'Restarts' },
+  { value: 'cluster' as const, label: 'Cluster' },
+  { value: 'kind' as const, label: 'Kind' },
+]
+
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
-  const { issues: allPodIssues } = useCachedPodIssues()
-  const { issues: allDeploymentIssues } = useCachedDeploymentIssues()
+  const { deduplicatedClusters: allClusters, isLoading: clusterLoading } = useClusters()
+  const { issues: allPodIssues, isLoading: podLoading, isFailed: podFailed, consecutiveFailures: podFailures } = useCachedPodIssues()
+  const { issues: allDeploymentIssues, isLoading: deployLoading, isFailed: deployFailed, consecutiveFailures: deployFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToPod } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -41,7 +67,15 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const [repairOutput, setRepairOutput] = useState<Record<string, string>>({})
   const [repairing, setRepairing] = useState<Record<string, boolean>>({})
 
-  useCardLoadingState({ isLoading, hasAnyData: allClusters.length > 0 })
+  const isLoading = podLoading || deployLoading || clusterLoading
+  const hasAnyData = allClusters.length > 0 || allPodIssues.length > 0 || allDeploymentIssues.length > 0
+
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData,
+    isFailed: podFailed || deployFailed,
+    consecutiveFailures: Math.max(podFailures || 0, deployFailures || 0),
+  })
 
   // Filter clusters by global filter
   const clusters = useMemo(() => {
@@ -77,51 +111,9 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     ? Math.round((healthyClusters / clusters.length) * 100)
     : 0
 
-  // Group pod issues by status
-  const issuesByStatus = useMemo(() => {
-    const groups: Record<string, number> = {}
-    for (const p of podIssues) {
-      const key = p.reason || p.status || 'Unknown'
-      groups[key] = (groups[key] || 0) + 1
-    }
-    if (deploymentIssues.length > 0) {
-      groups['Replica Mismatch'] = deploymentIssues.length
-    }
-    return Object.entries(groups)
-      .sort(([, a], [, b]) => b - a)
-  }, [podIssues, deploymentIssues])
-
-  // Group issues by cluster
-  const issuesByCluster = useMemo(() => {
-    const groups: Record<string, { pods: number; deploys: number }> = {}
-    for (const p of podIssues) {
-      const cluster = p.cluster || 'unknown'
-      if (!groups[cluster]) groups[cluster] = { pods: 0, deploys: 0 }
-      groups[cluster].pods++
-    }
-    for (const d of deploymentIssues) {
-      const cluster = d.cluster || 'unknown'
-      if (!groups[cluster]) groups[cluster] = { pods: 0, deploys: 0 }
-      groups[cluster].deploys++
-    }
-    return Object.entries(groups)
-      .map(([name, counts]) => ({ name, ...counts, total: counts.pods + counts.deploys }))
-      .sort((a, b) => b.total - a.total)
-  }, [podIssues, deploymentIssues])
-
-  // Combined sorted issue list for drill-down
-  const allIssues = useMemo(() => {
-    const items: Array<{
-      id: string
-      kind: 'Pod' | 'Deployment'
-      name: string
-      namespace: string
-      cluster: string
-      status: string
-      details: string[]
-      restarts?: number
-      replicas?: string
-    }> = []
+  // Combined issue list for drill-down and unified controls
+  const allIssues = useMemo<CombinedIssue[]>(() => {
+    const items: CombinedIssue[] = []
 
     for (const p of podIssues) {
       items.push({
@@ -148,10 +140,71 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
       })
     }
 
-    // Sort: highest restarts first for pods, then alphabetically
-    items.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
     return items
   }, [podIssues, deploymentIssues])
+
+  // Unified card controls: search, sort, pagination, cluster filter
+  const {
+    items: paginatedIssues,
+    totalItems,
+    currentPage, totalPages, itemsPerPage, setItemsPerPage,
+    goToPage, needsPagination,
+    filters: {
+      search, setSearch,
+      localClusterFilter, toggleClusterFilter, clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter, setShowClusterFilter, clusterFilterRef,
+    },
+    sorting: { sortBy, setSortBy, sortDirection, setSortDirection },
+  } = useCardData<CombinedIssue, SortByOption>(allIssues, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster', 'status', 'kind'],
+      clusterField: 'cluster',
+      customPredicate: (issue, query) => issue.details.some(d => d.toLowerCase().includes(query)),
+      storageKey: 'health-check-issues',
+    },
+    sort: {
+      defaultField: 'restarts',
+      defaultDirection: 'desc',
+      comparators: {
+        status: commonComparators.string('status'),
+        name: commonComparators.string('name'),
+        restarts: (a, b) => (b.restarts || 0) - (a.restarts || 0),
+        cluster: commonComparators.string('cluster'),
+        kind: commonComparators.string('kind'),
+      },
+    },
+    defaultLimit: 10,
+  })
+
+  // Filter allIssues by local cluster filter for Breakdown view
+  const clusterFilteredIssues = useMemo(() => {
+    if (localClusterFilter.length === 0) return allIssues
+    return allIssues.filter(i => localClusterFilter.includes(i.cluster))
+  }, [allIssues, localClusterFilter])
+
+  // Group issues by status (respects local cluster filter for Breakdown view)
+  const issuesByStatus = useMemo(() => {
+    const groups: Record<string, number> = {}
+    for (const issue of clusterFilteredIssues) {
+      groups[issue.status] = (groups[issue.status] || 0) + 1
+    }
+    return Object.entries(groups)
+      .sort(([, a], [, b]) => b - a)
+  }, [clusterFilteredIssues])
+
+  // Group issues by cluster (respects local cluster filter for Breakdown view)
+  const issuesByCluster = useMemo(() => {
+    const groups: Record<string, { pods: number; deploys: number }> = {}
+    for (const issue of clusterFilteredIssues) {
+      if (!groups[issue.cluster]) groups[issue.cluster] = { pods: 0, deploys: 0 }
+      if (issue.kind === 'Pod') groups[issue.cluster].pods++
+      else groups[issue.cluster].deploys++
+    }
+    return Object.entries(groups)
+      .map(([name, counts]) => ({ name, ...counts, total: counts.pods + counts.deploys }))
+      .sort((a, b) => b.total - a.total)
+  }, [clusterFilteredIssues])
 
   const runningHealthMission = missions.find(m => m.type === 'troubleshoot' && m.status === 'running')
 
@@ -254,6 +307,10 @@ Please provide:
 
   const maxIssueCount = issuesByStatus.length > 0 ? issuesByStatus[0][1] : 1
 
+  if (showSkeleton) {
+    return <CardSkeleton type="list" rows={3} showHeader />
+  }
+
   return (
     <div className="h-full flex flex-col relative overflow-hidden">
       <ApiKeyPromptModal isOpen={showKeyPrompt} onDismiss={dismissPrompt} onGoToSettings={goToSettings} />
@@ -299,7 +356,7 @@ Please provide:
       </div>
 
       {/* View toggle */}
-      {totalIssues > 0 && (
+      {allIssues.length > 0 && (
         <div className="flex gap-1 mb-2">
           <button
             onClick={() => setView('summary')}
@@ -315,14 +372,14 @@ Please provide:
               view === 'issues' ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             )}
           >
-            Issues ({totalIssues})
+            Issues ({totalItems})
           </button>
         </div>
       )}
 
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto min-h-0 space-y-3 pr-0.5">
-        {totalIssues === 0 ? (
+        {allIssues.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <div className="text-green-400 text-sm font-medium">No issues detected</div>
             <div className="text-xs text-muted-foreground mt-1">All pods and deployments are healthy</div>
@@ -410,7 +467,7 @@ Please provide:
                 </button>
               </div>
               <div className="space-y-0.5">
-                {allIssues.slice(0, 5).map(issue => {
+                {clusterFilteredIssues.slice(0, 5).map(issue => {
                   const colors = STATUS_COLORS[issue.status] || DEFAULT_COLOR
                   return (
                     <div
@@ -444,105 +501,160 @@ Please provide:
             </div>
           </>
         ) : (
-          /* Issues list view */
-          <div className="space-y-1">
-            {allIssues.map(issue => {
-              const isExpanded = expandedIssue === issue.id
-              const colors = STATUS_COLORS[issue.status] || DEFAULT_COLOR
-              const key = issue.id
-              const isRepairing = repairing[key]
-              const output = repairOutput[key]
+          /* Issues list view with unified controls */
+          <div className="space-y-2">
+            {/* Controls row */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${totalItems} issues`}>
+                {totalItems} issues
+              </span>
+              <CardControlsRow
+                clusterIndicator={{
+                  selectedCount: localClusterFilter.length,
+                  totalCount: availableClustersForFilter.length,
+                }}
+                clusterFilter={{
+                  availableClusters: availableClustersForFilter,
+                  selectedClusters: localClusterFilter,
+                  onToggle: toggleClusterFilter,
+                  onClear: clearClusterFilter,
+                  isOpen: showClusterFilter,
+                  setIsOpen: setShowClusterFilter,
+                  containerRef: clusterFilterRef,
+                  minClusters: 1,
+                }}
+                cardControls={{
+                  limit: itemsPerPage,
+                  onLimitChange: setItemsPerPage,
+                  sortBy,
+                  sortOptions: SORT_OPTIONS,
+                  onSortChange: (v) => setSortBy(v as SortByOption),
+                  sortDirection,
+                  onSortDirectionChange: setSortDirection,
+                }}
+              />
+            </div>
 
-              return (
-                <div key={issue.id} className={cn('rounded border transition-colors', isExpanded ? 'border-border/50 bg-muted/10' : 'border-transparent')}>
-                  <button
-                    className="w-full flex items-center gap-1.5 text-xs py-1.5 px-2 text-left hover:bg-muted/20 rounded transition-colors"
-                    onClick={() => setExpandedIssue(isExpanded ? null : issue.id)}
-                  >
-                    {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-                    {issue.kind === 'Pod' ? (
-                      <Box className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                    ) : (
-                      <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    )}
-                    <span className="text-foreground truncate flex-1 font-medium">{issue.name}</span>
-                    <span className={cn('px-1.5 py-0.5 rounded text-[11px] shrink-0', `${colors.bg}/20`, colors.text)}>
-                      {issue.status}
-                    </span>
-                  </button>
+            {/* Search */}
+            <CardSearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search issues..."
+            />
 
-                  {isExpanded && (
-                    <div className="px-2 pb-2 ml-6 space-y-1.5">
-                      <div className="text-xs space-y-0.5 text-muted-foreground">
-                        <div>Namespace: <span className="text-foreground font-mono">{issue.namespace}</span></div>
-                        <div>Cluster: <span className="text-foreground font-mono">{issue.cluster}</span></div>
-                        {issue.restarts !== undefined && issue.restarts > 0 && (
-                          <div>Restarts: <span className="text-orange-400 font-bold">{issue.restarts}</span></div>
-                        )}
-                        {issue.replicas && (
-                          <div>Replicas: <span className="text-blue-400">{issue.replicas} ready</span></div>
-                        )}
-                        {issue.details.length > 0 && (
-                          <div className="mt-1">
-                            <div className="text-muted-foreground mb-0.5">Issues:</div>
-                            {issue.details.map((d, i) => (
-                              <div key={i} className="text-red-400/80 pl-2 border-l border-red-500/20">{d}</div>
-                            ))}
+            {/* Issue list */}
+            <div className="space-y-1">
+              {paginatedIssues.map(issue => {
+                const isExpanded = expandedIssue === issue.id
+                const colors = STATUS_COLORS[issue.status] || DEFAULT_COLOR
+                const key = issue.id
+                const isRepairing = repairing[key]
+                const output = repairOutput[key]
+
+                return (
+                  <div key={issue.id} className={cn('rounded border transition-colors', isExpanded ? 'border-border/50 bg-muted/10' : 'border-transparent')}>
+                    <button
+                      className="w-full flex items-center gap-1.5 text-xs py-1.5 px-2 text-left hover:bg-muted/20 rounded transition-colors"
+                      onClick={() => setExpandedIssue(isExpanded ? null : issue.id)}
+                    >
+                      {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                      {issue.kind === 'Pod' ? (
+                        <Box className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                      ) : (
+                        <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      )}
+                      <span className="text-foreground truncate flex-1 font-medium">{issue.name}</span>
+                      <span className={cn('px-1.5 py-0.5 rounded text-[11px] shrink-0', `${colors.bg}/20`, colors.text)}>
+                        {issue.status}
+                      </span>
+                      {issue.restarts !== undefined && issue.restarts > 0 && (
+                        <span className="text-orange-400 text-[11px] shrink-0">×{issue.restarts}</span>
+                      )}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="px-2 pb-2 ml-6 space-y-1.5">
+                        <div className="text-xs space-y-0.5 text-muted-foreground">
+                          <div>Namespace: <span className="text-foreground font-mono">{issue.namespace}</span></div>
+                          <div>Cluster: <span className="text-foreground font-mono">{issue.cluster}</span></div>
+                          {issue.restarts !== undefined && issue.restarts > 0 && (
+                            <div>Restarts: <span className="text-orange-400 font-bold">{issue.restarts}</span></div>
+                          )}
+                          {issue.replicas && (
+                            <div>Replicas: <span className="text-blue-400">{issue.replicas} ready</span></div>
+                          )}
+                          {issue.details.length > 0 && (
+                            <div className="mt-1">
+                              <div className="text-muted-foreground mb-0.5">Issues:</div>
+                              {issue.details.map((d, i) => (
+                                <div key={i} className="text-red-400/80 pl-2 border-l border-red-500/20">{d}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {issue.kind === 'Pod' && (
+                            <button
+                              disabled={isRepairing}
+                              onClick={() => handleRestartPod(issue.cluster, issue.namespace, issue.name)}
+                              className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-40"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              Restart Pod
+                            </button>
+                          )}
+                          {issue.kind === 'Deployment' && (
+                            <button
+                              disabled={isRepairing}
+                              onClick={() => handleRolloutRestart(issue.cluster, issue.namespace, issue.name)}
+                              className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors disabled:opacity-40"
+                            >
+                              <ArrowUpCircle className="w-3 h-3" />
+                              Rollout Restart
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDiagnoseIssue(issue)}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-colors"
+                          >
+                            <Stethoscope className="w-3 h-3" />
+                            Diagnose
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (issue.kind === 'Pod') drillToPod(issue.cluster, issue.namespace, issue.name)
+                              else drillToCluster(issue.cluster)
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-muted/30 hover:bg-muted/50 text-muted-foreground transition-colors"
+                          >
+                            View Details
+                          </button>
+                        </div>
+
+                        {/* Repair output */}
+                        {output && (
+                          <div className="mt-1 p-2 rounded bg-black/30 text-xs font-mono text-green-400 whitespace-pre-wrap">
+                            {output}
                           </div>
                         )}
                       </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
 
-                      {/* Action buttons */}
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {issue.kind === 'Pod' && (
-                          <button
-                            disabled={isRepairing}
-                            onClick={() => handleRestartPod(issue.cluster, issue.namespace, issue.name)}
-                            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-40"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            Restart Pod
-                          </button>
-                        )}
-                        {issue.kind === 'Deployment' && (
-                          <button
-                            disabled={isRepairing}
-                            onClick={() => handleRolloutRestart(issue.cluster, issue.namespace, issue.name)}
-                            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors disabled:opacity-40"
-                          >
-                            <ArrowUpCircle className="w-3 h-3" />
-                            Rollout Restart
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDiagnoseIssue(issue)}
-                          className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-colors"
-                        >
-                          <Stethoscope className="w-3 h-3" />
-                          Diagnose
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (issue.kind === 'Pod') drillToPod(issue.cluster, issue.namespace, issue.name)
-                            else drillToCluster(issue.cluster)
-                          }}
-                          className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-muted/30 hover:bg-muted/50 text-muted-foreground transition-colors"
-                        >
-                          View Details
-                        </button>
-                      </div>
-
-                      {/* Repair output */}
-                      {output && (
-                        <div className="mt-1 p-2 rounded bg-black/30 text-xs font-mono text-green-400 whitespace-pre-wrap">
-                          {output}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {/* Pagination */}
+            <CardPaginationFooter
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 10}
+              onPageChange={goToPage}
+              needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+            />
           </div>
         )}
       </div>
@@ -565,13 +677,13 @@ Please provide:
             <><Play className="w-3.5 h-3.5" /> Full Diagnosis</>
           )}
         </button>
-        {totalIssues > 0 && (
+        {allIssues.length > 0 && (
           <button
             onClick={() => setView(view === 'issues' ? 'summary' : 'issues')}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs bg-muted/30 hover:bg-muted/50 text-muted-foreground transition-all"
           >
             <AlertCircle className="w-3.5 h-3.5" />
-            {view === 'issues' ? 'Summary' : `${totalIssues} Issues`}
+            {view === 'issues' ? 'Summary' : `${allIssues.length} Issues`}
           </button>
         )}
       </div>
