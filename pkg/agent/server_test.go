@@ -11,6 +11,8 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
+	t.Setenv("KC_AGENT_TOKEN", "") // ensure auth does not interfere
+
 	cfg := Config{
 		Port:       0,
 		Kubeconfig: "/tmp/fake",
@@ -64,6 +66,8 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestHealthEndpoint_OPTIONS(t *testing.T) {
+	t.Setenv("KC_AGENT_TOKEN", "") // hermetic test
+
 	cfg := Config{
 		Port:       0,
 		Kubeconfig: "/tmp/fake",
@@ -85,6 +89,10 @@ func TestHealthEndpoint_OPTIONS(t *testing.T) {
 		t.Fatalf("failed to create request: %v", err)
 	}
 
+	// simulate real browser preflight request
+	req.Header.Set("Origin", "http://localhost")
+	req.Header.Set("Access-Control-Request-Method", "GET")
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -98,9 +106,15 @@ func TestHealthEndpoint_OPTIONS(t *testing.T) {
 	if resp.Header.Get("Access-Control-Allow-Methods") == "" {
 		t.Fatalf("missing Access-Control-Allow-Methods header")
 	}
+
+	if resp.Header.Get("Access-Control-Allow-Origin") == "" {
+		t.Fatalf("missing Access-Control-Allow-Origin header")
+	}
 }
 
 func TestClustersEndpoint_CORSBehavior(t *testing.T) {
+	t.Setenv("KC_AGENT_TOKEN", "") // ensure auth disabled
+
 	cfg := Config{
 		Port:       0,
 		Kubeconfig: "/tmp/fake",
@@ -130,12 +144,20 @@ func TestClustersEndpoint_CORSBehavior(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
+	// ensure request actually reached handler
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+	}
+
+	// disallowed origin should not receive CORS header
 	if resp.Header.Get("Access-Control-Allow-Origin") != "" {
 		t.Fatalf("unexpected CORS header for disallowed origin")
 	}
 }
 
 func TestWebSocketHandshake(t *testing.T) {
+	t.Setenv("KC_AGENT_TOKEN", "") // prevent auth blocking WS
+
 	cfg := Config{
 		Port:       0,
 		Kubeconfig: "/tmp/fake",
