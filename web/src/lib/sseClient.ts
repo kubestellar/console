@@ -20,7 +20,7 @@ export interface SSEFetchOptions<T> {
   signal?: AbortSignal
 }
 
-const SSE_TIMEOUT = 60_000 // 60s — backend now skips offline clusters and has 30s deadline
+const SSE_TIMEOUT = 180_000 // 180s — backend has 120s overall deadline, slow clusters need time
 
 /**
  * Open an SSE connection and progressively collect data.

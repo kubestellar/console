@@ -771,6 +771,91 @@ func (m *MultiClusterClient) DeduplicatedClusters(ctx context.Context) ([]Cluste
 	return result, nil
 }
 
+// WarmupHealthCache probes all clusters on startup to populate the health cache.
+// Without this, HealthyClusters() treats unknown clusters as healthy, causing
+// every SSE stream to hit all clusters (including offline ones) on first load.
+// Uses a lightweight namespace list (Limit=1) with a 5s per-cluster timeout.
+// Blocks for at most 8s total.
+func (m *MultiClusterClient) WarmupHealthCache() {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	clusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		log.Printf("[Warmup] failed to list clusters: %v", err)
+		return
+	}
+
+	log.Printf("[Warmup] probing %d clusters for reachability...", len(clusters))
+	var wg sync.WaitGroup
+	for _, cl := range clusters {
+		wg.Add(1)
+		go func(name, ctxName string) {
+			defer wg.Done()
+			probeCtx, probeCancel := context.WithTimeout(ctx, 5*time.Second)
+			defer probeCancel()
+
+			client, clientErr := m.GetClient(ctxName)
+			if clientErr != nil {
+				m.mu.Lock()
+				m.healthCache[ctxName] = &ClusterHealth{
+					Cluster:      name,
+					Reachable:    false,
+					Healthy:      false,
+					ErrorType:    classifyError(clientErr.Error()),
+					ErrorMessage: clientErr.Error(),
+					CheckedAt:    time.Now().Format(time.RFC3339),
+				}
+				m.cacheTime[ctxName] = time.Now()
+				m.mu.Unlock()
+				log.Printf("[Warmup] %s: unreachable (client error)", name)
+				return
+			}
+
+			_, listErr := client.CoreV1().Namespaces().List(probeCtx, metav1.ListOptions{Limit: 1})
+			if listErr != nil {
+				m.mu.Lock()
+				m.healthCache[ctxName] = &ClusterHealth{
+					Cluster:      name,
+					Reachable:    false,
+					Healthy:      false,
+					ErrorType:    classifyError(listErr.Error()),
+					ErrorMessage: listErr.Error(),
+					CheckedAt:    time.Now().Format(time.RFC3339),
+				}
+				m.cacheTime[ctxName] = time.Now()
+				m.mu.Unlock()
+				log.Printf("[Warmup] %s: unreachable (%v)", name, listErr)
+			} else {
+				m.mu.Lock()
+				m.healthCache[ctxName] = &ClusterHealth{
+					Cluster:   name,
+					Reachable: true,
+					Healthy:   true,
+					CheckedAt: time.Now().Format(time.RFC3339),
+				}
+				m.cacheTime[ctxName] = time.Now()
+				m.mu.Unlock()
+				log.Printf("[Warmup] %s: reachable", name)
+			}
+		}(cl.Name, cl.Context)
+	}
+
+	wg.Wait()
+
+	m.mu.RLock()
+	reachable, unreachable := 0, 0
+	for _, h := range m.healthCache {
+		if h.Reachable {
+			reachable++
+		} else {
+			unreachable++
+		}
+	}
+	m.mu.RUnlock()
+	log.Printf("[Warmup] done: %d reachable, %d unreachable", reachable, unreachable)
+}
+
 // HealthyClusters returns deduplicated clusters split into two lists:
 // healthy/unknown clusters (safe to query) and offline clusters (skip to avoid
 // blocking on timeouts). Clusters with no cached health data are treated as

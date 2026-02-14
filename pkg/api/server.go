@@ -135,6 +135,9 @@ func NewServer(cfg Config) (*Server, error) {
 			log.Println("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
 		} else {
 			log.Println("Kubernetes client initialized successfully")
+			// Warmup: probe all clusters to populate health cache before serving.
+			// Without this, first load hits ALL clusters (including offline) = 30s+ load.
+			k8sClient.WarmupHealthCache()
 		}
 		k8sClient.SetOnReload(func() {
 			hub.BroadcastAll(handlers.Message{
