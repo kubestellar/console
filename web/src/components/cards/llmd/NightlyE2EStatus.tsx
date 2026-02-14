@@ -9,10 +9,11 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   TestTube2, ExternalLink, TrendingUp, TrendingDown, Minus,
-  CheckCircle, XCircle, Loader2, AlertTriangle,
+  CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles,
 } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
+import { useAIMode } from '../../../hooks/useAIMode'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 
 const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
@@ -225,6 +226,72 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
   )
 }
 
+function generateNightlySummary(guides: NightlyGuideStatus[]): string {
+  if (guides.length === 0) return 'No nightly E2E data available yet.'
+
+  // Group by platform
+  const byPlatform = new Map<string, NightlyGuideStatus[]>()
+  for (const g of guides) {
+    const list = byPlatform.get(g.platform) || []
+    list.push(g)
+    byPlatform.set(g.platform, list)
+  }
+
+  const platformSummaries: string[] = []
+
+  for (const [platform, pGuides] of byPlatform) {
+    const withRuns = pGuides.filter(g => g.runs.length > 0)
+    if (withRuns.length === 0) {
+      platformSummaries.push(`${platform} has no workflow runs yet`)
+      continue
+    }
+
+    const passing = withRuns.filter(g => g.latestConclusion === 'success').length
+    const total = withRuns.length
+    const trendingUp = withRuns.filter(g => g.trend === 'up').length
+    const running = withRuns.filter(g => g.runs.some(r => r.status === 'in_progress')).length
+
+    // Find best guide
+    const best = withRuns.reduce((a, b) => a.passRate > b.passRate ? a : b)
+
+    if (passing === 0 && total > 1) {
+      // Platform-wide failure
+      const suffix = running > 0 ? ` (${running} currently running)` : ''
+      platformSummaries.push(`${platform} is at 0% across all ${total} guides — likely an infrastructure issue${suffix}`)
+    } else if (passing === total) {
+      platformSummaries.push(`${platform} is fully green with all ${total} guides passing`)
+    } else {
+      const trendNote = trendingUp > total / 2 ? ', trending up' : ''
+      const leader = best.passRate > 0 ? `, led by ${best.acronym} at ${best.passRate}%` : ''
+      platformSummaries.push(`${platform} has ${passing}/${total} guides passing${leader}${trendNote}`)
+    }
+  }
+
+  // Build 2-sentence summary: join platform summaries intelligently
+  if (platformSummaries.length === 1) return platformSummaries[0] + '.'
+  if (platformSummaries.length === 2) return platformSummaries[0] + '. ' + platformSummaries[1] + '.'
+  return platformSummaries[0] + '. ' + platformSummaries.slice(1).join('; ') + '.'
+}
+
+function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }) {
+  const summary = useMemo(() => generateNightlySummary(guides), [guides])
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles size={14} className="text-purple-400" />
+        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">AI Summary</span>
+      </div>
+      <div className="flex-1">
+        <p className="text-[11px] text-slate-400 leading-relaxed">{summary}</p>
+      </div>
+      <div className="mt-auto pt-3 border-t border-slate-700/30">
+        <p className="text-[10px] text-slate-600 text-center">Hover a test for details</p>
+      </div>
+    </div>
+  )
+}
+
 function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
   const completedRuns = guide.runs.filter(r => r.status === 'completed')
   const passed = completedRuns.filter(r => r.conclusion === 'success').length
@@ -363,6 +430,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
 
 export function NightlyE2EStatus() {
   const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useNightlyE2EData()
+  const { shouldSummarize } = useAIMode()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
 
   useReportCardDataState({
@@ -494,6 +562,8 @@ export function NightlyE2EStatus() {
         <div className="w-72 shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
           {selectedGuide ? (
             <GuideDetailPanel guide={selectedGuide} />
+          ) : shouldSummarize ? (
+            <NightlySummaryPanel guides={guides} />
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center gap-2">
               <TestTube2 size={20} className="text-slate-600" />
