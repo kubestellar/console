@@ -136,6 +136,7 @@ const KNOWN_ROUTES: KnownRoute[] = [
   { href: '/ai-agents', name: 'AI Agents', description: 'Kagenti agent platform — deploy, secure, and manage AI agents across clusters', icon: 'Bot', category: 'Core Dashboards' },
   { href: '/llm-d-benchmarks', name: 'llm-d Benchmarks', description: 'LLM inference benchmarks — throughput, latency, and GPU utilization across clouds and accelerators', icon: 'TrendingUp', category: 'Core Dashboards' },
   { href: '/compliance', name: 'Compliance', description: 'Regulatory compliance, audit logs, and policy enforcement', icon: 'ClipboardCheck', category: 'Core Dashboards' },
+  { href: '/cluster-admin', name: 'Cluster Admin', description: 'Multi-cluster operations, control plane health, node debugging, and infrastructure management', icon: 'ShieldAlert', category: 'Core Dashboards' },
   // Resource Pages
   { href: '/namespaces', name: 'Namespaces', description: 'Namespace management and resource allocation', icon: 'FolderTree', category: 'Resources' },
   { href: '/nodes', name: 'Nodes', description: 'Cluster node health and resource usage', icon: 'HardDrive', category: 'Resources' },
