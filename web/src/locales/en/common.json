@@ -170,7 +170,65 @@
     "recommendations": {
       "addCard": "Add \"{{title}}\" card to dashboard",
       "showRealTimeData": "Show real-time cluster data",
-      "addressCriticalIssues": "Address critical issues faster"
+      "addressCriticalIssues": "Address critical issues faster",
+      "ai": "AI:",
+      "adding": "Adding...",
+      "snooze": "Snooze",
+      "dismiss": "Dismiss",
+      "critical": "{{count}} critical",
+      "more": "+{{count}} more"
+    },
+    "reset": {
+      "title": "Reset Dashboard",
+      "description": "Choose how to reset your dashboard cards",
+      "addMissing": "Add Missing Cards",
+      "addMissingDesc": "Keep your current cards and add any default cards that are missing. Your customizations will be preserved.",
+      "replaceAll": "Replace All Cards",
+      "replaceAllDesc": "Remove all current cards and replace them with the default set. This will remove any customizations."
+    },
+    "create": {
+      "title": "Create Dashboard",
+      "description": "Name your dashboard and optionally start with a template.",
+      "nameLabel": "Dashboard Name",
+      "descriptionLabel": "Description",
+      "optional": "(optional)",
+      "descriptionPlaceholder": "What is this dashboard for?",
+      "startingContent": "Starting Content",
+      "startBlank": "Start Blank",
+      "startBlankDesc": "Empty dashboard - add cards yourself",
+      "startWithTemplate": "Start with Template",
+      "chooseFromTemplates": "Choose from pre-built layouts",
+      "preConfiguredCards": "{{count}} pre-configured cards",
+      "selectByCategory": "Select a template by category:",
+      "cards": "cards"
+    },
+    "templates": {
+      "title": "Dashboard Templates",
+      "layoutPreview": "Layout Preview",
+      "cardsIncluded": "Cards included:",
+      "hoverToPreview": "Hover over a template to see preview",
+      "willAddCards": "\"{{name}}\" will add {{count}} cards to your dashboard",
+      "selectToPreview": "Select a template to preview",
+      "applyTemplate": "Apply Template",
+      "more": "+{{count}} more"
+    },
+    "empty": {
+      "noCardsYet": "No cards yet",
+      "emptyDescription": "This dashboard is empty. Add cards to start monitoring your clusters.",
+      "addCards": "Add Cards",
+      "startWithTemplate": "Start with Template"
+    },
+    "delete": {
+      "title": "Delete Dashboard",
+      "confirm": "Are you sure you want to delete \"{{name}}\"?",
+      "warning": "This action cannot be undone",
+      "details": "The dashboard and all its cards will be permanently removed from the sidebar."
+    },
+    "demoData": {
+      "title": "Demo Data in Use",
+      "description": "{{count}} card displaying simulated data. Connect to live clusters for real data.",
+      "description_plural": "{{count}} cards displaying simulated data. Connect to live clusters for real data.",
+      "badge": "Demo"
     }
   },
   "cardConfig": {

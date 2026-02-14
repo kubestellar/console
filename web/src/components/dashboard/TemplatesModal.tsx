@@ -67,7 +67,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
       <BaseModal.Header
-        title="Dashboard Templates"
+        title={t('dashboard.templates.title')}
         icon={Layout}
         onClose={onClose}
         showBack={false}
@@ -114,7 +114,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                     <span className="text-2xl">{template.icon}</span>
                     <div>
                       <h3 className="text-sm font-medium text-foreground">{template.name}</h3>
-                      <p className="text-xs text-muted-foreground">{template.cards.length} cards</p>
+                      <p className="text-xs text-muted-foreground">{template.cards.length} {t('dashboard.create.cards')}</p>
                     </div>
                     {selectedTemplate?.id === template.id && (
                       <Check className="w-5 h-5 text-purple-400 ml-auto" />
@@ -134,7 +134,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                     ))}
                     {template.cards.length > 4 && (
                       <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
-                        +{template.cards.length - 4} more
+                        {t('dashboard.templates.more', { count: template.cards.length - 4 })}
                       </span>
                     )}
                   </div>
@@ -161,7 +161,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
 
                 {/* Visual grid preview */}
                 <div className="bg-black/20 rounded-lg p-3 mb-4">
-                  <div className="text-xs text-muted-foreground mb-2">Layout Preview</div>
+                  <div className="text-xs text-muted-foreground mb-2">{t('dashboard.templates.layoutPreview')}</div>
                   <div className="grid grid-cols-12 gap-1 min-h-[120px]">
                     {hoveredTemplate.cards.map((card, idx) => {
                       const colSpan = Math.min(card.position.w, 12)
@@ -185,7 +185,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
 
                 {/* Card list */}
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground mb-1">Cards included:</div>
+                  <div className="text-xs text-muted-foreground mb-1">{t('dashboard.templates.cardsIncluded')}</div>
                   {hoveredTemplate.cards.map((card, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-xs">
                       <div className={`w-2 h-2 rounded ${CARD_COLORS[card.card_type] || 'bg-gray-500/40 dark:bg-gray-900/40'}`} />
@@ -197,7 +197,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                 <Layout className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-xs text-center">Hover over a template<br />to see preview</p>
+                <p className="text-xs text-center">{t('dashboard.templates.hoverToPreview')}</p>
               </div>
             )}
           </div>
@@ -207,8 +207,8 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">
               {selectedTemplate
-                ? `"${selectedTemplate.name}" will add ${selectedTemplate.cards.length} cards to your dashboard`
-                : 'Select a template to preview'}
+                ? t('dashboard.templates.willAddCards', { name: selectedTemplate.name, count: selectedTemplate.cards.length })
+                : t('dashboard.templates.selectToPreview')}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -216,14 +216,14 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
               onClick={onClose}
               className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              Cancel
+              {t('actions.cancel')}
             </button>
             <button
               onClick={handleApply}
               disabled={!selectedTemplate}
               className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
             >
-              Apply Template
+              {t('dashboard.templates.applyTemplate')}
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

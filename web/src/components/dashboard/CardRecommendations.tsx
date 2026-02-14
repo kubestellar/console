@@ -106,7 +106,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
           <Lightbulb className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium">AI:</span>
+          <span className="text-xs font-medium">{t('dashboard.recommendations.ai')}</span>
         </div>
 
         {/* Inline recommendation chips */}
@@ -165,19 +165,19 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                         } disabled:opacity-50`}
                       >
                         <Plus className="w-3 h-3" />
-                        {isAdding ? 'Adding...' : 'Add Card'}
+                        {isAdding ? t('dashboard.recommendations.adding') : t('buttons.addCard')}
                       </button>
                       <button
                         onClick={(e) => handleSnooze(e, rec)}
                         className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
-                        title="Snooze"
+                        title={t('dashboard.recommendations.snooze')}
                       >
                         <Clock className="w-3 h-3" />
                       </button>
                       <button
                         onClick={handleDismiss}
                         className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
-                        title="Dismiss"
+                        title={t('dashboard.recommendations.dismiss')}
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -192,13 +192,13 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
         {/* Stats badges */}
         {highPriorityCount > 0 && (
           <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
-            {highPriorityCount} critical
+            {t('dashboard.recommendations.critical', { count: highPriorityCount })}
           </span>
         )}
 
         {visibleRecommendations.length > 6 && (
           <span className="text-[10px] text-muted-foreground">
-            +{visibleRecommendations.length - 6} more
+            {t('dashboard.recommendations.more', { count: visibleRecommendations.length - 6 })}
           </span>
         )}
       </div>
