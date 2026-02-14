@@ -38,7 +38,7 @@ export function NodeDebug() {
   const [selectedNode, setSelectedNode] = useState<string>('')
   const [output, setOutput] = useState<string>('')
   const [isRunning, setIsRunning] = useState(false)
-  const [mode, setMode] = useState<TabMode>('inspect')
+  const [mode, setMode] = useState<TabMode>('exec')
   const [execImage, setExecImage] = useState(EXEC_IMAGES[0].value)
   const [customCmd, setCustomCmd] = useState('')
 
@@ -121,16 +121,6 @@ export function NodeDebug() {
       {/* Mode tabs */}
       <div className="flex gap-1">
         <button
-          onClick={() => setMode('inspect')}
-          className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-            mode === 'inspect'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-          }`}
-        >
-          Inspect
-        </button>
-        <button
           onClick={() => setMode('exec')}
           className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
             mode === 'exec'
@@ -139,6 +129,16 @@ export function NodeDebug() {
           }`}
         >
           Node Exec
+        </button>
+        <button
+          onClick={() => setMode('inspect')}
+          className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+            mode === 'inspect'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+          }`}
+        >
+          Inspect
         </button>
       </div>
 
