@@ -322,7 +322,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
  * Get icon component by name
  */
 function getIconComponent(iconName?: string): LucideIcon {
-  if (!iconName) return Info
+  if (!iconName?.trim()) return Info
   return ICON_MAP[iconName.toLowerCase()] ?? Info
 }
 
