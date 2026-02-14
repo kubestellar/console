@@ -564,7 +564,7 @@ interface MetricsHistoryData {
 }
 
 export function LLMdFlow() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
   const [serverMetrics, setServerMetrics] = useState<ServerMetrics[]>([])
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
@@ -940,8 +940,8 @@ export function LLMdFlow() {
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm">
           <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-purple-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">Select a stack to visualize</span>
-          <span className="text-slate-500 text-xs mt-1">Use the stack selector above</span>
+          <span className="text-slate-400 text-sm">{t('llmd.selectStackVisualize')}</span>
+          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -973,16 +973,16 @@ export function LLMdFlow() {
                 </span>
               )}
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common.demo')}</span>
+                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common:common.demo')}</span>
               )}
             </div>
           )}
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-muted-foreground">Throughput:</span>
+            <span className="text-muted-foreground">{t('llmd.throughput')}:</span>
             <span className="text-white font-mono font-medium">{totalThroughput} <Acronym term="RPS" /></span>
           </div>
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-muted-foreground">Avg Load:</span>
+            <span className="text-muted-foreground">{t('llmd.avgLoad')}:</span>
             <span className={`font-mono font-medium ${avgLoad > 70 ? 'text-amber-400' : 'text-green-400'}`}>
               {avgLoad}%
             </span>
@@ -997,7 +997,7 @@ export function LLMdFlow() {
                 ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
                 : 'bg-slate-700/50 text-slate-400'
             }`}
-            title="Toggle horseshoe gauge view"
+            title={t('llmd.toggleHorseshoe')}
           >
             <CircleDot size={12} />
           </button>
@@ -1009,7 +1009,7 @@ export function LLMdFlow() {
                 : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
             }`}
           >
-            {isAnimating ? 'Pause' : 'Play'}
+            {isAnimating ? t('common:common.pause') : t('common:common.play')}
           </button>
         </div>
       </div>
@@ -1018,11 +1018,11 @@ export function LLMdFlow() {
       <div className="absolute bottom-2 left-3 flex items-center gap-4 text-xs z-10">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.prefill, boxShadow: `0 0 6px ${COLORS.prefill}` }} />
-          <span className="text-muted-foreground">Prefill</span>
+          <span className="text-muted-foreground">{t('llmd.prefill')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.decode, boxShadow: `0 0 6px ${COLORS.decode}` }} />
-          <span className="text-muted-foreground">Decode</span>
+          <span className="text-muted-foreground">{t('llmd.decode')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS['kv-transfer'], boxShadow: `0 0 6px ${COLORS['kv-transfer']}` }} />
@@ -1119,7 +1119,7 @@ export function LLMdFlow() {
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-[9px] text-slate-500 uppercase">{metricConfig[metric].label}</div>
+                    <div className="text-[9px] text-slate-500 uppercase">{t(`llmd.${metric}`)}</div>
                     <div className="font-mono" style={{ color: selectedMetricTypes.includes(metric) ? metricConfig[metric].color : undefined }}>
                       {metric === 'load' ? `${selectedMetrics.load}%` :
                        metric === 'queue' ? selectedMetrics.queueDepth :
@@ -1143,7 +1143,7 @@ export function LLMdFlow() {
                       className="w-1.5 h-1.5 rounded-full"
                       style={{ backgroundColor: metricConfig[metric].color }}
                     />
-                    {metricConfig[metric].label}
+                    {t(`llmd.${metric}`)}
                   </div>
                   <Sparkline
                     data={getHistoryForNode(selectedNode, metric)}

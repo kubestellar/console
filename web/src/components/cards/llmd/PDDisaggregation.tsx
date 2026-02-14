@@ -100,6 +100,7 @@ interface ServerCardProps {
 }
 
 function ServerCard({ server, isHighlighted }: ServerCardProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const isPrefill = server.type === 'prefill'
   const color = isPrefill ? '#9333ea' : '#22c55e'
   const bgColor = isPrefill ? 'bg-purple-500/10' : 'bg-green-500/10'
@@ -124,7 +125,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <span className="text-muted-foreground">Load</span>
+          <span className="text-muted-foreground">{t('llmd.load')}</span>
           <div className="flex items-center gap-1 mt-0.5">
             <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
               <motion.div
@@ -139,13 +140,13 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
         </div>
 
         <div>
-          <span className="text-muted-foreground">Queue</span>
+          <span className="text-muted-foreground">{t('llmd.queue')}</span>
           <div className="text-white font-mono mt-0.5">{server.queueDepth}</div>
         </div>
 
         <div>
-          <span className="text-muted-foreground">Throughput</span>
-          <div className="text-white font-mono mt-0.5">{server.throughput} rps</div>
+          <span className="text-muted-foreground">{t('llmd.throughput')}</span>
+          <div className="text-white font-mono mt-0.5">{server.throughput} {t('llmd.rps').toLowerCase()}</div>
         </div>
 
         <div>
@@ -175,7 +176,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
 }
 
 export function PDDisaggregation() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
@@ -327,7 +328,7 @@ export function PDDisaggregation() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Split size={18} className="text-cyan-400" />
-          <span className="font-medium text-white">P/D Disaggregation</span>
+          <span className="font-medium text-white">{t('llmd.pdDisaggregation')}</span>
         </div>
         <div className="flex items-center gap-2">
           {selectedStack && (
@@ -339,7 +340,7 @@ export function PDDisaggregation() {
           )}
           {isDemoMode && (
             <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
-              Demo
+              {t('common:common.demo')}
             </span>
           )}
         </div>
@@ -349,12 +350,12 @@ export function PDDisaggregation() {
       {selectedStack && !hasDisaggregation && !isDemoMode && (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
           <AlertCircle size={32} className="text-slate-500 mb-3" />
-          <span className="text-slate-400 text-sm font-medium">Unified Serving Mode</span>
+          <span className="text-slate-400 text-sm font-medium">{t('llmd.unifiedServingMode')}</span>
           <span className="text-slate-500 text-xs mt-1">
-            This stack uses unified P/D serving.
+            {t('llmd.stackUsesUnified')}
           </span>
           <span className="text-slate-500 text-xs">
-            Disaggregation view is available for stacks with separate prefill/decode nodes.
+            {t('llmd.disaggregationAvailable')}
           </span>
         </div>
       )}
@@ -363,8 +364,8 @@ export function PDDisaggregation() {
       {!selectedStack && !isDemoMode && (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
           <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-cyan-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">Select a stack to view disaggregation</span>
-          <span className="text-slate-500 text-xs mt-1">Use the stack selector above</span>
+          <span className="text-slate-400 text-sm">{t('llmd.selectStackDisaggregation')}</span>
+          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
 
@@ -376,10 +377,10 @@ export function PDDisaggregation() {
             <div className="bg-purple-500/10 rounded-lg p-2 text-center">
               <div className="flex items-center justify-center gap-1 text-purple-400 mb-1">
                 <Cpu size={12} />
-                <span className="text-xs">Prefill</span>
+                <span className="text-xs">{t('llmd.prefill')}</span>
               </div>
               <div className="text-white font-mono text-sm">{metrics.prefillThroughput}</div>
-              <div className="text-xs text-muted-foreground">rps</div>
+              <div className="text-xs text-muted-foreground">{t('llmd.rps').toLowerCase()}</div>
             </div>
 
             <div className="bg-purple-500/10 rounded-lg p-2 text-center">
@@ -388,22 +389,22 @@ export function PDDisaggregation() {
                 <span className="text-xs"><Acronym term="TTFT" /></span>
               </div>
               <div className="text-white font-mono text-sm">{metrics.prefillAvgTTFT}</div>
-              <div className="text-xs text-muted-foreground">ms</div>
+              <div className="text-xs text-muted-foreground">{t('llmd.ms')}</div>
             </div>
 
             <div className="bg-cyan-500/10 rounded-lg p-2 text-center">
               <div className="flex items-center justify-center gap-1 text-cyan-400 mb-1">
                 <Zap size={12} />
-                <span className="text-xs">Transfer</span>
+                <span className="text-xs">{t('llmd.transfer')}</span>
               </div>
               <div className="text-white font-mono text-sm">{metrics.kvTransferRate}</div>
-              <div className="text-xs text-muted-foreground">KB/s</div>
+              <div className="text-xs text-muted-foreground">{t('llmd.kbps')}</div>
             </div>
 
         <div className="bg-green-500/10 rounded-lg p-2 text-center">
           <div className="flex items-center justify-center gap-1 text-green-400 mb-1">
             <Activity size={12} />
-            <span className="text-xs">Decode</span>
+            <span className="text-xs">{t('llmd.decode')}</span>
           </div>
           <div className="text-white font-mono text-sm">{metrics.decodeThroughput}</div>
           <div className="text-xs text-muted-foreground">rps</div>
@@ -425,7 +426,7 @@ export function PDDisaggregation() {
             <div className="flex-1 flex flex-col">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-purple-500" />
-                <span className="text-sm font-medium text-purple-400">Prefill Servers</span>
+                <span className="text-sm font-medium text-purple-400">{t('llmd.prefillServers')}</span>
               </div>
               <div className="flex-1 space-y-2 overflow-auto">
                 {prefillServers.map(server => (
@@ -468,7 +469,7 @@ export function PDDisaggregation() {
             <div className="flex-1 flex flex-col">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-sm font-medium text-green-400">Decode Servers</span>
+                <span className="text-sm font-medium text-green-400">{t('llmd.decodeServers')}</span>
               </div>
               <div className="flex-1 space-y-2 overflow-auto">
                 {decodeServers.map(server => (
@@ -480,7 +481,7 @@ export function PDDisaggregation() {
 
           {/* Architecture explanation */}
           <div className="mt-4 text-xs text-muted-foreground text-center">
-            Prefill processes prompts → KV cache transferred via RDMA → Decode generates tokens
+            {t('llmd.pdArchExplanation')}
           </div>
         </>
       )}

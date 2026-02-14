@@ -107,7 +107,7 @@ function QuotaModal({
   editingQuota?: ResourceQuota | null
   isLoading: boolean
 }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const [cluster, setCluster] = useState(editingQuota?.cluster || (selectedCluster !== 'all' ? selectedCluster : ''))
   const [namespace, setNamespace] = useState(editingQuota?.namespace || (selectedNamespace !== 'all' ? selectedNamespace : ''))
   const [name, setName] = useState(editingQuota?.name || '')
@@ -169,7 +169,7 @@ function QuotaModal({
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
       <BaseModal.Header
-        title={editingQuota ? 'Edit ResourceQuota' : 'Create ResourceQuota'}
+        title={editingQuota ? t('namespaceQuotas.editQuota') : t('namespaceQuotas.createQuota')}
         icon={Gauge}
         onClose={onClose}
         showBack={false}
@@ -185,7 +185,7 @@ function QuotaModal({
 
           {/* Cluster selector */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.cluster')}</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common:common.cluster')}</label>
             <select
               value={cluster}
               onChange={(e) => {
@@ -195,7 +195,7 @@ function QuotaModal({
               disabled={!!editingQuota}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
             >
-              <option value="">Select cluster...</option>
+              <option value="">{t('common:selectors.selectCluster')}</option>
               {clusters.map(c => (
                 <option key={c.name} value={c.name}>{c.name}</option>
               ))}
@@ -204,14 +204,14 @@ function QuotaModal({
 
           {/* Namespace selector */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.namespace')}</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common:common.namespace')}</label>
             <select
               value={namespace}
               onChange={(e) => setNamespace(e.target.value)}
               disabled={!!editingQuota || !cluster}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
             >
-              <option value="">Select namespace...</option>
+              <option value="">{t('common:selectors.selectNamespace')}</option>
               {availableNamespaces.map(ns => (
                 <option key={ns} value={ns}>{ns}</option>
               ))}
@@ -220,13 +220,13 @@ function QuotaModal({
 
           {/* Quota name */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">Quota Name</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('namespaceQuotas.quotaName')}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={!!editingQuota}
-              placeholder="e.g., gpu-quota, team-quota"
+              placeholder={t('namespaceQuotas.quotaNamePlaceholder')}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground disabled:opacity-50"
             />
           </div>
@@ -234,7 +234,7 @@ function QuotaModal({
           {/* Resources */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-muted-foreground">Resource Limits</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('namespaceQuotas.resourceLimits')}</label>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <button
@@ -264,7 +264,7 @@ function QuotaModal({
                   className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
                 >
                   <Plus className="w-3 h-3" />
-                  Add
+                  {t('common:common.add')}
                 </button>
               </div>
             </div>
@@ -277,11 +277,11 @@ function QuotaModal({
                     onChange={(e) => updateResource(index, 'key', e.target.value)}
                     className="flex-1 px-2 py-1.5 rounded bg-secondary border border-border text-sm text-foreground"
                   >
-                    <option value="">Select resource...</option>
+                    <option value="">{t('namespaceQuotas.selectResource')}</option>
                     {COMMON_RESOURCE_TYPES.map(rt => (
                       <option key={rt.key} value={rt.key}>{rt.label} ({rt.key})</option>
                     ))}
-                    <option value="custom">Custom...</option>
+                    <option value="custom">{t('namespaceQuotas.customResource')}</option>
                   </select>
                   {resource.key === 'custom' && (
                     <input
@@ -318,7 +318,7 @@ function QuotaModal({
             onClick={onClose}
             className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80"
           >
-            Cancel
+            {t('common:common.cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -326,7 +326,7 @@ function QuotaModal({
             className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {editingQuota ? 'Update' : 'Create'}
+            {editingQuota ? t('common:common.update') : t('common:common.create')}
           </button>
         </div>
       </BaseModal.Footer>
@@ -335,7 +335,7 @@ function QuotaModal({
 }
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'all')
@@ -609,7 +609,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                 className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
               >
                 <Plus className="w-3 h-3" />
-                Add Quota
+                {t('namespaceQuotas.addQuota')}
               </button>
             }
           />

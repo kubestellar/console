@@ -14,7 +14,7 @@ interface ClusterComparisonProps {
 }
 
 export function ClusterComparison({ config }: ClusterComparisonProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: rawClusters, isLoading: clustersLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
@@ -103,17 +103,17 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No clusters to compare</p>
-        <p className="text-xs mt-1">Add clusters to compare their metrics</p>
+        <p className="text-sm">{t('clusterComparison.noClustersSelected')}</p>
+        <p className="text-xs mt-1">{t('clusterComparison.addClustersHint')}</p>
       </div>
     )
   }
 
   const metrics = [
-    { key: 'nodes', label: 'Nodes', icon: Activity, color: 'text-blue-400', getValue: (c: typeof allClusters[0]) => c.nodeCount || 0 },
-    { key: 'pods', label: 'Pods', icon: Box, color: 'text-green-400', getValue: (c: typeof allClusters[0]) => c.podCount || 0 },
-    { key: 'cpus', label: 'CPUs', icon: Cpu, color: 'text-purple-400', getValue: (c: typeof allClusters[0]) => c.cpuCores || 0 },
-    { key: 'gpus', label: 'GPUs', icon: Cpu, color: 'text-cyan-400', getValue: (c: typeof allClusters[0]) => gpuByCluster[c.name] || 0 },
+    { key: 'nodes', label: t('clusterComparison.nodes'), icon: Activity, color: 'text-blue-400', getValue: (c: typeof allClusters[0]) => c.nodeCount || 0 },
+    { key: 'pods', label: t('clusterComparison.pods'), icon: Box, color: 'text-green-400', getValue: (c: typeof allClusters[0]) => c.podCount || 0 },
+    { key: 'cpus', label: t('clusterComparison.cpus'), icon: Cpu, color: 'text-purple-400', getValue: (c: typeof allClusters[0]) => c.cpuCores || 0 },
+    { key: 'gpus', label: t('clusterComparison.gpus'), icon: Cpu, color: 'text-cyan-400', getValue: (c: typeof allClusters[0]) => gpuByCluster[c.name] || 0 },
   ]
 
   const maxValues = metrics.reduce((acc, m) => {
@@ -150,7 +150,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
         <table className="w-full text-sm table-fixed">
           <thead>
             <tr className="border-b border-border/50">
-              <th className="text-left py-2 text-muted-foreground font-medium w-20">Metric</th>
+              <th className="text-left py-2 text-muted-foreground font-medium w-20">{t('clusterComparison.metric')}</th>
               {clustersToCompare.map(c => (
                 <th key={c.name} className="text-right py-2 px-2 max-w-[100px]">
                   <button

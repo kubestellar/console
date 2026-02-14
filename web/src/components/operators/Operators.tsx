@@ -15,7 +15,7 @@ const OPERATORS_CARDS_KEY = 'kubestellar-operators-cards'
 const DEFAULT_OPERATORS_CARDS = getDefaultCards('operators')
 
 export function Operators() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { subscriptions: operatorSubs, refetch: refetchSubs, error: subsError } = useOperatorSubscriptions()
   const { operators: allOperators, refetch: refetchOps, error: opsError } = useOperators()
@@ -85,25 +85,25 @@ export function Operators() {
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'operators':
-        return { value: totalOperators, sublabel: 'total operators', onClick: () => drillToAllOperators(), isClickable: totalOperators > 0 }
+        return { value: totalOperators, sublabel: t('common:operators.totalOperators'), onClick: () => drillToAllOperators(), isClickable: totalOperators > 0 }
       case 'installed':
-        return { value: installedOperators, sublabel: 'installed', onClick: () => drillToAllOperators('installed'), isClickable: installedOperators > 0 }
+        return { value: installedOperators, sublabel: t('cards:operators.installed'), onClick: () => drillToAllOperators('installed'), isClickable: installedOperators > 0 }
       case 'installing':
-        return { value: installingOperators, sublabel: 'installing', onClick: () => drillToAllOperators('installing'), isClickable: installingOperators > 0 }
+        return { value: installingOperators, sublabel: t('common:operators.installing'), onClick: () => drillToAllOperators('installing'), isClickable: installingOperators > 0 }
       case 'upgrades':
-        return { value: upgradesAvailable, sublabel: 'upgrades available', onClick: () => drillToAllOperators('upgrades'), isClickable: upgradesAvailable > 0 }
+        return { value: upgradesAvailable, sublabel: t('common:operators.upgradesAvailable'), onClick: () => drillToAllOperators('upgrades'), isClickable: upgradesAvailable > 0 }
       case 'subscriptions':
-        return { value: filteredSubscriptions.length, sublabel: 'subscriptions', onClick: () => drillToAllOperators(), isClickable: filteredSubscriptions.length > 0 }
+        return { value: filteredSubscriptions.length, sublabel: t('cards:operators.subscriptions'), onClick: () => drillToAllOperators(), isClickable: filteredSubscriptions.length > 0 }
       case 'crds':
-        return { value: 0, sublabel: 'CRDs' }
+        return { value: 0, sublabel: t('common:operators.crds') }
       case 'failing':
-        return { value: failingOperators, sublabel: 'failing', onClick: () => drillToAllOperators('failed'), isClickable: failingOperators > 0 }
+        return { value: failingOperators, sublabel: t('common:operators.failing'), onClick: () => drillToAllOperators('failed'), isClickable: failingOperators > 0 }
       case 'clusters':
-        return { value: reachableClusters.length, sublabel: 'clusters', onClick: () => drillToAllClusters(), isClickable: reachableClusters.length > 0 }
+        return { value: reachableClusters.length, sublabel: t('common:common.clusters'), onClick: () => drillToAllClusters(), isClickable: reachableClusters.length > 0 }
       default:
         return { value: 0 }
     }
-  }, [totalOperators, installedOperators, installingOperators, upgradesAvailable, failingOperators, reachableClusters.length, filteredSubscriptions, drillToAllOperators, drillToAllClusters])
+  }, [totalOperators, installedOperators, installingOperators, upgradesAvailable, failingOperators, reachableClusters.length, filteredSubscriptions, drillToAllOperators, drillToAllClusters, t])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
@@ -112,8 +112,8 @@ export function Operators() {
 
   return (
     <DashboardPage
-      title="Operators"
-      subtitle="Monitor OLM operators, subscriptions, and CRDs"
+      title={t('common:operators.title')}
+      subtitle={t('common:operators.subtitle')}
       icon="Cog"
       storageKey={OPERATORS_CARDS_KEY}
       defaultCards={DEFAULT_OPERATORS_CARDS}
@@ -125,8 +125,8 @@ export function Operators() {
       lastUpdated={lastUpdated}
       hasData={totalOperators > 0 || reachableClusters.length > 0}
       emptyState={{
-        title: 'Operators Dashboard',
-        description: 'Add cards to monitor OLM operators, subscriptions, and Custom Resource Definitions across your clusters.',
+        title: t('common:operators.dashboardTitle'),
+        description: t('common:operators.emptyDescription'),
       }}
     >
       {/* Error Display */}
@@ -134,7 +134,7 @@ export function Operators() {
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-400">Error loading operator data</p>
+            <p className="text-sm font-medium text-red-400">{t('common:operators.errorLoadingData')}</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>
           </div>
         </div>

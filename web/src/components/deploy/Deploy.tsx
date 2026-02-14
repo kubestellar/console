@@ -89,6 +89,7 @@ const SortableDeployCard = memo(function SortableDeployCard({
   onRefresh,
   lastUpdated,
 }: SortableDeployCardProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const { isMobile } = useMobile()
   const {
     attributes,
@@ -131,7 +132,7 @@ const SortableDeployCard = memo(function SortableDeployCard({
             {...attributes}
             {...listeners}
             className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
-            title="Drag to reorder"
+            title={t('common:deploy.dragToReorder')}
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -162,7 +163,7 @@ function DeployDragPreviewCard({ card }: { card: DashboardCard }) {
 }
 
 export function Deploy() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated, refetch } = useDeployments()
@@ -221,23 +222,23 @@ export function Deploy() {
   const getDeployStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'deployments':
-        return { value: cachedDeployments.length, sublabel: 'total deployments' }
+        return { value: cachedDeployments.length, sublabel: t('common:deploy.totalDeployments') }
       case 'healthy':
-        return { value: runningCount, sublabel: 'running' }
+        return { value: runningCount, sublabel: t('common:common.running') }
       case 'progressing':
-        return { value: progressingCount, sublabel: 'deploying' }
+        return { value: progressingCount, sublabel: t('common:deploy.deploying') }
       case 'failed':
-        return { value: failedCount, sublabel: 'failed' }
+        return { value: failedCount, sublabel: t('common:common.failed') }
       case 'helm':
-        return { value: helmReleases.length, sublabel: 'releases' }
+        return { value: helmReleases.length, sublabel: t('common:deploy.releases') }
       case 'argocd':
-        return { value: 0, sublabel: 'applications', isDemo: true }
+        return { value: 0, sublabel: t('common:deploy.applications'), isDemo: true }
       // 'namespaces' and 'clusters' fall through to universal stats
       // which returns total counts from useClusters()
       default:
         return { value: '-' }
     }
-  }, [cachedDeployments.length, runningCount, progressingCount, failedCount, helmReleases.length])
+  }, [cachedDeployments.length, runningCount, progressingCount, failedCount, helmReleases.length, t])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDeployStatValue, getUniversalStatValue)(blockId),
@@ -447,8 +448,8 @@ export function Deploy() {
     <div className="pt-16">
       {/* Header */}
       <DashboardHeader
-        title="KubeStellar Deploy"
-        subtitle="Monitor deployments, GitOps, and Helm releases across clusters"
+        title={t('common:deploy.title')}
+        subtitle={t('common:deploy.subtitle')}
         icon={<Rocket className="w-6 h-6 text-blue-400" />}
         isFetching={isFetching}
         onRefresh={triggerRefresh}
@@ -477,7 +478,7 @@ export function Deploy() {
             className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <LayoutGrid className="w-4 h-4" />
-            <span>Deployment Cards ({cards.length})</span>
+            <span>{t('common:deploy.deploymentCards', { count: cards.length })}</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
         </div>
@@ -490,16 +491,16 @@ export function Deploy() {
                 <div className="flex justify-center mb-4">
                   <Rocket className="w-12 h-12 text-blue-400" />
                 </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">Deployment Dashboard</h3>
+                <h3 className="text-lg font-medium text-foreground mb-2">{t('common:deploy.dashboardTitle')}</h3>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
-                  Add deployment monitoring cards! Track GitOps status, Helm releases, ArgoCD applications, and deployment health.
+                  {t('common:deploy.emptyDescription')}
                 </p>
                 <button
                   onClick={() => setShowAddCard(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Cards
+                  {t('common:buttons.addCard')}
                 </button>
               </div>
             ) : (

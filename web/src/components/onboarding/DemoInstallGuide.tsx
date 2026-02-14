@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 const DISMISSED_KEY = 'kc-demo-install-dismissed'
 
 function CopyCommand({ command }: { command: string }) {
+  const { t } = useTranslation('common')
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(async () => {
@@ -24,7 +25,7 @@ function CopyCommand({ command }: { command: string }) {
     <button
       onClick={handleCopy}
       className="flex items-center gap-2 w-full text-left font-mono text-[13px] bg-black/40 border border-gray-700/50 rounded-lg px-3 py-2 hover:border-purple-500/40 hover:bg-black/60 transition-colors group/copy"
-      title={copied ? 'Copied!' : 'Click to copy'}
+      title={copied ? t('common.copied') : t('onboarding.clickToCopy')}
     >
       <span className="text-gray-500 select-none">$</span>
       <span className="flex-1 text-gray-200 truncate">{command}</span>
@@ -46,6 +47,7 @@ function StepNumber({ n }: { n: number }) {
 }
 
 export function InstallModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation('common')
   const { toggleDemoMode } = useDemoMode()
 
   return (
@@ -74,8 +76,8 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
                 <Rocket className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Install KubeStellar Console</h2>
-                <p className="text-sm text-muted-foreground">Up and running in under a minute</p>
+                <h2 className="text-lg font-bold text-foreground">{t('onboarding.installTitle')}</h2>
+                <p className="text-sm text-muted-foreground">{t('onboarding.installSubtitle')}</p>
               </div>
             </div>
           </div>
@@ -89,11 +91,11 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Download className="w-4 h-4 text-purple-400" />
-                  <h3 className="text-sm font-semibold text-foreground">Start the Console</h3>
+                  <h3 className="text-sm font-semibold text-foreground">{t('onboarding.step1Title')}</h3>
                 </div>
                 <CopyCommand command="curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash" />
                 <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  One command, no dependencies — up and running in under a minute. Only requires curl.
+                  {t('onboarding.step1Desc')}
                 </p>
               </div>
             </div>
@@ -106,32 +108,32 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Github className="w-4 h-4 text-blue-400" />
-                  <h3 className="text-sm font-semibold text-muted-foreground">Optional: Enable GitHub OAuth</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground">{t('onboarding.step2Title')}</h3>
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Go to{' '}
+                  {t('onboarding.step2Desc1')}{' '}
                   <a
                     href="https://github.com/settings/developers"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
                   >
-                    GitHub Developer Settings
+                    {t('onboarding.githubDevSettings')}
                   </a>
-                  {' '}&rarr; New OAuth App:
+                  {' '}&rarr; {t('onboarding.newOAuthApp')}:
                 </p>
                 <div className="text-xs space-y-1 bg-black/30 rounded-lg px-3 py-2 border border-gray-700/30">
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground/70 shrink-0 w-28">Homepage URL</span>
+                    <span className="text-muted-foreground/70 shrink-0 w-28">{t('onboarding.homepageUrl')}</span>
                     <span className="text-gray-300 font-mono">http://localhost:8080</span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground/70 shrink-0 w-28">Callback URL</span>
+                    <span className="text-muted-foreground/70 shrink-0 w-28">{t('onboarding.callbackUrl')}</span>
                     <span className="text-gray-300 font-mono">http://localhost:8080/auth/github/callback</span>
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  Add credentials to a .env file, then Ctrl+C and re-run <code className="font-mono text-gray-400">start.sh</code>
+                  {t('onboarding.step2Desc2')}
                 </p>
               </div>
             </div>
@@ -144,11 +146,11 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Server className="w-4 h-4 text-green-400" />
-                  <h3 className="text-sm font-semibold text-muted-foreground">Optional: Deploy to Kubernetes</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground">{t('onboarding.step3Title')}</h3>
                 </div>
                 <CopyCommand command="curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/deploy.sh | bash" />
                 <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  Requires <code className="font-mono text-gray-400">helm</code> and <code className="font-mono text-gray-400">kubectl</code>. Supports <code className="font-mono text-gray-400">--context</code>, <code className="font-mono text-gray-400">--openshift</code>, and <code className="font-mono text-gray-400">--ingress</code> flags.
+                  {t('onboarding.step3Desc')}
                 </p>
               </div>
             </div>
@@ -161,10 +163,10 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Key className="w-4 h-4 text-yellow-400" />
-                  <h3 className="text-sm font-semibold text-muted-foreground">Optional: AI Keys</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground">{t('onboarding.step4Title')}</h3>
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Add API keys for OpenAI, Anthropic, or Google to enable AI-powered features.
+                  {t('onboarding.step4Desc')}
                 </p>
                 <Link
                   to="/settings"
@@ -172,7 +174,7 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
                   className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-secondary/50 border border-border/50 hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Settings className="w-3.5 h-3.5" />
-                  Open Settings
+                  {t('onboarding.openSettings')}
                   <ChevronRight className="w-3 h-3" />
                 </Link>
               </div>
@@ -187,7 +189,7 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              Full documentation
+              {t('onboarding.fullDocumentation')}
               <ExternalLink className="w-3 h-3" />
             </a>
             <div className="flex items-center gap-2">
@@ -196,14 +198,14 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
                   onClick={() => { toggleDemoMode(); onClose() }}
                   className="text-xs px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 text-yellow-400 transition-colors"
                 >
-                  Exit Demo
+                  {t('onboarding.exitDemo')}
                 </button>
               )}
               <button
                 onClick={onClose}
                 className="text-xs px-4 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 text-purple-300 font-medium transition-colors"
               >
-                Got it
+                {t('onboarding.gotIt')}
               </button>
             </div>
           </div>
@@ -215,6 +217,7 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
 
 // Banner under the demo mode banner
 export function DemoInstallBanner({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation('common')
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem(DISMISSED_KEY) === 'true'
   })
@@ -237,19 +240,19 @@ export function DemoInstallBanner({ collapsed }: { collapsed: boolean }) {
         <div className="flex items-center justify-center gap-3 py-1.5 px-4">
           <Rocket className="w-4 h-4 text-purple-400 animate-pulse" />
           <span className="text-sm text-purple-300">
-            Want to use your <span className="font-semibold text-purple-200">own clusters</span>?
+            {t('onboarding.bannerMessage')}
           </span>
           <button
             onClick={() => setModalOpen(true)}
             className="text-xs px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 text-purple-300 font-medium transition-colors"
           >
-            Install Guide
+            {t('onboarding.installGuide')}
             <ChevronRight className="w-3 h-3 inline ml-0.5 -mr-0.5" />
           </button>
           <button
             onClick={handleDismiss}
             className="ml-1 p-1 hover:bg-purple-500/20 rounded transition-colors"
-            title="Dismiss"
+            title={t('actions.close')}
           >
             <X className="w-3.5 h-3.5 text-purple-400/70" />
           </button>
@@ -263,6 +266,5 @@ export function DemoInstallBanner({ collapsed }: { collapsed: boolean }) {
 
 // Legacy export — no longer used in Layout
 export function DemoInstallGuide() {
-  const { t: _t } = useTranslation()
   return null
 }

@@ -62,7 +62,7 @@ function getDeviceLabel(deviceType: string): string {
 type ViewMode = 'alerts' | 'inventory'
 
 export function HardwareHealthCard() {
-  const { t: _t } = useTranslation()
+  const { t: _t } = useTranslation(['cards', 'common'])
   // Use cached hook — persists to IndexedDB, survives navigation, handles demo mode
   const {
     data: hwData,

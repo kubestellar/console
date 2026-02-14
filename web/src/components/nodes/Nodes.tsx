@@ -15,7 +15,7 @@ const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
 const DEFAULT_NODES_CARDS = getDefaultCards('nodes')
 
 export function Nodes() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const error = clustersError
@@ -63,29 +63,29 @@ export function Nodes() {
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'nodes':
-        return { value: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return { value: totalNodes, sublabel: t('common:nodes.totalNodes'), onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
       case 'cpus':
-        return { value: totalCPU, sublabel: 'CPU cores', onClick: () => drillToAllNodes(), isClickable: totalCPU > 0 }
+        return { value: totalCPU, sublabel: t('common:nodes.cpuCores'), onClick: () => drillToAllNodes(), isClickable: totalCPU > 0 }
       case 'memory':
-        return { value: `${totalMemoryGB.toFixed(0)} GB`, sublabel: 'memory', onClick: () => drillToAllNodes(), isClickable: totalMemoryGB > 0 }
+        return { value: `${totalMemoryGB.toFixed(0)} GB`, sublabel: t('common:common.memory'), onClick: () => drillToAllNodes(), isClickable: totalMemoryGB > 0 }
       case 'gpus':
-        return { value: totalGPUs, sublabel: 'GPUs', onClick: () => drillToAllGPU(), isClickable: totalGPUs > 0 }
+        return { value: totalGPUs, sublabel: t('common:common.gpus'), onClick: () => drillToAllGPU(), isClickable: totalGPUs > 0 }
       case 'tpus':
-        return { value: 0, sublabel: 'TPUs', isClickable: false }
+        return { value: 0, sublabel: t('common:nodes.tpus'), isClickable: false }
       case 'pods':
-        return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
+        return { value: totalPods, sublabel: t('common:common.pods'), onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
       case 'cpu_util':
-        return { value: `${cpuUtilization}%`, sublabel: 'utilization', onClick: () => drillToAllNodes(), isClickable: cpuUtilization > 0 }
+        return { value: `${cpuUtilization}%`, sublabel: t('common:common.utilization'), onClick: () => drillToAllNodes(), isClickable: cpuUtilization > 0 }
       case 'memory_util':
-        return { value: `${memoryUtilization}%`, sublabel: 'utilization', onClick: () => drillToAllNodes(), isClickable: memoryUtilization > 0 }
+        return { value: `${memoryUtilization}%`, sublabel: t('common:common.utilization'), onClick: () => drillToAllNodes(), isClickable: memoryUtilization > 0 }
       case 'clusters':
-        return { value: reachableClusters.length, sublabel: 'clusters', onClick: () => drillToAllClusters(), isClickable: reachableClusters.length > 0 }
+        return { value: reachableClusters.length, sublabel: t('common:common.clusters'), onClick: () => drillToAllClusters(), isClickable: reachableClusters.length > 0 }
       case 'healthy':
-        return { value: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return { value: totalNodes, sublabel: t('common:nodes.totalNodes'), onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
       default:
         return { value: 0 }
     }
-  }, [reachableClusters, totalNodes, totalCPU, totalMemoryGB, totalPods, totalGPUs, cpuUtilization, memoryUtilization, drillToAllNodes, drillToAllGPU, drillToAllPods, drillToAllClusters])
+  }, [reachableClusters, totalNodes, totalCPU, totalMemoryGB, totalPods, totalGPUs, cpuUtilization, memoryUtilization, drillToAllNodes, drillToAllGPU, drillToAllPods, drillToAllClusters, t])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
@@ -94,8 +94,8 @@ export function Nodes() {
 
   return (
     <DashboardPage
-      title="Nodes"
-      subtitle="Monitor node health and resources across clusters"
+      title={t('common:nodes.title')}
+      subtitle={t('common:nodes.subtitle')}
       icon="Server"
       storageKey={NODES_CARDS_KEY}
       defaultCards={DEFAULT_NODES_CARDS}
@@ -107,8 +107,8 @@ export function Nodes() {
       lastUpdated={lastUpdated}
       hasData={totalNodes > 0}
       emptyState={{
-        title: 'Nodes Dashboard',
-        description: 'Add cards to monitor node health, resource utilization, and capacity across your clusters.',
+        title: t('common:nodes.dashboardTitle'),
+        description: t('common:nodes.emptyDescription'),
       }}
     >
       {/* Error Display */}
@@ -116,7 +116,7 @@ export function Nodes() {
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-400">Error loading node data</p>
+            <p className="text-sm font-medium text-red-400">{t('common:nodes.errorLoadingData')}</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>
           </div>
         </div>
