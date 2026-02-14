@@ -141,6 +141,90 @@ function GuideRow({ guide, delay, isSelected, onMouseEnter }: {
   )
 }
 
+function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
+  // Build data points: 1 = success, 0 = failure/cancelled, 0.5 = in_progress
+  // Reversed so oldest is on left, newest on right
+  const points = [...runs].reverse().map(r => {
+    if (r.status === 'in_progress') return 0.5
+    return r.conclusion === 'success' ? 1 : 0
+  })
+
+  if (points.length < 2) return null
+
+  const width = 200
+  const height = 48
+  const padX = 12
+  const padY = 8
+  const chartW = width - padX * 2
+  const chartH = height - padY * 2
+
+  // Build SVG path + area
+  const xStep = chartW / (points.length - 1)
+  const pathPoints = points.map((val, i) => ({
+    x: padX + i * xStep,
+    y: padY + (1 - val) * chartH,
+  }))
+
+  // Smooth curve using cardinal spline approximation
+  let linePath = `M ${pathPoints[0].x} ${pathPoints[0].y}`
+  for (let i = 1; i < pathPoints.length; i++) {
+    const prev = pathPoints[i - 1]
+    const curr = pathPoints[i]
+    const cpx = (prev.x + curr.x) / 2
+    linePath += ` C ${cpx} ${prev.y}, ${cpx} ${curr.y}, ${curr.x} ${curr.y}`
+  }
+
+  // Area fill path (same curve, closed at bottom)
+  const areaPath = `${linePath} L ${pathPoints[pathPoints.length - 1].x} ${height - padY + 4} L ${pathPoints[0].x} ${height - padY + 4} Z`
+
+  // Gradient color based on latest point
+  const latest = points[points.length - 1]
+  const gradientId = `sparkGrad-${latest}`
+  const strokeColor = latest >= 1 ? '#34d399' : latest > 0 ? '#fbbf24' : '#f87171'
+  const fillOpacity = 0.15
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-2">
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Pass/Fail Trend</div>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity={fillOpacity} />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        {/* Grid lines */}
+        <line x1={padX} y1={padY} x2={width - padX} y2={padY} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
+        <line x1={padX} y1={padY + chartH / 2} x2={width - padX} y2={padY + chartH / 2} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
+        <line x1={padX} y1={padY + chartH} x2={width - padX} y2={padY + chartH} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
+        {/* Y-axis labels */}
+        <text x={padX - 2} y={padY + 3} textAnchor="end" fontSize="7" fill="#64748b">Pass</text>
+        <text x={padX - 2} y={padY + chartH + 3} textAnchor="end" fontSize="7" fill="#64748b">Fail</text>
+        {/* Area fill */}
+        <path d={areaPath} fill={`url(#${gradientId})`} />
+        {/* Line */}
+        <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Data points */}
+        {pathPoints.map((pt, i) => {
+          const val = points[i]
+          const dotColor = val >= 1 ? '#34d399' : val > 0 ? '#fbbf24' : '#f87171'
+          return (
+            <circle
+              key={i}
+              cx={pt.x}
+              cy={pt.y}
+              r={i === pathPoints.length - 1 ? 3.5 : 2.5}
+              fill={dotColor}
+              stroke="#0f172a"
+              strokeWidth="1.5"
+            />
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
 function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
   const completedRuns = guide.runs.filter(r => r.status === 'completed')
   const passed = completedRuns.filter(r => r.conclusion === 'success').length
@@ -175,7 +259,7 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
       className="h-full flex flex-col"
     >
       {/* Header */}
-      <div className="mb-3">
+      <div className="mb-2">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-mono font-bold text-sm" style={{ color: PLATFORM_COLORS[guide.platform] }}>
             {guide.acronym}
@@ -192,27 +276,30 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
         </div>
       </div>
 
-      {/* Pass rate big number */}
-      <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3 mb-3 text-center">
-        <div className={`text-2xl font-bold ${
-          guide.passRate >= 90 ? 'text-emerald-400' : guide.passRate >= 70 ? 'text-yellow-400' : guide.passRate > 0 ? 'text-red-400' : 'text-slate-500'
-        }`}>
-          {guide.passRate}%
-        </div>
-        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Pass Rate</div>
+      {/* Trend sparkline */}
+      <div className="mb-2">
+        <TrendSparkline runs={guide.runs} />
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <StatBox label="Passed" value={String(passed)} color="text-emerald-400" />
-        <StatBox label="Failed" value={String(failed)} color="text-red-400" />
-        <StatBox label="Cancelled" value={String(cancelled)} color="text-slate-400" />
-        <StatBox label="Running" value={String(running)} color="text-blue-400" />
+      {/* Pass rate + stats in a row */}
+      <div className="grid grid-cols-5 gap-1.5 mb-2">
+        <div className="col-span-1 bg-slate-800/60 border border-slate-700/50 rounded-lg p-2 text-center">
+          <div className={`text-lg font-bold ${
+            guide.passRate >= 90 ? 'text-emerald-400' : guide.passRate >= 70 ? 'text-yellow-400' : guide.passRate > 0 ? 'text-red-400' : 'text-slate-500'
+          }`}>
+            {guide.passRate}%
+          </div>
+          <div className="text-[8px] text-slate-500 uppercase tracking-wider">Rate</div>
+        </div>
+        <StatBox label="Pass" value={String(passed)} color="text-emerald-400" />
+        <StatBox label="Fail" value={String(failed)} color="text-red-400" />
+        <StatBox label="Skip" value={String(cancelled)} color="text-slate-400" />
+        <StatBox label="Run" value={String(running)} color="text-blue-400" />
       </div>
 
       {/* Streak */}
       {streakType && streak > 0 && (
-        <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border mb-3 ${
+        <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border mb-2 ${
           streakType === 'success'
             ? 'bg-emerald-950/30 border-emerald-800/40'
             : 'bg-red-950/30 border-red-800/40'
@@ -228,8 +315,8 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
         </div>
       )}
 
-      {/* Timestamps */}
-      <div className="space-y-1.5 flex-1">
+      {/* Timestamps + details */}
+      <div className="space-y-1 flex-1">
         {lastSuccess && (
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-slate-500">Last pass</span>
@@ -252,7 +339,7 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
         </div>
       </div>
 
-      {/* Run history visual */}
+      {/* Run history dots */}
       <div className="mt-auto pt-2 border-t border-slate-700/30">
         <div className="text-[10px] text-slate-500 mb-1.5">Run history (newest first)</div>
         <div className="flex items-center gap-1 flex-wrap">
@@ -404,7 +491,7 @@ export function NightlyE2EStatus() {
         </div>
 
         {/* Detail panel (right side) */}
-        <div className="w-52 shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
+        <div className="w-72 shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
           {selectedGuide ? (
             <GuideDetailPanel guide={selectedGuide} />
           ) : (
