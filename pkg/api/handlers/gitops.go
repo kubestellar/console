@@ -375,6 +375,21 @@ const (
 	operatorRestOverallTimeout    = 200 * time.Second
 	subscriptionPerClusterTimeout = 30 * time.Second
 	helmStreamPerClusterTimeout   = 30 * time.Second
+	operatorCacheTTL              = 5 * time.Minute
+)
+
+// operatorCacheEntry holds cached operators for a single cluster.
+type operatorCacheEntry struct {
+	operators []Operator
+	fetchedAt time.Time
+}
+
+// operatorCache is a per-cluster in-memory cache for slow CSV queries.
+// Protected by operatorCacheMu. Background refresh populates the cache
+// so that subsequent page loads are instant.
+var (
+	operatorCacheMu   sync.RWMutex
+	operatorCacheData = make(map[string]*operatorCacheEntry)
 )
 
 // ListOperators returns OLM-managed operators (ClusterServiceVersions)
@@ -513,12 +528,43 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 	return nil
 }
 
-// getOperatorsForCluster gets operators for a specific cluster using jsonpath
-// to avoid parsing the full 191MB+ JSON output from large OLM installations.
+// getOperatorsForCluster returns cached operators when available, otherwise
+// fetches from the cluster using kubectl -o json (faster than jsonpath for
+// large result sets) and caches the result.
 func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster string) []Operator {
-	// Use jsonpath to extract only the fields we need — avoids massive JSON parsing
-	jsonpathExpr := `{range .items[*]}{.metadata.name}{"\t"}{.metadata.namespace}{"\t"}{.spec.displayName}{"\t"}{.spec.version}{"\t"}{.status.phase}{"\n"}{end}`
-	args := []string{"get", "csv", "-A", "--chunk-size=500", "-o", "jsonpath=" + jsonpathExpr}
+	cacheKey := cluster
+	if cacheKey == "" {
+		cacheKey = "__default__"
+	}
+
+	// Check cache first
+	operatorCacheMu.RLock()
+	if entry, ok := operatorCacheData[cacheKey]; ok && time.Since(entry.fetchedAt) < operatorCacheTTL {
+		operators := entry.operators
+		operatorCacheMu.RUnlock()
+		return operators
+	}
+	operatorCacheMu.RUnlock()
+
+	// Cache miss — fetch from cluster
+	operators := h.fetchOperatorsFromCluster(ctx, cluster)
+
+	// Store in cache (even empty results, to avoid re-querying clusters with no OLM)
+	operatorCacheMu.Lock()
+	operatorCacheData[cacheKey] = &operatorCacheEntry{
+		operators: operators,
+		fetchedAt: time.Now(),
+	}
+	operatorCacheMu.Unlock()
+
+	return operators
+}
+
+// fetchOperatorsFromCluster queries a cluster for CSVs using kubectl -o json.
+// This is slow for large clusters (90-180s for 1000+ CSVs) but the result is
+// cached by getOperatorsForCluster.
+func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster string) []Operator {
+	args := []string{"get", "csv", "-A", "-o", "json"}
 	if cluster != "" {
 		args = append([]string{"--context", cluster}, args...)
 	}
@@ -529,7 +575,6 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		// Only log if not a context timeout (expected for very large clusters)
 		if ctx.Err() == nil {
 			log.Printf("kubectl get csv failed for cluster %s: %v, stderr: %s", cluster, err, stderr.String())
 		} else {
@@ -538,32 +583,40 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 		return []Operator{}
 	}
 
-	output := strings.TrimSpace(stdout.String())
-	if output == "" {
+	// Parse only the fields we need from the JSON output
+	var result struct {
+		Items []struct {
+			Metadata struct {
+				Name      string `json:"name"`
+				Namespace string `json:"namespace"`
+			} `json:"metadata"`
+			Spec struct {
+				DisplayName string `json:"displayName"`
+				Version     string `json:"version"`
+			} `json:"spec"`
+			Status struct {
+				Phase string `json:"phase"`
+			} `json:"status"`
+		} `json:"items"`
+	}
+
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		log.Printf("failed to parse operators JSON for cluster %s: %v", cluster, err)
 		return []Operator{}
 	}
 
-	lines := strings.Split(output, "\n")
-	operators := make([]Operator, 0, len(lines))
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		fields := strings.Split(line, "\t")
-		if len(fields) < 5 {
-			continue
-		}
-		displayName := fields[2]
+	operators := make([]Operator, 0, len(result.Items))
+	for _, item := range result.Items {
+		displayName := item.Spec.DisplayName
 		if displayName == "" {
-			displayName = fields[0]
+			displayName = item.Metadata.Name
 		}
 		operators = append(operators, Operator{
-			Name:        fields[0],
-			Namespace:   fields[1],
+			Name:        item.Metadata.Name,
+			Namespace:   item.Metadata.Namespace,
 			DisplayName: displayName,
-			Version:     fields[3],
-			Phase:       fields[4],
+			Version:     item.Spec.Version,
+			Phase:       item.Status.Phase,
 			Cluster:     cluster,
 		})
 	}
