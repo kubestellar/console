@@ -872,15 +872,25 @@ export function useCache<T>({
   const shouldFallbackToDemo = effectiveEnabled && demoWhenEmpty && demoData !== undefined
     && !state.isLoading && Array.isArray(state.data) && (state.data as unknown[]).length === 0
 
+  // Optimistic demo: for demoWhenEmpty hooks, show demoData immediately while
+  // the live fetch runs in the background.  This avoids skeleton flicker for
+  // "demo until X is installed" cards — they render demo content instantly and
+  // swap to real data only if the fetch returns non-empty results.
+  const showOptimisticDemo = effectiveEnabled && demoWhenEmpty && demoData !== undefined
+    && state.isLoading
+
   return {
-    data: !effectiveEnabled ? demoDisplayData : shouldFallbackToDemo ? demoData : state.data,
-    isLoading: effectiveEnabled ? (state.isLoading && !shouldFallbackToDemo) : false,
-    isRefreshing: state.isRefreshing,
+    data: !effectiveEnabled ? demoDisplayData
+      : shouldFallbackToDemo ? demoData
+      : showOptimisticDemo ? demoData
+      : state.data,
+    isLoading: effectiveEnabled ? (state.isLoading && !shouldFallbackToDemo && !showOptimisticDemo) : false,
+    isRefreshing: state.isRefreshing || showOptimisticDemo,
     error: state.error,
     isFailed: state.isFailed,
     consecutiveFailures: state.consecutiveFailures,
     lastRefresh: state.lastRefresh,
-    isDemoFallback: shouldFallbackToDemo || !effectiveEnabled,
+    isDemoFallback: shouldFallbackToDemo || !effectiveEnabled || showOptimisticDemo,
     refetch,
     clearAndRefetch,
   }

@@ -334,6 +334,16 @@ export const CARD_TITLES: Record<string, string> = {
   ml_jobs: 'ML Jobs',
   ml_notebooks: 'ML Notebooks',
 
+  // Benchmark cards
+  nightly_e2e_status: 'Nightly E2E Status',
+  benchmark_hero: 'Latest Benchmark',
+  pareto_frontier: 'Performance Explorer',
+  hardware_leaderboard: 'Hardware Leaderboard',
+  latency_breakdown: 'Latency Breakdown',
+  throughput_comparison: 'Throughput Comparison',
+  performance_timeline: 'Performance Timeline',
+  resource_utilization: 'Resource Utilization',
+
   // Games
   sudoku_game: 'Sudoku Game',
   match_game: 'Kube Match',

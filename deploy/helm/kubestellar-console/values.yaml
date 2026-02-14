@@ -69,6 +69,19 @@ github:
     clientId: github-client-id
     clientSecret: github-client-secret
 
+# GitHub token for server-side API access (nightly E2E status, etc.)
+githubToken:
+  token: ""
+  existingSecret: ""
+  existingSecretKey: github-token
+
+# Google Drive API key for benchmark data
+googleDrive:
+  apiKey: ""
+  existingSecret: ""
+  existingSecretKey: google-drive-api-key
+  folderId: "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"
+
 # Claude AI configuration (optional)
 claude:
   apiKey: ""
@@ -115,6 +128,14 @@ persistence:
 kubestellar:
   opsPath: /usr/local/bin/kubestellar-ops
   deployPath: /usr/local/bin/kubestellar-deploy
+
+# Sidebar dashboard filter (comma-separated dashboard IDs, empty = show all)
+# Available IDs: dashboard, clusters, deploy, ai-ml, ai-agents, ci-cd, alerts,
+#   arcade, compliance, compute, cost, data-compliance, deployments, events,
+#   gitops, gpu-reservations, helm, llm-d-benchmarks, logs, network, nodes,
+#   operators, pods, security, security-posture, services, storage, workloads
+# Example: "gpu-reservations,llm-d-benchmarks"
+enabledDashboards: ""
 
 nodeSelector: {}
 

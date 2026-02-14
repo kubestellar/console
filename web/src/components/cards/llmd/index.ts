@@ -16,6 +16,7 @@ export { LLMdConfigurator } from './LLMdConfigurator'
 export { NightlyE2EStatus } from './NightlyE2EStatus'
 
 // Benchmark dashboard cards
+export { NightlyE2EStatus } from './NightlyE2EStatus'
 export { BenchmarkHero } from './BenchmarkHero'
 export { ParetoFrontier } from './ParetoFrontier'
 export { HardwareLeaderboard } from './HardwareLeaderboard'

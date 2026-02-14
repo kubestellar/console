@@ -150,6 +150,7 @@ const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConf
 // Nightly E2E status card (shares the llmd barrel bundle)
 const NightlyE2EStatus = lazy(() => _llmdBundle.then(m => ({ default: m.NightlyE2EStatus })))
 // LLM-d benchmark dashboard cards (share the same barrel bundle)
+const NightlyE2EStatus = lazy(() => _llmdBundle.then(m => ({ default: m.NightlyE2EStatus })))
 const BenchmarkHero = lazy(() => _llmdBundle.then(m => ({ default: m.BenchmarkHero })))
 const ParetoFrontier = lazy(() => _llmdBundle.then(m => ({ default: m.ParetoFrontier })))
 const HardwareLeaderboard = lazy(() => _llmdBundle.then(m => ({ default: m.HardwareLeaderboard })))
@@ -388,6 +389,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   nightly_e2e_status: NightlyE2EStatus,
 
   // LLM-d benchmark dashboard cards
+  nightly_e2e_status: NightlyE2EStatus,
   benchmark_hero: BenchmarkHero,
   pareto_frontier: ParetoFrontier,
   hardware_leaderboard: HardwareLeaderboard,
@@ -476,9 +478,7 @@ export const DEMO_DATA_CARDS = new Set([
   // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
   // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
   'llmd_configurator',
-  // LLM-d benchmark dashboard cards — most now use live data via useCachedBenchmarkReports()
-  // Only performance_timeline stays demo-only (needs historical time-series data)
-  'performance_timeline',
+  // LLM-d benchmark dashboard cards — all now use live data via useCachedBenchmarkReports()
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
   // Kagenti cards - demo until kagenti-operator is installed on clusters
@@ -644,6 +644,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   // Nightly E2E status card — shares the llmd barrel bundle
   nightly_e2e_status: () => import('./llmd'),
   // LLM-d benchmark dashboard cards — all share the llmd barrel bundle
+  nightly_e2e_status: () => import('./llmd'),
   benchmark_hero: () => import('./llmd'),
   pareto_frontier: () => import('./llmd'),
   hardware_leaderboard: () => import('./llmd'),
@@ -762,6 +763,8 @@ export const LIVE_DATA_CARDS = new Set([
   'kagenti_agent_discovery',
   'kagenti_security',
   'kagenti_topology',
+  // Nightly E2E status card — fetches GitHub Actions workflow runs
+  'nightly_e2e_status',
 ])
 
 /**
@@ -832,6 +835,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   nightly_e2e_status: 12,
 
   // LLM-d benchmark dashboard cards (all full-width)
+  nightly_e2e_status: 12,
   benchmark_hero: 12,
   pareto_frontier: 12,
   hardware_leaderboard: 12,

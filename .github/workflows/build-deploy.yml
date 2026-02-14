@@ -117,6 +117,8 @@ jobs:
             --from-literal=github-client-id=${{ secrets.KSC_OAUTH_CLIENT_ID }} \
             --from-literal=github-client-secret=${{ secrets.KSC_OAUTH_CLIENT_SECRET }} \
             --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
+            --from-literal=github-token=${{ secrets.KSC_GITHUB_TOKEN }} \
+            --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy with Helm
@@ -127,6 +129,8 @@ jobs:
             --set image.tag=${{ github.sha }} \
             --set github.existingSecret=kc-secrets \
             --set jwt.existingSecret=kc-secrets \
+            --set githubToken.existingSecret=kc-secrets \
+            --set googleDrive.existingSecret=kc-secrets \
             --set route.enabled=true \
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --wait \
@@ -167,6 +171,8 @@ jobs:
             --from-literal=github-client-id=${{ secrets.KSC_OAUTH_CLIENT_ID }} \
             --from-literal=github-client-secret=${{ secrets.KSC_OAUTH_CLIENT_SECRET }} \
             --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
+            --from-literal=github-token=${{ secrets.KSC_GITHUB_TOKEN }} \
+            --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy with Helm
@@ -177,6 +183,8 @@ jobs:
             --set image.tag=${{ github.sha }} \
             --set github.existingSecret=kc-kubestellar-console \
             --set jwt.existingSecret=kc-kubestellar-console \
+            --set githubToken.existingSecret=kc-kubestellar-console \
+            --set googleDrive.existingSecret=kc-kubestellar-console \
             --set route.enabled=true \
             --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
             --wait \

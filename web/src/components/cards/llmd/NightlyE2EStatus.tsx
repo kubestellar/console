@@ -1,77 +1,26 @@
-import { useMemo } from 'react'
+/**
+ * NightlyE2EStatus — Report card for llm-d nightly E2E workflow status
+ *
+ * Shows per-guide pass/fail history with colored run dots, trend indicators,
+ * and aggregate statistics. Grouped by platform (OCP, GKE).
+ * Fetches from GitHub Actions API; falls back to demo data without a token.
+ */
+import { useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import {
-  Moon, CheckCircle, XCircle, Loader2, Clock,
-  ExternalLink, AlertTriangle, Key,
+  TestTube2, ExternalLink, TrendingUp, TrendingDown, Minus,
+  CheckCircle, XCircle, Loader2, AlertTriangle,
 } from 'lucide-react'
-import { Skeleton } from '../../ui/Skeleton'
-import { useCardLoadingState } from '../CardDataContext'
-import { useCache } from '../../../lib/cache'
-import { cn } from '../../../lib/cn'
+import { useReportCardDataState } from '../CardDataContext'
+import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
+import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface NightlyWorkflowConfig {
-  repo: string
-  workflowFile: string
-  label: string
-  platform: 'OpenShift' | 'GKE' | 'Both'
-  guide: string
-}
-
-interface WorkflowRunData {
-  id: number
-  conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required' | null
-  status: 'completed' | 'in_progress' | 'queued' | 'waiting'
-  createdAt: string
-  updatedAt: string
-  url: string
-  runNumber: number
-}
-
-interface NightlyWorkflowStatus {
-  config: NightlyWorkflowConfig
-  latestRun: WorkflowRunData | null
-  runs: WorkflowRunData[]
-  trend7d: ('pass' | 'fail' | 'running' | 'none')[]
-  passRate7d: number
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const NIGHTLY_WORKFLOWS: NightlyWorkflowConfig[] = [
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling.yaml', label: 'Inference Scheduling', platform: 'OpenShift', guide: 'inference-scheduling' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', label: 'Inference Scheduling', platform: 'GKE', guide: 'inference-scheduling' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation.yaml', label: 'PD Disaggregation', platform: 'OpenShift', guide: 'pd-disaggregation' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', label: 'PD Disaggregation', platform: 'GKE', guide: 'pd-disaggregation' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache.yaml', label: 'Precise Prefix Cache', platform: 'OpenShift', guide: 'precise-prefix-cache' },
-  { repo: 'llm-d/llm-d', workflowFile: 'e2e-wide-ep-accelerator-test.yaml', label: 'Wide EP', platform: 'Both', guide: 'wide-ep' },
-  { repo: 'llm-d/llm-d-workload-variant-autoscaler', workflowFile: 'nightly-e2e-openshift.yaml', label: 'WVA', platform: 'OpenShift', guide: 'workload-autoscaling' },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-ocp.yaml', label: 'Benchmark', platform: 'OpenShift', guide: 'benchmark' },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-gke.yaml', label: 'Benchmark', platform: 'GKE', guide: 'benchmark' },
-]
+const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
 
 const PLATFORM_COLORS: Record<string, string> = {
-  OpenShift: 'bg-red-500/20 text-red-400',
-  GKE: 'bg-blue-500/20 text-blue-400',
-  Both: 'bg-purple-500/20 text-purple-400',
-}
-
-const REPO_SHORT: Record<string, string> = {
-  'llm-d/llm-d': 'llm-d',
-  'llm-d/llm-d-workload-variant-autoscaler': 'wva',
-  'llm-d/llm-d-benchmark': 'benchmark',
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const decodeToken = (encoded: string): string => {
-  try { return atob(encoded) } catch { return encoded }
+  OCP: '#ef4444',  // red
+  GKE: '#3b82f6',  // blue
+  CKS: '#a855f7',  // purple
 }
 
 function formatTimeAgo(iso: string): string {
@@ -85,365 +34,498 @@ function formatTimeAgo(iso: string): string {
   return `${days}d ago`
 }
 
-function compute7DayTrend(runs: WorkflowRunData[]): ('pass' | 'fail' | 'running' | 'none')[] {
-  const now = new Date()
-  const trend: ('pass' | 'fail' | 'running' | 'none')[] = []
+function RunDot({ run }: { run: NightlyRun }) {
+  const isRunning = run.status === 'in_progress'
+  const color = isRunning
+    ? 'bg-blue-400'
+    : run.conclusion === 'success'
+      ? 'bg-emerald-400'
+      : run.conclusion === 'failure'
+        ? 'bg-red-400'
+        : run.conclusion === 'cancelled'
+          ? 'bg-slate-500'
+          : 'bg-yellow-400'
 
-  for (let i = 6; i >= 0; i--) {
-    const dayStart = new Date(now)
-    dayStart.setDate(dayStart.getDate() - i)
-    dayStart.setHours(0, 0, 0, 0)
-    const dayEnd = new Date(dayStart)
-    dayEnd.setDate(dayEnd.getDate() + 1)
-
-    const dayRuns = runs.filter(r => {
-      const t = new Date(r.createdAt)
-      return t >= dayStart && t < dayEnd
-    })
-
-    if (dayRuns.length === 0) {
-      trend.push('none')
-    } else {
-      const latest = dayRuns[0] // Runs are sorted newest-first from the API
-      if (latest.status !== 'completed') {
-        trend.push('running')
-      } else if (latest.conclusion === 'success') {
-        trend.push('pass')
-      } else {
-        trend.push('fail')
-      }
-    }
-  }
-  return trend
-}
-
-function compute7DayPassRate(runs: WorkflowRunData[]): number {
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-  const recentRuns = runs.filter(r =>
-    r.status === 'completed' && new Date(r.createdAt) >= sevenDaysAgo,
-  )
-  if (recentRuns.length === 0) return -1 // No data
-  const passed = recentRuns.filter(r => r.conclusion === 'success').length
-  return Math.round((passed / recentRuns.length) * 100)
-}
-
-// ---------------------------------------------------------------------------
-// Demo data
-// ---------------------------------------------------------------------------
-
-function generateDemoData(): NightlyWorkflowStatus[] {
-  const conclusions: ('success' | 'failure')[] = ['success', 'success', 'failure', 'success', 'success', 'success', 'success', 'success', 'failure']
-  return NIGHTLY_WORKFLOWS.map((config, idx) => {
-    const conclusion = conclusions[idx % conclusions.length]
-    const runs: WorkflowRunData[] = Array.from({ length: 14 }, (_, i) => ({
-      id: idx * 100 + i,
-      conclusion: i === 0 ? conclusion : (Math.random() > 0.2 ? 'success' : 'failure'),
-      status: 'completed' as const,
-      createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-      updatedAt: new Date(Date.now() - i * 86400000 + 3600000).toISOString(),
-      url: '#',
-      runNumber: 100 - i,
-    }))
-    return {
-      config,
-      latestRun: runs[0],
-      runs,
-      trend7d: compute7DayTrend(runs),
-      passRate7d: compute7DayPassRate(runs),
-    }
-  })
-}
-
-const DEMO_DATA = generateDemoData()
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-interface NightlyE2EStatusProps {
-  config?: Record<string, unknown>
-}
-
-export function NightlyE2EStatus({ config: _config }: NightlyE2EStatusProps) {
-  const { data, isLoading, isFailed } = useCache<{ statuses: NightlyWorkflowStatus[], isDemo: boolean }>({
-    key: 'nightly-e2e-status',
-    category: 'default',
-    initialData: { statuses: DEMO_DATA, isDemo: true },
-    demoData: { statuses: DEMO_DATA, isDemo: true },
-    persist: true,
-    fetcher: async () => {
-      const storedToken = localStorage.getItem('github_token')
-      const token = storedToken ? decodeToken(storedToken) : null
-      if (!token) return { statuses: DEMO_DATA, isDemo: true }
-
-      const statuses: NightlyWorkflowStatus[] = []
-      for (const wf of NIGHTLY_WORKFLOWS) {
-        try {
-          const res = await fetch(
-            `https://api.github.com/repos/${wf.repo}/actions/workflows/${wf.workflowFile}/runs?per_page=30`,
-            { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' } },
-          )
-          if (res.status === 401 || res.status === 403) {
-            return { statuses: DEMO_DATA, isDemo: true }
-          }
-          if (!res.ok) {
-            statuses.push({ config: wf, latestRun: null, runs: [], trend7d: Array(7).fill('none'), passRate7d: -1 })
-            continue
-          }
-          const json = await res.json()
-          const runs: WorkflowRunData[] = (json.workflow_runs || []).map((r: Record<string, unknown>) => ({
-            id: r.id as number,
-            conclusion: r.conclusion as WorkflowRunData['conclusion'],
-            status: r.status as WorkflowRunData['status'],
-            createdAt: r.created_at as string,
-            updatedAt: r.updated_at as string,
-            url: (r.html_url || '#') as string,
-            runNumber: r.run_number as number,
-          }))
-          statuses.push({
-            config: wf,
-            latestRun: runs[0] || null,
-            runs,
-            trend7d: compute7DayTrend(runs),
-            passRate7d: compute7DayPassRate(runs),
-          })
-        } catch {
-          statuses.push({ config: wf, latestRun: null, runs: [], trend7d: Array(7).fill('none'), passRate7d: -1 })
-        }
-      }
-      return { statuses, isDemo: false }
-    },
-  })
-
-  const statuses = data.statuses
-  const isDemo = data.isDemo
-
-  useCardLoadingState({ isLoading, hasAnyData: statuses.length > 0 })
-
-  // Aggregate stats
-  const stats = useMemo(() => {
-    const withRuns = statuses.filter(s => s.latestRun)
-    const total = withRuns.length
-    const passing = withRuns.filter(s => s.latestRun?.status === 'completed' && s.latestRun.conclusion === 'success').length
-    const failing = withRuns.filter(s => s.latestRun?.status === 'completed' && s.latestRun.conclusion !== 'success').length
-    const running = withRuns.filter(s => s.latestRun?.status === 'in_progress' || s.latestRun?.status === 'queued').length
-    const noData = statuses.length - withRuns.length
-    const passRate = total > 0 ? Math.round((passing / Math.max(passing + failing, 1)) * 100) : 0
-    return { total: statuses.length, passing, failing, running, noData, passRate }
-  }, [statuses])
-
-  // Platform breakdown
-  const platformStats = useMemo(() => {
-    const ocp = statuses.filter(s => s.config.platform === 'OpenShift' || s.config.platform === 'Both')
-    const gke = statuses.filter(s => s.config.platform === 'GKE' || s.config.platform === 'Both')
-    const rate = (arr: NightlyWorkflowStatus[]) => {
-      const completed = arr.filter(s => s.latestRun?.status === 'completed')
-      if (completed.length === 0) return -1
-      const passed = completed.filter(s => s.latestRun?.conclusion === 'success').length
-      return Math.round((passed / completed.length) * 100)
-    }
-    return { ocpRate: rate(ocp), gkeRate: rate(gke) }
-  }, [statuses])
-
-  const overallHealth = stats.failing > 0 ? 'degraded' : stats.total === 0 ? 'unknown' : 'healthy'
-
-  if (isLoading && statuses.length === 0) {
-    return (
-      <div className="space-y-3">
-        <Skeleton variant="text" width={200} height={20} />
-        <div className="grid grid-cols-5 gap-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} variant="rounded" height={48} />)}
-        </div>
-        <Skeleton variant="rounded" height={200} />
-      </div>
-    )
-  }
+  const title = isRunning
+    ? `Running (started ${formatTimeAgo(run.createdAt)})`
+    : `${run.conclusion} — ${formatTimeAgo(run.createdAt)}`
 
   return (
-    <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
-      <div className="rounded-lg bg-card/50 border border-border p-2.5 mb-3 flex items-center gap-2">
-        <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
-        <span className="text-sm font-medium text-foreground">Nightly E2E Report</span>
-        <span className="text-xs text-muted-foreground">{statuses.length} workflows</span>
-        <div className="ml-auto flex items-center gap-2">
-          {/* Platform badges */}
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400">
-            OCP {platformStats.ocpRate >= 0 ? `${platformStats.ocpRate}%` : '—'}
-          </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">
-            GKE {platformStats.gkeRate >= 0 ? `${platformStats.gkeRate}%` : '—'}
-          </span>
-          <span className={cn(
-            'text-xs px-1.5 py-0.5 rounded',
-            overallHealth === 'healthy' ? 'bg-green-500/20 text-green-400' :
-            overallHealth === 'degraded' ? 'bg-yellow-500/20 text-yellow-400' :
-            'bg-gray-500/20 text-gray-400',
-          )}>
-            {overallHealth}
-          </span>
-        </div>
-      </div>
+    <a
+      href={run.htmlUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={title}
+      className="group relative"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className={`w-3 h-3 rounded-full ${color} ${isRunning ? 'animate-pulse' : ''} group-hover:ring-2 group-hover:ring-white/30 transition-all`} />
+    </a>
+  )
+}
 
-      {/* Demo indicator */}
-      {isDemo && !isFailed && (
-        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-2 flex items-center gap-2 mb-2">
-          <Key className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-          <p className="text-xs text-yellow-400/70 flex-1">
-            No GitHub token configured — showing sample data.
-          </p>
-          <a
-            href="/settings#github-token"
-            className="text-xs px-2 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors whitespace-nowrap"
-          >
-            Add Token
-          </a>
-        </div>
-      )}
+function TrendIndicator({ trend, passRate }: { trend: 'up' | 'down' | 'steady'; passRate: number }) {
+  const Icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
+  const color = passRate === 100
+    ? 'text-emerald-400'
+    : passRate >= 70
+      ? 'text-yellow-400'
+      : 'text-red-400'
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-5 gap-2 mb-3">
-        <div className="rounded-md bg-card/50 border border-border p-2 text-center">
-          <p className={cn('text-lg font-semibold', stats.passRate >= 80 ? 'text-green-400' : stats.passRate >= 50 ? 'text-yellow-400' : 'text-red-400')}>
-            {stats.passRate}%
-          </p>
-          <p className="text-[10px] text-muted-foreground">Pass Rate</p>
-        </div>
-        <div className="rounded-md bg-card/50 border border-border p-2 text-center">
-          <p className="text-lg font-semibold text-green-400">{stats.passing}</p>
-          <p className="text-[10px] text-muted-foreground">Passing</p>
-        </div>
-        <div className="rounded-md bg-card/50 border border-border p-2 text-center">
-          <p className="text-lg font-semibold text-red-400">{stats.failing}</p>
-          <p className="text-[10px] text-muted-foreground">Failing</p>
-        </div>
-        <div className="rounded-md bg-card/50 border border-border p-2 text-center">
-          <p className="text-lg font-semibold text-blue-400">{stats.running}</p>
-          <p className="text-[10px] text-muted-foreground">Running</p>
-        </div>
-        <div className="rounded-md bg-card/50 border border-border p-2 text-center">
-          <p className="text-lg font-semibold text-muted-foreground">{stats.total}</p>
-          <p className="text-[10px] text-muted-foreground">Total</p>
-        </div>
-      </div>
-
-      {/* Workflow table */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Table header */}
-        <div className="grid grid-cols-[1fr_70px_60px_32px_112px_56px_40px_20px] gap-1 px-1.5 py-1 text-[10px] text-muted-foreground border-b border-border/50 mb-0.5">
-          <span>Workflow</span>
-          <span>Repo</span>
-          <span>Platform</span>
-          <span>St.</span>
-          <span className="text-center">7-Day Trend</span>
-          <span className="text-center">7d %</span>
-          <span>When</span>
-          <span />
-        </div>
-
-        {statuses.map((s, idx) => {
-          const run = s.latestRun
-          const isRunning = run?.status === 'in_progress' || run?.status === 'queued'
-          const isPassing = run?.status === 'completed' && run.conclusion === 'success'
-          const isFailing = run?.status === 'completed' && run.conclusion !== 'success' && run.conclusion !== null
-
-          const StatusIcon = isPassing ? CheckCircle :
-            isFailing ? XCircle :
-            isRunning ? Loader2 :
-            Clock
-
-          return (
-            <div
-              key={idx}
-              className="grid grid-cols-[1fr_70px_60px_32px_112px_56px_40px_20px] gap-1 items-center px-1.5 py-1 rounded hover:bg-card/30 transition-colors"
-            >
-              {/* Workflow name */}
-              <span className="text-xs text-foreground truncate">{s.config.label}</span>
-
-              {/* Repo badge */}
-              <span className="text-[10px] px-1 py-0.5 rounded bg-card/80 text-muted-foreground truncate text-center">
-                {REPO_SHORT[s.config.repo] || s.config.repo.split('/')[1]}
-              </span>
-
-              {/* Platform badge */}
-              <span className={cn('text-[10px] px-1 py-0.5 rounded text-center', PLATFORM_COLORS[s.config.platform])}>
-                {s.config.platform === 'OpenShift' ? 'OCP' : s.config.platform}
-              </span>
-
-              {/* Status icon */}
-              <StatusIcon className={cn(
-                'w-3.5 h-3.5',
-                isPassing ? 'text-green-400' :
-                isFailing ? 'text-red-400' :
-                isRunning ? 'text-blue-400 animate-spin' :
-                'text-muted-foreground',
-              )} />
-
-              {/* 7-day trend bar */}
-              <div className="flex gap-0.5 items-center justify-center">
-                {s.trend7d.map((day, di) => (
-                  <div
-                    key={di}
-                    className={cn(
-                      'w-3 h-4 rounded-sm',
-                      day === 'pass' ? 'bg-green-500/60' :
-                      day === 'fail' ? 'bg-red-500/60' :
-                      day === 'running' ? 'bg-blue-500/60' :
-                      'bg-gray-500/20',
-                    )}
-                    title={`${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][di] || `Day ${di + 1}`}: ${day}`}
-                  />
-                ))}
-              </div>
-
-              {/* 7-day pass rate */}
-              <span className={cn(
-                'text-[10px] text-center font-medium',
-                s.passRate7d >= 80 ? 'text-green-400' :
-                s.passRate7d >= 50 ? 'text-yellow-400' :
-                s.passRate7d >= 0 ? 'text-red-400' :
-                'text-muted-foreground',
-              )}>
-                {s.passRate7d >= 0 ? `${s.passRate7d}%` : '—'}
-              </span>
-
-              {/* Last run time */}
-              <span className="text-[10px] text-muted-foreground truncate">
-                {run ? formatTimeAgo(run.updatedAt) : '—'}
-              </span>
-
-              {/* Link */}
-              {run && run.url !== '#' ? (
-                <a
-                  href={run.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-0.5 rounded hover:bg-secondary transition-colors"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                </a>
-              ) : (
-                <span />
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Footer with failure callout */}
-      {stats.failing > 0 && (
-        <div className="mt-2 pt-2 border-t border-border/50">
-          <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-2 flex items-start gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-400/70">
-              {stats.failing} workflow{stats.failing > 1 ? 's' : ''} failing — check logs for details.
-            </p>
-          </div>
-        </div>
-      )}
+  return (
+    <div className={`flex items-center gap-1 ${color}`}>
+      <Icon size={12} />
+      <span className="text-xs font-mono">{passRate}%</span>
     </div>
   )
 }
+
+function GuideRow({ guide, delay, isSelected, onMouseEnter }: {
+  guide: NightlyGuideStatus
+  delay: number
+  isSelected: boolean
+  onMouseEnter: () => void
+}) {
+  const workflowUrl = `https://github.com/${guide.repo}/actions/workflows/${guide.workflowFile}`
+  const StatusIcon = guide.latestConclusion === 'success'
+    ? CheckCircle
+    : guide.latestConclusion === 'failure'
+      ? XCircle
+      : guide.latestConclusion === 'in_progress'
+        ? Loader2
+        : AlertTriangle
+
+  const iconColor = guide.latestConclusion === 'success'
+    ? 'text-emerald-400'
+    : guide.latestConclusion === 'failure'
+      ? 'text-red-400'
+      : guide.latestConclusion === 'in_progress'
+        ? 'text-blue-400 animate-spin'
+        : 'text-slate-400'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, delay }}
+      className={`flex items-center gap-3 py-1.5 px-2 rounded-lg transition-colors group cursor-pointer ${
+        isSelected ? 'bg-slate-700/50 ring-1 ring-slate-600/50' : 'hover:bg-slate-800/40'
+      }`}
+      onMouseEnter={onMouseEnter}
+    >
+      <StatusIcon size={14} className={`shrink-0 ${iconColor}`} />
+      <span className="text-xs text-slate-200 w-48 truncate shrink-0" title={guide.guide}>
+        <span className="font-mono font-semibold text-slate-400 mr-1.5">{guide.acronym}</span>
+        {guide.guide}
+      </span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {guide.runs.map((run) => (
+          <RunDot key={run.id} run={run} />
+        ))}
+        {/* Pad with empty dots if fewer than 7 runs */}
+        {Array.from({ length: Math.max(0, 7 - guide.runs.length) }).map((_, i) => (
+          <div key={`empty-${i}`} className="w-3 h-3 rounded-full bg-slate-700/50" />
+        ))}
+      </div>
+      <TrendIndicator trend={guide.trend} passRate={guide.passRate} />
+      <a
+        href={workflowUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-slate-700"
+        onClick={e => e.stopPropagation()}
+      >
+        <ExternalLink size={12} className="text-slate-400" />
+      </a>
+    </motion.div>
+  )
+}
+
+function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
+  // Build data points: 1 = success, 0 = failure/cancelled, 0.5 = in_progress
+  // Reversed so oldest is on left, newest on right
+  const points = [...runs].reverse().map(r => {
+    if (r.status === 'in_progress') return 0.5
+    return r.conclusion === 'success' ? 1 : 0
+  })
+
+  if (points.length < 2) return null
+
+  const width = 200
+  const height = 48
+  const padX = 12
+  const padY = 8
+  const chartW = width - padX * 2
+  const chartH = height - padY * 2
+
+  // Build SVG path + area
+  const xStep = chartW / (points.length - 1)
+  const pathPoints = points.map((val, i) => ({
+    x: padX + i * xStep,
+    y: padY + (1 - val) * chartH,
+  }))
+
+  // Smooth curve using cardinal spline approximation
+  let linePath = `M ${pathPoints[0].x} ${pathPoints[0].y}`
+  for (let i = 1; i < pathPoints.length; i++) {
+    const prev = pathPoints[i - 1]
+    const curr = pathPoints[i]
+    const cpx = (prev.x + curr.x) / 2
+    linePath += ` C ${cpx} ${prev.y}, ${cpx} ${curr.y}, ${curr.x} ${curr.y}`
+  }
+
+  // Area fill path (same curve, closed at bottom)
+  const areaPath = `${linePath} L ${pathPoints[pathPoints.length - 1].x} ${height - padY + 4} L ${pathPoints[0].x} ${height - padY + 4} Z`
+
+  // Gradient color based on latest point
+  const latest = points[points.length - 1]
+  const gradientId = `sparkGrad-${latest}`
+  const strokeColor = latest >= 1 ? '#34d399' : latest > 0 ? '#fbbf24' : '#f87171'
+  const fillOpacity = 0.15
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-2">
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Pass/Fail Trend</div>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity={fillOpacity} />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        {/* Grid lines */}
+        <line x1={padX} y1={padY} x2={width - padX} y2={padY} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
+        <line x1={padX} y1={padY + chartH / 2} x2={width - padX} y2={padY + chartH / 2} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
+        <line x1={padX} y1={padY + chartH} x2={width - padX} y2={padY + chartH} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
+        {/* Y-axis labels */}
+        <text x={padX - 2} y={padY + 3} textAnchor="end" fontSize="7" fill="#64748b">Pass</text>
+        <text x={padX - 2} y={padY + chartH + 3} textAnchor="end" fontSize="7" fill="#64748b">Fail</text>
+        {/* Area fill */}
+        <path d={areaPath} fill={`url(#${gradientId})`} />
+        {/* Line */}
+        <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Data points */}
+        {pathPoints.map((pt, i) => {
+          const val = points[i]
+          const dotColor = val >= 1 ? '#34d399' : val > 0 ? '#fbbf24' : '#f87171'
+          return (
+            <circle
+              key={i}
+              cx={pt.x}
+              cy={pt.y}
+              r={i === pathPoints.length - 1 ? 3.5 : 2.5}
+              fill={dotColor}
+              stroke="#0f172a"
+              strokeWidth="1.5"
+            />
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
+  const completedRuns = guide.runs.filter(r => r.status === 'completed')
+  const passed = completedRuns.filter(r => r.conclusion === 'success').length
+  const failed = completedRuns.filter(r => r.conclusion === 'failure').length
+  const cancelled = completedRuns.filter(r => r.conclusion === 'cancelled').length
+  const running = guide.runs.filter(r => r.status === 'in_progress').length
+
+  // Consecutive streak
+  let streak = 0
+  let streakType: 'success' | 'failure' | null = null
+  for (const run of guide.runs) {
+    if (run.status !== 'completed') continue
+    if (!streakType) streakType = run.conclusion === 'success' ? 'success' : 'failure'
+    if ((streakType === 'success' && run.conclusion === 'success') ||
+        (streakType === 'failure' && run.conclusion !== 'success')) {
+      streak++
+    } else break
+  }
+
+  // Last success & failure timestamps
+  const lastSuccess = guide.runs.find(r => r.conclusion === 'success')
+  const lastFailure = guide.runs.find(r => r.conclusion === 'failure')
+
+  const workflowUrl = `https://github.com/${guide.repo}/actions/workflows/${guide.workflowFile}`
+
+  return (
+    <motion.div
+      key={`${guide.guide}-${guide.platform}`}
+      initial={{ opacity: 0, x: 8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2 }}
+      className="h-full flex flex-col"
+    >
+      {/* Header */}
+      <div className="mb-2">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-mono font-bold text-sm" style={{ color: PLATFORM_COLORS[guide.platform] }}>
+            {guide.acronym}
+          </span>
+          <span className="text-sm font-semibold text-slate-200 truncate">{guide.guide}</span>
+        </div>
+        <div className="flex items-center gap-2 text-[10px] text-slate-500">
+          <span style={{ color: PLATFORM_COLORS[guide.platform] }}>{guide.platform}</span>
+          <span>&middot;</span>
+          <a href={workflowUrl} target="_blank" rel="noopener noreferrer"
+            className="hover:text-slate-300 transition-colors flex items-center gap-0.5">
+            {guide.repo.split('/')[1]} <ExternalLink size={9} />
+          </a>
+        </div>
+      </div>
+
+      {/* Trend sparkline */}
+      <div className="mb-2">
+        <TrendSparkline runs={guide.runs} />
+      </div>
+
+      {/* Pass rate + stats in a row */}
+      <div className="grid grid-cols-5 gap-1.5 mb-2">
+        <div className="col-span-1 bg-slate-800/60 border border-slate-700/50 rounded-lg p-2 text-center">
+          <div className={`text-lg font-bold ${
+            guide.passRate >= 90 ? 'text-emerald-400' : guide.passRate >= 70 ? 'text-yellow-400' : guide.passRate > 0 ? 'text-red-400' : 'text-slate-500'
+          }`}>
+            {guide.passRate}%
+          </div>
+          <div className="text-[8px] text-slate-500 uppercase tracking-wider">Rate</div>
+        </div>
+        <StatBox label="Pass" value={String(passed)} color="text-emerald-400" />
+        <StatBox label="Fail" value={String(failed)} color="text-red-400" />
+        <StatBox label="Skip" value={String(cancelled)} color="text-slate-400" />
+        <StatBox label="Run" value={String(running)} color="text-blue-400" />
+      </div>
+
+      {/* Streak */}
+      {streakType && streak > 0 && (
+        <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border mb-2 ${
+          streakType === 'success'
+            ? 'bg-emerald-950/30 border-emerald-800/40'
+            : 'bg-red-950/30 border-red-800/40'
+        }`}>
+          {streakType === 'success' ? (
+            <TrendingUp size={13} className="text-emerald-400" />
+          ) : (
+            <TrendingDown size={13} className="text-red-400" />
+          )}
+          <span className="text-xs text-slate-300">
+            {streak} consecutive {streakType === 'success' ? 'passes' : 'failures'}
+          </span>
+        </div>
+      )}
+
+      {/* Timestamps + details */}
+      <div className="space-y-1 flex-1">
+        {lastSuccess && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">Last pass</span>
+            <span className="text-emerald-400 font-mono">{formatTimeAgo(lastSuccess.updatedAt)}</span>
+          </div>
+        )}
+        {lastFailure && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">Last fail</span>
+            <span className="text-red-400 font-mono">{formatTimeAgo(lastFailure.updatedAt)}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-slate-500">Total runs</span>
+          <span className="text-slate-300 font-mono">{guide.runs.length}</span>
+        </div>
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-slate-500">Trend</span>
+          <TrendIndicator trend={guide.trend} passRate={guide.passRate} />
+        </div>
+      </div>
+
+      {/* Run history dots */}
+      <div className="mt-auto pt-2 border-t border-slate-700/30">
+        <div className="text-[10px] text-slate-500 mb-1.5">Run history (newest first)</div>
+        <div className="flex items-center gap-1 flex-wrap">
+          {guide.runs.map((run) => (
+            <RunDot key={run.id} run={run} />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function StatBox({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className="bg-slate-800/40 border border-slate-700/30 rounded-lg p-2 text-center">
+      <div className={`text-base font-bold ${color}`}>{value}</div>
+      <div className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</div>
+    </div>
+  )
+}
+
+export function NightlyE2EStatus() {
+  const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useNightlyE2EData()
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+
+  useReportCardDataState({
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    isLoading,
+    isRefreshing,
+    hasData: guides.length > 0,
+  })
+
+  const selectedGuide = useMemo(() => {
+    if (!selectedKey) return null
+    return guides.find(g => `${g.guide}-${g.platform}` === selectedKey) ?? null
+  }, [guides, selectedKey])
+
+  const { stats, grouped, lastRunTime } = useMemo(() => {
+    const total = guides.length
+    const allRuns = guides.flatMap(g => g.runs)
+    const completedRuns = allRuns.filter(r => r.status === 'completed')
+    const passedRuns = completedRuns.filter(r => r.conclusion === 'success')
+    const overallPassRate = completedRuns.length > 0
+      ? Math.round((passedRuns.length / completedRuns.length) * 100)
+      : 0
+
+    const failing = guides.filter(g => g.latestConclusion === 'failure').length
+
+    // Find most recent run across all guides
+    const mostRecent = allRuns
+      .map(r => new Date(r.updatedAt).getTime())
+      .sort((a, b) => b - a)[0]
+
+    // Group by platform
+    const byPlatform = new Map<string, NightlyGuideStatus[]>()
+    for (const p of PLATFORM_ORDER) {
+      const pg = guides.filter(g => g.platform === p)
+      if (pg.length > 0) byPlatform.set(p, pg)
+    }
+
+    return {
+      stats: { total, overallPassRate, failing },
+      grouped: byPlatform,
+      lastRunTime: mostRecent ? new Date(mostRecent).toISOString() : null,
+    }
+  }, [guides])
+
+  return (
+    <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-3">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05 }}
+          className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3 text-center"
+        >
+          <div className={`text-xl font-bold ${stats.overallPassRate >= 90 ? 'text-emerald-400' : stats.overallPassRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
+            {stats.overallPassRate}%
+          </div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Pass Rate</div>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3 text-center"
+        >
+          <div className="text-xl font-bold text-white">{stats.total}</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Guides</div>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+          className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3 text-center"
+        >
+          <div className={`text-xl font-bold ${stats.failing > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+            {stats.failing}
+          </div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Failing</div>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3 text-center"
+        >
+          <div className="text-xl font-bold text-slate-200">
+            {lastRunTime ? formatTimeAgo(lastRunTime) : '—'}
+          </div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Last Run</div>
+        </motion.div>
+      </div>
+
+      {/* Two-column layout: guide rows (left) + detail panel (right) */}
+      <div className="flex flex-1 min-h-0 gap-3">
+        {/* Guide rows grouped by platform */}
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
+          {[...grouped.entries()].map(([platform, platformGuides]) => (
+            <div key={platform}>
+              <div className="flex items-center gap-2 px-2 mb-1">
+                <TestTube2 size={12} style={{ color: PLATFORM_COLORS[platform] }} />
+                <span className="text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: PLATFORM_COLORS[platform] }}>
+                  {platform}
+                </span>
+                <div className="flex-1 h-px bg-slate-700/50" />
+                <span className="text-[10px] text-slate-500">
+                  {platformGuides.filter(g => g.latestConclusion === 'success').length}/{platformGuides.length} passing
+                </span>
+              </div>
+              {platformGuides.map((guide, gi) => {
+                const key = `${guide.guide}-${guide.platform}`
+                return (
+                  <GuideRow
+                    key={key}
+                    guide={guide}
+                    delay={0.25 + gi * 0.04}
+                    isSelected={selectedKey === key}
+                    onMouseEnter={() => setSelectedKey(key)}
+                  />
+                )
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Detail panel (right side) */}
+        <div className="w-72 shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
+          {selectedGuide ? (
+            <GuideDetailPanel guide={selectedGuide} />
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-center gap-2">
+              <TestTube2 size={20} className="text-slate-600" />
+              <p className="text-[11px] text-slate-500">Hover over a test to see detailed statistics</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500 pt-1 border-t border-slate-700/30">
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span>pass</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-red-400" />
+          <span>fail</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-blue-400" />
+          <span>running</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-slate-500" />
+          <span>cancelled</span>
+        </div>
+        <span className="text-slate-600">|</span>
+        <span>newest run on left</span>
+      </div>
+    </div>
+  )
+}
+
+export default NightlyE2EStatus
