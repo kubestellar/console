@@ -296,8 +296,10 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     return false
   }, [shouldUseCRs, endpoint, resourceType])
 
-  // TODO: Add WebSocket subscription for real-time updates
-  // For now, use polling or manual refresh
+  // WebSocket subscriptions for real-time updates can be added in the future.
+  // See src/hooks/mcp/shared.ts and src/hooks/mcp/clusters.ts for existing WebSocket
+  // infrastructure using sharedWebSocket. For now, data is fetched on mount and can be
+  // manually refreshed via the refresh() function returned by this hook.
 
   // Initial fetch
   useEffect(() => {
