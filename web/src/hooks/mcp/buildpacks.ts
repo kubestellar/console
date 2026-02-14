@@ -56,6 +56,7 @@ interface BuildpackCacheState {
   consecutiveFailures: number
   lastError: string | null
   lastRefresh: number | null
+  isDemoData: boolean 
 }
 
 function loadFromStorage(): { data: BuildpackImage[]; timestamp: number } {
@@ -67,7 +68,9 @@ function loadFromStorage(): { data: BuildpackImage[]; timestamp: number } {
         return { data: parsed.data, timestamp: parsed.timestamp || 0 }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.debug('[Buildpacks] Failed to load from storage:', err)
+  }
   return { data: [], timestamp: 0 }
 }
 
@@ -77,7 +80,9 @@ function saveToStorage(data: BuildpackImage[], timestamp: number) {
       BUILDPACK_CACHE_KEY,
       JSON.stringify({ data, timestamp })
     )
-  } catch {}
+  } catch (err){
+    console.debug('[Buildpacks] Failed to save to storage:', err)
+  }
 }
 
 const stored = typeof window !== 'undefined' ? loadFromStorage() : { data: [], timestamp: 0 }
@@ -101,6 +106,7 @@ export function useBuildpackImages(cluster?: string) {
   const [lastRefresh, setLastRefresh] = useState<number | null>(
     buildpackCache.timestamp || null
   )
+  const [isDemoData, setIsDemoData] = useState(false)
 
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
@@ -130,6 +136,7 @@ export function useBuildpackImages(cluster?: string) {
         lastError: buildpackCache.lastError,
         lastRefresh:
           buildpackCache.timestamp > 0 ? buildpackCache.timestamp : null,
+        isDemoData: false,
       }
       buildpackCache.listeners.forEach(l => l(state))
     },
@@ -169,6 +176,7 @@ export function useBuildpackImages(cluster?: string) {
             notifyListeners(false)
           }
           setImages(demoData)
+          setIsDemoData(true)
           setLastRefresh(Date.now())
           setIsLoading(false)
           setTimeout(() => {
@@ -207,6 +215,7 @@ export function useBuildpackImages(cluster?: string) {
         setError(null)
         setConsecutiveFailures(0)
         setLastRefresh(Date.now())
+        setIsDemoData(false)
       } catch (err) {
         const message =
           err instanceof Error
@@ -283,6 +292,7 @@ export function useBuildpackImages(cluster?: string) {
     consecutiveFailures,
     isFailed,
     lastRefresh,
+     isDemoData,
   }
 }
 
@@ -290,7 +300,9 @@ if (typeof window !== 'undefined') {
   registerCacheReset('buildpack-images', () => {
     try {
       localStorage.removeItem(BUILDPACK_CACHE_KEY)
-    } catch {}
+    } catch (err){
+      console.debug('[Buildpacks] Failed to remove cache from storage:', err)
+    }
 
     buildpackCache.data = []
     buildpackCache.timestamp = 0
@@ -305,6 +317,7 @@ if (typeof window !== 'undefined') {
         consecutiveFailures: 0,
         lastError: null,
         lastRefresh: null,
+        isDemoData: false,
       })
     )
   })

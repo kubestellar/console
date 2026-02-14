@@ -13,8 +13,6 @@ import {
   type ResourceContext,
 } from '../../modals'
 
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
-
 interface Props {
   data: Record<string, unknown>
 }
@@ -137,31 +135,41 @@ export function BuildpackDrillDown({ data }: Props) {
     issues,
   })
 
-  const runKubectl = async (args: string[]): Promise<string> => {
-    if (!agentConnected) return ''
+  const runKubectl = (args: string[]): Promise<string> => {
+    return new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      let output = ''
 
-    try {
-      const response = await fetch(`${LOCAL_AGENT_URL}/kubectl`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          context: cluster,
-          args,
-        }),
-      })
+      const timeout = setTimeout(() => {
+        ws.close()
+        resolve(output || '')
+      }, 15000) // 15 seconds timeout (same as runHelm)
 
-      if (!response.ok) {
-        throw new Error(`Agent returned ${response.status}`)
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          id: requestId,
+          type: 'kubectl',
+          payload: { context: cluster, args }
+        }))
       }
 
-      const data = await response.json()
-      return data?.output || ''
-    } catch (error) {
-      console.error('kubectl command failed:', error)
-      return ''
-    }
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data)
+        if (msg.id === requestId && msg.payload?.output) {
+          output = msg.payload.output
+        }
+        clearTimeout(timeout)
+        ws.close()
+        resolve(output)
+      }
+
+      ws.onerror = () => {
+        clearTimeout(timeout)
+        ws.close()
+        resolve(output || '')
+      }
+    })
   }
 
   const fetchImageInfo = async () => {
@@ -296,13 +304,23 @@ export function BuildpackDrillDown({ data }: Props) {
       await fetchBuilds()
     }
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentConnected])
+  // Explanation: fetchImageInfo and fetchBuilds are intentionally excluded because:
+  // 1. They are stable functions that don't change between renders
+  // 2. Including them would cause unnecessary re-fetches
+  // 3. hasLoadedRef ensures this effect only runs once when agent connects
 
   useEffect(() => {
     if (activeTab === 'yaml' && !imageYAML) fetchYAML()
     if (activeTab === 'logs' && !logs) fetchLogs()
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
-
+  // Explanation: imageYAML, logs, fetchYAML, and fetchLogs are intentionally excluded because:
+  // 1. This effect should only run when activeTab changes (tab switching behavior)
+  // 2. The conditional checks (imageYAML, logs) prevent redundant fetches
+  // 3. Including the fetch functions would cause infinite loops
+  // 4. Including the data (imageYAML, logs) would trigger unwanted re-fetches
   const handleDiagnose = () => {
     startMission({
       title: `Diagnose Buildpack: ${name}`,
