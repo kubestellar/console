@@ -23,7 +23,7 @@ interface YAMLManifest {
 }
 
 export function Kubectl() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { execute } = useKubectl()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [selectedContext, setSelectedContext] = useState<string>('')
@@ -677,7 +677,7 @@ data:
               type="text"
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
-              placeholder="Search history..."
+              placeholder={t('cards:kubectl.searchHistory')}
               className="w-full pl-7 pr-3 py-1.5 text-xs bg-secondary rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-500/50"
             />
           </div>

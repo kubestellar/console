@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
@@ -33,6 +34,7 @@ export function CardSearch({
   defaultExpanded = false,
   size = 'sm',
 }: CardSearchProps) {
+  const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || !!value)
   const [localValue, setLocalValue] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,7 +93,7 @@ export function CardSearch({
           'p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors',
           className
         )}
-        title="Search"
+        title={t('common.search')}
       >
         <Search className={iconSize} />
       </button>

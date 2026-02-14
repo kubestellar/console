@@ -498,7 +498,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
 }
 
 export function EPPRouting() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const stackContext = useOptionalStack()
   const [hoveredLink, setHoveredLink] = useState<string | null>(null)
   const [showParticles, setShowParticles] = useState(true)
@@ -858,7 +858,7 @@ export function EPPRouting() {
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
+                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common.demo')}</span>
               )}
             </div>
           )}

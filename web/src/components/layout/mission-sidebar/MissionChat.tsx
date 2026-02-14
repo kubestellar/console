@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Send,
   ChevronLeft,
@@ -26,6 +27,7 @@ import { TypingIndicator } from './TypingIndicator'
 import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
+  const { t } = useTranslation()
   const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, selectedAgent } = useMissions()
   const { findSimilarResolutions, recordUsage, allResolutions } = useResolutions()
   const [input, setInput] = useState('')
@@ -630,7 +632,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <div className="space-y-3">
               {/* Status */}
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">{t('common.status')}</span>
                 <span className={cn('font-medium', STATUS_CONFIG[mission.status].color)}>
                   {STATUS_CONFIG[mission.status].label}
                 </span>
@@ -677,12 +679,12 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <h4 className="text-sm font-semibold text-foreground mb-3">Mission Details</h4>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Type</span>
+                <span className="text-muted-foreground">{t('common.type')}</span>
                 <span className="text-foreground capitalize">{mission.type}</span>
               </div>
               {mission.cluster && (
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Cluster</span>
+                  <span className="text-muted-foreground">{t('common.cluster')}</span>
                   <span className="text-purple-400">{mission.cluster}</span>
                 </div>
               )}

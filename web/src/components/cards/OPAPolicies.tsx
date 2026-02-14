@@ -382,7 +382,7 @@ function PolicyDetailModal({
   violations: Violation[]
   onAddPolicy: () => void
 }) {
-  const { t } = useTranslation('cards')
+  const { t } = useTranslation(['cards', 'common'])
   // Get violations for this policy
   const policyViolations = violations.filter(v => v.policy === policy.name)
 
@@ -511,7 +511,7 @@ function ClusterOPAModal({
     context?: Record<string, unknown>
   }) => void
 }) {
-  const { t } = useTranslation('cards')
+  const { t } = useTranslation(['cards', 'common'])
   const [activeTab, setActiveTab] = useState<OPAModalTab>('policies')
   const [showCreateMenu, setShowCreateMenu] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
@@ -863,11 +863,11 @@ Please proceed with applying this policy.`,
               <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-border">
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
                   <p className="text-2xl font-bold text-red-400">{severityCounts.critical}</p>
-                  <p className="text-xs text-muted-foreground">Critical</p>
+                  <p className="text-xs text-muted-foreground">{t('common:common.critical')}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
                   <p className="text-2xl font-bold text-amber-400">{severityCounts.warning}</p>
-                  <p className="text-xs text-muted-foreground">Warning</p>
+                  <p className="text-xs text-muted-foreground">{t('common:common.warning')}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
                   <p className="text-2xl font-bold text-blue-400">{severityCounts.info}</p>
@@ -1030,7 +1030,7 @@ Please proceed with applying this policy.`,
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">
                 <div className="flex items-center gap-2 text-amber-400 mb-1">
                   <AlertTriangle className="w-4 h-4" />
-                  <span className="font-medium">Warning</span>
+                  <span className="font-medium">{t('common:common.warning')}</span>
                 </div>
                 <p className="text-muted-foreground">
                   This policy has {deleteConfirm.violations} active violations that will be cleared.
@@ -1072,7 +1072,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 }
 
 function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
-  const { t } = useTranslation('cards')
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
@@ -1469,7 +1469,7 @@ Let's start by discussing what kind of policy I need.`,
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search clusters..."
+        placeholder={t('common:common.searchClusters')}
         className="mb-3"
       />
 

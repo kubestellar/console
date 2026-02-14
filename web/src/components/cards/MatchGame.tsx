@@ -47,7 +47,7 @@ const DIFFICULTY_CONFIG = {
 }
 
 export function MatchGame(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
@@ -328,7 +328,7 @@ export function MatchGame(_props: CardComponentProps) {
             <button
               onClick={resetGame}
               className="p-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
-              title="Reset"
+              title={t('common.reset')}
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>

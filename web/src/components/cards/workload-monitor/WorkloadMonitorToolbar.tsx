@@ -105,7 +105,7 @@ export function WorkloadMonitorToolbar({
             <option value="all">All Status</option>
             <option value="healthy">{t('common.healthy')}</option>
             <option value="degraded">{t('common.degraded')}</option>
-            <option value="unhealthy">Unhealthy</option>
+            <option value="unhealthy">{t('common.unhealthy')}</option>
             <option value="missing">Missing</option>
           </select>
           <CardControls

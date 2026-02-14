@@ -147,11 +147,11 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <span className="text-sm text-foreground font-mono truncate">{serverInfo.host}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Port</span>
+              <span className="text-xs text-muted-foreground">{t('common.port')}</span>
               <span className="text-sm text-foreground font-mono">{serverInfo.port}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Protocol</span>
+              <span className="text-xs text-muted-foreground">{t('common.protocol')}</span>
               <span className="text-sm text-foreground font-mono uppercase">{serverInfo.protocol}</span>
             </div>
           </div>

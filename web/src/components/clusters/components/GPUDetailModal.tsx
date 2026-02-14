@@ -433,7 +433,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-2 px-3 text-muted-foreground font-medium">Node</th>
+                      <th className="text-left py-2 px-3 text-muted-foreground font-medium">{t('common.node')}</th>
                       <th className="text-left py-2 px-3 text-muted-foreground font-medium">{t('common.cluster')}</th>
                       <th className="text-left py-2 px-3 text-muted-foreground font-medium">GPU Type</th>
                       <th className="text-center py-2 px-3 text-muted-foreground font-medium">{t('common.memory')}</th>

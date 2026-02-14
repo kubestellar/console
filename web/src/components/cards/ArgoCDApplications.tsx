@@ -255,7 +255,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         <div className="text-center p-2 rounded-lg bg-red-500/10 cursor-pointer hover:bg-red-500/20"
              onClick={() => setSelectedFilter('unhealthy')}>
           <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>
-          <p className="text-xs text-muted-foreground">Unhealthy</p>
+          <p className="text-xs text-muted-foreground">{t('common.unhealthy')}</p>
         </div>
       </div>
 

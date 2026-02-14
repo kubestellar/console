@@ -35,7 +35,7 @@ const SORT_OPTIONS = [
 ]
 
 export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
-  const { t } = useTranslation('cards')
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
@@ -354,11 +354,11 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         </div>
         <div>
           <p className="text-xl font-bold text-foreground">{totals.nodes}</p>
-          <p className="text-xs text-muted-foreground">Nodes</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.nodes')}</p>
         </div>
         <div>
           <p className="text-xl font-bold text-green-400">{totals.pods.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground">Pods</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.pods')}</p>
         </div>
         {totals.totalGPUs > 0 && (
           <div>

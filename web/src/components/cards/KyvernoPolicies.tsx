@@ -62,7 +62,7 @@ const DEMO_STATS = {
 }
 
 export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [localSearch, setLocalSearch] = useState('')
 
@@ -152,7 +152,7 @@ export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search policies..."
+        placeholder={t('common.searchPolicies')}
       />
 
       {/* Policies list */}

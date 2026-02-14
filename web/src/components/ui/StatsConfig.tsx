@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Settings, Check, GripVertical, Eye, EyeOff, Plus, Trash2, Search, ChevronRight, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -114,6 +115,7 @@ interface SortableItemProps {
 }
 
 function SortableItem({ block, onToggleVisibility, onRemove, isCustom }: SortableItemProps) {
+  const { t } = useTranslation()
   const {
     attributes,
     listeners,
@@ -161,7 +163,7 @@ function SortableItem({ block, onToggleVisibility, onRemove, isCustom }: Sortabl
         <button
           onClick={() => onRemove(block.id)}
           className="p-1 rounded transition-colors hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
-          title="Remove"
+          title={t('common.remove')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -289,6 +291,7 @@ export function StatsConfigModal({
   defaultBlocks,
   title = 'Configure Stats',
 }: StatsConfigModalProps) {
+  const { t: _t } = useTranslation()
   const [localBlocks, setLocalBlocks] = useState<StatBlockConfig[]>(blocks)
   const [showAddPanel, setShowAddPanel] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')

@@ -317,14 +317,14 @@ export function GPUUsageTrend() {
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20" title={`${currentTotals.allocated} GPUs in use`}>
           <div className="flex items-center gap-1 mb-1">
             <Cpu className="w-3 h-3 text-purple-400" />
-            <span className="text-xs text-purple-400">Used</span>
+            <span className="text-xs text-purple-400">{t('common.used')}</span>
           </div>
           <span className="text-sm font-bold text-foreground">{currentTotals.allocated}</span>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20" title={`${currentTotals.free} GPUs free`}>
           <div className="flex items-center gap-1 mb-1">
             <Cpu className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">Free</span>
+            <span className="text-xs text-green-400">{t('common.free')}</span>
           </div>
           <span className="text-sm font-bold text-foreground">{currentTotals.free}</span>
         </div>

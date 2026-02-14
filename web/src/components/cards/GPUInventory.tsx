@@ -205,7 +205,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-green-400">{stats.availableGPUs}</p>
-          <p className="text-xs text-muted-foreground">Available</p>
+          <p className="text-xs text-muted-foreground">{t('common.available')}</p>
         </div>
       </div>
 

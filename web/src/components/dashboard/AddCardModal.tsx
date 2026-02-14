@@ -742,6 +742,7 @@ interface HoveredCard {
 
 // Mock preview component for card visualization - renders a mini card preview
 function CardPreview({ card }: { card: HoveredCard }) {
+  const { t } = useTranslation()
   const renderVisualization = () => {
     switch (card.visualization) {
       case 'gauge':
@@ -769,15 +770,15 @@ function CardPreview({ card }: { card: HoveredCard }) {
             <div className="ml-2 space-y-0.5">
               <div className="flex items-center gap-1 text-[8px]">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                <span className="text-muted-foreground">Healthy</span>
+                <span className="text-muted-foreground">{t('common.healthy')}</span>
               </div>
               <div className="flex items-center gap-1 text-[8px]">
                 <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                <span className="text-muted-foreground">Warning</span>
+                <span className="text-muted-foreground">{t('common.warning')}</span>
               </div>
               <div className="flex items-center gap-1 text-[8px]">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                <span className="text-muted-foreground">Critical</span>
+                <span className="text-muted-foreground">{t('common.critical')}</span>
               </div>
             </div>
           </div>

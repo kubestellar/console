@@ -286,7 +286,7 @@ export function ClusterHealth() {
         <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20" title={`${unhealthyClusters} clusters are reachable but have issues`}>
           <div className="flex items-center gap-2 mb-1">
             <AlertTriangle className="w-4 h-4 text-orange-400" />
-            <span className="text-xs text-orange-400">Unhealthy</span>
+            <span className="text-xs text-orange-400">{t('common.unhealthy')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
         </div>
@@ -300,7 +300,7 @@ export function ClusterHealth() {
         <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={`${networkOfflineClusters} clusters cannot be contacted - check network/VPN`}>
           <div className="flex items-center gap-2 mb-1">
             <WifiOff className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs text-yellow-400">Offline</span>
+            <span className="text-xs text-yellow-400">{t('common.offline')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{networkOfflineClusters}</span>
         </div>

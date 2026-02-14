@@ -9,7 +9,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
 export function EventSummary() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const {
     events,
     isLoading,
@@ -167,7 +167,7 @@ export function EventSummary() {
           <CheckCircle2 className="w-4 h-4 text-green-400" />
           <div>
             <div className="text-lg font-bold text-green-400">{summary.normal}</div>
-            <div className="text-xs text-muted-foreground">Normal</div>
+            <div className="text-xs text-muted-foreground">{t('common.normal')}</div>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
@@ -12,6 +13,7 @@ import { ROUTES } from '../../config/routes'
 
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
+  const { t: _t } = useTranslation()
   const [displayValue, setDisplayValue] = useState(value)
   const [isAnimating, setIsAnimating] = useState(false)
   const [direction, setDirection] = useState<'up' | 'down'>('up')
@@ -64,6 +66,7 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export function AlertBadge() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { activeAlerts, stats, acknowledgeAlert, acknowledgeAlerts, runAIDiagnosis } = useAlerts()
   const { open: openDrillDown } = useDrillDown()
@@ -292,7 +295,7 @@ export function AlertBadge() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search alerts..."
+                    placeholder={t('common.searchAlerts')}
                     className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                 </div>

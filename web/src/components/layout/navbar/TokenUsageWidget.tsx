@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
 import { useTokenUsage, type TokenCategory } from '../../../hooks/useTokenUsage'
@@ -14,6 +15,7 @@ const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.Elemen
 }
 
 export function TokenUsageWidget() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { usage, alertLevel, percentage, remaining } = useTokenUsage()
   const [showTokenDetails, setShowTokenDetails] = useState(false)
@@ -81,7 +83,7 @@ export function TokenUsageWidget() {
           <h4 className="text-sm font-medium text-foreground mb-3">Token Usage</h4>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Used</span>
+              <span className="text-muted-foreground">{t('common.used')}</span>
               <span className="text-foreground font-mono">{usage.used.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-xs">

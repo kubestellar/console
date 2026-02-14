@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface MaintenanceWindow {
   id: string
@@ -25,6 +26,7 @@ function saveWindows(windows: MaintenanceWindow[]) {
 }
 
 export function MaintenanceWindows() {
+  const { t } = useTranslation()
   const [windows, setWindows] = useState<MaintenanceWindow[]>(loadWindows)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -132,9 +134,9 @@ export function MaintenanceWindows() {
               className="px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="maintenance">Maintenance</option>
-              <option value="upgrade">Upgrade</option>
+              <option value="upgrade">{t('common.upgrade')}</option>
               <option value="patching">Patching</option>
-              <option value="custom">Custom</option>
+              <option value="custom">{t('common.custom')}</option>
             </select>
             <button onClick={handleAdd} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
               Add

@@ -564,7 +564,7 @@ interface MetricsHistoryData {
 }
 
 export function LLMdFlow() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const stackContext = useOptionalStack()
   const [serverMetrics, setServerMetrics] = useState<ServerMetrics[]>([])
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
@@ -973,7 +973,7 @@ export function LLMdFlow() {
                 </span>
               )}
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
+                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common.demo')}</span>
               )}
             </div>
           )}

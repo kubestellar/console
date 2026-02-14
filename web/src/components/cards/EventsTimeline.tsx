@@ -79,7 +79,7 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 }
 
 export function EventsTimeline() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const {
     events,
     isLoading: hookLoading,
@@ -243,7 +243,7 @@ export function EventsTimeline() {
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">Normal</span>
+            <span className="text-xs text-green-400">{t('common.normal')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{totalNormal}</span>
         </div>
@@ -330,7 +330,7 @@ export function EventsTimeline() {
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-green-500/60" />
-          <span className="text-muted-foreground">Normal</span>
+          <span className="text-muted-foreground">{t('common.normal')}</span>
         </div>
       </div>
     </div>

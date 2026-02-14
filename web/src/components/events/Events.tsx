@@ -440,7 +440,7 @@ export function Events() {
               </div>
               {hasActiveFilters && (
                 <div>
-                  <label className="block text-xs text-transparent mb-1">Clear</label>
+                  <label className="block text-xs text-transparent mb-1">{t('common.clear')}</label>
                   <button onClick={clearFilters} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-secondary text-muted-foreground hover:text-foreground transition-colors">Clear Filters</button>
                 </div>
               )}

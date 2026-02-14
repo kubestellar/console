@@ -377,7 +377,7 @@ export function StackSelector() {
             )}
 
             {isDemoMode && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">Demo</span>
+              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">{t('common.demo')}</span>
             )}
           </>
         ) : (

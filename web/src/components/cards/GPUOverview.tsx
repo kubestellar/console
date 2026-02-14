@@ -291,7 +291,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           title={allocatedGPUs > 0 ? `${allocatedGPUs} GPUs allocated - Click for details` : 'No GPUs allocated'}
         >
           <p className="text-lg font-bold text-purple-400">{allocatedGPUs}</p>
-          <p className="text-xs text-muted-foreground">Allocated</p>
+          <p className="text-xs text-muted-foreground">{t('common.allocated')}</p>
         </div>
         <div
           className={`text-center ${clusterCount > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}

@@ -237,7 +237,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           {/* Right: Preview & Code */}
           <div className="w-1/2 flex flex-col">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Preview</span>
+              <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
                 onClick={() => setShowCode(!showCode)}
                 className="text-xs text-purple-400 hover:text-purple-300"

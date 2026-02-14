@@ -444,7 +444,7 @@ Please:
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="text-sm font-medium text-foreground">{crdScope}</div>
-                <div className="text-xs text-muted-foreground">Scope</div>
+                <div className="text-xs text-muted-foreground">{t('common.scope')}</div>
               </div>
             </div>
 

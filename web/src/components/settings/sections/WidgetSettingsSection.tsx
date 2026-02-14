@@ -284,7 +284,7 @@ export const render = ({ output }) => {
             <div style={{ ...styles.statValue, color: hasIssues ? styles.colors.error : styles.colors.healthy }}>
               {offlineNodes.length}
             </div>
-            <div style={styles.statLabel}>Offline</div>
+            <div style={styles.statLabel}>{t('common.offline')}</div>
           </div>
           <div 
             style={styles.statBlock} 
@@ -296,7 +296,7 @@ export const render = ({ output }) => {
             <div style={{ ...styles.statValue, color: styles.colors.info }}>
               {nodes.length - offlineNodes.length}/{nodes.length}
             </div>
-            <div style={styles.statLabel}>Ready</div>
+            <div style={styles.statLabel}>{t('common.ready')}</div>
           </div>
           <div 
             style={styles.statBlock} 
@@ -320,7 +320,7 @@ export const render = ({ output }) => {
             <div style={{ ...styles.statValue, color: styles.colors.healthy }}>
               {nodes.length}
             </div>
-            <div style={styles.statLabel}>Total</div>
+            <div style={styles.statLabel}>{t('common.total')}</div>
           </div>
         </div>
         <div 
@@ -576,11 +576,11 @@ export function WidgetSettingsSection() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-gray-800/50 rounded-lg p-2 text-center">
                   <div className="text-lg font-bold text-green-400">0</div>
-                  <div className="text-[9px] text-gray-400 uppercase">Offline</div>
+                  <div className="text-[9px] text-gray-400 uppercase">{t('common.offline')}</div>
                 </div>
                 <div className="bg-gray-800/50 rounded-lg p-2 text-center">
                   <div className="text-lg font-bold text-blue-400">3/3</div>
-                  <div className="text-[9px] text-gray-400 uppercase">Ready</div>
+                  <div className="text-[9px] text-gray-400 uppercase">{t('common.ready')}</div>
                 </div>
                 <div className="bg-gray-800/50 rounded-lg p-2 text-center">
                   <div className="text-lg font-bold text-green-400">4/8</div>
@@ -588,7 +588,7 @@ export function WidgetSettingsSection() {
                 </div>
                 <div className="bg-gray-800/50 rounded-lg p-2 text-center">
                   <div className="text-lg font-bold text-green-400">3</div>
-                  <div className="text-[9px] text-gray-400 uppercase">Total</div>
+                  <div className="text-[9px] text-gray-400 uppercase">{t('common.total')}</div>
                 </div>
               </div>
               <div className="text-center text-[11px] text-green-400 mt-2 pt-2 border-t border-gray-700">

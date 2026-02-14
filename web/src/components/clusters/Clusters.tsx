@@ -647,7 +647,7 @@ function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps)
               <div className="mb-1">
                 <button onClick={() => toggleType('pods')} className="flex items-center gap-1.5 py-1 hover:bg-card/30 rounded px-1 w-full text-left">
                   {expandedTypes.has('pods') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />Pod</span>
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />{t('common.pod')}</span>
                   <span className="text-muted-foreground">Standalone ({podsByDeployment.standalone.length})</span>
                 </button>
                 {expandedTypes.has('pods') && (
@@ -1061,7 +1061,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                     >
                       <div className="flex items-center gap-2">
                         {isExpanded ? <ChevronDown className="w-4 h-4 text-red-400" /> : <ChevronRight className="w-4 h-4 text-red-400" />}
-                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />Pod</span>
+                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />{t('common.pod')}</span>
                         <span className="font-medium text-foreground">{issue.name}</span>
                         <span className="text-xs text-muted-foreground">({issue.namespace})</span>
                       </div>
@@ -1287,7 +1287,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                 >
                   <div className="p-3 flex items-center justify-between border-b border-border/30">
                     <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium"><Server className="w-3 h-3" />Node</span>
+                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium"><Server className="w-3 h-3" />{t('common.node')}</span>
                       <span className="font-medium text-foreground">{node.name}</span>
                       {node.roles.map(role => (
                         <span key={role} className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{role}</span>

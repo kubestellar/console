@@ -38,7 +38,7 @@ const STATUS_ORDER: Record<string, number> = {
 }
 
 export function HelmHistory({ config }: HelmHistoryProps) {
-  const { t } = useTranslation('common')
+  const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -360,7 +360,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           <CardSearchInput
             value={localSearch}
             onChange={setLocalSearch}
-            placeholder="Search history..."
+            placeholder={t('cards:kubectl.searchHistory')}
             className="mb-4"
           />
 

@@ -1831,7 +1831,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   <div style={{ paddingLeft: ownerChain.length * 24 }} className="py-1">
                     <div className="px-3 py-2 rounded-lg bg-cyan-500/20 border-2 border-cyan-500/50 text-cyan-400 inline-flex items-center gap-2 shadow-lg shadow-cyan-500/10">
                       <Box className="w-4 h-4" />
-                      <span className="text-xs text-cyan-300">Pod</span>
+                      <span className="text-xs text-cyan-300">{t('common.pod')}</span>
                       <span className="font-semibold">{podName}</span>
                       <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/30 text-cyan-300">current</span>
                     </div>
@@ -2002,7 +2002,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   <div className="py-1">
                     <div className="px-3 py-2 rounded-lg bg-cyan-500/20 border-2 border-cyan-500/50 text-cyan-400 inline-flex items-center gap-2 shadow-lg shadow-cyan-500/10">
                       <Box className="w-4 h-4" />
-                      <span className="text-xs text-cyan-300">Pod</span>
+                      <span className="text-xs text-cyan-300">{t('common.pod')}</span>
                       <span className="font-semibold">{podName}</span>
                       <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/30 text-cyan-300">current</span>
                     </div>

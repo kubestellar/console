@@ -838,7 +838,7 @@ export function GPUReservations() {
                   <div className="text-foreground">{selectedReservation.start_date}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Duration</div>
+                  <div className="text-sm text-muted-foreground">{t('common.duration')}</div>
                   <div className="text-foreground">{selectedReservation.duration_hours} hours</div>
                 </div>
                 <div>
@@ -853,7 +853,7 @@ export function GPUReservations() {
                 )}
                 {selectedReservation.description && (
                   <div className="col-span-2">
-                    <div className="text-sm text-muted-foreground">Description</div>
+                    <div className="text-sm text-muted-foreground">{t('common.description')}</div>
                     <div className="text-foreground">{selectedReservation.description}</div>
                   </div>
                 )}
@@ -951,11 +951,11 @@ export function GPUReservations() {
                     </div>
                   )}
                   <div className="p-2 rounded bg-secondary/30">
-                    <div className="text-xs text-muted-foreground">Start</div>
+                    <div className="text-xs text-muted-foreground">{t('common.start')}</div>
                     <div className="text-sm font-medium text-foreground">{r.start_date}</div>
                   </div>
                   <div className="p-2 rounded bg-secondary/30">
-                    <div className="text-xs text-muted-foreground">Duration</div>
+                    <div className="text-xs text-muted-foreground">{t('common.duration')}</div>
                     <div className="text-sm font-medium text-foreground">{r.duration_hours}h</div>
                   </div>
                 </div>
@@ -1186,6 +1186,7 @@ function ReservationFormModal({
   onSaved: () => void
   onError: (msg: string) => void
 }) {
+  const { t } = useTranslation()
   const [cluster, setCluster] = useState(editingReservation?.cluster || '')
   const [namespace, setNamespace] = useState(editingReservation?.namespace || '')
   const [isNewNamespace, setIsNewNamespace] = useState(false)
@@ -1364,7 +1365,7 @@ function ReservationFormModal({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">Description</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.description')}</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
               placeholder="Describe your experiment or workload..."
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />

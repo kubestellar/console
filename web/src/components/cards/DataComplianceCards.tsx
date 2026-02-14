@@ -16,7 +16,7 @@ interface CardConfig {
 
 // HashiCorp Vault - Secrets Management Card
 export function VaultSecrets({ config: _config }: CardConfig) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const demoData = {
     status: 'unsealed',
     secrets: 156,
@@ -60,7 +60,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
       <div className="grid grid-cols-2 gap-2">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{demoData.secrets}</p>
-          <p className="text-xs text-muted-foreground">Secrets</p>
+          <p className="text-xs text-muted-foreground">{t('drilldown.tabs.secrets')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{demoData.dynamicCredentials}</p>

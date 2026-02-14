@@ -535,7 +535,7 @@ export function KVCacheMonitor() {
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
+                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common.demo')}</span>
               )}
             </div>
           )}
@@ -614,7 +614,7 @@ export function KVCacheMonitor() {
             {aggregateMetrics.totalUsed.toFixed(0)}
             <span className="text-xs text-muted-foreground">/{aggregateMetrics.totalCapacity}GB</span>
           </div>
-          <div className="text-xs text-muted-foreground">Used</div>
+          <div className="text-xs text-muted-foreground">{t('common.used')}</div>
         </div>
         <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
           <div className="text-lg font-bold text-green-400" style={{ textShadow: '0 0 10px rgba(34,197,94,0.5)' }}>
