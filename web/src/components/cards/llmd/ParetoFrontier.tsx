@@ -382,7 +382,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
               return pt && pt.gpuCount > 1 ? `${pt.gpuCount}` : ''
             },
             fontSize: 9,
-            color: '#555',
+            color: '#94a3b8',
             position: 'top',
             distance: 4,
           },
@@ -411,16 +411,16 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     }
 
     return {
-      backgroundColor: '#e8e8e4',
+      backgroundColor: '#1a1d2e',
       grid: { top: 16, right: 16, bottom: 42, left: 70 },
       tooltip: {
         trigger: 'item',
-        backgroundColor: 'rgba(255,255,255,0.97)',
-        borderColor: '#d1d5db',
+        backgroundColor: 'rgba(15,23,42,0.97)',
+        borderColor: '#334155',
         borderWidth: 1,
         padding: [10, 14],
-        textStyle: { color: '#1f2937', fontSize: 11 },
-        extraCssText: 'box-shadow:0 4px 12px rgba(0,0,0,0.1);',
+        textStyle: { color: '#e2e8f0', fontSize: 11 },
+        extraCssText: 'box-shadow:0 4px 12px rgba(0,0,0,0.3);',
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         formatter: (params: any) => {
           const pt = params.data?.point as ParetoPoint | undefined
@@ -429,18 +429,18 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
           const model = getModelShort(pt.model)
           const c = HARDWARE_COLORS[hw] ?? '#6b7280'
           return (
-            `<div style="font-weight:600;margin-bottom:6px;color:#111">${model} ` +
-            `<span style="color:#666">${hw}</span> ` +
-            `<span style="background:${c}18;color:${c};padding:1px 6px;border-radius:4px;font-size:10px">${pt.config}</span></div>` +
+            `<div style="font-weight:600;margin-bottom:6px;color:#f1f5f9">${model} ` +
+            `<span style="color:#94a3b8">${hw}</span> ` +
+            `<span style="background:${c}30;color:${c};padding:1px 6px;border-radius:4px;font-size:10px">${pt.config}</span></div>` +
             `<div style="display:grid;grid-template-columns:auto auto;gap:2px 14px;font-size:11px">` +
-            `<span style="color:#888">Throughput/GPU:</span><span style="font-family:monospace;color:#111">${pt.throughputPerGpu.toFixed(0)} tok/s</span>` +
-            `<span style="color:#888">TTFT p50:</span><span style="font-family:monospace;color:#111">${pt.ttftP50Ms.toFixed(1)} ms</span>` +
-            `<span style="color:#888">TPOT p50:</span><span style="font-family:monospace;color:#111">${pt.tpotP50Ms.toFixed(2)} ms/tok</span>` +
-            `<span style="color:#888">p99 Latency:</span><span style="font-family:monospace;color:#111">${pt.p99LatencyMs.toFixed(0)} ms</span>` +
-            `<span style="color:#888">GPUs:</span><span style="font-family:monospace;color:#111">${pt.gpuCount}\u00d7</span>` +
-            `<span style="color:#888">ISL/OSL:</span><span style="font-family:monospace;color:#111">${pt.seqLen}</span>` +
-            `<span style="color:#888">Power/GPU:</span><span style="font-family:monospace;color:#111">${pt.powerPerGpuKw.toFixed(2)} kW</span>` +
-            `<span style="color:#888">TCO/GPU/hr:</span><span style="font-family:monospace;color:#111">$${pt.tcoPerGpuHr.toFixed(2)}</span>` +
+            `<span style="color:#94a3b8">Throughput/GPU:</span><span style="font-family:monospace;color:#e2e8f0">${pt.throughputPerGpu.toFixed(0)} tok/s</span>` +
+            `<span style="color:#94a3b8">TTFT p50:</span><span style="font-family:monospace;color:#e2e8f0">${pt.ttftP50Ms.toFixed(1)} ms</span>` +
+            `<span style="color:#94a3b8">TPOT p50:</span><span style="font-family:monospace;color:#e2e8f0">${pt.tpotP50Ms.toFixed(2)} ms/tok</span>` +
+            `<span style="color:#94a3b8">p99 Latency:</span><span style="font-family:monospace;color:#e2e8f0">${pt.p99LatencyMs.toFixed(0)} ms</span>` +
+            `<span style="color:#94a3b8">GPUs:</span><span style="font-family:monospace;color:#e2e8f0">${pt.gpuCount}\u00d7</span>` +
+            `<span style="color:#94a3b8">ISL/OSL:</span><span style="font-family:monospace;color:#e2e8f0">${pt.seqLen}</span>` +
+            `<span style="color:#94a3b8">Power/GPU:</span><span style="font-family:monospace;color:#e2e8f0">${pt.powerPerGpuKw.toFixed(2)} kW</span>` +
+            `<span style="color:#94a3b8">TCO/GPU/hr:</span><span style="font-family:monospace;color:#e2e8f0">$${pt.tcoPerGpuHr.toFixed(2)}</span>` +
             `</div>`
           )
         },
@@ -451,21 +451,21 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
         name: `${preset.xAxis.label} (${preset.xAxis.unit})`,
         nameLocation: 'middle',
         nameGap: 26,
-        nameTextStyle: { color: '#555', fontSize: 11, fontWeight: 500 },
-        axisLine: { lineStyle: { color: '#d1d5db' } },
-        splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
-        axisLabel: { color: '#666', fontSize: 10 },
+        nameTextStyle: { color: '#94a3b8', fontSize: 11, fontWeight: 500 },
+        axisLine: { lineStyle: { color: '#334155' } },
+        splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
+        axisLabel: { color: '#64748b', fontSize: 10 },
       },
       yAxis: {
         type: 'value',
         name: `${preset.yAxis.label} (${preset.yAxis.unit})`,
         nameLocation: 'middle',
         nameGap: 58,
-        nameTextStyle: { color: '#555', fontSize: 11, fontWeight: 500 },
-        axisLine: { lineStyle: { color: '#d1d5db' } },
-        splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
+        nameTextStyle: { color: '#94a3b8', fontSize: 11, fontWeight: 500 },
+        axisLine: { lineStyle: { color: '#334155' } },
+        splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
         axisLabel: {
-          color: '#666',
+          color: '#64748b',
           fontSize: 10,
           formatter: preset.yAxis.formatter ?? ((v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)),
         },
