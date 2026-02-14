@@ -647,7 +647,7 @@ export function NightlyE2EStatus() {
               <Skeleton key={i} variant="rounded" height={36} />
             ))}
           </div>
-          <div className="w-72 shrink-0">
+          <div className="w-80 shrink-0">
             <Skeleton variant="rounded" height={280} />
           </div>
         </div>
@@ -737,7 +737,7 @@ export function NightlyE2EStatus() {
         </div>
 
         {/* Detail panel (right side) */}
-        <div className="w-72 shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
+        <div className="w-80 shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
           {selectedGuide ? (
             <GuideDetailPanel guide={selectedGuide} />
           ) : shouldSummarize ? (
