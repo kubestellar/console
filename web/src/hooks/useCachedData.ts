@@ -42,6 +42,7 @@ import type { Workload } from './useWorkloads'
 const getToken = () => localStorage.getItem('token')
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+const AGENT_HTTP_TIMEOUT_MS = 5000
 
 async function fetchAPI<T>(
   endpoint: string,
@@ -191,6 +192,7 @@ function getAgentClusters(): Array<{ name: string; context?: string }> {
 
 /** Fetch pod issues from all clusters via agent kubectl proxy */
 async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial: PodIssue[]) => void): Promise<PodIssue[]> {
+  if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
   const accumulated: PodIssue[] = []
@@ -211,6 +213,7 @@ async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial:
 
 /** Fetch deployments from all clusters via agent HTTP endpoint */
 async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partial: Deployment[]) => void): Promise<Deployment[]> {
+  if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
   const accumulated: Deployment[] = []
@@ -221,7 +224,7 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
     if (namespace) params.append('namespace', namespace)
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000)
+    const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
     const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
@@ -453,7 +456,7 @@ export function useCachedPodIssues(
       let issues: PodIssue[]
 
       // Try agent first (fast, no backend needed)
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         if (cluster) {
           const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
           const ctx = clusterInfo?.context || cluster
@@ -482,7 +485,7 @@ export function useCachedPodIssues(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       // Try agent first
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const issues = await fetchPodIssuesViaAgent(namespace, (partial) => {
           onProgress(sortIssues([...partial]))
         })
@@ -540,7 +543,7 @@ export function useCachedDeploymentIssues(
     demoData: getDemoDeploymentIssues(),
     fetcher: async () => {
       // Try agent first — derive deployment issues from deployment data
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const deployments = cluster
           ? await (async () => {
               const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
@@ -548,7 +551,7 @@ export function useCachedDeploymentIssues(
               params.append('cluster', clusterInfo?.context || cluster)
               if (namespace) params.append('namespace', namespace)
               const ctrl = new AbortController()
-              const tid = setTimeout(() => ctrl.abort(), 15000)
+              const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
               const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
                 signal: ctrl.signal, headers: { Accept: 'application/json' },
               })
@@ -573,7 +576,7 @@ export function useCachedDeploymentIssues(
       return []
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const deployments = await fetchDeploymentsViaAgent(namespace, (partialDeps) => {
           onProgress(deriveIssues(partialDeps))
         })
@@ -625,7 +628,7 @@ export function useCachedDeployments(
           if (namespace) params.append('namespace', namespace)
 
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 15000)
+          const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
           const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
             signal: controller.signal,
             headers: { Accept: 'application/json' },
@@ -1307,7 +1310,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
     params.append('cluster', context || name)
 
     const ctrl = new AbortController()
-    const tid = setTimeout(() => ctrl.abort(), 15000)
+    const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
     const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
       signal: ctrl.signal,
       headers: { Accept: 'application/json' },

@@ -8,6 +8,9 @@
 import { getDemoMode } from '../hooks/useDemoMode'
 
 const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+const CONNECT_TIMEOUT_MS = 2500
+const CONNECTION_FAILURE_COOLDOWN_MS = 5000
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000
 
 type MessageType = 'kubectl' | 'health' | 'clusters' | 'result' | 'error'
 
@@ -54,6 +57,7 @@ class KubectlProxy {
   private requestQueue: QueuedRequest[] = []
   private activeRequests = 0
   private readonly maxConcurrentRequests = 4 // Limit concurrent requests to local agent
+  private lastConnectionFailureAt = 0
 
   /**
    * Ensure WebSocket is connected
@@ -68,6 +72,11 @@ class KubectlProxy {
       return
     }
 
+    // Fail fast during cooldown windows to avoid repeated expensive retries
+    if (Date.now() - this.lastConnectionFailureAt < CONNECTION_FAILURE_COOLDOWN_MS) {
+      throw new Error('Local agent unavailable (cooldown)')
+    }
+
     if (this.connectPromise) {
       return this.connectPromise
     }
@@ -80,12 +89,28 @@ class KubectlProxy {
 
     this.isConnecting = true
     this.connectPromise = new Promise((resolve, reject) => {
+      let settled = false
+      let connectTimeout: ReturnType<typeof setTimeout> | null = null
+      const finalize = (cb: () => void) => {
+        if (settled) return
+        settled = true
+        if (connectTimeout) clearTimeout(connectTimeout)
+        cb()
+      }
       try {
         this.ws = new WebSocket(KC_AGENT_WS_URL)
+        connectTimeout = setTimeout(() => {
+          try { this.ws?.close() } catch { /* ignore */ }
+          this.lastConnectionFailureAt = Date.now()
+          this.isConnecting = false
+          this.connectPromise = null
+          finalize(() => reject(new Error(`Connection timeout after ${CONNECT_TIMEOUT_MS}ms`)))
+        }, CONNECT_TIMEOUT_MS)
 
         this.ws.onopen = () => {
           this.isConnecting = false
-          resolve()
+          this.lastConnectionFailureAt = 0
+          finalize(() => resolve())
         }
 
         this.ws.onmessage = (event) => {
@@ -112,6 +137,7 @@ class KubectlProxy {
           this.ws = null
           this.connectPromise = null
           this.isConnecting = false
+          this.lastConnectionFailureAt = Date.now()
 
           // Reject all pending requests
           this.pendingRequests.forEach((pending, id) => {
@@ -125,12 +151,14 @@ class KubectlProxy {
           console.error('[KubectlProxy] WebSocket error:', err)
           this.isConnecting = false
           this.connectPromise = null
-          reject(new Error('Failed to connect to local agent'))
+          this.lastConnectionFailureAt = Date.now()
+          finalize(() => reject(new Error('Failed to connect to local agent')))
         }
       } catch (err) {
         this.isConnecting = false
         this.connectPromise = null
-        reject(err)
+        this.lastConnectionFailureAt = Date.now()
+        finalize(() => reject(err))
       }
     })
 
@@ -208,7 +236,7 @@ class KubectlProxy {
     }
 
     const id = this.generateId()
-    const timeout = options.timeout || 30000
+    const timeout = options.timeout || DEFAULT_REQUEST_TIMEOUT_MS
 
     return new Promise((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
