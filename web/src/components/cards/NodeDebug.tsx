@@ -18,16 +18,46 @@ const EXEC_IMAGES = [
   { label: 'netshoot', value: 'nicolaka/netshoot:latest' },
 ]
 
-const EXEC_COMMANDS = [
-  { label: 'Disk', shellCmd: 'df -h' },
-  { label: 'Memory', shellCmd: 'cat /proc/meminfo | head -5' },
-  { label: 'CPU', shellCmd: 'cat /proc/cpuinfo | grep "model name" | head -1 && nproc' },
-  { label: 'Processes', shellCmd: 'ps aux --sort=-%mem | head -15' },
-  { label: 'Network', shellCmd: 'ip addr 2>/dev/null || ifconfig 2>/dev/null || echo "no network tools"' },
-  { label: 'OS Info', shellCmd: 'cat /etc/os-release 2>/dev/null || uname -a' },
-  { label: 'Mounts', shellCmd: 'mount | grep -v "cgroup\\|proc\\|sys\\|tmpfs" | head -20' },
-  { label: 'Uptime', shellCmd: 'uptime && cat /proc/loadavg' },
+const EXEC_COMMANDS: { label: string; shellCmd: string; category: 'system' | 'kubernetes' | 'network' | 'storage' }[] = [
+  // System
+  { label: 'Top', shellCmd: 'top -b -n 1 | head -25', category: 'system' },
+  { label: 'Processes', shellCmd: 'ps aux --sort=-%mem | head -20', category: 'system' },
+  { label: 'Memory', shellCmd: 'free -h 2>/dev/null || cat /proc/meminfo | head -8', category: 'system' },
+  { label: 'CPU', shellCmd: 'cat /proc/cpuinfo | grep "model name" | head -1 && echo "cores: $(nproc)" && cat /proc/loadavg', category: 'system' },
+  { label: 'Uptime', shellCmd: 'uptime && cat /proc/loadavg', category: 'system' },
+  { label: 'OS Info', shellCmd: 'cat /etc/os-release 2>/dev/null || uname -a', category: 'system' },
+  { label: 'Dmesg', shellCmd: 'dmesg 2>/dev/null | tail -40 || chroot /host dmesg 2>/dev/null | tail -40 || echo "dmesg not available"', category: 'system' },
+  { label: 'Failed Svcs', shellCmd: 'chroot /host systemctl list-units --failed --no-pager 2>/dev/null || echo "systemctl not available"', category: 'system' },
+  { label: 'File Descs', shellCmd: 'echo "allocated / free / max" && cat /proc/sys/fs/file-nr', category: 'system' },
+  // Kubernetes
+  { label: 'Kubelet Logs', shellCmd: 'chroot /host journalctl -u kubelet --no-pager -n 40 2>/dev/null || echo "journalctl not available"', category: 'kubernetes' },
+  { label: 'Containers', shellCmd: 'chroot /host crictl ps 2>/dev/null || chroot /host docker ps 2>/dev/null || echo "no container runtime CLI found"', category: 'kubernetes' },
+  { label: 'Crictl Images', shellCmd: 'chroot /host crictl images 2>/dev/null | head -30 || echo "crictl not available"', category: 'kubernetes' },
+  // Network
+  { label: 'Interfaces', shellCmd: 'ip addr 2>/dev/null || ifconfig 2>/dev/null || echo "no network tools"', category: 'network' },
+  { label: 'Sockets', shellCmd: 'ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || echo "ss/netstat not available"', category: 'network' },
+  { label: 'DNS', shellCmd: 'cat /host/etc/resolv.conf 2>/dev/null || cat /etc/resolv.conf && echo "---" && nslookup kubernetes.default.svc.cluster.local 2>/dev/null || echo "nslookup not available"', category: 'network' },
+  { label: 'iptables', shellCmd: 'chroot /host iptables -L -n --line-numbers 2>/dev/null | head -50 || echo "iptables not available"', category: 'network' },
+  { label: 'Routes', shellCmd: 'ip route 2>/dev/null || route -n 2>/dev/null || echo "no routing tools"', category: 'network' },
+  // Storage
+  { label: 'Disk', shellCmd: 'df -h | grep -v "tmpfs\\|overlay" || df -h', category: 'storage' },
+  { label: 'Disk I/O', shellCmd: 'iostat 2>/dev/null || cat /proc/diskstats | awk "{print \\$3, \\$6, \\$10}" | head -15 || echo "no I/O stats available"', category: 'storage' },
+  { label: 'Mounts', shellCmd: 'mount | grep -v "cgroup\\|proc\\|sys\\|tmpfs" | head -20', category: 'storage' },
 ]
+
+const CATEGORY_COLORS: Record<string, { bg: string; hover: string; text: string }> = {
+  system: { bg: 'bg-orange-500/10', hover: 'hover:bg-orange-500/20', text: 'text-orange-400' },
+  kubernetes: { bg: 'bg-blue-500/10', hover: 'hover:bg-blue-500/20', text: 'text-blue-400' },
+  network: { bg: 'bg-emerald-500/10', hover: 'hover:bg-emerald-500/20', text: 'text-emerald-400' },
+  storage: { bg: 'bg-purple-500/10', hover: 'hover:bg-purple-500/20', text: 'text-purple-400' },
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  system: 'System',
+  kubernetes: 'Kubernetes',
+  network: 'Network',
+  storage: 'Storage',
+}
 
 type TabMode = 'inspect' | 'exec'
 
@@ -171,18 +201,25 @@ export function NodeDebug() {
             </select>
             <span className="text-[10px] text-muted-foreground">debug image</span>
           </div>
-          <div className="flex gap-1 flex-wrap">
-            {EXEC_COMMANDS.map(cmd => (
-              <button
-                key={cmd.label}
-                disabled={!selectedNode || isRunning}
-                onClick={() => handleExec(cmd.shellCmd)}
-                className="px-2 py-1 text-xs rounded bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {cmd.label}
-              </button>
-            ))}
-          </div>
+          {(['system', 'kubernetes', 'network', 'storage'] as const).map(cat => {
+            const cmds = EXEC_COMMANDS.filter(c => c.category === cat)
+            const colors = CATEGORY_COLORS[cat]
+            return (
+              <div key={cat} className="flex gap-1 items-center flex-wrap">
+                <span className={`text-[10px] ${colors.text} opacity-60 w-12 shrink-0`}>{CATEGORY_LABELS[cat]}</span>
+                {cmds.map(cmd => (
+                  <button
+                    key={cmd.label}
+                    disabled={!selectedNode || isRunning}
+                    onClick={() => handleExec(cmd.shellCmd)}
+                    className={`px-2 py-0.5 text-xs rounded ${colors.bg} ${colors.hover} ${colors.text} transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    {cmd.label}
+                  </button>
+                ))}
+              </div>
+            )
+          })}
           <form
             className="flex gap-1"
             onSubmit={e => { e.preventDefault(); handleExec(customCmd) }}
