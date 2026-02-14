@@ -11,7 +11,8 @@ import {
   TestTube2, ExternalLink, TrendingUp, TrendingDown, Minus,
   CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles,
 } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
+import { Skeleton } from '../../ui/Skeleton'
 import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
 import { useAIMode } from '../../../hooks/useAIMode'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
@@ -482,17 +483,16 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
 }
 
 export function NightlyE2EStatus() {
-  const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useNightlyE2EData()
+  const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useNightlyE2EData()
   const { shouldSummarize } = useAIMode()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
 
-  useReportCardDataState({
-    isDemoData: isDemoFallback,
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: guides.length > 0 && !isDemoFallback,
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData: guides.length > 0,
+    isDemoData: isDemoFallback,
   })
 
   const selectedGuide = useMemo(() => {
@@ -529,6 +529,28 @@ export function NightlyE2EStatus() {
       lastRunTime: mostRecent ? new Date(mostRecent).toISOString() : null,
     }
   }, [guides])
+
+  if (showSkeleton) {
+    return (
+      <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
+        <div className="grid grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={64} />
+          ))}
+        </div>
+        <div className="flex flex-1 min-h-0 gap-3">
+          <div className="flex-1 space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} variant="rounded" height={36} />
+            ))}
+          </div>
+          <div className="w-72 shrink-0">
+            <Skeleton variant="rounded" height={280} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
