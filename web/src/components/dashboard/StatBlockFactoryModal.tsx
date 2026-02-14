@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, startTransition } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Plus, X, Save, Trash2, Activity, Sparkles,
   CheckCircle, GripVertical, Eye, EyeOff,
@@ -230,6 +231,7 @@ function validateStatBlockResult(
 // ============================================================================
 
 export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatBlockFactoryModalProps) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('builder')
   const { isFeatureEnabled } = useAIMode()
 
@@ -385,14 +387,14 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
   }, [])
 
   const tabs = [
-    { id: 'builder' as Tab, label: 'Build', icon: Activity },
-    { id: 'ai' as Tab, label: 'AI Generate', icon: Sparkles },
-    { id: 'manage' as Tab, label: 'Manage', icon: Activity },
+    { id: 'builder' as Tab, label: t('dashboard.statFactory.buildTab'), icon: Activity },
+    { id: 'ai' as Tab, label: t('dashboard.statFactory.aiGenerateTab'), icon: Sparkles },
+    { id: 'manage' as Tab, label: t('dashboard.statFactory.manageTab'), icon: Activity },
   ]
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false}>
-      <BaseModal.Header title="Stat Block Factory" icon={Activity} onClose={onClose} showBack={false} />
+      <BaseModal.Header title={t('dashboard.statFactory.title')} icon={Activity} onClose={onClose} showBack={false} />
 
       <BaseModal.Tabs
         tabs={tabs}
@@ -425,33 +427,33 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               {/* Header fields */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Title</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.statFactory.titleLabel')}</label>
                   <input
                     type="text"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    placeholder="My Stats"
+                    placeholder={t('dashboard.statFactory.titlePlaceholder')}
                     className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Type ID</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.statFactory.typeIdLabel')}</label>
                   <input
                     type="text"
                     value={statsType}
                     onChange={e => setStatsType(e.target.value)}
-                    placeholder="auto-generated"
+                    placeholder={t('dashboard.statFactory.typeIdPlaceholder')}
                     className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Grid Columns</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.statFactory.gridColumnsLabel')}</label>
                   <select
                     value={gridCols}
                     onChange={e => setGridCols(Number(e.target.value))}
                     className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   >
-                    <option value={0}>Auto</option>
+                    <option value={0}>{t('dashboard.statFactory.autoOption')}</option>
                     <option value={2}>2</option>
                     <option value={3}>3</option>
                     <option value={4}>4</option>
@@ -467,14 +469,14 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs text-muted-foreground font-medium">
-                    Stat Blocks ({blocks.length})
+                    {t('dashboard.statFactory.statBlocks', { count: blocks.length })}
                   </label>
                   <button
                     onClick={addBlock}
                     className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Plus className="w-3 h-3" />
-                    Add Block
+                    {t('dashboard.statFactory.addBlock')}
                   </button>
                 </div>
 
@@ -509,8 +511,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                                   ? 'border-purple-500 bg-purple-500/10'
                                   : 'border-border bg-secondary/50 hover:border-purple-500/50',
                               )}
-                              title="Change icon"
-                              aria-label="Change icon"
+                              title={t('dashboard.statFactory.changeIcon')}
+                              aria-label={t('dashboard.statFactory.changeIcon')}
                             >
                               <IconComponent className={cn('w-4 h-4', COLOR_CLASSES[block.color])} />
                             </button>
@@ -562,7 +564,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                             type="text"
                             value={block.label}
                             onChange={e => updateBlock(idx, 'label', e.target.value)}
-                            placeholder="Label"
+                            placeholder={t('dashboard.statFactory.labelPlaceholder')}
                             className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                           />
 
@@ -571,7 +573,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                             type="text"
                             value={block.field}
                             onChange={e => updateBlock(idx, 'field', e.target.value)}
-                            placeholder="data field"
+                            placeholder={t('dashboard.statFactory.dataFieldPlaceholder')}
                             className="w-24 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                           />
 
@@ -625,7 +627,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                 )}
               >
                 <Save className="w-4 h-4" />
-                Create Stat Block
+                {t('dashboard.statFactory.createStatBlock')}
               </button>
             </div>
 
@@ -635,7 +637,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                 <button
                   onClick={() => setPreviewCollapsed(false)}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                  title="Show preview"
+                  title={t('dashboard.preview.showPreview')}
                 >
                   <Eye className="w-4 h-4" />
                 </button>
@@ -646,23 +648,23 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
                   <div className="flex items-center gap-1.5">
                     <Eye className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Preview</span>
+                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
                     <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400/70">
-                      Sample values
+                      {t('dashboard.preview.sampleValues')}
                     </span>
                   </div>
                   <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => setPreviewSize(previewSize === 'card' ? 'full' : 'card')}
                       className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
-                      title={previewSize === 'card' ? 'Full width' : 'Card width'}
+                      title={previewSize === 'card' ? t('dashboard.preview.fullWidth') : t('dashboard.preview.cardWidth')}
                     >
                       {previewSize === 'card' ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
                     </button>
                     <button
                       onClick={() => setPreviewCollapsed(true)}
                       className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
-                      title="Hide preview"
+                      title={t('dashboard.preview.hidePreview')}
                     >
                       <EyeOff className="w-3 h-3" />
                     </button>
@@ -746,9 +748,9 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
             {existingStats.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Activity className="w-8 h-8 text-muted-foreground/40 mb-2" />
-                <p className="text-sm text-muted-foreground">No custom stat blocks created yet.</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard.statFactory.noCustomStats')}</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  Use the Build tab to create your first stat block section.
+                  {t('dashboard.statFactory.useBuildTab')}
                 </p>
               </div>
             ) : (
@@ -759,7 +761,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                       <Activity className="w-4 h-4 text-purple-400 shrink-0" />
                       <span className="text-sm font-medium text-foreground">{stats.title || stats.type}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-                        {stats.blocks.length} blocks
+                        {t('dashboard.statFactory.blocksCount', { count: stats.blocks.length })}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -788,7 +790,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                   <button
                     onClick={() => handleDelete(stats.type)}
                     className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
-                    title="Delete stat block"
+                    title={t('dashboard.statFactory.deleteStatBlock')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

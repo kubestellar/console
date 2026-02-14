@@ -755,16 +755,16 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   }
 
   const tabs = [
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'behaviors', label: 'Behaviors', icon: ToggleLeft },
-    { id: 'ai', label: 'AI Configure', icon: Sparkles },
+    { id: 'settings', label: t('dashboard.configure.settingsTab'), icon: Settings },
+    { id: 'behaviors', label: t('dashboard.configure.behaviorsTab'), icon: ToggleLeft },
+    { id: 'ai', label: t('dashboard.configure.aiConfigureTab'), icon: Sparkles },
   ]
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
-        title="Configure Card"
-        description={`Customize "${card.title || card.card_type}"`}
+        title={t('dashboard.configure.title')}
+        description={t('dashboard.configure.description', { name: card.title || card.card_type })}
         icon={Settings}
         onClose={onClose}
         showBack={false}
@@ -781,12 +781,12 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
             <div className="space-y-4">
               {/* Title field */}
               <div>
-                <label className="block text-sm text-muted-foreground mb-1">Card Title</label>
+                <label className="block text-sm text-muted-foreground mb-1">{t('dashboard.configure.cardTitle')}</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Custom title (optional)"
+                  placeholder={t('dashboard.configure.cardTitlePlaceholder')}
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
               </div>
@@ -822,7 +822,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                       type="number"
                       value={(config[field.key] as number) || ''}
                       onChange={(e) => updateConfig(field.key, parseInt(e.target.value) || undefined)}
-                      placeholder="Default"
+                      placeholder={t('dashboard.configure.defaultPlaceholder')}
                       className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     />
                   ) : (
@@ -830,7 +830,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                       type="text"
                       value={(config[field.key] as string) || ''}
                       onChange={(e) => updateConfig(field.key, e.target.value || undefined)}
-                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                      placeholder={t('dashboard.configure.enterField', { field: field.label.toLowerCase() })}
                       className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     />
                   )}
@@ -839,7 +839,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
 
               {fields.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  This card type has no additional settings. Check the Behaviors tab.
+                  {t('dashboard.configure.noSettings')}
                 </p>
               )}
             </div>
@@ -874,7 +874,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  This card type has no configurable behaviors
+                  {t('dashboard.configure.noBehaviors')}
                 </p>
               )}
             </div>
@@ -885,12 +885,10 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm font-medium text-purple-300">AI-Powered Configuration</span>
+                  <span className="text-sm font-medium text-purple-300">{t('dashboard.configure.aiPoweredConfig')}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Describe how you want this card to behave in plain English. For example:
-                  "Only show warning events and alert me when new ones appear" or
-                  "Prioritize unhealthy clusters and refresh faster"
+                  {t('dashboard.configure.aiConfigDescription')}
                 </p>
               </div>
 
@@ -901,7 +899,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-sm font-medium text-green-300">Applied changes:</span>
+                    <span className="text-sm font-medium text-green-300">{t('dashboard.configure.appliedChanges')}</span>
                   </div>
                   <ul className="text-xs text-green-200 space-y-1">
                     {aiChanges.map((change, i) => (
@@ -928,7 +926,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
 
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">
-                  Describe your preferences
+                  {t('dashboard.configure.describePreferences')}
                 </label>
                 <textarea
                   value={nlPrompt}
@@ -936,7 +934,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     setNlPrompt(e.target.value)
                     setAiError(null) // Clear error on new input
                   }}
-                  placeholder="e.g., 'Show me only warning events from the vllm-d cluster and play a sound when new ones appear'"
+                  placeholder={t('dashboard.configure.aiPlaceholder')}
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm h-24 resize-none"
                   disabled={isProcessing}
                   onKeyDown={(e) => {
@@ -946,7 +944,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     }
                   }}
                 />
-                <p className="text-xs text-muted-foreground mt-1">Press Enter to apply, Shift+Enter for new line</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('dashboard.configure.pressEnterHint')}</p>
               </div>
 
               <button
@@ -962,18 +960,18 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing...
+                    {t('dashboard.configure.processing')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    Apply Configuration
+                    {t('dashboard.configure.applyConfiguration')}
                   </>
                 )}
               </button>
 
               <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium">Example prompts:</p>
+                <p className="font-medium">{t('dashboard.configure.examplePrompts')}</p>
                 <ul className="list-disc list-inside space-y-0.5">
                   <li>"Show only warnings from the vllm-d cluster"</li>
                   <li>"Alert me when critical issues appear"</li>
@@ -994,13 +992,13 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             >
-              Cancel
+              {t('actions.cancel')}
             </button>
             <button
               onClick={handleSave}
               className="px-4 py-2 rounded-lg bg-purple-500 text-foreground hover:bg-purple-600"
             >
-              Save Changes
+              {t('dashboard.configure.saveChanges')}
             </button>
           </div>
         </BaseModal.Footer>

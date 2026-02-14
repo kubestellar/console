@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
@@ -28,6 +29,7 @@ const EXAMPLE_PROMPTS = [
 ]
 
 export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCardModalProps) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'select' | 'ai'>('select')
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -69,8 +71,8 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
   if (!card) return null
 
   const tabs = [
-    { id: 'select', label: 'Choose Card Type', icon: ToggleLeft },
-    { id: 'ai', label: 'Describe What You Need', icon: Sparkles },
+    { id: 'select', label: t('dashboard.replace.chooseCardType'), icon: ToggleLeft },
+    { id: 'ai', label: t('dashboard.replace.describeWhatYouNeed'), icon: Sparkles },
   ]
 
   const handleSelectReplace = () => {
@@ -168,8 +170,8 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
-        title="Replace Card"
-        description={`Replace "${card.title || card.card_type}" with a new card`}
+        title={t('dashboard.replace.title')}
+        description={t('dashboard.replace.description', { name: card.title || card.card_type })}
         icon={RefreshCw}
         onClose={onClose}
         showBack={false}
@@ -188,7 +190,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search cards..."
+                placeholder={t('dashboard.replace.searchCards')}
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
               />
               <div className="grid grid-cols-2 gap-3 max-h-[40vh] overflow-y-auto">
@@ -216,7 +218,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                 ))}
                 {filteredCards.length === 0 && (
                   <div className="col-span-2 text-center py-8 text-muted-foreground text-sm">
-                    No cards match "{searchQuery}"
+                    {t('dashboard.replace.noCardsMatch', { query: searchQuery })}
                   </div>
                 )}
               </div>
@@ -228,21 +230,21 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
               <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm font-medium text-purple-300">AI-Powered Card Creation</span>
+                  <span className="text-sm font-medium text-purple-300">{t('dashboard.replace.aiPoweredCreation')}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Describe what you want to see and we'll create the perfect card for you.
+                  {t('dashboard.replace.aiCreationDescription')}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">
-                  What do you want to track or monitor?
+                  {t('dashboard.replace.whatToTrack')}
                 </label>
                 <textarea
                   value={nlPrompt}
                   onChange={(e) => setNlPrompt(e.target.value)}
-                  placeholder="e.g., 'Show me pods that have restarted more than 5 times in the last hour'"
+                  placeholder={t('dashboard.replace.aiPlaceholder')}
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm h-24 resize-none"
                   disabled={isProcessing}
                 />
@@ -261,12 +263,12 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
+                    {t('dashboard.replace.generating')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    Generate Card
+                    {t('dashboard.replace.generateCard')}
                   </>
                 )}
               </button>
@@ -276,15 +278,15 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                 <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                   <div className="flex items-center gap-2 mb-3">
                     <Sparkles className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-300">Suggested Card</span>
+                    <span className="text-sm font-medium text-green-300">{t('dashboard.replace.suggestedCard')}</span>
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <span className="text-xs text-muted-foreground">Title:</span>
+                      <span className="text-xs text-muted-foreground">{t('dashboard.replace.titleLabel')}</span>
                       <p className="text-foreground font-medium">{aiSuggestion.title}</p>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Type:</span>
+                      <span className="text-xs text-muted-foreground">{t('dashboard.replace.typeLabel')}</span>
                       <p className="text-foreground">{CARD_CONFIGS[aiSuggestion.type]?.title ?? aiSuggestion.type}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">{aiSuggestion.explanation}</p>
@@ -293,14 +295,14 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                     onClick={handleAIReplace}
                     className="w-full mt-3 px-4 py-2 rounded-lg bg-green-500 text-foreground hover:bg-green-600 text-sm font-medium"
                   >
-                    Use This Card
+                    {t('dashboard.replace.useThisCard')}
                   </button>
                 </div>
               )}
 
               {/* Example prompts */}
               <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium">Example requests:</p>
+                <p className="font-medium">{t('dashboard.replace.exampleRequests')}</p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {EXAMPLE_PROMPTS.map((prompt, i) => (
                     <button
@@ -324,7 +326,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             >
-              Cancel
+              {t('actions.cancel')}
             </button>
             {activeTab === 'select' && (
               <button
@@ -337,7 +339,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                     : 'bg-secondary text-muted-foreground cursor-not-allowed'
                 )}
               >
-                Replace Card
+                {t('dashboard.replace.replaceCard')}
               </button>
             )}
           </div>

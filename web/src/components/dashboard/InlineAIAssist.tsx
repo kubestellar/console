@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, ChevronDown, ChevronUp, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
@@ -21,6 +22,7 @@ export function InlineAIAssist<T>({
   onResult,
   validateResult,
 }: InlineAIAssistProps<T>) {
+  const { t } = useTranslation()
   const { mode, isFeatureEnabled } = useAIMode()
   const { startMission, missions, closeSidebar } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -109,7 +111,7 @@ export function InlineAIAssist<T>({
         className="w-full flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-purple-500/5 border border-purple-500/10 text-purple-400/70 hover:bg-purple-500/10 hover:text-purple-400 transition-colors"
       >
         <Sparkles className="w-3 h-3" />
-        <span>AI Assist — describe what you want</span>
+        <span>{t('dashboard.aiAssist.describeWhatYouWant')}</span>
         <ChevronDown className="w-3 h-3 ml-auto" />
       </button>
     )
@@ -123,7 +125,7 @@ export function InlineAIAssist<T>({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Sparkles className="w-3 h-3 text-purple-400" />
-          <span className="text-[10px] font-medium text-purple-400 uppercase tracking-wide">AI Assist</span>
+          <span className="text-[10px] font-medium text-purple-400 uppercase tracking-wide">{t('dashboard.aiAssist.header')}</span>
         </div>
         <button
           onClick={() => { setPhase('collapsed'); setError(null) }}
@@ -156,7 +158,7 @@ export function InlineAIAssist<T>({
                 : 'bg-secondary text-muted-foreground cursor-not-allowed',
             )}
           >
-            Generate
+            {t('dashboard.aiAssist.generate')}
           </button>
         </div>
       )}
@@ -173,7 +175,7 @@ export function InlineAIAssist<T>({
       {phase === 'generating' && (
         <div className="flex items-center gap-2 py-1">
           <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-          <span className="text-xs text-purple-400">Generating...</span>
+          <span className="text-xs text-purple-400">{t('dashboard.aiAssist.generating')}</span>
         </div>
       )}
 
@@ -181,7 +183,7 @@ export function InlineAIAssist<T>({
       {phase === 'success' && (
         <div className="flex items-center gap-2 py-1">
           <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-          <span className="text-xs text-green-400">Applied!</span>
+          <span className="text-xs text-green-400">{t('dashboard.aiAssist.applied')}</span>
         </div>
       )}
     </div>
