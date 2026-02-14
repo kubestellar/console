@@ -358,10 +358,13 @@ func (h *GitOpsHandlers) getKustomizationsForCluster(ctx context.Context, cluste
 // ListOperators returns OLM-managed operators (ClusterServiceVersions)
 func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
+	const perClusterTimeout = 15 * time.Second
 
 	// If specific cluster requested, query only that cluster
 	if cluster != "" {
-		operators := h.getOperatorsForCluster(c.Context(), cluster)
+		ctx, cancel := context.WithTimeout(c.Context(), perClusterTimeout)
+		defer cancel()
+		operators := h.getOperatorsForCluster(ctx, cluster)
 		return c.JSON(fiber.Map{"operators": operators})
 	}
 
@@ -374,14 +377,13 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		var allOperators []Operator
-		clusterTimeout := 15 * time.Second
+		allOperators := make([]Operator, 0)
 
 		for _, cl := range clusters {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
-				ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+				ctx, cancel := context.WithTimeout(c.Context(), perClusterTimeout)
 				defer cancel()
 
 				operators := h.getOperatorsForCluster(ctx, clusterName)
@@ -398,7 +400,9 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	}
 
 	// Fallback to default context
-	operators := h.getOperatorsForCluster(c.Context(), "")
+	ctx, cancel := context.WithTimeout(c.Context(), perClusterTimeout)
+	defer cancel()
+	operators := h.getOperatorsForCluster(ctx, "")
 	return c.JSON(fiber.Map{"operators": operators})
 }
 
