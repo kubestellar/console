@@ -226,8 +226,8 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
   )
 }
 
-function generateNightlySummary(guides: NightlyGuideStatus[]): string {
-  if (guides.length === 0) return 'No nightly E2E data available yet.'
+function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] {
+  if (guides.length === 0) return ['No nightly E2E data available yet.', '']
 
   // Group by platform
   const byPlatform = new Map<string, NightlyGuideStatus[]>()
@@ -237,44 +237,96 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): string {
     byPlatform.set(g.platform, list)
   }
 
-  const platformSummaries: string[] = []
+  // Paragraph 1: Overall + per-platform health
+  const para1Parts: string[] = []
+  const allWithRuns = guides.filter(g => g.runs.length > 0)
+  const totalPassing = allWithRuns.filter(g => g.latestConclusion === 'success').length
+  const totalWithRuns = allWithRuns.length
+  const overallPct = totalWithRuns > 0
+    ? Math.round((allWithRuns.reduce((s, g) => s + g.passRate, 0)) / totalWithRuns)
+    : 0
 
-  for (const [platform, pGuides] of byPlatform) {
-    const withRuns = pGuides.filter(g => g.runs.length > 0)
-    if (withRuns.length === 0) {
-      platformSummaries.push(`${platform} has no workflow runs yet`)
-      continue
-    }
+  if (totalWithRuns === 0) {
+    para1Parts.push('No workflow runs have been recorded yet across any platform.')
+  } else {
+    para1Parts.push(`Across ${totalWithRuns} active guides, ${totalPassing} are currently passing their latest run with an average pass rate of ${overallPct}%.`)
 
-    const passing = withRuns.filter(g => g.latestConclusion === 'success').length
-    const total = withRuns.length
-    const trendingUp = withRuns.filter(g => g.trend === 'up').length
-    const running = withRuns.filter(g => g.runs.some(r => r.status === 'in_progress')).length
+    for (const [platform, pGuides] of byPlatform) {
+      const withRuns = pGuides.filter(g => g.runs.length > 0)
+      if (withRuns.length === 0) {
+        para1Parts.push(`${platform} has no workflows created yet.`)
+        continue
+      }
+      const passing = withRuns.filter(g => g.latestConclusion === 'success').length
+      const total = withRuns.length
+      const avgRate = Math.round(withRuns.reduce((s, g) => s + g.passRate, 0) / total)
+      const trendingUp = withRuns.filter(g => g.trend === 'up').length
+      const running = withRuns.filter(g => g.runs.some(r => r.status === 'in_progress')).length
 
-    // Find best guide
-    const best = withRuns.reduce((a, b) => a.passRate > b.passRate ? a : b)
-
-    if (passing === 0 && total > 1) {
-      // Platform-wide failure
-      const suffix = running > 0 ? ` (${running} currently running)` : ''
-      platformSummaries.push(`${platform} is at 0% across all ${total} guides — likely an infrastructure issue${suffix}`)
-    } else if (passing === total) {
-      platformSummaries.push(`${platform} is fully green with all ${total} guides passing`)
-    } else {
-      const trendNote = trendingUp > total / 2 ? ', trending up' : ''
-      const leader = best.passRate > 0 ? `, led by ${best.acronym} at ${best.passRate}%` : ''
-      platformSummaries.push(`${platform} has ${passing}/${total} guides passing${leader}${trendNote}`)
+      if (passing === 0 && total > 1) {
+        const suffix = running > 0 ? `, though ${running} ${running === 1 ? 'is' : 'are'} currently running` : ''
+        para1Parts.push(`${platform} is at 0% across all ${total} guides${suffix} — this suggests an infrastructure or configuration issue.`)
+      } else if (passing === total) {
+        para1Parts.push(`${platform} is fully green with all ${total} guides passing (avg ${avgRate}%).`)
+      } else {
+        const trendNote = trendingUp > 0 ? ` with ${trendingUp} trending upward` : ''
+        para1Parts.push(`${platform} has ${passing}/${total} guides passing (avg ${avgRate}%)${trendNote}.`)
+      }
     }
   }
 
-  // Build 2-sentence summary: join platform summaries intelligently
-  if (platformSummaries.length === 1) return platformSummaries[0] + '.'
-  if (platformSummaries.length === 2) return platformSummaries[0] + '. ' + platformSummaries[1] + '.'
-  return platformSummaries[0] + '. ' + platformSummaries.slice(1).join('; ') + '.'
+  // Paragraph 2: Notable patterns — streaks, regressions, standouts
+  const para2Parts: string[] = []
+
+  // Find best and worst performers (with runs)
+  if (allWithRuns.length > 0) {
+    const best = allWithRuns.reduce((a, b) => a.passRate > b.passRate ? a : b)
+    const worst = allWithRuns.filter(g => g.runs.length >= 3).reduce(
+      (a, b) => a.passRate < b.passRate ? a : b, allWithRuns[0]
+    )
+
+    if (best.passRate > 0) {
+      para2Parts.push(`${best.acronym} (${best.platform}) leads at ${best.passRate}% pass rate.`)
+    }
+    if (worst.passRate === 0 && worst.runs.length >= 3) {
+      para2Parts.push(`${worst.acronym} (${worst.platform}) has never passed in ${worst.runs.length} runs and needs investigation.`)
+    }
+  }
+
+  // Streaks
+  for (const g of allWithRuns) {
+    let streak = 0
+    let sType: 'success' | 'failure' | null = null
+    for (const r of g.runs) {
+      if (r.status !== 'completed') continue
+      if (!sType) sType = r.conclusion === 'success' ? 'success' : 'failure'
+      if ((sType === 'success' && r.conclusion === 'success') ||
+          (sType === 'failure' && r.conclusion !== 'success')) {
+        streak++
+      } else break
+    }
+    if (sType === 'success' && streak >= 3) {
+      para2Parts.push(`${g.acronym} (${g.platform}) has ${streak} consecutive passes.`)
+    } else if (sType === 'failure' && streak >= 3 && g.runs.some(r => r.conclusion === 'success')) {
+      para2Parts.push(`${g.acronym} (${g.platform}) has regressed with ${streak} consecutive failures.`)
+    }
+  }
+
+  // Currently running
+  const runningGuides = allWithRuns.filter(g => g.runs.some(r => r.status === 'in_progress'))
+  if (runningGuides.length > 0) {
+    const names = runningGuides.map(g => `${g.acronym} (${g.platform})`).join(', ')
+    para2Parts.push(`Currently running: ${names}.`)
+  }
+
+  const p1 = para1Parts.join(' ')
+  const p2 = para2Parts.length > 0 ? para2Parts.join(' ') : 'No notable patterns detected in recent runs.'
+
+  return [p1, p2]
 }
 
 function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }) {
-  const summary = useMemo(() => generateNightlySummary(guides), [guides])
+  const [para1, para2] = useMemo(() => generateNightlySummary(guides), [guides])
 
   return (
     <div className="h-full flex flex-col">
@@ -282,8 +334,9 @@ function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }) {
         <Sparkles size={14} className="text-purple-400" />
         <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">AI Summary</span>
       </div>
-      <div className="flex-1">
-        <p className="text-[11px] text-slate-400 leading-relaxed">{summary}</p>
+      <div className="flex-1 space-y-3">
+        <p className="text-[11px] text-slate-400 leading-relaxed">{para1}</p>
+        {para2 && <p className="text-[11px] text-slate-400 leading-relaxed">{para2}</p>}
       </div>
       <div className="mt-auto pt-3 border-t border-slate-700/30">
         <p className="text-[10px] text-slate-600 text-center">Hover a test for details</p>
@@ -528,7 +581,7 @@ export function NightlyE2EStatus() {
       {/* Two-column layout: guide rows (left) + detail panel (right) */}
       <div className="flex flex-1 min-h-0 gap-3">
         {/* Guide rows grouped by platform */}
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-2" onMouseLeave={() => setSelectedKey(null)}>
           {[...grouped.entries()].map(([platform, platformGuides]) => (
             <div key={platform}>
               <div className="flex items-center gap-2 px-2 mb-1">
