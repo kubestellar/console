@@ -124,10 +124,7 @@ export function Login() {
 
           {/* Footer */}
           <p className="text-center text-sm text-muted-foreground mt-8">
-            By signing in, you agree to our{' '}
-            <span className="text-purple-400">
-              Terms of Service
-            </span>
+            By signing in, you agree to our Terms of Service
           </p>
         </div>
       </div>
