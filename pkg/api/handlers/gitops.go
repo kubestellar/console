@@ -549,6 +549,16 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	// Cache miss — fetch from cluster with retry for transient errors
 	operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
 	if err != nil {
+		// Permanent errors (cluster lacks OLM) — cache empty result
+		if _, ok := err.(errPermanent); ok {
+			operatorCacheMu.Lock()
+			operatorCacheData[cacheKey] = &operatorCacheEntry{
+				operators: []Operator{},
+				fetchedAt: time.Now(),
+			}
+			operatorCacheMu.Unlock()
+			return []Operator{}
+		}
 		// Retry once for transient errors (HTTP/2 stream errors, connection resets)
 		if ctx.Err() == nil {
 			log.Printf("Retrying operator fetch for cluster %s after transient error", cluster)
@@ -558,11 +568,11 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	}
 
 	if err != nil {
-		// Fetch failed — do NOT cache so next request retries
+		// Transient failure — do NOT cache so next request retries
 		return []Operator{}
 	}
 
-	// Store in cache (including empty results for clusters without OLM)
+	// Store in cache
 	operatorCacheMu.Lock()
 	operatorCacheData[cacheKey] = &operatorCacheEntry{
 		operators: operators,
@@ -573,10 +583,12 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	return operators
 }
 
+// errPermanent wraps an error to indicate it should be cached (e.g., cluster lacks OLM).
+type errPermanent struct{ error }
+
 // fetchOperatorsFromCluster queries a cluster for CSVs using kubectl -o json.
-// Returns (operators, nil) on success or (nil, error) on failure.
-// This is slow for large clusters (90-180s for 1000+ CSVs) but the result is
-// cached by getOperatorsForCluster.
+// Returns (operators, nil) on success, (nil, errPermanent) for permanent errors
+// (cluster lacks CSV resource), or (nil, error) for transient errors.
 func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster string) ([]Operator, error) {
 	args := []string{"get", "csv", "-A", "-o", "json", "--request-timeout=0"}
 	if cluster != "" {
@@ -589,10 +601,15 @@ func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster 
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		stderrStr := stderr.String()
 		if ctx.Err() == nil {
-			log.Printf("kubectl get csv failed for cluster %s: %v, stderr: %s", cluster, err, stderr.String())
+			log.Printf("kubectl get csv failed for cluster %s: %v, stderr: %s", cluster, err, stderrStr)
 		} else {
 			log.Printf("kubectl get csv timed out for cluster %s", cluster)
+		}
+		// "doesn't have a resource type" = cluster lacks OLM — permanent, safe to cache
+		if strings.Contains(stderrStr, "doesn't have a resource type") {
+			return nil, errPermanent{err}
 		}
 		return nil, err
 	}
