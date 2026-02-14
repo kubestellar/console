@@ -2,19 +2,22 @@
  * Hook for fetching nightly E2E workflow run status.
  *
  * Primary: fetches from backend proxy (/api/nightly-e2e/runs) which uses a
- * server-side GitHub token and caches results for 5 minutes.
+ * server-side GitHub token and caches results for 5 minutes (2 min when
+ * jobs are in progress).
  *
  * Fallback: if the backend is unavailable, tries direct GitHub API calls
  * using the user's localStorage token. Falls back to demo data when neither
  * source is available.
  */
+import { useEffect, useState } from 'react'
 import { useCache } from '../lib/cache'
 import {
   generateDemoNightlyData,
   type NightlyGuideStatus,
 } from '../lib/llmd/nightlyE2EDemoData'
 
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+const REFRESH_IDLE_MS = 5 * 60 * 1000    // 5 minutes when idle
+const REFRESH_ACTIVE_MS = 2 * 60 * 1000  // 2 minutes when jobs are running
 
 const DEMO_DATA = generateDemoNightlyData()
 
@@ -30,13 +33,16 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export function useNightlyE2EData() {
+  const [hasRunningJobs, setHasRunningJobs] = useState(false)
+  const refreshInterval = hasRunningJobs ? REFRESH_ACTIVE_MS : REFRESH_IDLE_MS
+
   const cacheResult = useCache<NightlyE2EData>({
     key: 'nightly-e2e-status',
     category: 'default',
     initialData: { guides: DEMO_DATA, isDemo: true },
     demoData: { guides: DEMO_DATA, isDemo: true },
     persist: true,
-    refreshInterval: REFRESH_INTERVAL_MS,
+    refreshInterval,
     fetcher: async () => {
       // Try authenticated endpoint first, then public fallback
       const endpoints = ['/api/nightly-e2e/runs', '/api/public/nightly-e2e/runs']
@@ -92,7 +98,13 @@ export function useNightlyE2EData() {
     },
   })
 
+  // Track whether any jobs are in progress to speed up polling
   const { guides, isDemo } = cacheResult.data
+  useEffect(() => {
+    const running = guides.some(g => g.runs.some(r => r.status === 'in_progress'))
+    if (running !== hasRunningJobs) setHasRunningJobs(running)
+  }, [guides, hasRunningJobs])
+
   return {
     guides,
     isDemoFallback: isDemo,

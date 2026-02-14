@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	nightlyCacheTTL    = 5 * time.Minute
-	nightlyRunsPerPage = 7
-	githubAPIBase      = "https://api.github.com"
+	nightlyCacheIdleTTL   = 5 * time.Minute // cache when no jobs running
+	nightlyCacheActiveTTL = 2 * time.Minute // cache when jobs are in progress
+	nightlyRunsPerPage    = 7
+	githubAPIBase         = "https://api.github.com"
 )
 
 // NightlyWorkflow defines a GitHub Actions workflow to monitor.
@@ -99,7 +100,8 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 	}
 }
 
-// GetRuns returns aggregated nightly E2E workflow data, cached for 5 minutes.
+// GetRuns returns aggregated nightly E2E workflow data.
+// Cache TTL is 2 min when jobs are in progress, 5 min when idle.
 func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 	// Check cache
 	h.mu.RLock()
@@ -119,10 +121,16 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 		})
 	}
 
+	// Use shorter cache TTL when any jobs are in progress
+	ttl := nightlyCacheIdleTTL
+	if hasInProgressRuns(resp.Guides) {
+		ttl = nightlyCacheActiveTTL
+	}
+
 	// Update cache
 	h.mu.Lock()
 	h.cache = resp
-	h.cacheExp = time.Now().Add(nightlyCacheTTL)
+	h.cacheExp = time.Now().Add(ttl)
 	h.mu.Unlock()
 
 	return c.JSON(resp)
@@ -279,6 +287,17 @@ func computeTrend(runs []NightlyRun) string {
 		return "down"
 	}
 	return "steady"
+}
+
+func hasInProgressRuns(guides []NightlyGuideStatus) bool {
+	for _, g := range guides {
+		for _, r := range g.Runs {
+			if r.Status == "in_progress" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func successRate(runs []NightlyRun) float64 {

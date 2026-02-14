@@ -25,6 +25,49 @@ const PLATFORM_COLORS: Record<string, string> = {
   CKS: '#a855f7',  // purple
 }
 
+/** Static metadata per workflow — model, GPU type, GPU count used in nightly runs */
+const WORKFLOW_META: Record<string, { model: string; gpuType: string; gpuCount: number }> = {
+  // OCP
+  'nightly-e2e-inference-scheduling.yaml':   { model: 'Qwen3-32B',       gpuType: 'A100', gpuCount: 2 },
+  'nightly-e2e-pd-disaggregation.yaml':      { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
+  'nightly-e2e-precise-prefix-cache.yaml':   { model: 'Qwen3-32B',       gpuType: 'A100', gpuCount: 2 },
+  'nightly-e2e-simulated-accelerators.yaml': { model: 'Simulated',       gpuType: 'CPU',  gpuCount: 0 },
+  'nightly-e2e-tiered-prefix-cache.yaml':    { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
+  'nightly-e2e-wide-ep-lws.yaml':            { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
+  'nightly-e2e-openshift.yaml':              { model: 'Llama-3.1-8B',    gpuType: 'A100', gpuCount: 2 },
+  'ci-nighly-benchmark-ocp.yaml':            { model: 'opt-125m',        gpuType: 'A100', gpuCount: 1 },
+  // GKE
+  'nightly-e2e-inference-scheduling-gke.yaml': { model: 'Qwen3-32B',     gpuType: 'L4',   gpuCount: 2 },
+  'nightly-e2e-pd-disaggregation-gke.yaml':   { model: 'Qwen3-0.6B',    gpuType: 'L4',   gpuCount: 1 },
+  'nightly-e2e-wide-ep-lws-gke.yaml':         { model: 'DeepSeek-R1',    gpuType: 'L4',   gpuCount: 8 },
+  'ci-nighly-benchmark-gke.yaml':             { model: 'Llama-3.2-1B',   gpuType: 'H100', gpuCount: 1 },
+  // CKS (workflows not yet created)
+  'nightly-e2e-inference-scheduling-cks.yaml': { model: 'Qwen3-32B',     gpuType: 'TBD',  gpuCount: 2 },
+  'nightly-e2e-pd-disaggregation-cks.yaml':   { model: 'Qwen3-0.6B',    gpuType: 'TBD',  gpuCount: 1 },
+  'nightly-e2e-wide-ep-lws-cks.yaml':         { model: 'Qwen3-0.6B',    gpuType: 'TBD',  gpuCount: 1 },
+  'nightly-e2e-benchmarking-cks.yaml':         { model: 'TBD',           gpuType: 'TBD',  gpuCount: 0 },
+}
+
+function getWorkflowMeta(workflowFile: string) {
+  return WORKFLOW_META[workflowFile] ?? { model: 'Unknown', gpuType: 'Unknown', gpuCount: 0 }
+}
+
+function computeAvgDurationMin(runs: NightlyRun[]): number | null {
+  const completed = runs.filter(r => r.status === 'completed' && r.createdAt && r.updatedAt)
+  if (completed.length === 0) return null
+  const totalMs = completed.reduce((sum, r) => {
+    return sum + (new Date(r.updatedAt).getTime() - new Date(r.createdAt).getTime())
+  }, 0)
+  return Math.round(totalMs / completed.length / 60_000)
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m > 0 ? `${h}h ${m}m` : `${h}h`
+}
+
 function formatTimeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (seconds < 60) return 'just now'
@@ -238,8 +281,6 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
     byPlatform.set(g.platform, list)
   }
 
-  // Paragraph 1: Overall + per-platform health
-  const para1Parts: string[] = []
   const allWithRuns = guides.filter(g => g.runs.length > 0)
   const totalPassing = allWithRuns.filter(g => g.latestConclusion === 'success').length
   const totalWithRuns = allWithRuns.length
@@ -247,10 +288,35 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
     ? Math.round((allWithRuns.reduce((s, g) => s + g.passRate, 0)) / totalWithRuns)
     : 0
 
+  // Compute duration stats across all completed runs
+  const allCompletedRuns = allWithRuns.flatMap(g => g.runs.filter(r => r.status === 'completed'))
+  const avgDuration = computeAvgDurationMin(allCompletedRuns)
+
+  // Collect unique models and GPU types across active guides
+  const modelSet = new Set<string>()
+  const gpuTypeSet = new Set<string>()
+  let totalGpus = 0
+  for (const g of allWithRuns) {
+    const meta = getWorkflowMeta(g.workflowFile)
+    if (meta.model !== 'Unknown' && meta.model !== 'Simulated') modelSet.add(meta.model)
+    if (meta.gpuType !== 'Unknown' && meta.gpuType !== 'CPU' && meta.gpuType !== 'TBD') gpuTypeSet.add(meta.gpuType)
+    totalGpus += meta.gpuCount
+  }
+
+  // Paragraph 1: Overall health + infrastructure context
+  const para1Parts: string[] = []
+
   if (totalWithRuns === 0) {
     para1Parts.push('No workflow runs have been recorded yet across any platform.')
   } else {
-    para1Parts.push(`Across ${totalWithRuns} active guides, ${totalPassing} are currently passing their latest run with an average pass rate of ${overallPct}%.`)
+    para1Parts.push(`Across ${totalWithRuns} active guides, ${totalPassing} are currently passing with an average pass rate of ${overallPct}%.`)
+
+    // Duration + infrastructure sentence
+    const infraParts: string[] = []
+    if (avgDuration !== null) infraParts.push(`Tests average ${formatDuration(avgDuration)} to complete`)
+    if (modelSet.size > 0) infraParts.push(`exercising ${modelSet.size} model${modelSet.size > 1 ? 's' : ''} (${[...modelSet].slice(0, 3).join(', ')}${modelSet.size > 3 ? '…' : ''})`)
+    if (gpuTypeSet.size > 0) infraParts.push(`across ${totalGpus} ${[...gpuTypeSet].join('/')} GPUs`)
+    if (infraParts.length > 0) para1Parts.push(infraParts.join(' ') + '.')
 
     for (const [platform, pGuides] of byPlatform) {
       const withRuns = pGuides.filter(g => g.runs.length > 0)
@@ -266,7 +332,7 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
 
       if (passing === 0 && total > 1) {
         const suffix = running > 0 ? `, though ${running} ${running === 1 ? 'is' : 'are'} currently running` : ''
-        para1Parts.push(`${platform} is at 0% across all ${total} guides${suffix} — this suggests an infrastructure or configuration issue.`)
+        para1Parts.push(`${platform} is at 0% across all ${total} guides${suffix} — likely an infrastructure issue.`)
       } else if (passing === total) {
         para1Parts.push(`${platform} is fully green with all ${total} guides passing (avg ${avgRate}%).`)
       } else {
@@ -276,10 +342,9 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
     }
   }
 
-  // Paragraph 2: Notable patterns — streaks, regressions, standouts
+  // Paragraph 2: Notable patterns + per-guide duration outliers
   const para2Parts: string[] = []
 
-  // Find best and worst performers (with runs)
   if (allWithRuns.length > 0) {
     const best = allWithRuns.reduce((a, b) => a.passRate > b.passRate ? a : b)
     const worst = allWithRuns.filter(g => g.runs.length >= 3).reduce(
@@ -287,10 +352,26 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
     )
 
     if (best.passRate > 0) {
-      para2Parts.push(`${best.acronym} (${best.platform}) leads at ${best.passRate}% pass rate.`)
+      const meta = getWorkflowMeta(best.workflowFile)
+      const dur = computeAvgDurationMin(best.runs.filter(r => r.status === 'completed'))
+      const durStr = dur !== null ? ` (avg ${formatDuration(dur)}, ${meta.model} on ${meta.gpuCount}× ${meta.gpuType})` : ''
+      para2Parts.push(`${best.acronym} (${best.platform}) leads at ${best.passRate}%${durStr}.`)
     }
     if (worst.passRate === 0 && worst.runs.length >= 3) {
       para2Parts.push(`${worst.acronym} (${worst.platform}) has never passed in ${worst.runs.length} runs and needs investigation.`)
+    }
+
+    // Find slowest guide
+    if (avgDuration !== null) {
+      let slowest: { g: NightlyGuideStatus; dur: number } | null = null
+      for (const g of allWithRuns) {
+        const d = computeAvgDurationMin(g.runs.filter(r => r.status === 'completed'))
+        if (d !== null && (slowest === null || d > slowest.dur)) slowest = { g, dur: d }
+      }
+      if (slowest && slowest.dur > avgDuration * 1.5) {
+        const meta = getWorkflowMeta(slowest.g.workflowFile)
+        para2Parts.push(`${slowest.g.acronym} (${slowest.g.platform}) is the slowest at ${formatDuration(slowest.dur)} avg, running ${meta.model} on ${meta.gpuCount}× ${meta.gpuType}.`)
+      }
     }
   }
 
@@ -316,7 +397,10 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
   // Currently running
   const runningGuides = allWithRuns.filter(g => g.runs.some(r => r.status === 'in_progress'))
   if (runningGuides.length > 0) {
-    const names = runningGuides.map(g => `${g.acronym} (${g.platform})`).join(', ')
+    const names = runningGuides.map(g => {
+      const meta = getWorkflowMeta(g.workflowFile)
+      return `${g.acronym} (${g.platform}, ${meta.model})`
+    }).join(', ')
     para2Parts.push(`Currently running: ${names}.`)
   }
 
@@ -352,6 +436,8 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
   const failed = completedRuns.filter(r => r.conclusion === 'failure').length
   const cancelled = completedRuns.filter(r => r.conclusion === 'cancelled').length
   const running = guide.runs.filter(r => r.status === 'in_progress').length
+  const meta = getWorkflowMeta(guide.workflowFile)
+  const avgDur = computeAvgDurationMin(completedRuns)
 
   // Consecutive streak
   let streak = 0
@@ -436,8 +522,25 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
         </div>
       )}
 
-      {/* Timestamps + details */}
+      {/* Infrastructure + timestamps */}
       <div className="space-y-1 flex-1">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-slate-500">Model</span>
+          <span className="text-slate-300 font-mono text-[10px] truncate max-w-[140px]" title={meta.model}>{meta.model}</span>
+        </div>
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-slate-500">GPU</span>
+          <span className="text-slate-300 font-mono text-[10px]">
+            {meta.gpuCount > 0 ? `${meta.gpuCount}× ${meta.gpuType}` : meta.gpuType}
+          </span>
+        </div>
+        {avgDur !== null && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">Avg duration</span>
+            <span className="text-slate-300 font-mono">{formatDuration(avgDur)}</span>
+          </div>
+        )}
+        <div className="h-px bg-slate-700/30 my-0.5" />
         {lastSuccess && (
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-slate-500">Last pass</span>
