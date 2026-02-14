@@ -5,9 +5,13 @@ web/node_modules/
 # Build outputs
 web/dist/
 web/tsconfig.tsbuildinfo
-console
-console-server
+/console
+/console-server
 *.exe
+*.out
+*.test
+coverage.out
+
 
 # Environment and secrets
 .env
@@ -59,5 +63,5 @@ vendor/
 
 # Claude Code local files
 .bob/
-bin/
+/bin/*
 *.bak
