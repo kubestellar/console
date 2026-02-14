@@ -526,8 +526,14 @@ func (s *Server) setupRoutes() {
 	api.Get("/gitops/helm-values", gitopsHandlers.GetHelmValues)
 	api.Get("/gitops/kustomizations", gitopsHandlers.ListKustomizations)
 	api.Get("/gitops/operators", gitopsHandlers.ListOperators)
+	api.Get("/gitops/operators/stream", gitopsHandlers.StreamOperators)
+	api.Get("/gitops/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
+	api.Get("/gitops/operator-subscriptions/stream", gitopsHandlers.StreamOperatorSubscriptions)
+	api.Get("/gitops/helm-releases/stream", gitopsHandlers.StreamHelmReleases)
 	api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
 	api.Post("/gitops/sync", gitopsHandlers.Sync)
+	// Frontend compatibility alias
+	api.Get("/mcp/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
 
 	// MCS (Multi-Cluster Service) routes
 	mcsHandlers := handlers.NewMCSHandlers(s.k8sClient, s.hub)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
+import { fetchSSE } from '../../lib/sseClient'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
@@ -10,8 +11,8 @@ import type { Operator, OperatorSubscription } from './types'
 const OPERATORS_CACHE_KEY = 'kubestellar-operators-cache'
 const SUBSCRIPTIONS_CACHE_KEY = 'kubestellar-subscriptions-cache'
 
-// Per-cluster timeout — short enough so auto-refresh (30s) doesn't overlap
-const OPERATOR_API_TIMEOUT = 15000
+// REST fallback timeout (SSE is preferred but REST needs generous timeout for large clusters)
+const OPERATOR_REST_TIMEOUT = 120000
 
 // Load operators from localStorage
 function loadOperatorsCacheFromStorage(cacheKey: string): { data: Operator[], timestamp: number } | null {
@@ -63,11 +64,8 @@ export function useOperators(cluster?: string) {
   const cached = loadOperatorsCacheFromStorage(cacheKey)
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
-  // Track whether we've ever completed a fetch with targets available
   const hasCompletedFetchRef = useRef(!!cached)
-  // AbortController ref — cancels in-flight HTTP requests on cleanup
   const abortRef = useRef<AbortController | null>(null)
-  // Guard against overlapping fetches (auto-refresh fires while previous is pending)
   const fetchInProgressRef = useRef(false)
 
   const [operators, setOperators] = useState<Operator[]>(cached?.data || [])
@@ -76,30 +74,23 @@ export function useOperators(cluster?: string) {
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  // Track cluster count to re-fetch when clusters become available
   const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
-  // Version counter to force refetch
   const [fetchVersion, setFetchVersion] = useState(0)
 
-  // Subscribe to cluster cache updates for "all clusters" mode
   useEffect(() => {
     return subscribeClusterCache((cache) => {
       setClusterCount(cache.clusters.length)
     })
   }, [])
 
-  // Refetch when cluster, clusterCount, or fetchVersion changes
   useEffect(() => {
-    // Skip if a fetch is already in progress (prevents auto-refresh overlap)
     if (fetchInProgressRef.current) return
 
-    // Abort any lingering previous requests
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
 
     const doFetch = async () => {
-      // If demo mode is enabled, use demo data directly
       if (isDemoMode()) {
         const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
         const allOperators = clusters.flatMap(c => getDemoOperators(c))
@@ -114,16 +105,69 @@ export function useOperators(cluster?: string) {
       fetchInProgressRef.current = true
       setIsRefreshing(true)
 
-      // Build URL — backend handles parallel cluster queries when no cluster specified
+      // Try SSE streaming first for progressive rendering
+      const token = localStorage.getItem('token')
+      const sseAvailable = token && token !== 'demo-token'
+
+      if (sseAvailable) {
+        try {
+          const accumulated: Operator[] = []
+          const params: Record<string, string> = {}
+          if (cluster) params.cluster = cluster
+
+          const result = await fetchSSE<Operator>({
+            url: '/api/gitops/operators/stream',
+            params,
+            itemsKey: 'operators',
+            signal: controller.signal,
+            onClusterData: (_clusterName, items) => {
+              // Map phase → status for each operator
+              const mapped = items.map(op => ({
+                ...op,
+                status: (op.status || (op as Operator & { phase?: string }).phase || 'Unknown') as Operator['status'],
+              }))
+              accumulated.push(...mapped)
+              if (!controller.signal.aborted) {
+                setOperators([...accumulated])
+                setIsLoading(false)
+              }
+            },
+          })
+
+          if (!controller.signal.aborted) {
+            hasCompletedFetchRef.current = true
+            const finalOperators = result.map(op => ({
+              ...op,
+              status: (op.status || (op as Operator & { phase?: string }).phase || 'Unknown') as Operator['status'],
+            }))
+            setOperators(finalOperators)
+            saveOperatorsCacheToStorage(finalOperators, cacheKey)
+            setError(null)
+            setConsecutiveFailures(0)
+            setLastRefresh(Date.now())
+          }
+          setIsLoading(false)
+          setIsRefreshing(false)
+          fetchInProgressRef.current = false
+          return
+        } catch {
+          // SSE failed — fall through to REST
+          if (controller.signal.aborted) {
+            fetchInProgressRef.current = false
+            return
+          }
+        }
+      }
+
+      // REST fallback
       const url = cluster
         ? `/api/gitops/operators?cluster=${encodeURIComponent(cluster)}`
         : '/api/gitops/operators'
 
       try {
-        const { data } = await api.get<{ operators: Array<Operator & { phase?: string }> }>(url, { timeout: OPERATOR_API_TIMEOUT })
+        const { data } = await api.get<{ operators: Array<Operator & { phase?: string }> }>(url, { timeout: OPERATOR_REST_TIMEOUT })
         if (!controller.signal.aborted) {
           hasCompletedFetchRef.current = true
-          // Map backend `phase` field to frontend `status` field
           const newOperators = (data.operators || []).map(op => ({
             ...op,
             status: (op.status || op.phase || 'Unknown') as Operator['status'],
@@ -137,16 +181,10 @@ export function useOperators(cluster?: string) {
         }
       } catch {
         if (!controller.signal.aborted) {
-          // Don't show error - operators are optional
           setError(null)
           setConsecutiveFailures(prev => prev + 1)
-          // Keep cached data on error instead of clearing
-          if (operators.length === 0) {
-            setOperators([])
-          }
         }
       }
-      // Always exit loading state after fetch completes
       setIsLoading(false)
       setIsRefreshing(false)
       fetchInProgressRef.current = false
@@ -154,7 +192,6 @@ export function useOperators(cluster?: string) {
 
     doFetch()
 
-    // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`operators:${cacheKey}`, () => {
       setFetchVersion(v => v + 1)
     })
@@ -172,7 +209,6 @@ export function useOperators(cluster?: string) {
     setFetchVersion(v => v + 1)
   }, [])
 
-  // Re-fetch when demo mode changes (not on initial mount)
   useEffect(() => {
     if (initialMountRef.current) {
       initialMountRef.current = false
@@ -200,19 +236,15 @@ export function useOperatorSubscriptions(cluster?: string) {
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  // Track cluster count to re-fetch when clusters become available
   const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
-  // Version counter to force refetch
   const [fetchVersion, setFetchVersion] = useState(0)
 
-  // Subscribe to cluster cache updates for "all clusters" mode
   useEffect(() => {
     return subscribeClusterCache((cache) => {
       setClusterCount(cache.clusters.length)
     })
   }, [])
 
-  // Refetch when cluster, clusterCount, or fetchVersion changes
   useEffect(() => {
     if (fetchInProgressRef.current) return
 
@@ -235,70 +267,62 @@ export function useOperatorSubscriptions(cluster?: string) {
       fetchInProgressRef.current = true
       setIsRefreshing(true)
 
-      // If no cluster specified, fetch from all clusters
-      if (!cluster) {
-        const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false)
-        if (allClusters.length === 0) {
-          if (hasCompletedFetchRef.current) {
-            setSubscriptions([])
+      // Try SSE streaming first — backend handles multi-cluster parallelism
+      const token = localStorage.getItem('token')
+      const sseAvailable = token && token !== 'demo-token'
+
+      if (sseAvailable) {
+        try {
+          const accumulated: OperatorSubscription[] = []
+          const params: Record<string, string> = {}
+          if (cluster) params.cluster = cluster
+
+          const result = await fetchSSE<OperatorSubscription>({
+            url: '/api/gitops/operator-subscriptions/stream',
+            params,
+            itemsKey: 'subscriptions',
+            signal: controller.signal,
+            onClusterData: (_clusterName, items) => {
+              accumulated.push(...items)
+              if (!controller.signal.aborted) {
+                setSubscriptions([...accumulated])
+                setIsLoading(false)
+              }
+            },
+          })
+
+          if (!controller.signal.aborted) {
+            hasCompletedFetchRef.current = true
+            setSubscriptions(result)
+            saveSubscriptionsCacheToStorage(result, cacheKey)
+            setError(null)
+            setConsecutiveFailures(0)
+            setLastRefresh(Date.now())
           }
           setIsLoading(false)
           setIsRefreshing(false)
           fetchInProgressRef.current = false
           return
-        }
-
-        const accumulated: OperatorSubscription[] = []
-        let anySucceeded = false
-
-        await Promise.allSettled(
-          allClusters.map(async (c) => {
-            try {
-              const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(
-                `/api/mcp/operator-subscriptions?cluster=${encodeURIComponent(c.name)}`,
-                { timeout: OPERATOR_API_TIMEOUT },
-              )
-              anySucceeded = true
-              const subs = (data.subscriptions || []).map(sub => ({ ...sub, cluster: c.name }))
-              if (subs.length > 0 && !controller.signal.aborted) {
-                accumulated.push(...subs)
-                setSubscriptions([...accumulated])
-                setIsLoading(false)
-              }
-            } catch {
-              // Skip clusters where operator subscription API is unavailable
-            }
-          }),
-        )
-
-        if (!controller.signal.aborted) {
-          if (anySucceeded || hasCompletedFetchRef.current) {
-            hasCompletedFetchRef.current = true
-            setSubscriptions([...accumulated])
-            saveSubscriptionsCacheToStorage(accumulated, cacheKey)
-            setError(null)
-            setConsecutiveFailures(0)
-            setLastRefresh(Date.now())
-          } else {
-            setConsecutiveFailures(prev => prev + 1)
+        } catch {
+          if (controller.signal.aborted) {
+            fetchInProgressRef.current = false
+            return
           }
         }
-        setIsLoading(false)
-        setIsRefreshing(false)
-        fetchInProgressRef.current = false
-        return
       }
 
+      // REST fallback
+      const url = cluster
+        ? `/api/gitops/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`
+        : '/api/gitops/operator-subscriptions'
+
       try {
-        const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(
-          `/api/mcp/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`,
-          { timeout: OPERATOR_API_TIMEOUT },
-        )
+        const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(url, { timeout: OPERATOR_REST_TIMEOUT })
         if (!controller.signal.aborted) {
           hasCompletedFetchRef.current = true
-          const newSubscriptions = (data.subscriptions || []).map(sub => ({ ...sub, cluster }))
-          setSubscriptions(newSubscriptions)
-          saveSubscriptionsCacheToStorage(newSubscriptions, cacheKey)
+          const newSubs = (data.subscriptions || []).map(sub => ({ ...sub, cluster: sub.cluster || cluster || '' }))
+          setSubscriptions(newSubs)
+          saveSubscriptionsCacheToStorage(newSubs, cacheKey)
           setError(null)
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
@@ -307,12 +331,8 @@ export function useOperatorSubscriptions(cluster?: string) {
         if (!controller.signal.aborted) {
           setError(null)
           setConsecutiveFailures(prev => prev + 1)
-          if (subscriptions.length === 0) {
-            setSubscriptions([])
-          }
         }
       }
-      // Always exit loading state
       setIsLoading(false)
       setIsRefreshing(false)
       fetchInProgressRef.current = false
@@ -337,7 +357,6 @@ export function useOperatorSubscriptions(cluster?: string) {
     setFetchVersion(v => v + 1)
   }, [])
 
-  // Re-fetch when demo mode changes (not on initial mount)
   useEffect(() => {
     if (initialMountRef.current) {
       initialMountRef.current = false
@@ -350,9 +369,8 @@ export function useOperatorSubscriptions(cluster?: string) {
 }
 
 function getDemoOperators(cluster: string): Operator[] {
-  // Generate cluster-specific demo data using hash of cluster name
   const hash = cluster.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  const operatorCount = 3 + (hash % 5) // 3-7 operators per cluster
+  const operatorCount = 3 + (hash % 5)
 
   const baseOperators: Operator[] = [
     { name: 'prometheus-operator', namespace: 'monitoring', version: 'v0.65.1', status: 'Succeeded', cluster },
@@ -368,9 +386,8 @@ function getDemoOperators(cluster: string): Operator[] {
 }
 
 function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
-  // Generate cluster-specific demo data using hash of cluster name
   const hash = cluster.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  const subCount = 2 + (hash % 4) // 2-5 subscriptions per cluster
+  const subCount = 2 + (hash % 4)
 
   const baseSubscriptions: OperatorSubscription[] = [
     {
