@@ -188,6 +188,7 @@ function GuideRow({ guide, delay, isSelected, onMouseEnter }: {
 }
 
 function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
+  const { t } = useTranslation(['cards'])
   // Build data points: 1 = success, 0 = failure/cancelled, 0.5 = in_progress
   // Reversed so oldest is on left, newest on right
   const points = [...runs].reverse().map(r => {
@@ -231,7 +232,7 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
 
   return (
     <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-2">
-      <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Pass/Fail Trend</div>
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{t('cards:llmd.passFailTrend')}</div>
       <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -244,8 +245,8 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
         <line x1={padX} y1={padY + chartH / 2} x2={width - padX} y2={padY + chartH / 2} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
         <line x1={padX} y1={padY + chartH} x2={width - padX} y2={padY + chartH} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
         {/* Y-axis labels */}
-        <text x={padX - 2} y={padY + 3} textAnchor="end" fontSize="7" fill="#64748b">Pass</text>
-        <text x={padX - 2} y={padY + chartH + 3} textAnchor="end" fontSize="7" fill="#64748b">Fail</text>
+        <text x={padX - 2} y={padY + 3} textAnchor="end" fontSize="7" fill="#64748b">{t('cards:llmd.pass')}</text>
+        <text x={padX - 2} y={padY + chartH + 3} textAnchor="end" fontSize="7" fill="#64748b">{t('cards:llmd.fail')}</text>
         {/* Area fill */}
         <path d={areaPath} fill={`url(#${gradientId})`} />
         {/* Line */}
@@ -412,26 +413,28 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
 }
 
 function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }) {
+  const { t } = useTranslation(['cards'])
   const [para1, para2] = useMemo(() => generateNightlySummary(guides), [guides])
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center gap-2 mb-3">
         <Sparkles size={14} className="text-purple-400" />
-        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">AI Summary</span>
+        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">{t('cards:llmd.aiSummary')}</span>
       </div>
       <div className="flex-1 space-y-3">
         <p className="text-[11px] text-slate-400 leading-relaxed">{para1}</p>
         {para2 && <p className="text-[11px] text-slate-400 leading-relaxed">{para2}</p>}
       </div>
       <div className="mt-auto pt-3 border-t border-slate-700/30">
-        <p className="text-[10px] text-slate-600 text-center">Hover a test for details</p>
+        <p className="text-[10px] text-slate-600 text-center">{t('cards:llmd.hoverTestDetails')}</p>
       </div>
     </div>
   )
 }
 
 function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
+  const { t } = useTranslation(['cards', 'common'])
   const completedRuns = guide.runs.filter(r => r.status === 'completed')
   const passed = completedRuns.filter(r => r.conclusion === 'success').length
   const failed = completedRuns.filter(r => r.conclusion === 'failure').length
@@ -497,12 +500,12 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
           }`}>
             {guide.passRate}%
           </div>
-          <div className="text-[8px] text-slate-500 uppercase tracking-wider">Rate</div>
+          <div className="text-[8px] text-slate-500 uppercase tracking-wider">{t('common:common.rate')}</div>
         </div>
-        <StatBox label="Pass" value={String(passed)} color="text-emerald-400" />
-        <StatBox label="Fail" value={String(failed)} color="text-red-400" />
-        <StatBox label="Skip" value={String(cancelled)} color="text-slate-400" />
-        <StatBox label="Run" value={String(running)} color="text-blue-400" />
+        <StatBox label={t('cards:llmd.pass')} value={String(passed)} color="text-emerald-400" />
+        <StatBox label={t('cards:llmd.fail')} value={String(failed)} color="text-red-400" />
+        <StatBox label={t('cards:llmd.skip')} value={String(cancelled)} color="text-slate-400" />
+        <StatBox label={t('cards:llmd.run')} value={String(running)} color="text-blue-400" />
       </div>
 
       {/* Streak */}
@@ -518,7 +521,7 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
             <TrendingDown size={13} className="text-red-400" />
           )}
           <span className="text-xs text-slate-300">
-            {streak} consecutive {streakType === 'success' ? 'passes' : 'failures'}
+            {streak} {streakType === 'success' ? t('cards:llmd.consecutivePasses') : t('cards:llmd.consecutiveFailures')}
           </span>
         </div>
       )}
@@ -526,47 +529,47 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
       {/* Infrastructure + timestamps */}
       <div className="space-y-1 flex-1">
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-slate-500">Model</span>
+          <span className="text-slate-500">{t('cards:llmd.model')}</span>
           <span className="text-slate-300 font-mono text-[10px] truncate max-w-[140px]" title={meta.model}>{meta.model}</span>
         </div>
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-slate-500">GPU</span>
+          <span className="text-slate-500">{t('cards:llmd.gpu')}</span>
           <span className="text-slate-300 font-mono text-[10px]">
             {meta.gpuCount > 0 ? `${meta.gpuCount}× ${meta.gpuType}` : meta.gpuType}
           </span>
         </div>
         {avgDur !== null && (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Avg duration</span>
+            <span className="text-slate-500">{t('cards:llmd.avgDuration')}</span>
             <span className="text-slate-300 font-mono">{formatDuration(avgDur)}</span>
           </div>
         )}
         <div className="h-px bg-slate-700/30 my-0.5" />
         {lastSuccess && (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Last pass</span>
+            <span className="text-slate-500">{t('cards:llmd.lastPass')}</span>
             <span className="text-emerald-400 font-mono">{formatTimeAgo(lastSuccess.updatedAt)}</span>
           </div>
         )}
         {lastFailure && (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Last fail</span>
+            <span className="text-slate-500">{t('cards:llmd.lastFail')}</span>
             <span className="text-red-400 font-mono">{formatTimeAgo(lastFailure.updatedAt)}</span>
           </div>
         )}
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-slate-500">Total runs</span>
+          <span className="text-slate-500">{t('cards:llmd.totalRuns')}</span>
           <span className="text-slate-300 font-mono">{guide.runs.length}</span>
         </div>
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-slate-500">Trend</span>
+          <span className="text-slate-500">{t('cards:llmd.trend')}</span>
           <TrendIndicator trend={guide.trend} passRate={guide.passRate} />
         </div>
       </div>
 
       {/* Run history dots */}
       <div className="mt-auto pt-2 border-t border-slate-700/30">
-        <div className="text-[10px] text-slate-500 mb-1.5">Run history (newest first)</div>
+        <div className="text-[10px] text-slate-500 mb-1.5">{t('cards:llmd.runHistoryNewest')}</div>
         <div className="flex items-center gap-1 flex-wrap">
           {guide.runs.map((run) => (
             <RunDot key={run.id} run={run} />
@@ -587,7 +590,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
 }
 
 export function NightlyE2EStatus() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useNightlyE2EData()
   const { shouldSummarize } = useAIMode()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
@@ -670,7 +673,7 @@ export function NightlyE2EStatus() {
           <div className={`text-xl font-bold ${stats.overallPassRate >= 90 ? 'text-emerald-400' : stats.overallPassRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
             {stats.overallPassRate}%
           </div>
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Pass Rate</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{t('cards:llmd.passRate')}</div>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -679,7 +682,7 @@ export function NightlyE2EStatus() {
           className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3 text-center"
         >
           <div className="text-xl font-bold text-white">{stats.total}</div>
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Guides</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{t('cards:llmd.guides')}</div>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -690,7 +693,7 @@ export function NightlyE2EStatus() {
           <div className={`text-xl font-bold ${stats.failing > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
             {stats.failing}
           </div>
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Failing</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{t('cards:llmd.failing')}</div>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -701,7 +704,7 @@ export function NightlyE2EStatus() {
           <div className="text-xl font-bold text-slate-200">
             {lastRunTime ? formatTimeAgo(lastRunTime) : '—'}
           </div>
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Last Run</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{t('cards:llmd.lastRun')}</div>
         </motion.div>
       </div>
 
@@ -719,7 +722,7 @@ export function NightlyE2EStatus() {
                 </span>
                 <div className="flex-1 h-px bg-slate-700/50" />
                 <span className="text-[10px] text-slate-500">
-                  {platformGuides.filter(g => g.latestConclusion === 'success').length}/{platformGuides.length} passing
+                  {platformGuides.filter(g => g.latestConclusion === 'success').length}/{platformGuides.length} {t('cards:llmd.passing')}
                 </span>
               </div>
               {platformGuides.map((guide, gi) => {
@@ -747,7 +750,7 @@ export function NightlyE2EStatus() {
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center gap-2">
               <TestTube2 size={20} className="text-slate-600" />
-              <p className="text-[11px] text-slate-500">Hover over a test to see detailed statistics</p>
+              <p className="text-[11px] text-slate-500">{t('cards:llmd.hoverTestDetails')}</p>
             </div>
           )}
         </div>
@@ -757,22 +760,22 @@ export function NightlyE2EStatus() {
       <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500 pt-1 border-t border-slate-700/30">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span>pass</span>
+          <span>{t('cards:llmd.pass')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-red-400" />
-          <span>fail</span>
+          <span>{t('cards:llmd.fail')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-blue-400" />
-          <span>running</span>
+          <span>{t('common:common.running').toLowerCase()}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-slate-500" />
-          <span>cancelled</span>
+          <span>{t('cards:llmd.cancelled')}</span>
         </div>
         <span className="text-slate-600">|</span>
-        <span>newest run on left</span>
+        <span>{t('cards:llmd.newestRunOnLeft')}</span>
       </div>
     </div>
   )

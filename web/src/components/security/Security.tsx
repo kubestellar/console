@@ -33,7 +33,7 @@ const DEFAULT_SECURITY_CARDS = getDefaultCards('security')
 type ViewTab = 'overview' | 'issues' | 'rbac' | 'compliance'
 
 export function Security() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const [searchParams, setSearchParams] = useSearchParams()
   const {
     selectedClusters: globalSelectedClusters,
@@ -276,11 +276,11 @@ export function Security() {
   // Get type label for display
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      privileged: 'Privileged Container',
-      root: 'Running as Root',
-      hostNetwork: 'Host Network',
-      hostPID: 'Host PID',
-      noSecurityContext: 'No Security Context',
+      privileged: t('cards:security.privilegedContainers'),
+      root: t('cards:security.runAsRoot'),
+      hostNetwork: t('cards:security.hostNetwork'),
+      hostPID: t('cards:security.hostPID'),
+      noSecurityContext: t('cards:security.noSecurityContext'),
     }
     return labels[type] || type
   }
@@ -330,14 +330,14 @@ export function Security() {
         <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 flex-shrink-0" />
           <div className="flex-1">
-            <p className="font-medium">Failed to refresh security data</p>
+            <p className="font-medium">{t('cards:security.refreshFailed')}</p>
             <p className="text-sm text-red-300/80">{refreshError}</p>
           </div>
           <button
             onClick={handleRefresh}
             className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-medium transition-colors"
           >
-            Retry
+            {t('common:common.retry')}
           </button>
         </div>
       )}
@@ -345,10 +345,10 @@ export function Security() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
         {[
-          { id: 'overview', label: 'Overview', icon: Shield },
-          { id: 'issues', label: 'Issues', icon: ShieldAlert, count: stats.total },
-          { id: 'rbac', label: 'RBAC', icon: Users, count: stats.rbacTotal },
-          { id: 'compliance', label: 'Compliance', icon: ShieldCheck },
+          { id: 'overview', label: t('cards:security.overview'), icon: Shield },
+          { id: 'issues', label: t('cards:security.issues'), icon: ShieldAlert, count: stats.total },
+          { id: 'rbac', label: t('cards:security.rbac'), icon: Users, count: stats.rbacTotal },
+          { id: 'compliance', label: t('cards:security.compliance'), icon: ShieldCheck },
         ].map(tab => {
           const Icon = tab.icon
           return (
@@ -381,8 +381,8 @@ export function Security() {
 
   return (
     <DashboardPage
-      title="Security"
-      subtitle="RBAC, compliance, and security policies across your clusters"
+      title={t('common:navigation.security')}
+      subtitle={t('cards:security.subtitle')}
       icon="Shield"
       storageKey={SECURITY_CARDS_KEY}
       defaultCards={DEFAULT_SECURITY_CARDS}
@@ -395,8 +395,8 @@ export function Security() {
       hasData={stats.total > 0 || securityIssues.length > 0}
       beforeCards={tabsSection}
       emptyState={{
-        title: 'Security Dashboard',
-        description: 'Add cards to monitor security issues, RBAC policies, and compliance checks across your clusters.',
+        title: t('cards:security.securityDashboard'),
+        description: t('cards:security.emptyDescription'),
       }}
     >
       {/* Show skeleton when agent is offline and demo mode is OFF */}
@@ -464,7 +464,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-                  <div className="text-xs text-muted-foreground">Security Issues</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.totalIssues')}</div>
                 </div>
               </div>
             </button>
@@ -478,7 +478,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-foreground">{stats.rbacTotal}</div>
-                  <div className="text-xs text-muted-foreground">RBAC Bindings</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.roleBindings')}</div>
                 </div>
               </div>
             </button>
@@ -500,7 +500,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-foreground">{stats.complianceScore}%</div>
-                  <div className="text-xs text-muted-foreground">Compliance Score</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.complianceScore')}</div>
                 </div>
               </div>
             </button>
@@ -514,7 +514,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-red-400">{stats.high}</div>
-                  <div className="text-xs text-muted-foreground">Critical Issues</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.criticalIssues')}</div>
                 </div>
               </div>
             </button>
@@ -524,7 +524,7 @@ export function Security() {
           <div className="grid grid-cols-3 gap-4">
             {/* Severity Distribution */}
             <div className="glass p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">Issues by Severity</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('cards:security.issuesBySeverity')}</h3>
               {stats.severityChartData.length > 0 ? (
                 <DonutChart
                   data={stats.severityChartData}
@@ -541,7 +541,7 @@ export function Security() {
 
             {/* Issue Types */}
             <div className="glass p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">Issues by Type</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('cards:security.issuesByCategory')}</h3>
               {stats.typeChartData.length > 0 ? (
                 <DonutChart
                   data={stats.typeChartData}
@@ -558,7 +558,7 @@ export function Security() {
 
             {/* Compliance Status */}
             <div className="glass p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">Compliance Status</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('cards:security.complianceStatus')}</h3>
               {stats.complianceChartData.length > 0 ? (
                 <DonutChart
                   data={stats.complianceChartData}
@@ -568,7 +568,7 @@ export function Security() {
                 />
               ) : (
                 <div className="flex items-center justify-center h-[180px] text-muted-foreground">
-                  No compliance data
+                  {t('cards:security.noComplianceData')}
                 </div>
               )}
             </div>
@@ -579,17 +579,17 @@ export function Security() {
             {/* Recent Critical Issues */}
             <div className="glass p-4 rounded-lg">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground">Critical Issues</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">{t('cards:security.criticalIssues')}</h3>
                 <button
                   onClick={() => { setActiveTab('issues'); setSeverityFilter('high'); }}
                   className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
                 >
-                  View all <ChevronRight className="w-3 h-3" />
+                  {t('common:common.viewAll')} <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
               {globalFilteredIssues.filter(i => i.severity === 'high').slice(0, 3).length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-4">
-                  No critical issues
+                  {t('cards:security.noCriticalIssues')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -610,17 +610,17 @@ export function Security() {
             {/* High Risk RBAC */}
             <div className="glass p-4 rounded-lg">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground">High Risk RBAC Bindings</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">{t('cards:security.highRiskRBAC')}</h3>
                 <button
                   onClick={() => setActiveTab('rbac')}
                   className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
                 >
-                  View all <ChevronRight className="w-3 h-3" />
+                  {t('common:common.viewAll')} <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
               {filteredRBAC.filter(r => r.riskLevel === 'high').slice(0, 3).length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-4">
-                  No high risk bindings
+                  {t('cards:security.noHighRiskBindings')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -643,26 +643,26 @@ export function Security() {
 
           {/* Security Recommendations */}
           <div className="glass p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-muted-foreground mb-4">Security Recommendations</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('cards:security.recommendations')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <StatusIndicator status="healthy" size="sm" />
-                  <span className="text-foreground">Use Pod Security Standards to enforce security contexts</span>
+                  <span className="text-foreground">{t('cards:security.recUsePodSecurity')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <StatusIndicator status="healthy" size="sm" />
-                  <span className="text-foreground">Avoid privileged containers unless absolutely necessary</span>
+                  <span className="text-foreground">{t('cards:security.recAvoidPrivileged')}</span>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <StatusIndicator status="healthy" size="sm" />
-                  <span className="text-foreground">Run containers as non-root users</span>
+                  <span className="text-foreground">{t('cards:security.recRunNonRoot')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <StatusIndicator status="healthy" size="sm" />
-                  <span className="text-foreground">Enable network policies to restrict pod communication</span>
+                  <span className="text-foreground">{t('cards:security.recEnableNetPolicies')}</span>
                 </div>
               </div>
             </div>
@@ -676,10 +676,10 @@ export function Security() {
           {/* Severity Stats */}
           <div className="grid grid-cols-4 gap-4">
             {[
-              { sev: 'all', label: 'All Issues', count: stats.total, color: 'text-foreground', bg: 'bg-card' },
-              { sev: 'high', label: 'High', count: stats.high, color: 'text-red-400', bg: 'bg-red-500/20' },
-              { sev: 'medium', label: 'Medium', count: stats.medium, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
-              { sev: 'low', label: 'Low', count: stats.low, color: 'text-blue-400', bg: 'bg-blue-500/20' },
+              { sev: 'all', label: t('cards:security.allIssues'), count: stats.total, color: 'text-foreground', bg: 'bg-card' },
+              { sev: 'high', label: t('cards:security.highLabel'), count: stats.high, color: 'text-red-400', bg: 'bg-red-500/20' },
+              { sev: 'medium', label: t('cards:security.mediumLabel'), count: stats.medium, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+              { sev: 'low', label: t('cards:security.lowLabel'), count: stats.low, color: 'text-blue-400', bg: 'bg-blue-500/20' },
             ].map(item => (
               <button
                 key={item.sev}
@@ -699,7 +699,7 @@ export function Security() {
 
           {/* Issue Type Quick Filters */}
           <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground mr-2">Filter by type:</span>
+            <span className="text-sm text-muted-foreground mr-2">{t('cards:security.filterByType')}</span>
             <button
               onClick={() => setSelectedIssueType(null)}
               className={cn(
@@ -707,7 +707,7 @@ export function Security() {
                 selectedIssueType === null ? 'bg-purple-500 text-white' : 'bg-card text-muted-foreground hover:text-foreground'
               )}
             >
-              All
+              {t('common:common.all')}
             </button>
             {Object.entries(stats.typeCounts).map(([type, count]) => (
               <button
@@ -727,8 +727,8 @@ export function Security() {
           {filteredIssues.filter(i => selectedIssueType === null || i.type === selectedIssueType).length === 0 ? (
             <div className="text-center py-12">
               <ShieldCheck className="w-16 h-16 mx-auto mb-4 text-green-400 opacity-50" />
-              <p className="text-lg text-foreground">No security issues found!</p>
-              <p className="text-sm text-muted-foreground">Your clusters are following security best practices</p>
+              <p className="text-lg text-foreground">{t('cards:security.noIssuesFound')}</p>
+              <p className="text-sm text-muted-foreground">{t('cards:security.bestPractices')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -759,7 +759,7 @@ export function Security() {
                       </div>
                       <p className="text-sm text-foreground">{issue.message}</p>
                       <div className="text-xs text-muted-foreground mt-2">
-                        Namespace: {issue.namespace}
+                        {t('common:common.namespace')}: {issue.namespace}
                       </div>
                     </div>
                   </div>
@@ -782,7 +782,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-foreground">{stats.rbacTotal}</div>
-                  <div className="text-xs text-muted-foreground">Total Bindings</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.totalBindings')}</div>
                 </div>
               </div>
             </div>
@@ -793,7 +793,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-red-400">{stats.rbacHighRisk}</div>
-                  <div className="text-xs text-muted-foreground">High Risk</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.highRisk')}</div>
                 </div>
               </div>
             </div>
@@ -804,7 +804,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-yellow-400">{stats.rbacMedRisk}</div>
-                  <div className="text-xs text-muted-foreground">Medium Risk</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.mediumRisk')}</div>
                 </div>
               </div>
             </div>
@@ -815,7 +815,7 @@ export function Security() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-green-400">{stats.rbacLowRisk}</div>
-                  <div className="text-xs text-muted-foreground">Low Risk</div>
+                  <div className="text-xs text-muted-foreground">{t('cards:security.lowRisk')}</div>
                 </div>
               </div>
             </div>
@@ -859,14 +859,14 @@ export function Security() {
                         binding.riskLevel === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
                         'bg-green-500/20 text-green-400'
                       )}>
-                        {binding.riskLevel} risk
+                        {binding.riskLevel} {t('cards:security.risk')}
                       </span>
                       <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">
                         {binding.kind}
                       </span>
                     </div>
                     <div className="text-sm text-foreground mb-2">
-                      <span className="text-muted-foreground">Subjects: </span>
+                      <span className="text-muted-foreground">{t('cards:security.subjects')}: </span>
                       {binding.subjects.map((s, j) => (
                         <span key={j} className="inline-flex items-center gap-1 mr-2">
                           {s.kind === 'User' && <Users className="w-3 h-3" />}
@@ -884,13 +884,13 @@ export function Security() {
                       ))}
                       {binding.permissions.length > 5 && (
                         <span className="text-xs text-muted-foreground">
-                          +{binding.permissions.length - 5} more
+                          +{binding.permissions.length - 5} {t('common:common.more').toLowerCase()}
                         </span>
                       )}
                     </div>
                     {binding.namespace && (
                       <div className="text-xs text-muted-foreground mt-2">
-                        Namespace: {binding.namespace}
+                        {t('common:common.namespace')}: {binding.namespace}
                       </div>
                     )}
                   </div>
@@ -908,7 +908,7 @@ export function Security() {
           <div className="glass p-6 rounded-lg">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Overall Compliance Score</h3>
+                <h3 className="text-lg font-semibold text-foreground">{t('cards:security.overallComplianceScore')}</h3>
                 <p className="text-sm text-muted-foreground">Based on {stats.complianceTotal} checks across all clusters</p>
               </div>
               <div className={cn(
@@ -929,15 +929,15 @@ export function Security() {
             <div className="flex items-center gap-6 mt-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-400" />
-                <span className="text-sm text-foreground">{stats.compliancePass} Passed</span>
+                <span className="text-sm text-foreground">{stats.compliancePass} {t('cards:security.passed')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm text-foreground">{stats.complianceWarn} Warnings</span>
+                <span className="text-sm text-foreground">{stats.complianceWarn} {t('cards:security.warnings')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <XCircle className="w-4 h-4 text-red-400" />
-                <span className="text-sm text-foreground">{stats.complianceFail} Failed</span>
+                <span className="text-sm text-foreground">{stats.complianceFail} {t('cards:security.failedChecks')}</span>
               </div>
             </div>
           </div>
@@ -964,7 +964,7 @@ export function Security() {
                     percentage >= 80 ? 'text-green-400' :
                     percentage >= 60 ? 'text-yellow-400' : 'text-red-400'
                   )}>
-                    {passed}/{total} passed
+                    {passed}/{total} {t('cards:security.passed').toLowerCase()}
                   </span>
                 </div>
                 <div className="space-y-2">

@@ -510,7 +510,7 @@ export interface GitHubActivityRef {
 }
 
 export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubActivityConfig }>(function GitHubActivity({ config }, ref) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const [viewMode, setViewMode] = useState<ViewMode>('prs')
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>(config?.timeRange || '30d')
 
@@ -713,7 +713,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
         {/* Header with inline repo editor */}
         <div className="flex items-center justify-between mb-3">
           <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-            Error
+            {t('common:common.error')}
           </span>
           <button
             onClick={() => setIsEditingRepos(!isEditingRepos)}
@@ -721,7 +721,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
               "text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1",
               isEditingRepos && "text-purple-400"
             )}
-            title="Configure repos"
+            title={t('cards:github.configureRepo')}
           >
             {currentRepo}
             <Settings className="w-3 h-3" />
@@ -744,14 +744,14 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
                 onClick={handleAddRepo}
                 disabled={!repoInput.trim()}
                 className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Add repo"
+                title={t('cards:github.addRepo')}
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setIsEditingRepos(false)}
                 className="p-1 rounded hover:bg-secondary text-muted-foreground"
-                title="Done"
+                title={t('cards:github.done')}
               >
                 <Check className="w-3.5 h-3.5" />
               </button>
@@ -774,7 +774,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRemoveRepo(repo) }}
                       className="hover:text-red-400 transition-colors"
-                      title="Remove repo"
+                      title={t('cards:github.removeRepo')}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -790,28 +790,28 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
           <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
             <div className="flex items-center gap-2 mb-1">
               <GitPullRequest className="w-4 h-4 text-blue-400" />
-              <span className="text-xs text-muted-foreground">Open PRs</span>
+              <span className="text-xs text-muted-foreground">{t('cards:github.openPRs')}</span>
             </div>
             <div className="text-lg font-bold text-muted-foreground">--</div>
           </div>
           <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
             <div className="flex items-center gap-2 mb-1">
               <GitBranch className="w-4 h-4 text-green-400" />
-              <span className="text-xs text-muted-foreground">Merged PRs</span>
+              <span className="text-xs text-muted-foreground">{t('cards:github.merged')}</span>
             </div>
             <div className="text-lg font-bold text-muted-foreground">--</div>
           </div>
           <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
             <div className="flex items-center gap-2 mb-1">
               <AlertCircle className="w-4 h-4 text-orange-400" />
-              <span className="text-xs text-muted-foreground">Open Issues</span>
+              <span className="text-xs text-muted-foreground">{t('cards:github.openIssues')}</span>
             </div>
             <div className="text-lg font-bold text-muted-foreground">--</div>
           </div>
           <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
             <div className="flex items-center gap-2 mb-1">
               <Star className="w-4 h-4 text-yellow-400" />
-              <span className="text-xs text-muted-foreground">Stars</span>
+              <span className="text-xs text-muted-foreground">{t('cards:github.stars')}</span>
             </div>
             <div className="text-lg font-bold text-muted-foreground">--</div>
           </div>
@@ -820,16 +820,16 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
         {/* Prominent error message */}
         <div className="flex-1 flex flex-col items-center justify-center text-center p-4 rounded-lg bg-red-500/5 border border-red-500/20">
           <AlertCircle className="w-8 h-8 text-red-400 mb-3" />
-          <p className="text-sm text-foreground mb-2">Unable to load GitHub data</p>
+          <p className="text-sm text-foreground mb-2">{t('cards:github.fetchError')}</p>
           <p className="text-xs text-muted-foreground mb-4 max-w-xs">{error}</p>
           <button
             onClick={refetch}
             className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
-            Try again
+            {t('common:common.retry')}
           </button>
           <p className="mt-4 text-xs text-muted-foreground/70 max-w-xs">
-            Tip: GitHub has rate limits for unauthenticated requests. Add a personal access token via localStorage for higher limits.
+            {t('cards:github.configureToken')}
           </p>
         </div>
       </div>
@@ -844,7 +844,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
-            {totalItems} items
+            {t('common:common.itemCount', { count: totalItems, item: viewMode })}
           </span>
           <button
             onClick={() => setIsEditingRepos(!isEditingRepos)}
@@ -852,7 +852,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
               "text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1",
               isEditingRepos && "text-purple-400"
             )}
-            title="Configure repos"
+            title={t('cards:github.configureRepo')}
           >
             {repoInfo?.full_name || currentRepo}
             <Settings className="w-3 h-3" />
@@ -947,7 +947,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
           )}
         >
           <GitPullRequest className="w-3 h-3 inline mr-1" />
-          Pull Requests
+          {t('cards:github.pullRequests')}
         </button>
         <button
           onClick={() => setViewMode('issues')}
@@ -959,7 +959,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
           )}
         >
           <AlertCircle className="w-3 h-3 inline mr-1" />
-          Issues
+          {t('cards:github.issues')}
         </button>
         <button
           onClick={() => setViewMode('releases')}
@@ -971,7 +971,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
           )}
         >
           <Package className="w-3 h-3 inline mr-1" />
-          Releases
+          {t('cards:github.releases')}
         </button>
         <button
           onClick={() => setViewMode('contributors')}
@@ -983,7 +983,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
           )}
         >
           <Users className="w-3 h-3 inline mr-1" />
-          Contributors
+          {t('cards:github.contributors')}
         </button>
       </div>
 
@@ -992,17 +992,17 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <GitPullRequest className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-muted-foreground">Open PRs</span>
+            <span className="text-xs text-muted-foreground">{t('cards:github.openPRs')}</span>
           </div>
           <div className="text-lg font-bold">{stats.openPRs}</div>
           {stats.stalePRs > 0 && (
-            <div className="text-xs text-yellow-400 mt-1">{stats.stalePRs} stale</div>
+            <div className="text-xs text-yellow-400 mt-1">{stats.stalePRs} {t('cards:github.stale')}</div>
           )}
         </div>
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <GitBranch className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-muted-foreground">Merged PRs</span>
+            <span className="text-xs text-muted-foreground">{t('cards:github.merged')}</span>
           </div>
           <div className="text-lg font-bold">{stats.mergedPRs}</div>
         </div>
@@ -1013,7 +1013,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
           </div>
           <div className="text-lg font-bold">{stats.openIssues}</div>
           {stats.staleIssues > 0 && (
-            <div className="text-xs text-yellow-400 mt-1">{stats.staleIssues} stale</div>
+            <div className="text-xs text-yellow-400 mt-1">{stats.staleIssues} {t('cards:github.stale')}</div>
           )}
         </div>
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
@@ -1027,7 +1027,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
 
       {/* Time Range Controls */}
       <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-        <span className="text-xs text-muted-foreground">Time Range:</span>
+        <span className="text-xs text-muted-foreground">{t('cards:github.timeRange')}:</span>
         {TIME_RANGES.map(range => (
           <button
             key={range.value}
@@ -1082,12 +1082,13 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
 
 // Sub-components for rendering different item types
 function PRItem({ pr }: { pr: GitHubPR }) {
+  const { t } = useTranslation(['cards', 'common'])
   const isOpen = pr.state === 'open'
   const isMerged = pr.merged_at != null
   const isStaleItem = isOpen && isStale(pr.updated_at)
 
-  const statusText = isMerged ? 'Merged' : isOpen ? 'Open' : 'Closed'
-  const statusTitle = isMerged ? 'Merged pull request' : isOpen ? 'Open pull request' : 'Closed pull request (not merged)'
+  const statusText = isMerged ? t('cards:github.merged') : isOpen ? t('cards:github.open') : t('cards:github.closed')
+  const statusTitle = isMerged ? t('cards:github.mergedPR') : isOpen ? t('cards:github.openPR') : t('cards:github.closedPR')
 
   return (
     <a
@@ -1128,10 +1129,10 @@ function PRItem({ pr }: { pr: GitHubPR }) {
               {statusText}
             </span>
             {pr.draft && (
-              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 shrink-0">Draft</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 shrink-0">{t('cards:github.draft')}</span>
             )}
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">Stale</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">{t('cards:github.stale')}</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1151,6 +1152,7 @@ function PRItem({ pr }: { pr: GitHubPR }) {
 }
 
 function IssueItem({ issue }: { issue: GitHubIssue }) {
+  const { t } = useTranslation(['cards', 'common'])
   const isOpen = issue.state === 'open'
   const isStaleItem = isOpen && isStale(issue.updated_at)
 
@@ -1167,7 +1169,7 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5" title={isOpen ? "Open issue" : "Closed issue"}>
+        <div className="mt-0.5" title={isOpen ? t('cards:github.openIssue') : t('cards:github.closedIssue')}>
           {isOpen ? (
             <AlertCircle className="w-4 h-4 text-orange-400" />
           ) : (
@@ -1184,10 +1186,10 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
                 ? "bg-orange-500/20 text-orange-400"
                 : "bg-green-500/20 text-green-400"
             )}>
-              {isOpen ? 'Open' : 'Closed'}
+              {isOpen ? t('cards:github.open') : t('cards:github.closed')}
             </span>
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">Stale</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">{t('cards:github.stale')}</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1200,7 +1202,7 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
               {formatTimeAgo(issue.updated_at)}
             </span>
             {issue.comments > 0 && (
-              <span title={`${issue.comments} comments`}>{issue.comments} comments</span>
+              <span title={`${issue.comments} ${t('cards:github.comments')}`}>{issue.comments} {t('cards:github.comments')}</span>
             )}
           </div>
         </div>
@@ -1210,6 +1212,7 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
 }
 
 function ReleaseItem({ release }: { release: GitHubRelease }) {
+  const { t } = useTranslation(['cards'])
   return (
     <a
       href={release.html_url}
@@ -1225,7 +1228,7 @@ function ReleaseItem({ release }: { release: GitHubRelease }) {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium">{release.name || release.tag_name}</span>
             {release.prerelease && (
-              <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400">Pre-release</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400">{t('cards:github.preRelease')}</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1242,6 +1245,7 @@ function ReleaseItem({ release }: { release: GitHubRelease }) {
 }
 
 function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
+  const { t } = useTranslation(['cards'])
   return (
     <a
       href={contributor.html_url}
@@ -1254,7 +1258,7 @@ function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium">{contributor.login}</div>
           <div className="text-xs text-muted-foreground">
-            {contributor.contributions} contributions
+            {contributor.contributions} {t('cards:github.contributions')}
           </div>
         </div>
         <TrendingUp className="w-4 h-4 text-green-400" />

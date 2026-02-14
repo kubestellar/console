@@ -46,7 +46,7 @@ function getDemoRSSItems(): FeedItem[] {
 }
 
 function RSSFeedInternal({ config }: RSSFeedProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode } = useDemoMode()
   const [feeds, setFeeds] = useState<FeedConfig[]>(() => {
     if (config?.feedUrl) {
@@ -690,7 +690,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-secondary rounded"
                     >
                       <Plus className="w-4 h-4" />
-                      Add Feed...
+                      {t('cards:rssFeed.addFeed')}...
                     </button>
                   </div>
                 </div>
@@ -700,7 +700,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
           {/* Count badge */}
           <span className="text-sm font-medium text-muted-foreground">
-            {totalItems} items
+            {totalItems} {t('cards:rssFeed.items')}
           </span>
         </div>
 
@@ -709,7 +709,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             onClick={() => fetchFeed(true)}
             disabled={isRefreshing}
             className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh)})` : t('common.refresh')}
+            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh)})` : t('common:common.refresh')}
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
@@ -721,7 +721,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 ? 'bg-primary/20 text-primary'
                 : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
             )}
-            title="Settings"
+            title={t('common:navigation.settings')}
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -733,7 +733,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         <CardSearchInput
           value={filters.search}
           onChange={filters.setSearch}
-          placeholder="Search items..."
+          placeholder={t('cards:rssFeed.searchItems')}
         />
       </div>
 
@@ -775,8 +775,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               onLimitChange: setItemsPerPage,
               sortBy: sorting.sortBy,
               sortOptions: [
-                { value: 'date', label: 'Date' },
-                { value: 'title', label: 'Title' },
+                { value: 'date', label: t('common:common.date') },
+                { value: 'title', label: t('cards:rssFeed.title') },
               ],
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
@@ -795,7 +795,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             )}
           >
             <Filter className="w-3 h-3" />
-            {activeFeed?.filter ? 'Filtered' : 'Filter'}
+            {activeFeed?.filter ? t('cards:rssFeed.filtered') : t('common:common.filter')}
           </button>
 
           {/* Source filter for aggregate feeds */}
@@ -812,7 +812,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 title="Filter by source feed"
               >
                 <Rss className="w-3 h-3" />
-                {sourceFilter.length > 0 ? `${sourceFilter.length}/${availableSources.length}` : 'Sources'}
+                {sourceFilter.length > 0 ? `${sourceFilter.length}/${availableSources.length}` : t('cards:rssFeed.sources')}
                 <ChevronDown className={cn('w-3 h-3 transition-transform', showSourceFilter && 'rotate-180')} />
               </button>
 
@@ -826,7 +826,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                         sourceFilter.length === 0 ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-secondary text-foreground'
                       )}
                     >
-                      All sources ({availableSources.length})
+                      {t('cards:rssFeed.allSources')} ({availableSources.length})
                     </button>
                     <div className="border-t border-border my-1" />
                     {availableSources.map(source => (
@@ -870,7 +870,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           </div>
           <div className="space-y-2">
             <div>
-              <label className="text-[10px] text-muted-foreground">Include (show items with ANY of these terms, comma-separated)</label>
+              <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.includeDesc')}</label>
               <input
                 type="text"
                 value={tempIncludeTerms}
@@ -880,7 +880,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground">Exclude (hide items with ANY of these terms, comma-separated)</label>
+              <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.excludeDesc')}</label>
               <input
                 type="text"
                 value={tempExcludeTerms}
@@ -894,7 +894,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 onClick={saveFilter}
                 className="px-3 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
               >
-                Apply Filter
+                {t('cards:rssFeed.applyFilter')}
               </button>
               {activeFeed?.filter && (
                 <button
@@ -904,7 +904,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                   }}
                   className="px-3 py-1 text-xs bg-secondary text-foreground rounded hover:bg-secondary/80 transition-colors"
                 >
-                  Clear Filter
+                  {t('cards:rssFeed.clearFilter')}
                 </button>
               )}
             </div>
@@ -916,7 +916,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       {showSettings && (
         <div className="absolute inset-x-3 top-16 bottom-3 p-3 bg-card border border-border rounded-lg shadow-lg z-40 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium">Manage Feeds</span>
+            <span className="text-sm font-medium">{t('cards:rssFeed.manageFeeds')}</span>
             <button
               onClick={() => setShowSettings(false)}
               className="p-1 rounded hover:bg-secondary text-muted-foreground"
@@ -969,7 +969,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 disabled={!newFeedUrl.trim()}
                 className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50"
               >
-                Add
+                {t('common:common.add')}
               </button>
             </div>
             <p className="text-[10px] text-muted-foreground">
@@ -981,7 +981,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           <div className="mb-3">
             <div className="flex items-center gap-2 mb-2">
               <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-              <span className="text-xs text-muted-foreground">Your saved feeds ({feeds.length}):</span>
+              <span className="text-xs text-muted-foreground">{t('cards:rssFeed.yourSavedFeeds')} ({feeds.length}):</span>
             </div>
             <div className="space-y-1 max-h-32 overflow-y-auto">
               {feeds.map((feed, idx) => (
@@ -1035,11 +1035,11 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
           {/* Preset feeds by category */}
           <div>
-            <span className="text-xs text-muted-foreground block mb-2">Popular feeds (click to add):</span>
+            <span className="text-xs text-muted-foreground block mb-2">{t('cards:rssFeed.popularFeeds')}:</span>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {/* Reddit */}
               <div>
-                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">Reddit</span>
+                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.reddit')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {PRESET_FEEDS.filter(p => p.url.includes('reddit.com') && !feeds.some(f => f.url === p.url)).slice(0, 8).map(preset => (
                     <button
@@ -1054,7 +1054,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               </div>
               {/* Tech News */}
               <div>
-                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">Tech News</span>
+                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.techNews')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {PRESET_FEEDS.filter(p => !p.url.includes('reddit.com') && !p.url.includes('kubernetes') && !p.url.includes('cncf') && !p.url.includes('docker') && !p.url.includes('hashicorp') && !p.url.includes('istio') && !p.url.includes('prometheus') && !p.url.includes('netflix') && !p.url.includes('cloudflare') && !p.url.includes('github.blog') && !p.url.includes('infoq') && !p.url.includes('dev.to') && !p.url.includes('css-tricks') && !p.url.includes('smashing') && !feeds.some(f => f.url === p.url)).slice(0, 10).map(preset => (
                     <button
@@ -1069,7 +1069,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               </div>
               {/* Cloud Native */}
               <div>
-                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">Cloud Native</span>
+                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.cloudNative')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {PRESET_FEEDS.filter(p => (p.url.includes('kubernetes') || p.url.includes('cncf') || p.url.includes('docker') || p.url.includes('hashicorp') || p.url.includes('istio') || p.url.includes('prometheus')) && !feeds.some(f => f.url === p.url)).map(preset => (
                     <button
@@ -1084,7 +1084,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground/60 mt-2">
-              Tip: For any Reddit subreddit, just type: r/subreddit
+              {t('cards:rssFeed.redditTip')}
             </p>
           </div>
 
@@ -1108,10 +1108,10 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             >
               <span>📚</span>
               {showAggregateCreator
-                ? 'Hide'
+                ? t('common:common.hide')
                 : editingAggregateIndex !== null
-                  ? 'Edit Aggregate Feed'
-                  : 'Create Custom Aggregate Feed'}
+                  ? t('cards:rssFeed.editAggregateFeed')
+                  : t('cards:rssFeed.createAggregateFeed')}
             </button>
 
             {showAggregateCreator && (
@@ -1127,7 +1127,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 {/* Source feed selector */}
                 <div className="mb-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] text-muted-foreground">Select source feeds:</label>
+                    <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.selectSourceFeeds')}:</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -1140,7 +1140,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                       }}
                       className="text-[10px] text-purple-400 hover:text-purple-300"
                     >
-                      {selectedSourceUrls.length === feeds.filter(f => !f.isAggregate).length ? 'Deselect All' : 'Select All'}
+                      {selectedSourceUrls.length === feeds.filter(f => !f.isAggregate).length ? t('cards:rssFeed.deselectAll') : t('common:common.selectAll')}
                     </button>
                   </div>
                   <div className="max-h-32 overflow-y-auto mt-1 space-y-1">
@@ -1166,7 +1166,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                       </label>
                     ))}
                     {feeds.filter(f => !f.isAggregate).length === 0 && (
-                      <span className="text-[10px] text-muted-foreground">Add feeds first to create an aggregate</span>
+                      <span className="text-[10px] text-muted-foreground">{t('cards:rssFeed.addFeedsFirst')}</span>
                     )}
                   </div>
                 </div>
@@ -1174,7 +1174,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 {/* Include/Exclude terms */}
                 <div className="space-y-2 mb-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground">Include terms (comma-separated)</label>
+                    <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.includeTerms')}</label>
                     <input
                       type="text"
                       value={aggregateIncludeTerms}
@@ -1184,7 +1184,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground">Exclude terms (comma-separated)</label>
+                    <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.excludeTerms')}</label>
                     <input
                       type="text"
                       value={aggregateExcludeTerms}
@@ -1201,7 +1201,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     disabled={!aggregateName.trim() || selectedSourceUrls.length === 0}
                     className="flex-1 px-3 py-1.5 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {editingAggregateIndex !== null ? 'Update' : 'Create'} Aggregate ({selectedSourceUrls.length} sources)
+                    {editingAggregateIndex !== null ? t('common:common.update') : t('common:common.create')} Aggregate ({selectedSourceUrls.length} sources)
                   </button>
                   {editingAggregateIndex !== null && (
                     <button
@@ -1215,7 +1215,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                       }}
                       className="px-3 py-1.5 text-xs bg-secondary text-foreground rounded hover:bg-secondary/80 transition-colors"
                     >
-                      Cancel
+                      {t('common:common.cancel')}
                     </button>
                   )}
                 </div>
@@ -1243,7 +1243,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               onClick={() => fetchFeed(true)}
               className="flex-shrink-0 px-1.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 rounded text-amber-300 transition-colors"
             >
-              Retry
+              {t('common:common.retry')}
             </button>
           </div>
         ) : fetchSuccess ? (
@@ -1272,7 +1272,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         ) : totalItems === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Rss className="w-8 h-8 mb-2 opacity-50" />
-            <span className="text-sm">{filters.search || activeFeed?.filter ? 'No matching items' : 'No items in feed'}</span>
+            <span className="text-sm">{filters.search || activeFeed?.filter ? t('cards:rssFeed.noMatchingItems') : t('cards:rssFeed.noItemsInFeed')}</span>
             {(filters.search || activeFeed?.filter) && (
               <button
                 onClick={() => {
@@ -1283,7 +1283,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 }}
                 className="mt-2 text-xs text-primary hover:underline"
               >
-                Clear filters
+                {t('common:common.clearFilters')}
               </button>
             )}
           </div>
@@ -1383,7 +1383,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 }
 
 export function RSSFeed(props: RSSFeedProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  void t
   return (
     <DynamicCardErrorBoundary cardId="RSSFeed">
       <RSSFeedInternal {...props} />

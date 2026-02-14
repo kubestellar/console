@@ -112,7 +112,7 @@ function relativeTime(iso: string): string {
 // ============================================================================
 
 export function ClusterGroups(_props: ClusterGroupsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -174,7 +174,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
             className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
           >
             <Plus className="w-3 h-3" />
-            New Group
+            {t('cards:clusterGroups.newGroup')}
           </button>
         )}
       </div>
@@ -196,9 +196,9 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       {groups.length === 0 && !isCreating ? (
         <div className="text-center py-6">
           <Layers className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-          <p className="text-sm text-gray-500">No cluster groups yet</p>
+          <p className="text-sm text-gray-500">{t('cards:clusterGroups.noGroupsYet')}</p>
           <p className="text-xs text-gray-600 mt-1">
-            Create a group, then drag workloads onto it to deploy
+            {t('cards:clusterGroups.createGroupHint')}
           </p>
         </div>
       ) : (
@@ -236,7 +236,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       {/* Help text */}
       <div className="pt-2 border-t border-gray-800">
         <p className="text-[10px] text-gray-600 text-center">
-          Drag a workload from the Workload card onto a group to deploy
+          {t('cards:clusterGroups.dragWorkloadHint')}
         </p>
       </div>
     </div>
@@ -259,6 +259,7 @@ interface DroppableGroupProps {
 }
 
 function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onToggle, onEdit, onDelete, onRefresh }: DroppableGroupProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const { isOver, setNodeRef } = useDroppable({
     id: `cluster-group-${group.name}`,
     data: {
@@ -303,7 +304,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
           {isDynamic && (
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
               <Zap className="w-2.5 h-2.5" />
-              dynamic
+              {t('cards:clusterGroups.dynamic')}
             </span>
           )}
         </span>
@@ -317,7 +318,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
                 'w-2 h-2 rounded-full border border-gray-700',
                 clusterHealthMap.get(cluster) === false ? 'bg-red-500' : 'bg-green-500'
               )}
-              title={`${cluster} — ${clusterHealthMap.get(cluster) === false ? 'unhealthy' : 'healthy'}`}
+              title={`${cluster} — ${clusterHealthMap.get(cluster) === false ? t('common:common.unhealthy').toLowerCase() : t('common:common.healthy').toLowerCase()}`}
             />
           ))}
           {group.clusters.length > MAX_INLINE_BADGES && (
@@ -329,7 +330,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
 
         {/* Cluster count + health */}
         <span className="text-[10px] text-gray-500">
-          {healthyCount}/{group.clusters.length} healthy
+          {healthyCount}/{group.clusters.length} {t('common:common.healthy').toLowerCase()}
         </span>
 
         {/* Dynamic: refresh button */}
@@ -354,14 +355,14 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
           <button
             onClick={onEdit}
             className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
-            title="Edit group"
+            title={t('cards:clusterGroups.editGroup')}
           >
             <Edit2 className="w-3 h-3" />
           </button>
           <button
             onClick={onDelete}
             className="p-1 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
-            title="Delete group"
+            title={t('cards:clusterGroups.deleteGroup')}
           >
             <Trash2 className="w-3 h-3" />
           </button>
@@ -407,7 +408,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
               )
             })}
             {group.clusters.length === 0 && (
-              <span className="text-xs text-gray-600 italic">No clusters match</span>
+              <span className="text-xs text-gray-600 italic">{t('cards:clusterGroups.noClustersMatch')}</span>
             )}
           </div>
         </div>
@@ -428,6 +429,7 @@ interface CreateGroupFormProps {
 }
 
 function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel }: CreateGroupFormProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const { previewQuery, generateAIQuery } = useClusterGroups()
   const [name, setName] = useState('')
   const [selectedColor, setSelectedColor] = useState('blue')
@@ -534,7 +536,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
   return (
     <div className="rounded-lg border border-blue-500/40 bg-blue-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-blue-400">New Cluster Group</span>
+        <span className="text-xs font-medium text-blue-400">{t('cards:clusterGroups.newClusterGroup')}</span>
         <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-gray-500" />
         </button>
@@ -545,14 +547,14 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Group name..."
+        placeholder={t('cards:clusterGroups.groupNamePlaceholder')}
         className="w-full px-2.5 py-1.5 text-sm rounded-md bg-gray-900/50 border border-gray-700 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500"
         autoFocus
       />
 
       {/* Color picker */}
       <div className="flex items-center gap-1.5">
-        <span className="text-[10px] text-gray-500 mr-1">Color:</span>
+        <span className="text-[10px] text-gray-500 mr-1">{t('cards:clusterGroups.color')}:</span>
         {GROUP_COLORS.map(c => (
           <button
             key={c.name}
@@ -578,7 +580,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
           )}
         >
           <Server className="w-3 h-3" />
-          Static
+          {t('cards:clusterGroups.static')}
         </button>
         <button
           onClick={() => setKind('dynamic')}
@@ -590,7 +592,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
           )}
         >
           <Zap className="w-3 h-3" />
-          Dynamic
+          {t('cards:clusterGroups.dynamic')}
         </button>
       </div>
 
@@ -620,7 +622,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
               )}
             >
               <Search className="w-2.5 h-2.5" />
-              Query Builder
+              {t('cards:clusterGroups.queryBuilder')}
             </button>
             <button
               onClick={() => setDynamicTab('ai')}
@@ -632,7 +634,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
               )}
             >
               <Sparkles className="w-2.5 h-2.5" />
-              AI Assistant
+              {t('cards:clusterGroups.aiAssistant')}
             </button>
           </div>
 
@@ -668,7 +670,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
               )}
             >
               {isPreviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-              Preview Matches
+              {t('cards:clusterGroups.previewMatches')}
             </button>
             {previewClusters !== null && (
               <div className="text-[10px] text-gray-400">
@@ -695,7 +697,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
             : 'bg-gray-800 text-gray-600 cursor-not-allowed'
         )}
       >
-        Create {kind === 'dynamic' ? 'Dynamic' : ''} Group
+        {kind === 'dynamic' ? t('cards:clusterGroups.createDynamicGroup') : t('cards:clusterGroups.createGroup')}
       </button>
     </div>
   )
@@ -718,6 +720,7 @@ function StaticClusterPicker({
   onToggle: (cluster: string) => void
   accentColor: 'blue' | 'yellow'
 }) {
+  const { t } = useTranslation(['cards', 'common'])
   const accent = accentColor === 'blue'
     ? { selected: 'bg-blue-500/20 text-blue-300', check: 'border-blue-500 bg-blue-500' }
     : { selected: 'bg-yellow-500/20 text-yellow-300', check: 'border-yellow-500 bg-yellow-500' }
@@ -725,13 +728,13 @@ function StaticClusterPicker({
   return (
     <div>
       <span className="text-[10px] text-gray-500 block mb-1.5">
-        Select clusters ({selectedClusters.size} selected)
+        {t('cards:clusterGroups.selectClusters')} ({selectedClusters.size} {t('common:common.selected').toLowerCase()})
       </span>
       <div className="max-h-32 overflow-y-auto space-y-1">
         {availableClusters.length === 0 ? (
           <div className="flex items-center gap-2 py-2 text-xs text-gray-500">
             <Loader2 className="w-3 h-3 animate-spin" />
-            Loading clusters...
+            {t('cards:clusterGroups.loadingClusters')}
           </div>
         ) : (
           availableClusters.map(cluster => {
@@ -786,13 +789,14 @@ function QueryBuilder({
   onRemoveFilter: (i: number) => void
   onUpdateFilter: (i: number, updates: Partial<ClusterFilter>) => void
 }) {
+  const { t } = useTranslation(['cards', 'common'])
   return (
     <div className="space-y-2">
       {/* Label selector */}
       <div>
         <label className="flex items-center gap-1 text-[10px] text-gray-500 mb-1">
           <Tag className="w-2.5 h-2.5" />
-          Label Selector
+          {t('cards:clusterGroups.labelSelector')}
         </label>
         <input
           type="text"
@@ -808,14 +812,14 @@ function QueryBuilder({
         <div className="flex items-center justify-between mb-1">
           <label className="flex items-center gap-1 text-[10px] text-gray-500">
             <Filter className="w-2.5 h-2.5" />
-            Resource Filters
+            {t('cards:clusterGroups.resourceFilters')}
           </label>
           <button
             onClick={onAddFilter}
             className="flex items-center gap-0.5 text-[10px] text-purple-400 hover:text-purple-300"
           >
             <Plus className="w-2.5 h-2.5" />
-            Add
+            {t('common:common.add')}
           </button>
         </div>
         <div className="space-y-1.5">
@@ -908,7 +912,7 @@ function QueryBuilder({
             )
           })}
           {filters.length === 0 && (
-            <p className="text-[10px] text-gray-600 italic">No filters — add one above</p>
+            <p className="text-[10px] text-gray-600 italic">{t('cards:clusterGroups.noFilters')}</p>
           )}
         </div>
       </div>
@@ -933,11 +937,12 @@ function AIAssistant({
   loading: boolean
   error: string | null
 }) {
+  const { t } = useTranslation(['cards', 'common'])
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-1 text-[10px] text-gray-500">
         <Sparkles className="w-2.5 h-2.5" />
-        Describe the clusters you want
+        {t('cards:clusterGroups.describeClusters')}
       </label>
       <textarea
         value={prompt}
@@ -957,7 +962,7 @@ function AIAssistant({
         )}
       >
         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-        {loading ? 'Generating...' : 'Generate Query'}
+        {loading ? t('common:common.generating') : t('cards:clusterGroups.generateQuery')}
       </button>
       {error && (
         <p className="text-[10px] text-red-400">{error}</p>
@@ -979,6 +984,7 @@ interface EditGroupFormProps {
 }
 
 function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onCancel }: EditGroupFormProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const { previewQuery } = useClusterGroups()
   const [selectedClusters, setSelectedClusters] = useState<Set<string>>(new Set(group.clusters))
   const [selectedColor, setSelectedColor] = useState(group.color || 'blue')
@@ -1038,7 +1044,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
   return (
     <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-yellow-400">Edit: {group.name}</span>
+        <span className="text-xs font-medium text-yellow-400">{t('common:common.edit')}: {group.name}</span>
         <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-gray-500" />
         </button>
@@ -1046,7 +1052,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
 
       {/* Color picker */}
       <div className="flex items-center gap-1.5">
-        <span className="text-[10px] text-gray-500 mr-1">Color:</span>
+        <span className="text-[10px] text-gray-500 mr-1">{t('cards:clusterGroups.color')}:</span>
         {GROUP_COLORS.map(c => (
           <button
             key={c.name}
@@ -1072,7 +1078,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
           )}
         >
           <Server className="w-3 h-3" />
-          Static
+          {t('cards:clusterGroups.static')}
         </button>
         <button
           onClick={() => setKind('dynamic')}
@@ -1084,7 +1090,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
           )}
         >
           <Zap className="w-3 h-3" />
-          Dynamic
+          {t('cards:clusterGroups.dynamic')}
         </button>
       </div>
 
@@ -1140,13 +1146,13 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
           onClick={onCancel}
           className="flex-1 py-1.5 text-xs font-medium rounded-md bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors"
         >
-          Cancel
+          {t('common:common.cancel')}
         </button>
         <button
           onClick={handleSave}
           className="flex-1 py-1.5 text-xs font-medium rounded-md bg-yellow-500 text-black hover:bg-yellow-400 transition-colors"
         >
-          Save
+          {t('common:common.save')}
         </button>
       </div>
     </div>
