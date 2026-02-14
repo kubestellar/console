@@ -1,4 +1,5 @@
 import { useDroppable } from '@dnd-kit/core'
+import { useTranslation } from 'react-i18next'
 import { LayoutDashboard, Plus, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Dashboard } from '../../hooks/useDashboards'
@@ -16,6 +17,7 @@ export function DashboardDropZone({
   isDragging,
   onCreateDashboard,
 }: DashboardDropZoneProps) {
+  const { t } = useTranslation()
   // Filter out current dashboard (handle null/undefined dashboards)
   const otherDashboards = (dashboards || []).filter((d) => d.id !== currentDashboardId)
 
@@ -26,13 +28,13 @@ export function DashboardDropZone({
       <div className="glass rounded-xl border border-border/50 p-4 w-64 shadow-2xl">
         <div className="flex items-center gap-2 mb-3 text-sm font-medium text-foreground">
           <LayoutDashboard className="w-4 h-4 text-purple-400" />
-          Move to Dashboard
+          {t('dashboard.dropZone.moveToDashboard')}
         </div>
 
         {otherDashboards.length === 0 ? (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground mb-3">
-              No other dashboards available
+              {t('dashboard.dropZone.noOtherDashboards')}
             </p>
             {onCreateDashboard && (
               <button
@@ -40,7 +42,7 @@ export function DashboardDropZone({
                 className="flex items-center gap-2 mx-auto px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 text-sm"
               >
                 <Plus className="w-4 h-4" />
-                Create New Dashboard
+                {t('dashboard.dropZone.createNewDashboard')}
               </button>
             )}
           </div>
@@ -59,14 +61,14 @@ export function DashboardDropZone({
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border/50 text-muted-foreground hover:text-foreground hover:border-purple-500/50 text-sm transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Create New Dashboard
+                {t('dashboard.dropZone.createNewDashboard')}
               </button>
             )}
           </div>
         )}
 
         <p className="text-xs text-muted-foreground mt-3 text-center">
-          Drop card here to move it
+          {t('dashboard.dropZone.dropCardHere')}
         </p>
       </div>
     </div>

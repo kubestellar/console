@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout } from 'lucide-react'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
@@ -44,6 +45,7 @@ export function DashboardCards({
   emptyDescription = 'Add cards to customize this dashboard.',
   defaultCollapsed = false,
 }: DashboardCardsProps) {
+  const { t } = useTranslation()
   const [showCards, setShowCards] = useState(!defaultCollapsed)
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
@@ -122,14 +124,14 @@ export function DashboardCards({
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
             >
               <Layout className="w-3.5 h-3.5" />
-              Templates
+              {t('dashboard.actions.templates')}
             </button>
             <button
               onClick={() => setIsAddCardOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add Card
+              {t('dashboard.actions.addCard')}
             </button>
           </div>
         )}
@@ -150,7 +152,7 @@ export function DashboardCards({
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Add Cards
+                {t('dashboard.addCard.addCards')}
               </button>
             </div>
           ) : (

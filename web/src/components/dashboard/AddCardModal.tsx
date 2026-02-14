@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { CardFactoryModal } from './CardFactoryModal'
@@ -868,6 +869,7 @@ function CardPreview({ card }: { card: HoveredCard }) {
 }
 
 export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = [] }: AddCardModalProps) {
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<'ai' | 'browse'>('browse')
   const [showCardFactory, setShowCardFactory] = useState(false)
@@ -948,7 +950,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   const dynamicCatalogEntries = dynamicCards.map(dc => ({
     type: `dynamic_card::${dc.id}`,
     title: dc.title,
-    description: dc.description || 'Custom dynamic card',
+    description: dc.description || t('dashboard.addCard.customDynamicCard'),
     visualization: dc.tier === 'tier1' ? 'table' : 'status',
   }))
 
@@ -1000,7 +1002,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
         cardsToAdd.push({
           type: 'dynamic_card',
           title: dc.title,
-          description: dc.description || 'Custom dynamic card',
+          description: dc.description || t('dashboard.addCard.customDynamicCard'),
           visualization: (dc.tier === 'tier1' ? 'table' : 'status') as CardSuggestion['visualization'],
           config: { dynamicCardId: dc.id },
         })
@@ -1027,7 +1029,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       onAddCards(cardsToAdd)
     } catch (error) {
       console.error('Error adding cards:', error)
-      showToast('Failed to add cards', 'error')
+      showToast(t('dashboard.addCard.failedToAdd'), 'error')
     }
     // Always close and reset state
     onClose()
@@ -1036,15 +1038,15 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   }
 
   const tabs = [
-    { id: 'browse', label: 'Browse Cards', icon: LayoutGrid },
-    { id: 'ai', label: 'AI Suggestions', icon: Sparkles },
+    { id: 'browse', label: t('dashboard.addCard.browseCards'), icon: LayoutGrid },
+    { id: 'ai', label: t('dashboard.addCard.aiSuggestions'), icon: Sparkles },
   ]
 
   return (
     <>
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false}>
       <BaseModal.Header
-        title="Add Cards"
+        title={t('dashboard.addCard.title')}
         icon={Plus}
         onClose={onClose}
         showBack={false}
@@ -1071,7 +1073,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                       type="text"
                       value={browseSearch}
                       onChange={(e) => setBrowseSearch(e.target.value)}
-                      placeholder="Search cards..."
+                      placeholder={t('dashboard.addCard.searchCards')}
                       className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     />
                   </div>
@@ -1080,14 +1082,14 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium whitespace-nowrap shrink-0"
                   >
                     <Wand2 className="w-4 h-4" />
-                    Create Custom
+                    {t('dashboard.addCard.createCustom')}
                   </button>
                   <button
                     onClick={() => setShowStatFactory(true)}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors text-sm font-medium whitespace-nowrap shrink-0"
                   >
                     <Activity className="w-4 h-4" />
-                    Create Stats
+                    {t('dashboard.addCard.createStats')}
                   </button>
                 </div>
 
@@ -1107,7 +1109,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                         >
                           <span>{category}</span>
                           <span className="text-xs text-muted-foreground">
-                            {cards.length} cards {expandedCategories.has(category) ? '▼' : '▶'}
+                            {cards.length} {t('dashboard.addCard.cards')} {expandedCategories.has(category) ? '▼' : '▶'}
                           </span>
                         </button>
                         {availableCards.length > 0 && (
@@ -1130,7 +1132,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                                 : 'bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground'
                             }`}
                           >
-                            {allCategorySelected ? 'Deselect All' : 'Add All'}
+                            {allCategorySelected ? t('dashboard.addCard.deselectAll') : t('dashboard.addCard.addAll')}
                           </button>
                         )}
                       </div>
@@ -1164,7 +1166,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                                   {wrapAbbreviations(card.description)}
                                 </p>
                                 {isAlreadyAdded && (
-                                  <span className="text-xs text-muted-foreground">(Added)</span>
+                                  <span className="text-xs text-muted-foreground">{t('dashboard.addCard.added')}</span>
                                 )}
                               </button>
                             )
@@ -1180,8 +1182,8 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                 <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
                     {selectedBrowseCards.size > 0
-                      ? `${selectedBrowseCards.size} card${selectedBrowseCards.size !== 1 ? 's' : ''} selected`
-                      : `${Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type)).length} cards available`}
+                      ? t('dashboard.addCard.cardsSelected', { count: selectedBrowseCards.size })
+                      : t('dashboard.addCard.cardsAvailable', { count: Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type)).length })}
                   </span>
                   <div className="flex items-center gap-2">
                     {selectedBrowseCards.size > 0 && (
@@ -1189,7 +1191,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                         onClick={() => setSelectedBrowseCards(new Set())}
                         className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        Clear
+                        {t('dashboard.addCard.clear')}
                       </button>
                     )}
                     <button
@@ -1199,8 +1201,8 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     >
                       <Plus className="w-4 h-4" />
                       {selectedBrowseCards.size > 0
-                        ? `Add ${selectedBrowseCards.size} Card${selectedBrowseCards.size !== 1 ? 's' : ''}`
-                        : 'Add Cards'}
+                        ? t('dashboard.addCard.addCount', { count: selectedBrowseCards.size })
+                        : t('dashboard.addCard.addCards')}
                     </button>
                   </div>
                 </div>
@@ -1210,7 +1212,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               <div className="w-64 border-l border-border pl-4 flex-shrink-0">
                 {hoveredCard ? (
                   <div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Preview</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">{t('dashboard.addCard.preview')}</div>
 
                     {/* Card preview - looks like actual card */}
                     <CardPreview card={hoveredCard} />
@@ -1237,7 +1239,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-8">
                     <LayoutGrid className="w-8 h-8 mb-2 opacity-30" />
-                    <p className="text-xs text-center">Hover over a card<br />to see preview</p>
+                    <p className="text-xs text-center">{t('dashboard.addCard.hoverToPreview')}</p>
                   </div>
                 )}
               </div>
@@ -1250,7 +1252,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           {/* Query input */}
           <div className="mb-4">
             <label className="block text-sm text-muted-foreground mb-2">
-              Describe what you want to see
+              {t('dashboard.addCard.describeWhatYouWant')}
             </label>
             <div className="flex gap-2">
               <input
@@ -1258,7 +1260,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                placeholder="e.g., Show me GPU status, utilization, and any issues..."
+                placeholder={t('dashboard.addCard.aiPlaceholder')}
                 className="flex-1 px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               />
               <button
@@ -1269,12 +1271,12 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Thinking...
+                    {t('dashboard.addCard.thinking')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    Generate
+                    {t('dashboard.addCard.generate')}
                   </>
                 )}
               </button>
@@ -1284,7 +1286,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           {/* Example queries */}
           {!suggestions.length && !isGenerating && (
             <div className="mb-4">
-              <p className="text-xs text-muted-foreground mb-2">Try asking:</p>
+              <p className="text-xs text-muted-foreground mb-2">{t('dashboard.addCard.tryAsking')}</p>
               <div className="flex flex-wrap gap-2">
                 {[
                   'Show me GPU utilization and availability',
@@ -1310,7 +1312,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           {suggestions.length > 0 && (
             <div>
               <p className="text-sm text-muted-foreground mb-3">
-                Suggested cards ({selectedCards.size} selected):
+                {t('dashboard.addCard.suggestedCards', { count: selectedCards.size })}
               </p>
               <div className="grid grid-cols-2 gap-3 max-h-[40vh] overflow-y-auto">
                 {suggestions.map((card, index) => {
@@ -1334,7 +1336,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                           {card.title}
                         </span>
                         {isAlreadyAdded && (
-                          <span className="text-xs text-muted-foreground">(Already added)</span>
+                          <span className="text-xs text-muted-foreground">{t('dashboard.addCard.alreadyAdded')}</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -1362,7 +1364,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               onClick={onClose}
               className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              Cancel
+              {t('actions.cancel')}
             </button>
             <button
               onClick={handleAddCards}
@@ -1370,7 +1372,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Add {selectedCards.size} Card{selectedCards.size !== 1 ? 's' : ''}
+              {t('dashboard.addCard.addCount', { count: selectedCards.size })}
             </button>
           </div>
         </BaseModal.Footer>
@@ -1385,8 +1387,8 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           // Add the newly created dynamic card to the dashboard
           onAddCards([{
             type: 'dynamic_card',
-            title: 'Custom Card',
-            description: 'Dynamically created card',
+            title: t('dashboard.addCard.customCard'),
+            description: t('dashboard.addCard.dynamicallyCreated'),
             visualization: 'status',
             config: { dynamicCardId: cardId },
           }])
