@@ -7,6 +7,7 @@
 
 import { useState, useMemo } from 'react'
 import { Download, Monitor, Smartphone, Copy, Check, ExternalLink, Info } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import {
   WIDGET_CARDS,
@@ -27,6 +28,7 @@ interface WidgetExportModalProps {
 type ExportTab = 'card' | 'stats' | 'templates'
 
 export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'picker' }: WidgetExportModalProps) {
+  const { t } = useTranslation('common')
   const [activeTab, setActiveTab] = useState<ExportTab>(cardType ? 'card' : 'templates')
   const [selectedCard, setSelectedCard] = useState<string | null>(cardType || null)
   const [selectedStats, setSelectedStats] = useState<string[]>([])
@@ -261,14 +263,14 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-blue-200">
-                  <p className="font-medium mb-1">Übersicht Setup:</p>
+                  <p className="font-medium mb-1">{t('widgets.uebersichtSetup')}</p>
                   <ol className="list-decimal list-inside space-y-0.5 text-blue-300/80">
-                    <li>Download the widget file</li>
+                    <li>{t('widgets.downloadWidget')}</li>
                     <li>
                       Move to <code className="bg-blue-500/20 px-1 rounded">~/Library/Application Support/Übersicht/widgets/</code>
                     </li>
-                    <li>Ensure KC agent is running locally on port 8080</li>
-                    <li>Restart Übersicht</li>
+                    <li>{t('widgets.ensureAgentRunning')}</li>
+                    <li>{t('widgets.restartUebersicht')}</li>
                   </ol>
                 </div>
               </div>

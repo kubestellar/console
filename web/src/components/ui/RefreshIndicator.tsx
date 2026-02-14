@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, Clock, AlertTriangle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { formatLastSeen } from '../../lib/errorClassifier'
 
@@ -146,6 +147,7 @@ export function RefreshButton({
   size = 'md',
   className = '',
 }: RefreshButtonProps) {
+  const { t } = useTranslation('common')
   // Track visual spinning state separately to ensure minimum spin duration
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
   const spinStartRef = useRef<number | null>(null)
@@ -188,7 +190,7 @@ export function RefreshButton({
           title={`${consecutiveFailures} consecutive refresh failures`}
         >
           <AlertTriangle className="w-3 h-3" />
-          <span>Failed</span>
+          <span>{t('refresh.failed')}</span>
         </div>
       )}
       <button

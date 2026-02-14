@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'
 import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -17,6 +18,7 @@ interface NamespaceOverviewProps {
 }
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
+  const { t } = useTranslation('common')
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
@@ -130,7 +132,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
           title="Select a cluster to view namespace details"
         >
-          <option value="">Select cluster...</option>
+          <option value="">{t('selectors.selectCluster')}</option>
           {clusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -142,7 +144,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
           title={selectedCluster ? "Select a namespace to view details" : "Select a cluster first"}
         >
-          <option value="">Select namespace...</option>
+          <option value="">{t('selectors.selectNamespace')}</option>
           {namespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}

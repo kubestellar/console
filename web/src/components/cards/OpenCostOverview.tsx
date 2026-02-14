@@ -1,4 +1,5 @@
 import { Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
@@ -40,6 +41,7 @@ const DEMO_NAMESPACE_COSTS: NamespaceCost[] = [
 ]
 
 export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
+  const { t } = useTranslation('common')
   const { drillToCost } = useDrillDownActions()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
 
@@ -220,14 +222,14 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
 
       {/* Footer */}
       <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
-        <span>Powered by OpenCost</span>
+        <span>{t('costs.poweredByOpenCost')}</span>
         <a
           href="https://www.opencost.io/docs"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
         >
-          <span>Docs</span>
+          <span>{t('costs.docs')}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>

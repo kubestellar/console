@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useClusters, useHelmReleases, useHelmHistory, type HelmHistoryEntry } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -37,6 +38,7 @@ const STATUS_ORDER: Record<string, number> = {
 }
 
 export function HelmHistory({ config }: HelmHistoryProps) {
+  const { t } = useTranslation('common')
   const { deduplicatedClusters: allClusters } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -306,7 +308,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">Select cluster...</option>
+          <option value="">{t('selectors.selectCluster')}</option>
           {clusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -317,7 +319,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           disabled={!selectedCluster || releasesLoading}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
-          <option value="">Select release...</option>
+          <option value="">{t('selectors.selectRelease')}</option>
           {releases.map(r => (
             <option key={r} value={r}>{r}</option>
           ))}

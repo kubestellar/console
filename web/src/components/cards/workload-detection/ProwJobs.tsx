@@ -3,6 +3,7 @@ import {
   CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
   Play
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
 import { CardSearchInput, CardAIActions } from '../../../lib/cards'
@@ -18,6 +19,7 @@ interface ProwJobsProps {
 }
 
 export function ProwJobs({ config: _config }: ProwJobsProps) {
+  const { t } = useTranslation('common')
   // Check if we should use demo data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
@@ -140,10 +142,10 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             onChange={(e) => setTypeFilter(e.target.value as ProwJob['type'] | 'all')}
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
-            <option value="all">All Types</option>
-            <option value="periodic">Periodic</option>
-            <option value="presubmit">Presubmit</option>
-            <option value="postsubmit">Postsubmit</option>
+            <option value="all">{t('prowJobs.allTypes')}</option>
+            <option value="periodic">{t('prowJobs.periodic')}</option>
+            <option value="presubmit">{t('prowJobs.presubmit')}</option>
+            <option value="postsubmit">{t('prowJobs.postsubmit')}</option>
           </select>
           {/* State Filter */}
           <select

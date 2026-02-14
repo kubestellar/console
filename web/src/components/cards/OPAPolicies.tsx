@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy, WifiOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton } from '../../lib/cards/CardComponents'
@@ -381,6 +382,7 @@ function PolicyDetailModal({
   violations: Violation[]
   onAddPolicy: () => void
 }) {
+  const { t } = useTranslation('cards')
   // Get violations for this policy
   const policyViolations = violations.filter(v => v.policy === policy.name)
 
@@ -427,7 +429,7 @@ function PolicyDetailModal({
         {policyViolations.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
-            <p>No violations for this policy</p>
+            <p>{t('messages.noViolations')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -509,6 +511,7 @@ function ClusterOPAModal({
     context?: Record<string, unknown>
   }) => void
 }) {
+  const { t } = useTranslation('cards')
   const [activeTab, setActiveTab] = useState<OPAModalTab>('policies')
   const [showCreateMenu, setShowCreateMenu] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
@@ -784,8 +787,8 @@ Please proceed with applying this policy.`,
               {policies.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No policies configured</p>
-                  <p className="text-xs mt-1">Create a policy to enforce rules on your cluster</p>
+                  <p>{t('messages.noPoliciesConfigured')}</p>
+                  <p className="text-xs mt-1">{t('messages.createPolicyPrompt')}</p>
                 </div>
               ) : (
                 policies.map(policy => (
@@ -1069,6 +1072,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 }
 
 function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
+  const { t } = useTranslation('cards')
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
@@ -1533,10 +1537,10 @@ Let's start by discussing what kind of policy I need.`,
                 {isOffline ? (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground/50">
                     <WifiOff className="w-3 h-3" />
-                    <span>Offline</span>
+                    <span>{t('messages.offline')}</span>
                   </div>
                 ) : isInitialLoading ? (
-                  <p className="text-xs text-muted-foreground">Checking...</p>
+                  <p className="text-xs text-muted-foreground">{t('messages.checking')}</p>
                 ) : status?.installed ? (
                   <div className="space-y-1">
                     <div className="flex items-center gap-3 text-xs">

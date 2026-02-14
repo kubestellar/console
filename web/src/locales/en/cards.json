@@ -88,5 +88,16 @@
   "replaceCard": {
     "title": "Replace Card",
     "description": "Choose a card to replace \"{{cardName}}\""
+  },
+  "messages": {
+    "noViolations": "No violations for this policy",
+    "noPoliciesConfigured": "No policies configured",
+    "createPolicyPrompt": "Create a policy to enforce rules on your cluster",
+    "loadingCapacity": "Loading capacity data...",
+    "fetchingMetrics": "Fetching resource metrics from clusters",
+    "waitingForMetrics": "Waiting for cluster metrics...",
+    "connectClusters": "Connect to clusters to see capacity",
+    "offline": "Offline",
+    "checking": "Checking..."
   }
 }

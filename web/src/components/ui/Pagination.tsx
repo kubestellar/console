@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 // Hook for managing pagination state
 export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOnFilterChange: boolean = true) {
@@ -94,6 +95,7 @@ export function Pagination({
   showItemsPerPage = true,
   itemsPerPageOptions = [5, 10, 20, 50],
 }: PaginationProps) {
+  const { t } = useTranslation('common')
   const startItem = (currentPage - 1) * itemsPerPage + 1
   const endItem = Math.min(currentPage * itemsPerPage, totalItems)
 
@@ -106,10 +108,10 @@ export function Pagination({
       <div className="text-muted-foreground">
         {totalItems > 0 ? (
           <span>
-            Showing {startItem}-{endItem} of {totalItems}
+            {t('pagination.showing', { start: startItem, end: endItem, total: totalItems })}
           </span>
         ) : (
-          <span>No items</span>
+          <span>{t('pagination.noItems')}</span>
         )}
       </div>
 

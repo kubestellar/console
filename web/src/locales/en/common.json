@@ -184,5 +184,48 @@
   "drilldown": {
     "customView": "Custom view",
     "unknownViewType": "Unknown view type"
+  },
+  "pagination": {
+    "showing": "Showing {{start}}-{{end}} of {{total}}",
+    "noItems": "No items"
+  },
+  "refresh": {
+    "failed": "Failed"
+  },
+  "widgets": {
+    "uebersichtSetup": "Übersicht Setup:",
+    "downloadWidget": "Download the widget file",
+    "ensureAgentRunning": "Ensure KC agent is running locally on port 8080",
+    "restartUebersicht": "Restart Übersicht"
+  },
+  "selectors": {
+    "selectCluster": "Select cluster...",
+    "selectNamespace": "Select namespace...",
+    "selectRelease": "Select release...",
+    "allGpuTypes": "All GPU Types",
+    "allTypes": "All Types"
+  },
+  "weather": {
+    "hourlyForecast": "Hourly Forecast",
+    "feelsLike": "Feels Like",
+    "warmer": "Warmer",
+    "cooler": "Cooler",
+    "sameAsActual": "Same as actual",
+    "humidity": "Humidity",
+    "humidityHigh": "High",
+    "humidityModerate": "Moderate",
+    "humidityLow": "Low",
+    "wind": "Wind",
+    "condition": "Condition"
+  },
+  "prowJobs": {
+    "allTypes": "All Types",
+    "periodic": "Periodic",
+    "presubmit": "Presubmit",
+    "postsubmit": "Postsubmit"
+  },
+  "costs": {
+    "poweredByOpenCost": "Powered by OpenCost",
+    "docs": "Docs"
   }
 }

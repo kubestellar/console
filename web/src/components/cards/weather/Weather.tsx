@@ -4,6 +4,7 @@ import {
   MapPin, Calendar, Search as SearchIcon, Star, X,
   ExternalLink, ChevronRight, ChevronDown, Loader2
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { WeatherAnimation, getWeatherCondition, getConditionColor } from './WeatherAnimation'
 import { WEATHER_API } from '../../../config/externalApis'
 import { useCardLoadingState } from '../CardDataContext'
@@ -73,6 +74,7 @@ interface WeatherData {
 const INITIAL_WEATHER: WeatherData = { current: null, forecast: [], hourly: [] }
 
 export function Weather({ config }: { config?: WeatherConfig }) {
+  const { t } = useTranslation('common')
   const [units, setUnits] = useState<'F' | 'C'>(config?.units || 'F')
   const [forecastLength, setForecastLength] = useState<2 | 7 | 14>(config?.forecastLength || 7)
   const [showSettings, setShowSettings] = useState(false)
@@ -534,7 +536,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
             <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
               <Calendar className="w-3 h-3" />
-              <span>Hourly Forecast</span>
+              <span>{t('weather.hourlyForecast')}</span>
             </div>
             <div
               ref={hourlyScrollRef}
@@ -650,13 +652,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Gauge className="w-3 h-3" />
-                <span>Feels Like</span>
+                <span>{t('weather.feelsLike')}</span>
               </div>
               <div className="text-3xl font-semibold mb-1">
                 {currentWeather.feelsLike}°
               </div>
               <div className="text-sm text-muted-foreground">
-                {currentWeather.feelsLike > currentWeather.temperature ? 'Warmer' : currentWeather.feelsLike < currentWeather.temperature ? 'Cooler' : 'Same as actual'}
+                {currentWeather.feelsLike > currentWeather.temperature ? t('weather.warmer') : currentWeather.feelsLike < currentWeather.temperature ? t('weather.cooler') : t('weather.sameAsActual')}
               </div>
             </div>
 
@@ -664,13 +666,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Droplets className="w-3 h-3" />
-                <span>Humidity</span>
+                <span>{t('weather.humidity')}</span>
               </div>
               <div className="text-3xl font-semibold mb-1">
                 {currentWeather.humidity}%
               </div>
               <div className="text-sm text-muted-foreground">
-                {currentWeather.humidity > 70 ? 'High' : currentWeather.humidity > 40 ? 'Moderate' : 'Low'}
+                {currentWeather.humidity > 70 ? t('weather.humidityHigh') : currentWeather.humidity > 40 ? t('weather.humidityModerate') : t('weather.humidityLow')}
               </div>
             </div>
 
@@ -678,7 +680,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Wind className="w-3 h-3" />
-                <span>Wind</span>
+                <span>{t('weather.wind')}</span>
               </div>
               <div className="text-3xl font-semibold mb-1">
                 {currentWeather.windSpeed}
@@ -692,7 +694,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Eye className="w-3 h-3" />
-                <span>Condition</span>
+                <span>{t('weather.condition')}</span>
               </div>
               <div className="text-xl font-semibold mb-1">
                 {currentCondition?.label}
