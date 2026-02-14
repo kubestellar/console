@@ -279,21 +279,21 @@ Please provide:
             onClick={() => { const c = clusters.find(c => c.healthy && c.reachable !== false); if (c) drillToCluster(c.name) }}
           >
             <div className="text-sm font-bold text-green-400">{healthyClusters}</div>
-            <div className="text-[9px] text-muted-foreground">Healthy</div>
+            <div className="text-[11px] text-muted-foreground">Healthy</div>
           </div>
           <div
             className={cn('flex-1 text-center p-1.5 rounded cursor-pointer transition-colors', unhealthyClusters > 0 ? 'bg-orange-500/10 hover:bg-orange-500/20' : 'bg-muted/20')}
             onClick={() => { const c = clusters.find(c => !c.healthy && c.reachable !== false); if (c) drillToCluster(c.name) }}
           >
             <div className="text-sm font-bold text-orange-400">{unhealthyClusters}</div>
-            <div className="text-[9px] text-muted-foreground">Degraded</div>
+            <div className="text-[11px] text-muted-foreground">Degraded</div>
           </div>
           <div
             className={cn('flex-1 text-center p-1.5 rounded cursor-pointer transition-colors', unreachableClusters > 0 ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-muted/20')}
             onClick={() => { const c = clusters.find(c => c.reachable === false); if (c) drillToCluster(c.name) }}
           >
             <div className="text-sm font-bold text-red-400">{unreachableClusters}</div>
-            <div className="text-[9px] text-muted-foreground">Offline</div>
+            <div className="text-[11px] text-muted-foreground">Offline</div>
           </div>
         </div>
       </div>
@@ -303,7 +303,7 @@ Please provide:
         <div className="flex gap-1 mb-2">
           <button
             onClick={() => setView('summary')}
-            className={cn('px-2 py-0.5 text-[10px] rounded-full transition-colors',
+            className={cn('px-2.5 py-1 text-xs rounded-full transition-colors',
               view === 'summary' ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             )}
           >
@@ -311,7 +311,7 @@ Please provide:
           </button>
           <button
             onClick={() => setView('issues')}
-            className={cn('px-2 py-0.5 text-[10px] rounded-full transition-colors',
+            className={cn('px-2.5 py-1 text-xs rounded-full transition-colors',
               view === 'issues' ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             )}
           >
@@ -325,27 +325,27 @@ Please provide:
         {totalIssues === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <div className="text-green-400 text-sm font-medium">No issues detected</div>
-            <div className="text-[10px] text-muted-foreground mt-1">All pods and deployments are healthy</div>
+            <div className="text-xs text-muted-foreground mt-1">All pods and deployments are healthy</div>
           </div>
         ) : view === 'summary' ? (
           <>
             {/* Issue breakdown by type */}
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">By Type</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 font-medium">By Type</div>
               <div className="space-y-1">
                 {issuesByStatus.map(([status, count]) => {
                   const colors = STATUS_COLORS[status] || DEFAULT_COLOR
                   const pct = Math.max(8, (count / maxIssueCount) * 100)
                   return (
                     <div key={status} className="flex items-center gap-2">
-                      <div className="w-[100px] text-[10px] text-muted-foreground truncate shrink-0" title={status}>{status}</div>
-                      <div className="flex-1 h-3.5 bg-muted/20 rounded-sm overflow-hidden">
+                      <div className="w-[110px] text-xs text-muted-foreground truncate shrink-0" title={status}>{status}</div>
+                      <div className="flex-1 h-4 bg-muted/20 rounded-sm overflow-hidden">
                         <div
                           className={cn('h-full rounded-sm transition-all', colors.bg, 'opacity-60')}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <div className={cn('text-[10px] font-mono w-6 text-right shrink-0', colors.text)}>{count}</div>
+                      <div className={cn('text-xs font-mono w-6 text-right shrink-0', colors.text)}>{count}</div>
                     </div>
                   )
                 })}
@@ -355,7 +355,7 @@ Please provide:
             {/* Per-cluster breakdown */}
             {issuesByCluster.length > 0 && (
               <div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">By Cluster</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 font-medium">By Cluster</div>
                 <div className="space-y-1">
                   {issuesByCluster.slice(0, 8).map(cluster => {
                     const maxCluster = issuesByCluster[0].total
@@ -367,9 +367,9 @@ Please provide:
                         onClick={() => drillToCluster(cluster.name)}
                         title={`${cluster.name}: ${cluster.pods} pod issues, ${cluster.deploys} deployment issues — Click to view`}
                       >
-                        <Server className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-                        <div className="w-[85px] text-[10px] text-foreground truncate shrink-0">{cluster.name}</div>
-                        <div className="flex-1 h-3 bg-muted/20 rounded-sm overflow-hidden flex">
+                        <Server className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <div className="w-[90px] text-xs text-foreground truncate shrink-0">{cluster.name}</div>
+                        <div className="flex-1 h-3.5 bg-muted/20 rounded-sm overflow-hidden flex">
                           {cluster.pods > 0 && (
                             <div
                               className="h-full bg-red-500/50"
@@ -385,12 +385,12 @@ Please provide:
                             />
                           )}
                         </div>
-                        <div className="text-[10px] font-mono w-6 text-right text-muted-foreground shrink-0">{cluster.total}</div>
+                        <div className="text-xs font-mono w-6 text-right text-muted-foreground shrink-0">{cluster.total}</div>
                       </div>
                     )
                   })}
                   {issuesByCluster.length > 8 && (
-                    <div className="text-[10px] text-muted-foreground pl-5">
+                    <div className="text-xs text-muted-foreground pl-5">
                       +{issuesByCluster.length - 8} more clusters
                     </div>
                   )}
@@ -401,10 +401,10 @@ Please provide:
             {/* Quick peek at top issues */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Top Issues</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Top Issues</div>
                 <button
                   onClick={() => setView('issues')}
-                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                  className="text-xs text-primary hover:text-primary/80 transition-colors"
                 >
                   View all →
                 </button>
@@ -415,7 +415,7 @@ Please provide:
                   return (
                     <div
                       key={issue.id}
-                      className="flex items-center gap-1.5 text-[10px] py-1 px-1 -mx-1 rounded cursor-pointer hover:bg-muted/20 transition-colors"
+                      className="flex items-center gap-1.5 text-xs py-1 px-1 -mx-1 rounded cursor-pointer hover:bg-muted/20 transition-colors"
                       onClick={() => {
                         if (issue.kind === 'Pod') {
                           drillToPod(issue.cluster, issue.namespace, issue.name)
@@ -426,12 +426,12 @@ Please provide:
                       title={`${issue.kind}: ${issue.name} in ${issue.namespace} on ${issue.cluster}`}
                     >
                       {issue.kind === 'Pod' ? (
-                        <Box className="w-2.5 h-2.5 text-red-400 shrink-0" />
+                        <Box className="w-3 h-3 text-red-400 shrink-0" />
                       ) : (
-                        <Layers className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                        <Layers className="w-3 h-3 text-blue-400 shrink-0" />
                       )}
                       <span className="text-foreground truncate flex-1">{issue.name}</span>
-                      <span className={cn('px-1 rounded text-[9px] shrink-0', `${colors.bg}/20`, colors.text)}>
+                      <span className={cn('px-1.5 py-0.5 rounded text-[11px] shrink-0', `${colors.bg}/20`, colors.text)}>
                         {issue.status}
                       </span>
                       {issue.restarts !== undefined && issue.restarts > 0 && (
@@ -456,24 +456,24 @@ Please provide:
               return (
                 <div key={issue.id} className={cn('rounded border transition-colors', isExpanded ? 'border-border/50 bg-muted/10' : 'border-transparent')}>
                   <button
-                    className="w-full flex items-center gap-1.5 text-[10px] py-1.5 px-2 text-left hover:bg-muted/20 rounded transition-colors"
+                    className="w-full flex items-center gap-1.5 text-xs py-1.5 px-2 text-left hover:bg-muted/20 rounded transition-colors"
                     onClick={() => setExpandedIssue(isExpanded ? null : issue.id)}
                   >
-                    {isExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />}
+                    {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                     {issue.kind === 'Pod' ? (
-                      <Box className="w-3 h-3 text-red-400 shrink-0" />
+                      <Box className="w-3.5 h-3.5 text-red-400 shrink-0" />
                     ) : (
-                      <Layers className="w-3 h-3 text-blue-400 shrink-0" />
+                      <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                     )}
                     <span className="text-foreground truncate flex-1 font-medium">{issue.name}</span>
-                    <span className={cn('px-1 py-0.5 rounded text-[9px] shrink-0', `${colors.bg}/20`, colors.text)}>
+                    <span className={cn('px-1.5 py-0.5 rounded text-[11px] shrink-0', `${colors.bg}/20`, colors.text)}>
                       {issue.status}
                     </span>
                   </button>
 
                   {isExpanded && (
-                    <div className="px-2 pb-2 ml-5 space-y-1.5">
-                      <div className="text-[10px] space-y-0.5 text-muted-foreground">
+                    <div className="px-2 pb-2 ml-6 space-y-1.5">
+                      <div className="text-xs space-y-0.5 text-muted-foreground">
                         <div>Namespace: <span className="text-foreground font-mono">{issue.namespace}</span></div>
                         <div>Cluster: <span className="text-foreground font-mono">{issue.cluster}</span></div>
                         {issue.restarts !== undefined && issue.restarts > 0 && (
@@ -498,9 +498,9 @@ Please provide:
                           <button
                             disabled={isRepairing}
                             onClick={() => handleRestartPod(issue.cluster, issue.namespace, issue.name)}
-                            className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-40"
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-40"
                           >
-                            <RotateCcw className="w-2.5 h-2.5" />
+                            <RotateCcw className="w-3 h-3" />
                             Restart Pod
                           </button>
                         )}
@@ -508,17 +508,17 @@ Please provide:
                           <button
                             disabled={isRepairing}
                             onClick={() => handleRolloutRestart(issue.cluster, issue.namespace, issue.name)}
-                            className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors disabled:opacity-40"
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors disabled:opacity-40"
                           >
-                            <ArrowUpCircle className="w-2.5 h-2.5" />
+                            <ArrowUpCircle className="w-3 h-3" />
                             Rollout Restart
                           </button>
                         )}
                         <button
                           onClick={() => handleDiagnoseIssue(issue)}
-                          className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-colors"
                         >
-                          <Stethoscope className="w-2.5 h-2.5" />
+                          <Stethoscope className="w-3 h-3" />
                           Diagnose
                         </button>
                         <button
@@ -526,7 +526,7 @@ Please provide:
                             if (issue.kind === 'Pod') drillToPod(issue.cluster, issue.namespace, issue.name)
                             else drillToCluster(issue.cluster)
                           }}
-                          className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-muted/30 hover:bg-muted/50 text-muted-foreground transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-muted/30 hover:bg-muted/50 text-muted-foreground transition-colors"
                         >
                           View Details
                         </button>
@@ -534,7 +534,7 @@ Please provide:
 
                       {/* Repair output */}
                       {output && (
-                        <div className="mt-1 p-1.5 rounded bg-black/30 text-[10px] font-mono text-green-400 whitespace-pre-wrap">
+                        <div className="mt-1 p-2 rounded bg-black/30 text-xs font-mono text-green-400 whitespace-pre-wrap">
                           {output}
                         </div>
                       )}
