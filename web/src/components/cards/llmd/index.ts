@@ -12,9 +12,6 @@ export { LLMdBenchmarks } from './LLMdBenchmarks'
 export { LLMdAIInsights } from './LLMdAIInsights'
 export { LLMdConfigurator } from './LLMdConfigurator'
 
-// Nightly E2E status card
-export { NightlyE2EStatus } from './NightlyE2EStatus'
-
 // Benchmark dashboard cards
 export { NightlyE2EStatus } from './NightlyE2EStatus'
 export { BenchmarkHero } from './BenchmarkHero'
