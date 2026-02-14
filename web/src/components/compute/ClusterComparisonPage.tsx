@@ -13,7 +13,7 @@ interface ClusterMetrics {
 }
 
 export function ClusterComparisonPage() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -161,7 +161,7 @@ export function ClusterComparisonPage() {
             <div className={`mb-4 ${hasDifference(m => m.cluster.nodeCount) ? 'bg-amber-500/20 -mx-2 px-2 py-2 rounded' : ''}`}>
               <div className="flex items-center gap-2 text-sm mb-1">
                 <Server className="w-4 h-4 text-blue-400" />
-                <span className="text-muted-foreground">Nodes</span>
+                <span className="text-muted-foreground">{t('common.nodes')}</span>
               </div>
               <div className="text-2xl font-bold text-foreground">
                 {cluster.nodeCount || 0}
@@ -215,7 +215,7 @@ export function ClusterComparisonPage() {
             <div className={`mb-4 ${hasDifference(m => m.cluster.podCount) ? 'bg-amber-500/20 -mx-2 px-2 py-2 rounded' : ''}`}>
               <div className="flex items-center gap-2 text-sm mb-1">
                 <Box className="w-4 h-4 text-cyan-400" />
-                <span className="text-muted-foreground">Pods</span>
+                <span className="text-muted-foreground">{t('common.pods')}</span>
               </div>
               <div className="text-2xl font-bold text-foreground">
                 {cluster.podCount || 0}
@@ -227,7 +227,7 @@ export function ClusterComparisonPage() {
             <div className={`pt-4 border-t border-border/50 ${hasDifference(m => m.cluster.storageGB) ? 'bg-amber-500/20 -mx-2 px-2 py-2 rounded' : ''}`}>
               <div className="flex items-center gap-2 text-sm mb-1">
                 <Activity className="w-4 h-4 text-amber-400" />
-                <span className="text-muted-foreground">Storage</span>
+                <span className="text-muted-foreground">{t('common.storage')}</span>
               </div>
               <div className="text-lg font-bold text-foreground">
                 {cluster.storageGB ? `${cluster.storageGB.toFixed(1)} GB` : 'N/A'}

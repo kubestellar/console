@@ -22,6 +22,7 @@ interface PVCListModalProps {
 }
 
 function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSelectPVC }: PVCListModalProps) {
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
 
   // Filter by status and search query
@@ -62,7 +63,7 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
       <div className="px-6 py-4 border-b border-border">
         <input
           type="text"
-          placeholder="Search by name, namespace, cluster, or storage class..."
+          placeholder={t('common.search')} // TODO by name, namespace, cluster, or storage class..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"

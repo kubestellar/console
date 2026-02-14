@@ -92,6 +92,7 @@ interface ResourceDetailModalProps {
 }
 
 function ResourceDetailModal({ resource, onClose }: ResourceDetailModalProps) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'describe' | 'labels' | 'logs'>('describe')
   const { startMission } = useMissions()
 
@@ -240,8 +241,8 @@ Start by running diagnostic commands to understand what's happening.`,
               <div className="text-muted-foreground mb-2"># kubectl describe {resource.kind.toLowerCase()} {resource.name} {resource.namespace ? `-n ${resource.namespace}` : ''}</div>
               <div className="space-y-1">
                 <div><span className="text-muted-foreground">Name:</span> <span className="text-foreground">{resource.name}</span></div>
-                {resource.namespace && <div><span className="text-muted-foreground">Namespace:</span> <span className="text-foreground">{resource.namespace}</span></div>}
-                <div><span className="text-muted-foreground">Cluster:</span> <span className="text-foreground">{resource.cluster}</span></div>
+                {resource.namespace && <div><span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span> <span className="text-foreground">{resource.namespace}</span></div>}
+                <div><span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span> <span className="text-foreground">{resource.cluster}</span></div>
                 {resource.data && Object.entries(resource.data).map(([k, v]) => (
                   <div key={k}><span className="text-muted-foreground">{k}:</span> <span className="text-foreground">{String(v)}</span></div>
                 ))}
@@ -260,7 +261,7 @@ Start by running diagnostic commands to understand what's happening.`,
                     </span>
                   ))}
                   {(!resource.labels || Object.keys(resource.labels).length === 0) && (
-                    <span className="text-xs text-muted-foreground">No labels</span>
+                    <span className="text-xs text-muted-foreground">{t('drilldown.empty.noLabels')}</span>
                   )}
                 </div>
               </div>
@@ -274,7 +275,7 @@ Start by running diagnostic commands to understand what's happening.`,
                     </div>
                   ))}
                   {(!resource.annotations || Object.keys(resource.annotations).length === 0) && (
-                    <span className="text-xs text-muted-foreground">No annotations</span>
+                    <span className="text-xs text-muted-foreground">{t('drilldown.empty.noAnnotations')}</span>
                   )}
                 </div>
               </div>
@@ -804,6 +805,7 @@ interface _ClusterDetailProps {
 
  
 export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetailProps) {
+  const { t } = useTranslation()
   const { health, isLoading } = useClusterHealth(clusterName)
   const { issues: podIssues } = usePodIssues(clusterName)
   const { issues: deploymentIssues } = useDeploymentIssues()
@@ -960,11 +962,11 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                     <span className="text-foreground font-medium">{namespaceStats.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Deployments</span>
+                    <span className="text-muted-foreground">{t('common.deployments')}</span>
                     <span className="text-foreground font-medium">{clusterDeployments.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pods</span>
+                    <span className="text-muted-foreground">{t('common.pods')}</span>
                     <span className="text-foreground font-medium">{health?.podCount || 0}</span>
                   </div>
                 </>
@@ -975,7 +977,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
           </button>
           <div className="p-4 rounded-lg bg-card/50 border border-border">
             <div className="text-2xl font-bold text-foreground">{!isUnreachable ? clusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0) : '-'}</div>
-            <div className="text-sm text-muted-foreground">GPUs</div>
+            <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
             <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} allocated` : ''}</div>
           </div>
         </div>
@@ -1068,7 +1070,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                       <div className="px-3 pb-3 pt-0 border-t border-red-500/20">
                         <div className="pl-6 space-y-2 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Namespace:</span>
+                            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
                             <span className="ml-2 font-mono text-foreground">{issue.namespace}</span>
                           </div>
                           <div>
@@ -1077,7 +1079,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                           </div>
                           {issue.restarts !== undefined && issue.restarts > 0 && (
                             <div>
-                              <span className="text-muted-foreground">Restarts:</span>
+                              <span className="text-muted-foreground">{t('drilldown.fields.restarts')}</span>
                               <span className="ml-2 text-orange-400">{issue.restarts}</span>
                             </div>
                           )}
@@ -1141,7 +1143,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                       <div className="px-3 pb-3 pt-0 border-t border-orange-500/20">
                         <div className="pl-6 space-y-2 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Namespace:</span>
+                            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
                             <span className="ml-2 font-mono text-foreground">{issue.namespace}</span>
                           </div>
                           <div>
@@ -1150,7 +1152,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                           </div>
                           {issue.message && (
                             <div>
-                              <span className="text-muted-foreground">Message:</span>
+                              <span className="text-muted-foreground">{t('drilldown.fields.message')}</span>
                               <span className="ml-2 text-orange-400">{issue.message}</span>
                             </div>
                           )}

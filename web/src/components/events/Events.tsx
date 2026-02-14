@@ -290,7 +290,7 @@ export function Events() {
             <button onClick={() => { setActiveTab('list'); setFilter('normal') }} className="glass p-4 rounded-lg text-left hover:bg-secondary/30 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-500/20"><CheckCircle2 className="w-5 h-5 text-green-400" /></div>
-                <div><div className="text-2xl font-bold text-green-400">{formatStat(stats.normal)}</div><div className="text-xs text-muted-foreground">Normal</div></div>
+                <div><div className="text-2xl font-bold text-green-400">{formatStat(stats.normal)}</div><div className="text-xs text-muted-foreground">{t('common.normal')}</div></div>
               </div>
             </button>
             <div className="glass p-4 rounded-lg">
@@ -414,21 +414,21 @@ export function Events() {
             </button>
             <button onClick={() => setFilter('normal')} className={cn('glass p-4 rounded-lg text-left transition-all', filter === 'normal' ? 'ring-2 ring-green-500' : 'hover:bg-secondary/30')}>
               <div className="text-3xl font-bold text-green-400">{formatStat(stats.normal)}</div>
-              <div className="text-sm text-muted-foreground">Normal</div>
+              <div className="text-sm text-muted-foreground">{t('common.normal')}</div>
             </button>
           </div>
 
           <div className="glass p-4 rounded-lg">
             <div className="flex flex-wrap items-center gap-4">
               <div>
-                <label htmlFor="events-namespace-filter" className="block text-xs text-muted-foreground mb-1">Namespace</label>
+                <label htmlFor="events-namespace-filter" className="block text-xs text-muted-foreground mb-1">{t('common.namespace')}</label>
                 <select id="events-namespace-filter" value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                   <option value="">{t('events.allNamespaces')}</option>
                   {namespaces.map((ns) => <option key={ns} value={ns}>{ns}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="events-reason-filter" className="block text-xs text-muted-foreground mb-1">Reason</label>
+                <label htmlFor="events-reason-filter" className="block text-xs text-muted-foreground mb-1">{t('common.reason')}</label>
                 <select id="events-reason-filter" value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                   <option value="">{t('events.allReasons')}</option>
                   {reasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
@@ -436,7 +436,7 @@ export function Events() {
               </div>
               <div className="flex-1 min-w-[200px]">
                 <label htmlFor="events-search" className="block text-xs text-muted-foreground mb-1">Search</label>
-                <input type="text" id="events-search" placeholder="Search events..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                <input type="text" id="events-search" placeholder={t('common.searchEvents')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               {hasActiveFilters && (
                 <div>

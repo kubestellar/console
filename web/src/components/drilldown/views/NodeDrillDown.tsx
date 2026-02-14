@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function NodeDrillDown({ data }: Props) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const nodeName = data.node as string
   const status = data.status as string | undefined
@@ -66,7 +66,7 @@ Start by checking node events and conditions.`,
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-red-400">Node Issue Detected</h4>
+              <h4 className="font-semibold text-red-400">{t('drilldown.node.nodeIssueDetected')}</h4>
               <p className="text-sm text-red-300/80 mt-1">{issue || 'This node is not accepting new workloads'}</p>
             </div>
           </div>
@@ -78,21 +78,21 @@ Start by checking node events and conditions.`,
         <h3 className="text-lg font-semibold text-foreground mb-4">Node: {nodeName}</h3>
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <dt className="text-muted-foreground">Cluster</dt>
+            <dt className="text-muted-foreground">{t('common.cluster')}</dt>
             <dd className="font-mono text-foreground">{clusterShort}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Status</dt>
+            <dt className="text-muted-foreground">{t('common.status')}</dt>
             <dd className={`font-medium ${isOffline ? 'text-red-400' : 'text-green-400'}`}>
               {status || 'Unknown'}
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Roles</dt>
+            <dt className="text-muted-foreground">{t('common.roles')}</dt>
             <dd className="font-mono text-foreground">{roles?.join(', ') || 'worker'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Schedulable</dt>
+            <dt className="text-muted-foreground">{t('drilldown.node.schedulable')}</dt>
             <dd className={`font-medium ${unschedulable ? 'text-red-400' : 'text-green-400'}`}>
               {unschedulable ? 'No (Cordoned)' : 'Yes'}
             </dd>

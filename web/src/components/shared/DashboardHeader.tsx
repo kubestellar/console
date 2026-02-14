@@ -57,7 +57,7 @@ export function DashboardHeader({
   rightExtra,
   error,
 }: DashboardHeaderProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const location = useLocation()
   const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
 
@@ -92,7 +92,7 @@ export function DashboardHeader({
           title="Updating..."
         >
           <Hourglass className="w-3 h-3" />
-          <span>Updating</span>
+          <span>{t('common.updating')}</span>
         </span>
         {afterTitle}
       </div>

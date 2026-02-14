@@ -16,7 +16,7 @@ const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 const DEFAULT_COMPUTE_CARDS = getDefaultCards('compute')
 
 export function Compute() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -245,15 +245,15 @@ export function Compute() {
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs">
                       <div>
-                        <div className="text-muted-foreground">Nodes</div>
+                        <div className="text-muted-foreground">{t('common.nodes')}</div>
                         <div className="text-foreground font-medium">{cluster.nodeCount || 0}</div>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">CPUs</div>
+                        <div className="text-muted-foreground">{t('common.cpus')}</div>
                         <div className="text-foreground font-medium">{cluster.cpuCores || 0}</div>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Pods</div>
+                        <div className="text-muted-foreground">{t('common.pods')}</div>
                         <div className="text-foreground font-medium">{cluster.podCount || 0}</div>
                       </div>
                     </div>

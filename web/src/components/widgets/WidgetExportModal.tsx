@@ -524,6 +524,7 @@ function WidgetPreview({ config }: { config: WidgetConfig | null }) {
 
 // --- Card previews ---
 function CardPreview({ cardType }: { cardType: string }) {
+  const { t } = useTranslation()
   const card = WIDGET_CARDS[cardType]
   if (!card) return null
 
@@ -535,11 +536,11 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={ps.row}>
             <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.healthy}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.healthy }}>3</span>
-              <span style={ps.statLbl}>Healthy</span>
+              <span style={ps.statLbl}>{t('common.healthy')}</span>
             </div>
             <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.error}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.error }}>1</span>
-              <span style={ps.statLbl}>Unhealthy</span>
+              <span style={ps.statLbl}>{t('common.unhealthy')}</span>
             </div>
           </div>
         </div>
@@ -573,16 +574,16 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={ps.title}><span style={ps.dot(ps.colors.purple)} /> GPU Overview</div>
           <div style={{ textAlign: 'center', marginBottom: '8px' }}>
             <div style={{ fontSize: '28px', fontWeight: 700, color: ps.colors.purple }}>72%</div>
-            <div style={ps.muted}>Utilization</div>
+            <div style={ps.muted}>{t('common.utilization')}</div>
           </div>
           <div style={ps.row}>
             <div style={ps.statBlock}>
               <span style={ps.statVal}>32</span>
-              <span style={ps.statLbl}>Total</span>
+              <span style={ps.statLbl}>{t('common.total')}</span>
             </div>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, color: ps.colors.purple }}>23</span>
-              <span style={ps.statLbl}>Allocated</span>
+              <span style={ps.statLbl}>{t('common.allocated')}</span>
             </div>
           </div>
         </div>
@@ -595,11 +596,11 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={{ ...ps.row, marginBottom: '6px' }}>
             <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.healthy}` }}>
               <span style={ps.statVal}>4</span>
-              <span style={ps.statLbl}>Nodes</span>
+              <span style={ps.statLbl}>{t('common.nodes')}</span>
             </div>
             <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.purple}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.purple }}>16</span>
-              <span style={ps.statLbl}>GPUs</span>
+              <span style={ps.statLbl}>{t('common.gpus')}</span>
             </div>
             <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.info}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.info }}>8</span>
@@ -750,15 +751,15 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={ps.row}>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: '16px', color: ps.colors.info }}>24</span>
-              <span style={ps.statLbl}>PVCs</span>
+              <span style={ps.statLbl}>{t('common.pvcs')}</span>
             </div>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: '16px', color: ps.colors.healthy }}>22</span>
-              <span style={ps.statLbl}>Bound</span>
+              <span style={ps.statLbl}>{t('common.bound')}</span>
             </div>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: '16px', color: ps.colors.warning }}>2</span>
-              <span style={ps.statLbl}>Pending</span>
+              <span style={ps.statLbl}>{t('common.pending')}</span>
             </div>
           </div>
         </div>
@@ -772,7 +773,7 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={{ ...ps.row, marginBottom: '6px' }}>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: '16px' }}>18</span>
-              <span style={ps.statLbl}>Services</span>
+              <span style={ps.statLbl}>{t('common.services')}</span>
             </div>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: '16px', color: ps.colors.info }}>6</span>
@@ -806,7 +807,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             </div>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: '14px', color: '#22d3ee' }}>$130</span>
-              <span style={ps.statLbl}>Storage</span>
+              <span style={ps.statLbl}>{t('common.storage')}</span>
             </div>
           </div>
         </div>

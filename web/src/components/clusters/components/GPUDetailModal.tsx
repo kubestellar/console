@@ -52,7 +52,7 @@ interface GPUDetailModalInternalProps extends GPUDetailModalProps {
 
 export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRefresh, onClose, operatorStatus }: GPUDetailModalInternalProps) {
 
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   // Calculate GPU type breakdown
   const gpuTypeInfo = useMemo(() => {
     const typeMap = new Map<string, GPUTypeInfo>()
@@ -209,23 +209,23 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
           <div className="grid grid-cols-4 gap-4">
             <div className="glass p-4 rounded-lg text-center">
               <div className="text-3xl font-bold text-foreground">{totals.total}</div>
-              <div className="text-xs text-muted-foreground">Total GPUs</div>
+              <div className="text-xs text-muted-foreground">{t('common.totalGpus')}</div>
             </div>
             <div className="glass p-4 rounded-lg text-center">
               <div className={`text-3xl font-bold ${getUtilizationColor(totals.utilizationPercent)}`}>
                 {totals.allocated}
               </div>
-              <div className="text-xs text-muted-foreground">Allocated</div>
+              <div className="text-xs text-muted-foreground">{t('common.allocated')}</div>
             </div>
             <div className="glass p-4 rounded-lg text-center">
               <div className="text-3xl font-bold text-green-400">{totals.available}</div>
-              <div className="text-xs text-muted-foreground">Available</div>
+              <div className="text-xs text-muted-foreground">{t('common.available')}</div>
             </div>
             <div className="glass p-4 rounded-lg text-center">
               <div className={`text-3xl font-bold ${getUtilizationColor(totals.utilizationPercent)}`}>
                 {totals.utilizationPercent}%
               </div>
-              <div className="text-xs text-muted-foreground">Utilization</div>
+              <div className="text-xs text-muted-foreground">{t('common.utilization')}</div>
             </div>
           </div>
 
@@ -434,12 +434,12 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 text-muted-foreground font-medium">Node</th>
-                      <th className="text-left py-2 px-3 text-muted-foreground font-medium">Cluster</th>
+                      <th className="text-left py-2 px-3 text-muted-foreground font-medium">{t('common.cluster')}</th>
                       <th className="text-left py-2 px-3 text-muted-foreground font-medium">GPU Type</th>
-                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">Memory</th>
-                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">Used</th>
-                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">Available</th>
-                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">Total</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">{t('common.memory')}</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">{t('common.used')}</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">{t('common.available')}</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">{t('common.total')}</th>
                     </tr>
                   </thead>
                   <tbody>

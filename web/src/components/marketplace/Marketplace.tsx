@@ -443,7 +443,7 @@ const filterBtnClass = (active: boolean) =>
   }`
 
 export function Marketplace() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const {
     items,
     allTags,
@@ -597,7 +597,7 @@ export function Marketplace() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search marketplace..."
+            placeholder={t('common.search')} // TODO marketplace..."
             className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
           />
         </div>

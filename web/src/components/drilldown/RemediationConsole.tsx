@@ -81,7 +81,7 @@ export function RemediationConsole({
   cluster,
   issues,
 }: RemediationConsoleProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
@@ -456,7 +456,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 {isRunning && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Processing...</span>
+                    <span>{t('common.processing')}</span>
                   </div>
                 )}
                 <div ref={logsEndRef} />
@@ -503,7 +503,7 @@ Labels:       app=${resourceName.split('-')[0]}
               {isExecuting && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Executing...</span>
+                  <span>{t('common.executing')}</span>
                 </div>
               )}
               <div ref={logsEndRef} />

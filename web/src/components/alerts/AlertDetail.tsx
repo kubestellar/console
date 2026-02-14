@@ -44,7 +44,7 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export function AlertDetail({ alert, onClose }: AlertDetailProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { acknowledgeAlert, resolveAlert, runAIDiagnosis } = useAlerts()
   const { webhooks } = useSlackWebhooks()
   const { sendNotification } = useSlackNotification()
@@ -156,7 +156,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           {alert.cluster && (
             <div className="flex items-center gap-2 text-sm">
               <Server className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Cluster:</span>
+              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
               <span className="text-foreground">{alert.cluster}</span>
             </div>
           )}

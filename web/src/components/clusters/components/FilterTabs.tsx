@@ -36,7 +36,7 @@ export function FilterTabs({
   layoutMode = 'grid',
   onLayoutModeChange,
 }: FilterTabsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   return (
     <div className="flex flex-wrap gap-2 mb-4">
       <button
@@ -112,9 +112,9 @@ export function FilterTabs({
             onChange={(e) => onSortByChange(e.target.value as SortByType)}
             className="px-2 py-1.5 rounded-lg text-sm bg-card/50 border border-border text-foreground"
           >
-            <option value="name">Name</option>
-            <option value="nodes">Nodes</option>
-            <option value="pods">Pods</option>
+            <option value="name">{t('common.name')}</option>
+            <option value="nodes">{t('common.nodes')}</option>
+            <option value="pods">{t('common.pods')}</option>
             <option value="health">Health</option>
           </select>
           <button

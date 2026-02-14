@@ -68,7 +68,7 @@ export function AIActionBar({
   compact = false,
   className = '',
 }: AIActionBarProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { agents } = useMissions()
   const isAgentConnected = agents.length > 0
 
@@ -103,7 +103,7 @@ export function AIActionBar({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">AI Assistant</span>
+          <span className="text-sm font-medium text-foreground">{t('drilldown.ai.aiAssistant')}</span>
         </div>
 
         {!isAgentConnected && (

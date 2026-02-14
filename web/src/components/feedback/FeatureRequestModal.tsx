@@ -115,7 +115,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
 }
 
 export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
@@ -396,7 +396,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                     {requestsLoading && requests.length === 0 ? (
                       <div className="p-8 text-center text-muted-foreground">
                         <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                        <p className="text-sm">Loading...</p>
+                        <p className="text-sm">{t('common.loading')}</p>
                       </div>
                     ) : requests.length === 0 ? (
                       <div className="p-8 text-center text-muted-foreground">
@@ -590,7 +590,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                                 <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-muted-foreground">
                                   <div className="flex items-center gap-1 text-red-400 mb-1">
                                     <MessageSquare className="w-3 h-3" />
-                                    <span className="font-medium">Reason:</span>
+                                    <span className="font-medium">{t('drilldown.fields.reason')}</span>
                                   </div>
                                   <p className="line-clamp-3">{request.latest_comment}</p>
                                 </div>
@@ -730,7 +730,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                       {notificationsLoading && notifications.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">
                           <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                          <p className="text-sm">Loading...</p>
+                          <p className="text-sm">{t('common.loading')}</p>
                         </div>
                       ) : notifications.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">

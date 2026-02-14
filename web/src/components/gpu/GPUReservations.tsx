@@ -78,7 +78,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export function GPUReservations() {
-  useTranslation()
+  const { t } = useTranslation()
   const { nodes: rawNodes, isLoading: nodesLoading } = useGPUNodes()
   const { resourceQuotas } = useResourceQuotas()
   useClusters()
@@ -530,7 +530,7 @@ export function GPUReservations() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-foreground">{stats.totalGPUs}</div>
-                  <div className="text-xs text-muted-foreground">Total GPUs</div>
+                  <div className="text-xs text-muted-foreground">{t('common.totalGpus')}</div>
                 </div>
               </div>
             </div>
@@ -541,7 +541,7 @@ export function GPUReservations() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-green-400">{stats.availableGPUs}</div>
-                  <div className="text-xs text-muted-foreground">Available</div>
+                  <div className="text-xs text-muted-foreground">{t('common.available')}</div>
                 </div>
               </div>
             </div>
@@ -588,7 +588,7 @@ export function GPUReservations() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-2xl font-bold text-foreground">{stats.utilizationPercent}%</span>
-                    <span className="text-xs text-muted-foreground">Used</span>
+                    <span className="text-xs text-muted-foreground">{t('common.used')}</span>
                   </div>
                 </div>
               </div>
@@ -599,7 +599,7 @@ export function GPUReservations() {
 
             {/* GPU Types */}
             <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">GPU Types</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('common.gpuTypes')}</h3>
               {stats.typeChartData.length > 0 ? (
                 <DonutChart data={stats.typeChartData} size={150} thickness={20} showLegend={true} />
               ) : (
@@ -649,7 +649,7 @@ export function GPUReservations() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <div className="font-medium text-foreground">{r.gpu_count} <TechnicalAcronym term="GPU">GPUs</TechnicalAcronym></div>
+                      <div className="font-medium text-foreground">{r.gpu_count} <TechnicalAcronym term="GPU">{t('common.gpus')}</TechnicalAcronym></div>
                       <div className="text-sm text-muted-foreground">{r.duration_hours}h duration</div>
                     </div>
                     <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.pending)}>
@@ -809,7 +809,7 @@ export function GPUReservations() {
                   <div className="text-foreground font-medium">{selectedReservation.title}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Status</div>
+                  <div className="text-sm text-muted-foreground">{t('common.status')}</div>
                   <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[selectedReservation.status] || STATUS_COLORS.pending)}>
                     {(selectedReservation.status === 'active') && <span className="w-2 h-2 rounded-full bg-green-400" />}
                     {selectedReservation.status}
@@ -820,11 +820,11 @@ export function GPUReservations() {
                   <div className="text-foreground">{selectedReservation.user_name}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Namespace</div>
+                  <div className="text-sm text-muted-foreground">{t('common.namespace')}</div>
                   <div className="text-foreground">{selectedReservation.namespace}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">GPUs</div>
+                  <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
                   <div className="text-foreground">{selectedReservation.gpu_count}</div>
                 </div>
                 {selectedReservation.gpu_type && (
@@ -842,7 +842,7 @@ export function GPUReservations() {
                   <div className="text-foreground">{selectedReservation.duration_hours} hours</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Cluster</div>
+                  <div className="text-sm text-muted-foreground">{t('common.cluster')}</div>
                   <div className="text-foreground">{selectedReservation.cluster}</div>
                 </div>
                 {selectedReservation.quota_enforced && selectedReservation.quota_name && (
@@ -940,13 +940,13 @@ export function GPUReservations() {
                   <div className="flex items-center gap-2 p-2 rounded bg-secondary/30">
                     <Zap className="w-3.5 h-3.5 text-purple-400" />
                     <div>
-                      <div className="text-xs text-muted-foreground">GPUs</div>
+                      <div className="text-xs text-muted-foreground">{t('common.gpus')}</div>
                       <div className="text-sm font-medium text-foreground">{r.gpu_count}</div>
                     </div>
                   </div>
                   {r.gpu_type && (
                     <div className="p-2 rounded bg-secondary/30">
-                      <div className="text-xs text-muted-foreground">Type</div>
+                      <div className="text-xs text-muted-foreground">{t('common.type')}</div>
                       <div className="text-sm font-medium text-foreground truncate">{r.gpu_type}</div>
                     </div>
                   )}

@@ -153,7 +153,7 @@ export function SaveResolutionDialog({
   onClose,
   onSaved,
 }: SaveResolutionDialogProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { saveResolution } = useResolutions()
 
   // Auto-detect issue signature from mission content
@@ -299,7 +299,7 @@ export function SaveResolutionDialog({
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Save className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold text-foreground">Save Resolution</h2>
+            <h2 className="font-semibold text-foreground">{t('common.saveResolution')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -314,7 +314,7 @@ export function SaveResolutionDialog({
           <div className="flex items-center gap-3 p-4 bg-primary/10 border-b border-primary/20">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <div>
-              <p className="text-sm font-medium text-foreground">Generating AI Summary...</p>
+              <p className="text-sm font-medium text-foreground">{t('common.generatingAISummary')}</p>
               <p className="text-xs text-muted-foreground">Creating a reusable problem/solution pair</p>
             </div>
           </div>
@@ -482,7 +482,7 @@ export function SaveResolutionDialog({
                 )}
               >
                 <Save className="w-4 h-4" />
-                <span className="text-sm">Save Private</span>
+                <span className="text-sm">{t('common.savePrivate')}</span>
               </button>
               <button
                 onClick={() => setVisibility('shared')}
@@ -496,7 +496,7 @@ export function SaveResolutionDialog({
                 )}
               >
                 <Share2 className="w-4 h-4" />
-                <span className="text-sm">Share to Org</span>
+                <span className="text-sm">{t('common.shareToOrg')}</span>
               </button>
             </div>
           </div>
@@ -533,7 +533,7 @@ export function SaveResolutionDialog({
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSaving ? (
-                <>Saving...</>
+                <>{t('common.saving')}</>
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4" />

@@ -30,7 +30,7 @@ interface AppSummary {
 }
 
 export function Workloads() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   // Data fetching
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
@@ -263,7 +263,7 @@ export function Workloads() {
                 <div className="flex items-center gap-6">
                   <div className="text-center">
                     <div className="text-lg font-bold text-foreground">{app.deploymentCount}</div>
-                    <div className="text-xs text-muted-foreground">Deployments</div>
+                    <div className="text-xs text-muted-foreground">{t('common.deployments')}</div>
                   </div>
                   {app.deploymentIssues > 0 && (
                     <div className="text-center">

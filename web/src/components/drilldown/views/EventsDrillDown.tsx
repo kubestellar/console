@@ -47,7 +47,7 @@ function EventsSkeleton() {
 }
 
 export function EventsDrillDown({ data }: Props) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string | undefined
   const objectName = data.objectName as string | undefined
@@ -208,7 +208,7 @@ export function EventsDrillDown({ data }: Props) {
           <div className="text-2xl font-bold text-green-400">
             {filteredEvents.filter(e => e.type === 'Normal').length}
           </div>
-          <div className="text-sm text-muted-foreground">Normal</div>
+          <div className="text-sm text-muted-foreground">{t('common.normal')}</div>
         </div>
       </div>
 

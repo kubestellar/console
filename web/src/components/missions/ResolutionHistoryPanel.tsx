@@ -178,6 +178,7 @@ function ResolutionCard({
   showSharedBy,
   canShare,
 }: ResolutionCardProps) {
+  const { t } = useTranslation()
   const { effectiveness } = resolution
   const successRate = effectiveness.timesUsed > 0
     ? Math.round((effectiveness.timesSuccessful / effectiveness.timesUsed) * 100)
@@ -299,7 +300,7 @@ function ResolutionCard({
                 title={isDeleteConfirm ? "Click again to confirm" : "Delete"}
               >
                 <Trash2 className="w-3 h-3" />
-                {isDeleteConfirm && <span>Confirm</span>}
+                {isDeleteConfirm && <span>{t('common.confirm')}</span>}
               </button>
             </div>
           </div>

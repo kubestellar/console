@@ -45,7 +45,7 @@ export function IssueItem({
   onViewDetails,
   onTroubleshoot,
 }: IssueItemProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const isPod = issue.kind === 'Pod'
 
   const bgClass = isPod ? 'bg-red-500/10 border-red-500/20' : 'bg-orange-500/10 border-orange-500/20'
@@ -88,7 +88,7 @@ export function IssueItem({
         <div className={cn('px-3 pb-3 pt-0 border-t', borderClass)}>
           <div className="pl-6 space-y-2 text-sm">
             <div>
-              <span className="text-muted-foreground">Namespace:</span>
+              <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
               <span className="ml-2 font-mono text-foreground">{issue.namespace}</span>
             </div>
 
@@ -100,7 +100,7 @@ export function IssueItem({
                 </div>
                 {(issue as PodIssue).restarts !== undefined && (issue as PodIssue).restarts! > 0 && (
                   <div>
-                    <span className="text-muted-foreground">Restarts:</span>
+                    <span className="text-muted-foreground">{t('drilldown.fields.restarts')}</span>
                     <span className="ml-2 text-orange-400">{(issue as PodIssue).restarts}</span>
                   </div>
                 )}
@@ -125,7 +125,7 @@ export function IssueItem({
                 </div>
                 {(issue as DeploymentIssue).message && (
                   <div>
-                    <span className="text-muted-foreground">Message:</span>
+                    <span className="text-muted-foreground">{t('drilldown.fields.message')}</span>
                     <span className="ml-2 text-orange-400">{(issue as DeploymentIssue).message}</span>
                   </div>
                 )}

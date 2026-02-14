@@ -103,7 +103,7 @@ function cleanupPodCache() {
 }
 
 export function PodDrillDown({ data }: Props) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const podName = data.pod as string
@@ -1222,7 +1222,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
               <Layers className="w-4 h-4 text-purple-400" />
-              <span className="text-muted-foreground">Namespace:</span>
+              <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
               <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
               <svg className="w-3 h-3 text-purple-400/50 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1233,7 +1233,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
               <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-muted-foreground">Cluster:</span>
+              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
               <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
               <svg className="w-3 h-3 text-blue-400/50 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1242,7 +1242,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             {restarts > 0 && (
               <div className="flex items-center gap-2">
                 <Box className="w-4 h-4 text-yellow-400" />
-                <span className="text-muted-foreground">Restarts:</span>
+                <span className="text-muted-foreground">{t('drilldown.fields.restarts')}</span>
                 <span className="font-mono text-yellow-400">{restarts}</span>
               </div>
             )}
@@ -1483,7 +1483,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                       <Plus className="w-4 h-4 text-green-400 flex-shrink-0" />
                       <input
                         type="text"
-                        placeholder="key"
+                        placeholder={t('common.key')}
                         value={newLabelKey}
                         onChange={(e) => setNewLabelKey(e.target.value)}
                         className="w-32 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground"
@@ -1491,7 +1491,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                       <span className="text-muted-foreground">=</span>
                       <input
                         type="text"
-                        placeholder="value"
+                        placeholder={t('common.value')}
                         value={newLabelValue}
                         onChange={(e) => setNewLabelValue(e.target.value)}
                         className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground min-w-0"
@@ -2027,7 +2027,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               {/* Agent not connected warning */}
               {!agentConnected && ownerChain.length === 0 && configMaps.length === 0 && secrets.length === 0 && !serviceAccount && (
                 <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                  <p className="text-yellow-400">Local Agent not connected</p>
+                  <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
                   <p className="text-sm text-muted-foreground mt-1">Connect the local agent to discover related resources</p>
                 </div>
               )}
@@ -2041,7 +2041,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           {describeLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Running kubectl describe...</span>
+              <span className="ml-2 text-muted-foreground">{t('drilldown.status.runningDescribe')}</span>
             </div>
           ) : describeOutput ? (
             <div className="relative">
@@ -2065,7 +2065,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">Local Agent not connected</p>
+              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view kubectl describe output</p>
             </div>
           ) : (
@@ -2087,7 +2087,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           {logsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Fetching logs...</span>
+              <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingLogs')}</span>
             </div>
           ) : logsOutput ? (
             <div className="relative">
@@ -2118,7 +2118,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">Local Agent not connected</p>
+              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view pod logs</p>
             </div>
           ) : (
@@ -2140,7 +2140,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           {eventsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Fetching events...</span>
+              <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingEvents')}</span>
             </div>
           ) : eventsOutput ? (
             <div className="relative">
@@ -2171,7 +2171,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">Local Agent not connected</p>
+              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view events</p>
             </div>
           ) : (
@@ -2193,7 +2193,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           {yamlLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Fetching YAML...</span>
+              <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingYaml')}</span>
             </div>
           ) : yamlOutput ? (
             <div className="relative">
@@ -2224,7 +2224,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">Local Agent not connected</p>
+              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view YAML</p>
             </div>
           ) : (
@@ -2264,7 +2264,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   <div className="p-4 max-h-48 overflow-y-auto">
                     <div className="flex items-center gap-2 text-xs text-purple-400 mb-2">
                       <ConsoleAIIcon size="sm" />
-                      <span className="font-semibold tracking-wide">AI DIAGNOSIS</span>
+                      <span className="font-semibold tracking-wide">{t('drilldown.ai.aiDiagnosis')}</span>
                       <span className="text-purple-400/50 font-mono">// powered by KubeStellar</span>
                     </div>
                     <div className="font-mono text-sm text-foreground leading-relaxed whitespace-pre-wrap">
@@ -2289,7 +2289,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               {aiAnalysisLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Analyzing...</span>
+                  <span>{t('common.analyzing')}</span>
                 </>
               ) : (
                 <>
@@ -2313,7 +2313,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                 <Wrench className="w-4 h-4" />
                 <Sparkles className="absolute -top-0.5 -right-0.5 w-2 h-2 text-purple-400 animate-pulse" />
               </div>
-              <span>Repair</span>
+              <span>{t('drilldown.actions.repair')}</span>
             </button>
           </div>
           {/* Delete Pod button */}
@@ -2347,17 +2347,17 @@ Please proceed step by step and ask for confirmation before making any changes.`
               {deletingPod ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Deleting...</span>
+                  <span>{t('common.deleting')}</span>
                 </>
               ) : canDeletePod === null ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Checking permissions...</span>
+                  <span>{t('drilldown.status.checkingPermissions')}</span>
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4" />
-                  <span>Delete Pod</span>
+                  <span>{t('drilldown.actions.deletePod')}</span>
                   {isManagedPod && (
                     <span className="text-xs text-red-400/60">(will be recreated)</span>
                   )}

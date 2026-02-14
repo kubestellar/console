@@ -96,7 +96,7 @@ export function DeployConfirmDialog({
   targetClusters,
   groupName,
 }: DeployConfirmDialogProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { data, isLoading, error, resolve, reset } = useResolveDependencies()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
@@ -150,15 +150,15 @@ export function DeployConfirmDialog({
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Namespace</span>
+              <span className="text-sm text-muted-foreground">{t('common.namespace')}</span>
               <span className="text-sm font-mono text-foreground">{namespace}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Source</span>
+              <span className="text-sm text-muted-foreground">{t('common.source')}</span>
               <ClusterBadge cluster={sourceCluster} size="sm" />
             </div>
             <div className="flex items-start justify-between">
-              <span className="text-sm text-muted-foreground mt-0.5">Target</span>
+              <span className="text-sm text-muted-foreground mt-0.5">{t('common.target')}</span>
               <div className="flex flex-wrap justify-end gap-1">
                 {targetClusters.map(c => (
                   <ClusterBadge key={c} cluster={c} size="sm" />

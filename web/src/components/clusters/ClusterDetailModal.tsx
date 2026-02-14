@@ -85,7 +85,7 @@ interface ClusterDetailModalProps {
 }
 
 export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename }: ClusterDetailModalProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { health, isLoading } = useClusterHealth(clusterName)
   const { deduplicatedClusters, clusters: rawClusters } = useClusters()
   const { issues: podIssues } = usePodIssues(clusterName)
@@ -337,7 +337,7 @@ After I approve, help me execute the repairs step by step.`,
         <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
           <div className="flex items-center gap-2 mb-3">
             <Bot className="w-5 h-5 text-purple-400" />
-            <span className="text-sm font-medium text-foreground">AI Assistant</span>
+            <span className="text-sm font-medium text-foreground">{t('drilldown.ai.aiAssistant')}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -398,7 +398,7 @@ After I approve, help me execute the repairs step by step.`,
             {isLoading ? (
               <>
                 <div className="h-8 w-12 bg-muted/30 rounded animate-pulse mb-1" />
-                <div className="text-sm text-muted-foreground">Nodes</div>
+                <div className="text-sm text-muted-foreground">{t('common.nodes')}</div>
                 <div className="h-4 w-16 bg-muted/30 rounded animate-pulse mt-1" />
               </>
             ) : (
@@ -443,11 +443,11 @@ After I approve, help me execute the repairs step by step.`,
                         <span className="text-foreground font-medium">{namespaceStats.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Deployments</span>
+                        <span className="text-muted-foreground">{t('common.deployments')}</span>
                         <span className="text-foreground font-medium">{clusterDeployments.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Pods</span>
+                        <span className="text-muted-foreground">{t('common.pods')}</span>
                         <span className="text-foreground font-medium">{health?.podCount || 0}</span>
                       </div>
                     </>
@@ -472,13 +472,13 @@ After I approve, help me execute the repairs step by step.`,
             {isLoading ? (
               <>
                 <div className="h-8 w-12 bg-muted/30 rounded animate-pulse mb-1" />
-                <div className="text-sm text-muted-foreground">GPUs</div>
+                <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
                 <div className="h-4 w-20 bg-muted/30 rounded animate-pulse mt-1" />
               </>
             ) : (
               <>
                 <div className="text-2xl font-bold text-foreground">{!isUnreachable ? clusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0) : '-'}</div>
-                <div className="text-sm text-muted-foreground">GPUs</div>
+                <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
                 <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} allocated` : ''}</div>
                 {!isUnreachable && clusterGPUs.length > 0 && (
                   <div className="text-[10px] text-muted-foreground/50 mt-2 group-hover:text-yellow-400/70 transition-colors">click for details</div>
@@ -500,7 +500,7 @@ After I approve, help me execute the repairs step by step.`,
           >
             <div className="flex items-center gap-2 mb-2">
               <Cpu className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-muted-foreground">CPU</span>
+              <span className="text-sm text-muted-foreground">{t('common.cpu')}</span>
             </div>
             {isLoading ? (
               <>
@@ -527,7 +527,7 @@ After I approve, help me execute the repairs step by step.`,
           >
             <div className="flex items-center gap-2 mb-2">
               <MemoryStick className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-muted-foreground">Memory</span>
+              <span className="text-sm text-muted-foreground">{t('common.memory')}</span>
             </div>
             {isLoading ? (
               <>
@@ -556,7 +556,7 @@ After I approve, help me execute the repairs step by step.`,
           >
             <div className="flex items-center gap-2 mb-2">
               <Database className="w-4 h-4 text-purple-400" />
-              <span className="text-sm text-muted-foreground">Storage</span>
+              <span className="text-sm text-muted-foreground">{t('common.storage')}</span>
             </div>
             {isLoading ? (
               <>

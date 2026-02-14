@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function NamespaceDrillDown({ data }: Props) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const { drillToDeployment, drillToPod, drillToEvents } = useDrillDownActions()
@@ -48,7 +48,7 @@ export function NamespaceDrillDown({ data }: Props) {
           <div className="text-2xl font-bold text-foreground">{podIssues.length}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">Recent Events</div>
+          <div className="text-sm text-muted-foreground mb-2">{t('drilldown.fields.recentEvents')}</div>
           <div className="text-2xl font-bold text-foreground">{nsEvents.length}</div>
         </div>
       </div>
@@ -141,7 +141,7 @@ export function NamespaceDrillDown({ data }: Props) {
       {/* Recent Events */}
       {nsEvents.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-foreground mb-4">Recent Events</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">{t('drilldown.fields.recentEvents')}</h3>
           <div className="space-y-2">
             {nsEvents.slice(0, 10).map((event, i) => (
               <div
