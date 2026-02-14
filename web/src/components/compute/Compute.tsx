@@ -8,6 +8,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 
@@ -15,6 +16,7 @@ const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 const DEFAULT_COMPUTE_CARDS = getDefaultCards('compute')
 
 export function Compute() {
+  const { t: _t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()

@@ -4,6 +4,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Loader2, Copy, Check, Layers, Server, Lock, User } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -12,6 +13,7 @@ interface Props {
 type TabType = 'overview' | 'secrets' | 'describe' | 'yaml'
 
 export function ServiceAccountDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const serviceaccountName = data.serviceaccount as string

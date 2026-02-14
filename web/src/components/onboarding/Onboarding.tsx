@@ -4,6 +4,7 @@ import { ChevronRight, ChevronLeft, Check, GripVertical, ArrowUp, ArrowDown } fr
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
+import { useTranslation } from 'react-i18next'
 
 interface Question {
   key: string
@@ -58,6 +59,7 @@ const questions: Question[] = [
 ]
 
 export function Onboarding() {
+  const { t: _t } = useTranslation()
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)

@@ -23,6 +23,7 @@ import {
 import type { Mission } from '../../hooks/useMissions'
 import { useResolutions, detectIssueSignature, type IssueSignature, type ResolutionSteps } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
 
@@ -152,6 +153,7 @@ export function SaveResolutionDialog({
   onClose,
   onSaved,
 }: SaveResolutionDialogProps) {
+  const { t: _t } = useTranslation()
   const { saveResolution } = useResolutions()
 
   // Auto-detect issue signature from mission content

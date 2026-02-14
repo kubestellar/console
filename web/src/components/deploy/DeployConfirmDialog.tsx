@@ -22,6 +22,7 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 interface DeployConfirmDialogProps {
   isOpen: boolean
@@ -95,6 +96,7 @@ export function DeployConfirmDialog({
   targetClusters,
   groupName,
 }: DeployConfirmDialogProps) {
+  const { t: _t } = useTranslation()
   const { data, isLoading, error, resolve, reset } = useResolveDependencies()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 

@@ -4,6 +4,7 @@ import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNo
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
+import { useTranslation } from 'react-i18next'
 
 // Resource tree lens/view options
 type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function ClusterDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const clusterName = (data.cluster as string) || ''
   const { drillToNamespace, drillToPod, drillToGPUNode, drillToEvents } = useDrillDownActions()
 

@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Bug } from 'lucide-react'
 import { FeatureRequestModal } from './FeatureRequestModal'
 import { useNotifications } from '../../hooks/useFeatureRequests'
+import { useTranslation } from 'react-i18next'
 
 export function FeatureRequestButton() {
+  const { t: _t } = useTranslation()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { unreadCount } = useNotifications()
 

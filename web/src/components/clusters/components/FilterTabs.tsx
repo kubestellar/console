@@ -1,6 +1,7 @@
 import { WifiOff, SortAsc, SortDesc, LayoutGrid, List, Grid3X3, Columns } from 'lucide-react'
 import { ClusterStats } from './StatsOverview'
 import { ClusterLayoutMode } from './ClusterGrid'
+import { useTranslation } from 'react-i18next'
 
 export type FilterType = 'all' | 'healthy' | 'unhealthy' | 'unreachable'
 export type SortByType = 'name' | 'nodes' | 'pods' | 'health'
@@ -35,6 +36,7 @@ export function FilterTabs({
   layoutMode = 'grid',
   onLayoutModeChange,
 }: FilterTabsProps) {
+  const { t: _t } = useTranslation()
   return (
     <div className="flex flex-wrap gap-2 mb-4">
       <button

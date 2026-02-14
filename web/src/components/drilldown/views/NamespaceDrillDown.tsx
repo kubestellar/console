@@ -3,12 +3,14 @@ import { ChevronRight } from 'lucide-react'
 import { usePodIssues, useDeploymentIssues, useEvents } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
 }
 
 export function NamespaceDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const { drillToDeployment, drillToPod, drillToEvents } = useDrillDownActions()

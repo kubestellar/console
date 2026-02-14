@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { ChevronRight, ChevronDown, Box, Layers, Network, List, GitBranch, Activity, Briefcase, Lock, Settings, Loader2, User, HardDrive, AlertCircle } from 'lucide-react'
 import { usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, useSecrets, useServiceAccounts, usePVCs } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useTranslation } from 'react-i18next'
 
 type ResourceKind = 'Pod' | 'Deployment' | 'Service' | 'Job' | 'HPA' | 'ConfigMap' | 'Secret' | 'ServiceAccount' | 'PVC'
 
@@ -12,6 +13,7 @@ interface NamespaceResourcesProps {
 }
 
 export function NamespaceResources({ clusterName, namespace, onClose }: NamespaceResourcesProps) {
+  const { t: _t } = useTranslation()
   const { pods, isLoading: podsLoading } = usePods(clusterName, namespace, 'name', 100)
   const { deployments, isLoading: deploymentsLoading } = useDeployments(clusterName, namespace)
   const { services, isLoading: servicesLoading } = useServices(clusterName, namespace)

@@ -35,6 +35,7 @@ import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { usePersistence } from '../../hooks/usePersistence'
 import { useWorkloadDeployments, useManagedWorkloads } from '../../hooks/useConsoleCRs'
 import { useToast } from '../ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
@@ -161,6 +162,7 @@ function DeployDragPreviewCard({ card }: { card: DashboardCard }) {
 }
 
 export function Deploy() {
+  const { t: _t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated, refetch } = useDeployments()

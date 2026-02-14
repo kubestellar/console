@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
 }
 
 export function NodeDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const nodeName = data.node as string
   const status = data.status as string | undefined

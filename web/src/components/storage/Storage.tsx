@@ -9,6 +9,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 // PVC List Modal
 interface PVCListModalProps {
@@ -118,6 +119,7 @@ const STORAGE_CARDS_KEY = 'kubestellar-storage-cards'
 const DEFAULT_STORAGE_CARDS = getDefaultCards('storage')
 
 export function Storage() {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const {
     selectedClusters: globalSelectedClusters,

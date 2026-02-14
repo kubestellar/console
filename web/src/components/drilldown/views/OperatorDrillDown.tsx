@@ -16,6 +16,7 @@ import {
   useModalAI,
   type ResourceContext,
 } from '../../modals'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -69,6 +70,7 @@ interface CRDRaw {
 }
 
 export function OperatorDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const operatorName = data.operator as string

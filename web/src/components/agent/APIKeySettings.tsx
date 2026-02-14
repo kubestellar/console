@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
 import { BaseModal } from '../../lib/modals'
 import { KC_AGENT, AI_PROVIDER_DOCS } from '../../config/externalApis'
+import { useTranslation } from 'react-i18next'
 
 const INSTALL_COMMAND = KC_AGENT.installCommand
 
@@ -44,6 +45,7 @@ const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = 
 }
 
 export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
+  const { t: _t } = useTranslation()
   const [keysStatus, setKeysStatus] = useState<KeyStatus[]>([])
   const [configPath, setConfigPath] = useState<string>('')
   const [loading, setLoading] = useState(true)

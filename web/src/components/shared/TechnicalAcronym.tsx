@@ -6,6 +6,7 @@
  */
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Comprehensive mapping of technical abbreviations used in the console
 export const TECHNICAL_ACRONYMS: Record<string, { full: string; desc: string }> = {
@@ -88,6 +89,7 @@ interface TechnicalAcronymProps {
 }
 
 export function TechnicalAcronym({ term, className = '', children }: TechnicalAcronymProps) {
+  const { t: _t } = useTranslation()
   const def = TECHNICAL_ACRONYMS[term]
   
   // If no definition exists, render without tooltip

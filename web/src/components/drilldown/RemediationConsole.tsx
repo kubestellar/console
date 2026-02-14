@@ -3,6 +3,7 @@ import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Termina
 import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { safeGetItem } from '../../lib/utils/localStorage'
+import { useTranslation } from 'react-i18next'
 
 interface LogEntry {
   id: string
@@ -80,6 +81,7 @@ export function RemediationConsole({
   cluster,
   issues,
 }: RemediationConsoleProps) {
+  const { t: _t } = useTranslation()
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [isComplete, setIsComplete] = useState(false)

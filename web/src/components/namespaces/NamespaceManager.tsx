@@ -24,6 +24,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { api } from '../../lib/api'
 import { useToast } from '../ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
@@ -50,6 +51,7 @@ interface NamespaceAccessEntry {
 const namespaceCache = new Map<string, NamespaceDetails[]>()
 
 export function NamespaceManager() {
+  const { t: _t } = useTranslation()
   const { showToast } = useToast()
   const { clusters, deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()

@@ -23,6 +23,7 @@ import {
   type ComplianceCheck,
 } from '../../mocks/securityData'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const SECURITY_CARDS_KEY = 'kubestellar-security-cards'
 
@@ -32,6 +33,7 @@ const DEFAULT_SECURITY_CARDS = getDefaultCards('security')
 type ViewTab = 'overview' | 'issues' | 'rbac' | 'compliance'
 
 export function Security() {
+  const { t: _t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const {
     selectedClusters: globalSelectedClusters,

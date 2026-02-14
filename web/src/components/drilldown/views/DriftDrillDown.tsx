@@ -15,6 +15,7 @@ import {
   useModalAI,
   type ResourceContext,
 } from '../../modals'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -67,6 +68,7 @@ interface DriftChange {
 }
 
 export function DriftDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string | undefined
   const resourceName = data.resource as string | undefined

@@ -5,6 +5,7 @@ import { ClusterInfo } from '../../../hooks/useMCP'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { isClusterUnreachable, isClusterLoading } from '../utils'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getProviderColor, getConsoleUrl } from '../../ui/CloudProviderIcon'
+import { useTranslation } from 'react-i18next'
 
 // Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster.
 // Uses refs for condition checks to avoid stale closure issues when refreshing
@@ -105,6 +106,7 @@ const FullClusterCard = memo(function FullClusterCard({
   onRenameCluster,
   onRefreshCluster,
 }: Omit<ClusterCardProps, 'layoutMode'>) {
+  const { t: _t } = useTranslation()
   const loading = isClusterLoading(cluster)
   const unreachable = isClusterUnreachable(cluster)
   const hasCachedData = cluster.nodeCount !== undefined && cluster.nodeCount > 0

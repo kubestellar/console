@@ -10,6 +10,7 @@ import { NodeDetailPanel } from './NodeDetailPanel'
 import { NamespaceResources } from './components'
 import { CPUDetailModal, MemoryDetailModal, StorageDetailModal, GPUDetailModal } from './ResourceDetailModals'
 import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, getProviderLabel, CloudProvider as CloudProviderType } from '../ui/CloudProviderIcon'
+import { useTranslation } from 'react-i18next'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'kind' | 'minikube' | 'k3s' | 'unknown'
@@ -84,6 +85,7 @@ interface ClusterDetailModalProps {
 }
 
 export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename }: ClusterDetailModalProps) {
+  const { t: _t } = useTranslation()
   const { health, isLoading } = useClusterHealth(clusterName)
   const { deduplicatedClusters, clusters: rawClusters } = useClusters()
   const { issues: podIssues } = usePodIssues(clusterName)

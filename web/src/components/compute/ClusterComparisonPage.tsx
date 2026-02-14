@@ -4,6 +4,7 @@ import { ArrowLeft, Server, Cpu, MemoryStick, Box, Activity, AlertCircle, GitBra
 import { useClusters, ClusterInfo } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ROUTES } from '../../config/routes'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterMetrics {
   cluster: ClusterInfo
@@ -12,6 +13,7 @@ interface ClusterMetrics {
 }
 
 export function ClusterComparisonPage() {
+  const { t: _t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()

@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
+import { useTranslation } from 'react-i18next'
 
 const DATA_COMPLIANCE_CARDS_KEY = 'data-compliance-dashboard-cards'
 
@@ -42,6 +43,7 @@ const DEMO_POSTURE = {
 }
 
 export function DataCompliance() {
+  const { t: _t } = useTranslation()
   const { isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   useGlobalFilters() // Keep hook for potential future use
   const { getStatValue: getUniversalStatValue } = useUniversalStats()

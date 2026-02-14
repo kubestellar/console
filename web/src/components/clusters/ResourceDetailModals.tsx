@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Cpu, MemoryStick, Database, HardDrive, Server, ChevronDown, ChevronRight } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { Gauge } from '../charts/Gauge'
+import { useTranslation } from 'react-i18next'
 
 interface ResourceModalProps {
   clusterName: string
@@ -40,6 +41,7 @@ export function CPUDetailModal({
   isLoading,
   onClose,
 }: CPUDetailModalProps) {
+  const { t: _t } = useTranslation()
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
 
   const utilizationPercent = allocatableCores > 0 ? Math.round((requestedCores / allocatableCores) * 100) : 0

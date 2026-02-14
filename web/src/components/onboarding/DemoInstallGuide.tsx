@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { X, Copy, Check, ExternalLink, Settings, Rocket, Key, Download, ChevronRight, Github, Server } from 'lucide-react'
 import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 const DISMISSED_KEY = 'kc-demo-install-dismissed'
 
@@ -262,5 +263,6 @@ export function DemoInstallBanner({ collapsed }: { collapsed: boolean }) {
 
 // Legacy export — no longer used in Layout
 export function DemoInstallGuide() {
+  const { t: _t } = useTranslation()
   return null
 }

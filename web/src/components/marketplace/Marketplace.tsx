@@ -12,6 +12,7 @@ import { useToast } from '../ui/Toast'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { MarketplaceThumbnail } from './MarketplaceThumbnail'
 import { suggestIconSync } from '../../lib/iconSuggester'
+import { useTranslation } from 'react-i18next'
 
 type ViewMode = 'grid' | 'list'
 type SortField = 'name' | 'author' | 'type' | 'difficulty'
@@ -442,6 +443,7 @@ const filterBtnClass = (active: boolean) =>
   }`
 
 export function Marketplace() {
+  const { t: _t } = useTranslation()
   const {
     items,
     allTags,

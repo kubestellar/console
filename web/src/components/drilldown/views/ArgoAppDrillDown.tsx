@@ -16,6 +16,7 @@ import {
   useModalAI,
   type ResourceContext,
 } from '../../modals'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -92,6 +93,7 @@ interface SyncHistoryRaw {
 }
 
 export function ArgoAppDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const appName = data.app as string

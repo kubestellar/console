@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
 
@@ -14,6 +15,7 @@ const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
 const DEFAULT_NODES_CARDS = getDefaultCards('nodes')
 
 export function Nodes() {
+  const { t: _t } = useTranslation()
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const error = clustersError

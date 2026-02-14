@@ -8,6 +8,7 @@ import { useIsModeSwitching } from '../../lib/unified/demo'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 
@@ -15,6 +16,7 @@ const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 const DEFAULT_NETWORK_CARDS = getDefaultCards('network')
 
 export function Network() {
+  const { t: _t } = useTranslation()
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error } = useServices()
 
   const {

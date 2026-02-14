@@ -7,6 +7,7 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw, Stethoscope, Wrench, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
+import { useTranslation } from 'react-i18next'
 
 // Helper to determine issue severity for styling
 const getIssueSeverity = (issue: string): 'critical' | 'warning' | 'info' => {
@@ -102,6 +103,7 @@ function cleanupPodCache() {
 }
 
 export function PodDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const podName = data.pod as string

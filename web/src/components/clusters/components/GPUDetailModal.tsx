@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Zap, Server, Layers, RefreshCw, Cpu, AlertCircle, HardDrive, CircuitBoard, Settings } from 'lucide-react'
 import { GPUNode, NVIDIAOperatorStatus } from '../../../hooks/useMCP'
 import { BaseModal } from '../../../lib/modals'
+import { useTranslation } from 'react-i18next'
 
 interface GPUDetailModalProps {
   gpuNodes: GPUNode[]
@@ -51,6 +52,7 @@ interface GPUDetailModalInternalProps extends GPUDetailModalProps {
 
 export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRefresh, onClose, operatorStatus }: GPUDetailModalInternalProps) {
 
+  const { t: _t } = useTranslation()
   // Calculate GPU type breakdown
   const gpuTypeInfo = useMemo(() => {
     const typeMap = new Map<string, GPUTypeInfo>()

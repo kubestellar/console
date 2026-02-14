@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const OPERATORS_CARDS_KEY = 'kubestellar-operators-cards'
 
@@ -14,6 +15,7 @@ const OPERATORS_CARDS_KEY = 'kubestellar-operators-cards'
 const DEFAULT_OPERATORS_CARDS = getDefaultCards('operators')
 
 export function Operators() {
+  const { t: _t } = useTranslation()
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { subscriptions: operatorSubs, refetch: refetchSubs, error: subsError } = useOperatorSubscriptions()
   const { operators: allOperators, refetch: refetchOps, error: opsError } = useOperators()

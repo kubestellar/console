@@ -13,6 +13,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
@@ -29,6 +30,7 @@ interface AppSummary {
 }
 
 export function Workloads() {
+  const { t: _t } = useTranslation()
   // Data fetching
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()

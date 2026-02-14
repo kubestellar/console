@@ -22,6 +22,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ClusterInfo } from '../../../hooks/useMCP'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -180,6 +181,7 @@ function SortableClusterRow({
 }
 
 export function ResourcesDrillDown({ data: _data }: Props) {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: initialClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCluster } = useDrillDownActions()

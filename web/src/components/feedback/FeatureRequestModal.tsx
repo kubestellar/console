@@ -14,6 +14,7 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -114,6 +115,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
 }
 
 export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProps) {
+  const { t: _t } = useTranslation()
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''

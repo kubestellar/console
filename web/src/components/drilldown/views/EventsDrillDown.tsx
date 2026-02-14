@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle } from 'lucide-react'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { getDemoMode } from '../../../hooks/useDemoMode'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterEvent {
   type: string
@@ -46,6 +47,7 @@ function EventsSkeleton() {
 }
 
 export function EventsDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string | undefined
   const objectName = data.objectName as string | undefined

@@ -4,12 +4,14 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const AI_AGENTS_CARDS_KEY = 'kubestellar-aiagents-cards'
 
 const DEFAULT_AIAGENTS_CARDS = getDefaultCards('ai-agents')
 
 export function AIAgents() {
+  const { t: _t } = useTranslation()
   const { summary, isLoading, refetch, error } = useKagentiSummary()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 

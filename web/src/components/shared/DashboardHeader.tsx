@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
 import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
+import { useTranslation } from 'react-i18next'
 
 interface DashboardHeaderProps {
   /** Dashboard title text or ReactNode */
@@ -56,6 +57,7 @@ export function DashboardHeader({
   rightExtra,
   error,
 }: DashboardHeaderProps) {
+  const { t: _t } = useTranslation()
   const location = useLocation()
   const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
 

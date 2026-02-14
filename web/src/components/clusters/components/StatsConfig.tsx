@@ -18,6 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useTranslation } from 'react-i18next'
 
 export interface StatBlockConfig {
   id: string
@@ -246,6 +247,7 @@ export function StatsConfigModal({ isOpen, onClose, blocks, onSave }: StatsConfi
 
 // Hook to manage stats configuration
 export function useStatsConfig(storageKey: string = 'cluster-stats-config') {
+  const { t: _t } = useTranslation()
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
     try {
       const saved = localStorage.getItem(storageKey)

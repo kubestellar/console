@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { useTranslation } from 'react-i18next'
 
 interface SetupInstructionsDialogProps {
   isOpen: boolean
@@ -28,6 +29,7 @@ const OAUTH_STEPS = [
 ]
 
 export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDialogProps) {
+  const { t: _t } = useTranslation()
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const [showOAuthGuide, setShowOAuthGuide] = useState(false)
   const [showDevGuide, setShowDevGuide] = useState(false)

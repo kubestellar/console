@@ -7,6 +7,7 @@ import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, B
 import { cn } from '../../../lib/cn'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -15,6 +16,7 @@ interface Props {
 type TabType = 'overview' | 'pods' | 'events' | 'describe' | 'yaml'
 
 export function DeploymentDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const deploymentName = data.deployment as string

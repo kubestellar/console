@@ -2,6 +2,7 @@ import { Bot, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
 import type { AIAction, ResourceContext } from '../types/modal.types'
+import { useTranslation } from 'react-i18next'
 
 interface AIActionBarProps {
   /** Resource being viewed */
@@ -67,6 +68,7 @@ export function AIActionBar({
   compact = false,
   className = '',
 }: AIActionBarProps) {
+  const { t: _t } = useTranslation()
   const { agents } = useMissions()
   const isAgentConnected = agents.length > 0
 

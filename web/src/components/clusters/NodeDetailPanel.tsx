@@ -5,6 +5,7 @@ import { ConditionBadges, hasConditionIssues, getConditionIssuesSummary } from '
 import { useMissions } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
 import { formatK8sMemory, formatK8sStorage } from '../../lib/formatters'
+import { useTranslation } from 'react-i18next'
 
 interface NodeDetailPanelProps {
   node: NodeInfo
@@ -19,6 +20,7 @@ const INITIAL_LABELS_SHOWN = 10
  * Shows node info, conditions, taints, labels (expandable), and a repair button if issues exist.
  */
 export function NodeDetailPanel({ node, clusterName, onClose }: NodeDetailPanelProps) {
+  const { t: _t } = useTranslation()
   const { startMission } = useMissions()
   const [showAllLabels, setShowAllLabels] = useState(false)
 

@@ -3,6 +3,7 @@ import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { useTour, TourStep } from '../../hooks/useTour'
 import { useMissions } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 // KubeStellar logo with AI sparkle effect
 function KubeStellarAIIcon({ className }: { className?: string }) {
@@ -230,6 +231,7 @@ function getTooltipPosition(
 }
 
 export function TourOverlay() {
+  const { t: _t } = useTranslation()
   const {
     isActive,
     currentStep,

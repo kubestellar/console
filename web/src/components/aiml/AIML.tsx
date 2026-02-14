@@ -8,6 +8,7 @@ import { getDefaultCards } from '../../config/dashboards'
 import { useLLMdClusters } from '../cards/workload-detection/shared'
 import { StackProvider } from '../../contexts/StackContext'
 import { StackSelector } from '../cards/llmd/StackSelector'
+import { useTranslation } from 'react-i18next'
 
 const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
 
@@ -15,6 +16,7 @@ const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
 const DEFAULT_AIML_CARDS = getDefaultCards('ai-ml')
 
 export function AIML() {
+  const { t: _t } = useTranslation()
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()

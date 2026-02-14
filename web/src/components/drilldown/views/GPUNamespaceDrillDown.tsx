@@ -4,6 +4,7 @@ import { useGPUNodes, useAllPods } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusIndicator, type Status } from '../../charts/StatusIndicator'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -30,6 +31,7 @@ function podStatusToIndicator(status: string): Status {
 }
 
 export function GPUNamespaceDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const namespace = data.namespace as string
   const passedGpuRequested = data.gpuRequested as number | undefined
   const passedPodCount = data.podCount as number | undefined

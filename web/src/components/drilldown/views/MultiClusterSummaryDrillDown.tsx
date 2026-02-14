@@ -3,6 +3,7 @@ import { Search, Server, Layers, Rocket, Box, Settings as SettingsIcon, AlertCir
 import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
+import { useTranslation } from 'react-i18next'
 
 interface MultiClusterSummaryDrillDownProps {
   data: Record<string, unknown>
@@ -168,6 +169,7 @@ function getStatusBadge(status: string) {
 }
 
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
+  const { t: _t } = useTranslation()
   const { clusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')

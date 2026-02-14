@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FolderOpen, ChevronDown, ChevronRight, Plus, Trash2, Check, WifiOff, CheckCircle, AlertTriangle } from 'lucide-react'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { isClusterUnreachable } from '../utils'
+import { useTranslation } from 'react-i18next'
 
 export interface ClusterGroup {
   id: string
@@ -28,6 +29,7 @@ export function ClusterGroups({
   onSelectGroup,
   onDeleteGroup,
 }: ClusterGroupsProps) {
+  const { t: _t } = useTranslation()
   const [showGroupForm, setShowGroupForm] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupClusters, setNewGroupClusters] = useState<string[]>([])

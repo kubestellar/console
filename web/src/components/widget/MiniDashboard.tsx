@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { RefreshCw, Maximize2, Download } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 // Node data type from agent
 interface NodeData {
@@ -78,6 +79,7 @@ function isStandalone(): boolean {
 }
 
 export function MiniDashboard() {
+  const { t: _t } = useTranslation()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)

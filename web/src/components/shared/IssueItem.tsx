@@ -1,5 +1,6 @@
 import { ChevronRight, ChevronDown, Box, Layers, Eye, Wrench } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 export type IssueKind = 'Pod' | 'Deployment'
 
@@ -44,6 +45,7 @@ export function IssueItem({
   onViewDetails,
   onTroubleshoot,
 }: IssueItemProps) {
+  const { t: _t } = useTranslation()
   const isPod = issue.kind === 'Pod'
 
   const bgClass = isPod ? 'bg-red-500/10 border-red-500/20' : 'bg-orange-500/10 border-orange-500/20'

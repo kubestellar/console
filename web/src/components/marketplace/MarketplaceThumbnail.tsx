@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface ThumbnailConfig {
   gradient: [string, string]
   icon: string // SVG path data
@@ -77,6 +79,7 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
   cncfCategory?: string
   isHelpWanted?: boolean
 }) {
+  const { t: _t } = useTranslation()
   // For CNCF items, use category-based gradients
   const cncfGradient = cncfCategory ? CNCF_CATEGORY_GRADIENTS[cncfCategory] : undefined
   const cncfIcon = cncfCategory ? CNCF_CATEGORY_ICONS[cncfCategory] : undefined

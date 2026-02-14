@@ -6,6 +6,7 @@ import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../../hooks/useBackendHealth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 export interface ClusterStats {
   total: number
@@ -212,6 +213,7 @@ export function StatsOverview({
   configKey,
   showConfigButton = true,
 }: StatsOverviewProps) {
+  const { t: _t } = useTranslation()
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType, configKey)
   const [showConfig, setShowConfig] = useState(false)
   const { status: agentStatus } = useLocalAgent()

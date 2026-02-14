@@ -3,8 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { getLastRoute } from '../../hooks/useLastRoute'
 import { ROUTES, getLoginWithError } from '../../config/routes'
+import { useTranslation } from 'react-i18next'
 
 export function AuthCallback() {
+  const { t: _t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { setToken, refreshUser } = useAuth()

@@ -4,6 +4,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useAllPods } from '../../../hooks/useMCP'
 import { Gauge } from '../../charts/Gauge'
 import { StatusIndicator, type Status } from '../../charts/StatusIndicator'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -30,6 +31,7 @@ function podStatusToIndicator(status: string): Status {
 }
 
 export function GPUNodeDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const cluster = data.cluster as string
   const nodeName = data.node as string
   const gpuType = data.gpuType as string

@@ -1,4 +1,5 @@
 import type { AgentProvider } from '../../types/agent'
+import { useTranslation } from 'react-i18next'
 
 interface AgentIconProps {
   provider: AgentProvider | string
@@ -6,6 +7,7 @@ interface AgentIconProps {
 }
 
 export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
+  const { t: _t } = useTranslation()
   switch (provider) {
     case 'anthropic':
       return (
