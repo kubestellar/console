@@ -167,7 +167,7 @@ function QuotaModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
         title={editingQuota ? t('namespaceQuotas.editQuota') : t('namespaceQuotas.createQuota')}
         icon={Gauge}

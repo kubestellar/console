@@ -396,7 +396,7 @@ export function StatsConfigModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
       <BaseModal.Header
         title={title}
         description="Drag to reorder. Click the eye icon to show/hide stats."
