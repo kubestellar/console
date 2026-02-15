@@ -102,8 +102,8 @@ const STATUS_CONFIG: Record<DeployMissionStatus, {
   },
   partial: {
     icon: AlertTriangle,
-    color: 'text-orange-400',
-    bg: 'bg-orange-500/20',
+    color: 'text-red-400',
+    bg: 'bg-red-500/20',
     label: 'Partial',
   },
 }
@@ -489,7 +489,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
               'h-full rounded-full transition-all duration-500',
               mission.status === 'orbit' ? 'bg-green-500' :
               mission.status === 'abort' ? 'bg-red-500' :
-              failedClusters > 0 ? 'bg-orange-500' : 'bg-blue-500',
+              failedClusters > 0 ? 'bg-red-500' : 'bg-blue-500',
             )}
             style={{ width: `${(mission.status === 'orbit' || mission.status === 'abort') ? 100 : Math.max(progressPct, 5)}%` }}
           />
