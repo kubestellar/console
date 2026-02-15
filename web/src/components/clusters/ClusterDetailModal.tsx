@@ -267,7 +267,7 @@ After I approve, help me execute the repairs step by step.`,
                 <CheckCircle className="w-4 h-4" />
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/20 text-orange-400" title={t('clusterDetail.unhealthy')}>
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/20 text-red-400" title={t('clusterDetail.unhealthy')}>
                 <AlertTriangle className="w-4 h-4" />
               </span>
             )}
@@ -352,13 +352,13 @@ After I approve, help me execute the repairs step by step.`,
             <button
               onClick={handleRepair}
               disabled={isUnreachable || (podIssues.length === 0 && clusterDeploymentIssues.length === 0)}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={podIssues.length === 0 && clusterDeploymentIssues.length === 0 ? t('clusterDetail.noIssuesToRepair') : t('clusterDetail.repairTitle')}
             >
               <Wrench className="w-3.5 h-3.5" />
               {t('clusterDetail.repair')}
               {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
-                <span className="px-1.5 py-0.5 rounded bg-orange-500/30 text-xs">
+                <span className="px-1.5 py-0.5 rounded bg-red-500/30 text-xs">
                   {podIssues.length + clusterDeploymentIssues.length}
                 </span>
               )}
@@ -648,7 +648,7 @@ After I approve, help me execute the repairs step by step.`,
         {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-orange-400" />
+              <AlertTriangle className="w-4 h-4 text-red-400" />
               {t('clusterDetail.issuesCount', { count: podIssues.length + clusterDeploymentIssues.length })}
             </h3>
             <div className="space-y-2">
@@ -687,7 +687,7 @@ After I approve, help me execute the repairs step by step.`,
               {clusterDeploymentIssues.slice(0, 3).map((issue, i) => (
                 <div
                   key={`dep-${i}`}
-                  className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
+                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -698,14 +698,14 @@ After I approve, help me execute the repairs step by step.`,
                       <span className="text-xs text-muted-foreground flex-shrink-0">({issue.namespace})</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-400">
+                      <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">
                         {issue.readyReplicas}/{issue.replicas} ready
                       </span>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
                   </div>
                   {issue.message && (
-                    <div className="mt-1 text-xs text-orange-400 pl-16 truncate">{issue.message}</div>
+                    <div className="mt-1 text-xs text-red-400 pl-16 truncate">{issue.message}</div>
                   )}
                 </div>
               ))}

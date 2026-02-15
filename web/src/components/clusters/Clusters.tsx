@@ -906,7 +906,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                 <CheckCircle className="w-4 h-4" />
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/20 text-orange-400" title={t('cluster.unhealthy')}>
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/20 text-red-400" title={t('cluster.unhealthy')}>
                 <AlertTriangle className="w-4 h-4" />
               </span>
             )}
@@ -1043,7 +1043,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
         {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-orange-400" />
+              <AlertTriangle className="w-4 h-4 text-red-400" />
               Issues ({podIssues.length + clusterDeploymentIssues.length})
             </h3>
             <div className="space-y-2">
@@ -1124,24 +1124,24 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                 return (
                   <div
                     key={issueId}
-                    className="rounded-lg bg-orange-500/10 border border-orange-500/20 overflow-hidden"
+                    className="rounded-lg bg-red-500/10 border border-red-500/20 overflow-hidden"
                   >
                     <button
                       onClick={() => toggleIssue(issueId)}
-                      className="w-full p-3 flex items-center justify-between text-left hover:bg-orange-500/5 transition-colors"
+                      className="w-full p-3 flex items-center justify-between text-left hover:bg-red-500/5 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        {isExpanded ? <ChevronDown className="w-4 h-4 text-orange-400" /> : <ChevronRight className="w-4 h-4 text-orange-400" />}
+                        {isExpanded ? <ChevronDown className="w-4 h-4 text-red-400" /> : <ChevronRight className="w-4 h-4 text-red-400" />}
                         <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium"><Layers className="w-3 h-3" />Deploy</span>
                         <span className="font-medium text-foreground">{issue.name}</span>
                         <span className="text-xs text-muted-foreground">({issue.namespace})</span>
                       </div>
-                      <span className="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-400">
+                      <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">
                         {issue.readyReplicas}/{issue.replicas} ready
                       </span>
                     </button>
                     {isExpanded && (
-                      <div className="px-3 pb-3 pt-0 border-t border-orange-500/20">
+                      <div className="px-3 pb-3 pt-0 border-t border-red-500/20">
                         <div className="pl-6 space-y-2 text-sm">
                           <div>
                             <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>

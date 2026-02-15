@@ -364,10 +364,10 @@ export function Sidebar() {
                 className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
               >
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
                   {t('labels.unhealthy')}
                 </span>
-                <span className="text-sm font-medium text-orange-400">{unhealthyClusters}</span>
+                <span className="text-sm font-medium text-red-400">{unhealthyClusters}</span>
               </button>
               <button
                 onClick={() => handleClusterStatusClick('unreachable')}
