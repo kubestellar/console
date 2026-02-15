@@ -181,30 +181,18 @@ Start by running diagnostic commands to understand what's happening.`,
     }
   }
 
-  const handleBackdropKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onClose()
-    }
-  }
-
-  const handleContentKeyDown = (e: React.KeyboardEvent) => {
-    e.stopPropagation()
-  }
-
   return (
     <div 
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
       onClick={onClose}
-      onKeyDown={handleBackdropKeyDown}
-      role="button"
-      tabIndex={0}
-      aria-label="Close modal"
+      role="presentation"
     >
       <div 
         className="glass p-6 rounded-lg w-[700px] max-h-[80vh] overflow-hidden flex flex-col" 
         onClick={e => e.stopPropagation()}
-        onKeyDown={handleContentKeyDown}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="resource-detail-title"
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -212,7 +200,7 @@ Start by running diagnostic commands to understand what's happening.`,
               {getKindIcon()}
               {resource.kind}
             </span>
-            <span className="font-medium text-foreground">{resource.name}</span>
+            <span id="resource-detail-title" className="font-medium text-foreground">{resource.name}</span>
             {resource.namespace && <span className="text-muted-foreground text-sm">({resource.namespace})</span>}
           </div>
           <div className="flex items-center gap-2">
@@ -903,17 +891,6 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
     })
   }
 
-  const handleBackdropKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onClose()
-    }
-  }
-
-  const handleContentKeyDown = (e: React.KeyboardEvent) => {
-    e.stopPropagation()
-  }
-
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -928,15 +905,14 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
     <div 
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
       onClick={onClose}
-      onKeyDown={handleBackdropKeyDown}
-      role="button"
-      tabIndex={0}
-      aria-label="Close modal"
+      role="presentation"
     >
       <div 
         className="glass p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto" 
         onClick={e => e.stopPropagation()}
-        onKeyDown={handleContentKeyDown}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cluster-detail-title"
       >
         {/* Header with status icons */}
         <div className="flex items-center justify-between mb-6">
@@ -954,7 +930,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                 <AlertTriangle className="w-4 h-4" />
               </span>
             )}
-            <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
+            <h2 id="cluster-detail-title" className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
             {onRename && (
               <button
                 onClick={() => onRename(clusterName)}
