@@ -283,10 +283,10 @@ export function ClusterHealth() {
           </div>
           <span className="text-2xl font-bold text-foreground">{healthyClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
           <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4 text-orange-400" />
-            <span className="text-xs text-orange-400">{t('common:common.unhealthy')}</span>
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-xs text-red-400">{t('common:common.unhealthy')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
         </div>
@@ -338,7 +338,7 @@ export function ClusterHealth() {
               title={t('clusterHealth.clickViewDetails', { name: cluster.name })}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1" title={statusTooltip}>
-                {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, orange triangle for degraded */}
+                {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, red triangle for degraded */}
                 {clusterLoading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
                 ) : clusterTokenExpired ? (
@@ -348,7 +348,7 @@ export function ClusterHealth() {
                 ) : clusterHealthy ? (
                   <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
                 ) : (
-                  <AlertTriangle className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                 )}
                 <span title={providerLabel} className="shrink-0">
                   <CloudProviderIcon provider={provider} size={14} />

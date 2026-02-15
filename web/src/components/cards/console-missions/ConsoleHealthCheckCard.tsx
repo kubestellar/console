@@ -177,8 +177,8 @@ Please provide:
         </div>
         <div
           className={cn(
-            "p-2 rounded bg-orange-500/10",
-            unhealthyClusters > 0 && "cursor-pointer hover:bg-orange-500/20 transition-colors"
+            "p-2 rounded bg-red-500/10",
+            unhealthyClusters > 0 && "cursor-pointer hover:bg-red-500/20 transition-colors"
           )}
           onClick={() => {
             const unhealthyCluster = clusters.find(c => !c.healthy && c.reachable !== false)
@@ -186,7 +186,7 @@ Please provide:
           }}
           title={t('healthCheck.unhealthyClusterTooltip', { count: unhealthyClusters })}
         >
-          <div className="text-lg font-bold text-orange-400">{unhealthyClusters}</div>
+          <div className="text-lg font-bold text-red-400">{unhealthyClusters}</div>
           <div className="text-[10px] text-muted-foreground">{t('common.unhealthy')}</div>
         </div>
         <div
@@ -208,7 +208,7 @@ Please provide:
       {/* Issues Summary */}
       {totalIssues > 0 && (
         <div
-          className="mb-4 p-2 rounded bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
+          className="mb-4 p-2 rounded bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           onClick={() => {
             if (podIssues.length > 0 && podIssues[0]?.cluster) {
               drillToPod(podIssues[0].cluster, podIssues[0].namespace, podIssues[0].name)
@@ -216,7 +216,7 @@ Please provide:
           }}
           title={t('healthCheck.issuesTooltip', { count: totalIssues })}
         >
-          <div className="flex items-center gap-2 text-xs text-orange-400">
+          <div className="flex items-center gap-2 text-xs text-red-400">
             <AlertCircle className="w-3 h-3" />
             {t('healthCheck.issuesDetected', { count: totalIssues })}
           </div>
