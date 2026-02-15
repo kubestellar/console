@@ -80,6 +80,14 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 }
 
 export function EventsTimeline() {
+  return (
+    <DynamicCardErrorBoundary cardId="EventsTimeline">
+      <EventsTimelineInternal />
+    </DynamicCardErrorBoundary>
+  )
+}
+
+function EventsTimelineInternal() {
   const { t } = useTranslation()
   const {
     events,
@@ -335,13 +343,5 @@ export function EventsTimeline() {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function EventsTimelineWithErrorBoundary() {
-  return (
-    <DynamicCardErrorBoundary cardId="EventsTimeline">
-      <EventsTimeline />
-    </DynamicCardErrorBoundary>
   )
 }

@@ -63,6 +63,14 @@ const DEMO_STATS = {
 }
 
 export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="KyvernoPolicies">
+      <KyvernoPoliciesInternal config={_config} />
+    </DynamicCardErrorBoundary>
+  )
+}
+
+function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   const { t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [localSearch, setLocalSearch] = useState('')
@@ -233,13 +241,5 @@ export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
         </a>
       </div>
     </div>
-  )
-}
-
-export default function KyvernoPoliciesWithErrorBoundary(props: KyvernoPoliciesProps) {
-  return (
-    <DynamicCardErrorBoundary cardId="KyvernoPolicies">
-      <KyvernoPolicies {...props} />
-    </DynamicCardErrorBoundary>
   )
 }

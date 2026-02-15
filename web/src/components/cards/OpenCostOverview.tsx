@@ -42,6 +42,14 @@ const DEMO_NAMESPACE_COSTS: NamespaceCost[] = [
 ]
 
 export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="OpenCostOverview">
+      <OpenCostOverviewInternal config={_config} />
+    </DynamicCardErrorBoundary>
+  )
+}
+
+function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   const { t } = useTranslation('common')
   const { drillToCost } = useDrillDownActions()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
@@ -235,13 +243,5 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
         </a>
       </div>
     </div>
-  )
-}
-
-export default function OpenCostOverviewWithErrorBoundary(props: OpenCostOverviewProps) {
-  return (
-    <DynamicCardErrorBoundary cardId="OpenCostOverview">
-      <OpenCostOverview {...props} />
-    </DynamicCardErrorBoundary>
   )
 }
