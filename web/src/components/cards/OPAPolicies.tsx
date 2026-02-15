@@ -692,8 +692,8 @@ Please proceed with applying this policy.`,
         { context: clusterName, timeout: 15000 }
       )
       setDeleteConfirm(null)
-      onRefresh()
       showToast('Policy deleted successfully', 'success')
+      onRefresh()
     } catch (err) {
       console.error('Failed to delete policy:', err)
       showToast('Failed to delete policy', 'error')
