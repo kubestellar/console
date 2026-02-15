@@ -181,9 +181,31 @@ Start by running diagnostic commands to understand what's happening.`,
     }
   }
 
+  const handleBackdropKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClose()
+    }
+  }
+
+  const handleContentKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation()
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="glass p-6 rounded-lg w-[700px] max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+      onClick={onClose}
+      onKeyDown={handleBackdropKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label="Close modal"
+    >
+      <div 
+        className="glass p-6 rounded-lg w-[700px] max-h-[80vh] overflow-hidden flex flex-col" 
+        onClick={e => e.stopPropagation()}
+        onKeyDown={handleContentKeyDown}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className={`flex items-center gap-1 px-2 py-1 rounded text-sm font-medium ${getKindColors()}`}>
@@ -881,6 +903,17 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
     })
   }
 
+  const handleBackdropKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClose()
+    }
+  }
+
+  const handleContentKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation()
+  }
+
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -892,8 +925,19 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="glass p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+      onClick={onClose}
+      onKeyDown={handleBackdropKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label="Close modal"
+    >
+      <div 
+        className="glass p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto" 
+        onClick={e => e.stopPropagation()}
+        onKeyDown={handleContentKeyDown}
+      >
         {/* Header with status icons */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
