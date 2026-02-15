@@ -24,6 +24,7 @@ import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -70,6 +71,7 @@ const SA_COMPARATORS: Record<SASortBy, (a: { name: string; namespace: string; cl
 
 export function UserManagement({ config: _config }: UserManagementProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('clusterUsers')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
@@ -288,8 +290,10 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
       await updateUserRole(userId, newRole)
+      showToast('User role updated successfully', 'success')
     } catch (error) {
       console.error('Failed to update role:', error)
+      showToast('Failed to update user role', 'error')
     }
   }
 
@@ -297,8 +301,10 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     if (!confirm(t('userManagement.confirmDelete'))) return
     try {
       await deleteUser(userId)
+      showToast('User deleted successfully', 'success')
     } catch (error) {
       console.error('Failed to delete user:', error)
+      showToast('Failed to delete user', 'error')
     }
   }
 

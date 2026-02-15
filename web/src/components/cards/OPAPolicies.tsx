@@ -10,6 +10,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useToast } from '../ui/Toast'
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -512,6 +513,7 @@ function ClusterOPAModal({
   }) => void
 }) {
   const { t } = useTranslation(['cards', 'common'])
+  const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<OPAModalTab>('policies')
   const [showCreateMenu, setShowCreateMenu] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
@@ -678,6 +680,7 @@ Please proceed with applying this policy.`,
       onRefresh()
     } catch (err) {
       console.error('Failed to toggle mode:', err)
+      showToast('Failed to toggle policy mode', 'error')
     }
   }
 
@@ -690,8 +693,10 @@ Please proceed with applying this policy.`,
       )
       setDeleteConfirm(null)
       onRefresh()
+      showToast('Policy deleted successfully', 'success')
     } catch (err) {
       console.error('Failed to delete policy:', err)
+      showToast('Failed to delete policy', 'error')
     }
   }
 
