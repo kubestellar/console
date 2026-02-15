@@ -295,10 +295,10 @@ export function PodHealthTrend() {
           </div>
           <span className="text-lg font-bold text-foreground">{hasReachableClusters ? currentStats.healthy : '-'}</span>
         </div>
-        <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20" title={hasReachableClusters ? `${currentStats.issues} pods with issues` : 'No reachable clusters'}>
+        <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20" title={hasReachableClusters ? `${currentStats.issues} pods with issues` : 'No reachable clusters'}>
           <div className="flex items-center gap-1.5 mb-1">
-            <AlertTriangle className="w-3 h-3 text-orange-400" />
-            <span className="text-xs text-orange-400">Issues</span>
+            <AlertTriangle className="w-3 h-3 text-red-400" />
+            <span className="text-xs text-red-400">Issues</span>
           </div>
           <span className="text-lg font-bold text-foreground">{hasReachableClusters ? currentStats.issues : '-'}</span>
         </div>

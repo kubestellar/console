@@ -17,7 +17,7 @@ const CARD_COLORS: Record<string, string> = {
   resource_usage: 'bg-blue-500/40 dark:bg-blue-900/40',
   cluster_metrics: 'bg-purple-500/40 dark:bg-purple-900/40',
   pod_issues: 'bg-red-500/40 dark:bg-red-900/40',
-  deployment_issues: 'bg-orange-500/40 dark:bg-orange-900/40',
+  deployment_issues: 'bg-red-500/40 dark:bg-red-900/40',
   cluster_comparison: 'bg-cyan-500/40 dark:bg-cyan-900/40',
   cluster_costs: 'bg-yellow-500/40 dark:bg-yellow-900/40',
   resource_capacity: 'bg-indigo-500/40 dark:bg-indigo-900/40',

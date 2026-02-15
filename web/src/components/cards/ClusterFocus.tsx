@@ -203,10 +203,10 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
           title={podIssues.length > 0 ? `Click to view ${podIssues[0].name}` : 'No pod issues'}
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-orange-400" />
-            <span className="text-sm text-orange-300">Pod Issues</span>
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-sm text-red-300">Pod Issues</span>
           </div>
-          <span className="text-sm font-medium text-orange-400">{clusterPodIssues}</span>
+          <span className="text-sm font-medium text-red-400">{clusterPodIssues}</span>
         </div>
 
         <div

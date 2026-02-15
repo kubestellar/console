@@ -142,7 +142,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400" title={`${rawIssues.length} deployments with issues`}>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${rawIssues.length} deployments with issues`}>
             {rawIssues.length} issues
           </span>
         </div>
@@ -190,13 +190,13 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
             <CardListItem
               key={`${issue.name}-${idx}`}
               onClick={() => handleDeploymentClick(issue)}
-              bgClass="bg-orange-500/10"
-              borderClass="border-orange-500/20"
+              bgClass="bg-red-500/10"
+              borderClass="border-red-500/20"
               title={`Click to view details for ${issue.name}`}
             >
               <div className="flex items-start gap-3 group">
-                <div className="p-2 rounded-lg bg-orange-500/20 flex-shrink-0" title={iconTooltip}>
-                  <Icon className="w-4 h-4 text-orange-400" />
+                <div className="p-2 rounded-lg bg-red-500/20 flex-shrink-0" title={iconTooltip}>
+                  <Icon className="w-4 h-4 text-red-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
