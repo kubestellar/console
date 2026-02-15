@@ -204,7 +204,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-sm text-red-300">Pod Issues</span>
+            <span className="text-sm text-red-400">Pod Issues</span>
           </div>
           <span className="text-sm font-medium text-red-400">{clusterPodIssues}</span>
         </div>
