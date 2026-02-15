@@ -80,7 +80,7 @@ function saveToStorage(data: BuildpackImage[], timestamp: number) {
       BUILDPACK_CACHE_KEY,
       JSON.stringify({ data, timestamp })
     )
-  } catch (err){
+  } catch (err) {
     console.debug('[Buildpacks] Failed to save to storage:', err)
   }
 }
@@ -127,7 +127,7 @@ export function useBuildpackImages(cluster?: string) {
   }, [])
 
   const notifyListeners = useCallback(
-    (isRefreshing: boolean, isLoading = false) => {
+    (isRefreshing: boolean, isLoading = false, isDemoData = false) => {
       const state: BuildpackCacheState = {
         images: buildpackCache.data,
         isLoading,
@@ -136,7 +136,7 @@ export function useBuildpackImages(cluster?: string) {
         lastError: buildpackCache.lastError,
         lastRefresh:
           buildpackCache.timestamp > 0 ? buildpackCache.timestamp : null,
-        isDemoData: false,
+        isDemoData,
       }
       buildpackCache.listeners.forEach(l => l(state))
     },
@@ -173,7 +173,7 @@ export function useBuildpackImages(cluster?: string) {
             buildpackCache.consecutiveFailures = 0
             buildpackCache.lastError = null
             saveToStorage(demoData, buildpackCache.timestamp)
-            notifyListeners(false)
+            notifyListeners(false, false, true)
           }
           setImages(demoData)
           setIsDemoData(true)
@@ -181,7 +181,7 @@ export function useBuildpackImages(cluster?: string) {
           setIsLoading(false)
           setTimeout(() => {
             setIsRefreshing(false)
-            notifyListeners(false)
+            notifyListeners(false, false, true)
           }, MIN_REFRESH_INDICATOR_MS)
           return
         }
@@ -292,7 +292,7 @@ export function useBuildpackImages(cluster?: string) {
     consecutiveFailures,
     isFailed,
     lastRefresh,
-     isDemoData,
+    isDemoData,
   }
 }
 
@@ -300,7 +300,7 @@ if (typeof window !== 'undefined') {
   registerCacheReset('buildpack-images', () => {
     try {
       localStorage.removeItem(BUILDPACK_CACHE_KEY)
-    } catch (err){
+    } catch (err) {
       console.debug('[Buildpacks] Failed to remove cache from storage:', err)
     }
 

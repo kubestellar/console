@@ -497,6 +497,7 @@ export function useDrillDownActions() {
       data: { cluster, namespace, name, ...buildpackData },
     })
   }, [openOrPush])
+  
   const drillToDrift = useCallback((cluster: string, driftData?: Record<string, unknown>) => {
     openOrPush({
       type: 'drift',
