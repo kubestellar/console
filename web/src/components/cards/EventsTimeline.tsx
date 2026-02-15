@@ -16,6 +16,7 @@ import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards'
 import { useTranslation } from 'react-i18next'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface TimePoint {
   time: string
@@ -334,5 +335,13 @@ export function EventsTimeline() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function EventsTimelineWithErrorBoundary() {
+  return (
+    <DynamicCardErrorBoundary cardId="EventsTimeline">
+      <EventsTimeline />
+    </DynamicCardErrorBoundary>
   )
 }

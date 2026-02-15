@@ -4,6 +4,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useReportCardDataState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface OpenCostOverviewProps {
   config?: {
@@ -234,5 +235,13 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
         </a>
       </div>
     </div>
+  )
+}
+
+export default function OpenCostOverviewWithErrorBoundary(props: OpenCostOverviewProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="OpenCostOverview">
+      <OpenCostOverview {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

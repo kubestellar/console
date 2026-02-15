@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck } from
 import { CardSearchInput } from '../../lib/cards'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface KyvernoPoliciesProps {
   config?: Record<string, unknown>
@@ -232,5 +233,13 @@ export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
         </a>
       </div>
     </div>
+  )
+}
+
+export default function KyvernoPoliciesWithErrorBoundary(props: KyvernoPoliciesProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="KyvernoPolicies">
+      <KyvernoPolicies {...props} />
+    </DynamicCardErrorBoundary>
   )
 }
