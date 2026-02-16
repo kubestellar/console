@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope, MonitorCheck, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
 } from 'lucide-react'
@@ -1273,6 +1273,7 @@ export function CardWrapper({
                 <RefreshCw className={cn('w-4 h-4', (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-spin')} />
               </button>
             )}
+            {/* Chat button - feature not yet implemented
             <button
               data-tour="card-chat"
               onClick={() => {}}
@@ -1281,6 +1282,7 @@ export function CardWrapper({
             >
               <MessageCircle className="w-4 h-4" />
             </button>
+            */}
             <button
               onClick={() => setIsExpanded(true)}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"

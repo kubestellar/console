@@ -29,6 +29,8 @@ import {
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
+import { useMissions } from '../../hooks/useMissions'
+import { useApiKeyCheck } from './console-missions/shared'
 
 interface MissionsProps {
   config?: Record<string, unknown>
@@ -397,6 +399,8 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
   const StatusIcon = config.icon
   const elapsed = getElapsed(mission.startedAt, mission.completedAt)
   const [showLogs, setShowLogs] = useState(false)
+  const { startMission } = useMissions()
+  const { checkKeyAndRun } = useApiKeyCheck()
 
   // Auto-show logs when deploying (keep visible after completion for review)
   const isDeploying = mission.status === 'launching' || mission.status === 'deploying'
@@ -411,6 +415,86 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
   const readyClusters = mission.clusterStatuses.filter(s => s.status === 'running').length
   const failedClusters = mission.clusterStatuses.filter(s => s.status === 'failed').length
   const progressPct = totalClusters > 0 ? ((readyClusters + failedClusters) / totalClusters) * 100 : 0
+
+  // AI Diagnose handler
+  const handleDiagnose = useCallback(() => {
+    checkKeyAndRun(() => {
+      const targetClustersStr = mission.targetClusters.join(', ')
+      const failedClustersStr = mission.clusterStatuses
+        .filter(cs => cs.status === 'failed')
+        .map(cs => cs.cluster)
+        .join(', ')
+      
+      startMission({
+        title: `Diagnose ${mission.workload}`,
+        description: `Analyze failed deployment to ${mission.targetClusters.length} cluster(s)`,
+        type: 'troubleshoot',
+        cluster: mission.targetClusters[0],
+        initialPrompt: `Diagnose why deployment mission for "${mission.workload}" in namespace "${mission.namespace}" failed.
+
+Source cluster: ${mission.sourceCluster}
+Target clusters: ${targetClustersStr}
+Failed clusters: ${failedClustersStr || 'None'}
+Status: ${mission.status}
+
+Please:
+1. Analyze the deployment events and logs
+2. Identify the root cause of the failure
+3. Provide specific remediation steps`,
+        context: {
+          kind: 'Deployment',
+          name: mission.workload,
+          namespace: mission.namespace,
+          cluster: mission.sourceCluster,
+          status: mission.status,
+          targetClusters: mission.targetClusters,
+          clusterStatuses: mission.clusterStatuses,
+        },
+      })
+    })
+  }, [checkKeyAndRun, startMission, mission])
+
+  // AI Repair handler
+  const handleRepair = useCallback(() => {
+    checkKeyAndRun(() => {
+      const targetClustersStr = mission.targetClusters.join(', ')
+      const failedClusters = mission.clusterStatuses
+        .filter(cs => cs.status === 'failed')
+        .map(cs => cs.cluster)
+      const issues = failedClusters.length > 0
+        ? failedClusters.map(cluster => `- ${cluster}: Deployment failed`).join('\n')
+        : 'Deployment partially completed or aborted'
+
+      startMission({
+        title: `Repair ${mission.workload}`,
+        description: `Fix failed deployment to ${mission.targetClusters.length} cluster(s)`,
+        type: 'repair',
+        cluster: mission.targetClusters[0],
+        initialPrompt: `Repair failed deployment mission for "${mission.workload}" in namespace "${mission.namespace}".
+
+Source cluster: ${mission.sourceCluster}
+Target clusters: ${targetClustersStr}
+
+Issues:
+${issues}
+
+Please:
+1. Diagnose the root cause
+2. Suggest fixes with exact kubectl commands
+3. Explain potential side effects
+4. Apply fixes step by step with my confirmation`,
+        context: {
+          kind: 'Deployment',
+          name: mission.workload,
+          namespace: mission.namespace,
+          cluster: mission.sourceCluster,
+          status: mission.status,
+          targetClusters: mission.targetClusters,
+          clusterStatuses: mission.clusterStatuses,
+        },
+      })
+    })
+  }, [checkKeyAndRun, startMission, mission])
 
   return (
     <div className={cn(
@@ -512,7 +596,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
       {(mission.status === 'abort' || mission.status === 'partial') && (
         <div className="px-3 pb-2 flex items-center gap-2">
           <button
-            onClick={() => {}}
+            onClick={handleDiagnose}
             className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/20 transition-colors"
             title="AI will analyze pod events, logs, and resource limits to diagnose the failure"
           >
@@ -520,7 +604,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
             Diagnose
           </button>
           <button
-            onClick={() => {}}
+            onClick={handleRepair}
             className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/20 transition-colors"
             title="AI will attempt to fix the issue (restart pods, adjust resources, etc.)"
           >
