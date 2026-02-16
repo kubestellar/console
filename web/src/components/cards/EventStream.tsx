@@ -4,6 +4,7 @@ import type { ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {
   useCardData, commonComparators,
@@ -28,6 +29,8 @@ function EventStreamInternal() {
     events: rawEvents,
     isLoading: hookLoading,
     isDemoFallback,
+    isRefreshing,
+    lastRefresh,
     error,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
@@ -136,7 +139,15 @@ function EventStreamInternal() {
     <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2" />
+        <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
+        </div>
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,

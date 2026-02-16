@@ -7,6 +7,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
@@ -57,8 +58,8 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     }
   }, [demoMode, clusters, selectedCluster])
 
-  const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback } = useCachedPodIssues(selectedCluster)
-  const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback } = useCachedDeploymentIssues(selectedCluster)
+  const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback, isRefreshing: isPodIssuesRefreshing, lastRefresh: podIssuesLastRefresh } = useCachedPodIssues(selectedCluster)
+  const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback, isRefreshing: isDeploymentIssuesRefreshing, lastRefresh: deploymentIssuesLastRefresh } = useCachedDeploymentIssues(selectedCluster)
 
   // Fetch namespaces for the selected cluster
   const { namespaces } = useNamespaces(selectedCluster || undefined)
@@ -82,6 +83,10 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   }, [allDeploymentIssues, selectedNamespace])
 
   const cluster = clusters.find(c => c.name === selectedCluster)
+
+  // Use the most recent refresh time of the two data sources
+  const isRefreshing = isPodIssuesRefreshing || isDeploymentIssuesRefreshing
+  const lastRefresh = Math.max(podIssuesLastRefresh || 0, deploymentIssuesLastRefresh || 0)
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -119,7 +124,14 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+          staleThresholdMinutes={5}
+        />
       </div>
 
       {/* Selectors */}
