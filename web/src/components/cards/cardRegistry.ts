@@ -712,13 +712,10 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kagenti_security: () => import('./kagenti'),
   kagenti_security_posture: () => import('./kagenti'),
   kagenti_topology: () => import('./kagenti'),
-<<<<<<< HEAD
   // Crossplane cards
   crossplane_managed_resources: () => import('./crossplane_status'),
-=======
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
->>>>>>> origin/main
 }
 
 /**
