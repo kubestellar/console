@@ -62,14 +62,6 @@ const DEMO_STATS = {
   auditCount: 5,
 }
 
-export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
-  return (
-    <DynamicCardErrorBoundary cardId="KyvernoPolicies">
-      <KyvernoPoliciesInternal config={_config} />
-    </DynamicCardErrorBoundary>
-  )
-}
-
 function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   const { t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
@@ -241,5 +233,13 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
         </a>
       </div>
     </div>
+  )
+}
+
+export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="KyvernoPolicies">
+      <KyvernoPoliciesInternal config={_config} />
+    </DynamicCardErrorBoundary>
   )
 }

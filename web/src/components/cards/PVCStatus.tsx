@@ -68,14 +68,6 @@ function getStatusColor(status: string) {
   }
 }
 
-export function PVCStatus() {
-  return (
-    <DynamicCardErrorBoundary cardId="PVCStatus">
-      <PVCStatusInternal />
-    </DynamicCardErrorBoundary>
-  )
-}
-
 function PVCStatusInternal() {
   const { t } = useTranslation()
   const { pvcs, isLoading, error, consecutiveFailures, isFailed } = usePVCs()
@@ -296,5 +288,13 @@ function PVCStatusInternal() {
         needsPagination={needsPagination}
       />
     </div>
+  )
+}
+
+export function PVCStatus() {
+  return (
+    <DynamicCardErrorBoundary cardId="PVCStatus">
+      <PVCStatusInternal />
+    </DynamicCardErrorBoundary>
   )
 }

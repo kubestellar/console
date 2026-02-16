@@ -17,6 +17,11 @@ export function CodeBlock({ children, language = 'text', fontSize = 'sm' }: Code
   const timeoutRef = useRef<number>()
 
   const handleCopy = async () => {
+    // Clear any pending timeout to avoid race conditions
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    
     try {
       await navigator.clipboard.writeText(children)
       setCopied(true)
