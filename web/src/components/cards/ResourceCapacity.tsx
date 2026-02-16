@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Cpu, HardDrive, Zap, Loader2 } from 'lucide-react'
+import { Cpu, HardDrive, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters, useGPUNodes, GPUNode } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -246,9 +246,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
             showLabel={true}
             staleThresholdMinutes={5}
           />
-          {isRefreshing && (
-            <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
-          )}
         </div>
         <div className="flex items-center gap-2">
           <ClusterFilterDropdown
