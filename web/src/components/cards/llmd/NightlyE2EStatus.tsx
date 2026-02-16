@@ -81,7 +81,7 @@ function formatTimeAgo(iso: string): string {
 }
 
 function RunDot({ run }: { run: NightlyRun }) {
-  const isRunning = run.status === 'in_progress'
+  const isRunning = run.status !== 'completed'
   const color = isRunning
     ? 'bg-blue-400'
     : run.conclusion === 'success'
