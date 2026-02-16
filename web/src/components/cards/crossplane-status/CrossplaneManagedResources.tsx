@@ -3,6 +3,7 @@ import { SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput,CardControlsRow,CardPaginationFooter,CardAIActions } from '../../../lib/cards/CardComponents'
 import { useCardLoadingState } from '../CardDataContext'
+import { useCrossplaneManagedResources, type CrossplaneManagedResource } from '../../../hooks/mcp/crossplane'
 
 type ManagedResourceView = {
   name: string
@@ -15,143 +16,6 @@ type ManagedResourceView = {
   externalName?: string
   raw: CrossplaneManagedResource
 }
-
-type CrossplaneCondition = {
-  type: string
-  status: 'True' | 'False' | 'Unknown'
-  reason?: string
-  message?: string
-  lastTransitionTime?: string
-}
-
-type CrossplaneManagedResource = {
-  apiVersion: string
-  kind: string
-  metadata: {
-    name: string
-    namespace: string
-    creationTimestamp: string
-    annotations?: Record<string, string>
-  }
-  spec?: {
-    providerConfigRef?: {
-      name?: string
-    }
-  }
-  status?: {
-    conditions?: CrossplaneCondition[]
-    atProvider?: Record<string, any>
-  }
-}
-
-const DEMO_DATA: CrossplaneManagedResource[] = [
-  {
-    apiVersion: 'rds.aws.crossplane.io/v1beta1',
-    kind: 'RDSInstance',
-    metadata: {
-      name: 'prod-db',
-      namespace: 'infra',
-      creationTimestamp: '2026-02-10T10:00:00Z',
-      annotations: { 'crossplane.io/external-name': 'prod-db-abc123' }
-    },
-    spec: { providerConfigRef: { name: 'aws-provider' } },
-    status: {
-      conditions: [
-        { type: 'Ready', status: 'True', reason: 'Available' },
-        { type: 'Synced', status: 'True', reason: 'ReconcileSuccess' }
-      ]
-    }
-  },
-  {
-    apiVersion: 's3.aws.crossplane.io/v1beta1',
-    kind: 'Bucket',
-    metadata: {
-      name: 'staging-bucket',
-      namespace: 'infra',
-      creationTimestamp: '2026-02-13T08:00:00Z'
-    },
-    status: {
-      conditions: [
-        {
-          type: 'Ready',
-          status: 'False',
-          reason: 'Creating',
-          message: 'IAM role missing'
-        },
-        { type: 'Synced', status: 'True' }
-      ]
-    }
-  },
-  {
-    apiVersion: 'compute.gcp.crossplane.io/v1beta1',
-    kind: 'Network',
-    metadata: {
-      name: 'gke-network',
-      namespace: 'platform',
-      creationTimestamp: '2026-02-09T12:00:00Z'
-    },
-    status: {
-      conditions: [
-        { type: 'Ready', status: 'True' },
-        { type: 'Synced', status: 'False', reason: 'ReconcilePending' }
-      ]
-    }
-  },
-  {
-    apiVersion: 'sql.azure.crossplane.io/v1beta1',
-    kind: 'SQLServer',
-    metadata: {
-      name: 'azure-db',
-      namespace: 'infra',
-      creationTimestamp: '2026-02-11T09:30:00Z'
-    },
-    status: {
-      conditions: [
-        { type: 'Ready', status: 'False', reason: 'Provisioning' },
-        { type: 'Synced', status: 'False' }
-      ]
-    }
-  },
-  ...Array.from({ length: 10 }).map((_, i): CrossplaneManagedResource => ({
-    apiVersion: 'ec2.aws.crossplane.io/v1beta1',
-    kind: 'VPC',
-    metadata: {
-      name: `vpc-${i + 1}`,
-      namespace: i % 2 === 0 ? 'networking' : 'platform',
-      creationTimestamp: `2026-02-${(i + 1).toString().padStart(2, '0')}T10:00:00Z`
-    },
-    status: {
-      conditions: [
-        {
-          type: 'Ready',
-          status: (i % 3 === 0 ? 'False' : 'True') as 'True' | 'False',
-          reason: i % 3 === 0 ? 'ReconcileError' : 'Available',
-          message: i % 3 === 0 ? 'Subnet not found' : undefined
-        },
-        {
-          type: 'Synced',
-          status: (i % 4 === 0 ? 'False' : 'True') as 'True' | 'False'
-        }
-      ]
-    }
-  }))
-]
-
-const rawResources = DEMO_DATA
-
-const viewResources: ManagedResourceView[] = rawResources.map(r => ({
-  name: r.metadata.name,
-  namespace: r.metadata.namespace,
-  kind: r.kind,
-  ready: isReady(r),
-  synced: isSynced(r),
-  error: getError(r),
-  creationTimestamp: r.metadata.creationTimestamp,
-  externalName:
-    r.metadata.annotations?.['crossplane.io/external-name'],
-  raw: r
-}))
-
 
 function getCondition(
   resource: CrossplaneManagedResource,
@@ -186,7 +50,28 @@ const SORT_OPTIONS = [
 ]
 
 export function CrossplaneManagedResources() {
-  const rawResources = DEMO_DATA
+  const {
+  resources: rawResources,
+  isLoading,
+  isRefreshing,
+  error,
+  consecutiveFailures,
+  isFailed,
+  lastRefresh,
+  isDemoData,
+  } = useCrossplaneManagedResources()
+
+  const viewResources: ManagedResourceView[] = rawResources.map(r => ({
+    name: r.metadata.name,
+    namespace: r.metadata.namespace,
+    kind: r.kind,
+    ready: isReady(r),
+    synced: isSynced(r),
+    error: getError(r),
+    creationTimestamp: r.metadata.creationTimestamp,
+    externalName: r.metadata.annotations?.['crossplane.io/external-name'],
+    raw: r
+  }))
 
   const {
     items,
@@ -217,11 +102,14 @@ export function CrossplaneManagedResources() {
     defaultLimit: 5
   })
 
+  const hasCompletedInitialFetch = lastRefresh !== null
+  const hasData = rawResources.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: false,
-    hasAnyData: rawResources.length > 0,
-    isFailed: false,
-    consecutiveFailures: 0
+  isLoading: isLoading || !hasCompletedInitialFetch,
+  hasAnyData: hasData,
+  isFailed,
+  consecutiveFailures,
+  isDemoData,
   })
 
   const readyCount = rawResources.filter(isReady).length
@@ -241,7 +129,11 @@ export function CrossplaneManagedResources() {
   if (showEmptyState) {
     return (
       <div className="h-full flex items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No managed resources found</p>
+        {error ? (
+          <p className="text-sm text-red-400">{error}</p>
+        ) : (
+          <p className="text-sm">No managed resources found</p>
+        )}
       </div>
     )
   }
@@ -253,6 +145,9 @@ export function CrossplaneManagedResources() {
         <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
           {rawResources.length} managed resources
         </span>
+        {isRefreshing && (
+          <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+        )}
         <CardControlsRow
           cardControls={{
             limit: itemsPerPage,
@@ -359,6 +254,13 @@ export function CrossplaneManagedResources() {
   )
 }
 
+const COLOR_CLASSES = {
+  green: { bg: 'bg-green-500/10', border: 'border-green-500/20', text: 'text-green-400' },
+  orange: { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400' },
+  red: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400' },
+  blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400' }
+} as const
+
 function StatBox({
   label,
   value,
@@ -368,9 +270,10 @@ function StatBox({
   value: number
   color: 'green' | 'orange' | 'red' | 'blue'
 }) {
+  const classes = COLOR_CLASSES[color]
   return (
-    <div className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20`}>
-      <span className={`text-xs text-${color}-400`}>{label}</span>
+    <div className={`p-3 rounded-lg ${classes.bg} border ${classes.border}`}>
+      <span className={`text-xs ${classes.text}`}>{label}</span>
       <div className="text-2xl font-bold text-foreground">{value}</div>
     </div>
   )

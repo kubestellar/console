@@ -170,7 +170,7 @@ const KagentiAgentDiscovery = lazy(() => _kagentiBundle.then(m => ({ default: m.
 const KagentiSecurity = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurity })))
 const KagentiSecurityPosture = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurityPosture })))
 const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiTopology })))
-const CrossplaneManagedResources = lazy(() => import('./crossplane_status/CrossplaneManagedResources').then(m => ({ default: m.CrossplaneManagedResources })))
+const CrossplaneManagedResources = lazy(() => import('./crossplane-status/CrossplaneManagedResources').then(m => ({ default: m.CrossplaneManagedResources })))
 // Cloud Native Buildpacks card
 const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
 
@@ -527,6 +527,8 @@ export const DEMO_DATA_CARDS = new Set([
   'kagenti_security',
   'kagenti_topology',
   'kagenti_security_posture',
+  // Crossplane cards - demo until Crossplane is installed
+  'crossplane_managed_resources',
 ])
 
 /**
@@ -713,7 +715,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kagenti_security_posture: () => import('./kagenti'),
   kagenti_topology: () => import('./kagenti'),
   // Crossplane cards
-  crossplane_managed_resources: () => import('./crossplane_status'),
+  crossplane_managed_resources: () => import('./crossplane-status'),
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
 }
@@ -763,7 +765,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./kagenti/KagentiAgentDiscovery'),
     () => import('./kagenti/KagentiSecurity'),
     () => import('./kagenti/KagentiTopology'),
-    () => import('./crossplane_status/CrossplaneManagedResources'),
+    () => import('./crossplane-status/CrossplaneManagedResources'),
   ]
   startupChunks.forEach(load => load().catch(() => {}))
 }
@@ -827,8 +829,6 @@ export const LIVE_DATA_CARDS = new Set([
   'kagenti_agent_discovery',
   'kagenti_security',
   'kagenti_topology',
-  // crossplane cards
-  'crossplane_managed_resources',
 ])
 
 /**
