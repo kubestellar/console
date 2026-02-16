@@ -303,21 +303,21 @@ export function Events() {
 
           <div className="grid grid-cols-3 gap-4">
             <div className="glass p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-4">Event Types</div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-4">Event Types</h4>
               {stats.typeChartData.length > 0 ? <DonutChart data={stats.typeChartData} size={150} thickness={20} showLegend={true} /> : <div className="flex items-center justify-center h-[150px] text-muted-foreground">No events</div>}
             </div>
             <div className="glass p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-4">Top Reasons</div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-4">Top Reasons</h4>
               {stats.topReasons.length > 0 ? <DonutChart data={stats.topReasons} size={150} thickness={20} showLegend={true} /> : <div className="flex items-center justify-center h-[150px] text-muted-foreground">No events</div>}
             </div>
             <div className="glass p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-4">By Cluster</div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-4">By Cluster</h4>
               {stats.clusterData.length > 0 ? <DonutChart data={stats.clusterData} size={150} thickness={20} showLegend={true} /> : <div className="flex items-center justify-center h-[150px] text-muted-foreground">No cluster data</div>}
             </div>
           </div>
 
           <div className="glass p-4 rounded-lg">
-            <div className="text-sm font-medium text-muted-foreground mb-4">Event Activity (Last 24 Hours)</div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-4">Event Activity (Last 24 Hours)</h4>
             <BarChart data={stats.hourlyData} height={200} color={getChartColorByName('primary')} showGrid={true} />
           </div>
 
