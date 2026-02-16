@@ -188,7 +188,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       {/* Issues Summary */}
       <div className="space-y-2">
         <div
-          className="flex items-center justify-between p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
+          className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           onClick={() => {
             if (podIssues.length > 0) {
               const issue = podIssues[0]

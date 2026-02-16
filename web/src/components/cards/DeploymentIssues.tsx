@@ -205,7 +205,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
                   </div>
                   <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400" title={`Issue: ${issue.reason || 'Unknown'}`}>
+                    <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400" title={`Issue: ${issue.reason || 'Unknown'}`}>
                       {issue.reason || 'Issue'}
                     </span>
                     <span className="text-xs text-muted-foreground" title={`${issue.readyReplicas} of ${issue.replicas} replicas are ready`}>

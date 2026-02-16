@@ -247,7 +247,7 @@ export const VALUE_COLORS: Record<string, string> = {
   failing: 'text-red-400',
   errors: 'text-red-400',
   issues: 'text-red-400',
-  high: 'text-orange-400',
+  high: 'text-red-400',
   medium: 'text-yellow-400',
   low: 'text-blue-400',
   privileged: 'text-red-400',
