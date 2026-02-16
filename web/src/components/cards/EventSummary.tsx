@@ -25,7 +25,6 @@ export function EventSummary() {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
-    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed: isFailed && events.length === 0,

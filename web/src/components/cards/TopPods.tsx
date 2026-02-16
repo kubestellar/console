@@ -70,7 +70,6 @@ export function TopPods({ config }: TopPodsProps) {
   const {
     pods: rawPods,
     isLoading,
-    isRefreshing,
     isDemoFallback,
     isFailed,
     consecutiveFailures,
@@ -80,7 +79,6 @@ export function TopPods({ config }: TopPodsProps) {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
-    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: rawPods.length > 0,
     isFailed,

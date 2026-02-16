@@ -83,7 +83,6 @@ export function EventsTimeline() {
   const {
     events,
     isLoading: hookLoading,
-    isRefreshing,
     isDemoFallback,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
@@ -92,7 +91,6 @@ export function EventsTimeline() {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
-    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
   })

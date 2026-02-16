@@ -52,7 +52,6 @@ export function WarningEvents() {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
-    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed,
