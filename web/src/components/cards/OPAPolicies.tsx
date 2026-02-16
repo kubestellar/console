@@ -677,6 +677,7 @@ Please proceed with applying this policy.`,
         ['patch', policy.kind.toLowerCase(), policy.name, '--type=merge', '-p', `{"spec":{"enforcementAction":"${newMode}"}}`],
         { context: clusterName, timeout: 15000 }
       )
+      showToast('Policy mode updated successfully', 'success')
       onRefresh()
     } catch (err) {
       console.error('Failed to toggle mode:', err)

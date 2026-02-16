@@ -62,7 +62,7 @@ export function AuthCallback() {
       console.warn('[AuthCallback] No token in URL')
       navigate(ROUTES.LOGIN)
     }
-  }, [searchParams, setToken, refreshUser, navigate])
+  }, [searchParams, setToken, refreshUser, navigate, showToast])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
