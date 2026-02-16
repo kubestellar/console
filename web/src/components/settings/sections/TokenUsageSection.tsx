@@ -38,7 +38,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-medium text-foreground">{t('settings.tokens.title')}</h2>
               {isDemoData && (
-                <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded border border-yellow-500/20">
+                <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded border border-yellow-500/20" role="img" aria-label="Demo mode active">
                   Demo Data
                 </span>
               )}
