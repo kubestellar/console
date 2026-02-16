@@ -9,6 +9,7 @@ import {
   CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface HelmReleaseStatusProps {
   config?: {
@@ -40,6 +41,7 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
+  const { t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
   const { drillToHelm } = useDrillDownActions()
 
@@ -278,7 +280,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
           <CardSearchInput
             value={localSearch}
             onChange={setLocalSearch}
-            placeholder="Search releases..."
+            placeholder={t('common.searchReleases')}
             className="mb-4"
           />
 
@@ -286,7 +288,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-blue-500/10 text-center cursor-default" title={`${totalItems} total Helm release${totalItems !== 1 ? 's' : ''}`}>
               <span className="text-lg font-bold text-blue-400">{totalItems}</span>
-              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-xs text-muted-foreground">{t('common.total')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center cursor-default" title={`${deployedCount} release${deployedCount !== 1 ? 's' : ''} successfully deployed`}>
               <span className="text-lg font-bold text-green-400">{deployedCount}</span>
@@ -294,7 +296,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
             </div>
             <div className="flex-1 p-2 rounded-lg bg-red-500/10 text-center cursor-default" title={`${failedCount} release${failedCount !== 1 ? 's' : ''} in failed state`}>
               <span className="text-lg font-bold text-red-400">{failedCount}</span>
-              <p className="text-xs text-muted-foreground">Failed</p>
+              <p className="text-xs text-muted-foreground">{t('common.failed')}</p>
             </div>
           </div>
 

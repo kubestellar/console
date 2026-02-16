@@ -15,6 +15,7 @@ import {
   useModalAI,
   type ResourceContext,
 } from '../../modals'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -67,6 +68,7 @@ interface DriftChange {
 }
 
 export function DriftDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string | undefined
   const resourceName = data.resource as string | undefined
@@ -299,10 +301,10 @@ Please:
   const SeverityIcon = severityStyle.icon
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'changes', label: `Changes (${changes?.length || driftedResources || 0})`, icon: Diff },
-    { id: 'diff', label: 'Diff View', icon: FileText },
-    { id: 'ai', label: 'AI Analysis', icon: Stethoscope },
+    { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
+    { id: 'changes', label: `${t('drilldown.tabs.changes')} (${changes?.length || driftedResources || 0})`, icon: Diff },
+    { id: 'diff', label: t('drilldown.tabs.diffView'), icon: FileText },
+    { id: 'ai', label: t('drilldown.tabs.aiAnalysis'), icon: Stethoscope },
   ]
 
   return (
@@ -317,7 +319,7 @@ Please:
                 className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
               >
                 <Layers className="w-4 h-4 text-purple-400" />
-                <span className="text-muted-foreground">Namespace:</span>
+                <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
                 <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
                 <svg className="w-3 h-3 text-purple-400/50 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -329,7 +331,7 @@ Please:
               className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
               <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-muted-foreground">Cluster:</span>
+              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
               <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
               <svg className="w-3 h-3 text-blue-400/50 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -424,30 +426,30 @@ Please:
                 <div className={cn('text-2xl font-bold', severityStyle.text)}>
                   <SeverityIcon className="w-8 h-8" />
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">Status</div>
+                <div className="text-xs text-muted-foreground mt-1">{t('common.status')}</div>
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className={cn('text-2xl font-bold', driftedResources > 0 ? 'text-red-400' : 'text-green-400')}>
                   {driftedResources}
                 </div>
-                <div className="text-xs text-muted-foreground">Drifted Resources</div>
+                <div className="text-xs text-muted-foreground">{t('drilldown.drift.driftedResources')}</div>
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="text-sm font-mono text-foreground truncate">{gitPath || '/'}</div>
-                <div className="text-xs text-muted-foreground">Git Path</div>
+                <div className="text-xs text-muted-foreground">{t('drilldown.drift.gitPath')}</div>
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="text-sm text-foreground">
                   {lastChecked ? new Date(lastChecked).toLocaleString() : '-'}
                 </div>
-                <div className="text-xs text-muted-foreground">Last Checked</div>
+                <div className="text-xs text-muted-foreground">{t('drilldown.drift.lastChecked')}</div>
               </div>
             </div>
 
             {/* Git Source Info */}
             {gitRepo && (
               <div className="p-4 rounded-lg border border-border bg-card/50">
-                <h4 className="text-sm font-medium text-foreground mb-3">Git Source</h4>
+                <h4 className="text-sm font-medium text-foreground mb-3">{t('drilldown.drift.gitSource')}</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Repository:</span>
@@ -515,8 +517,8 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-50 text-green-400" />
-                <p className="text-green-400">No drifted resources</p>
-                <p className="text-xs mt-1">All resources match the desired Git state</p>
+                <p className="text-green-400">{t('drilldown.drift.noDrifted')}</p>
+                <p className="text-xs mt-1">{t('drilldown.drift.allMatch')}</p>
               </div>
             )}
           </div>
@@ -524,7 +526,7 @@ Please:
 
         {activeTab === 'diff' && (
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">Configuration Diff</h4>
+            <h4 className="text-sm font-medium text-foreground">{t('drilldown.drift.configDiff')}</h4>
             {selectedChange ? (
               <div className="space-y-4">
                 <div className="p-3 rounded-lg bg-secondary/50">
@@ -550,7 +552,7 @@ Please:
                             <pre className="text-sm text-green-400 mt-1">{field.gitValue}</pre>
                           </div>
                           <div>
-                            <span className="text-xs text-muted-foreground">Cluster:</span>
+                            <span className="text-xs text-muted-foreground">{t('drilldown.fields.cluster')}</span>
                             <pre className="text-sm text-red-400 mt-1">{field.clusterValue}</pre>
                           </div>
                         </div>
@@ -560,16 +562,16 @@ Please:
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Detailed diff not available</p>
-                    <p className="text-xs mt-1">Select a resource from the Changes tab</p>
+                    <p>{t('drilldown.drift.diffNotAvailable')}</p>
+                    <p className="text-xs mt-1">{t('drilldown.drift.selectResourceChanges')}</p>
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Diff className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Select a resource to view diff</p>
-                <p className="text-xs mt-1">Choose a drifted resource from the Changes tab</p>
+                <p>{t('drilldown.drift.selectResourceDiff')}</p>
+                <p className="text-xs mt-1">{t('drilldown.drift.chooseDrifted')}</p>
               </div>
             )}
           </div>
@@ -580,7 +582,7 @@ Please:
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <ConsoleAIIcon className="w-5 h-5" />
-                AI Analysis
+                {t('drilldown.ai.title')}
               </h4>
               <button
                 onClick={handleDiagnose}
@@ -595,8 +597,8 @@ Please:
             {!isAgentConnected ? (
               <div className="text-center py-12 text-muted-foreground">
                 <ConsoleAIIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>AI agent not connected</p>
-                <p className="text-xs mt-1">Configure the local agent in Settings to enable AI analysis</p>
+                <p>{t('drilldown.ai.notConnected')}</p>
+                <p className="text-xs mt-1">{t('drilldown.ai.configureAgent')}</p>
               </div>
             ) : aiAnalysisLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -609,8 +611,8 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Click "Analyze Drift" to get AI-powered analysis</p>
-                <p className="text-xs mt-1">AI will analyze the drift and suggest remediation steps</p>
+                <p>{t('drilldown.drift.clickAnalyze')}</p>
+                <p className="text-xs mt-1">{t('drilldown.drift.analyzeHint')}</p>
               </div>
             )}
           </div>

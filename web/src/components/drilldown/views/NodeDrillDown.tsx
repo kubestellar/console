@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
 }
 
 export function NodeDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const nodeName = data.node as string
   const status = data.status as string | undefined
@@ -64,7 +66,7 @@ Start by checking node events and conditions.`,
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-red-400">Node Issue Detected</h4>
+              <h4 className="font-semibold text-red-400">{t('drilldown.node.nodeIssueDetected')}</h4>
               <p className="text-sm text-red-300/80 mt-1">{issue || 'This node is not accepting new workloads'}</p>
             </div>
           </div>
@@ -76,21 +78,21 @@ Start by checking node events and conditions.`,
         <h3 className="text-lg font-semibold text-foreground mb-4">Node: {nodeName}</h3>
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <dt className="text-muted-foreground">Cluster</dt>
+            <dt className="text-muted-foreground">{t('common.cluster')}</dt>
             <dd className="font-mono text-foreground">{clusterShort}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Status</dt>
+            <dt className="text-muted-foreground">{t('common.status')}</dt>
             <dd className={`font-medium ${isOffline ? 'text-red-400' : 'text-green-400'}`}>
               {status || 'Unknown'}
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Roles</dt>
+            <dt className="text-muted-foreground">{t('common.roles')}</dt>
             <dd className="font-mono text-foreground">{roles?.join(', ') || 'worker'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Schedulable</dt>
+            <dt className="text-muted-foreground">{t('drilldown.node.schedulable')}</dt>
             <dd className={`font-medium ${unschedulable ? 'text-red-400' : 'text-green-400'}`}>
               {unschedulable ? 'No (Cordoned)' : 'Yes'}
             </dd>
@@ -129,7 +131,7 @@ Start by checking node events and conditions.`,
             <button
               onClick={() => copyCommand(`kubectl --context ${clusterShort} describe node ${nodeName}`, 'describe')}
               className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-              title="Copy command"
+              title={t('drilldown.tooltips.copyCommand')}
             >
               {copied === 'describe' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
             </button>
@@ -141,7 +143,7 @@ Start by checking node events and conditions.`,
             <button
               onClick={() => copyCommand(`kubectl --context ${clusterShort} get events --field-selector involvedObject.name=${nodeName}`, 'events')}
               className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-              title="Copy command"
+              title={t('drilldown.tooltips.copyCommand')}
             >
               {copied === 'events' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
             </button>
@@ -154,7 +156,7 @@ Start by checking node events and conditions.`,
               <button
                 onClick={() => copyCommand(`kubectl --context ${clusterShort} uncordon ${nodeName}`, 'uncordon')}
                 className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-                title="Copy command"
+                title={t('drilldown.tooltips.copyCommand')}
               >
                 {copied === 'uncordon' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
               </button>
@@ -167,7 +169,7 @@ Start by checking node events and conditions.`,
             <button
               onClick={() => copyCommand(`kubectl --context ${clusterShort} get node ${nodeName} -o jsonpath='{.status.conditions}'`, 'conditions')}
               className="ml-2 p-1 hover:bg-card rounded flex-shrink-0"
-              title="Copy command"
+              title={t('drilldown.tooltips.copyCommand')}
             >
               {copied === 'conditions' ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
             </button>

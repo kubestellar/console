@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const ALERTS_STORAGE_KEY = 'kubestellar-alerts-dashboard-cards'
 
@@ -14,6 +15,7 @@ const ALERTS_STORAGE_KEY = 'kubestellar-alerts-dashboard-cards'
 const DEFAULT_ALERT_CARDS = getDefaultCards('alerts')
 
 export function Alerts() {
+  const { t: _t } = useTranslation()
   const { stats, evaluateConditions } = useAlerts()
   const { rules } = useAlertRules()
   const { isRefreshing: dataRefreshing, refetch, error } = useClusters()

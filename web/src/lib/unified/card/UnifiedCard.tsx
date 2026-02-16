@@ -11,7 +11,16 @@
  */
 
 import { useMemo, useCallback, ReactNode } from 'react'
-import { AlertTriangle, Info, RefreshCw } from 'lucide-react'
+import { 
+  AlertTriangle, 
+  Info, 
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  HelpCircle,
+  type LucideIcon
+} from 'lucide-react'
 import type {
   UnifiedCardConfig,
   UnifiedCardProps,
@@ -211,7 +220,7 @@ function renderContent(
       )
 
     case 'custom':
-      // TODO: Load from component registry
+      // Custom components are rendered as placeholders until registered via component registry
       return (
         <PlaceholderVisualization
           type={`custom: ${content.componentName}`}
@@ -298,6 +307,27 @@ function LoadingState({
 }
 
 /**
+ * Icon lookup map for common icon names
+ * Supports kebab-case icon names (e.g., 'info', 'alert-triangle', 'check-circle')
+ */
+const ICON_MAP: Record<string, LucideIcon> = {
+  info: Info,
+  'alert-triangle': AlertTriangle,
+  'alert-circle': AlertCircle,
+  'check-circle': CheckCircle,
+  'x-circle': XCircle,
+  'help-circle': HelpCircle,
+}
+
+/**
+ * Get icon component by name (case-insensitive, kebab-case format)
+ */
+function getIconComponent(iconName?: string): LucideIcon {
+  if (!iconName?.trim()) return Info
+  return ICON_MAP[iconName.toLowerCase()] ?? Info
+}
+
+/**
  * Empty state component
  */
 function EmptyState({
@@ -305,10 +335,10 @@ function EmptyState({
 }: {
   config?: UnifiedCardConfig['emptyState']
 }) {
-  // TODO: Use dynamic icon lookup based on config?.icon (using Info for now)
   const title = config?.title ?? 'No data'
   const message = config?.message
   const variant = config?.variant ?? 'neutral'
+  const IconComponent = getIconComponent(config?.icon)
 
   const variantColors = {
     success: 'text-green-400',
@@ -320,7 +350,7 @@ function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center p-6 text-center">
       <div className={`mb-2 ${variantColors[variant]}`}>
-        <Info className="w-8 h-8" />
+        <IconComponent className="w-8 h-8" />
       </div>
       <div className="text-sm font-medium text-gray-300">{title}</div>
       {message && (
@@ -359,6 +389,10 @@ function ErrorState({
 
 /**
  * Inline stats displayed at top of card
+ * 
+ * Note: Value resolution is intentionally left as placeholder ("--") until the stats
+ * feature design is finalized. Stats config includes valueField/valueResolver for future
+ * implementation to compute values from card data.
  */
 function InlineStats({
   stats,
@@ -367,7 +401,6 @@ function InlineStats({
   stats: NonNullable<UnifiedCardConfig['stats']>
   data: unknown[] | undefined
 }) {
-  // TODO: Implement value resolution from stats config
   return (
     <div className="flex items-center gap-3 px-2 py-1.5 border-b border-gray-800">
       {stats.map((stat) => (

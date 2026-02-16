@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
 import { useModalNavigation } from '../../../lib/modals/useModalNavigation'
+import { useTranslation } from 'react-i18next'
 
 export interface CardConfigModalCluster {
   name: string
@@ -21,6 +22,7 @@ export function CardConfigModal({
   onSave,
   onClose,
 }: CardConfigModalProps) {
+  const { t: _t } = useTranslation()
   const [config, setConfig] = useState<Record<string, unknown>>(card.config || {})
 
   // Use standardized modal keyboard navigation (Escape to close, body scroll lock)

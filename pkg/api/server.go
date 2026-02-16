@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -58,6 +59,8 @@ type Config struct {
 	// Benchmark data configuration (Google Drive)
 	BenchmarkGoogleDriveAPIKey string // API key for fetching benchmark data from Google Drive
 	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
+	// Sidebar configuration
+	EnabledDashboards string // Comma-separated list of dashboard IDs to show in sidebar (empty = all)
 }
 
 // Server represents the API server
@@ -132,6 +135,9 @@ func NewServer(cfg Config) (*Server, error) {
 			log.Println("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
 		} else {
 			log.Println("Kubernetes client initialized successfully")
+			// Warmup: probe all clusters to populate health cache before serving.
+			// Without this, first load hits ALL clusters (including offline) = 30s+ load.
+			k8sClient.WarmupHealthCache()
 		}
 		k8sClient.SetOnReload(func() {
 			hub.BroadcastAll(handlers.Message{
@@ -299,12 +305,25 @@ func (s *Server) setupRoutes() {
 			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
 		}
 		inCluster := s.k8sClient != nil && s.k8sClient.IsInCluster()
-		return c.JSON(fiber.Map{
+		resp := fiber.Map{
 			"status":           "ok",
 			"version":          Version,
 			"oauth_configured": s.config.GitHubClientID != "",
 			"in_cluster":       inCluster,
-		})
+		}
+		if s.config.EnabledDashboards != "" {
+			dashboards := strings.Split(s.config.EnabledDashboards, ",")
+			trimmed := make([]string, 0, len(dashboards))
+			for _, d := range dashboards {
+				if t := strings.TrimSpace(d); t != "" {
+					trimmed = append(trimmed, t)
+				}
+			}
+			if len(trimmed) > 0 {
+				resp["enabled_dashboards"] = trimmed
+			}
+		}
+		return c.JSON(resp)
 	})
 
 	// Auth routes (public)
@@ -362,6 +381,11 @@ func (s *Server) setupRoutes() {
 			"totalConnections": demoCount,
 		})
 	})
+
+	// Public API routes (no auth — only non-sensitive, publicly-available data)
+	// Nightly E2E status is public GitHub Actions data, safe for desktop widgets
+	nightlyE2EPublic := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
+	s.app.Get("/api/public/nightly-e2e/runs", nightlyE2EPublic.GetRuns)
 
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
@@ -495,6 +519,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/nodes/stream", mcpHandlers.GetNodesStream)
 	api.Get("/mcp/gpu-nodes/stream", mcpHandlers.GetGPUNodesStream)
 	api.Get("/mcp/events/warnings/stream", mcpHandlers.GetWarningEventsStream)
+	api.Get("/mcp/jobs/stream", mcpHandlers.GetJobsStream)
+	api.Get("/mcp/configmaps/stream", mcpHandlers.GetConfigMapsStream)
+	api.Get("/mcp/secrets/stream", mcpHandlers.GetSecretsStream)
+	api.Get("/mcp/nvidia-operators/stream", mcpHandlers.GetNVIDIAOperatorStatusStream)
 
 	// GitOps routes (drift detection and sync)
 	// SECURITY: All GitOps routes require authentication in both dev and production modes
@@ -505,8 +533,14 @@ func (s *Server) setupRoutes() {
 	api.Get("/gitops/helm-values", gitopsHandlers.GetHelmValues)
 	api.Get("/gitops/kustomizations", gitopsHandlers.ListKustomizations)
 	api.Get("/gitops/operators", gitopsHandlers.ListOperators)
+	api.Get("/gitops/operators/stream", gitopsHandlers.StreamOperators)
+	api.Get("/gitops/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
+	api.Get("/gitops/operator-subscriptions/stream", gitopsHandlers.StreamOperatorSubscriptions)
+	api.Get("/gitops/helm-releases/stream", gitopsHandlers.StreamHelmReleases)
 	api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
 	api.Post("/gitops/sync", gitopsHandlers.Sync)
+	// Frontend compatibility alias
+	api.Get("/mcp/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
 
 	// MCS (Multi-Cluster Service) routes
 	mcsHandlers := handlers.NewMCSHandlers(s.k8sClient, s.hub)
@@ -576,6 +610,10 @@ func (s *Server) setupRoutes() {
 	benchmarkHandlers := handlers.NewBenchmarkHandlers(s.config.BenchmarkGoogleDriveAPIKey, s.config.BenchmarkFolderID)
 	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)
 	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
+
+	// Nightly E2E status (GitHub Actions proxy with server-side token + cache)
+	nightlyE2E := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
+	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
 
 	// GPU reservation routes
 	gpuHandler := handlers.NewGPUHandler(s.store)
@@ -748,6 +786,8 @@ func LoadConfigFromEnv() Config {
 		// Benchmark data from Google Drive
 		BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
 		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
+		// Sidebar dashboard filter
+		EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
 	}
 }
 

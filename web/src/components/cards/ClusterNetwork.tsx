@@ -4,6 +4,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterNetworkProps {
   config?: {
@@ -12,6 +13,7 @@ interface ClusterNetworkProps {
 }
 
 export function ClusterNetwork({ config }: ClusterNetworkProps) {
+  const { t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
 
@@ -145,11 +147,11 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <span className="text-sm text-foreground font-mono truncate">{serverInfo.host}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Port</span>
+              <span className="text-xs text-muted-foreground">{t('common.port')}</span>
               <span className="text-sm text-foreground font-mono">{serverInfo.port}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Protocol</span>
+              <span className="text-xs text-muted-foreground">{t('common.protocol')}</span>
               <span className="text-sm text-foreground font-mono uppercase">{serverInfo.protocol}</span>
             </div>
           </div>
@@ -176,7 +178,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <Shield className="w-4 h-4 text-purple-400" />
               <span className="text-sm text-muted-foreground">TLS</span>
             </div>
-            <span className="text-sm font-medium text-green-400">Enabled</span>
+            <span className="text-sm font-medium text-green-400">{t('common.enabled')}</span>
           </div>
         </div>
 
@@ -184,7 +186,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-muted-foreground">Nodes</span>
+              <span className="text-sm text-muted-foreground">{t('common.nodes')}</span>
             </div>
             <span className="text-sm font-medium text-foreground">{cluster?.nodeCount || 0}</span>
           </div>

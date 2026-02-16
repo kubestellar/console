@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useId } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Pencil, X, Check, Loader2, WifiOff, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, ChevronDown, HardDrive, Network, FolderOpen, Plus, Trash2, Box, Layers, Server, List, GitBranch, Eye, Terminal, FileText, Info, Activity, Briefcase, Lock, Settings, LayoutGrid, Wrench } from 'lucide-react'
 import {
@@ -49,6 +49,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { Gauge } from '../charts/Gauge'
 import { ClusterCardSkeleton, StatsOverviewSkeleton } from '../ui/ClusterCardSkeleton'
 import { useIsModeSwitching } from '../../lib/unified/demo'
+import { useTranslation } from 'react-i18next'
 
 // Helper to format labels/annotations for tooltip
 function formatMetadata(labels?: Record<string, string>, annotations?: Record<string, string>): string {
@@ -91,8 +92,10 @@ interface ResourceDetailModalProps {
 }
 
 function ResourceDetailModal({ resource, onClose }: ResourceDetailModalProps) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'describe' | 'labels' | 'logs'>('describe')
   const { startMission } = useMissions()
+  const titleId = useId()
 
   const handleRepairPod = () => {
     const issues = resource.data?.issues as string[] | undefined
@@ -180,10 +183,20 @@ Start by running diagnostic commands to understand what's happening.`,
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="glass p-6 rounded-lg w-[700px] max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+      onClick={onClose}
+      role="presentation"
+    >
+      <div 
+        className="glass p-6 rounded-lg w-[700px] max-h-[80vh] overflow-hidden flex flex-col" 
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+          <div id={titleId} className="flex items-center gap-2">
             <span className={`flex items-center gap-1 px-2 py-1 rounded text-sm font-medium ${getKindColors()}`}>
               {getKindIcon()}
               {resource.kind}
@@ -196,10 +209,10 @@ Start by running diagnostic commands to understand what's happening.`,
               <button
                 onClick={handleRepairPod}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
-                title="Launch AI repair mission"
+                title={t('cluster.launchAIRepairMission')}
               >
                 <Wrench className="w-4 h-4" />
-                Repair Pod
+                {t('cluster.repairPod')}
               </button>
             )}
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -214,20 +227,20 @@ Start by running diagnostic commands to understand what's happening.`,
             onClick={() => setActiveTab('describe')}
             className={`px-3 py-1.5 rounded-t text-sm flex items-center gap-1.5 ${activeTab === 'describe' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <FileText className="w-4 h-4" />Describe
+            <FileText className="w-4 h-4" />{t('drilldown.tabs.describe')}
           </button>
           <button
             onClick={() => setActiveTab('labels')}
             className={`px-3 py-1.5 rounded-t text-sm flex items-center gap-1.5 ${activeTab === 'labels' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <Info className="w-4 h-4" />Labels & Annotations
+            <Info className="w-4 h-4" />{t('cluster.labelsAndAnnotations')}
           </button>
           {resource.kind === 'Pod' && (
             <button
               onClick={() => setActiveTab('logs')}
               className={`px-3 py-1.5 rounded-t text-sm flex items-center gap-1.5 ${activeTab === 'logs' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              <Terminal className="w-4 h-4" />Logs
+              <Terminal className="w-4 h-4" />{t('drilldown.tabs.logs')}
             </button>
           )}
         </div>
@@ -239,8 +252,8 @@ Start by running diagnostic commands to understand what's happening.`,
               <div className="text-muted-foreground mb-2"># kubectl describe {resource.kind.toLowerCase()} {resource.name} {resource.namespace ? `-n ${resource.namespace}` : ''}</div>
               <div className="space-y-1">
                 <div><span className="text-muted-foreground">Name:</span> <span className="text-foreground">{resource.name}</span></div>
-                {resource.namespace && <div><span className="text-muted-foreground">Namespace:</span> <span className="text-foreground">{resource.namespace}</span></div>}
-                <div><span className="text-muted-foreground">Cluster:</span> <span className="text-foreground">{resource.cluster}</span></div>
+                {resource.namespace && <div><span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span> <span className="text-foreground">{resource.namespace}</span></div>}
+                <div><span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span> <span className="text-foreground">{resource.cluster}</span></div>
                 {resource.data && Object.entries(resource.data).map(([k, v]) => (
                   <div key={k}><span className="text-muted-foreground">{k}:</span> <span className="text-foreground">{String(v)}</span></div>
                 ))}
@@ -259,7 +272,7 @@ Start by running diagnostic commands to understand what's happening.`,
                     </span>
                   ))}
                   {(!resource.labels || Object.keys(resource.labels).length === 0) && (
-                    <span className="text-xs text-muted-foreground">No labels</span>
+                    <span className="text-xs text-muted-foreground">{t('drilldown.empty.noLabels')}</span>
                   )}
                 </div>
               </div>
@@ -273,7 +286,7 @@ Start by running diagnostic commands to understand what's happening.`,
                     </div>
                   ))}
                   {(!resource.annotations || Object.keys(resource.annotations).length === 0) && (
-                    <span className="text-xs text-muted-foreground">No annotations</span>
+                    <span className="text-xs text-muted-foreground">{t('drilldown.empty.noAnnotations')}</span>
                   )}
                 </div>
               </div>
@@ -289,13 +302,13 @@ Start by running diagnostic commands to understand what's happening.`,
                   disabled={logsLoading}
                   className="text-xs px-2 py-1 rounded bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-50"
                 >
-                  {logsLoading ? 'Loading...' : 'Refresh'}
+                  {logsLoading ? t('common.loading') : t('common.refresh')}
                 </button>
               </div>
-              {logsLoading && <div className="text-muted-foreground">Loading logs...</div>}
+              {logsLoading && <div className="text-muted-foreground">{t('cluster.loadingLogs')}</div>}
               {logsError && <div className="text-red-400">{logsError}</div>}
               {!logsLoading && !logsError && !logs && (
-                <div className="text-muted-foreground">No logs available</div>
+                <div className="text-muted-foreground">{t('cluster.noLogsAvailable')}</div>
               )}
               {!logsLoading && logs && (
                 <pre className="whitespace-pre-wrap break-all text-foreground">{logs}</pre>
@@ -317,6 +330,7 @@ interface NamespaceResourcesProps {
 type ResourceKind = 'Pod' | 'Deployment' | 'Service' | 'Job' | 'HPA' | 'ConfigMap' | 'Secret'
 
 function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps) {
+  const { t } = useTranslation()
   const { pods, isLoading: podsLoading } = usePods(clusterName, namespace, 'name', 100)
   const { deployments, isLoading: deploymentsLoading } = useDeployments(clusterName, namespace)
   const { services, isLoading: servicesLoading } = useServices(clusterName, namespace)
@@ -580,7 +594,7 @@ function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps)
                       data: resource.data
                     })}
                     className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="View details"
+                    title={t('common.viewDetails')}
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>
@@ -644,7 +658,7 @@ function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps)
               <div className="mb-1">
                 <button onClick={() => toggleType('pods')} className="flex items-center gap-1.5 py-1 hover:bg-card/30 rounded px-1 w-full text-left">
                   {expandedTypes.has('pods') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />Pod</span>
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />{t('common.pod')}</span>
                   <span className="text-muted-foreground">Standalone ({podsByDeployment.standalone.length})</span>
                 </button>
                 {expandedTypes.has('pods') && (
@@ -803,6 +817,7 @@ interface _ClusterDetailProps {
 
  
 export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetailProps) {
+  const { t } = useTranslation()
   const { health, isLoading } = useClusterHealth(clusterName)
   const { issues: podIssues } = usePodIssues(clusterName)
   const { issues: deploymentIssues } = useDeploymentIssues()
@@ -825,6 +840,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
   const [showNodeDetails, setShowNodeDetails] = useState(false)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [expandedNamespace, setExpandedNamespace] = useState<string | null>(null)
+  const titleId = useId()
 
   // ESC to close
   useEffect(() => {
@@ -888,30 +904,40 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="glass p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+      onClick={onClose}
+      role="presentation"
+    >
+      <div 
+        className="glass p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto" 
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         {/* Header with status icons */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             {isUnreachable ? (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 text-yellow-400" title="Offline - check network connection">
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 text-yellow-400" title={t('cluster.offline')}>
                 <WifiOff className="w-4 h-4" />
               </span>
             ) : isHealthy ? (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/20 text-green-400" title="Healthy">
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/20 text-green-400" title={t('cluster.healthy')}>
                 <CheckCircle className="w-4 h-4" />
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/20 text-orange-400" title="Unhealthy">
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/20 text-red-400" title={t('cluster.unhealthy')}>
                 <AlertTriangle className="w-4 h-4" />
               </span>
             )}
-            <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
+            <h2 id={titleId} className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
             {onRename && (
               <button
                 onClick={() => onRename(clusterName)}
                 className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-                title="Rename cluster"
+                title={t('cluster.renameCluster')}
               >
                 <Pencil className="w-4 h-4" />
               </button>
@@ -930,7 +956,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
             className={`p-4 rounded-lg bg-card/50 border text-left transition-colors ${
               !isUnreachable ? 'border-border hover:border-primary/50 hover:bg-card/70 cursor-pointer' : 'border-border cursor-default'
             } ${showNodeDetails ? 'border-primary/50 bg-card/70' : ''}`}
-            title={!isUnreachable ? 'Click to view node details' : undefined}
+            title={!isUnreachable ? t('cluster.clickToViewNodeDetails') : undefined}
           >
             <div className="text-2xl font-bold text-foreground">{!isUnreachable ? (health?.nodeCount || 0) : '-'}</div>
             <div className="text-sm text-muted-foreground flex items-center gap-1">
@@ -945,7 +971,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
             className={`p-4 rounded-lg bg-card/50 border text-left transition-colors ${
               !isUnreachable ? 'border-border hover:border-primary/50 hover:bg-card/70 cursor-pointer' : 'border-border cursor-default'
             } ${showPodsByNamespace ? 'border-primary/50 bg-card/70' : ''}`}
-            title={!isUnreachable ? 'Click to view workloads by namespace' : undefined}
+            title={!isUnreachable ? t('cluster.clickToViewWorkloads') : undefined}
           >
             <div className="text-sm text-muted-foreground flex items-center gap-1 mb-1">
               Workloads
@@ -959,11 +985,11 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                     <span className="text-foreground font-medium">{namespaceStats.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Deployments</span>
+                    <span className="text-muted-foreground">{t('common.deployments')}</span>
                     <span className="text-foreground font-medium">{clusterDeployments.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pods</span>
+                    <span className="text-muted-foreground">{t('common.pods')}</span>
                     <span className="text-foreground font-medium">{health?.podCount || 0}</span>
                   </div>
                 </>
@@ -974,8 +1000,8 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
           </button>
           <div className="p-4 rounded-lg bg-card/50 border border-border">
             <div className="text-2xl font-bold text-foreground">{!isUnreachable ? clusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0) : '-'}</div>
-            <div className="text-sm text-muted-foreground">GPUs</div>
-            <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} allocated` : ''}</div>
+            <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
+            <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} ${t('cluster.allocated')}` : ''}</div>
           </div>
         </div>
 
@@ -1022,14 +1048,14 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                   onClick={() => setShowAllNamespaces(!showAllNamespaces)}
                   className="w-full p-2 text-sm text-primary hover:bg-card/30 transition-colors border-t border-border/30"
                 >
-                  {showAllNamespaces ? 'Show less' : `Show all ${namespaceStats.length} namespaces`}
+                  {showAllNamespaces ? t('cluster.showLess') : t('cluster.showAllNamespaces', { count: namespaceStats.length })}
                 </button>
               )}
             </div>
             {nsLoading && (
               <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                Loading namespace data...
+                {t('cluster.loadingNamespaceData')}
               </div>
             )}
           </div>
@@ -1039,7 +1065,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
         {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-orange-400" />
+              <AlertTriangle className="w-4 h-4 text-red-400" />
               Issues ({podIssues.length + clusterDeploymentIssues.length})
             </h3>
             <div className="space-y-2">
@@ -1057,7 +1083,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                     >
                       <div className="flex items-center gap-2">
                         {isExpanded ? <ChevronDown className="w-4 h-4 text-red-400" /> : <ChevronRight className="w-4 h-4 text-red-400" />}
-                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />Pod</span>
+                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />{t('common.pod')}</span>
                         <span className="font-medium text-foreground">{issue.name}</span>
                         <span className="text-xs text-muted-foreground">({issue.namespace})</span>
                       </div>
@@ -1067,7 +1093,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                       <div className="px-3 pb-3 pt-0 border-t border-red-500/20">
                         <div className="pl-6 space-y-2 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Namespace:</span>
+                            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
                             <span className="ml-2 font-mono text-foreground">{issue.namespace}</span>
                           </div>
                           <div>
@@ -1076,7 +1102,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                           </div>
                           {issue.restarts !== undefined && issue.restarts > 0 && (
                             <div>
-                              <span className="text-muted-foreground">Restarts:</span>
+                              <span className="text-muted-foreground">{t('drilldown.fields.restarts')}</span>
                               <span className="ml-2 text-orange-400">{issue.restarts}</span>
                             </div>
                           )}
@@ -1120,27 +1146,27 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                 return (
                   <div
                     key={issueId}
-                    className="rounded-lg bg-orange-500/10 border border-orange-500/20 overflow-hidden"
+                    className="rounded-lg bg-red-500/10 border border-red-500/20 overflow-hidden"
                   >
                     <button
                       onClick={() => toggleIssue(issueId)}
-                      className="w-full p-3 flex items-center justify-between text-left hover:bg-orange-500/5 transition-colors"
+                      className="w-full p-3 flex items-center justify-between text-left hover:bg-red-500/5 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        {isExpanded ? <ChevronDown className="w-4 h-4 text-orange-400" /> : <ChevronRight className="w-4 h-4 text-orange-400" />}
+                        {isExpanded ? <ChevronDown className="w-4 h-4 text-red-400" /> : <ChevronRight className="w-4 h-4 text-red-400" />}
                         <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium"><Layers className="w-3 h-3" />Deploy</span>
                         <span className="font-medium text-foreground">{issue.name}</span>
                         <span className="text-xs text-muted-foreground">({issue.namespace})</span>
                       </div>
-                      <span className="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-400">
+                      <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">
                         {issue.readyReplicas}/{issue.replicas} ready
                       </span>
                     </button>
                     {isExpanded && (
-                      <div className="px-3 pb-3 pt-0 border-t border-orange-500/20">
+                      <div className="px-3 pb-3 pt-0 border-t border-red-500/20">
                         <div className="pl-6 space-y-2 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Namespace:</span>
+                            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
                             <span className="ml-2 font-mono text-foreground">{issue.namespace}</span>
                           </div>
                           <div>
@@ -1149,7 +1175,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                           </div>
                           {issue.message && (
                             <div>
-                              <span className="text-muted-foreground">Message:</span>
+                              <span className="text-muted-foreground">{t('drilldown.fields.message')}</span>
                               <span className="ml-2 text-orange-400">{issue.message}</span>
                             </div>
                           )}
@@ -1283,7 +1309,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
                 >
                   <div className="p-3 flex items-center justify-between border-b border-border/30">
                     <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium"><Server className="w-3 h-3" />Node</span>
+                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium"><Server className="w-3 h-3" />{t('common.node')}</span>
                       <span className="font-medium text-foreground">{node.name}</span>
                       {node.roles.map(role => (
                         <span key={role} className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{role}</span>
@@ -1363,6 +1389,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
 }
 
 export function Clusters() {
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
@@ -1680,8 +1707,8 @@ export function Clusters() {
     <div data-testid="clusters-page" className="pt-16">
       {/* Header */}
       <DashboardHeader
-        title="My Clusters"
-        subtitle="Manage your Kubernetes clusters"
+        title={t('navigation.clusters')}
+        subtitle={t('cluster.subtitle')}
         icon={<Server className="w-6 h-6 text-purple-400" />}
         isFetching={isFetching}
         onRefresh={triggerRefresh}
@@ -1907,7 +1934,7 @@ export function Clusters() {
                       deleteClusterGroup(group.id)
                     }}
                     className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                    title="Delete group"
+                    title={t('cluster.deleteGroup')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

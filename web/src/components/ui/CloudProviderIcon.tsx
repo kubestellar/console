@@ -1,5 +1,6 @@
 // Cloud provider icons as SVG components
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 export type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'kind' | 'minikube' | 'k3s' | 'kubernetes'
 
@@ -318,6 +319,26 @@ export function getProviderLabel(provider: CloudProvider): string {
     case 'minikube': return 'Minikube'
     case 'k3s': return 'K3s'
     default: return 'Kubernetes'
+  }
+}
+
+// Hook to get translated provider label
+export function useProviderLabel(provider: CloudProvider): string {
+  const { t } = useTranslation('common')
+
+  switch (provider) {
+    case 'eks': return t('cloudProviders.awsEks')
+    case 'gke': return t('cloudProviders.googleGke')
+    case 'aks': return t('cloudProviders.azureAks')
+    case 'openshift': return t('cloudProviders.openshift')
+    case 'oci': return t('cloudProviders.oracleOke')
+    case 'alibaba': return t('cloudProviders.alibabaAck')
+    case 'digitalocean': return t('cloudProviders.digitalocean')
+    case 'rancher': return t('cloudProviders.rancher')
+    case 'kind': return t('cloudProviders.kind')
+    case 'minikube': return t('cloudProviders.minikube')
+    case 'k3s': return t('cloudProviders.k3s')
+    default: return t('cloudProviders.kubernetes')
   }
 }
 

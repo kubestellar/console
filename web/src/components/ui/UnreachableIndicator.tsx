@@ -1,4 +1,5 @@
 import { WifiOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface UnreachableIndicatorProps {
   /** Size of the indicator */
@@ -33,6 +34,7 @@ export function UnreachableIndicator({
   tooltip = 'Offline - check network connection',
   className = '',
 }: UnreachableIndicatorProps) {
+  const { t } = useTranslation()
   return (
     <span
       className={`inline-flex items-center gap-1 text-yellow-400 ${className}`}
@@ -40,7 +42,7 @@ export function UnreachableIndicator({
     >
       <WifiOff className={SIZES[size]} />
       {showLabel && (
-        <span className={LABEL_SIZES[size]}>Offline</span>
+        <span className={LABEL_SIZES[size]}>{t('common.offline')}</span>
       )}
     </span>
   )

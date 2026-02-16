@@ -20,7 +20,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Synchronous fallback prevents flash during React transitions
   const isDemoMode = isDemoModeHook || getDemoMode()
   const [isOpen, setIsOpen] = useState(false)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // CLI-based agents (bob, claude-code) should be hidden when not available
@@ -57,7 +57,6 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Retry connection when dropdown is opened and agents are empty
   useEffect(() => {
     if (isOpen && agents.length === 0 && !agentsLoading && !isDemoMode) {
-      console.log('[AgentSelector] Dropdown opened with no agents, attempting reconnect...')
       connectToAgent()
     }
   }, [isOpen, agents.length, agentsLoading, isDemoMode, connectToAgent])
@@ -101,7 +100,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     return (
       <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>
         <Loader2 className="w-4 h-4 animate-spin" />
-        {!compact && <span>Loading...</span>}
+        {!compact && <span>{t('common.loading')}</span>}
       </div>
     )
   }
@@ -223,7 +222,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           <div className="border-t border-border">
             <button
               onClick={() => {
-                setShowSettingsModal(true)
+                setIsSettingsOpen(true)
                 setIsOpen(false)
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -235,7 +234,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         </div>
       )}
     </div>
-    {!isDemoMode && <APIKeySettings isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />}
+    {!isDemoMode && <APIKeySettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />}
     </>
   )
 }

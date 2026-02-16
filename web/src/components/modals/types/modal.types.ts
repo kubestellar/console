@@ -31,6 +31,7 @@ export type ResourceKind =
   | 'NetworkPolicy'
   | 'Event'
   | 'HelmRelease'
+  | 'BuildpackImage'
   | 'ArgoApplication'
   | 'Operator'
   | 'CRD'
@@ -388,6 +389,7 @@ export const RESOURCE_KIND_ICONS: Record<ResourceKind, string> = {
   NetworkPolicy: 'Network',
   Event: 'Zap',
   HelmRelease: 'Ship',
+  BuildpackImage: 'Package',
   ArgoApplication: 'GitBranch',
   Operator: 'Settings',
   CRD: 'Puzzle',

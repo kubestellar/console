@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import type { SimilarResolution, Resolution, ResolutionSteps } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 interface ResolutionKnowledgePanelProps {
   relatedResolutions: SimilarResolution[]
@@ -30,6 +31,7 @@ export function ResolutionKnowledgePanel({
   onApplyResolution,
   onSaveNewResolution,
 }: ResolutionKnowledgePanelProps) {
+  const { t: _t } = useTranslation()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Separate personal and shared

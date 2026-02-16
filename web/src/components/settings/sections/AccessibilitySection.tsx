@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Eye } from 'lucide-react'
 
 interface AccessibilitySectionProps {
@@ -17,6 +18,7 @@ export function AccessibilitySection({
   highContrast,
   setHighContrast,
 }: AccessibilitySectionProps) {
+  const { t } = useTranslation()
   return (
     <div id="accessibility-settings" className="glass rounded-xl p-6 relative z-0">
       <div className="flex items-center gap-3 mb-4">
@@ -24,8 +26,8 @@ export function AccessibilitySection({
           <Eye className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">Accessibility</h2>
-          <p className="text-sm text-muted-foreground">Customize accessibility features</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.accessibility.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.accessibility.subtitle')}</p>
         </div>
       </div>
 
@@ -33,9 +35,9 @@ export function AccessibilitySection({
         {/* Color Blind Mode */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
           <div>
-            <p className="text-sm font-medium text-foreground">Color Blind Mode</p>
+            <p className="text-sm font-medium text-foreground">{t('settings.accessibility.colorBlindMode')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Use icons and patterns instead of colors alone
+              {t('settings.accessibility.colorBlindModeDesc')}
             </p>
           </div>
           <button
@@ -57,9 +59,9 @@ export function AccessibilitySection({
         {/* Reduce Motion */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
           <div>
-            <p className="text-sm font-medium text-foreground">Reduce Motion</p>
+            <p className="text-sm font-medium text-foreground">{t('settings.accessibility.reduceMotion')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Minimize animations and transitions
+              {t('settings.accessibility.reduceMotionDesc')}
             </p>
           </div>
           <button
@@ -81,9 +83,9 @@ export function AccessibilitySection({
         {/* High Contrast */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
           <div>
-            <p className="text-sm font-medium text-foreground">High Contrast</p>
+            <p className="text-sm font-medium text-foreground">{t('settings.accessibility.highContrast')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Increase contrast for better visibility
+              {t('settings.accessibility.highContrastDesc')}
             </p>
           </div>
           <button

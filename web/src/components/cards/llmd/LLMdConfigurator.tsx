@@ -10,6 +10,7 @@ import { Settings, Zap, Split, Layers, Scale, ChevronRight, Check, Copy, Externa
 import { getConfiguratorPresets, type ConfiguratorPreset } from '../../../lib/llmd/mockData'
 import { useReportCardDataState } from '../CardDataContext'
 import { Acronym } from './shared/PortalTooltip'
+import { useTranslation } from 'react-i18next'
 
 const CATEGORY_ICONS = {
   scheduling: Zap,
@@ -147,6 +148,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 }
 
 export function LLMdConfigurator() {
+  const { t } = useTranslation()
   const presets = useMemo(() => getConfiguratorPresets(), [])
   const [selectedPresetId, setSelectedPresetId] = useState<string>(presets[0]?.id || '')
 
@@ -299,12 +301,12 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
                   {copied ? (
                     <>
                       <Check size={12} className="text-green-400" />
-                      <span className="text-green-400">Copied!</span>
+                      <span className="text-green-400">{t('common.copied')}</span>
                     </>
                   ) : (
                     <>
                       <Copy size={12} />
-                      <span>Copy</span>
+                      <span>{t('common.copy')}</span>
                     </>
                   )}
                 </button>

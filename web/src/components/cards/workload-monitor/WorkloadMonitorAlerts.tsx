@@ -2,6 +2,7 @@ import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight } from 'luc
 import { useState } from 'react'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { CardAIActions } from '../../../lib/cards/CardComponents'
+import { useTranslation } from 'react-i18next'
 
 interface AlertsProps {
   issues: MonitorIssue[]
@@ -17,6 +18,7 @@ const SEVERITY_CONFIG = {
 }
 
 export function WorkloadMonitorAlerts({ issues, monitorType: _monitorType, expanded: forcedExpanded }: AlertsProps) {
+  const { t: _t } = useTranslation()
   const [localExpanded, setLocalExpanded] = useState(true)
   const isExpanded = forcedExpanded !== undefined ? forcedExpanded : localExpanded
 

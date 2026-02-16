@@ -12,6 +12,7 @@ import {
   CardAIActions,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface KustomizationStatusProps {
   config?: {
@@ -69,6 +70,7 @@ function getDemoKustomizations(): Kustomization[] {
 }
 
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
+  const { t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -337,11 +339,11 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-pink-500/10 text-center">
               <span className="text-lg font-bold text-pink-400">{totalItems}</span>
-              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-xs text-muted-foreground">{t('common.total')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center">
               <span className="text-lg font-bold text-green-400">{readyCount}</span>
-              <p className="text-xs text-muted-foreground">Ready</p>
+              <p className="text-xs text-muted-foreground">{t('common.ready')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-red-500/10 text-center">
               <span className="text-lg font-bold text-red-400">{notReadyCount}</span>

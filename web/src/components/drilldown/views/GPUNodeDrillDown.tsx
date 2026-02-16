@@ -4,6 +4,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useAllPods } from '../../../hooks/useMCP'
 import { Gauge } from '../../charts/Gauge'
 import { StatusIndicator, type Status } from '../../charts/StatusIndicator'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -30,6 +31,7 @@ function podStatusToIndicator(status: string): Status {
 }
 
 export function GPUNodeDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const nodeName = data.node as string
   const gpuType = data.gpuType as string
@@ -76,15 +78,15 @@ export function GPUNodeDrillDown({ data }: Props) {
       {/* GPU Details */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">Total GPUs</div>
+          <div className="text-sm text-muted-foreground mb-2">{t('common.totalGpus')}</div>
           <div className="text-2xl font-bold text-foreground">{gpuCount}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">Allocated</div>
+          <div className="text-sm text-muted-foreground mb-2">{t('common.allocated')}</div>
           <div className="text-2xl font-bold text-yellow-400">{gpuAllocated}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">Available</div>
+          <div className="text-sm text-muted-foreground mb-2">{t('common.available')}</div>
           <div className="text-2xl font-bold text-green-400">{gpuCount - gpuAllocated}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
@@ -178,7 +180,7 @@ export function GPUNodeDrillDown({ data }: Props) {
               <dd className="font-mono text-foreground break-all">{nodeName}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Cluster</dt>
+              <dt className="text-muted-foreground">{t('common.cluster')}</dt>
               <dd className="font-mono text-foreground">{cluster.split('/').pop()}</dd>
             </div>
             <div>

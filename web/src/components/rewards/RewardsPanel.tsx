@@ -7,8 +7,10 @@ import { Coins, Trophy, Gift, Github, Bug, Lightbulb, Star, ChevronRight } from 
 import { useRewards, REWARD_ACTIONS, ACHIEVEMENTS } from '../../hooks/useRewards'
 import { GitHubInviteModal, GitHubInviteButton } from './GitHubInvite'
 import { LinkedInShareCard } from './LinkedInShare'
+import { useTranslation } from 'react-i18next'
 
 export function RewardsPanel() {
+  const { t: _t } = useTranslation()
   const [showGitHubInvite, setShowGitHubInvite] = useState(false)
   const { totalCoins, earnedAchievements, recentEvents, hasEarnedAction, getActionCount } = useRewards()
 

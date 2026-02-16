@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react'
 import { Bot } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
+import { useTranslation } from 'react-i18next'
 
 export const ANTHROPIC_KEY_STORAGE = 'kubestellar-anthropic-key'
 
 // Hook to check if any AI agent is available (API-based or CLI-based)
 export function useApiKeyCheck() {
+  const { t: _t } = useTranslation()
   const [showKeyPrompt, setShowKeyPrompt] = useState(false)
   const { agents, selectedAgent, openSidebar } = useMissions()
 

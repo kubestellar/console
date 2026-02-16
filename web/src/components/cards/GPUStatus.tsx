@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Activity, ChevronRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -29,6 +30,7 @@ interface ClusterGPUStats {
 }
 
 export function GPUStatus({ config }: GPUStatusProps) {
+  const { t } = useTranslation('common')
   const cluster = config?.cluster as string | undefined
   const {
     nodes: rawNodes,
@@ -198,7 +200,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search GPU clusters..."
+        placeholder={t('common.searchGPUClusters')}
         className="mb-2"
       />
 
@@ -209,7 +211,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
           onChange={(e) => setSelectedGpuType(e.target.value)}
           className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-3"
         >
-          <option value="all">All GPU Types</option>
+          <option value="all">{t('selectors.allGpuTypes')}</option>
           {gpuTypes.map(type => (
             <option key={type} value={type}>{type}</option>
           ))}

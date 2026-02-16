@@ -7,8 +7,10 @@ import { formatStat, formatMemoryStat } from '../../lib/formatStats'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
+import { useTranslation } from 'react-i18next'
 
 export function ComputeOverview() {
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -197,7 +199,7 @@ export function ComputeOverview() {
         >
           <div className="flex items-center gap-2 mb-1">
             <MemoryStick className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-green-400">Memory</span>
+            <span className="text-xs text-green-400">{t('common.memory')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">
             {formatMemoryStat(stats.totalMemoryGB, hasRealData)}
@@ -211,11 +213,11 @@ export function ComputeOverview() {
         <div
           className="p-2 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary/70 transition-colors"
           onClick={drillToResources}
-          title={hasRealData ? `${stats.totalNodes} worker nodes across all clusters - Click for details` : 'No data available'}
+          title={hasRealData ? `${stats.totalNodes} worker nodes across all clusters - Click for details` : t('common.noData')}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Server className="w-3 h-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Nodes</span>
+            <span className="text-xs text-muted-foreground">{t('common.nodes')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalNodes) : '-'}
@@ -224,11 +226,11 @@ export function ComputeOverview() {
         <div
           className="p-2 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary/70 transition-colors"
           onClick={drillToResources}
-          title={hasRealData ? `${stats.totalPods} running pods across all clusters - Click for details` : 'No data available'}
+          title={hasRealData ? `${stats.totalPods} running pods across all clusters - Click for details` : t('common.noData')}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Box className="w-3 h-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Pods</span>
+            <span className="text-xs text-muted-foreground">{t('common.pods')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalPods) : '-'}

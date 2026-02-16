@@ -9,6 +9,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 // PVC List Modal
 interface PVCListModalProps {
@@ -21,6 +22,7 @@ interface PVCListModalProps {
 }
 
 function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSelectPVC }: PVCListModalProps) {
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
 
   // Filter by status and search query
@@ -61,7 +63,7 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
       <div className="px-6 py-4 border-b border-border">
         <input
           type="text"
-          placeholder="Search by name, namespace, cluster, or storage class..."
+          placeholder={t('common.search')} // TODO by name, namespace, cluster, or storage class..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -118,6 +120,7 @@ const STORAGE_CARDS_KEY = 'kubestellar-storage-cards'
 const DEFAULT_STORAGE_CARDS = getDefaultCards('storage')
 
 export function Storage() {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const {
     selectedClusters: globalSelectedClusters,

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, RotateCcw, Pause, Trophy, Target, Heart, Crosshair } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Canvas dimensions
 const CANVAS_WIDTH = 480
@@ -87,6 +88,7 @@ function spawnEnemies(level: number): Enemy[] {
 }
 
 export function KubeDoom() {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)

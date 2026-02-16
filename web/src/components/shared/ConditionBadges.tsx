@@ -1,4 +1,5 @@
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 export interface Condition {
   type: string
@@ -40,6 +41,7 @@ export function ConditionBadges({ conditions, className }: ConditionBadgesProps)
  * Get the appropriate style class for a condition badge
  */
 export function getConditionStyle(condition: Condition): string {
+  const { t: _t } = useTranslation()
   const { type, status } = condition
 
   if (type === 'Ready') {

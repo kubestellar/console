@@ -1,6 +1,7 @@
 import { CheckCircle, XCircle, AlertTriangle, HelpCircle, MinusCircle } from 'lucide-react'
 import { getIconForKind } from '../../../lib/resourceCategories'
 import type { MonitoredResource, ResourceHealthStatus } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface ListProps {
   resources: MonitoredResource[]
@@ -36,6 +37,7 @@ const CATEGORY_BADGE: Record<string, string> = {
 }
 
 export function WorkloadMonitorList({ resources, onResourceClick }: ListProps) {
+  const { t: _t } = useTranslation()
   if (resources.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-4">

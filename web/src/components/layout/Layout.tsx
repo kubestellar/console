@@ -1,4 +1,5 @@
 import { ReactNode, Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw } from 'lucide-react'
 import { Navbar } from './navbar/index'
@@ -100,6 +101,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const { t } = useTranslation()
   const { config } = useSidebarConfig()
   const { isMobile } = useMobile()
   const { isSidebarOpen: isMissionSidebarOpen, isSidebarMinimized: isMissionSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
@@ -348,7 +350,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-3 md:px-4">
             <div className="flex items-center gap-2 min-w-0">
               <WifiOff className="w-4 h-4 text-orange-400 shrink-0" />
-              <span className="text-sm text-orange-400 font-medium shrink-0">Offline</span>
+              <span className="text-sm text-orange-400 font-medium shrink-0">{t('common.offline')}</span>
               <span className="hidden lg:inline text-xs text-orange-400/70 truncate">
                 — Install: <code className="bg-orange-500/20 px-1 rounded">brew install kubestellar/tap/kc-agent</code> → run <code className="bg-orange-500/20 px-1 rounded">kc-agent</code>
               </span>

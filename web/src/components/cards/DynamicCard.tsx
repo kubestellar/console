@@ -9,6 +9,7 @@ import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { cn } from '../../lib/cn'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
 import type { CardComponentProps, CardComponent } from './cardRegistry'
+import { useTranslation } from 'react-i18next'
 
 /**
  * DynamicCard: Meta-component that renders dynamic card definitions.
@@ -20,6 +21,7 @@ import type { CardComponentProps, CardComponent } from './cardRegistry'
  * config.dynamicCardId determines which definition to render.
  */
 export function DynamicCard({ config }: CardComponentProps) {
+  const { t: _t } = useTranslation()
   const dynamicCardId = (config?.dynamicCardId as string) || ''
   const definition = getDynamicCard(dynamicCardId)
 
@@ -65,6 +67,7 @@ export interface Tier1Props {
 }
 
 export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
+  const { t } = useTranslation()
   const [apiData, setApiData] = useState<Record<string, unknown>[]>([])
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
@@ -186,7 +189,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
             type="text"
             value={filters.search}
             onChange={(e) => filters.setSearch(e.target.value)}
-            placeholder="Search..."
+            placeholder={t('common.search')}
             className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
           />
         </div>

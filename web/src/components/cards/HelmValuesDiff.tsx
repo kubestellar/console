@@ -10,6 +10,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface HelmValuesDiffProps {
   config?: {
@@ -52,6 +53,7 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
+  const { t: _t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')

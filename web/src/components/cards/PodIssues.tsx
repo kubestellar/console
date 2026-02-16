@@ -11,6 +11,7 @@ import {
   CardControlsRow, CardListItem, CardPaginationFooter,
   CardAIActions,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'restarts' | 'cluster'
 
@@ -29,9 +30,11 @@ const getIssueIcon = (status: string): { icon: typeof MemoryStick; tooltip: stri
 }
 
 export function PodIssues() {
+  const { t } = useTranslation()
   const {
     issues: rawIssues,
     isLoading: hookLoading,
+    isDemoFallback,
     isFailed,
     consecutiveFailures,
     error
@@ -40,6 +43,7 @@ export function PodIssues() {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: rawIssues.length > 0,
     isFailed,
     consecutiveFailures,
@@ -158,7 +162,7 @@ export function PodIssues() {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search issues..."
+        placeholder={t('common.searchIssues')}
         className="mb-3"
       />
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Clock, X, ArrowRight, Bell, Lightbulb, Zap, AlertTriangle, Shield, Server, Scale, Activity } from 'lucide-react'
 import { useSnoozedCards, formatTimeRemaining, SnoozedSwap } from '../../hooks/useSnoozedCards'
 import { useSnoozedRecommendations, formatElapsedTime, SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
@@ -23,6 +24,7 @@ interface SnoozedCardsProps {
 }
 
 export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMission }: SnoozedCardsProps) {
+  const { t } = useTranslation()
   const { snoozedSwaps, unsnoozeSwap, dismissSwap } = useSnoozedCards()
   const { snoozedRecommendations, unsnooozeRecommendation, dismissSnoozedRecommendation } = useSnoozedRecommendations()
   const { snoozedMissions, unsnoozeMission, dismissMission } = useSnoozedMissions()
@@ -45,15 +47,15 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
         <div className="flex items-center gap-2 px-3 mb-2">
           <Clock className="w-4 h-4 text-muted-foreground" />
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Snoozed Items
+            {t('sidebar.snoozedItems')}
           </h4>
         </div>
         <div className="mx-2 p-3 rounded-lg border border-dashed border-border/50 text-center">
           <p className="text-xs text-muted-foreground">
-            No snoozed items
+            {t('sidebar.noSnoozedItems')}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-1">
-            Snooze cards or suggestions to see them here
+            {t('sidebar.snoozedItemsHint')}
           </p>
         </div>
       </div>
@@ -88,7 +90,7 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
       <div className="flex items-center gap-2 px-3 mb-2">
         <Lightbulb className="w-4 h-4 text-purple-400" />
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Snoozed Actions
+          {t('sidebar.snoozedActions')}
         </h4>
         <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">
           {snoozedMissions.length}
@@ -113,7 +115,7 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
       <div className="flex items-center gap-2 px-3 mb-2">
         <Lightbulb className="w-4 h-4 text-yellow-400" />
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Snoozed Recommendations
+          {t('sidebar.snoozedRecommendations')}
         </h4>
         <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">
           {snoozedRecommendations.length}
@@ -138,7 +140,7 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
       <div className="flex items-center gap-2 px-3 mb-2">
         <Clock className="w-4 h-4 text-purple-400" />
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Snoozed Swaps
+          {t('sidebar.snoozedSwaps')}
         </h4>
         <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">
           {snoozedSwaps.length}
@@ -167,6 +169,7 @@ interface SnoozedItemProps {
 }
 
 function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
+  const { t } = useTranslation()
   const [isHovered, setIsHovered] = useState(false)
   const timeRemaining = formatTimeRemaining(swap.snoozedUntil)
   const isExpired = timeRemaining === 'Expired'
@@ -206,7 +209,7 @@ function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
           {isExpired ? (
             <>
               <Bell className="w-3 h-3 animate-pulse" />
-              Ready to swap
+              {t('sidebar.readyToSwap')}
             </>
           ) : (
             <>
@@ -221,7 +224,7 @@ function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
             onClick={onApply}
             className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
           >
-            Apply
+            {t('actions.apply')}
           </button>
         )}
       </div>
@@ -243,6 +246,7 @@ interface SnoozedRecommendationItemProps {
 }
 
 function SnoozedRecommendationItem({ rec, onApply, onDismiss }: SnoozedRecommendationItemProps) {
+  const { t } = useTranslation()
   const [isHovered, setIsHovered] = useState(false)
   const elapsedTime = formatElapsedTime(rec.snoozedAt)
 
@@ -301,7 +305,7 @@ function SnoozedRecommendationItem({ rec, onApply, onDismiss }: SnoozedRecommend
                 : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
             )}
           >
-            Restore
+            {t('actions.restore')}
           </button>
         )}
       </div>
@@ -323,6 +327,7 @@ interface SnoozedMissionItemProps {
 }
 
 function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissionItemProps) {
+  const { t } = useTranslation()
   const [isHovered, setIsHovered] = useState(false)
   const timeRemaining = formatMissionTimeRemaining(mission.expiresAt - Date.now())
   const isExpired = mission.expiresAt <= Date.now()
@@ -376,7 +381,7 @@ function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissionItemP
           {isExpired ? (
             <>
               <Bell className="w-3 h-3 animate-pulse" />
-              Ready
+              {t('sidebar.ready')}
             </>
           ) : (
             <>
@@ -394,7 +399,7 @@ function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissionItemP
               'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
             )}
           >
-            Restore
+            {t('actions.restore')}
           </button>
         )}
       </div>

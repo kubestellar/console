@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
 import { useRewards } from '../../hooks/useRewards'
+import { useTranslation } from 'react-i18next'
 
 interface GitHubInviteProps {
   isOpen: boolean
@@ -39,6 +40,7 @@ function saveInvite(username: string): void {
 }
 
 export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
+  const { t: _t } = useTranslation()
   const [username, setUsername] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)

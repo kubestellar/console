@@ -21,6 +21,7 @@ import { WorkloadMonitorTree } from './WorkloadMonitorTree'
 import { WorkloadMonitorList } from './WorkloadMonitorList'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
+import { useTranslation } from 'react-i18next'
 
 interface WorkloadMonitorProps {
   config?: Record<string, unknown>
@@ -31,6 +32,7 @@ type SortField = 'name' | 'kind' | 'status' | 'category' | 'order'
 const STATUS_ORDER: Record<string, number> = { unhealthy: 0, missing: 1, degraded: 2, unknown: 3, healthy: 4 }
 
 export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
+  const { t } = useTranslation()
   const monitorConfig = config as WorkloadMonitorConfig | undefined
 
   // Cascading selectors (used when config doesn't pre-specify the workload)
@@ -167,7 +169,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
       {!isPreConfigured && (
         <div className="space-y-2 mb-3">
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground w-20 shrink-0">Cluster</label>
+            <label className="text-xs text-muted-foreground w-20 shrink-0">{t('common.cluster')}</label>
             <select
               value={selectedCluster}
               onChange={(e) => handleClusterChange(e.target.value)}
@@ -180,7 +182,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground w-20 shrink-0">Namespace</label>
+            <label className="text-xs text-muted-foreground w-20 shrink-0">{t('common.namespace')}</label>
             <select
               value={selectedNamespace}
               onChange={(e) => handleNamespaceChange(e.target.value)}
@@ -190,7 +192,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
                 (!selectedCluster || nsLoading) && 'opacity-50 cursor-not-allowed',
               )}
             >
-              <option value="">{nsLoading ? 'Loading...' : 'Select namespace...'}</option>
+              <option value="">{nsLoading ? t('common.loading') : 'Select namespace...'}</option>
               {namespaces.map(ns => (
                 <option key={ns} value={ns}>{ns}</option>
               ))}
@@ -207,7 +209,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
                 (!selectedNamespace || wlLoading) && 'opacity-50 cursor-not-allowed',
               )}
             >
-              <option value="">{wlLoading ? 'Loading...' : 'Select workload...'}</option>
+              <option value="">{wlLoading ? t('common.loading') : 'Select workload...'}</option>
               {workloads?.map(w => (
                 <option key={`${w.type}-${w.name}`} value={w.name}>
                   {w.name} ({w.type})
@@ -258,7 +260,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
               onClick={refetch}
               disabled={isRefreshing}
               className="p-1 rounded hover:bg-secondary transition-colors"
-              title="Refresh"
+              title={t('common.refresh')}
             >
               {isRefreshing
                 ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />

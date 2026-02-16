@@ -701,16 +701,16 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
       size="xl"
       closeOnBackdrop={false}
     >
-      <BaseModal.Header title="Card Factory" icon={Wand2} onClose={onClose} showBack={false} />
+      <BaseModal.Header title={t('dashboard.cardFactory.title')} icon={Wand2} onClose={onClose} showBack={false} />
       <BaseModal.Content className="max-h-[70vh]">
       <div className="flex flex-col">
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-border pb-2 mb-4">
           {[
-            { id: 'declarative' as Tab, label: 'Declarative', icon: Layers },
-            { id: 'code' as Tab, label: 'Custom Code', icon: Code },
-            { id: 'ai' as Tab, label: 'AI Create', icon: Sparkles },
-            { id: 'manage' as Tab, label: 'Manage', icon: Wand2 },
+            { id: 'declarative' as Tab, label: t('dashboard.cardFactory.declarativeTab'), icon: Layers },
+            { id: 'code' as Tab, label: t('dashboard.cardFactory.customCodeTab'), icon: Code },
+            { id: 'ai' as Tab, label: t('dashboard.cardFactory.aiCreateTab'), icon: Sparkles },
+            { id: 'manage' as Tab, label: t('dashboard.cardFactory.manageTab'), icon: Wand2 },
           ].map(t => (
             <button
               key={t.id}
@@ -755,49 +755,49 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                 <TemplateDropdown
                   templates={T1_TEMPLATES}
                   onSelect={applyT1Template}
-                  label="Declarative Templates"
+                  label={t('dashboard.cardFactory.declarativeTemplates')}
                 />
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Title *</label>
+                    <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.titleRequired')}</label>
                     <input
                       type="text"
                       value={t1Title}
                       onChange={e => setT1Title(e.target.value)}
-                      placeholder="My Custom Card"
+                      placeholder={t('dashboard.cardFactory.titlePlaceholder')}
                       className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Width (columns)</label>
+                    <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.widthLabel')}</label>
                     <select
                       value={t1Width}
                       onChange={e => setT1Width(Number(e.target.value))}
                       className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
-                      <option value={3}>Small (3)</option>
-                      <option value={4}>Medium (4)</option>
-                      <option value={6}>Large (6)</option>
-                      <option value={8}>Wide (8)</option>
-                      <option value={12}>Full (12)</option>
+                      <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
+                      <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
+                      <option value={6}>{t('dashboard.cardFactory.widthLarge')}</option>
+                      <option value={8}>{t('dashboard.cardFactory.widthWide')}</option>
+                      <option value={12}>{t('dashboard.cardFactory.widthFull')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Description</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.descriptionLabel')}</label>
                   <input
                     type="text"
                     value={t1Description}
                     onChange={e => setT1Description(e.target.value)}
-                    placeholder="What does this card show?"
+                    placeholder={t('dashboard.cardFactory.descPlaceholder')}
                     className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Layout</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.layoutLabel')}</label>
                   <div className="flex gap-2">
                     {(['list', 'stats', 'stats-and-list'] as const).map(l => (
                       <button
@@ -819,13 +819,13 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                 {/* Columns */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs text-muted-foreground">Columns</label>
+                    <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.columnsLabel')}</label>
                     <button
                       onClick={addColumn}
                       className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Plus className="w-3 h-3" />
-                      Add
+                      {t('dashboard.cardFactory.addColumn')}
                     </button>
                   </div>
                   <div className="space-y-2">
@@ -835,14 +835,14 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                           type="text"
                           value={col.field}
                           onChange={e => updateColumn(idx, 'field', e.target.value)}
-                          placeholder="field"
+                          placeholder={t('dashboard.cardFactory.fieldPlaceholder')}
                           className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <input
                           type="text"
                           value={col.label}
                           onChange={e => updateColumn(idx, 'label', e.target.value)}
-                          placeholder="Label"
+                          placeholder={t('dashboard.cardFactory.labelPlaceholder')}
                           className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <select
@@ -875,7 +875,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
 
                 {/* Static data JSON */}
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Data (JSON array)</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.dataLabel')}</label>
                   <textarea
                     value={t1DataJson}
                     onChange={e => setT1DataJson(e.target.value)}
@@ -896,7 +896,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                   )}
                 >
                   <Save className="w-4 h-4" />
-                  Create Card
+                  {t('dashboard.cardFactory.createCard')}
                 </button>
               </div>
 
@@ -908,7 +908,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                   columns: t1Columns,
                   staticData: t1PreviewData,
                 }}
-                title={t1Title || 'Untitled Card'}
+                title={t1Title || t('dashboard.cardFactory.untitledCard')}
                 width={t1Width}
               />
             </div>
@@ -931,43 +931,43 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                 <TemplateDropdown
                   templates={T2_TEMPLATES}
                   onSelect={applyT2Template}
-                  label="Code Templates"
+                  label={t('dashboard.cardFactory.codeTemplates')}
                 />
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Title *</label>
+                    <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.titleRequired')}</label>
                     <input
                       type="text"
                       value={t2Title}
                       onChange={e => setT2Title(e.target.value)}
-                      placeholder="My Custom Card"
+                      placeholder={t('dashboard.cardFactory.titlePlaceholder')}
                       className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Width (columns)</label>
+                    <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.widthLabel')}</label>
                     <select
                       value={t2Width}
                       onChange={e => setT2Width(Number(e.target.value))}
                       className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
-                      <option value={3}>Small (3)</option>
-                      <option value={4}>Medium (4)</option>
-                      <option value={6}>Large (6)</option>
-                      <option value={8}>Wide (8)</option>
-                      <option value={12}>Full (12)</option>
+                      <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
+                      <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
+                      <option value={6}>{t('dashboard.cardFactory.widthLarge')}</option>
+                      <option value={8}>{t('dashboard.cardFactory.widthWide')}</option>
+                      <option value={12}>{t('dashboard.cardFactory.widthFull')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Description</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.descriptionLabel')}</label>
                   <input
                     type="text"
                     value={t2Description}
                     onChange={e => setT2Description(e.target.value)}
-                    placeholder="What does this card do?"
+                    placeholder={t('dashboard.cardFactory.codeDescPlaceholder')}
                     className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
@@ -975,13 +975,13 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                 {/* Code editor */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs text-muted-foreground">TSX Source Code</label>
+                    <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.tsxSourceCode')}</label>
                     <button
                       onClick={handleCompile}
                       className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Eye className="w-3 h-3" />
-                      Validate
+                      {t('dashboard.cardFactory.validate')}
                     </button>
                   </div>
                   <textarea
@@ -996,13 +996,13 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                   {compileStatus === 'compiling' && (
                     <div className="mt-2 flex items-center gap-2">
                       <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-                      <span className="text-xs text-muted-foreground">Compiling...</span>
+                      <span className="text-xs text-muted-foreground">{t('dashboard.cardFactory.compiling')}</span>
                     </div>
                   )}
                   {compileStatus === 'success' && (
                     <div className="mt-2 flex items-center gap-2">
                       <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-                      <span className="text-xs text-green-400">Compilation successful!</span>
+                      <span className="text-xs text-green-400">{t('dashboard.cardFactory.compilationSuccess')}</span>
                     </div>
                   )}
                   {compileStatus === 'error' && compileError && (
@@ -1015,7 +1015,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
 
                 {/* Available APIs info */}
                 <div className="rounded-md bg-secondary/30 border border-border/50 p-3">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Available in scope:</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">{t('dashboard.cardFactory.availableInScope')}</p>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
                     React, useState, useEffect, useMemo, useCallback, useRef, useReducer,
                     cn, useCardData, commonComparators, Skeleton, Pagination,
@@ -1035,7 +1035,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                   )}
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {saving ? 'Compiling & Saving...' : 'Create Card'}
+                  {saving ? t('dashboard.cardFactory.compilingAndSaving') : t('dashboard.cardFactory.createCard')}
                 </button>
               </div>
 
@@ -1043,7 +1043,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
               <LivePreviewPanel
                 tier="tier2"
                 t2Source={t2Source}
-                title={t2Title || 'Untitled Card'}
+                title={t2Title || t('dashboard.cardFactory.untitledCard')}
                 width={t2Width}
               />
             </div>
@@ -1067,9 +1067,9 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
               {existingCards.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Wand2 className="w-8 h-8 text-muted-foreground/40 mb-2" />
-                  <p className="text-sm text-muted-foreground">No custom cards created yet.</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.cardFactory.noCustomCards')}</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
-                    Use the Declarative or Code tab to create your first card.
+                    {t('dashboard.cardFactory.useDeclarativeOrCode')}
                   </p>
                 </div>
               ) : (
@@ -1082,7 +1082,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                           'text-[10px] px-1.5 py-0.5 rounded',
                           card.tier === 'tier1' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400',
                         )}>
-                          {card.tier === 'tier1' ? 'Declarative' : 'Custom Code'}
+                          {card.tier === 'tier1' ? t('dashboard.cardFactory.declarativeBadge') : t('dashboard.cardFactory.customCodeBadge')}
                         </span>
                       </div>
                       {card.description && (
@@ -1095,7 +1095,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     <button
                       onClick={() => handleDelete(card.id)}
                       className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
-                      title="Delete card"
+                      title={t('dashboard.cardFactory.deleteCard')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

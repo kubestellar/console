@@ -23,6 +23,7 @@ import {
 } from 'three'
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js'
 import { Play, Pause, RotateCcw, Sun, Moon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 // Block types with colors and properties
 type BlockType = 'air' | 'grass' | 'dirt' | 'stone' | 'wood' | 'leaves' | 'water' | 'sand' | 'brick' | 'glass' | 'bedrock'
@@ -158,6 +159,7 @@ function generateTerrain(): Block[][][] {
 }
 
 export function KubeCraft3D() {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const containerRef = useRef<HTMLDivElement>(null)

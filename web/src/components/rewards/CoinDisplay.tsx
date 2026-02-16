@@ -4,6 +4,7 @@
 
 import { Coins } from 'lucide-react'
 import { useRewards } from '../../hooks/useRewards'
+import { useTranslation } from 'react-i18next'
 
 interface CoinDisplayProps {
   size?: 'sm' | 'md' | 'lg'
@@ -12,6 +13,7 @@ interface CoinDisplayProps {
 }
 
 export function CoinDisplay({ size = 'md', showLabel = false, className = '' }: CoinDisplayProps) {
+  const { t: _t } = useTranslation()
   const { totalCoins, isLoading } = useRewards()
 
   const sizeClasses = {

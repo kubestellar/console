@@ -18,6 +18,7 @@ import {
 } from 'recharts'
 import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useTranslation } from 'react-i18next'
 
 interface GPUPoint {
   time: string
@@ -36,6 +37,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
 ]
 
 export function GPUUtilization() {
+  const { t } = useTranslation()
   const {
     nodes: gpuNodes,
     isLoading: hookLoading,
@@ -320,15 +322,15 @@ export function GPUUtilization() {
         {/* Stats */}
         <div className="flex-1 grid grid-cols-3 gap-2">
           <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-            <div className="text-xs text-purple-400 mb-1">Allocated</div>
+            <div className="text-xs text-purple-400 mb-1">{t('common.allocated')}</div>
             <span className="text-lg font-bold text-foreground">{currentStats.allocated}</span>
           </div>
           <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-            <div className="text-xs text-green-400 mb-1">Available</div>
+            <div className="text-xs text-green-400 mb-1">{t('common.available')}</div>
             <span className="text-lg font-bold text-foreground">{currentStats.available}</span>
           </div>
           <div className="p-2 rounded-lg bg-secondary/50">
-            <div className="text-xs text-muted-foreground mb-1">Total</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('common.total')}</div>
             <span className="text-lg font-bold text-foreground">{currentStats.total}</span>
           </div>
         </div>

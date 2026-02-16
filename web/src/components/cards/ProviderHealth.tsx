@@ -8,6 +8,7 @@ import type { CloudProvider } from '../ui/CloudProviderIcon'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { ROUTES } from '../../config/routes'
+import { useTranslation } from 'react-i18next'
 
 const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   operational: 'bg-green-500',
@@ -83,6 +84,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
 }
 
 export function ProviderHealth() {
+  const { t: _t } = useTranslation()
   const { aiProviders, cloudProviders, isLoading } = useProviderHealth()
   const navigate = useNavigate()
 

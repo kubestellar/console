@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useTranslation } from 'react-i18next'
 
 // Board dimensions
 const ROWS = 20
@@ -486,6 +487,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
 }
 
 export function ContainerTetris(props: CardComponentProps) {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   return (
     <DynamicCardErrorBoundary cardId="ContainerTetris">

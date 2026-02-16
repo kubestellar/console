@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Monitor, Key, Rocket, X, Settings, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { cn } from '../../lib/cn'
@@ -6,6 +7,7 @@ import { cn } from '../../lib/cn'
 const DISMISSED_KEY = 'kc-welcome-dismissed'
 
 export function WelcomeCard() {
+  const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem(DISMISSED_KEY) === 'true'
   )
@@ -22,7 +24,7 @@ export function WelcomeCard() {
       <button
         onClick={handleDismiss}
         className="absolute top-3 right-3 p-1 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
-        title="Dismiss"
+        title={t('dashboard.welcome.dismiss')}
       >
         <X className="w-4 h-4" />
       </button>
@@ -32,8 +34,8 @@ export function WelcomeCard() {
           <Rocket className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-foreground">Getting Started</h3>
-          <p className="text-sm text-muted-foreground">You're up and running — just a few optional steps left</p>
+          <h3 className="text-base font-semibold text-foreground">{t('dashboard.welcome.gettingStarted')}</h3>
+          <p className="text-sm text-muted-foreground">{t('dashboard.welcome.subtitle')}</p>
         </div>
       </div>
 
@@ -41,37 +43,37 @@ export function WelcomeCard() {
         <Step
           number={1}
           icon={CheckCircle2}
-          title="Console is running"
-          description="Your KubeStellar Console is up and ready."
+          title={t('dashboard.welcome.step1Title')}
+          description={t('dashboard.welcome.step1Desc')}
           done
         />
         <Step
           number={2}
           icon={Monitor}
-          title="Connect a cluster"
-          description="Clusters are auto-detected from your kubeconfig. Place a kubeconfig at ~/.kube/config or configure via Settings."
+          title={t('dashboard.welcome.step2Title')}
+          description={t('dashboard.welcome.step2Desc')}
           action={
             <Link
               to="/settings"
               className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-purple-500/15 border border-purple-500/30 hover:bg-purple-500/25 text-purple-300 font-medium transition-colors"
             >
               <Settings className="w-3.5 h-3.5" />
-              Open Settings
+              {t('dashboard.welcome.openSettings')}
             </Link>
           }
         />
         <Step
           number={3}
           icon={Key}
-          title="Optional: Enable AI features"
-          description="Add API keys for Anthropic, OpenAI, or Google to enable AI-powered predictions and card suggestions."
+          title={t('dashboard.welcome.step3Title')}
+          description={t('dashboard.welcome.step3Desc')}
           action={
             <Link
               to="/settings"
               className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-secondary/50 border border-border/50 hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Settings className="w-3.5 h-3.5" />
-              Settings
+              {t('settings.title')}
             </Link>
           }
         />
@@ -85,7 +87,7 @@ export function WelcomeCard() {
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
-          Documentation
+          {t('dashboard.welcome.documentation')}
         </a>
       </div>
     </div>

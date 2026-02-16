@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -163,21 +164,20 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "releases": []HelmRelease{}})
 		}
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		var allReleases []HelmRelease
-		clusterTimeout := 15 * time.Second
+		allReleases := make([]HelmRelease, 0)
 
 		for _, cl := range clusters {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
-				ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+				ctx, cancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
 				defer cancel()
 
 				releases := h.getHelmReleasesForCluster(ctx, clusterName)
@@ -189,7 +189,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 			}(cl.Name)
 		}
 
-		waitWithDeadline(&wg, maxResponseDeadline)
+		wg.Wait()
 		return c.JSON(fiber.Map{"releases": allReleases})
 	}
 
@@ -246,7 +246,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "kustomizations": []Kustomization{}})
 		}
@@ -355,33 +355,75 @@ func (h *GitOpsHandlers) getKustomizationsForCluster(ctx context.Context, cluste
 	return kustomizations
 }
 
+// OperatorSubscription represents an OLM subscription
+type OperatorSubscription struct {
+	Name                string `json:"name"`
+	Namespace           string `json:"namespace"`
+	Channel             string `json:"channel"`
+	Source              string `json:"source"`
+	InstallPlanApproval string `json:"installPlanApproval"`
+	CurrentCSV          string `json:"currentCSV"`
+	InstalledCSV        string `json:"installedCSV,omitempty"`
+	Cluster             string `json:"cluster,omitempty"`
+}
+
+// Operator/subscription timeouts — CSV queries take 90-100s for clusters with
+// 1000+ CSVs (e.g. vllm-d has 1381 CSVs). The jsonpath extraction in kubectl
+// is the bottleneck, not network transfer.
+const (
+	operatorPerClusterTimeout     = 180 * time.Second
+	operatorRestOverallTimeout    = 200 * time.Second
+	subscriptionPerClusterTimeout = 30 * time.Second
+	helmStreamPerClusterTimeout   = 30 * time.Second
+	operatorCacheTTL              = 5 * time.Minute
+)
+
+// operatorCacheEntry holds cached operators for a single cluster.
+type operatorCacheEntry struct {
+	operators []Operator
+	fetchedAt time.Time
+}
+
+// operatorCache is a per-cluster in-memory cache for slow CSV queries.
+// Protected by operatorCacheMu. Background refresh populates the cache
+// so that subsequent page loads are instant.
+var (
+	operatorCacheMu   sync.RWMutex
+	operatorCacheData = make(map[string]*operatorCacheEntry)
+)
+
 // ListOperators returns OLM-managed operators (ClusterServiceVersions)
 func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 
 	// If specific cluster requested, query only that cluster
 	if cluster != "" {
-		operators := h.getOperatorsForCluster(c.Context(), cluster)
+		ctx, cancel := context.WithTimeout(c.Context(), operatorPerClusterTimeout)
+		defer cancel()
+		operators := h.getOperatorsForCluster(ctx, cluster)
 		return c.JSON(fiber.Map{"operators": operators})
 	}
 
-	// Query all clusters in parallel with timeout
+	// Query all clusters in parallel — operators are slow, so we wait for all
+	// (no maxResponseDeadline; SSE streaming is preferred for UI)
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "operators": []Operator{}})
 		}
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		var allOperators []Operator
-		clusterTimeout := 15 * time.Second
+		allOperators := make([]Operator, 0)
+
+		overallCtx, overallCancel := context.WithTimeout(c.Context(), operatorRestOverallTimeout)
+		defer overallCancel()
 
 		for _, cl := range clusters {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
-				ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+				ctx, cancel := context.WithTimeout(overallCtx, operatorPerClusterTimeout)
 				defer cancel()
 
 				operators := h.getOperatorsForCluster(ctx, clusterName)
@@ -393,18 +435,162 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 			}(cl.Name)
 		}
 
-		waitWithDeadline(&wg, maxResponseDeadline)
+		wg.Wait()
 		return c.JSON(fiber.Map{"operators": allOperators})
 	}
 
 	// Fallback to default context
-	operators := h.getOperatorsForCluster(c.Context(), "")
+	ctx, cancel := context.WithTimeout(c.Context(), operatorPerClusterTimeout)
+	defer cancel()
+	operators := h.getOperatorsForCluster(ctx, "")
 	return c.JSON(fiber.Map{"operators": operators})
 }
 
-// getOperatorsForCluster gets operators for a specific cluster
+// StreamOperators streams operators per cluster via SSE for progressive rendering
+func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "operators", getDemoOperatorsForStreaming())
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	// Single cluster — return as single SSE event
+	if cluster != "" {
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("X-Accel-Buffering", "no")
+		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+			ctx, cancel := context.WithTimeout(context.Background(), operatorPerClusterTimeout)
+			defer cancel()
+			operators := h.getOperatorsForCluster(ctx, cluster)
+			writeSSEEvent(w, "cluster_data", fiber.Map{
+				"cluster":   cluster,
+				"operators": operators,
+				"source":    "k8s",
+			})
+			writeSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
+		})
+		return nil
+	}
+
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("X-Accel-Buffering", "no")
+
+	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		completedClusters := 0
+		totalClusters := len(clusters)
+
+		for _, cl := range clusters {
+			wg.Add(1)
+			go func(clusterName string) {
+				defer wg.Done()
+				ctx, cancel := context.WithTimeout(context.Background(), operatorPerClusterTimeout)
+				defer cancel()
+
+				operators := h.getOperatorsForCluster(ctx, clusterName)
+				mu.Lock()
+				completedClusters++
+				// Always send cluster_data — even for empty clusters so the
+				// frontend sees progress and knows the stream is alive.
+				writeSSEEvent(w, "cluster_data", fiber.Map{
+					"cluster":   clusterName,
+					"operators": operators,
+					"source":    "k8s",
+				})
+				mu.Unlock()
+			}(cl.Name)
+		}
+
+		wg.Wait()
+		writeSSEEvent(w, "done", fiber.Map{
+			"totalClusters":     totalClusters,
+			"completedClusters": completedClusters,
+		})
+	})
+
+	return nil
+}
+
+// getOperatorsForCluster returns cached operators when available, otherwise
+// fetches from the cluster using kubectl -o json (faster than jsonpath for
+// large result sets) and caches the result.
 func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster string) []Operator {
-	args := []string{"get", "csv", "-A", "-o", "json"}
+	cacheKey := cluster
+	if cacheKey == "" {
+		cacheKey = "__default__"
+	}
+
+	// Check cache first
+	operatorCacheMu.RLock()
+	if entry, ok := operatorCacheData[cacheKey]; ok && time.Since(entry.fetchedAt) < operatorCacheTTL {
+		operators := entry.operators
+		operatorCacheMu.RUnlock()
+		return operators
+	}
+	operatorCacheMu.RUnlock()
+
+	// Cache miss — fetch from cluster with retry for transient errors
+	operators, err := h.fetchOperatorsFromCluster(ctx, cluster)
+	if err != nil {
+		// Permanent errors (cluster lacks OLM) — cache empty result
+		if _, ok := err.(errPermanent); ok {
+			operatorCacheMu.Lock()
+			operatorCacheData[cacheKey] = &operatorCacheEntry{
+				operators: []Operator{},
+				fetchedAt: time.Now(),
+			}
+			operatorCacheMu.Unlock()
+			return []Operator{}
+		}
+		// Retry once for transient errors (HTTP/2 stream errors, connection resets)
+		if ctx.Err() == nil {
+			log.Printf("Retrying operator fetch for cluster %s after transient error", cluster)
+			time.Sleep(2 * time.Second)
+			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
+		}
+	}
+
+	if err != nil {
+		// Transient failure — do NOT cache so next request retries
+		return []Operator{}
+	}
+
+	// Store in cache
+	operatorCacheMu.Lock()
+	operatorCacheData[cacheKey] = &operatorCacheEntry{
+		operators: operators,
+		fetchedAt: time.Now(),
+	}
+	operatorCacheMu.Unlock()
+
+	return operators
+}
+
+// errPermanent wraps an error to indicate it should be cached (e.g., cluster lacks OLM).
+type errPermanent struct{ error }
+
+// fetchOperatorsFromCluster queries a cluster for CSVs using kubectl -o json.
+// Returns (operators, nil) on success, (nil, errPermanent) for permanent errors
+// (cluster lacks CSV resource), or (nil, error) for transient errors.
+func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster string) ([]Operator, error) {
+	args := []string{"get", "csv", "-A", "-o", "json", "--request-timeout=0"}
 	if cluster != "" {
 		args = append([]string{"--context", cluster}, args...)
 	}
@@ -415,10 +601,20 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("kubectl get csv failed for cluster %s: %v, stderr: %s", cluster, err, stderr.String())
-		return []Operator{}
+		stderrStr := stderr.String()
+		if ctx.Err() == nil {
+			log.Printf("kubectl get csv failed for cluster %s: %v, stderr: %s", cluster, err, stderrStr)
+		} else {
+			log.Printf("kubectl get csv timed out for cluster %s", cluster)
+		}
+		// "doesn't have a resource type" = cluster lacks OLM — permanent, safe to cache
+		if strings.Contains(stderrStr, "doesn't have a resource type") {
+			return nil, errPermanent{err}
+		}
+		return nil, err
 	}
 
+	// Parse only the fields we need from the JSON output
 	var result struct {
 		Items []struct {
 			Metadata struct {
@@ -436,27 +632,303 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 	}
 
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
-		log.Printf("failed to parse operators for cluster %s: %v", cluster, err)
-		return []Operator{}
+		log.Printf("failed to parse operators JSON for cluster %s: %v", cluster, err)
+		return nil, err
 	}
 
 	operators := make([]Operator, 0, len(result.Items))
 	for _, item := range result.Items {
-		op := Operator{
+		displayName := item.Spec.DisplayName
+		if displayName == "" {
+			displayName = item.Metadata.Name
+		}
+		operators = append(operators, Operator{
 			Name:        item.Metadata.Name,
-			DisplayName: item.Spec.DisplayName,
 			Namespace:   item.Metadata.Namespace,
+			DisplayName: displayName,
 			Version:     item.Spec.Version,
 			Phase:       item.Status.Phase,
 			Cluster:     cluster,
-		}
-		if op.DisplayName == "" {
-			op.DisplayName = item.Metadata.Name
-		}
-		operators = append(operators, op)
+		})
 	}
 
-	return operators
+	return operators, nil
+}
+
+// ListOperatorSubscriptions returns OLM subscriptions across clusters
+func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+
+	if cluster != "" {
+		ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
+		defer cancel()
+		subs := h.getSubscriptionsForCluster(ctx, cluster)
+		return c.JSON(fiber.Map{"subscriptions": subs})
+	}
+
+	if h.k8sClient != nil {
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "subscriptions": []OperatorSubscription{}})
+		}
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		allSubs := make([]OperatorSubscription, 0)
+
+		for _, cl := range clusters {
+			wg.Add(1)
+			go func(clusterName string) {
+				defer wg.Done()
+				ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
+				defer cancel()
+
+				subs := h.getSubscriptionsForCluster(ctx, clusterName)
+				if len(subs) > 0 {
+					mu.Lock()
+					allSubs = append(allSubs, subs...)
+					mu.Unlock()
+				}
+			}(cl.Name)
+		}
+
+		wg.Wait()
+		return c.JSON(fiber.Map{"subscriptions": allSubs})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
+	defer cancel()
+	subs := h.getSubscriptionsForCluster(ctx, "")
+	return c.JSON(fiber.Map{"subscriptions": subs})
+}
+
+// StreamOperatorSubscriptions streams subscriptions per cluster via SSE
+func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "subscriptions", []OperatorSubscription{})
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	if cluster != "" {
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("X-Accel-Buffering", "no")
+		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+			ctx, cancel := context.WithTimeout(context.Background(), subscriptionPerClusterTimeout)
+			defer cancel()
+			subs := h.getSubscriptionsForCluster(ctx, cluster)
+			writeSSEEvent(w, "cluster_data", fiber.Map{
+				"cluster":       cluster,
+				"subscriptions": subs,
+				"source":        "k8s",
+			})
+			writeSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
+		})
+		return nil
+	}
+
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("X-Accel-Buffering", "no")
+
+	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		completedClusters := 0
+		totalClusters := len(clusters)
+
+		for _, cl := range clusters {
+			wg.Add(1)
+			go func(clusterName string) {
+				defer wg.Done()
+				ctx, cancel := context.WithTimeout(context.Background(), subscriptionPerClusterTimeout)
+				defer cancel()
+
+				subs := h.getSubscriptionsForCluster(ctx, clusterName)
+				mu.Lock()
+				completedClusters++
+				writeSSEEvent(w, "cluster_data", fiber.Map{
+					"cluster":       clusterName,
+					"subscriptions": subs,
+					"source":        "k8s",
+				})
+				mu.Unlock()
+			}(cl.Name)
+		}
+
+		wg.Wait()
+		writeSSEEvent(w, "done", fiber.Map{
+			"totalClusters":     totalClusters,
+			"completedClusters": completedClusters,
+		})
+	})
+
+	return nil
+}
+
+// getSubscriptionsForCluster gets OLM subscriptions for a specific cluster using jsonpath
+func (h *GitOpsHandlers) getSubscriptionsForCluster(ctx context.Context, cluster string) []OperatorSubscription {
+	jsonpathExpr := `{range .items[*]}{.metadata.name}{"\t"}{.metadata.namespace}{"\t"}{.spec.channel}{"\t"}{.spec.source}{"\t"}{.spec.installPlanApproval}{"\t"}{.status.currentCSV}{"\t"}{.status.installedCSV}{"\n"}{end}`
+	args := []string{"get", "subscriptions.operators.coreos.com", "-A", "-o", "jsonpath=" + jsonpathExpr}
+	if cluster != "" {
+		args = append([]string{"--context", cluster}, args...)
+	}
+
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == nil {
+			log.Printf("kubectl get subscriptions failed for cluster %s: %v", cluster, err)
+		}
+		return []OperatorSubscription{}
+	}
+
+	output := strings.TrimSpace(stdout.String())
+	if output == "" {
+		return []OperatorSubscription{}
+	}
+
+	lines := strings.Split(output, "\n")
+	subs := make([]OperatorSubscription, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := strings.Split(line, "\t")
+		if len(fields) < 6 {
+			continue
+		}
+		sub := OperatorSubscription{
+			Name:                fields[0],
+			Namespace:           fields[1],
+			Channel:             fields[2],
+			Source:              fields[3],
+			InstallPlanApproval: fields[4],
+			CurrentCSV:          fields[5],
+			Cluster:             cluster,
+		}
+		if len(fields) > 6 {
+			sub.InstalledCSV = fields[6]
+		}
+		subs = append(subs, sub)
+	}
+
+	return subs
+}
+
+// StreamHelmReleases streams helm releases per cluster via SSE
+func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "releases", getDemoHelmReleasesForStreaming())
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	if cluster != "" {
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("X-Accel-Buffering", "no")
+		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+			ctx, cancel := context.WithTimeout(context.Background(), helmStreamPerClusterTimeout)
+			defer cancel()
+			releases := h.getHelmReleasesForCluster(ctx, cluster)
+			writeSSEEvent(w, "cluster_data", fiber.Map{
+				"cluster":  cluster,
+				"releases": releases,
+				"source":   "k8s",
+			})
+			writeSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
+		})
+		return nil
+	}
+
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("X-Accel-Buffering", "no")
+
+	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		completedClusters := 0
+		totalClusters := len(clusters)
+
+		for _, cl := range clusters {
+			wg.Add(1)
+			go func(clusterName string) {
+				defer wg.Done()
+				ctx, cancel := context.WithTimeout(context.Background(), helmStreamPerClusterTimeout)
+				defer cancel()
+
+				releases := h.getHelmReleasesForCluster(ctx, clusterName)
+				mu.Lock()
+				completedClusters++
+				writeSSEEvent(w, "cluster_data", fiber.Map{
+					"cluster":  clusterName,
+					"releases": releases,
+					"source":   "k8s",
+				})
+				mu.Unlock()
+			}(cl.Name)
+		}
+
+		wg.Wait()
+		writeSSEEvent(w, "done", fiber.Map{
+			"totalClusters":     totalClusters,
+			"completedClusters": completedClusters,
+		})
+	})
+
+	return nil
+}
+
+// getDemoOperatorsForStreaming returns demo operators for SSE streaming
+func getDemoOperatorsForStreaming() []Operator {
+	return []Operator{
+		{Name: "prometheus-operator.v0.65.1", DisplayName: "Prometheus Operator", Namespace: "monitoring", Version: "0.65.1", Phase: "Succeeded", Cluster: "demo-cluster"},
+		{Name: "cert-manager.v1.12.0", DisplayName: "cert-manager", Namespace: "cert-manager", Version: "1.12.0", Phase: "Succeeded", Cluster: "demo-cluster"},
+		{Name: "elasticsearch-operator.v2.8.0", DisplayName: "Elasticsearch Operator", Namespace: "elastic-system", Version: "2.8.0", Phase: "Succeeded", Cluster: "demo-cluster"},
+	}
+}
+
+// getDemoHelmReleasesForStreaming returns demo helm releases for SSE streaming
+func getDemoHelmReleasesForStreaming() []HelmRelease {
+	return []HelmRelease{
+		{Name: "prometheus", Namespace: "monitoring", Revision: "5", Status: "deployed", Chart: "prometheus-25.8.0", AppVersion: "2.48.1", Cluster: "demo-cluster"},
+		{Name: "grafana", Namespace: "monitoring", Revision: "3", Status: "deployed", Chart: "grafana-7.0.11", AppVersion: "10.2.3", Cluster: "demo-cluster"},
+	}
 }
 
 // DetectDrift detects drift between git and cluster state

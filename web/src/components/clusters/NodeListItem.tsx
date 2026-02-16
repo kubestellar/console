@@ -3,6 +3,7 @@ import { NodeInfo } from '../../hooks/useMCP'
 import { hasConditionIssues } from '../shared/ConditionBadges'
 import { cn } from '../../lib/cn'
 import { formatK8sMemory } from '../../lib/formatters'
+import { useTranslation } from 'react-i18next'
 
 interface NodeListItemProps {
   node: NodeInfo
@@ -15,6 +16,7 @@ interface NodeListItemProps {
  * Used in cluster detail views and node list cards.
  */
 export function NodeListItem({ node, isSelected, onClick }: NodeListItemProps) {
+  const { t: _t } = useTranslation()
   const hasIssues = hasConditionIssues(node.conditions)
   const isReady = node.status === 'Ready'
 

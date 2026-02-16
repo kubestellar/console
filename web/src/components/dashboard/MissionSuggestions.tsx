@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, startTransition } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Lightbulb, Clock, X, ChevronDown, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope } from 'lucide-react'
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
@@ -47,6 +48,7 @@ const PRIORITY_STYLES = {
 }
 
 export function MissionSuggestions() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { suggestions, hasSuggestions, stats } = useMissionSuggestions()
   // Subscribe to snoozedMissions to trigger re-render when snooze state changes
@@ -135,10 +137,10 @@ export function MissionSuggestions() {
     // Start mission after dropdown closes
     setTimeout(() => {
       startMission({
-        title: `Repair: ${suggestion.title}`,
-        description: `Auto-repair: ${suggestion.description}`,
+        title: t('dashboard.missions.repairPrefix', { title: suggestion.title }),
+        description: t('dashboard.missions.autoRepairPrefix', { description: suggestion.description }),
         type: 'repair',
-        initialPrompt: `Automatically fix the following issue: ${suggestion.action.target}. Apply safe remediation steps.`,
+        initialPrompt: t('dashboard.missions.repairPrompt', { target: suggestion.action.target }),
         context: suggestion.context,
       })
     }, 0)
@@ -163,7 +165,7 @@ export function MissionSuggestions() {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
             <Lightbulb className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-medium">Actions:</span>
+            <span className="text-xs font-medium">{t('dashboard.missions.actions')}</span>
           </div>
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} variant="rounded" width={120} height={26} className="rounded-full" />
@@ -226,7 +228,7 @@ export function MissionSuggestions() {
                           ))}
                           {suggestion.context.details.length > 3 && (
                             <li className="text-muted-foreground/70">
-                              +{suggestion.context.details.length - 3} more
+                              {t('dashboard.missions.moreDetails', { count: suggestion.context.details.length - 3 })}
                             </li>
                           )}
                         </ul>
@@ -235,7 +237,7 @@ export function MissionSuggestions() {
 
                     {snoozeRemaining && snoozeRemaining > 0 && (
                       <div className="text-xs text-purple-400 mb-2">
-                        Snoozed for {formatTimeRemaining(snoozeRemaining)}
+                        {t('dashboard.missions.snoozedFor', { time: formatTimeRemaining(snoozeRemaining) })}
                       </div>
                     )}
 
@@ -259,22 +261,22 @@ export function MissionSuggestions() {
                         onClick={(e) => handleRepair(e, suggestion)}
                         disabled={isProcessing}
                         className="px-2 py-1.5 rounded text-xs font-medium bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors flex items-center gap-1"
-                        title="AI Repair - automatically fix this issue"
+                        title={t('dashboard.missions.repairTitle')}
                       >
                         <Wrench className="w-3 h-3" />
-                        Repair
+                        {t('dashboard.missions.repair')}
                       </button>
                       <button
                         onClick={(e) => handleSnooze(e, suggestion)}
                         className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
-                        title="Snooze for 24 hours"
+                        title={t('dashboard.missions.snoozeTitle')}
                       >
                         <Clock className="w-3 h-3" />
                       </button>
                       <button
                         onClick={(e) => handleDismiss(e, suggestion)}
                         className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
-                        title="Dismiss"
+                        title={t('dashboard.missions.dismiss')}
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -289,18 +291,18 @@ export function MissionSuggestions() {
         {/* Stats badges */}
         {stats.critical > 0 && (
           <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
-            {stats.critical} critical
+            {t('dashboard.missions.critical', { count: stats.critical })}
           </span>
         )}
         {stats.high > 0 && stats.critical === 0 && (
           <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[10px]">
-            {stats.high} high
+            {t('dashboard.missions.high', { count: stats.high })}
           </span>
         )}
 
         {suggestions.length > 6 && (
           <span className="text-[10px] text-muted-foreground">
-            +{suggestions.length - 6} more
+            {t('dashboard.missions.moreDetails', { count: suggestions.length - 6 })}
           </span>
         )}
       </div>

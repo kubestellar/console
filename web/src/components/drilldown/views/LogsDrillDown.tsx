@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
 }
 
 export function LogsDrillDown({ data }: Props) {
+  const { t: _t } = useTranslation()
   const pod = data.pod as string
   const container = data.container as string | undefined
   const [tailLines, setTailLines] = useState(100)

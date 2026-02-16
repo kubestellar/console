@@ -1,8 +1,10 @@
 'use client'
 
 import { useLocalAgent } from '@/hooks/useLocalAgent'
+import { useTranslation } from 'react-i18next'
 
 export function AgentStatus() {
+  const { t: _t } = useTranslation()
   const { status, health, error, isDemoMode } = useLocalAgent()
 
   if (status === 'connecting') {

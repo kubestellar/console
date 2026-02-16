@@ -1,6 +1,7 @@
 import { Search, List, GitBranch } from 'lucide-react'
 import { CardControls } from '../../ui/CardControls'
 import type { MonitorViewMode, ResourceCategory, ResourceHealthStatus } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface ToolbarProps {
   search: string
@@ -47,6 +48,7 @@ export function WorkloadMonitorToolbar({
   limit,
   onLimitChange,
 }: ToolbarProps) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-2 mb-3">
       {/* Top row: summary + controls */}
@@ -90,7 +92,7 @@ export function WorkloadMonitorToolbar({
             <option value="config">Config</option>
             <option value="networking">Networking</option>
             <option value="scaling">Scaling</option>
-            <option value="storage">Storage</option>
+            <option value="storage">{t('common.storage')}</option>
             <option value="crd">CRDs</option>
             <option value="admission">Admission</option>
           </select>
@@ -101,9 +103,9 @@ export function WorkloadMonitorToolbar({
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
             <option value="all">All Status</option>
-            <option value="healthy">Healthy</option>
-            <option value="degraded">Degraded</option>
-            <option value="unhealthy">Unhealthy</option>
+            <option value="healthy">{t('common.healthy')}</option>
+            <option value="degraded">{t('common.degraded')}</option>
+            <option value="unhealthy">{t('common.unhealthy')}</option>
             <option value="missing">Missing</option>
           </select>
           <CardControls
@@ -124,7 +126,7 @@ export function WorkloadMonitorToolbar({
           type="text"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search resources..."
+          placeholder={t('common.searchResources')}
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
       </div>

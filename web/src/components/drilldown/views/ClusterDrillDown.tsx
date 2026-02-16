@@ -4,6 +4,7 @@ import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNo
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
+import { useTranslation } from 'react-i18next'
 
 // Resource tree lens/view options
 type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function ClusterDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const clusterName = (data.cluster as string) || ''
   const { drillToNamespace, drillToPod, drillToGPUNode, drillToEvents } = useDrillDownActions()
 
@@ -237,7 +239,7 @@ export function ClusterDrillDown({ data }: Props) {
                 ? (health.readyNodes === health.nodeCount ? 'healthy' : 'warning')
                 : (health?.healthy ? 'healthy' : 'error')
             } />
-            <span className="text-sm text-muted-foreground">Status</span>
+            <span className="text-sm text-muted-foreground">{t('common.status')}</span>
           </div>
           <div className="text-2xl font-bold text-foreground">
             {health?.reachable === false ? 'Offline' :
@@ -248,18 +250,18 @@ export function ClusterDrillDown({ data }: Props) {
         </div>
 
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">Nodes</div>
+          <div className="text-sm text-muted-foreground mb-2">{t('common.nodes')}</div>
           <div className="text-2xl font-bold text-foreground">{health?.nodeCount || 0}</div>
           <div className="text-xs text-green-400">{health?.readyNodes || 0} ready</div>
         </div>
 
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">Pods</div>
+          <div className="text-sm text-muted-foreground mb-2">{t('common.pods')}</div>
           <div className="text-2xl font-bold text-foreground">{health?.podCount || 0}</div>
         </div>
 
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">GPUs</div>
+          <div className="text-sm text-muted-foreground mb-2">{t('common.gpus')}</div>
           <div className="text-2xl font-bold text-foreground">{totalGPUs}</div>
           <div className="text-xs text-yellow-400">{allocatedGPUs} allocated</div>
         </div>
@@ -268,7 +270,7 @@ export function ClusterDrillDown({ data }: Props) {
       {/* GPU Type Breakdown */}
       {Object.keys(gpuByType).length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-foreground mb-3">GPU Types</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-3">{t('common.gpuTypes')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {Object.entries(gpuByType).map(([type, info]) => (
               <div key={type} className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
@@ -286,7 +288,7 @@ export function ClusterDrillDown({ data }: Props) {
       {/* Recent Events Section */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-foreground">Recent Events</h3>
+          <h3 className="text-lg font-semibold text-foreground">{t('drilldown.fields.recentEvents')}</h3>
           <button
             onClick={() => drillToEvents(clusterName)}
             className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
@@ -500,7 +502,7 @@ export function ClusterDrillDown({ data }: Props) {
                   type="text"
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder="Search resources..."
+                  placeholder={t('common.searchResources')}
                   className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                 />
               </div>
@@ -569,7 +571,7 @@ export function ClusterDrillDown({ data }: Props) {
                         >
                           {expandedSections.has('nodes') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           <Server className="w-4 h-4 text-blue-400" />
-                          <span className="text-sm font-medium text-foreground">Nodes</span>
+                          <span className="text-sm font-medium text-foreground">{t('common.nodes')}</span>
                           <span className="text-xs text-muted-foreground">({filteredNodes.length})</span>
                           {issueCounts.nodes > 0 && (
                             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-400">
@@ -782,7 +784,7 @@ export function ClusterDrillDown({ data }: Props) {
                         >
                           {expandedSections.has('storage') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           <HardDrive className="w-4 h-4 text-emerald-400" />
-                          <span className="text-sm font-medium text-foreground">PVCs</span>
+                          <span className="text-sm font-medium text-foreground">{t('common.pvcs')}</span>
                           <span className="text-xs text-muted-foreground">({filteredPVCs.length})</span>
                           {issueCounts.pvcs > 0 && (
                             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-yellow-500/20 text-yellow-400">
@@ -828,7 +830,7 @@ export function ClusterDrillDown({ data }: Props) {
                         >
                           {expandedSections.has('network') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           <Network className="w-4 h-4 text-blue-400" />
-                          <span className="text-sm font-medium text-foreground">Services</span>
+                          <span className="text-sm font-medium text-foreground">{t('common.services')}</span>
                           <span className="text-xs text-muted-foreground">({filteredServices.length})</span>
                         </div>
 

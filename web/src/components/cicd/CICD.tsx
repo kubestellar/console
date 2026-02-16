@@ -5,6 +5,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
 
@@ -12,6 +13,7 @@ const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
 const DEFAULT_CICD_CARDS = getDefaultCards('ci-cd')
 
 export function CICD() {
+  const { t: _t } = useTranslation()
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { jobs: prowJobs, isLoading: prowLoading, status: prowStatus } = useCachedProwJobs()
   const { deployments, isLoading: deploymentsLoading } = useDeployments()

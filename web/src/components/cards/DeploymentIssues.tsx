@@ -12,6 +12,7 @@ import {
   CardControlsRow, CardListItem, CardPaginationFooter,
   CardAIActions,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'cluster'
 
@@ -33,11 +34,13 @@ const getIssueIcon = (status: string): { icon: typeof AlertCircle; tooltip: stri
 }
 
 function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
+  const { t } = useTranslation()
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
   const {
     issues: rawIssues,
     isLoading: hookLoading,
+    isDemoFallback,
     isFailed,
     consecutiveFailures,
     error
@@ -48,6 +51,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: rawIssues.length > 0,
     isFailed,
     consecutiveFailures,
@@ -140,7 +144,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400" title={`${rawIssues.length} deployments with issues`}>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${rawIssues.length} deployments with issues`}>
             {rawIssues.length} issues
           </span>
         </div>
@@ -175,7 +179,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search issues..."
+        placeholder={t('common.searchIssues')}
         className="mb-3"
       />
 
@@ -188,13 +192,13 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
             <CardListItem
               key={`${issue.name}-${idx}`}
               onClick={() => handleDeploymentClick(issue)}
-              bgClass="bg-orange-500/10"
-              borderClass="border-orange-500/20"
+              bgClass="bg-red-500/10"
+              borderClass="border-red-500/20"
               title={`Click to view details for ${issue.name}`}
             >
               <div className="flex items-start gap-3 group">
-                <div className="p-2 rounded-lg bg-orange-500/20 flex-shrink-0" title={iconTooltip}>
-                  <Icon className="w-4 h-4 text-orange-400" />
+                <div className="p-2 rounded-lg bg-red-500/20 flex-shrink-0" title={iconTooltip}>
+                  <Icon className="w-4 h-4 text-red-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -203,7 +207,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
                   </div>
                   <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400" title={`Issue: ${issue.reason || 'Unknown'}`}>
+                    <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400" title={`Issue: ${issue.reason || 'Unknown'}`}>
                       {issue.reason || 'Issue'}
                     </span>
                     <span className="text-xs text-muted-foreground" title={`${issue.readyReplicas} of ${issue.replicas} replicas are ready`}>
@@ -250,6 +254,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
 }
 
 export function DeploymentIssues(props: DeploymentIssuesProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="DeploymentIssues">
       <DeploymentIssuesInternal {...props} />

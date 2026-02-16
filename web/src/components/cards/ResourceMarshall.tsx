@@ -17,6 +17,7 @@ import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/re
 import { useCardLoadingState } from './CardDataContext'
 import { ClusterSelect } from '../ui/ClusterSelect'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useTranslation } from 'react-i18next'
 
 function groupDependencies(deps: ResolvedDependency[]) {
   const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
@@ -38,6 +39,7 @@ function groupDependencies(deps: ResolvedDependency[]) {
 }
 
 export function ResourceMarshall() {
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
 
@@ -140,7 +142,7 @@ export function ResourceMarshall() {
       <div className="space-y-2">
         {/* Cluster selector */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground w-20 shrink-0">Cluster</label>
+          <label className="text-xs text-muted-foreground w-20 shrink-0">{t('common.cluster')}</label>
           <ClusterSelect
             clusters={clusters}
             value={selectedCluster}
@@ -152,7 +154,7 @@ export function ResourceMarshall() {
 
         {/* Namespace selector */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground w-20 shrink-0">Namespace</label>
+          <label className="text-xs text-muted-foreground w-20 shrink-0">{t('common.namespace')}</label>
           <select
             value={selectedNamespace}
             onChange={(e) => handleNamespaceChange(e.target.value)}
@@ -163,7 +165,7 @@ export function ResourceMarshall() {
             )}
           >
             <option value="">
-              {nsLoading ? 'Loading...' : 'Select namespace...'}
+              {nsLoading ? t('common.loading') : 'Select namespace...'}
             </option>
             {namespaces.map(ns => (
               <option key={ns} value={ns}>{ns}</option>
@@ -184,7 +186,7 @@ export function ResourceMarshall() {
             )}
           >
             <option value="">
-              {wlLoading ? 'Loading...' : 'Select workload...'}
+              {wlLoading ? t('common.loading') : 'Select workload...'}
             </option>
             {workloads?.map(w => (
               <option key={`${w.type}-${w.name}`} value={w.name}>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2 } from 'lucide-react'
 
 interface GitHubTokenSectionProps {
@@ -16,6 +17,7 @@ const decodeToken = (encoded: string) => {
 }
 
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {
+  const { t } = useTranslation()
   const [githubToken, setGithubToken] = useState('')
   const [hasGithubToken, setHasGithubToken] = useState(false)
   const [githubTokenSaved, setGithubTokenSaved] = useState(false)
@@ -150,8 +152,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
           <Github className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">GitHub Integration</h2>
-          <p className="text-sm text-muted-foreground">Configure GitHub API access for the GitHub Activity card</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.github.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.github.subtitle')}</p>
         </div>
       </div>
 
@@ -172,39 +174,39 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
           {githubTokenTesting ? (
             <>
               <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
-              <span className="font-medium text-blue-400">Testing token...</span>
+              <span className="font-medium text-blue-400">{t('settings.github.testingToken')}</span>
             </>
           ) : githubTokenError ? (
             <>
               <X className="w-5 h-5 text-red-400" />
-              <span className="font-medium text-red-400">Token Error</span>
+              <span className="font-medium text-red-400">{t('settings.github.tokenError')}</span>
               <span className="text-muted-foreground">- {githubTokenError}</span>
             </>
           ) : hasGithubToken && githubRateLimit ? (
             <>
               <Check className="w-5 h-5 text-green-400" />
-              <span className="font-medium text-green-400">Token Valid</span>
+              <span className="font-medium text-green-400">{t('settings.github.tokenValid')}</span>
               <span className="text-muted-foreground">
-                - {githubRateLimit.remaining.toLocaleString()}/{githubRateLimit.limit.toLocaleString()} requests remaining
+                - {githubRateLimit.remaining.toLocaleString()}/{githubRateLimit.limit.toLocaleString()} {t('settings.github.requestsRemaining')}
               </span>
             </>
           ) : hasGithubToken ? (
             <>
               <Check className="w-5 h-5 text-green-400" />
-              <span className="font-medium text-green-400">Token Configured</span>
-              <span className="text-muted-foreground">- 5,000 requests/hour</span>
+              <span className="font-medium text-green-400">{t('settings.github.tokenConfigured')}</span>
+              <span className="text-muted-foreground">- 5,000 {t('settings.github.requestsPerHour')}</span>
             </>
           ) : (
             <>
               <X className="w-5 h-5 text-yellow-400" />
-              <span className="font-medium text-yellow-400">No Token</span>
-              <span className="text-muted-foreground">- Limited to 60 requests/hour</span>
+              <span className="font-medium text-yellow-400">{t('settings.github.noToken')}</span>
+              <span className="text-muted-foreground">- {t('settings.github.limitedRequests')}</span>
             </>
           )}
         </div>
         {githubRateLimit && hasGithubToken && !githubTokenError && (
           <p className="text-xs text-muted-foreground mt-2">
-            Rate limit resets at {githubRateLimit.reset.toLocaleTimeString()}
+            {t('settings.github.rateLimitResets', { time: githubRateLimit.reset.toLocaleTimeString() })}
           </p>
         )}
       </div>
@@ -213,7 +215,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
           <div className="space-y-4">
             <div>
               <label htmlFor="github-token" className="block text-sm text-muted-foreground mb-2">
-                Personal Access Token
+                {t('settings.github.personalAccessToken')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -234,14 +236,14 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  {githubTokenTesting ? 'Testing...' : githubTokenSaved ? 'Saved!' : 'Save & Test'}
+                  {githubTokenTesting ? t('settings.github.testing') : githubTokenSaved ? t('settings.github.saved') : t('settings.github.saveAndTest')}
                 </button>
                 {hasGithubToken && (
                   <button
                     onClick={handleClearGithubToken}
                     className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10"
                   >
-                    Clear
+                    {t('settings.github.clear')}
                   </button>
                 )}
               </div>
@@ -249,11 +251,11 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 
             {/* Instructions */}
             <div className="p-4 rounded-lg bg-secondary/30 space-y-3">
-          <p className="text-sm font-medium text-foreground">How to create a token:</p>
+          <p className="text-sm font-medium text-foreground">{t('settings.github.howToCreate')}</p>
 
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2">
-              <span className="text-purple-400 font-medium">Option 1:</span>
+              <span className="text-purple-400 font-medium">{t('settings.github.option1')}</span>
               <div>
                 <a
                   href="https://github.com/settings/personal-access-tokens/new"
@@ -261,17 +263,17 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                   rel="noopener noreferrer"
                   className="text-primary hover:underline inline-flex items-center gap-1"
                 >
-                  Create Fine-grained Token (Recommended)
+                  {t('settings.github.createFineGrained')}
                   <ExternalLink className="w-3 h-3" />
                 </a>
                 <p className="text-muted-foreground text-xs mt-0.5">
-                  Set expiration, select "Public repositories (read-only)". No additional permissions needed for public repos.
+                  {t('settings.github.fineGrainedInstructions')}
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <span className="text-purple-400 font-medium">Option 2:</span>
+              <span className="text-purple-400 font-medium">{t('settings.github.option2')}</span>
               <div>
                 <a
                   href="https://github.com/settings/tokens/new?description=KubeStellar%20Console&scopes="
@@ -279,11 +281,11 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                   rel="noopener noreferrer"
                   className="text-primary hover:underline inline-flex items-center gap-1"
                 >
-                  Create Classic Token
+                  {t('settings.github.createClassic')}
                   <ExternalLink className="w-3 h-3" />
                 </a>
                 <p className="text-muted-foreground text-xs mt-0.5">
-                  No scopes needed for public repos. For private repos, check the "repo" scope.
+                  {t('settings.github.classicInstructions')}
                 </p>
               </div>
             </div>
@@ -291,7 +293,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 
             <div className="pt-2 border-t border-border/50">
               <p className="text-xs text-yellow-400/70">
-                ⚠️ Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date.
+                {t('settings.github.securityWarning')}
               </p>
             </div>
           </div>

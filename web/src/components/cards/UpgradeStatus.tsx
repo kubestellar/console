@@ -9,6 +9,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -294,6 +295,7 @@ function getDemoVersionForCluster(name: string): string {
 }
 
 export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
+  const { t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading: isLoadingHook } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { startMission } = useMissions()
@@ -589,7 +591,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search clusters..."
+        placeholder={t('common.searchClusters')}
         className="mb-3"
       />
 

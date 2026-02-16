@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
 import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
+import { useTranslation } from 'react-i18next'
 
 interface DashboardHeaderProps {
   /** Dashboard title text or ReactNode */
@@ -56,6 +57,7 @@ export function DashboardHeader({
   rightExtra,
   error,
 }: DashboardHeaderProps) {
+  const { t } = useTranslation()
   const location = useLocation()
   const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
 
@@ -90,7 +92,7 @@ export function DashboardHeader({
           title="Updating..."
         >
           <Hourglass className="w-3 h-3" />
-          <span>Updating</span>
+          <span>{t('common.updating')}</span>
         </span>
         {afterTitle}
       </div>
@@ -137,7 +139,7 @@ export function DashboardHeader({
             onClick={onRefresh}
             disabled={isFetching}
             className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-            title="Refresh data"
+            title={t('common.refreshClusterData')}
           >
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>

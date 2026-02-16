@@ -61,20 +61,21 @@ function getGitOpsAppConfigs(): GitOpsAppConfig[] {
   ]
 }
 
-function getTimeAgo(timestamp: string | undefined): string {
-  if (!timestamp) return 'Unknown'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getTimeAgo(timestamp: string | undefined, t: (...args: any[]) => string): string {
+  if (!timestamp) return t('gitops.unknown')
   const now = new Date()
   const then = new Date(timestamp)
   const diffMs = now.getTime() - then.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMins / 60)
-  if (diffHours > 0) return `${diffHours}h ago`
-  if (diffMins > 0) return `${diffMins}m ago`
-  return 'Just now'
+  if (diffHours > 0) return t('gitops.hoursAgo', { count: diffHours })
+  if (diffMins > 0) return t('gitops.minutesAgo', { count: diffMins })
+  return t('gitops.justNow')
 }
 
 export function GitOps() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { clusters, isRefreshing: dataRefreshing, refetch } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
@@ -218,10 +219,10 @@ export function GitOps() {
 
   const syncStatusLabel = (status: string) => {
     switch (status) {
-      case 'synced': return 'Synced'
-      case 'out-of-sync': return 'Out of Sync'
-      case 'checking': return 'Checking...'
-      default: return 'Unknown'
+      case 'synced': return t('gitops.synced')
+      case 'out-of-sync': return t('gitops.outOfSync')
+      case 'checking': return t('gitops.checking')
+      default: return t('gitops.unknown')
     }
   }
 
@@ -236,17 +237,17 @@ export function GitOps() {
   // Stats value getter
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
-      case 'total': return { value: stats.total, sublabel: 'apps configured', onClick: () => drillToAllHelm(), isClickable: stats.total > 0 }
-      case 'helm': return { value: helmCount, sublabel: 'helm releases', onClick: () => drillToAllHelm(), isClickable: helmCount > 0 }
-      case 'kustomize': return { value: 0, sublabel: 'kustomize apps', isClickable: false }
-      case 'operators': return { value: operatorSubs.length, sublabel: 'operators', onClick: () => drillToAllOperators(), isClickable: operatorSubs.length > 0 }
-      case 'deployed': return { value: stats.synced, sublabel: 'synced', onClick: () => drillToAllHelm('synced'), isClickable: stats.synced > 0 }
-      case 'failed': return { value: stats.drifted, sublabel: 'drifted', onClick: () => drillToAllHelm('drifted'), isClickable: stats.drifted > 0 }
-      case 'pending': return { value: stats.checking, sublabel: 'checking', isClickable: false }
-      case 'other': return { value: stats.healthy, sublabel: 'healthy', onClick: () => drillToAllHelm('healthy'), isClickable: stats.healthy > 0 }
+      case 'total': return { value: stats.total, sublabel: t('gitops.appsConfigured'), onClick: () => drillToAllHelm(), isClickable: stats.total > 0 }
+      case 'helm': return { value: helmCount, sublabel: t('gitops.helmReleases'), onClick: () => drillToAllHelm(), isClickable: helmCount > 0 }
+      case 'kustomize': return { value: 0, sublabel: t('gitops.kustomizeApps'), isClickable: false }
+      case 'operators': return { value: operatorSubs.length, sublabel: t('gitops.operators'), onClick: () => drillToAllOperators(), isClickable: operatorSubs.length > 0 }
+      case 'deployed': return { value: stats.synced, sublabel: t('gitops.synced'), onClick: () => drillToAllHelm('synced'), isClickable: stats.synced > 0 }
+      case 'failed': return { value: stats.drifted, sublabel: t('gitops.drifted'), onClick: () => drillToAllHelm('drifted'), isClickable: stats.drifted > 0 }
+      case 'pending': return { value: stats.checking, sublabel: t('gitops.checking'), isClickable: false }
+      case 'other': return { value: stats.healthy, sublabel: t('gitops.healthy'), onClick: () => drillToAllHelm('healthy'), isClickable: stats.healthy > 0 }
       default: return { value: 0 }
     }
-  }, [stats, helmCount, operatorSubs, drillToAllHelm, drillToAllOperators])
+  }, [stats, helmCount, operatorSubs, drillToAllHelm, drillToAllOperators, t])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
@@ -278,7 +279,7 @@ export function GitOps() {
               statusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-card/50 text-muted-foreground hover:text-foreground'
             }`}
           >
-            All
+            {t('common.all')}
           </button>
           <button
             onClick={() => setStatusFilter('synced')}
@@ -286,7 +287,7 @@ export function GitOps() {
               statusFilter === 'synced' ? 'bg-green-500 text-white' : 'bg-card/50 text-muted-foreground hover:text-foreground'
             }`}
           >
-            Synced
+            {t('gitops.synced')}
           </button>
           <button
             onClick={() => setStatusFilter('drifted')}
@@ -294,21 +295,21 @@ export function GitOps() {
               statusFilter === 'drifted' ? 'bg-yellow-500 text-white' : 'bg-card/50 text-muted-foreground hover:text-foreground'
             }`}
           >
-            Drifted
+            {t('gitops.drifted')}
           </button>
         </div>
       </div>
 
       {/* Apps List */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-sm font-medium text-muted-foreground">GitOps Applications</span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Demo</span>
+        <span className="text-sm font-medium text-muted-foreground">{t('gitops.applications')}</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{t('common:common.demo')}</span>
       </div>
       {filteredApps.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🔄</div>
-          <p className="text-lg text-foreground">No GitOps applications found</p>
-          <p className="text-sm text-muted-foreground">Configure ArgoCD or Flux to see sync status</p>
+          <p className="text-lg text-foreground">{t('gitops.noApplications')}</p>
+          <p className="text-sm text-muted-foreground">{t('gitops.configureHint')}</p>
         </div>
       ) : (
         <div className="space-y-4 mb-6 border-2 border-yellow-500/30 rounded-lg p-4">
@@ -337,29 +338,29 @@ export function GitOps() {
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1" title="Kubernetes Namespace">
+                      <span className="flex items-center gap-1" title={t('gitops.kubernetesNamespace')}>
                         <Box className="w-3 h-3" />
                         <span>{app.namespace}</span>
                       </span>
                       {app.cluster && (
-                        <span className="flex items-center gap-1" title="Target Cluster">
+                        <span className="flex items-center gap-1" title={t('gitops.targetCluster')}>
                           <span className="text-muted-foreground/50">→</span>
                           <span>{app.cluster}</span>
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1" title="Git Repository Source">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1" title={t('gitops.gitRepoSource')}>
                       <GitBranch className="w-3 h-3 text-purple-400" />
                       <span className="font-mono">github.com/{app.repoUrl.replace('https://github.com/', '')}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Path in Repository">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground" title={t('gitops.pathInRepo')}>
                       <FolderGit className="w-3 h-3 text-blue-400" />
                       <span className="font-mono">{app.path}</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
-                  <div>Last sync: {getTimeAgo(app.lastSyncTime)}</div>
+                  <div>{t('gitops.lastSync')}: {getTimeAgo(app.lastSyncTime, t)}</div>
                   <div className="mt-1 capitalize">{app.healthStatus}</div>
                 </div>
               </div>
@@ -367,7 +368,7 @@ export function GitOps() {
               {/* Drift Details */}
               {app.driftDetails && app.driftDetails.length > 0 && (
                 <div className="mt-3 p-3 rounded bg-yellow-500/10 border border-yellow-500/20">
-                  <div className="text-sm font-medium text-yellow-400 mb-2">Drift Detected</div>
+                  <div className="text-sm font-medium text-yellow-400 mb-2">{t('gitops.driftDetected')}</div>
                   <ul className="text-xs text-muted-foreground space-y-1">
                     {app.driftDetails.map((detail, j) => (
                       <li key={j} className="flex items-center gap-2">
@@ -381,7 +382,7 @@ export function GitOps() {
                     className="mt-2 px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors flex items-center gap-1.5"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    Sync Now
+                    {t('gitops.syncNow')}
                   </button>
                 </div>
               )}
@@ -395,8 +396,8 @@ export function GitOps() {
   return (
     <>
       <DashboardPage
-        title="GitOps"
-        subtitle="GitOps drift detection and sync status"
+        title={t('gitops.title')}
+        subtitle={t('gitops.subtitle')}
         icon="GitBranch"
         storageKey={GITOPS_STORAGE_KEY}
         defaultCards={DEFAULT_GITOPS_CARDS}
@@ -409,24 +410,23 @@ export function GitOps() {
         hasData={stats.total > 0}
         beforeCards={filtersAndAppsList}
         emptyState={{
-          title: 'GitOps Dashboard',
-          description: 'Add cards to monitor ArgoCD applications, Helm releases, and GitOps sync status.',
+          title: t('gitops.dashboardTitle'),
+          description: t('gitops.dashboardDescription'),
         }}
         isDemoData={true}
       >
         {/* Info */}
         <div className="mt-8 p-4 rounded-lg bg-card/30 border border-border">
-          <h3 className="text-lg font-semibold text-foreground mb-3">GitOps Integration</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-3">{t('gitops.integrationTitle')}</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            GitOps integration detects drift between your Git repository and live cluster state
-            using kubectl diff. Connect ArgoCD or Flux for enhanced sync capabilities.
+            {t('gitops.integrationDescription')}
           </p>
           <div className="flex gap-2">
             <button className="px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors">
-              Configure ArgoCD
+              {t('gitops.configureArgoCD')}
             </button>
             <button className="px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors">
-              Configure Flux
+              {t('gitops.configureFlux')}
             </button>
           </div>
         </div>

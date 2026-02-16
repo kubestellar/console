@@ -7,6 +7,7 @@ import {
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ChartVersionsProps {
   config?: {
@@ -31,6 +32,7 @@ const SORT_OPTIONS = [
 ]
 
 export function ChartVersions({ config: _config }: ChartVersionsProps) {
+  const { t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
 
   // Fetch ALL Helm releases once - filter locally
@@ -170,7 +172,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
           <CardSearchInput
             value={localSearch}
             onChange={setLocalSearch}
-            placeholder="Search charts..."
+            placeholder={t('common.searchCharts')}
             className="mb-4"
           />
 

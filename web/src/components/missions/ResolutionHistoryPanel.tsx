@@ -21,12 +21,14 @@ import {
 } from 'lucide-react'
 import { useResolutions, type Resolution } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 interface ResolutionHistoryPanelProps {
   onApplyResolution?: (resolution: Resolution) => void
 }
 
 export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryPanelProps) {
+  const { t: _t } = useTranslation()
   const { resolutions, sharedResolutions, deleteResolution, shareResolution } = useResolutions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showPersonal, setShowPersonal] = useState(true)
@@ -176,6 +178,7 @@ function ResolutionCard({
   showSharedBy,
   canShare,
 }: ResolutionCardProps) {
+  const { t } = useTranslation()
   const { effectiveness } = resolution
   const successRate = effectiveness.timesUsed > 0
     ? Math.round((effectiveness.timesSuccessful / effectiveness.timesUsed) * 100)
@@ -297,7 +300,7 @@ function ResolutionCard({
                 title={isDeleteConfirm ? "Click again to confirm" : "Delete"}
               >
                 <Trash2 className="w-3 h-3" />
-                {isDeleteConfirm && <span>Confirm</span>}
+                {isDeleteConfirm && <span>{t('common.confirm')}</span>}
               </button>
             </div>
           </div>

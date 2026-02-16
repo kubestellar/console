@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 // Hook for managing pagination state
 export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOnFilterChange: boolean = true) {
@@ -13,14 +14,13 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
     if (prevDefaultPerPage.current !== defaultPerPage) {
       prevDefaultPerPage.current = defaultPerPage
       setItemsPerPage(defaultPerPage)
-      setCurrentPage(1) // Reset to first page when changing page size
+      setCurrentPage(1)
     }
   }, [defaultPerPage])
 
   // Reset to page 1 when filter changes (items count changes)
   useEffect(() => {
     if (resetOnFilterChange && prevItemsLength.current !== items.length) {
-      // Only reset if we're not on page 1 and the filter actually changed
       if (currentPage > 1) {
         setCurrentPage(1)
       }
@@ -31,24 +31,32 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
   const totalItems = items.length
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
 
-  // Reset to page 1 if current page is out of bounds
+  // Derive safe page without setState during render (avoids React anti-pattern)
   const safePage = Math.min(currentPage, totalPages)
-  if (safePage !== currentPage) {
-    setCurrentPage(safePage)
-  }
+
+  // Sync currentPage back when out of bounds, but via effect not during render
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const paginatedItems = useMemo(() => {
     const start = (safePage - 1) * itemsPerPage
     return items.slice(start, start + itemsPerPage)
   }, [items, safePage, itemsPerPage])
 
+  // Use ref to avoid stale totalPages in goToPage callback
+  const totalPagesRef = useRef(totalPages)
+  totalPagesRef.current = totalPages
+
   const goToPage = useCallback((page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)))
-  }, [totalPages])
+    setCurrentPage(Math.max(1, Math.min(page, totalPagesRef.current)))
+  }, [])
 
   const setPerPage = useCallback((perPage: number) => {
     setItemsPerPage(perPage)
-    setCurrentPage(1) // Reset to first page when changing page size
+    setCurrentPage(1)
   }, [])
 
   return {
@@ -87,6 +95,7 @@ export function Pagination({
   showItemsPerPage = true,
   itemsPerPageOptions = [5, 10, 20, 50],
 }: PaginationProps) {
+  const { t } = useTranslation('common')
   const startItem = (currentPage - 1) * itemsPerPage + 1
   const endItem = Math.min(currentPage * itemsPerPage, totalItems)
 
@@ -99,10 +108,10 @@ export function Pagination({
       <div className="text-muted-foreground">
         {totalItems > 0 ? (
           <span>
-            Showing {startItem}-{endItem} of {totalItems}
+            {t('pagination.showing', { start: startItem, end: endItem, total: totalItems })}
           </span>
         ) : (
-          <span>No items</span>
+          <span>{t('pagination.noItems')}</span>
         )}
       </div>
 

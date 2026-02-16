@@ -24,6 +24,7 @@ import { useCachedWorkloads } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useTranslation } from 'react-i18next'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -207,6 +208,7 @@ interface DraggableWorkloadItemProps {
 }
 
 function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWorkloadItemProps) {
+  const { t } = useTranslation()
   // Source cluster is the first cluster in the list (where we'll copy from)
   const sourceCluster = workload.targetClusters[0] || 'unknown'
 
@@ -312,7 +314,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Labels</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t('common.labels')}</span>
             <div className="flex gap-1 flex-wrap justify-end">
               {Object.entries(workload.labels).map(([k, v]) => (
                 <span
@@ -363,6 +365,7 @@ interface WorkloadDeploymentProps {
 }
 
 export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
+  const { t } = useTranslation()
   const [typeFilter, setTypeFilter] = useState<WorkloadType | 'All'>('All')
   const [statusFilter, setStatusFilter] = useState<WorkloadStatus | 'All'>('All')
   const [selectedWorkload, setSelectedWorkload] = useState<Workload | null>(null)
@@ -632,7 +635,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       <div className="grid grid-cols-6 gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
         <div className="text-center">
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.totalWorkloads}</div>
-          <div className="text-xs text-gray-500">Total</div>
+          <div className="text-xs text-gray-500">{t('common.total')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-purple-500">{stats.uniqueWorkloads}</div>
@@ -640,19 +643,19 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-green-600">{stats.runningCount}</div>
-          <div className="text-xs text-gray-500">Running</div>
+          <div className="text-xs text-gray-500">{t('common.running')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-yellow-600">{stats.degradedCount}</div>
-          <div className="text-xs text-gray-500">Degraded</div>
+          <div className="text-xs text-gray-500">{t('common.degraded')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-blue-600">{stats.pendingCount}</div>
-          <div className="text-xs text-gray-500">Pending</div>
+          <div className="text-xs text-gray-500">{t('common.pending')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-red-600">{stats.failedCount}</div>
-          <div className="text-xs text-gray-500">Failed</div>
+          <div className="text-xs text-gray-500">{t('common.failed')}</div>
         </div>
       </div>
 

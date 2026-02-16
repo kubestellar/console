@@ -3,6 +3,7 @@ import { Search, Server, Layers, Rocket, Box, Settings as SettingsIcon, AlertCir
 import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
+import { useTranslation } from 'react-i18next'
 
 interface MultiClusterSummaryDrillDownProps {
   data: Record<string, unknown>
@@ -168,6 +169,7 @@ function getStatusBadge(status: string) {
 }
 
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
+  const { t } = useTranslation()
   const { clusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -418,14 +420,14 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
         <div className="glass rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
             <Icon className={`w-5 h-5 ${config.color}`} />
-            <span className="text-sm text-muted-foreground">Total</span>
+            <span className="text-sm text-muted-foreground">{t('common.total')}</span>
           </div>
           <div className="text-2xl font-bold">{stats.total}</div>
         </div>
         <div className="glass rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle className="w-5 h-5 text-green-400" />
-            <span className="text-sm text-muted-foreground">Healthy</span>
+            <span className="text-sm text-muted-foreground">{t('common.healthy')}</span>
           </div>
           <div className="text-2xl font-bold text-green-400">{stats.healthy}</div>
         </div>
@@ -445,7 +447,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder={t('common.search')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-card/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"

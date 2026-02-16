@@ -4,6 +4,7 @@ import type { ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {
   useCardData, commonComparators,
@@ -11,6 +12,7 @@ import {
   CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'time' | 'count' | 'type'
 
@@ -21,16 +23,21 @@ const SORT_OPTIONS = [
 ]
 
 function EventStreamInternal() {
+  const { t } = useTranslation()
   // Fetch more events from API to enable pagination (using cached data hook)
   const {
     events: rawEvents,
     isLoading: hookLoading,
+    isDemoFallback,
+    isRefreshing,
+    lastRefresh,
     error,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: rawEvents.length > 0,
     isFailed: !!error && rawEvents.length === 0,
     consecutiveFailures: error ? 1 : 0,
@@ -132,7 +139,15 @@ function EventStreamInternal() {
     <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2" />
+        <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
+        </div>
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,
@@ -164,7 +179,7 @@ function EventStreamInternal() {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search events..."
+        placeholder={t('common.searchEvents')}
         className="mb-3"
       />
 
@@ -229,6 +244,7 @@ function EventStreamInternal() {
 }
 
 export function EventStream() {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="EventStream">
       <EventStreamInternal />

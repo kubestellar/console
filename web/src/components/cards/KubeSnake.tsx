@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, RotateCcw, Pause, Trophy, Apple, Zap } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -31,6 +32,7 @@ interface Point {
 type Direction = 'up' | 'down' | 'left' | 'right'
 
 export function KubeSnake() {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)

@@ -3,6 +3,7 @@ import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // 5-letter Kubernetes-themed words
 const WORD_LIST = [
@@ -122,6 +123,7 @@ const KEYBOARD_ROWS = [
 ]
 
 export function Kubedle(_props: CardComponentProps) {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
 

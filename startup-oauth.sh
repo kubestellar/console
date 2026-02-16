@@ -10,22 +10,30 @@
 #        curl -sSL .../startup-oauth.sh | bash -s -- --tag v1.0.0
 #        curl -sSL .../startup-oauth.sh | bash -s -- --release latest
 #
-# Options (bootstrap mode):
-#   --branch, -b <name>    Branch to clone (default: main)
-#   --tag, -t <name>       Tag to checkout after cloning
-#   --release, -r <name>   Release tag to checkout ("latest" resolves automatically)
-#   --dir, -d <path>       Install directory (default: ./kubestellar-console)
+# Options:
+#   --dev                  Use Vite dev server with HMR (slower initial load, live reload)
+#   --branch, -b <name>   Branch to clone (default: main) [bootstrap mode]
+#   --tag, -t <name>      Tag to checkout after cloning [bootstrap mode]
+#   --release, -r <name>  Release tag to checkout ("latest" resolves automatically) [bootstrap mode]
+#   --dir, -d <path>      Install directory (default: ./kubestellar-console) [bootstrap mode]
 #
 # Setup:
 #   1. Create a GitHub OAuth App at https://github.com/settings/developers
-#      - Homepage URL: http://localhost:5174
+#      - Homepage URL: http://localhost:8080 (or http://localhost:5174 with --dev)
 #      - Callback URL: http://localhost:8080/auth/github/callback
 #   2. Create a .env file:
 #      GITHUB_CLIENT_ID=<your-client-id>
 #      GITHUB_CLIENT_SECRET=<your-client-secret>
-#   3. Run: ./startup-oauth.sh
+#   3. Run: ./startup-oauth.sh           (production build, fast load)
+#      Or:  ./startup-oauth.sh --dev     (Vite dev server, HMR)
 
 set -e
+
+# Parse --dev flag before bootstrap (needs to survive exec)
+USE_DEV_SERVER=false
+for arg in "$@"; do
+    if [ "$arg" = "--dev" ]; then USE_DEV_SERVER=true; fi
+done
 
 # --- Bootstrap: clone repo if not already inside one ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
@@ -37,6 +45,7 @@ if [ ! -f "$SCRIPT_DIR/web/package.json" ] || [ ! -d "$SCRIPT_DIR/cmd" ]; then
 
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --dev) shift ;; # already parsed above
             --branch|-b) BRANCH="$2"; shift 2 ;;
             --tag|-t) TAG="$2"; shift 2 ;;
             --release|-r)
@@ -135,9 +144,15 @@ if [ -z "$JWT_SECRET" ]; then
 fi
 
 # Environment
-export DEV_MODE=false
 export SKIP_ONBOARDING=true
-export FRONTEND_URL=http://localhost:5174
+if [ "$USE_DEV_SERVER" = true ]; then
+    export DEV_MODE=true
+    export FRONTEND_URL=http://localhost:5174
+else
+    export DEV_MODE=false
+    # Frontend served by Go backend on same port — no separate Vite process needed
+    export FRONTEND_URL=http://localhost:8080
+fi
 
 # Create data directory
 mkdir -p ./data
@@ -147,10 +162,17 @@ echo "  Mode: OAuth (real GitHub login)"
 echo "  GitHub Client ID: ${GITHUB_CLIENT_ID:0:8}..."
 echo "  Backend Port: 8080"
 echo "  Frontend URL: $FRONTEND_URL"
+if [ "$USE_DEV_SERVER" = true ]; then
+    echo "  Frontend: Vite dev server (HMR enabled)"
+else
+    echo "  Frontend: Production build (fast load)"
+fi
 echo ""
 
 # Port cleanup
-for p in 8080 5174 8585; do
+PORTS_TO_CLEAN="8080 8585"
+if [ "$USE_DEV_SERVER" = true ]; then PORTS_TO_CLEAN="8080 5174 8585"; fi
+for p in $PORTS_TO_CLEAN; do
     if lsof -Pi :$p -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${YELLOW}Port $p is in use, killing existing process...${NC}"
         lsof -ti:$p | xargs kill -9 2>/dev/null || true
@@ -190,24 +212,43 @@ else
     AGENT_PID=""
 fi
 
-# Start backend (NO --dev flag, uses real OAuth)
-echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
-GOWORK=off go run ./cmd/console &
-BACKEND_PID=$!
-sleep 2
+if [ "$USE_DEV_SERVER" = true ]; then
+    # Dev mode: Vite dev server with HMR (slower initial load, live reload on code changes)
+    echo -e "${GREEN}Starting backend (OAuth + dev mode)...${NC}"
+    GOWORK=off go run ./cmd/console --dev &
+    BACKEND_PID=$!
+    sleep 2
 
-# Start frontend
-echo -e "${GREEN}Starting frontend...${NC}"
-(cd web && npm run dev -- --port 5174) &
-FRONTEND_PID=$!
+    echo -e "${GREEN}Starting Vite dev server...${NC}"
+    (cd web && npm run dev -- --port 5174) &
+    FRONTEND_PID=$!
 
-echo ""
-echo -e "${GREEN}=== Console is running in OAUTH mode ===${NC}"
-echo ""
-echo -e "  Frontend: ${CYAN}http://localhost:5174${NC}"
-echo -e "  Backend:  ${CYAN}http://localhost:8080${NC}"
-echo -e "  Agent:    ${CYAN}http://localhost:8585${NC}"
-echo -e "  Auth:     GitHub OAuth (real login)"
+    echo ""
+    echo -e "${GREEN}=== Console is running in OAUTH + DEV mode ===${NC}"
+    echo ""
+    echo -e "  Frontend: ${CYAN}http://localhost:5174${NC}  (Vite HMR)"
+    echo -e "  Backend:  ${CYAN}http://localhost:8080${NC}"
+    echo -e "  Agent:    ${CYAN}http://localhost:8585${NC}"
+    echo -e "  Auth:     GitHub OAuth (real login)"
+else
+    # Production mode: pre-built frontend served by Go backend (fast load)
+    echo -e "${GREEN}Building frontend...${NC}"
+    (cd web && npm run build)
+    echo -e "${GREEN}Frontend built successfully${NC}"
+
+    # Start backend — serves both API and frontend static files from ./web/dist
+    echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
+    GOWORK=off go run ./cmd/console &
+    BACKEND_PID=$!
+    sleep 2
+
+    echo ""
+    echo -e "${GREEN}=== Console is running in OAUTH mode ===${NC}"
+    echo ""
+    echo -e "  Console: ${CYAN}http://localhost:8080${NC}"
+    echo -e "  Agent:   ${CYAN}http://localhost:8585${NC}"
+    echo -e "  Auth:    GitHub OAuth (real login)"
+fi
 echo ""
 echo "Press Ctrl+C to stop"
 

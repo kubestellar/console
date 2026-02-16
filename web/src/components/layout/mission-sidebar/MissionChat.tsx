@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Send,
   ChevronLeft,
@@ -26,6 +27,7 @@ import { TypingIndicator } from './TypingIndicator'
 import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
+  const { t } = useTranslation('common')
   const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, selectedAgent } = useMissions()
   const { findSimilarResolutions, recordUsage, allResolutions } = useResolutions()
   const [input, setInput] = useState('')
@@ -369,7 +371,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <div className="flex items-center gap-2 text-xs">
               <BookOpen className="w-3.5 h-3.5 text-purple-400" />
               <span className="text-purple-300">
-                {relatedResolutions.length} similar resolution{relatedResolutions.length !== 1 ? 's' : ''} found
+                {t('missionChat.similarResolutionsFound', { count: relatedResolutions.length })}
               </span>
             </div>
             {onToggleFullScreen && (
@@ -377,7 +379,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onClick={onToggleFullScreen}
                 className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
               >
-                View in fullscreen
+                {t('missionChat.viewInFullscreen')}
                 <Maximize2 className="w-3 h-3" />
               </button>
             )}
@@ -455,14 +457,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type next message..."
+                placeholder={t('missionChat.typeNextMessage')}
                 className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
                 className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Send (will queue until current response completes)"
+                title={t('missionChat.sendWillQueue')}
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -472,7 +474,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onClick={() => cancelMission(mission.id)}
                 className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
               >
-                Cancel
+                {t('missionChat.cancel')}
               </button>
             </div>
           </div>
@@ -487,10 +489,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-foreground mb-2">
                     {mission.type === 'troubleshoot'
-                      ? "I've completed my diagnosis. Did this help resolve your issue?"
+                      ? t('missionChat.completedDiagnosis')
                       : mission.type === 'deploy' || mission.type === 'repair'
-                      ? "The operation is complete. Did everything work as expected?"
-                      : "Mission complete! Was this information helpful?"}
+                      ? t('missionChat.operationComplete')
+                      : t('missionChat.missionComplete')}
                   </p>
 
                   {/* Feedback buttons - only show if no feedback yet */}
@@ -506,7 +508,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors"
                       >
                         <ThumbsUp className="w-3.5 h-3.5" />
-                        Yes, helpful
+                        {t('missionChat.yesHelpful')}
                       </button>
                       <button
                         onClick={() => {
@@ -518,7 +520,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-muted-foreground border border-border rounded-lg transition-colors"
                       >
                         <ThumbsDown className="w-3.5 h-3.5" />
-                        Not really
+                        {t('missionChat.notReally')}
                       </button>
                     </div>
                   )}
@@ -527,14 +529,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                   {mission.feedback === 'positive' && (
                     <div className="mt-3 pt-3 border-t border-border/50">
                       <p className="text-sm text-foreground mb-2">
-                        Great! Would you like to save this resolution? It'll help you (and your team) solve similar issues faster next time.
+                        {t('missionChat.saveResolutionPrompt')}
                       </p>
                       <button
                         onClick={() => setShowSaveDialog(true)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg transition-colors"
                       >
                         <Save className="w-3.5 h-3.5" />
-                        Save Resolution
+                        {t('missionChat.saveResolution')}
                       </button>
                     </div>
                   )}
@@ -543,7 +545,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                   {mission.feedback === 'negative' && (
                     <div className="mt-2">
                       <p className="text-xs text-muted-foreground">
-                        Thanks for the feedback. Try a different approach or switch to another agent above.
+                        {t('missionChat.thanksFeedback')}
                       </p>
                     </div>
                   )}
@@ -556,14 +558,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="w-3 h-3" />
-              Back to missions
+              {t('missionChat.backToMissions')}
             </button>
           </div>
         ) : mission.status === 'failed' ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs">
               <span className={cn(config.color)}>{config.label}</span>
-              <span className="text-muted-foreground">Switch agent above and retry</span>
+              <span className="text-muted-foreground">{t('missionChat.switchAgentRetry')}</span>
             </div>
             <div className="flex gap-2">
               <input
@@ -572,7 +574,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Retry with message..."
+                placeholder={t('missionChat.retryWithMessage')}
                 className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <button
@@ -592,7 +594,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
+              placeholder={t('missionChat.typeMessage')}
               className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
@@ -630,7 +632,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <div className="space-y-3">
               {/* Status */}
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">{t('common.status')}</span>
                 <span className={cn('font-medium', STATUS_CONFIG[mission.status].color)}>
                   {STATUS_CONFIG[mission.status].label}
                 </span>
@@ -677,12 +679,12 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <h4 className="text-sm font-semibold text-foreground mb-3">Mission Details</h4>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Type</span>
+                <span className="text-muted-foreground">{t('common.type')}</span>
                 <span className="text-foreground capitalize">{mission.type}</span>
               </div>
               {mission.cluster && (
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Cluster</span>
+                  <span className="text-muted-foreground">{t('common.cluster')}</span>
                   <span className="text-purple-400">{mission.cluster}</span>
                 </div>
               )}

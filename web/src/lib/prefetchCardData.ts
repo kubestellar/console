@@ -16,6 +16,8 @@ import { coreFetchers, specialtyFetchers } from '../hooks/useCachedData'
 import { isDemoMode } from './demoMode'
 
 const SPECIALTY_DELAY_MS = 1000
+const BACKGROUND_DELAY_MS = 5000
+const PREFETCH_CONCURRENCY = 2
 
 interface PrefetchEntry {
   key: string
@@ -23,15 +25,21 @@ interface PrefetchEntry {
   initial: never[]
 }
 
-const CORE_ENTRIES: PrefetchEntry[] = [
+const PRIORITY_ENTRIES: PrefetchEntry[] = [
   { key: 'pods:all:all:100',         fetcher: coreFetchers.pods,             initial: [] },
   { key: 'podIssues:all:all',        fetcher: coreFetchers.podIssues,        initial: [] },
   { key: 'events:all:all:20',        fetcher: coreFetchers.events,           initial: [] },
   { key: 'deploymentIssues:all:all', fetcher: coreFetchers.deploymentIssues, initial: [] },
+]
+
+const CORE_ENTRIES: PrefetchEntry[] = [
   { key: 'deployments:all:all',      fetcher: coreFetchers.deployments,      initial: [] },
   { key: 'services:all:all',         fetcher: coreFetchers.services,         initial: [] },
-  { key: 'securityIssues:all:all',   fetcher: coreFetchers.securityIssues,   initial: [] },
   { key: 'workloads:all:all',        fetcher: coreFetchers.workloads,        initial: [] },
+]
+
+const BACKGROUND_ENTRIES: PrefetchEntry[] = [
+  { key: 'securityIssues:all:all',   fetcher: coreFetchers.securityIssues,   initial: [] },
 ]
 
 const SPECIALTY_ENTRIES: PrefetchEntry[] = [
@@ -42,6 +50,24 @@ const SPECIALTY_ENTRIES: PrefetchEntry[] = [
 
 let prefetched = false
 
+async function runPrefetchQueue(entries: PrefetchEntry[]): Promise<void> {
+  if (entries.length === 0) return
+
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(PREFETCH_CONCURRENCY, entries.length) }, async () => {
+    while (cursor < entries.length) {
+      const current = entries[cursor++]
+      try {
+        await prefetchCache(current.key, current.fetcher, current.initial)
+      } catch {
+        // Ignore individual prefetch failures — cards will fetch on demand.
+      }
+    }
+  })
+
+  await Promise.all(workers)
+}
+
 export function prefetchCardData(): void {
   if (prefetched) return
   prefetched = true
@@ -51,19 +77,21 @@ export function prefetchCardData(): void {
   // downloads need (browser limits to ~6 concurrent connections per origin).
   if (isDemoMode()) return
 
-  // Tier 1: Core data — all in parallel
-  Promise.allSettled(
-    CORE_ENTRIES.map(entry =>
-      prefetchCache(entry.key, entry.fetcher, entry.initial)
-    )
-  ).catch(() => {})
+  // Tier 1: Priority data for initial dashboard cards.
+  runPrefetchQueue(PRIORITY_ENTRIES).catch(() => {})
 
-  // Tier 2: Specialty data — starts 1s after core begins
+  // Tier 2: Core data after priority warm-up.
   setTimeout(() => {
-    Promise.allSettled(
-      SPECIALTY_ENTRIES.map(entry =>
-        prefetchCache(entry.key, entry.fetcher, entry.initial)
-      )
-    ).catch(() => {})
+    runPrefetchQueue(CORE_ENTRIES).catch(() => {})
+  }, 400)
+
+  // Tier 3: Heavy fetchers in background (security scans can be expensive).
+  setTimeout(() => {
+    runPrefetchQueue(BACKGROUND_ENTRIES).catch(() => {})
+  }, BACKGROUND_DELAY_MS)
+
+  // Tier 4: Specialty data — starts after core prefetch begins.
+  setTimeout(() => {
+    runPrefetchQueue(SPECIALTY_ENTRIES).catch(() => {})
   }, SPECIALTY_DELAY_MS)
 }

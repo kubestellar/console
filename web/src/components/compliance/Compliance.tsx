@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const COMPLIANCE_CARDS_KEY = 'compliance-dashboard-cards'
 
@@ -45,6 +46,7 @@ function getCompliancePosture(clusterCount: number) {
 }
 
 export function Compliance() {
+  const { t: _t } = useTranslation()
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { drillToAllSecurity } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()

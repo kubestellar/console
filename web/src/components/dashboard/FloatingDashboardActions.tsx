@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Layout, RotateCcw, Download, Upload, Pencil } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
@@ -34,11 +35,12 @@ export function FloatingDashboardActions({
   onExport,
   onImport,
 }: FloatingDashboardActionsProps) {
+  const { t } = useTranslation()
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
   const { isMobile } = useMobile()
   const [isOpen, setIsOpen] = useState(false)
-  const [showResetDialog, setShowResetDialog] = useState(false)
-  const [showCustomizer, setShowCustomizer] = useState(false)
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -50,8 +52,17 @@ export function FloatingDashboardActions({
         setIsOpen(false)
       }
     }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
   }, [isOpen])
 
   // Desktop: shift button left based on mission sidebar state
@@ -66,7 +77,7 @@ export function FloatingDashboardActions({
   const positionClasses = getPositionClasses()
 
   const handleReset = (mode: ResetMode) => {
-    setShowResetDialog(false)
+    setIsResetDialogOpen(false)
     if (onReset) {
       onReset(mode)
     } else if (onResetToDefaults && mode === 'replace') {
@@ -116,57 +127,57 @@ export function FloatingDashboardActions({
               <button
                 onClick={handleImportClick}
                 className={menuBtnClass}
-                title="Import dashboard from JSON file"
+                title={t('dashboard.actions.importTitle')}
               >
                 <Upload className="w-3.5 h-3.5" />
-                Import
+                {t('dashboard.actions.import')}
               </button>
             )}
             {onExport && (
               <button
                 onClick={() => { setIsOpen(false); onExport() }}
                 className={menuBtnClass}
-                title="Export dashboard as JSON file"
+                title={t('dashboard.actions.exportTitle')}
               >
                 <Download className="w-3.5 h-3.5" />
-                Export
+                {t('dashboard.actions.export')}
               </button>
             )}
             {showResetOption && (
               <button
-                onClick={() => { setIsOpen(false); setShowResetDialog(true) }}
+                onClick={() => { setIsOpen(false); setIsResetDialogOpen(true) }}
                 className={menuBtnClass}
-                title="Reset dashboard cards"
+                title={t('dashboard.actions.resetTitle')}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Reset
+                {t('dashboard.actions.reset')}
               </button>
             )}
             <button
-              onClick={() => { setIsOpen(false); setShowCustomizer(true) }}
+              onClick={() => { setIsOpen(false); setIsCustomizerOpen(true) }}
               className={menuBtnClass}
-              title="Customize sidebar"
+              title={t('dashboard.actions.customizeTitle')}
             >
               <Pencil className="w-3.5 h-3.5" />
-              Customize
+              {t('dashboard.actions.customize')}
             </button>
             <button
               onClick={() => { setIsOpen(false); onOpenTemplates() }}
               data-tour="templates"
               className={menuBtnClass}
-              title="Browse dashboard templates"
+              title={t('dashboard.actions.templatesTitle')}
             >
               <Layout className="w-3.5 h-3.5" />
-              Templates
+              {t('dashboard.actions.templates')}
             </button>
             <button
               onClick={() => { setIsOpen(false); onAddCard() }}
               data-tour="add-card"
               className={menuBtnClass}
-              title="Add a new card"
+              title={t('dashboard.actions.addCardTitle')}
             >
               <Plus className="w-3.5 h-3.5" />
-              Add Card
+              {t('dashboard.actions.addCard')}
             </button>
           </div>
         )}
@@ -181,21 +192,21 @@ export function FloatingDashboardActions({
               ? 'bg-card border border-border rotate-45'
               : 'bg-gradient-ks hover:scale-110 hover:shadow-xl'
           }`}
-          title={isOpen ? 'Close menu' : 'Dashboard actions'}
+          title={isOpen ? t('dashboard.actions.closeMenu') : t('dashboard.actions.dashboardActions')}
         >
           <Plus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-foreground`} />
         </button>
       </div>
 
       <ResetDialog
-        isOpen={showResetDialog}
-        onClose={() => setShowResetDialog(false)}
+        isOpen={isResetDialogOpen}
+        onClose={() => setIsResetDialogOpen(false)}
         onReset={handleReset}
       />
 
       <SidebarCustomizer
-        isOpen={showCustomizer}
-        onClose={() => setShowCustomizer(false)}
+        isOpen={isCustomizerOpen}
+        onClose={() => setIsCustomizerOpen(false)}
       />
     </>
   )

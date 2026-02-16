@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { useTranslation } from 'react-i18next'
 
 interface SetupInstructionsDialogProps {
   isOpen: boolean
@@ -28,6 +29,7 @@ const OAUTH_STEPS = [
 ]
 
 export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDialogProps) {
+  const { t } = useTranslation()
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const [showOAuthGuide, setShowOAuthGuide] = useState(false)
   const [showDevGuide, setShowDevGuide] = useState(false)
@@ -71,7 +73,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                   <button
                     onClick={() => copyToClipboard(QUICKSTART_CMD, 1)}
                     className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copy command"
+                    title={t('drilldown.tooltips.copyCommand')}
                   >
                     {copiedStep === 1 ? (
                       <Check className="w-3.5 h-3.5 text-green-400" />
@@ -104,7 +106,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                         <button
                           onClick={() => copyToClipboard('git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh', 300)}
                           className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title="Copy command"
+                          title={t('drilldown.tooltips.copyCommand')}
                         >
                           {copiedStep === 300 ? (
                             <Check className="w-3.5 h-3.5 text-green-400" />
@@ -146,7 +148,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                         <button
                           onClick={() => copyToClipboard(K8S_DEPLOY_CMD, 400)}
                           className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title="Copy command"
+                          title={t('drilldown.tooltips.copyCommand')}
                         >
                           {copiedStep === 400 ? (
                             <Check className="w-3.5 h-3.5 text-green-400" />
@@ -209,7 +211,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                                 <button
                                   onClick={() => copyToClipboard(oStep.command, 200 + idx)}
                                   className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors self-start"
-                                  title="Copy"
+                                  title={t('common.copy')}
                                 >
                                   {copiedStep === 200 + idx ? (
                                     <Check className="w-3.5 h-3.5 text-green-400" />

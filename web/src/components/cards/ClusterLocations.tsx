@@ -7,6 +7,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -212,6 +213,7 @@ function extractRegion(cluster: ClusterInfo): string | null {
 type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
+  const { t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToCluster } = useDrillDownActions()
 
@@ -427,7 +429,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Search clusters..."
+              placeholder={t('common.searchClusters')}
               className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             />
             {searchFilter && (
@@ -642,7 +644,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
             ))}
             <div className="flex items-center gap-1 ml-auto">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Healthy</span>
+              <span>{t('common.healthy')}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-red-500" />

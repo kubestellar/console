@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 
+
 interface Props {
   cardId: string
   children: ReactNode

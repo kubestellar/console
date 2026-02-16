@@ -4,6 +4,7 @@ import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface CommandHistoryItem {
   id: string
@@ -22,6 +23,7 @@ interface YAMLManifest {
 }
 
 export function Kubectl() {
+  const { t } = useTranslation(['common', 'cards'])
   const { execute } = useKubectl()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [selectedContext, setSelectedContext] = useState<string>('')
@@ -481,7 +483,7 @@ data:
               'p-1.5 rounded-lg transition-colors',
               showAI ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
             )}
-            title="AI Assistant"
+            title={t('cards:kubectl.aiAssist')}
           >
             <Sparkles className="w-4 h-4" />
           </button>
@@ -491,7 +493,7 @@ data:
               'p-1.5 rounded-lg transition-colors',
               showYAMLEditor ? 'bg-blue-500/20 text-blue-400' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
             )}
-            title="YAML Editor"
+            title={t('cards:kubectl.yamlEditor')}
           >
             <FileCode className="w-4 h-4" />
           </button>
@@ -501,14 +503,14 @@ data:
               'p-1.5 rounded-lg transition-colors',
               showHistory ? 'bg-orange-500/20 text-orange-400' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
             )}
-            title="Command History"
+            title={t('cards:kubectl.history')}
           >
             <History className="w-4 h-4" />
           </button>
           <button
             onClick={clearOutput}
             className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-            title="Clear output"
+            title={t('cards:kubectl.clearOutput')}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -520,7 +522,7 @@ data:
         <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-purple-300">AI Assistant</span>
+            <span className="text-sm font-medium text-purple-300">{t('cards:kubectl.aiAssist')}</span>
           </div>
           <input
             type="text"
@@ -536,14 +538,14 @@ data:
               disabled={isExecuting || !aiPrompt.trim()}
               className="px-3 py-1.5 text-xs rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Generate Command
+              {t('cards:kubectl.generateCommand')}
             </button>
             <button
               onClick={generateYAML}
               disabled={isExecuting || !aiPrompt.trim()}
               className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Generate YAML
+              {t('cards:kubectl.generateYAML')}
             </button>
           </div>
         </div>
@@ -555,7 +557,7 @@ data:
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <FileCode className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium text-blue-300">YAML Manifest</span>
+              <span className="text-sm font-medium text-blue-300">{t('cards:kubectl.yamlEditor')}</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -566,7 +568,7 @@ data:
                 )}
                 title={isDryRun ? 'Dry-run enabled' : 'Dry-run disabled'}
               >
-                Dry-run
+                {t('cards:kubectl.dryRun')}
               </button>
               <button
                 onClick={() => {
@@ -607,7 +609,7 @@ data:
           {!yamlError && yamlContent.trim() && (
             <div className="flex items-center gap-2 mt-2 text-xs text-green-400">
               <CheckCircle className="w-3.5 h-3.5" />
-              Valid YAML
+              {t('cards:kubectl.validYaml')}
             </div>
           )}
           <div className="flex gap-2 mt-2">
@@ -616,7 +618,7 @@ data:
               disabled={isExecuting || !yamlContent.trim() || !!yamlError}
               className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isExecuting ? 'Applying...' : isDryRun ? 'Dry-run Apply' : 'Apply'}
+              {isExecuting ? t('cards:kubectl.applying') : isDryRun ? t('cards:kubectl.dryRunApply') : t('common:common.apply')}
             </button>
             <button
               onClick={() => {
@@ -625,7 +627,7 @@ data:
               }}
               className="px-3 py-1.5 text-xs rounded-lg hover:bg-secondary/50 text-muted-foreground"
             >
-              Clear
+              {t('common:common.clear')}
             </button>
           </div>
 
@@ -634,7 +636,7 @@ data:
             <div className="mt-3 pt-3 border-t border-border/30">
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Saved Manifests</span>
+                <span className="text-xs text-muted-foreground">{t('cards:kubectl.savedManifests')}</span>
               </div>
               <div className="space-y-1">
                 {yamlManifests.slice(-5).reverse().map(manifest => (
@@ -667,7 +669,7 @@ data:
         <div className="mb-4 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg max-h-64 overflow-hidden flex flex-col">
           <div className="flex items-center gap-2 mb-2">
             <History className="w-4 h-4 text-orange-400" />
-            <span className="text-sm font-medium text-orange-300">Command History</span>
+            <span className="text-sm font-medium text-orange-300">{t('cards:kubectl.history')}</span>
           </div>
           <div className="relative mb-2">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
@@ -675,7 +677,7 @@ data:
               type="text"
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
-              placeholder="Search history..."
+              placeholder={t('cards:kubectl.searchHistory')}
               className="w-full pl-7 pr-3 py-1.5 text-xs bg-secondary rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-500/50"
             />
           </div>
@@ -711,7 +713,7 @@ data:
             ))}
             {filteredHistory.length === 0 && (
               <div className="text-xs text-muted-foreground text-center py-4">
-                {historySearch ? 'No matching commands' : 'No command history'}
+                {historySearch ? t('cards:kubectl.noMatchingCommands') : t('cards:kubectl.noHistory')}
               </div>
             )}
           </div>
@@ -801,7 +803,7 @@ data:
               )}
               title="Toggle dry-run mode"
             >
-              {isDryRun ? 'DRY' : 'RUN'}
+              {isDryRun ? t('cards:kubectl.dry') : t('cards:kubectl.run')}
             </button>
           </div>
         </div>
@@ -814,12 +816,12 @@ data:
           {isExecuting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Running...</span>
+              <span className="text-sm">{t('cards:kubectl.running')}</span>
             </>
           ) : (
             <>
               <Send className="w-4 h-4" />
-              <span className="text-sm">Run</span>
+              <span className="text-sm">{t('cards:kubectl.run')}</span>
             </>
           )}
         </button>
@@ -827,30 +829,30 @@ data:
 
       {/* Quick Actions */}
       <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground">Quick actions:</span>
+        <span className="text-xs text-muted-foreground">{t('cards:kubectl.quickCommands')}:</span>
         <button
           onClick={() => setCommand('get pods --all-namespaces')}
           className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
-          List Pods
+          {t('cards:kubectl.listPods')}
         </button>
         <button
           onClick={() => setCommand('get deployments')}
           className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
-          Deployments
+          {t('common:common.deployments')}
         </button>
         <button
           onClick={() => setCommand('get services')}
           className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
-          Services
+          {t('common:common.services')}
         </button>
         <button
           onClick={() => setCommand('get nodes')}
           className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
-          Nodes
+          {t('common:common.nodes')}
         </button>
         <button
           onClick={copyOutput}
@@ -858,7 +860,7 @@ data:
           className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
         >
           <Copy className="w-3 h-3 inline mr-1" />
-          Copy Output
+          {t('cards:kubectl.copyOutput')}
         </button>
       </div>
     </div>

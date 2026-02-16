@@ -3,6 +3,7 @@ import { History, Trash2, Plus, RefreshCw, ArrowRight, Settings2, RotateCcw } fr
 import { useCardHistory, CardHistoryEntry } from '../../hooks/useCardHistory'
 import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { useTranslation } from 'react-i18next'
 
 function formatCardType(type: string): string {
   return formatCardTitle(type)
@@ -77,6 +78,7 @@ interface CardHistoryProps {
 }
 
 export function CardHistory({ onRestoreCard }: CardHistoryProps) {
+  const { t: _t } = useTranslation()
   const { history, clearHistory, removeEntry } = useCardHistory()
   const [filter, setFilter] = useState<CardHistoryEntry['action'] | 'all'>('all')
 

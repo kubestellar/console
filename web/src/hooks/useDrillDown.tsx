@@ -26,6 +26,7 @@ export type DrillDownViewType =
   | 'helm'
   | 'argoapp'
   | 'kustomization'
+  | 'buildpack'
   | 'drift'
   // Phase 2: Policy and compliance views
   | 'policy'
@@ -210,6 +211,8 @@ function getViewKey(view: DrillDownView): string {
       return `argoapp:${data.cluster}:${data.namespace}:${data.app}`
     case 'kustomization':
       return `kustomization:${data.cluster}:${data.namespace}:${data.name}`
+    case 'buildpack':
+      return `buildpack:${data.cluster}:${data.namespace}:${data.name}`
     case 'drift':
       return `drift:${data.cluster}`
     // Phase 2: Policy and compliance views
@@ -486,7 +489,15 @@ export function useDrillDownActions() {
       data: { cluster, namespace, name, ...kustomizeData },
     })
   }, [openOrPush])
-
+  const drillToBuildpack = useCallback((cluster: string, namespace: string, name: string, buildpackData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'buildpack',
+      title: name,
+      subtitle: `Buildpack in ${namespace}`,
+      data: { cluster, namespace, name, ...buildpackData },
+    })
+  }, [openOrPush])
+  
   const drillToDrift = useCallback((cluster: string, driftData?: Record<string, unknown>) => {
     openOrPush({
       type: 'drift',
@@ -728,6 +739,7 @@ export function useDrillDownActions() {
     drillToHelm,
     drillToArgoApp,
     drillToKustomization,
+    drillToBuildpack,
     drillToDrift,
     drillToPolicy,
     drillToCRD,

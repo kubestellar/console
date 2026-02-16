@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
@@ -22,6 +23,7 @@ export function CreateDashboardModal({
   const [showTemplates, setShowTemplates] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { t } = useTranslation()
 
   // Reset state when modal opens
   useEffect(() => {
@@ -63,8 +65,8 @@ export function CreateDashboardModal({
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
-        title="Create Dashboard"
-        description="Name your dashboard and optionally start with a template."
+        title={t('dashboard.create.title')}
+        description={t('dashboard.create.description')}
         icon={LayoutDashboard}
         onClose={onClose}
         showBack={false}
@@ -74,7 +76,7 @@ export function CreateDashboardModal({
         {/* Dashboard name input */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-foreground mb-2">
-            Dashboard Name
+            {t('dashboard.create.nameLabel')}
           </label>
           <input
             ref={inputRef}
@@ -90,12 +92,12 @@ export function CreateDashboardModal({
         {/* Description input (optional) */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-foreground mb-2">
-            Description <span className="text-muted-foreground font-normal">(optional)</span>
+            {t('dashboard.create.descriptionLabel')} <span className="text-muted-foreground font-normal">{t('dashboard.create.optional')}</span>
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What is this dashboard for?"
+            placeholder={t('dashboard.create.descriptionPlaceholder')}
             rows={2}
             className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent resize-none"
           />
@@ -104,7 +106,7 @@ export function CreateDashboardModal({
         {/* Starting content options */}
         <div className="space-y-3">
           <label className="block text-sm font-medium text-foreground">
-            Starting Content
+            {t('dashboard.create.startingContent')}
           </label>
 
           {/* Blank option */}
@@ -123,8 +125,8 @@ export function CreateDashboardModal({
               <FileText className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-foreground">Start Blank</h3>
-              <p className="text-xs text-muted-foreground">Empty dashboard - add cards yourself</p>
+              <h3 className="text-sm font-medium text-foreground">{t('dashboard.create.startBlank')}</h3>
+              <p className="text-xs text-muted-foreground">{t('dashboard.create.startBlankDesc')}</p>
             </div>
             {!selectedTemplate && !showTemplates && (
               <Check className="w-5 h-5 text-purple-400" />
@@ -145,12 +147,12 @@ export function CreateDashboardModal({
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                {selectedTemplate ? selectedTemplate.name : 'Start with Template'}
+                {selectedTemplate ? selectedTemplate.name : t('dashboard.create.startWithTemplate')}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {selectedTemplate
-                  ? `${selectedTemplate.cards.length} pre-configured cards`
-                  : 'Choose from pre-built layouts'
+                  ? t('dashboard.create.preConfiguredCards', { count: selectedTemplate.cards.length })
+                  : t('dashboard.create.chooseFromTemplates')
                 }
               </p>
             </div>
@@ -164,7 +166,7 @@ export function CreateDashboardModal({
           {/* Template selection - categorized view */}
           {showTemplates && (
             <div className="ml-14 space-y-2 animate-fade-in max-h-64 overflow-y-auto">
-              <p className="text-xs text-muted-foreground">Select a template by category:</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.create.selectByCategory')}</p>
 
               {TEMPLATE_CATEGORIES.map((category) => {
                 const categoryTemplates = DASHBOARD_TEMPLATES.filter(t => t.category === category.id)
@@ -204,7 +206,7 @@ export function CreateDashboardModal({
                             <span className="text-base">{template.icon}</span>
                             <div className="flex-1 min-w-0">
                               <h4 className="text-[11px] font-medium text-foreground truncate">{template.name}</h4>
-                              <p className="text-[9px] text-muted-foreground">{template.cards.length} cards</p>
+                              <p className="text-[9px] text-muted-foreground">{template.cards.length} {t('dashboard.create.cards')}</p>
                             </div>
                           </button>
                         ))}
@@ -223,13 +225,13 @@ export function CreateDashboardModal({
           onClick={onClose}
           className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          Cancel
+          {t('actions.cancel')}
         </button>
         <button
           onClick={handleCreate}
           className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
         >
-          Create Dashboard
+          {t('dashboard.create.title')}
           <ChevronRight className="w-4 h-4" />
         </button>
       </BaseModal.Footer>

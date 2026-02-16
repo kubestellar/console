@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
 import { useTokenUsage, type TokenCategory } from '../../../hooks/useTokenUsage'
@@ -14,8 +15,9 @@ const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.Elemen
 }
 
 export function TokenUsageWidget() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const { usage, alertLevel, percentage, remaining } = useTokenUsage()
+  const { usage, alertLevel, percentage, remaining, isDemoData } = useTokenUsage()
   const [showTokenDetails, setShowTokenDetails] = useState(false)
   const [tokenAnimating, setTokenAnimating] = useState(false)
   const previousTokensRef = useRef<number>(usage.used)
@@ -49,7 +51,9 @@ export function TokenUsageWidget() {
       <button
         onClick={() => setShowTokenDetails(!showTokenDetails)}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
-          alertLevel === 'stopped'
+          isDemoData
+            ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
+            : alertLevel === 'stopped'
             ? 'bg-red-500/20 text-red-400'
             : alertLevel === 'critical'
             ? 'bg-red-500/10 text-red-400'
@@ -57,14 +61,19 @@ export function TokenUsageWidget() {
             ? 'bg-yellow-500/10 text-yellow-400'
             : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
         }`}
-        title={`Token usage: ${percentage.toFixed(0)}%`}
+        title={`Token usage: ${percentage.toFixed(0)}%${isDemoData ? ' (Demo Data)' : ''}`}
       >
         <Coins className={cn("w-4 h-4 transition-transform", tokenAnimating && "animate-bounce text-yellow-400 scale-125")} />
+        {isDemoData && (
+          <span className="text-xs font-medium px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded" role="img" aria-label="Demo mode active">Demo</span>
+        )}
         <span className="text-xs font-medium hidden sm:inline">{percentage.toFixed(0)}%</span>
         <div className="w-12 h-1.5 bg-secondary rounded-full overflow-hidden hidden sm:block">
           <div
             className={`h-full transition-all ${
-              alertLevel === 'stopped' || alertLevel === 'critical'
+              isDemoData
+                ? 'bg-yellow-500'
+                : alertLevel === 'stopped' || alertLevel === 'critical'
                 ? 'bg-red-500'
                 : alertLevel === 'warning'
                 ? 'bg-yellow-500'
@@ -78,10 +87,24 @@ export function TokenUsageWidget() {
       {/* Token details dropdown */}
       {showTokenDetails && (
         <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-4 z-50">
-          <h4 className="text-sm font-medium text-foreground mb-3">Token Usage</h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-foreground">Token Usage</h4>
+            {isDemoData && (
+              <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded border border-yellow-500/20">
+                Demo Data
+              </span>
+            )}
+          </div>
+          {isDemoData && (
+            <div className="mb-3 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <p className="text-xs text-yellow-400/80">
+                Showing simulated token usage. Connect to kc-agent for live data.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Used</span>
+              <span className="text-muted-foreground">{t('common.used')}</span>
               <span className="text-foreground font-mono">{usage.used.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-xs">
@@ -95,7 +118,9 @@ export function TokenUsageWidget() {
             <div className="h-2 bg-secondary rounded-full overflow-hidden mt-2">
               <div
                 className={`h-full transition-all ${
-                  alertLevel === 'stopped' || alertLevel === 'critical'
+                  isDemoData
+                    ? 'bg-yellow-500'
+                    : alertLevel === 'stopped' || alertLevel === 'critical'
                     ? 'bg-red-500'
                     : alertLevel === 'warning'
                     ? 'bg-yellow-500'
@@ -106,7 +131,9 @@ export function TokenUsageWidget() {
             </div>
             <div className="flex justify-between text-xs mt-1">
               <span className={`${
-                alertLevel === 'stopped'
+                isDemoData
+                  ? 'text-yellow-400'
+                  : alertLevel === 'stopped'
                   ? 'text-red-400 font-medium'
                   : alertLevel === 'critical'
                   ? 'text-red-400'
@@ -114,7 +141,9 @@ export function TokenUsageWidget() {
                   ? 'text-yellow-400'
                   : 'text-green-400'
               }`}>
-                {alertLevel === 'stopped'
+                {isDemoData
+                  ? 'Demo Mode'
+                  : alertLevel === 'stopped'
                   ? 'AI Disabled'
                   : alertLevel === 'critical'
                   ? 'Critical'

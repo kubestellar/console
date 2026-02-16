@@ -8,6 +8,7 @@ import { CardControlsRow, CardSearchInput } from '../../lib/cards/CardComponents
 import { useCardLoadingState } from './CardDataContext'
 import { Activity } from 'lucide-react'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
+import { useTranslation } from 'react-i18next'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
@@ -21,6 +22,7 @@ const SORT_OPTIONS = [
 ]
 
 export function GPUOverview({ config: _config }: GPUOverviewProps) {
+  const { t } = useTranslation()
   const {
     nodes: rawNodes,
     isLoading: hookLoading,
@@ -219,7 +221,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search GPU types..."
+        placeholder={t('common.searchGPUTypes')}
         className="mb-3"
       />
 
@@ -289,7 +291,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           title={allocatedGPUs > 0 ? `${allocatedGPUs} GPUs allocated - Click for details` : 'No GPUs allocated'}
         >
           <p className="text-lg font-bold text-purple-400">{allocatedGPUs}</p>
-          <p className="text-xs text-muted-foreground">Allocated</p>
+          <p className="text-xs text-muted-foreground">{t('common.allocated')}</p>
         </div>
         <div
           className={`text-center ${clusterCount > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}

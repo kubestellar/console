@@ -8,6 +8,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const DEPLOYMENTS_CARDS_KEY = 'kubestellar-deployments-cards'
 
@@ -15,6 +16,7 @@ const DEPLOYMENTS_CARDS_KEY = 'kubestellar-deployments-cards'
 const DEFAULT_DEPLOYMENTS_CARDS = getDefaultCards('deployments')
 
 export function Deployments() {
+  const { t: _t } = useTranslation()
   // Use cached hooks for stale-while-revalidate pattern
   const { deployments, isLoading, isRefreshing: dataRefreshing, lastRefresh, refetch, error: deploymentsError } = useCachedDeployments()
   const { issues: deploymentIssues, refetch: refetchIssues, error: deploymentIssuesError } = useCachedDeploymentIssues()

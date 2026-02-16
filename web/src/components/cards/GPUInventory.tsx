@@ -10,6 +10,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface GPUInventoryProps {
   config?: Record<string, unknown>
@@ -34,6 +35,7 @@ const GPU_SORT_COMPARATORS: Record<SortByOption, (a: GPUNode, b: GPUNode) => num
 }
 
 export function GPUInventory({ config }: GPUInventoryProps) {
+  const { t } = useTranslation()
   const cluster = config?.cluster as string | undefined
   const {
     nodes: rawNodes,
@@ -195,7 +197,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{stats.totalGPUs}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-xs text-muted-foreground">{t('common.total')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-purple-400">{stats.allocatedGPUs}</p>
@@ -203,7 +205,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-green-400">{stats.availableGPUs}</p>
-          <p className="text-xs text-muted-foreground">Available</p>
+          <p className="text-xs text-muted-foreground">{t('common.available')}</p>
         </div>
       </div>
 

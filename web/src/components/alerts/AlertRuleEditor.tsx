@@ -27,22 +27,22 @@ interface AlertRuleEditorProps {
   onCancel: () => void
 }
 
-const CONDITION_TYPES: { value: AlertConditionType; label: string; description: string }[] = [
-  { value: 'gpu_usage', label: 'GPU Usage', description: 'Alert when GPU utilization exceeds threshold' },
-  { value: 'node_not_ready', label: 'Node Not Ready', description: 'Alert when a node is not in Ready state' },
-  { value: 'pod_crash', label: 'Pod Crash Loop', description: 'Alert when pod restarts exceed threshold' },
-  { value: 'memory_pressure', label: 'Memory Pressure', description: 'Alert when memory usage exceeds threshold' },
-  { value: 'weather_alerts', label: 'Weather Alerts', description: 'Alert on severe weather conditions' },
-]
-
-const SEVERITY_OPTIONS: { value: AlertSeverity; label: string; color: string }[] = [
-  { value: 'critical', label: 'Critical', color: 'bg-red-500' },
-  { value: 'warning', label: 'Warning', color: 'bg-orange-500' },
-  { value: 'info', label: 'Info', color: 'bg-blue-500' },
-]
-
 export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: AlertRuleEditorProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('common')
+
+  const CONDITION_TYPES: { value: AlertConditionType; label: string; description: string }[] = [
+    { value: 'gpu_usage', label: t('alerts.conditions.gpuUsage'), description: t('alerts.conditions.gpuUsageDesc') },
+    { value: 'node_not_ready', label: t('alerts.conditions.nodeNotReady'), description: t('alerts.conditions.nodeNotReadyDesc') },
+    { value: 'pod_crash', label: t('alerts.conditions.podCrash'), description: t('alerts.conditions.podCrashDesc') },
+    { value: 'memory_pressure', label: t('alerts.conditions.memoryPressure'), description: t('alerts.conditions.memoryPressureDesc') },
+    { value: 'weather_alerts', label: t('alerts.conditions.weatherAlerts'), description: t('alerts.conditions.weatherAlertsDesc') },
+  ]
+
+  const SEVERITY_OPTIONS: { value: AlertSeverity; label: string; color: string }[] = [
+    { value: 'critical', label: t('alerts.severityOptions.critical'), color: 'bg-red-500' },
+    { value: 'warning', label: t('alerts.severityOptions.warning'), color: 'bg-orange-500' },
+    { value: 'info', label: t('alerts.severityOptions.info'), color: 'bg-blue-500' },
+  ]
   const { clusters } = useClusters()
 
   // Form state
@@ -168,7 +168,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
   return (
     <BaseModal isOpen={isOpen} onClose={onCancel} size="lg">
       <BaseModal.Header
-        title={rule ? 'Edit Alert Rule' : 'Create Alert Rule'}
+        title={rule ? t('alerts.editRule') : t('alerts.createRule')}
         icon={Bell}
         onClose={onCancel}
         showBack={false}
@@ -180,13 +180,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                Rule Name *
+                {t('alerts.ruleName')} *
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="e.g., High GPU Usage Alert"
+                placeholder={t('alerts.ruleNamePlaceholder')}
                 className={`w-full px-3 py-2 rounded-lg bg-secondary border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                   errors.name ? 'border-red-500' : 'border-border'
                 }`}
@@ -198,12 +198,12 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                Description
+                {t('alerts.description')}
               </label>
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                placeholder="Optional description of what this alert monitors"
+                placeholder={t('alerts.descriptionPlaceholder')}
                 rows={2}
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
               />
@@ -212,7 +212,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             <div className="flex items-center gap-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
-                  Severity
+                  {t('alerts.severity')}
                 </label>
                 <div className="flex gap-2">
                   {SEVERITY_OPTIONS.map(opt => (
@@ -242,7 +242,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   }`}
                 >
                   {enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-                  {enabled ? 'Enabled' : 'Disabled'}
+                  {enabled ? t('alerts.enabled') : t('alerts.disabled')}
                 </button>
               </div>
             </div>
@@ -250,11 +250,11 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
           {/* Condition */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">Condition</h4>
+            <h4 className="text-sm font-medium text-foreground">{t('alerts.condition')}</h4>
 
             <div>
               <label className="block text-xs text-muted-foreground mb-2">
-                Condition Type
+                {t('alerts.conditionType')}
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {CONDITION_TYPES.map(type => (
@@ -278,7 +278,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             {['gpu_usage', 'memory_pressure'].includes(conditionType) && (
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Threshold (%)
+                  {t('alerts.thresholdPercent')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -302,7 +302,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             {conditionType === 'pod_crash' && (
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Restart Count Threshold
+                  {t('alerts.restartCountThreshold')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -325,7 +325,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">
-                    Weather Condition
+                    {t('alerts.weatherCondition')}
                   </label>
                   <select
                     value={weatherCondition}

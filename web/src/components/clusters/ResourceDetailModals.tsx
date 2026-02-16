@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Cpu, MemoryStick, Database, HardDrive, Server, ChevronDown, ChevronRight } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { Gauge } from '../charts/Gauge'
+import { useTranslation } from 'react-i18next'
 
 interface ResourceModalProps {
   clusterName: string
@@ -40,6 +41,7 @@ export function CPUDetailModal({
   isLoading,
   onClose,
 }: CPUDetailModalProps) {
+  const { t } = useTranslation()
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
 
   const utilizationPercent = allocatableCores > 0 ? Math.round((requestedCores / allocatableCores) * 100) : 0
@@ -66,12 +68,12 @@ export function CPUDetailModal({
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Total Capacity</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.totalCapacity')}</div>
                 <div className="text-3xl font-bold text-foreground">{totalCores}</div>
                 <div className="text-xs text-muted-foreground">cores</div>
               </div>
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Allocatable</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.allocatable')}</div>
                 <div className="text-3xl font-bold text-foreground">{allocatableCores}</div>
                 <div className="text-xs text-muted-foreground">cores</div>
               </div>
@@ -80,7 +82,7 @@ export function CPUDetailModal({
             {/* Utilization */}
             <div className="mb-6 p-4 rounded-lg bg-card/50 border border-border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">CPU Allocation</span>
+                <span className="text-sm font-medium text-foreground">{t('common.cpuAllocation')}</span>
                 <span className={`text-sm ${utilizationPercent > 80 ? 'text-red-400' : utilizationPercent > 60 ? 'text-yellow-400' : 'text-green-400'}`}>
                   {utilizationPercent}% requested
                 </span>
@@ -90,11 +92,11 @@ export function CPUDetailModal({
                   <Gauge value={requestedCores} max={allocatableCores} size="lg" label="Requested" />
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Requested</div>
+                  <div className="text-sm text-muted-foreground">{t('common.requested')}</div>
                   <div className="text-xl font-bold text-foreground">{requestedCores.toFixed(1)}</div>
                   {limitCores > 0 && (
                     <>
-                      <div className="text-sm text-muted-foreground mt-2">Limits</div>
+                      <div className="text-sm text-muted-foreground mt-2">{t('common.limits')}</div>
                       <div className="text-lg font-medium text-foreground">{limitCores.toFixed(1)}</div>
                     </>
                   )}
@@ -140,16 +142,16 @@ export function CPUDetailModal({
                         {isExpanded && (
                           <div className="px-4 pb-3 grid grid-cols-3 gap-4 text-sm">
                             <div>
-                              <div className="text-muted-foreground">Capacity</div>
+                              <div className="text-muted-foreground">{t('common.capacity')}</div>
                               <div className="font-medium">{node.cpuCapacity} cores</div>
                             </div>
                             <div>
-                              <div className="text-muted-foreground">Requested</div>
+                              <div className="text-muted-foreground">{t('common.requested')}</div>
                               <div className="font-medium">{(node.cpuRequested || 0).toFixed(1)} cores</div>
                             </div>
                             {node.cpuUsed !== undefined && (
                               <div>
-                                <div className="text-muted-foreground">Usage</div>
+                                <div className="text-muted-foreground">{t('common.usage')}</div>
                                 <div className="font-medium">{node.cpuUsed.toFixed(1)} cores</div>
                               </div>
                             )}
@@ -200,6 +202,7 @@ export function MemoryDetailModal({
   isLoading,
   onClose,
 }: MemoryDetailModalProps) {
+  const { t } = useTranslation()
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
 
   const utilizationPercent = allocatableMemoryGB > 0 ? Math.round((requestedMemoryGB / allocatableMemoryGB) * 100) : 0
@@ -226,11 +229,11 @@ export function MemoryDetailModal({
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Total Capacity</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.totalCapacity')}</div>
                 <div className="text-3xl font-bold text-foreground">{formatMemory(totalMemoryGB)}</div>
               </div>
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Allocatable</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.allocatable')}</div>
                 <div className="text-3xl font-bold text-foreground">{formatMemory(allocatableMemoryGB)}</div>
               </div>
             </div>
@@ -238,7 +241,7 @@ export function MemoryDetailModal({
             {/* Utilization */}
             <div className="mb-6 p-4 rounded-lg bg-card/50 border border-border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">Memory Allocation</span>
+                <span className="text-sm font-medium text-foreground">{t('common.memoryAllocation')}</span>
                 <span className={`text-sm ${utilizationPercent > 80 ? 'text-red-400' : utilizationPercent > 60 ? 'text-yellow-400' : 'text-green-400'}`}>
                   {utilizationPercent}% requested
                 </span>
@@ -248,11 +251,11 @@ export function MemoryDetailModal({
                   <Gauge value={requestedMemoryGB} max={allocatableMemoryGB} size="lg" label="Requested" />
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Requested</div>
+                  <div className="text-sm text-muted-foreground">{t('common.requested')}</div>
                   <div className="text-xl font-bold text-foreground">{formatMemory(requestedMemoryGB)}</div>
                   {limitMemoryGB > 0 && (
                     <>
-                      <div className="text-sm text-muted-foreground mt-2">Limits</div>
+                      <div className="text-sm text-muted-foreground mt-2">{t('common.limits')}</div>
                       <div className="text-lg font-medium text-foreground">{formatMemory(limitMemoryGB)}</div>
                     </>
                   )}
@@ -298,16 +301,16 @@ export function MemoryDetailModal({
                         {isExpanded && (
                           <div className="px-4 pb-3 grid grid-cols-3 gap-4 text-sm">
                             <div>
-                              <div className="text-muted-foreground">Capacity</div>
+                              <div className="text-muted-foreground">{t('common.capacity')}</div>
                               <div className="font-medium">{formatMemory(node.memoryCapacityGB)}</div>
                             </div>
                             <div>
-                              <div className="text-muted-foreground">Requested</div>
+                              <div className="text-muted-foreground">{t('common.requested')}</div>
                               <div className="font-medium">{formatMemory(node.memoryRequestedGB || 0)}</div>
                             </div>
                             {node.memoryUsedGB !== undefined && (
                               <div>
-                                <div className="text-muted-foreground">Usage</div>
+                                <div className="text-muted-foreground">{t('common.usage')}</div>
                                 <div className="font-medium">{formatMemory(node.memoryUsedGB)}</div>
                               </div>
                             )}
@@ -358,6 +361,7 @@ export function StorageDetailModal({
   isLoading,
   onClose,
 }: StorageDetailModalProps) {
+  const { t } = useTranslation()
   const [showPVCs, setShowPVCs] = useState(true)
   const [showNodes, setShowNodes] = useState(false)
 
@@ -385,11 +389,11 @@ export function StorageDetailModal({
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Ephemeral Storage</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.ephemeralStorage')}</div>
                 <div className="text-3xl font-bold text-foreground">{formatMemory(totalStorageGB)}</div>
               </div>
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Allocatable</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.allocatable')}</div>
                 <div className="text-3xl font-bold text-foreground">{formatMemory(allocatableStorageGB)}</div>
               </div>
             </div>
@@ -397,7 +401,7 @@ export function StorageDetailModal({
             {/* Utilization */}
             <div className="mb-6 p-4 rounded-lg bg-card/50 border border-border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">Storage Utilization</span>
+                <span className="text-sm font-medium text-foreground">{t('common.storageUtilization')}</span>
                 <span className={`text-sm ${utilizationPercent > 80 ? 'text-red-400' : utilizationPercent > 60 ? 'text-yellow-400' : 'text-green-400'}`}>
                   {utilizationPercent}% used
                 </span>
@@ -407,9 +411,9 @@ export function StorageDetailModal({
                   <Gauge value={usedStorageGB} max={allocatableStorageGB} size="lg" label="Used" />
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Used</div>
+                  <div className="text-sm text-muted-foreground">{t('common.used')}</div>
                   <div className="text-xl font-bold text-foreground">{formatMemory(usedStorageGB)}</div>
-                  <div className="text-sm text-muted-foreground mt-2">Available</div>
+                  <div className="text-sm text-muted-foreground mt-2">{t('common.available')}</div>
                   <div className="text-lg font-medium text-foreground">{formatMemory(allocatableStorageGB - usedStorageGB)}</div>
                 </div>
               </div>
@@ -510,6 +514,7 @@ export function GPUDetailModal({
   isLoading,
   onClose,
 }: GPUDetailModalProps) {
+  const { t } = useTranslation()
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set())
 
   // Group by GPU type
@@ -558,15 +563,15 @@ export function GPUDetailModal({
             {/* Summary */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Total GPUs</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.totalGpus')}</div>
                 <div className="text-3xl font-bold text-foreground">{totalGPUs}</div>
               </div>
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Allocated</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.allocated')}</div>
                 <div className="text-3xl font-bold text-yellow-400">{allocatedGPUs}</div>
               </div>
               <div className="p-4 rounded-lg bg-card/50 border border-border">
-                <div className="text-sm text-muted-foreground mb-1">Available</div>
+                <div className="text-sm text-muted-foreground mb-1">{t('common.available')}</div>
                 <div className="text-3xl font-bold text-green-400">{totalGPUs - allocatedGPUs}</div>
               </div>
             </div>
@@ -574,7 +579,7 @@ export function GPUDetailModal({
             {/* Utilization */}
             <div className="mb-6 p-4 rounded-lg bg-card/50 border border-border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">GPU Allocation</span>
+                <span className="text-sm font-medium text-foreground">{t('common.gpuAllocation')}</span>
                 <span className={`text-sm ${utilizationPercent > 80 ? 'text-red-400' : utilizationPercent > 60 ? 'text-yellow-400' : 'text-green-400'}`}>
                   {utilizationPercent}% allocated
                 </span>
@@ -584,9 +589,9 @@ export function GPUDetailModal({
                   <Gauge value={allocatedGPUs} max={totalGPUs} size="lg" label="Allocated" unit="" />
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">GPU Types</div>
+                  <div className="text-sm text-muted-foreground">{t('common.gpuTypes')}</div>
                   <div className="text-xl font-bold text-foreground">{Object.keys(gpuByType).length}</div>
-                  <div className="text-sm text-muted-foreground mt-2">Nodes with GPU</div>
+                  <div className="text-sm text-muted-foreground mt-2">{t('common.nodesWithGpu')}</div>
                   <div className="text-lg font-medium text-foreground">{gpuNodes.length}</div>
                 </div>
               </div>

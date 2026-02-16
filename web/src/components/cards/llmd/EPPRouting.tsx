@@ -13,6 +13,7 @@ import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useCardExpanded } from '../CardWrapper'
+import { useTranslation } from 'react-i18next'
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -497,6 +498,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
 }
 
 export function EPPRouting() {
+  const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
   const [hoveredLink, setHoveredLink] = useState<string | null>(null)
   const [showParticles, setShowParticles] = useState(true)
@@ -833,8 +835,8 @@ export function EPPRouting() {
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm rounded-lg">
           <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-amber-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">Select a stack to view routing</span>
-          <span className="text-slate-500 text-xs mt-1">Use the stack selector above</span>
+          <span className="text-slate-400 text-sm">{t('llmd.selectStackRouting')}</span>
+          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -856,7 +858,7 @@ export function EPPRouting() {
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
+                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common:common.demo')}</span>
               )}
             </div>
           )}
@@ -868,7 +870,7 @@ export function EPPRouting() {
                 ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
                 : 'bg-slate-700/50 text-slate-400'
             }`}
-            title="Toggle horseshoe gauge view"
+            title={t('llmd.toggleHorseshoe')}
           >
             <CircleDot size={12} />
           </button>
@@ -880,7 +882,7 @@ export function EPPRouting() {
                 : 'bg-slate-700/50 text-slate-400'
             }`}
           >
-            {showParticles ? 'Pause' : 'Play'}
+            {showParticles ? t('common:common.pause') : t('common:common.play')}
           </button>
         </div>
       </div>
@@ -888,7 +890,7 @@ export function EPPRouting() {
       {/* Metrics bar */}
       <div className="flex items-center gap-4 mb-3 text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">Total:</span>
+          <span className="text-muted-foreground">{t('common:common.total')}:</span>
           <span className="text-white font-mono">{metrics.totalRps} <Acronym term="RPS" /></span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -1037,9 +1039,9 @@ export function EPPRouting() {
                     </div>
 
                     <div className="text-xs text-slate-400 mb-2 capitalize">
-                      {node.type === 'router' ? 'Endpoint Picker Pod' :
-                       node.type === 'prefill' ? 'Prefill Server' :
-                       node.type === 'decode' ? 'Decode Server' : 'Source'}
+                      {node.type === 'router' ? t('llmd.endpointPickerPod') :
+                       node.type === 'prefill' ? t('llmd.prefillServer') :
+                       node.type === 'decode' ? t('llmd.decodeServer') : t('llmd.source')}
                     </div>
 
                     {metrics && (
@@ -1058,7 +1060,7 @@ export function EPPRouting() {
                                   : 'bg-slate-700/50 text-slate-500 hover:text-slate-300'
                               }`}
                             >
-                              {metric === 'load' ? 'Load' : 'RPS'}
+                              {metric === 'load' ? t('llmd.load') : t('llmd.rps')}
                             </button>
                           ))}
                         </div>
@@ -1067,13 +1069,13 @@ export function EPPRouting() {
                         <div className="flex gap-3 text-xs">
                           {selectedMetricTypes.includes('load') && (
                             <div>
-                              <span className="text-slate-500">Load:</span>{' '}
+                              <span className="text-slate-500">{t('llmd.load')}:</span>{' '}
                               <span className="text-amber-400 font-mono">{metrics.load}%</span>
                             </div>
                           )}
                           {selectedMetricTypes.includes('rps') && (
                             <div>
-                              <span className="text-slate-500">RPS:</span>{' '}
+                              <span className="text-slate-500">{t('llmd.rps')}:</span>{' '}
                               <span className="text-cyan-400 font-mono">{metrics.rps}</span>
                             </div>
                           )}
@@ -1084,7 +1086,7 @@ export function EPPRouting() {
                           <div className={`grid gap-2 ${selectedMetricTypes.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {selectedMetricTypes.includes('load') && (
                               <div>
-                                <div className="text-[10px] text-amber-400/70 mb-1">Load %</div>
+                                <div className="text-[10px] text-amber-400/70 mb-1">{t('llmd.loadPercent')}</div>
                                 <Sparkline
                                   data={history.load}
                                   color="#f59e0b"
@@ -1095,7 +1097,7 @@ export function EPPRouting() {
                             )}
                             {selectedMetricTypes.includes('rps') && (
                               <div>
-                                <div className="text-[10px] text-cyan-400/70 mb-1">RPS</div>
+                                <div className="text-[10px] text-cyan-400/70 mb-1">{t('llmd.rps')}</div>
                                 <Sparkline
                                   data={history.rps}
                                   color="#06b6d4"
@@ -1111,7 +1113,7 @@ export function EPPRouting() {
 
                     {node.type === 'source' && (
                       <div className="text-xs text-slate-500">
-                        Incoming inference requests
+                        {t('llmd.incomingRequests')}
                       </div>
                     )}
                   </>
@@ -1142,7 +1144,7 @@ export function EPPRouting() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-muted-foreground">
-                    <span className="text-white font-mono">{link.value}</span> rps
+                    <span className="text-white font-mono">{link.value}</span> {t('llmd.rps').toLowerCase()}
                   </span>
                   <span className={`font-mono font-medium ${
                     link.type === 'prefill' ? 'text-purple-400' : 'text-green-400'
@@ -1160,15 +1162,15 @@ export function EPPRouting() {
       <div className="flex items-center justify-center gap-4 mt-3 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-6 h-1 bg-gradient-to-r from-amber-500/60 to-purple-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(147,51,234,0.4)' }} />
-          <span className="text-muted-foreground">Prefill</span>
+          <span className="text-muted-foreground">{t('llmd.prefill')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-6 h-1 bg-gradient-to-r from-amber-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
-          <span className="text-muted-foreground">Decode</span>
+          <span className="text-muted-foreground">{t('llmd.decode')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-6 h-1 bg-gradient-to-r from-purple-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
-          <span className="text-muted-foreground">Handoff</span>
+          <span className="text-muted-foreground">{t('llmd.handoff')}</span>
         </div>
       </div>
     </div>

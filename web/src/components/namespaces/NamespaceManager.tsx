@@ -24,6 +24,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { api } from '../../lib/api'
 import { useToast } from '../ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
@@ -50,6 +51,7 @@ interface NamespaceAccessEntry {
 const namespaceCache = new Map<string, NamespaceDetails[]>()
 
 export function NamespaceManager() {
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const { clusters, deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -414,7 +416,7 @@ export function NamespaceManager() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search namespaces..."
+            placeholder={t('common.searchNamespaces')}
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
         </div>
@@ -894,6 +896,7 @@ interface InitialAccessEntry {
 }
 
 function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceModalProps) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [cluster, setCluster] = useState(clusters[0] || '')
   const [teamLabel, setTeamLabel] = useState('')
@@ -978,7 +981,7 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">Cluster</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.cluster')}</label>
             <select
               value={cluster}
               onChange={(e) => setCluster(e.target.value)}
@@ -1105,8 +1108,8 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
                       >
                         <option value="cluster-admin">Full Admin</option>
                         <option value="admin">Admin</option>
-                        <option value="edit">Edit</option>
-                        <option value="view">View</option>
+                        <option value="edit">{t('common.edit')}</option>
+                        <option value="view">{t('common.view')}</option>
                       </select>
                       <button
                         onClick={() => removeAccess(index)}
@@ -1186,6 +1189,7 @@ const COMMON_SUBJECTS = {
 }
 
 function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: GrantAccessModalProps) {
+  const { t } = useTranslation()
   const [subjectKind, setSubjectKind] = useState<'User' | 'Group' | 'ServiceAccount'>('User')
   const [subjectName, setSubjectName] = useState('')
   const [subjectNS, setSubjectNS] = useState('')
@@ -1327,7 +1331,7 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
           )}
 
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">Role</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.role')}</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}

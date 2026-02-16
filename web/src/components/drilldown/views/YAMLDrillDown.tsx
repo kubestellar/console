@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { Copy, Check, Download, RefreshCw } from 'lucide-react'
 import { api } from '../../../lib/api'
 import { useToast } from '../../ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
 }
 
 export function YAMLDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
@@ -91,7 +93,7 @@ export function YAMLDrillDown({ data }: Props) {
           <button
             onClick={fetchYAML}
             className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors"
-            title="Refresh"
+            title={t('common.refresh')}
           >
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>

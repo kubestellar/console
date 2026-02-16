@@ -10,6 +10,7 @@ import { useCardData } from '../../../lib/cards/cardHooks'
 import { DEMO_ML_JOBS } from './shared'
 import { useDemoData } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 type MLJob = typeof DEMO_ML_JOBS[number]
 type SortByOption = 'name' | 'status' | 'framework' | 'gpus'
@@ -26,6 +27,7 @@ interface MLJobsProps {
 }
 
 export function MLJobs({ config: _config }: MLJobsProps) {
+  const { t } = useTranslation()
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
 
   useCardLoadingState({
@@ -121,7 +123,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search jobs..."
+        placeholder={t('common.searchJobs')}
         className="mb-2"
       />
 

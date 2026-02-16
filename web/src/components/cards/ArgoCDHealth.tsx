@@ -2,6 +2,7 @@ import { CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle }
 import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDHealth } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
@@ -16,6 +17,7 @@ const healthConfig = {
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
+  const { t } = useTranslation()
   const {
     stats,
     total,
@@ -93,7 +95,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
       <div className="flex items-center justify-center gap-4 mb-4 p-4 rounded-lg bg-secondary/30">
         <div className="text-center">
           <p className="text-3xl font-bold text-foreground">{healthyPercent.toFixed(0)}%</p>
-          <p className="text-xs text-muted-foreground">Healthy</p>
+          <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
         </div>
         <div className="w-px h-12 bg-border" />
         <div className="text-center">

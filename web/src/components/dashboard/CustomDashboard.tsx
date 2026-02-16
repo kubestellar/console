@@ -20,6 +20,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
@@ -65,6 +66,7 @@ interface SortableCardProps {
 }
 
 function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated }: SortableCardProps) {
+  const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id })
 
   const style = {
@@ -92,7 +94,7 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
           lastUpdated={lastUpdated}
         >
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            Unknown card type: {card.card_type}
+            {t('drilldown.unknownViewType')}: {card.card_type}
           </div>
         </CardWrapper>
       </div>
@@ -153,9 +155,10 @@ export function CustomDashboard() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const { getDashboardWithCards, deleteDashboard, exportDashboard, importDashboard } = useDashboards()
-  const { clusters, deduplicatedClusters, isLoading: isClustersLoading } = useClusters()
+  const { deduplicatedClusters, isLoading: isClustersLoading } = useClusters()
   const { config, removeItem } = useSidebarConfig()
   const { drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
+  const { t } = useTranslation()
 
   // Find the sidebar item matching this dashboard to get name/description
   const sidebarItem = useMemo(() => {
@@ -469,7 +472,7 @@ export function CustomDashboard() {
           <button
             onClick={() => setIsDeleteConfirmOpen(true)}
             className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-            title="Delete dashboard"
+            title={t('dashboard.delete.title')}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -503,22 +506,22 @@ export function CustomDashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
             </svg>
           </div>
-          <h2 className="text-lg font-medium text-foreground mb-2">No cards yet</h2>
+          <h2 className="text-lg font-medium text-foreground mb-2">{t('dashboard.empty.noCardsYet')}</h2>
           <p className="text-muted-foreground mb-6 max-w-md">
-            This dashboard is empty. Add cards to start monitoring your {clusters.length > 0 ? `${clusters.length} clusters` : 'Kubernetes clusters'}.
+            {t('dashboard.empty.emptyDescription')}
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => setIsAddCardOpen(true)}
               className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
             >
-              Add Cards
+              {t('dashboard.empty.addCards')}
             </button>
             <button
               onClick={() => setIsTemplatesOpen(true)}
               className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
             >
-              Start with Template
+              {t('dashboard.empty.startWithTemplate')}
             </button>
           </div>
         </div>
@@ -618,8 +621,8 @@ export function CustomDashboard() {
       {/* Delete Confirmation Modal */}
       <BaseModal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} size="md">
         <BaseModal.Header
-          title="Delete Dashboard"
-          description={`Are you sure you want to delete "${sidebarItem?.name || dashboard?.name || 'this dashboard'}"?`}
+          title={t('dashboard.delete.title')}
+          description={t('dashboard.delete.confirm', { name: sidebarItem?.name || dashboard?.name || 'this dashboard' })}
           icon={Trash2}
           onClose={() => setIsDeleteConfirmOpen(false)}
           showBack={false}
@@ -628,9 +631,9 @@ export function CustomDashboard() {
           <div className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
             <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-foreground font-medium">This action cannot be undone</p>
+              <p className="text-sm text-foreground font-medium">{t('dashboard.delete.warning')}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                The dashboard and all its cards will be permanently removed from the sidebar.
+                {t('dashboard.delete.details')}
               </p>
             </div>
           </div>
@@ -640,7 +643,7 @@ export function CustomDashboard() {
             onClick={() => setIsDeleteConfirmOpen(false)}
             className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             onClick={() => {
@@ -650,7 +653,7 @@ export function CustomDashboard() {
             className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-            Delete Dashboard
+            {t('dashboard.delete.title')}
           </button>
         </BaseModal.Footer>
       </BaseModal>

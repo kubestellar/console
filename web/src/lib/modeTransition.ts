@@ -54,10 +54,6 @@ export function unregisterCacheReset(key: string): void {
  * Cards will then fetch appropriate data (demo or live) based on the new mode.
  */
 export function clearAllRegisteredCaches(): void {
-  console.log(
-    `[ModeTransition] Clearing ${cacheResetRegistry.size} registered caches`
-  )
-
   cacheResetRegistry.forEach((resetFn, key) => {
     try {
       resetFn()
@@ -108,10 +104,6 @@ export function getModeTransitionVersion(): number {
  * Called after mode transition completes (after skeleton delay).
  */
 export function triggerAllRefetches(): void {
-  console.log(
-    `[ModeTransition] Triggering ${refetchRegistry.size} registered refetches`
-  )
-
   refetchRegistry.forEach((refetchFn, key) => {
     try {
       refetchFn()
@@ -127,5 +119,4 @@ export function triggerAllRefetches(): void {
  */
 export function incrementModeTransitionVersion(): void {
   modeTransitionVersion++
-  console.log(`[ModeTransition] Version incremented to ${modeTransitionVersion}`)
 }

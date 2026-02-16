@@ -75,6 +75,7 @@ const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
   operators: 'Operators',
   deploy: 'Deploy',
   'ai-agents': 'AI Agents',
+  'cluster-admin': 'Cluster Admin',
 }
 
 const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
@@ -95,12 +96,14 @@ const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
   operators: '/operators',
   deploy: '/deploy',
   'ai-agents': '/ai-agents',
+  'cluster-admin': '/cluster-admin',
 }
 
 const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
   'dashboard', 'clusters', 'workloads', 'pods', 'gitops', 'storage',
   'network', 'security', 'compliance', 'data-compliance', 'compute',
   'events', 'cost', 'alerts', 'operators', 'deploy', 'ai-agents',
+  'cluster-admin',
 ]
 
 // --- Dashboard storage keys → routes (for scanning placed cards) ---
@@ -129,6 +132,7 @@ const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
   { key: 'kubestellar-logs-cards', route: '/logs', name: 'Logs' },
   { key: 'kubestellar-arcade-cards', route: '/arcade', name: 'Arcade' },
   { key: 'kubestellar-kagenti-cards', route: '/ai-agents', name: 'AI Agents' },
+  { key: 'kubestellar-cluster-admin-cards', route: '/cluster-admin', name: 'Cluster Admin' },
 ]
 
 interface StoredCard {
@@ -270,6 +274,7 @@ const PAGE_ITEMS: SearchItem[] = [
   { id: 'page-gpu-reservations', name: 'GPU Reservations', description: 'GPU resource reservations', category: 'page', href: '/gpu-reservations', keywords: ['nvidia', 'cuda', 'gpu'] },
   { id: 'page-cluster-compare', name: 'Cluster Comparison', description: 'Compare clusters side by side', category: 'page', href: '/compute/compare', keywords: ['diff', 'compare'] },
   { id: 'page-ai-agents', name: 'AI Agents', description: 'Kagenti agent deployment, builds, and MCP tools', category: 'page', href: '/ai-agents', keywords: ['kagenti', 'agent', 'mcp', 'llm', 'a2a'] },
+  { id: 'page-cluster-admin', name: 'Cluster Admin', description: 'Multi-cluster operations, health, and infrastructure management', category: 'page', href: '/cluster-admin', keywords: ['admin', 'operations', 'infrastructure', 'control-plane', 'node', 'etcd'] },
 ]
 
 const SETTING_ITEMS: SearchItem[] = [

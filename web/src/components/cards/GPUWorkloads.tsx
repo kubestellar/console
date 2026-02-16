@@ -10,6 +10,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import type { PodInfo } from '../../hooks/useMCP'
+import { useTranslation } from 'react-i18next'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -57,6 +58,7 @@ function normalizeClusterName(cluster: string): string {
 
 
 export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
+  const { t } = useTranslation()
   const {
     nodes: gpuNodes,
     isLoading: gpuLoading,
@@ -266,19 +268,19 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       <div className="grid grid-cols-4 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.total} total GPU workloads`}>
           <p className="text-lg font-bold text-foreground">{summary.total}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-xs text-muted-foreground">{t('common.total')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.running} running`}>
           <p className="text-lg font-bold text-green-400">{summary.running}</p>
-          <p className="text-xs text-muted-foreground">Running</p>
+          <p className="text-xs text-muted-foreground">{t('common.running')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.pending} pending`}>
           <p className="text-lg font-bold text-yellow-400">{summary.pending}</p>
-          <p className="text-xs text-muted-foreground">Pending</p>
+          <p className="text-xs text-muted-foreground">{t('common.pending')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.failed} failed`}>
           <p className="text-lg font-bold text-red-400">{summary.failed}</p>
-          <p className="text-xs text-muted-foreground">Failed</p>
+          <p className="text-xs text-muted-foreground">{t('common.failed')}</p>
         </div>
       </div>
 

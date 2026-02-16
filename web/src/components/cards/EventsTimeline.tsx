@@ -13,8 +13,11 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface TimePoint {
   time: string
@@ -77,10 +80,14 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
   return buckets
 }
 
-export function EventsTimeline() {
+function EventsTimelineInternal() {
+  const { t } = useTranslation()
   const {
     events,
     isLoading: hookLoading,
+    isDemoFallback,
+    isRefreshing,
+    lastRefresh,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
   const { deduplicatedClusters: clusters } = useClusters()
@@ -88,6 +95,7 @@ export function EventsTimeline() {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
   })
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
@@ -191,6 +199,13 @@ export function EventsTimeline() {
       {/* Controls - single row: Time Range → Cluster Filter → Refresh */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
@@ -241,7 +256,7 @@ export function EventsTimeline() {
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">Normal</span>
+            <span className="text-xs text-green-400">{t('common.normal')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{totalNormal}</span>
         </div>
@@ -328,9 +343,17 @@ export function EventsTimeline() {
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-green-500/60" />
-          <span className="text-muted-foreground">Normal</span>
+          <span className="text-muted-foreground">{t('common.normal')}</span>
         </div>
       </div>
     </div>
+  )
+}
+
+export function EventsTimeline() {
+  return (
+    <DynamicCardErrorBoundary cardId="EventsTimeline">
+      <EventsTimelineInternal />
+    </DynamicCardErrorBoundary>
   )
 }

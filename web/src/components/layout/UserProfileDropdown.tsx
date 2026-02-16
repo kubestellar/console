@@ -22,7 +22,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0]
 
@@ -109,7 +109,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
               )}
               <div>
                 <p className="font-medium text-foreground">{user.github_login}</p>
-                <p className="text-sm text-muted-foreground">{user.email || 'No email set'}</p>
+                <p className="text-sm text-muted-foreground">{user.email || t('profile.noEmail')}</p>
               </div>
             </div>
           </div>
@@ -118,26 +118,26 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
           <div className="p-3 space-y-2 border-b border-border">
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Mail className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Email:</span>
-              <span className="text-foreground truncate">{user.email || 'Not set'}</span>
+              <span className="text-muted-foreground">{t('profile.email')}</span>
+              <span className="text-foreground truncate">{user.email || t('profile.notSet')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Slack:</span>
-              <span className="text-foreground">{user.slackId || 'Not connected'}</span>
+              <span className="text-muted-foreground">{t('profile.slack')}</span>
+              <span className="text-foreground">{user.slackId || t('profile.notConnected')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Role:</span>
+              <span className="text-muted-foreground">{t('profile.role')}</span>
               <span className={`text-xs px-2 py-0.5 rounded ${
                 user.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-secondary text-foreground'
               }`}>
-                {user.role || 'User'}
+                {user.role || t('profile.defaultRole')}
               </span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Coins className="w-4 h-4 text-yellow-500" />
-              <span className="text-muted-foreground">Coins:</span>
+              <span className="text-muted-foreground">{t('profile.coins')}</span>
               <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
             </div>
             {/* Language selector */}
@@ -147,7 +147,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
                 className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary/50 rounded-lg transition-colors"
               >
                 <Globe className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Language:</span>
+                <span className="text-muted-foreground">{t('profile.language')}</span>
                 <span className="text-foreground flex items-center gap-1.5">
                   <span>{currentLanguage.flag}</span>
                   <span>{currentLanguage.name}</span>
@@ -188,15 +188,15 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
               <Lightbulb className="w-4 h-4 text-yellow-500" />
-              <span>Feedback</span>
-              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">+Coins</span>
+              <span>{t('feedback.feedback')}</span>
+              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{t('feedback.plusCoins')}</span>
             </button>
             <button
               onClick={handleLinkedInShare}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
               <Linkedin className="w-4 h-4 text-[#0A66C2]" />
-              <span>Share on LinkedIn</span>
+              <span>{t('feedback.shareOnLinkedIn')}</span>
               <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
             </button>
             <button
@@ -207,7 +207,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
               <Settings className="w-4 h-4 text-muted-foreground" />
-              Settings
+              {t('settings.title')}
             </button>
             <button
               onClick={() => {
@@ -217,7 +217,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              Sign Out
+              {t('actions.signOut')}
             </button>
           </div>
         </div>

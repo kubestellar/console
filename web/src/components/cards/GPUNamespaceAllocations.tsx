@@ -9,6 +9,7 @@ import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface GPUNamespaceAllocationsProps {
   config?: Record<string, unknown>
@@ -49,6 +50,7 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 }
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
+  const { t } = useTranslation()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { pods: allPods, isLoading: podsLoading } = useAllPods()
   const { drillToGPUNamespace } = useDrillDownActions()
@@ -204,7 +206,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search namespaces..."
+        placeholder={t('common.searchNamespaces')}
         className="mb-4"
       />
 

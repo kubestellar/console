@@ -13,6 +13,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useTranslation } from 'react-i18next'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
@@ -29,6 +30,7 @@ interface AppSummary {
 }
 
 export function Workloads() {
+  const { t } = useTranslation()
   // Data fetching
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
@@ -261,7 +263,7 @@ export function Workloads() {
                 <div className="flex items-center gap-6">
                   <div className="text-center">
                     <div className="text-lg font-bold text-foreground">{app.deploymentCount}</div>
-                    <div className="text-xs text-muted-foreground">Deployments</div>
+                    <div className="text-xs text-muted-foreground">{t('common.deployments')}</div>
                   </div>
                   {app.deploymentIssues > 0 && (
                     <div className="text-center">

@@ -5,11 +5,13 @@
 import { useState } from 'react'
 import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
 import { useRewards } from '../../hooks/useRewards'
+import { useTranslation } from 'react-i18next'
 
 const LINKEDIN_SHARE_URL = 'https://www.linkedin.com/sharing/share-offsite/'
 const KUBESTELLAR_URL = 'https://kubestellar.io'
 
 export function LinkedInShareButton() {
+  const { t: _t } = useTranslation()
   const [showConfirm, setShowConfirm] = useState(false)
   const { awardCoins, getActionCount } = useRewards()
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy, WifiOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton } from '../../lib/cards/CardComponents'
@@ -9,6 +10,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useToast } from '../ui/Toast'
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -381,6 +383,7 @@ function PolicyDetailModal({
   violations: Violation[]
   onAddPolicy: () => void
 }) {
+  const { t } = useTranslation(['cards', 'common'])
   // Get violations for this policy
   const policyViolations = violations.filter(v => v.policy === policy.name)
 
@@ -427,7 +430,7 @@ function PolicyDetailModal({
         {policyViolations.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
-            <p>No violations for this policy</p>
+            <p>{t('messages.noViolations')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -509,6 +512,8 @@ function ClusterOPAModal({
     context?: Record<string, unknown>
   }) => void
 }) {
+  const { t } = useTranslation(['cards', 'common'])
+  const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<OPAModalTab>('policies')
   const [showCreateMenu, setShowCreateMenu] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
@@ -672,9 +677,11 @@ Please proceed with applying this policy.`,
         ['patch', policy.kind.toLowerCase(), policy.name, '--type=merge', '-p', `{"spec":{"enforcementAction":"${newMode}"}}`],
         { context: clusterName, timeout: 15000 }
       )
+      showToast('Policy mode updated successfully', 'success')
       onRefresh()
     } catch (err) {
       console.error('Failed to toggle mode:', err)
+      showToast('Failed to toggle policy mode', 'error')
     }
   }
 
@@ -686,9 +693,11 @@ Please proceed with applying this policy.`,
         { context: clusterName, timeout: 15000 }
       )
       setDeleteConfirm(null)
+      showToast('Policy deleted successfully', 'success')
       onRefresh()
     } catch (err) {
       console.error('Failed to delete policy:', err)
+      showToast('Failed to delete policy', 'error')
     }
   }
 
@@ -784,8 +793,8 @@ Please proceed with applying this policy.`,
               {policies.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No policies configured</p>
-                  <p className="text-xs mt-1">Create a policy to enforce rules on your cluster</p>
+                  <p>{t('messages.noPoliciesConfigured')}</p>
+                  <p className="text-xs mt-1">{t('messages.createPolicyPrompt')}</p>
                 </div>
               ) : (
                 policies.map(policy => (
@@ -860,11 +869,11 @@ Please proceed with applying this policy.`,
               <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-border">
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
                   <p className="text-2xl font-bold text-red-400">{severityCounts.critical}</p>
-                  <p className="text-xs text-muted-foreground">Critical</p>
+                  <p className="text-xs text-muted-foreground">{t('common:common.critical')}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
                   <p className="text-2xl font-bold text-amber-400">{severityCounts.warning}</p>
-                  <p className="text-xs text-muted-foreground">Warning</p>
+                  <p className="text-xs text-muted-foreground">{t('common:common.warning')}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
                   <p className="text-2xl font-bold text-blue-400">{severityCounts.info}</p>
@@ -1027,7 +1036,7 @@ Please proceed with applying this policy.`,
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">
                 <div className="flex items-center gap-2 text-amber-400 mb-1">
                   <AlertTriangle className="w-4 h-4" />
-                  <span className="font-medium">Warning</span>
+                  <span className="font-medium">{t('common:common.warning')}</span>
                 </div>
                 <p className="text-muted-foreground">
                   This policy has {deleteConfirm.violations} active violations that will be cleared.
@@ -1069,6 +1078,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 }
 
 function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
@@ -1465,7 +1475,7 @@ Let's start by discussing what kind of policy I need.`,
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search clusters..."
+        placeholder={t('common:common.searchClusters')}
         className="mb-3"
       />
 
@@ -1533,10 +1543,10 @@ Let's start by discussing what kind of policy I need.`,
                 {isOffline ? (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground/50">
                     <WifiOff className="w-3 h-3" />
-                    <span>Offline</span>
+                    <span>{t('messages.offline')}</span>
                   </div>
                 ) : isInitialLoading ? (
-                  <p className="text-xs text-muted-foreground">Checking...</p>
+                  <p className="text-xs text-muted-foreground">{t('messages.checking')}</p>
                 ) : status?.installed ? (
                   <div className="space-y-1">
                     <div className="flex items-center gap-3 text-xs">

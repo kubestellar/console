@@ -18,6 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useTranslation } from 'react-i18next'
 
 export interface StatBlockConfig {
   id: string
@@ -31,7 +32,7 @@ export interface StatBlockConfig {
 export const DEFAULT_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'clusters', name: 'Clusters', icon: 'Server', visible: true, color: 'purple' },
   { id: 'healthy', name: 'Healthy', icon: 'CheckCircle2', visible: true, color: 'green' },
-  { id: 'unhealthy', name: 'Unhealthy', icon: 'XCircle', visible: true, color: 'orange' },
+  { id: 'unhealthy', name: 'Unhealthy', icon: 'XCircle', visible: true, color: 'red' },
   { id: 'unreachable', name: 'Offline', icon: 'WifiOff', visible: true, color: 'yellow' },
   { id: 'nodes', name: 'Nodes', icon: 'Box', visible: true, color: 'cyan' },
   { id: 'cpus', name: 'CPUs', icon: 'Cpu', visible: true, color: 'blue' },
@@ -246,6 +247,7 @@ export function StatsConfigModal({ isOpen, onClose, blocks, onSave }: StatsConfi
 
 // Hook to manage stats configuration
 export function useStatsConfig(storageKey: string = 'cluster-stats-config') {
+  const { t: _t } = useTranslation()
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
     try {
       const saved = localStorage.getItem(storageKey)

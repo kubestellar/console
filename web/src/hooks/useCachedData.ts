@@ -42,6 +42,7 @@ import type { Workload } from './useWorkloads'
 const getToken = () => localStorage.getItem('token')
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+const AGENT_HTTP_TIMEOUT_MS = 5000
 
 async function fetchAPI<T>(
   endpoint: string,
@@ -191,6 +192,7 @@ function getAgentClusters(): Array<{ name: string; context?: string }> {
 
 /** Fetch pod issues from all clusters via agent kubectl proxy */
 async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial: PodIssue[]) => void): Promise<PodIssue[]> {
+  if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
   const accumulated: PodIssue[] = []
@@ -211,6 +213,7 @@ async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial:
 
 /** Fetch deployments from all clusters via agent HTTP endpoint */
 async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partial: Deployment[]) => void): Promise<Deployment[]> {
+  if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
   const accumulated: Deployment[] = []
@@ -221,7 +224,7 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
     if (namespace) params.append('namespace', namespace)
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000)
+    const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
     const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
@@ -329,6 +332,7 @@ interface CachedHookResult<T> {
   data: T
   isLoading: boolean
   isRefreshing: boolean
+  isDemoFallback: boolean
   error: string | null
   isFailed: boolean
   consecutiveFailures: number
@@ -381,6 +385,7 @@ export function useCachedPods(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -422,6 +427,7 @@ export function useCachedEvents(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -453,7 +459,7 @@ export function useCachedPodIssues(
       let issues: PodIssue[]
 
       // Try agent first (fast, no backend needed)
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         if (cluster) {
           const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
           const ctx = clusterInfo?.context || cluster
@@ -482,7 +488,7 @@ export function useCachedPodIssues(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       // Try agent first
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const issues = await fetchPodIssuesViaAgent(namespace, (partial) => {
           onProgress(sortIssues([...partial]))
         })
@@ -502,6 +508,7 @@ export function useCachedPodIssues(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -540,7 +547,7 @@ export function useCachedDeploymentIssues(
     demoData: getDemoDeploymentIssues(),
     fetcher: async () => {
       // Try agent first — derive deployment issues from deployment data
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const deployments = cluster
           ? await (async () => {
               const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
@@ -548,7 +555,7 @@ export function useCachedDeploymentIssues(
               params.append('cluster', clusterInfo?.context || cluster)
               if (namespace) params.append('namespace', namespace)
               const ctrl = new AbortController()
-              const tid = setTimeout(() => ctrl.abort(), 15000)
+              const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
               const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
                 signal: ctrl.signal, headers: { Accept: 'application/json' },
               })
@@ -573,7 +580,7 @@ export function useCachedDeploymentIssues(
       return []
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const deployments = await fetchDeploymentsViaAgent(namespace, (partialDeps) => {
           onProgress(deriveIssues(partialDeps))
         })
@@ -591,6 +598,7 @@ export function useCachedDeploymentIssues(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -625,7 +633,7 @@ export function useCachedDeployments(
           if (namespace) params.append('namespace', namespace)
 
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 15000)
+          const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
           const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
             signal: controller.signal,
             headers: { Accept: 'application/json' },
@@ -672,6 +680,7 @@ export function useCachedDeployments(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -713,6 +722,7 @@ export function useCachedServices(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -870,6 +880,7 @@ export function useCachedProwJobs(
     status,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -1198,6 +1209,7 @@ export function useCachedLLMdServers(
     status,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -1272,6 +1284,7 @@ export function useCachedLLMdModels(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -1307,7 +1320,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
     params.append('cluster', context || name)
 
     const ctrl = new AbortController()
-    const tid = setTimeout(() => ctrl.abort(), 15000)
+    const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
     const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
       signal: ctrl.signal,
       headers: { Accept: 'application/json' },
@@ -1432,6 +1445,7 @@ export function useCachedWorkloads(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -1448,6 +1462,7 @@ export function useCachedWorkloads(
  * Fetch security issues via kubectlProxy - scans pods for security misconfigurations
  */
 async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: string, onProgress?: (partial: SecurityIssue[]) => void): Promise<SecurityIssue[]> {
+  if (isAgentUnavailable()) return []
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
 
@@ -1610,6 +1625,7 @@ export function useCachedSecurityIssues(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -1661,6 +1677,7 @@ export function useCachedNodes(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -1717,6 +1734,7 @@ export function useCachedWarningEvents(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -1736,7 +1754,7 @@ export const coreFetchers = {
     return pods.sort((a, b) => (b.restarts || 0) - (a.restarts || 0)).slice(0, 100)
   },
   podIssues: async (): Promise<PodIssue[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       const issues = await fetchPodIssuesViaAgent()
       return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
     }
@@ -1752,7 +1770,7 @@ export const coreFetchers = {
     return data.events || []
   },
   deploymentIssues: async (): Promise<DeploymentIssue[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       const deployments = await fetchDeploymentsViaAgent()
       return deployments
         .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
@@ -1773,7 +1791,7 @@ export const coreFetchers = {
     return []
   },
   deployments: async (): Promise<Deployment[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       return fetchDeploymentsViaAgent()
     }
     const token = getToken()
@@ -1787,7 +1805,7 @@ export const coreFetchers = {
     return data.services || []
   },
   securityIssues: async (): Promise<SecurityIssue[]> => {
-    if (clusterCacheRef.clusters.length > 0) {
+    if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       try {
         const issues = await fetchSecurityIssuesViaKubectl()
         if (issues.length > 0) return issues
@@ -2038,6 +2056,7 @@ export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> 
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,

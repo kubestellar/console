@@ -14,6 +14,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 interface ResourcePoint {
   time: string
@@ -34,6 +35,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 ]
 
 export function ResourceTrend() {
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [view, setView] = useState<MetricView>('all')
@@ -296,14 +298,14 @@ export function ResourceTrend() {
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20" title={hasReachableClusters ? `${currentTotals.pods} pods running` : 'No reachable clusters'}>
           <div className="flex items-center gap-1 mb-1">
             <Box className="w-3 h-3 text-purple-400" />
-            <span className="text-xs text-purple-400">Pods</span>
+            <span className="text-xs text-purple-400">{t('common.pods')}</span>
           </div>
           <span className="text-sm font-bold text-foreground">{hasReachableClusters ? currentTotals.pods : '-'}</span>
         </div>
         <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={hasReachableClusters ? `${currentTotals.nodes} nodes total` : 'No reachable clusters'}>
           <div className="flex items-center gap-1 mb-1">
             <Server className="w-3 h-3 text-yellow-400" />
-            <span className="text-xs text-yellow-400">Nodes</span>
+            <span className="text-xs text-yellow-400">{t('common.nodes')}</span>
           </div>
           <span className="text-sm font-bold text-foreground">{hasReachableClusters ? currentTotals.nodes : '-'}</span>
         </div>

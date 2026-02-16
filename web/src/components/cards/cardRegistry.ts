@@ -1,28 +1,5 @@
-import { lazy, Suspense, createElement, ComponentType } from 'react'
+import { lazy, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
-import { useReportCardDataState } from './CardDataContext'
-import { isDemoMode } from '../../lib/demoMode'
-
-/**
- * Suspense fallback that reports loading state to CardWrapper while chunks load.
- *
- * In demo mode: reports hasData=true so CardWrapper skips the skeleton entirely.
- * Demo data is synchronous — the only delay is chunk download, and showing a
- * skeleton for that is unnecessary and adds 550ms+ of perceived latency.
- *
- * In live mode: reports isLoading=true so CardWrapper shows a proper skeleton
- * while waiting for the chunk (and subsequent API data).
- */
-function CardSuspenseFallback() {
-  const demo = isDemoMode()
-  useReportCardDataState({
-    hasData: demo,
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: !demo,
-  })
-  return null
-}
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -171,6 +148,7 @@ const LLMdBenchmarks = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdBenchm
 const LLMdAIInsights = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdAIInsights })))
 const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConfigurator })))
 // LLM-d benchmark dashboard cards (share the same barrel bundle)
+const NightlyE2EStatus = lazy(() => _llmdBundle.then(m => ({ default: m.NightlyE2EStatus })))
 const BenchmarkHero = lazy(() => _llmdBundle.then(m => ({ default: m.BenchmarkHero })))
 const ParetoFrontier = lazy(() => _llmdBundle.then(m => ({ default: m.ParetoFrontier })))
 const HardwareLeaderboard = lazy(() => _llmdBundle.then(m => ({ default: m.HardwareLeaderboard })))
@@ -193,6 +171,23 @@ const KagentiSecurity = lazy(() => _kagentiBundle.then(m => ({ default: m.Kagent
 const KagentiSecurityPosture = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurityPosture })))
 const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiTopology })))
 const CrossplaneManagedResources = lazy(() => import('./crossplane_status/CrossplaneManagedResources').then(m => ({ default: m.CrossplaneManagedResources })))
+// Cloud Native Buildpacks card
+const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
+
+// Cluster admin cards — share one chunk via barrel import
+const _clusterAdminBundle = import('./cluster-admin-bundle')
+const PredictiveHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.PredictiveHealth })))
+const NodeDebug = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NodeDebug })))
+const ControlPlaneHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.ControlPlaneHealth })))
+const NodeConditions = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NodeConditions })))
+const AdmissionWebhooks = lazy(() => _clusterAdminBundle.then(m => ({ default: m.AdmissionWebhooks })))
+const DNSHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.DNSHealth })))
+const EtcdStatus = lazy(() => _clusterAdminBundle.then(m => ({ default: m.EtcdStatus })))
+const NetworkPolicyCoverage = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NetworkPolicyCoverage })))
+const RBACExplorer = lazy(() => _clusterAdminBundle.then(m => ({ default: m.RBACExplorer })))
+const MaintenanceWindows = lazy(() => _clusterAdminBundle.then(m => ({ default: m.MaintenanceWindows })))
+const ClusterChangelog = lazy(() => _clusterAdminBundle.then(m => ({ default: m.ClusterChangelog })))
+const QuotaHeatmap = lazy(() => _clusterAdminBundle.then(m => ({ default: m.QuotaHeatmap })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -200,19 +195,10 @@ export type CardComponentProps = { config?: Record<string, unknown> }
 // Card component type
 export type CardComponent = ComponentType<CardComponentProps>
 
-/**
- * Wrap a lazy card component with its own Suspense boundary.
- * This prevents one slow-loading card from blanking out the entire page —
- * only the individual card shows nothing while its chunk loads.
- */
-function withSuspense(LazyComponent: ComponentType<CardComponentProps>): CardComponent {
-  function SuspenseWrapped(props: CardComponentProps) {
-    return createElement(Suspense, { fallback: createElement(CardSuspenseFallback) }, createElement(LazyComponent, props))
-  }
-  // Access displayName property that may exist on lazy component
-  SuspenseWrapped.displayName = `Suspense(${(LazyComponent as ComponentType<CardComponentProps> & { displayName?: string }).displayName || 'Card'})`
-  return SuspenseWrapped
-}
+// No per-card Suspense wrapper — CardWrapper.tsx already wraps children in
+// <Suspense fallback={<CardSkeleton/>}> which shows a visible skeleton while
+// lazy chunks load. A second inner Suspense with a null fallback was hiding
+// that skeleton, causing blank card bodies during initial page load.
 
 /**
  * Central registry of all card components.
@@ -408,6 +394,22 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // Crossplane cards
   crossplane_managed_resources: CrossplaneManagedResources,
 
+  // Cluster admin cards
+  predictive_health: PredictiveHealth,
+  node_debug: NodeDebug,
+  control_plane_health: ControlPlaneHealth,
+  node_conditions: NodeConditions,
+  admission_webhooks: AdmissionWebhooks,
+  dns_health: DNSHealth,
+  etcd_status: EtcdStatus,
+  network_policies: NetworkPolicyCoverage,
+  rbac_explorer: RBACExplorer,
+  maintenance_windows: MaintenanceWindows,
+  cluster_changelog: ClusterChangelog,
+  quota_heatmap: QuotaHeatmap,
+  // Cloud Native Buildpacks
+  buildpacks_status: BuildpacksStatus,
+
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
   kvcache_monitor: KVCacheMonitor,
@@ -418,6 +420,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   llmd_configurator: LLMdConfigurator,
 
   // LLM-d benchmark dashboard cards
+  nightly_e2e_status: NightlyE2EStatus,
   benchmark_hero: BenchmarkHero,
   pareto_frontier: ParetoFrontier,
   hardware_leaderboard: HardwareLeaderboard,
@@ -444,10 +447,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   rbac_summary: NamespaceRBAC,
 }
 
-// Wrap every card with its own Suspense boundary
-export const CARD_COMPONENTS: Record<string, CardComponent> = Object.fromEntries(
-  Object.entries(RAW_CARD_COMPONENTS).map(([key, Component]) => [key, withSuspense(Component)])
-)
+// Export cards directly — CardWrapper.tsx provides the Suspense boundary with a visible skeleton
+export const CARD_COMPONENTS: Record<string, CardComponent> = RAW_CARD_COMPONENTS
 
 /**
  * Cards that ALWAYS use demo/mock data (no live data source exists).
@@ -473,6 +474,8 @@ export const DEMO_DATA_CARDS = new Set([
   'gateway_status',
   // Service Topology - demo visualization
   'service_topology',
+  'buildpacks_status',
+
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
   // ArgoCD cards - all use mock data
@@ -508,11 +511,13 @@ export const DEMO_DATA_CARDS = new Set([
   // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
   // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
   'llmd_configurator',
-  // LLM-d benchmark dashboard cards — most now use live data via useCachedBenchmarkReports()
-  // Only performance_timeline stays demo-only (needs historical time-series data)
-  'performance_timeline',
+  // LLM-d benchmark dashboard cards — all now use live data via useCachedBenchmarkReports()
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
+  // Cluster admin cards - demo until backend endpoints exist
+  'admission_webhooks',
+  'etcd_status',
+  'rbac_explorer',
   // Kagenti cards - demo until kagenti-operator is installed on clusters
   'kagenti_status',
   'kagenti_agent_fleet',
@@ -553,6 +558,9 @@ export const DEMO_EXEMPT_CARDS = new Set([
   'kube_craft',
   'kube_doom',
   'dynamic_card',
+  // Cluster admin cards - no demo/live concept
+  'maintenance_windows',
+  'node_debug',
 ])
 
 /**
@@ -646,6 +654,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   // GitHub & misc
   github_activity: () => import('./GitHubActivity'),
   hardware_health: () => import('./HardwareHealthCard'),
+  console_ai_offline_detection: () => import('./console-missions/ConsoleOfflineDetectionCard'),
   provider_health: () => import('./ProviderHealth'),
   // MCS & Gateway
   service_exports: () => import('./ServiceExports'),
@@ -673,6 +682,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   llmd_ai_insights: () => import('./llmd'),
   llmd_configurator: () => import('./llmd'),
   // LLM-d benchmark dashboard cards — all share the llmd barrel bundle
+  nightly_e2e_status: () => import('./llmd'),
   benchmark_hero: () => import('./llmd'),
   pareto_frontier: () => import('./llmd'),
   hardware_leaderboard: () => import('./llmd'),
@@ -680,6 +690,19 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   throughput_comparison: () => import('./llmd'),
   performance_timeline: () => import('./llmd'),
   resource_utilization: () => import('./llmd'),
+  // Cluster admin — all share one chunk via barrel
+  predictive_health: () => import('./cluster-admin-bundle'),
+  node_debug: () => import('./cluster-admin-bundle'),
+  control_plane_health: () => import('./cluster-admin-bundle'),
+  node_conditions: () => import('./cluster-admin-bundle'),
+  admission_webhooks: () => import('./cluster-admin-bundle'),
+  dns_health: () => import('./cluster-admin-bundle'),
+  etcd_status: () => import('./cluster-admin-bundle'),
+  network_policies: () => import('./cluster-admin-bundle'),
+  rbac_explorer: () => import('./cluster-admin-bundle'),
+  maintenance_windows: () => import('./cluster-admin-bundle'),
+  cluster_changelog: () => import('./cluster-admin-bundle'),
+  quota_heatmap: () => import('./cluster-admin-bundle'),
   // Kagenti AI Agents — all share one chunk via barrel
   kagenti_status: () => import('./KagentiStatusCard'),
   kagenti_agent_fleet: () => import('./kagenti'),
@@ -689,8 +712,13 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kagenti_security: () => import('./kagenti'),
   kagenti_security_posture: () => import('./kagenti'),
   kagenti_topology: () => import('./kagenti'),
+<<<<<<< HEAD
   // Crossplane cards
   crossplane_managed_resources: () => import('./crossplane_status'),
+=======
+  // Cloud Native Buildpacks
+  buildpacks_status: () => import('./buildpacks-status'),
+>>>>>>> origin/main
 }
 
 /**
@@ -784,6 +812,16 @@ export const LIVE_DATA_CARDS = new Set([
   'prow_ci_monitor',
   'github_ci_monitor',
   'cluster_health_monitor',
+  // Nightly E2E status card
+  'nightly_e2e_status',
+  // Cluster admin cards with live data
+  'control_plane_health',
+  'node_conditions',
+  'dns_health',
+  'network_policies',
+  'cluster_changelog',
+  'predictive_health',
+  'quota_heatmap',
   // Kagenti AI agent cards
   'kagenti_status',
   'kagenti_agent_fleet',
@@ -812,7 +850,12 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   active_alerts: 4,
   security_issues: 4,
   upgrade_status: 4,
+<<<<<<< HEAD
   crossplane_managed_resources: 4,
+=======
+  buildpacks_status: 6,
+
+>>>>>>> origin/main
   // MCS cards
   service_exports: 6,
   service_imports: 6,
@@ -861,6 +904,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   llmd_configurator: 4,   // Configurator showcase
 
   // LLM-d benchmark dashboard cards (all full-width)
+  nightly_e2e_status: 12,
   benchmark_hero: 12,
   pareto_frontier: 12,
   hardware_leaderboard: 12,
@@ -868,6 +912,20 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   throughput_comparison: 12,
   performance_timeline: 12,
   resource_utilization: 12,
+
+  // Cluster admin cards
+  predictive_health: 8,
+  node_debug: 6,
+  control_plane_health: 4,
+  node_conditions: 6,
+  admission_webhooks: 6,
+  dns_health: 4,
+  etcd_status: 4,
+  network_policies: 6,
+  rbac_explorer: 6,
+  maintenance_windows: 6,
+  cluster_changelog: 6,
+  quota_heatmap: 8,
 
   // Event dashboard cards
   event_summary: 6,

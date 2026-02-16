@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Sun, Moon, Monitor, Menu, X, MoreVertical } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
@@ -26,6 +27,7 @@ export function Navbar() {
   const [showMobileMore, setShowMobileMore] = useState(false)
   const { config, toggleMobileSidebar } = useSidebarConfig()
   const { isMobile } = useMobile()
+  const { t } = useTranslation()
 
   // Close mobile more menu on route change
   useEffect(() => {
@@ -40,7 +42,7 @@ export function Navbar() {
         <button
           onClick={toggleMobileSidebar}
           className="p-2 md:hidden hover:bg-secondary rounded-lg transition-colors"
-          aria-label={config.isMobileOpen ? 'Close menu' : 'Open menu'}
+          aria-label={config.isMobileOpen ? t('navbar.closeMenu') : t('navbar.openMenu')}
         >
           {config.isMobileOpen ? (
             <X className="w-5 h-5 text-foreground" />
@@ -91,7 +93,7 @@ export function Navbar() {
         <button
           onClick={toggleTheme}
           className="p-2 hover:bg-secondary rounded-lg transition-colors"
-          title={`Theme: ${theme} (click to toggle)`}
+          title={t('navbar.themeToggle', { theme })}
         >
           {theme === 'dark' ? (
             <Moon className="w-5 h-5 text-muted-foreground" />
@@ -110,7 +112,7 @@ export function Navbar() {
           <button
             onClick={() => setShowMobileMore(!showMobileMore)}
             className="p-2 hover:bg-secondary rounded-lg transition-colors"
-            aria-label="More options"
+            aria-label={t('navbar.moreOptions')}
           >
             <MoreVertical className="w-5 h-5 text-muted-foreground" />
           </button>

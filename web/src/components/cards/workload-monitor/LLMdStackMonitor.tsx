@@ -20,6 +20,7 @@ import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 type SortField = 'name' | 'status' | 'type' | 'cluster'
 type StatusFilter = 'all' | 'healthy' | 'degraded' | 'unhealthy'
@@ -105,6 +106,7 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
+  const { t } = useTranslation()
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
 
@@ -593,7 +595,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           onClick={handleRefresh}
           disabled={isRefreshing}
           className="p-1 rounded hover:bg-secondary transition-colors"
-          title="Refresh"
+          title={t('common.refresh')}
         >
           {isRefreshing
             ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
@@ -674,7 +676,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           <CardSearchInput
             value={search}
             onChange={(v) => { setSearch(v); setCurrentPage(1) }}
-            placeholder="Search components..."
+            placeholder={t('common.searchComponents')}
             className="mb-3"
           />
 
@@ -792,7 +794,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           <CardSearchInput
             value={issueSearch}
             onChange={(v) => { setIssueSearch(v); setIssueCurrentPage(1) }}
-            placeholder="Search issues..."
+            placeholder={t('common.searchIssues')}
             className="mb-3"
           />
 

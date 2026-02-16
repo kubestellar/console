@@ -414,7 +414,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	// Deduplicate clusters — multiple kubeconfig contexts can point to the
 	// same physical cluster (e.g. "vllm-d" and "default/api-fmaas-vllm-d-…").
 	// We only want one result per unique server URL.
-	dedupClusters, err := h.k8sClient.DeduplicatedClusters(ctx)
+	dedupClusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to list clusters: " + err.Error()})
 	}

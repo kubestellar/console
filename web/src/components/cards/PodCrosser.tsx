@@ -3,6 +3,7 @@ import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 // Game constants
 const CANVAS_WIDTH = 280
@@ -60,6 +61,7 @@ const LANES = [
 ]
 
 export function PodCrosser(_props: CardComponentProps) {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)

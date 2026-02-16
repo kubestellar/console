@@ -3,8 +3,10 @@ import {
   CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
   Play
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { CardSearchInput, CardAIActions } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
@@ -18,6 +20,7 @@ interface ProwJobsProps {
 }
 
 export function ProwJobs({ config: _config }: ProwJobsProps) {
+  const { t } = useTranslation('common')
   // Check if we should use demo data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
@@ -25,6 +28,8 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   const {
     jobs,
     isLoading,
+    isRefreshing,
+    lastRefresh,
     isFailed,
     consecutiveFailures,
     formatTimeAgo,
@@ -123,6 +128,13 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
           <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
             {totalItems} jobs
           </span>
@@ -140,10 +152,10 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             onChange={(e) => setTypeFilter(e.target.value as ProwJob['type'] | 'all')}
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
-            <option value="all">All Types</option>
-            <option value="periodic">Periodic</option>
-            <option value="presubmit">Presubmit</option>
-            <option value="postsubmit">Postsubmit</option>
+            <option value="all">{t('selectors.allTypes')}</option>
+            <option value="periodic">{t('prowJobs.periodic')}</option>
+            <option value="presubmit">{t('prowJobs.presubmit')}</option>
+            <option value="postsubmit">{t('prowJobs.postsubmit')}</option>
           </select>
           {/* State Filter */}
           <select
@@ -152,10 +164,10 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
             <option value="all">All States</option>
-            <option value="success">Success</option>
+            <option value="success">{t('common.success')}</option>
             <option value="failure">Failure</option>
-            <option value="running">Running</option>
-            <option value="pending">Pending</option>
+            <option value="running">{t('common.running')}</option>
+            <option value="pending">{t('common.pending')}</option>
           </select>
           <CardControls
             limit={itemsPerPage}
@@ -177,7 +189,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search jobs..."
+        placeholder={t('common.searchJobs')}
         className="mb-2"
       />
 

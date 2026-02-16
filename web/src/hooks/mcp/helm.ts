@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
+import { fetchSSE } from '../../lib/sseClient'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
@@ -187,30 +188,73 @@ export function useHelmReleases(cluster?: string) {
         return
       }
 
-      // Use direct fetch to bypass the global circuit breaker
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers })
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-      const data = await response.json() as { releases: HelmRelease[] }
-      const newReleases = data.releases || []
+      // Try SSE streaming first for progressive rendering
+      const sseAvailable = token && token !== 'demo-token'
+      let sseSucceeded = false
 
-      // Update cache if fetching all clusters
-      if (!cluster) {
-        helmReleasesCache.data = newReleases
-        helmReleasesCache.timestamp = Date.now()
-        helmReleasesCache.consecutiveFailures = 0
-        helmReleasesCache.lastError = null
-        saveHelmReleasesToStorage(newReleases, helmReleasesCache.timestamp)
-        notifyListeners(false)
+      if (sseAvailable) {
+        try {
+          const sseParams: Record<string, string> = {}
+          if (cluster) sseParams.cluster = cluster
+          const accumulated: HelmRelease[] = []
+
+          const result = await fetchSSE<HelmRelease>({
+            url: '/api/gitops/helm-releases/stream',
+            params: sseParams,
+            itemsKey: 'releases',
+            onClusterData: (_clusterName, items) => {
+              accumulated.push(...items)
+              setReleases([...accumulated])
+              setIsLoading(false)
+            },
+          })
+
+          sseSucceeded = true
+          const newReleases = result
+
+          if (!cluster) {
+            helmReleasesCache.data = newReleases
+            helmReleasesCache.timestamp = Date.now()
+            helmReleasesCache.consecutiveFailures = 0
+            helmReleasesCache.lastError = null
+            saveHelmReleasesToStorage(newReleases, helmReleasesCache.timestamp)
+            notifyListeners(false)
+          }
+
+          setReleases(newReleases)
+          setError(null)
+          setConsecutiveFailures(0)
+          setLastRefresh(Date.now())
+        } catch {
+          // SSE failed — fall through to REST
+        }
       }
 
-      setReleases(newReleases)
-      setError(null)
-      setConsecutiveFailures(0)
-      setLastRefresh(Date.now())
+      // REST fallback if SSE unavailable or failed
+      if (!sseSucceeded) {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        headers['Authorization'] = `Bearer ${token}`
+        const response = await fetch(url, { method: 'GET', headers })
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`)
+        }
+        const data = await response.json() as { releases: HelmRelease[] }
+        const newReleases = data.releases || []
+
+        if (!cluster) {
+          helmReleasesCache.data = newReleases
+          helmReleasesCache.timestamp = Date.now()
+          helmReleasesCache.consecutiveFailures = 0
+          helmReleasesCache.lastError = null
+          saveHelmReleasesToStorage(newReleases, helmReleasesCache.timestamp)
+          notifyListeners(false)
+        }
+
+        setReleases(newReleases)
+        setError(null)
+        setConsecutiveFailures(0)
+        setLastRefresh(Date.now())
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Helm releases'
 

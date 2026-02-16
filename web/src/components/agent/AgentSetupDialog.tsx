@@ -5,12 +5,14 @@ import { Download } from 'lucide-react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { BaseModal } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { useTranslation } from 'react-i18next'
 
 const DISMISSED_KEY = 'kc-agent-setup-dismissed'
 const SNOOZED_KEY = 'kc-agent-setup-snoozed'
 const SNOOZE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 export function AgentSetupDialog() {
+  const { t: _t } = useTranslation()
   const { status, isConnected } = useLocalAgent()
   const [show, setShow] = useState(false)
   const [copied, setCopied] = useState(false)

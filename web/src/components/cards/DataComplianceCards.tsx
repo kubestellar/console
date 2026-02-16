@@ -8,6 +8,7 @@
 import { Shield, CheckCircle2, AlertTriangle, Clock, AlertCircle } from 'lucide-react'
 import { useCertManager } from '../../hooks/useCertManager'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -15,6 +16,7 @@ interface CardConfig {
 
 // HashiCorp Vault - Secrets Management Card
 export function VaultSecrets({ config: _config }: CardConfig) {
+  const { t } = useTranslation()
   const demoData = {
     status: 'unsealed',
     secrets: 156,
@@ -58,7 +60,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
       <div className="grid grid-cols-2 gap-2">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{demoData.secrets}</p>
-          <p className="text-xs text-muted-foreground">Secrets</p>
+          <p className="text-xs text-muted-foreground">{t('drilldown.tabs.secrets')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{demoData.dynamicCredentials}</p>
@@ -84,6 +86,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
 
 // External Secrets Operator Card
 export function ExternalSecrets({ config: _config }: CardConfig) {
+  const { t } = useTranslation()
   const demoData = {
     totalSecrets: 89,
     synced: 85,
@@ -142,12 +145,12 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
         <div className="p-2 rounded-lg bg-red-500/10">
           <AlertTriangle className="w-4 h-4 text-red-400 mx-auto mb-1" />
           <p className="font-medium text-foreground">{demoData.failed}</p>
-          <p className="text-muted-foreground">Failed</p>
+          <p className="text-muted-foreground">{t('common.failed')}</p>
         </div>
         <div className="p-2 rounded-lg bg-yellow-500/10">
           <Clock className="w-4 h-4 text-yellow-400 mx-auto mb-1" />
           <p className="font-medium text-foreground">{demoData.pending}</p>
-          <p className="text-muted-foreground">Pending</p>
+          <p className="text-muted-foreground">{t('common.pending')}</p>
         </div>
       </div>
 
@@ -165,6 +168,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
 
 // Cert-Manager TLS Certificates Card
 export function CertManager({ config: _config }: CardConfig) {
+  const { t } = useTranslation()
   const { status, issuers, isLoading, consecutiveFailures, isFailed } = useCertManager()
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
@@ -248,7 +252,7 @@ export function CertManager({ config: _config }: CardConfig) {
         </div>
         <div className="p-2 rounded-lg bg-secondary/30">
           <p className="text-lg font-bold text-foreground">{status.totalCertificates}</p>
-          <p className="text-muted-foreground">Total</p>
+          <p className="text-muted-foreground">{t('common.total')}</p>
         </div>
       </div>
 

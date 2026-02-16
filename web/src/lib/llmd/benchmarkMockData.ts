@@ -155,7 +155,7 @@ export interface ParetoPoint {
   hardware: string
   hardwareMemory: number
   gpuCount: number
-  config: 'standalone' | 'llm-d' | 'disaggregated'
+  config: 'standalone' | 'scheduling' | 'disaggregated'
   framework: string
   seqLen: string
   throughputPerGpu: number
@@ -163,13 +163,15 @@ export interface ParetoPoint {
   tpotP50Ms: number
   p99LatencyMs: number
   requestRate: number
+  powerPerGpuKw: number
+  tcoPerGpuHr: number
 }
 
 export interface LeaderboardRow {
   rank: number
   hardware: string
   model: string
-  config: 'standalone' | 'llm-d' | 'disaggregated'
+  config: 'standalone' | 'scheduling' | 'disaggregated'
   framework: string
   throughputPerGpu: number
   ttftP50Ms: number
@@ -195,12 +197,17 @@ export interface TimelinePoint {
 // Constants
 // ---------------------------------------------------------------------------
 
-const HARDWARE_CONFIGS: { model: string; memory: number; costPerHr: number }[] = [
-  { model: 'NVIDIA-H100-80GB-HBM3', memory: 80, costPerHr: 2.50 },
-  { model: 'NVIDIA-A100-SXM4-80GB', memory: 80, costPerHr: 1.50 },
-  { model: 'NVIDIA-L40S', memory: 48, costPerHr: 1.00 },
-  { model: 'NVIDIA-H200-141GB', memory: 141, costPerHr: 3.80 },
+const HARDWARE_CONFIGS: { model: string; memory: number; costPerHr: number; powerKw: number }[] = [
+  { model: 'NVIDIA-H100-80GB-HBM3', memory: 80, costPerHr: 2.50, powerKw: 0.70 },
+  { model: 'NVIDIA-A100-SXM4-80GB', memory: 80, costPerHr: 1.50, powerKw: 0.40 },
+  { model: 'NVIDIA-L40S', memory: 48, costPerHr: 1.00, powerKw: 0.35 },
+  { model: 'NVIDIA-H200-141GB', memory: 141, costPerHr: 3.80, powerKw: 0.70 },
 ]
+
+/** Hardware specs lookup by model name (power and cost). */
+export const HARDWARE_SPECS: Record<string, { powerKw: number; costPerHr: number }> = Object.fromEntries(
+  HARDWARE_CONFIGS.map(hw => [hw.model, { powerKw: hw.powerKw, costPerHr: hw.costPerHr }])
+)
 
 const MODELS = [
   { name: 'meta-llama/Llama-3-70B-Instruct', short: 'Llama-3-70B' },
@@ -467,11 +474,13 @@ export function generateBenchmarkReports(): BenchmarkReport[] {
   for (const hw of HARDWARE_CONFIGS) {
     for (const model of MODELS) {
       for (const config of CONFIGS) {
-        // Skip unrealistic combos: large models on small GPUs
-        if (model.name.includes('70B') && hw.model.includes('L40S')) continue
-        if (model.name.includes('R1') && !hw.model.includes('H100') && !hw.model.includes('H200')) continue
+        for (const seqLen of SEQ_LENS) {
+          // Skip unrealistic combos: large models on small GPUs
+          if (model.name.includes('70B') && hw.model.includes('L40S')) continue
+          if (model.name.includes('R1') && !hw.model.includes('H100') && !hw.model.includes('H200')) continue
 
-        reports.push(generateBenchmarkReport(hw, model, config, SEQ_LENS[0], dateStr, rand))
+          reports.push(generateBenchmarkReport(hw, model, config, seqLen, dateStr, rand))
+        }
       }
     }
   }
@@ -522,19 +531,41 @@ export function generateTimelineReports(days = 90): TimelinePoint[] {
 /** Extract Pareto-plottable points from a set of reports. */
 export function extractParetoPoints(reports: BenchmarkReport[]): ParetoPoint[] {
   return reports.map(r => {
-    const engine = r.scenario.stack.find(c => c.standardized.kind === 'inference_engine')
+    const engine = r.scenario.stack?.find(c => c.standardized?.kind === 'inference_engine')
     if (!engine) return null
+
+    const agg = r.results?.request_performance?.aggregate
+    if (!agg) return null
 
     const acc = engine.standardized.accelerator
     const gpuCount = acc?.count ?? 1
-    const outputRate = r.results.request_performance.aggregate.throughput.output_token_rate?.mean ?? 0
-    const ttft = (r.results.request_performance.aggregate.latency.time_to_first_token?.p50 ?? 0) * 1000
-    const tpot = (r.results.request_performance.aggregate.latency.time_per_output_token?.p50 ?? 0) * 1000
-    const p99 = (r.results.request_performance.aggregate.latency.request_latency?.p99 ?? 0) * 1000
+    const outputRate = agg.throughput?.output_token_rate?.mean ?? 0
+    const ttft = (agg.latency?.time_to_first_token?.p50 ?? 0) * 1000
+    const tpot = (agg.latency?.time_per_output_token?.p50 ?? 0) * 1000
+    const p99 = (agg.latency?.request_latency?.p99 ?? 0) * 1000
 
-    const config: ParetoPoint['config'] = r.scenario.stack.some(c => c.standardized.role === 'prefill')
-      ? 'disaggregated'
-      : engine.standardized.tool === 'llm-d' ? 'llm-d' : 'standalone'
+    // Skip points with zero throughput (invalid data)
+    if (outputRate === 0) return null
+
+    // Classify config by stack roles, tool name, and experiment ID
+    const roles = (r.scenario.stack ?? []).map(c => c.standardized?.role).filter(Boolean) as string[]
+    const eid = r.run?.eid ?? ''
+    const tool = engine.standardized.tool ?? ''
+    const hasPrefill = roles.includes('prefill')
+    const hasDecode = roles.includes('decode')
+    const hasReplica = roles.includes('replica')
+
+    let config: ParetoPoint['config'] = 'scheduling'
+    if (hasReplica || eid.includes('standalone') || tool === 'vllm') {
+      config = 'standalone'
+    } else if ((hasPrefill && hasDecode) || eid.includes('modelservice')) {
+      config = 'disaggregated'
+    }
+
+    const isl = r.scenario.load?.standardized?.input_seq_len?.value ?? 0
+    const osl = r.scenario.load?.standardized?.output_seq_len?.value
+
+    const hwSpecs = HARDWARE_SPECS[acc?.model ?? ''] ?? { powerKw: 0.5, costPerHr: 2.00 }
 
     return {
       uid: r.run.uid,
@@ -543,13 +574,15 @@ export function extractParetoPoints(reports: BenchmarkReport[]): ParetoPoint[] {
       hardwareMemory: acc?.memory ?? 0,
       gpuCount,
       config,
-      framework: engine.standardized.tool,
-      seqLen: `${r.scenario.load.standardized.input_seq_len.value}/${r.scenario.load.standardized.output_seq_len?.value ?? '?'}`,
+      framework: tool,
+      seqLen: `${isl}/${osl ?? '?'}`,
       throughputPerGpu: outputRate / gpuCount,
       ttftP50Ms: ttft,
       tpotP50Ms: tpot,
       p99LatencyMs: p99,
-      requestRate: r.results.request_performance.aggregate.throughput.request_rate?.mean ?? 0,
+      requestRate: agg.throughput?.request_rate?.mean ?? 0,
+      powerPerGpuKw: hwSpecs.powerKw,
+      tcoPerGpuHr: hwSpecs.costPerHr,
     }
   }).filter((p): p is ParetoPoint => p !== null)
 }
@@ -575,12 +608,15 @@ export function computeParetoFrontier(points: ParetoPoint[]): ParetoPoint[] {
 export function generateLeaderboardRows(reports: BenchmarkReport[]): LeaderboardRow[] {
   const points = extractParetoPoints(reports)
 
+  // Build uid→report lookup (extractParetoPoints filters nulls, so indices don't match)
+  const reportByUid = new Map(reports.map(r => [r.run.uid, r]))
+
   // Compute composite score: normalize each metric to 0-100, weighted average
   const maxThroughput = Math.max(...points.map(p => p.throughputPerGpu), 1)
   const minTtft = Math.min(...points.map(p => p.ttftP50Ms), 1)
   const minP99 = Math.min(...points.map(p => p.p99LatencyMs), 1)
 
-  const rows: LeaderboardRow[] = points.map((p, i) => {
+  const rows: LeaderboardRow[] = points.map((p) => {
     const throughputScore = (p.throughputPerGpu / maxThroughput) * 100
     const ttftScore = (minTtft / p.ttftP50Ms) * 100
     const p99Score = (minP99 / p.p99LatencyMs) * 100
@@ -611,7 +647,7 @@ export function generateLeaderboardRows(reports: BenchmarkReport[]): Leaderboard
       p99LatencyMs: Math.round(p.p99LatencyMs),
       score: Math.round(score * 10) / 10,
       llmdAdvantage: advantage,
-      report: reports[i],
+      report: reportByUid.get(p.uid) ?? reports[0],
     }
   })
 
@@ -642,7 +678,7 @@ export const HARDWARE_COLORS: Record<string, string> = {
 
 /** Color palette for config types. */
 export const CONFIG_COLORS: Record<string, string> = {
-  'standalone': '#6b7280',
-  'llm-d': '#3b82f6',
+  'standalone': '#f59e0b',
+  'scheduling': '#3b82f6',
   'disaggregated': '#10b981',
 }

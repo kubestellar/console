@@ -6,6 +6,7 @@ import {
 import { CardClusterFilter, CardSearchInput } from '../../../lib/cards'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
@@ -14,6 +15,7 @@ import type { LLMdServer, LLMdComponentType } from '../../../hooks/useLLMd'
 import { useLLMdClusters } from './shared'
 import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface LLMInferenceProps {
   config?: Record<string, unknown>
@@ -39,13 +41,14 @@ const COMPONENT_FILTERS: { value: LLMdComponentType | 'all' | 'autoscale', label
 ]
 
 export function LLMInference({ config: _config }: LLMInferenceProps) {
+  const { t: _t } = useTranslation()
   // Dynamically discover LLM-d clusters instead of using static list
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
   const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
-  const { servers, isLoading, refetch, isFailed, consecutiveFailures, error } = useCachedLLMdServers(llmdClusters)
+  const { servers, isLoading, isRefreshing, lastRefresh, refetch, isFailed, consecutiveFailures, error } = useCachedLLMdServers(llmdClusters)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
@@ -167,6 +170,13 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
           {filters.localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />

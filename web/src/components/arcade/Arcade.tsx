@@ -23,6 +23,7 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
 import { useMobile } from '../../hooks/useMobile'
+import { useTranslation } from 'react-i18next'
 
 const ARCADE_CARDS_KEY = 'kubestellar-arcade-cards'
 
@@ -145,6 +146,7 @@ function ArcadeDragPreviewCard({ card }: { card: DashboardCard }) {
 }
 
 export function Arcade() {
+  const { t: _t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
 

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { useVersionCheck } from '../../../hooks/useVersionCheck'
@@ -6,6 +7,7 @@ import { ROUTES } from '../../../config/routes'
 
 export function UpdateIndicator() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { hasUpdate, latestRelease, skipVersion, checkForUpdates } = useVersionCheck()
   const [showUpdateDropdown, setShowUpdateDropdown] = useState(false)
   const updateRef = useRef<HTMLDivElement>(null)
@@ -35,7 +37,7 @@ export function UpdateIndicator() {
       <button
         onClick={() => setShowUpdateDropdown(!showUpdateDropdown)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
-        title={`Update available: ${latestRelease.tag}`}
+        title={t('update.availableTag', { tag: latestRelease.tag })}
       >
         <Download className="w-4 h-4" />
         <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
@@ -46,7 +48,7 @@ export function UpdateIndicator() {
           <div className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Download className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium text-foreground">Update Available</span>
+              <span className="text-sm font-medium text-foreground">{t('update.available')}</span>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
               {latestRelease.tag}
@@ -59,7 +61,7 @@ export function UpdateIndicator() {
                 }}
                 className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
               >
-                View Details
+                {t('actions.viewDetails')}
               </button>
               <button
                 onClick={() => {
@@ -68,7 +70,7 @@ export function UpdateIndicator() {
                 }}
                 className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                Skip
+                {t('actions.skip')}
               </button>
             </div>
           </div>

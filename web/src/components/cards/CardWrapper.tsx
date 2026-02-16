@@ -1,10 +1,11 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope, MonitorCheck, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
@@ -44,12 +45,13 @@ interface PendingSwap {
 }
 
 // Card width options (in grid columns out of 12)
+// labelKey/descKey reference cards.json cardWrapper.resize* keys
 const WIDTH_OPTIONS = [
-  { value: 3, label: 'Small', description: '1/4 width' },
-  { value: 4, label: 'Medium', description: '1/3 width' },
-  { value: 6, label: 'Large', description: '1/2 width' },
-  { value: 8, label: 'Wide', description: '2/3 width' },
-  { value: 12, label: 'Full', description: 'Full width' },
+  { value: 3, labelKey: 'cardWrapper.resizeSmall' as const, descKey: 'cardWrapper.resizeSmallDesc' as const },
+  { value: 4, labelKey: 'cardWrapper.resizeMedium' as const, descKey: 'cardWrapper.resizeMediumDesc' as const },
+  { value: 6, labelKey: 'cardWrapper.resizeLarge' as const, descKey: 'cardWrapper.resizeLargeDesc' as const },
+  { value: 8, labelKey: 'cardWrapper.resizeWide' as const, descKey: 'cardWrapper.resizeWideDesc' as const },
+  { value: 12, labelKey: 'cardWrapper.resizeFull' as const, descKey: 'cardWrapper.resizeFullDesc' as const },
 ]
 
 // Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
@@ -250,6 +252,7 @@ export const CARD_TITLES: Record<string, string> = {
   helm_history: 'Helm History',
   helm_values_diff: 'Helm Values Diff',
   kustomization_status: 'Kustomization Status',
+  buildpacks_status: 'Buildpacks Status',
   overlay_comparison: 'Overlay Comparison',
   chart_versions: 'Helm Chart Versions',
 
@@ -333,6 +336,16 @@ export const CARD_TITLES: Record<string, string> = {
   pd_disaggregation: 'P/D Disaggregation',
   ml_jobs: 'ML Jobs',
   ml_notebooks: 'ML Notebooks',
+
+  // Benchmark cards
+  nightly_e2e_status: 'Nightly E2E Status',
+  benchmark_hero: 'Latest Benchmark',
+  pareto_frontier: 'Performance Explorer',
+  hardware_leaderboard: 'Hardware Leaderboard',
+  latency_breakdown: 'Latency Breakdown',
+  throughput_comparison: 'Throughput Comparison',
+  performance_timeline: 'Performance Timeline',
+  resource_utilization: 'Resource Utilization',
 
   // Games
   sudoku_game: 'Sudoku Game',
@@ -534,7 +547,7 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   deployment_missions: { icon: Rocket, color: 'text-blue-400' },
   deployment_progress: { icon: Clock, color: 'text-blue-400' },
   deployment_status: { icon: Box, color: 'text-purple-400' },
-  deployment_issues: { icon: AlertTriangle, color: 'text-orange-400' },
+  deployment_issues: { icon: AlertTriangle, color: 'text-red-400' },
   statefulset_status: { icon: Database, color: 'text-purple-400' },
   daemonset_status: { icon: Server, color: 'text-blue-400' },
   replicaset_status: { icon: Box, color: 'text-cyan-400' },
@@ -544,7 +557,7 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   resource_marshall: { icon: GitBranch, color: 'text-blue-400' },
 
   // Pod and resource cards
-  pod_issues: { icon: AlertTriangle, color: 'text-orange-400' },
+  pod_issues: { icon: AlertTriangle, color: 'text-red-400' },
   top_pods: { icon: Box, color: 'text-purple-400' },
   resource_capacity: { icon: Gauge, color: 'text-blue-400' },
   resource_usage: { icon: Gauge, color: 'text-purple-400' },
@@ -581,6 +594,7 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   helm_history: { icon: Clock, color: 'text-purple-400' },
   helm_values_diff: { icon: FileCode, color: 'text-yellow-400' },
   kustomization_status: { icon: Layers, color: 'text-purple-400' },
+  buildpacks_status: { icon: Package, color: 'text-purple-400' },
   overlay_comparison: { icon: Layers, color: 'text-blue-400' },
   chart_versions: { icon: Package, color: 'text-emerald-400' },
 
@@ -721,6 +735,7 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
  * Updates position on scroll to stay attached to the trigger element.
  */
 function InfoTooltip({ text }: { text: string }) {
+  const { t } = useTranslation('cards')
   const [isVisible, setIsVisible] = useState(false)
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -794,7 +809,7 @@ function InfoTooltip({ text }: { text: string }) {
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-        title="Card information"
+        title={t('cardWrapper.cardInfo')}
       >
         <Info className="w-3.5 h-3.5" />
       </button>
@@ -847,6 +862,7 @@ export function CardWrapper({
   skeletonRows,
   children,
 }: CardWrapperProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const [isExpanded, setIsExpanded] = useState(false)
   // Lazy mounting - only render children when card is visible in viewport
   const { ref: lazyRef, isVisible } = useLazyMount('200px')
@@ -1056,9 +1072,10 @@ export function CardWrapper({
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
 
-  const title = CARD_TITLES[cardType] || customTitle || cardType
-  const description = CARD_DESCRIPTIONS[cardType]
-  const newTitle = pendingSwap?.newTitle || CARD_TITLES[pendingSwap?.newType || ''] || pendingSwap?.newType
+  const title = t(`titles.${cardType}`, CARD_TITLES[cardType] || '') || customTitle || cardType
+  const description = t(`descriptions.${cardType}`, CARD_DESCRIPTIONS[cardType] || '')
+  const swapType = pendingSwap?.newType || ''
+  const newTitle = pendingSwap?.newTitle || t(`titles.${swapType}`, CARD_TITLES[swapType] || '') || swapType
 
   // Get icon from prop or registry
   const cardIconConfig = CARD_ICONS[cardType]
@@ -1192,32 +1209,32 @@ export function CardWrapper({
             {dragHandle}
             {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4', resolvedIconColor)} />}
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
-            <InfoTooltip text={description || `${title} card. Description coming soon.`} />
+            <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
             {/* Demo data indicator - shows if card uses demo data (respects child opt-out) */}
             {showDemoIndicator && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
-                title={effectiveIsDemoData ? "This card displays demo data" : "Demo mode enabled - showing sample data"}
+                title={effectiveIsDemoData ? t('cardWrapper.demoBadgeTitle') : t('cardWrapper.demoModeTitle')}
               >
-                Demo
+                {t('cardWrapper.demo')}
               </span>
             )}
             {/* Live data indicator - for time-series/trend cards with real data */}
             {isLive && !showDemoIndicator && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
-                title="Showing live data"
+                title={t('cardWrapper.liveBadgeTitle')}
               >
-                Live
+                {t('cardWrapper.live')}
               </span>
             )}
             {/* Failure indicator */}
             {effectiveIsFailed && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"
-                title={`${effectiveConsecutiveFailures} consecutive refresh failures`}
+                title={t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
               >
-                Refresh failed
+                {t('cardWrapper.refreshFailed')}
               </span>
             )}
             {/* Refresh indicator - only shows when no refresh button is present (button handles its own spin) */}
@@ -1236,7 +1253,7 @@ export function CardWrapper({
             <button
               onClick={() => setCollapsed(!isCollapsed)}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-              title={isCollapsed ? 'Expand card' : 'Collapse card'}
+              title={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
             >
               {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1253,23 +1270,25 @@ export function CardWrapper({
                     ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
                     : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                 )}
-                title={forceSkeletonForOffline ? 'Waiting for agent to connect...' : effectiveIsFailed ? `Refresh failed ${effectiveConsecutiveFailures} times - click to retry` : 'Refresh data'}
+                title={forceSkeletonForOffline ? t('cardWrapper.waitingForAgent') : effectiveIsFailed ? t('cardWrapper.refreshFailedRetry', { count: effectiveConsecutiveFailures }) : t('cardWrapper.refreshData')}
               >
                 <RefreshCw className={cn('w-4 h-4', (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-spin')} />
               </button>
             )}
+            {/* Chat button - feature not yet implemented
             <button
               data-tour="card-chat"
               onClick={() => {}}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-              title="Ask AI about this card"
+              title={t('common:buttons.askAI')}
             >
               <MessageCircle className="w-4 h-4" />
             </button>
+            */}
             <button
               onClick={() => setIsExpanded(true)}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-              title="Expand card to full screen"
+              title={t('cardWrapper.expandFullScreen')}
             >
               <Maximize2 className="w-4 h-4" />
             </button>
@@ -1278,7 +1297,7 @@ export function CardWrapper({
                 ref={menuButtonRef}
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                title="Card menu - configure, replace, or remove"
+                title={t('cardWrapper.cardMenuTooltip')}
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
@@ -1293,10 +1312,10 @@ export function CardWrapper({
                       onConfigure?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                    title="Configure card settings like cluster and namespace filters"
+                    title={t('cardWrapper.configureTooltip')}
                   >
                     <Settings className="w-4 h-4" />
-                    Configure
+                    {t('common:actions.configure')}
                   </button>
                   <button
                     onClick={() => {
@@ -1305,10 +1324,10 @@ export function CardWrapper({
                       navigator.clipboard.writeText(url)
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                    title="Copy a direct URL to this card"
+                    title={t('cardWrapper.copyLinkTooltip')}
                   >
                     <Link2 className="w-4 h-4" />
-                    Copy Link
+                    {t('cardWrapper.copyLink')}
                   </button>
                   {/* Resize submenu */}
                   {onWidthChange && (
@@ -1316,11 +1335,11 @@ export function CardWrapper({
                       <button
                         onClick={() => setShowResizeMenu(!showResizeMenu)}
                         className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center justify-between"
-                        title="Change card width"
+                        title={t('cardWrapper.resizeTooltip')}
                       >
                         <span className="flex items-center gap-2">
                           <MoveHorizontal className="w-4 h-4" />
-                          Resize
+                          {t('cardWrapper.resize')}
                         </span>
                         <ChevronRight className={cn('w-4 h-4 transition-transform', showResizeMenu && 'rotate-90')} />
                       </button>
@@ -1344,8 +1363,8 @@ export function CardWrapper({
                                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                               )}
                             >
-                              <span>{option.label}</span>
-                              <span className="text-xs opacity-60">{option.description}</span>
+                              <span>{t(option.labelKey)}</span>
+                              <span className="text-xs opacity-60">{t(option.descKey)}</span>
                             </button>
                           ))}
                         </div>
@@ -1359,10 +1378,10 @@ export function CardWrapper({
                         setShowWidgetExport(true)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                      title="Export this card as a desktop widget for Übersicht"
+                      title={t('cardWrapper.exportWidgetTooltip')}
                     >
                       <Download className="w-4 h-4" />
-                      Export Widget
+                      {t('cardWrapper.exportWidget')}
                     </button>
                   )}
                   <button
@@ -1371,10 +1390,10 @@ export function CardWrapper({
                       onReplace?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                    title="Replace this card with a different card type"
+                    title={t('cardWrapper.replaceTooltip')}
                   >
                     <Replace className="w-4 h-4" />
-                    Replace Card
+                    {t('common:buttons.replaceCard')}
                   </button>
                   <button
                     onClick={() => {
@@ -1382,10 +1401,10 @@ export function CardWrapper({
                       onRemove?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
-                    title="Remove this card from the dashboard"
+                    title={t('cardWrapper.removeTooltip')}
                   >
                     <Trash2 className="w-4 h-4" />
-                    Remove
+                    {t('common:actions.remove')}
                   </button>
                 </div>,
                 document.body
@@ -1425,9 +1444,9 @@ export function CardWrapper({
         {!isCollapsed && pendingSwap && (
           <div className="px-4 py-3 bg-purple-500/10 border-t border-purple-500/20">
             <div className="flex items-center gap-2 text-sm">
-              <span title="Card swap pending"><Clock className="w-4 h-4 text-purple-400 animate-pulse" /></span>
+              <span title={t('cardWrapper.swapPending')}><Clock className="w-4 h-4 text-purple-400 animate-pulse" /></span>
               <span className="text-purple-300">
-                Swapping to "{newTitle}" in 30s
+                {t('common:labels.swappingTo', { cardName: newTitle })}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">{pendingSwap.reason}</p>
@@ -1435,23 +1454,23 @@ export function CardWrapper({
               <button
                 onClick={() => handleSnooze(3600000)}
                 className="text-xs px-2 py-1 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
-                title="Delay this swap for 1 hour"
+                title={t('cardWrapper.snoozeTooltip')}
               >
-                Snooze 1hr
+                {t('common:buttons.snoozeHour')}
               </button>
               <button
                 onClick={handleSwapNow}
                 className="text-xs px-2 py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300"
-                title="Swap to the new card immediately"
+                title={t('cardWrapper.swapNowTooltip')}
               >
-                Swap Now
+                {t('common:buttons.swapNow')}
               </button>
               <button
                 onClick={() => onSwapCancel?.()}
                 className="text-xs px-2 py-1 rounded hover:bg-secondary/50 text-muted-foreground"
-                title="Cancel the swap and keep this card"
+                title={t('cardWrapper.keepThisTooltip')}
               >
-                Keep This
+                {t('common:buttons.keepThis')}
               </button>
             </div>
           </div>
@@ -1460,7 +1479,7 @@ export function CardWrapper({
         {/* Hover summary */}
         {showSummary && lastSummary && (
           <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 p-3 glass rounded-lg text-sm animate-fade-in-up">
-            <p className="text-xs text-muted-foreground mb-1">Since last focus:</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('common:labels.sinceFocus')}</p>
             <p className="text-foreground">{lastSummary}</p>
           </div>
         )}

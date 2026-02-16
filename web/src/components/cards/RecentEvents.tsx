@@ -9,6 +9,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
+import { useTranslation } from 'react-i18next'
 
 const ONE_HOUR_MS = 60 * 60 * 1000
 
@@ -24,10 +25,12 @@ function getMinutesAgo(timestamp: string | undefined): string {
 }
 
 export function RecentEvents() {
+  const { t: _t } = useTranslation()
   const {
     events,
     isLoading,
     isRefreshing,
+    isDemoFallback,
     refetch,
     isFailed,
     consecutiveFailures,
@@ -38,6 +41,7 @@ export function RecentEvents() {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed,
     consecutiveFailures,

@@ -9,6 +9,7 @@ import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
+import { useTranslation } from 'react-i18next'
 
 const STATUS_COLORS = {
   healthy: 'bg-green-500',
@@ -199,6 +200,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
 })
 
 export function StackSelector() {
+  const { t } = useTranslation()
   const stackContext = useOptionalStack()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -375,7 +377,7 @@ export function StackSelector() {
             )}
 
             {isDemoMode && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">Demo</span>
+              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">{t('common.demo')}</span>
             )}
           </>
         ) : (
@@ -442,7 +444,7 @@ export function StackSelector() {
                   <input
                     ref={searchInputRef}
                     type="text"
-                    placeholder="Search stacks..."
+                    placeholder={t('common.searchStacks')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-900/50 border border-slate-700 rounded focus:outline-none focus:border-slate-600 text-white placeholder-slate-500"

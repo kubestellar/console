@@ -7,6 +7,7 @@
 import { useState, useRef, useEffect, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 
 interface PortalTooltipProps {
   children: ReactNode
@@ -15,6 +16,7 @@ interface PortalTooltipProps {
 }
 
 export function PortalTooltip({ children, content, className = '' }: PortalTooltipProps) {
+  const { t: _t } = useTranslation()
   const [isVisible, setIsVisible] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const triggerRef = useRef<HTMLSpanElement>(null)

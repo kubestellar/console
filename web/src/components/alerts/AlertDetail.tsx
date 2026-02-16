@@ -17,6 +17,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon, getSeverityColor } from '../../types/alerts'
 import type { Alert } from '../../types/alerts'
 import { useToast } from '../ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -43,6 +44,7 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export function AlertDetail({ alert, onClose }: AlertDetailProps) {
+  const { t } = useTranslation()
   const { acknowledgeAlert, resolveAlert, runAIDiagnosis } = useAlerts()
   const { webhooks } = useSlackWebhooks()
   const { sendNotification } = useSlackNotification()
@@ -154,7 +156,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           {alert.cluster && (
             <div className="flex items-center gap-2 text-sm">
               <Server className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Cluster:</span>
+              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
               <span className="text-foreground">{alert.cluster}</span>
             </div>
           )}

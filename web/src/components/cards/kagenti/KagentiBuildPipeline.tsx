@@ -4,6 +4,7 @@ import { useKagentiBuilds } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
 import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards'
 import { Skeleton } from '../../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 interface KagentiBuildPipelineProps {
   config?: { cluster?: string }
@@ -36,6 +37,7 @@ function timeAgo(dateStr: string): string {
 type SortField = 'name' | 'status' | 'cluster'
 
 export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
+  const { t: _t } = useTranslation()
   const {
     data: builds,
     isLoading,

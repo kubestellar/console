@@ -3,6 +3,7 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useTranslation } from 'react-i18next'
 
 // Chess piece types
 type PieceType = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P' // King, Queen, Rook, Bishop, kNight, Pawn
@@ -805,6 +806,7 @@ function KubeChessInternal() {
 }
 
 export function KubeChess() {
+  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   return (
     <DynamicCardErrorBoundary cardId="KubeChess">

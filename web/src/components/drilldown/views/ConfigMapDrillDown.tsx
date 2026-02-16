@@ -4,6 +4,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Layers, Server, Database } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -12,6 +13,7 @@ interface Props {
 type TabType = 'overview' | 'data' | 'describe' | 'yaml'
 
 export function ConfigMapDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const configmapName = data.configmap as string
@@ -145,7 +147,7 @@ export function ConfigMapDrillDown({ data }: Props) {
             className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
           >
             <Layers className="w-4 h-4 text-purple-400" />
-            <span className="text-muted-foreground">Namespace:</span>
+            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
             <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
             <svg className="w-3 h-3 text-purple-400/50 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -156,7 +158,7 @@ export function ConfigMapDrillDown({ data }: Props) {
             className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
           >
             <Server className="w-4 h-4 text-blue-400" />
-            <span className="text-muted-foreground">Cluster:</span>
+            <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
             <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
             <svg className="w-3 h-3 text-blue-400/50 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -297,7 +299,7 @@ export function ConfigMapDrillDown({ data }: Props) {
             {describeLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Running kubectl describe...</span>
+                <span className="ml-2 text-muted-foreground">{t('drilldown.status.runningDescribe')}</span>
               </div>
             ) : describeOutput ? (
               <div className="relative">
@@ -313,7 +315,7 @@ export function ConfigMapDrillDown({ data }: Props) {
               </div>
             ) : (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">Local Agent not connected</p>
+                <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
               </div>
             )}
           </div>
@@ -324,7 +326,7 @@ export function ConfigMapDrillDown({ data }: Props) {
             {yamlLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Fetching YAML...</span>
+                <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingYaml')}</span>
               </div>
             ) : yamlOutput ? (
               <div className="relative">
@@ -340,7 +342,7 @@ export function ConfigMapDrillDown({ data }: Props) {
               </div>
             ) : (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">Local Agent not connected</p>
+                <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
               </div>
             )}
           </div>

@@ -15,6 +15,7 @@ import { HorseshoeGauge } from './shared/HorseshoeGauge'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { useCardExpanded } from '../CardWrapper'
+import { useTranslation } from 'react-i18next'
 
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
@@ -243,6 +244,7 @@ function InfoSparkline({ data, color, width = 100, height = 30 }: { data: number
 }
 
 export function KVCacheMonitor() {
+  const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
   const [stats, setStats] = useState<KVCacheStats[]>([])
   const [viewMode, setViewMode] = useState<'gauges' | 'horseshoe' | 'heatmap'>('gauges')
@@ -510,8 +512,8 @@ export function KVCacheMonitor() {
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm rounded-lg">
           <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-cyan-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">Select a stack to monitor</span>
-          <span className="text-slate-500 text-xs mt-1">Use the stack selector above</span>
+          <span className="text-slate-400 text-sm">{t('llmd.selectStackMonitor')}</span>
+          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -520,7 +522,7 @@ export function KVCacheMonitor() {
           <div className="p-1.5 rounded-lg bg-cyan-500/20">
             <Database size={16} className="text-cyan-400" />
           </div>
-          <span className="font-medium text-white">KV Cache Monitor</span>
+          <span className="font-medium text-white">{t('llmd.kvCacheMonitor')}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -533,7 +535,7 @@ export function KVCacheMonitor() {
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
+                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common:common.demo')}</span>
               )}
             </div>
           )}
@@ -547,9 +549,9 @@ export function KVCacheMonitor() {
                   ? 'bg-purple-500/30 text-purple-400 shadow-lg shadow-purple-500/20'
                   : 'text-muted-foreground hover:text-white'
               }`}
-              title="Show one gauge per role (Prefill, Decode, Unified)"
+              title={t('llmd.showOnePerRole')}
             >
-              Agg
+              {t('llmd.agg')}
             </button>
             <button
               onClick={() => setAggregationMode('disaggregated')}
@@ -558,9 +560,9 @@ export function KVCacheMonitor() {
                   ? 'bg-purple-500/30 text-purple-400 shadow-lg shadow-purple-500/20'
                   : 'text-muted-foreground hover:text-white'
               }`}
-              title="Show one gauge per replica"
+              title={t('llmd.showOnePerReplica')}
             >
-              Per-Pod
+              {t('llmd.perPod')}
             </button>
           </div>
 
@@ -575,7 +577,7 @@ export function KVCacheMonitor() {
                     ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
                     : 'bg-slate-700/50 text-slate-400'
                 }`}
-                title="Toggle horseshoe gauge view"
+                title={t('llmd.toggleHorseshoe')}
               >
                 <CircleDot size={12} />
               </button>
@@ -589,7 +591,7 @@ export function KVCacheMonitor() {
                   ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
                   : 'bg-slate-700/50 text-slate-400'
               }`}
-              title="Toggle heatmap view"
+              title={t('llmd.toggleHeatmap')}
             >
               <Grid3X3 size={12} />
             </button>
@@ -605,26 +607,26 @@ export function KVCacheMonitor() {
             {trend > 2 && <TrendingUp size={14} className="text-red-400" />}
             {trend < -2 && <TrendingDown size={14} className="text-green-400" />}
           </div>
-          <div className="text-xs text-muted-foreground">Avg Util</div>
+          <div className="text-xs text-muted-foreground">{t('llmd.avgUtil')}</div>
         </div>
         <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
           <div className="text-lg font-bold text-white">
             {aggregateMetrics.totalUsed.toFixed(0)}
             <span className="text-xs text-muted-foreground">/{aggregateMetrics.totalCapacity}GB</span>
           </div>
-          <div className="text-xs text-muted-foreground">Used</div>
+          <div className="text-xs text-muted-foreground">{t('common:common.used')}</div>
         </div>
         <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
           <div className="text-lg font-bold text-green-400" style={{ textShadow: '0 0 10px rgba(34,197,94,0.5)' }}>
             {aggregateMetrics.avgHitRate}%
           </div>
-          <div className="text-xs text-muted-foreground">Hit Rate</div>
+          <div className="text-xs text-muted-foreground">{t('llmd.hitRate')}</div>
         </div>
         <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
           <div className="text-lg font-bold text-cyan-400" style={{ textShadow: '0 0 10px rgba(6,182,212,0.5)' }}>
             {stats.length}
           </div>
-          <div className="text-xs text-muted-foreground">Pods</div>
+          <div className="text-xs text-muted-foreground">{t('common:common.pods')}</div>
         </div>
       </div>
 
@@ -677,7 +679,7 @@ export function KVCacheMonitor() {
                                 : 'bg-slate-700/50 text-slate-500 hover:text-slate-300'
                             }`}
                           >
-                            {metric === 'util' ? 'Util' : 'Hit Rate'}
+                            {metric === 'util' ? t('llmd.util') : t('llmd.hitRate')}
                           </button>
                         ))}
                       </div>
@@ -686,13 +688,13 @@ export function KVCacheMonitor() {
                       <div className="flex gap-3 text-xs mb-2">
                         {selectedMetrics.includes('util') && (
                           <div>
-                            <span className="text-slate-500">Util:</span>{' '}
+                            <span className="text-slate-500">{t('llmd.util')}:</span>{' '}
                             <span className="text-amber-400 font-mono">{stat.utilizationPercent}%</span>
                           </div>
                         )}
                         {selectedMetrics.includes('hitRate') && (
                           <div>
-                            <span className="text-slate-500">Hit:</span>{' '}
+                            <span className="text-slate-500">{t('llmd.hit')}:</span>{' '}
                             <span className="text-green-400 font-mono">{Math.round(stat.hitRate * 100)}%</span>
                           </div>
                         )}
@@ -703,7 +705,7 @@ export function KVCacheMonitor() {
                         <div className={`grid gap-2 ${selectedMetrics.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                           {selectedMetrics.includes('util') && (
                             <div>
-                              <div className="text-[10px] text-amber-400/70 mb-1">Util %</div>
+                              <div className="text-[10px] text-amber-400/70 mb-1">{t('llmd.utilPercent')}</div>
                               <InfoSparkline
                                 data={podHist.util}
                                 color="#f59e0b"
@@ -714,7 +716,7 @@ export function KVCacheMonitor() {
                           )}
                           {selectedMetrics.includes('hitRate') && (
                             <div>
-                              <div className="text-[10px] text-green-400/70 mb-1">Hit Rate</div>
+                              <div className="text-[10px] text-green-400/70 mb-1">{t('llmd.hitRate')}</div>
                               <InfoSparkline
                                 data={podHist.hitRate}
                                 color="#22c55e"

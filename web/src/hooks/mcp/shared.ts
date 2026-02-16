@@ -829,7 +829,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 65000) // 65s timeout — large clusters can take 30s+ uncached
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout — offline clusters fail fast
       const response = await fetch(`${LOCAL_AGENT_URL}/cluster-health?cluster=${encodeURIComponent(context)}`, {
         signal: controller.signal,
         headers: { 'Accept': 'application/json' },
@@ -857,7 +857,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     const response = await fetch(
       `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
       {
-        signal: AbortSignal.timeout(65000),
+        signal: AbortSignal.timeout(15000), // 15s — offline clusters fail fast
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       }
     )
@@ -1162,7 +1162,7 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
 
 // Concurrency limit for health checks - rolling concurrency for 100+ clusters
 // Keep at 2 to avoid overwhelming the local agent WebSocket connection
-const HEALTH_CHECK_CONCURRENCY = 2
+const HEALTH_CHECK_CONCURRENCY = 6
 
 // Progressive health check with rolling concurrency
 // Uses continuous processing: as soon as one finishes, the next starts
@@ -1271,12 +1271,16 @@ export async function fullFetchClusters() {
     updateClusterCache({ isLoading: true, isRefreshing: true })
   }
 
-  // Helper to ensure minimum visible duration for refresh animation
+  // Helper to ensure minimum visible duration for refresh animation.
+  // On initial load (no cached data), skip the delay — show data ASAP.
+  // On refresh (cached data visible), enforce minimum so indicator is readable.
   const finishWithMinDuration = async (updates: Partial<typeof clusterCache>) => {
-    const elapsed = Date.now() - startTime
-    const minDuration = MIN_REFRESH_INDICATOR_MS
-    if (elapsed < minDuration) {
-      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+    if (hasCachedData) {
+      const elapsed = Date.now() - startTime
+      const minDuration = MIN_REFRESH_INDICATOR_MS
+      if (elapsed < minDuration) {
+        await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+      }
     }
     fetchInProgress = false
     updateClusterCache(updates)

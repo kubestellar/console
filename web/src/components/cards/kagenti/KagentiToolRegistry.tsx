@@ -3,6 +3,7 @@ import { useKagentiTools } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
 import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards'
 import { Skeleton } from '../../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 interface KagentiToolRegistryProps {
   config?: { cluster?: string }
@@ -11,6 +12,7 @@ interface KagentiToolRegistryProps {
 type SortField = 'name' | 'cluster'
 
 export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
+  const { t: _t } = useTranslation()
   const {
     data: tools,
     isLoading,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Maximize2, Minimize2, AlertTriangle, Loader2, Database } from 'lucide-react'
 import { Tier1CardRuntime } from '../cards/DynamicCard'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
@@ -26,6 +27,7 @@ const DEBOUNCE_T1 = 300
 const DEBOUNCE_T2 = 800
 
 export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }: LivePreviewPanelProps) {
+  const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
   const [sizeMode, setSizeMode] = useState<'card' | 'full'>('card')
 
@@ -35,7 +37,7 @@ export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }:
         <button
           onClick={() => setCollapsed(false)}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          title="Show preview"
+          title={t('dashboard.preview.showPreview')}
         >
           <Eye className="w-4 h-4" />
         </button>
@@ -53,23 +55,23 @@ export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }:
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
         <div className="flex items-center gap-1.5">
           <Eye className="w-3 h-3 text-muted-foreground" />
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Preview</span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
           <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400/70">
-            Sample data
+            {t('dashboard.preview.sampleData')}
           </span>
         </div>
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => setSizeMode(sizeMode === 'card' ? 'full' : 'card')}
             className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
-            title={sizeMode === 'card' ? 'Full width' : 'Card width'}
+            title={sizeMode === 'card' ? t('dashboard.preview.fullWidth') : t('dashboard.preview.cardWidth')}
           >
             {sizeMode === 'card' ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
           </button>
           <button
             onClick={() => setCollapsed(true)}
             className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
-            title="Hide preview"
+            title={t('dashboard.preview.hidePreview')}
           >
             <EyeOff className="w-3 h-3" />
           </button>
@@ -104,6 +106,7 @@ export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }:
 // ============================================================================
 
 function T1Preview({ config }: { config?: LivePreviewPanelProps['t1Config'] }) {
+  const { t } = useTranslation()
   const [debouncedConfig, setDebouncedConfig] = useState(config)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
 
@@ -117,7 +120,7 @@ function T1Preview({ config }: { config?: LivePreviewPanelProps['t1Config'] }) {
     return (
       <div className="flex flex-col items-center justify-center py-6 text-center">
         <Database className="w-6 h-6 text-muted-foreground/30 mb-2" />
-        <p className="text-xs text-muted-foreground/50">Add columns to see preview</p>
+        <p className="text-xs text-muted-foreground/50">{t('dashboard.preview.addColumnsToPreview')}</p>
       </div>
     )
   }
@@ -153,6 +156,7 @@ function T1Preview({ config }: { config?: LivePreviewPanelProps['t1Config'] }) {
 // ============================================================================
 
 function T2Preview({ source }: { source?: string }) {
+  const { t } = useTranslation()
   const [debouncedSource, setDebouncedSource] = useState(source)
   const [compiling, setCompiling] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -207,7 +211,7 @@ function T2Preview({ source }: { source?: string }) {
     return (
       <div className="flex flex-col items-center justify-center py-6 text-center">
         <Database className="w-6 h-6 text-muted-foreground/30 mb-2" />
-        <p className="text-xs text-muted-foreground/50">Write code to see preview</p>
+        <p className="text-xs text-muted-foreground/50">{t('dashboard.preview.writeCodeToPreview')}</p>
       </div>
     )
   }
@@ -216,7 +220,7 @@ function T2Preview({ source }: { source?: string }) {
     return (
       <div className="flex items-center justify-center py-6 gap-2">
         <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
-        <span className="text-xs text-muted-foreground">Compiling...</span>
+        <span className="text-xs text-muted-foreground">{t('dashboard.preview.compiling')}</span>
       </div>
     )
   }
@@ -233,7 +237,7 @@ function T2Preview({ source }: { source?: string }) {
   if (!CardComponent) {
     return (
       <div className="flex items-center justify-center py-6">
-        <p className="text-xs text-muted-foreground/50">No component produced</p>
+        <p className="text-xs text-muted-foreground/50">{t('dashboard.preview.noComponentProduced')}</p>
       </div>
     )
   }

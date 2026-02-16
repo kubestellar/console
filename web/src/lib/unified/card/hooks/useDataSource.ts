@@ -284,12 +284,16 @@ function useStaticDataSourceInternal(staticData: unknown[] | null): UseDataSourc
 
 /**
  * Context-based data source (internal - always runs but skips if contextKey is null)
+ * 
+ * Note: Context registry is a future feature for advanced use cases where card data
+ * should be read from React context providers. For most cards, use 'hook' or 'api'
+ * data sources instead. When implemented, this will follow a similar pattern to the
+ * hook registry (see registerDataHook above).
  */
 function useContextDataSourceInternal(contextKey: string | null): UseDataSourceResult {
   return useMemo(
     () => {
       if (!contextKey) return EMPTY_RESULT
-      // TODO: Implement context registry similar to hook registry
       return {
         data: undefined,
         isLoading: false,

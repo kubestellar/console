@@ -8,6 +8,7 @@ import {
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface NamespaceEventsProps {
   config?: {
@@ -37,6 +38,7 @@ const EVENT_SORT_COMPARATORS: Record<SortByOption, (a: ClusterEvent, b: ClusterE
 }
 
 export function NamespaceEvents({ config }: NamespaceEventsProps) {
+  const { t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
   const { events: allEvents, isLoading: eventsLoading } = useWarningEvents()
   const { drillToEvents } = useDrillDownActions()
@@ -243,7 +245,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search events..."
+        placeholder={t('common.searchEvents')}
         className="mb-4"
       />
 

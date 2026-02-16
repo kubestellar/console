@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Save, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface ProfileSectionProps {
@@ -9,6 +10,7 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLoading }: ProfileSectionProps) {
+  const { t } = useTranslation()
   const [email, setEmail] = useState(initialEmail)
   const [slackId, setSlackId] = useState(initialSlackId)
   const [profileSaved, setProfileSaved] = useState(false)
@@ -65,8 +67,8 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
           <User className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-lg font-medium text-foreground">Profile</h2>
-          <p className="text-sm text-muted-foreground">Update your contact information</p>
+          <h2 className="text-lg font-medium text-foreground">{t('settings.profile.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('settings.profile.subtitle')}</p>
         </div>
       </div>
       {isLoading ? (
@@ -84,7 +86,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
       ) : (
         <div className="space-y-4">
           <div>
-            <label htmlFor="profile-email" className="block text-sm text-muted-foreground mb-1">Email</label>
+            <label htmlFor="profile-email" className="block text-sm text-muted-foreground mb-1">{t('settings.profile.email')}</label>
             <input
               id="profile-email"
               type="email"
@@ -94,7 +96,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
             />
           </div>
           <div>
-            <label htmlFor="profile-slack" className="block text-sm text-muted-foreground mb-1">Slack ID</label>
+            <label htmlFor="profile-slack" className="block text-sm text-muted-foreground mb-1">{t('settings.profile.slackId')}</label>
             <input
               id="profile-slack"
               type="text"
@@ -115,7 +117,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
                 className="flex items-center gap-2 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors disabled:opacity-50"
               >
                 <RefreshCw className="w-3 h-3" />
-                Retry Save
+                {t('settings.profile.retrySave')}
               </button>
             </div>
           )}
@@ -129,7 +131,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {isRefreshing ? 'Refreshing...' : isSaving ? 'Saving...' : profileSaved ? 'Saved!' : 'Save Profile'}
+            {isRefreshing ? t('settings.profile.refreshing') : isSaving ? t('settings.profile.saving') : profileSaved ? t('settings.profile.saved') : t('settings.profile.saveProfile')}
           </button>
         </div>
       )}

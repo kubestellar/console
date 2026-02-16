@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { fetchSSE } from '../../lib/sseClient'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
@@ -60,47 +61,46 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       hadNoData = prev.length === 0
       return prev
     })
+    // In demo mode, use demo data
+    if (isDemoMode()) {
+      setIssues(getDemoSecurityIssues())
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
+      setIsLoading(false)
+      if (!silent) {
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
+      setIsUsingDemoData(true)
+      return
+    }
+
+    // Use SSE streaming for progressive multi-cluster data
     try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      const url = `/api/mcp/security-issues?${params}`
+      const sseParams: Record<string, string> = {}
+      if (cluster) sseParams.cluster = cluster
+      if (namespace) sseParams.namespace = namespace
 
-      // Skip API calls when using demo token
-      const token = localStorage.getItem('token')
-      if (isDemoMode()) {
-        setIssues(getDemoSecurityIssues())
-        const now = new Date()
-        setLastUpdated(now)
-        setLastRefresh(now)
-        setIsLoading(false)
-        if (!silent) {
-          setIsRefreshing(true)
-          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-        } else {
-          setIsRefreshing(false)
-        }
-        setIsUsingDemoData(true)
-        return
-      }
+      const allIssues = await fetchSSE<SecurityIssue>({
+        url: '/api/mcp/security-issues/stream',
+        params: sseParams,
+        itemsKey: 'issues',
+        onClusterData: (_clusterName, items) => {
+          setIssues(prev => [...prev, ...items])
+          setIsLoading(false)
+        },
+      })
 
-      // Use direct fetch to bypass the global circuit breaker
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers })
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-      const data = await response.json() as { issues: SecurityIssue[] }
-      setIssues(data.issues || [])
+      setIssues(allIssues)
       setError(null)
       const now = new Date()
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
       setIsUsingDemoData(false)
-    } catch (err) {
-      // Only set demo data if we don't have existing data and not silent
+    } catch {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && hadNoData) {
@@ -109,9 +109,7 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
         setIsUsingDemoData(true)
       }
     } finally {
-      if (!silent) {
-        setIsLoading(false)
-      }
+      setIsLoading(false)
       setIsRefreshing(false)
     }
   }, [cluster, namespace])

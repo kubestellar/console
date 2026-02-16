@@ -15,6 +15,7 @@ import {
   useModalAI,
   type ResourceContext,
 } from '../../modals'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -82,6 +83,7 @@ interface CRDConditionRaw {
 }
 
 export function CRDDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const crdName = data.crd as string
 
@@ -338,7 +340,7 @@ Please:
               className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
               <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-muted-foreground">Cluster:</span>
+              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
               <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
               <svg className="w-3 h-3 text-blue-400/50 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -430,7 +432,7 @@ Please:
                 <div className={cn('text-2xl font-bold', statusStyle.text)}>
                   <StatusIcon className="w-8 h-8" />
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">Status</div>
+                <div className="text-xs text-muted-foreground mt-1">{t('common.status')}</div>
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="text-2xl font-bold text-foreground">{versions?.length || '-'}</div>
@@ -442,14 +444,14 @@ Please:
               </div>
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="text-sm font-medium text-foreground">{crdScope}</div>
-                <div className="text-xs text-muted-foreground">Scope</div>
+                <div className="text-xs text-muted-foreground">{t('common.scope')}</div>
               </div>
             </div>
 
             {/* Conditions */}
             {conditions && conditions.length > 0 && (
               <div className="p-4 rounded-lg border border-border bg-card/50">
-                <h4 className="text-sm font-medium text-foreground mb-3">Conditions</h4>
+                <h4 className="text-sm font-medium text-foreground mb-3">{t('common.conditions')}</h4>
                 <div className="space-y-2">
                   {conditions.map((condition, i) => {
                     const condStyle = getConditionStyle(condition.status)
@@ -489,7 +491,7 @@ Please:
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">{version.name}</span>
                         {version.storage && (
-                          <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400">Storage</span>
+                          <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400">{t('common.storage')}</span>
                         )}
                         {version.deprecated && (
                           <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">Deprecated</span>

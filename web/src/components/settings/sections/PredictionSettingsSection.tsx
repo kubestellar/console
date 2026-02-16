@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { TrendingUp, Save, RotateCcw, Sparkles, Clock, Percent, Layers, Info } from 'lucide-react'
 import type { PredictionSettings } from '../../../types/predictions'
 import { usePredictionFeedback } from '../../../hooks/usePredictionFeedback'
@@ -15,6 +16,7 @@ export function PredictionSettingsSection({
   updateSettings,
   resetSettings,
 }: PredictionSettingsSectionProps) {
+  const { t } = useTranslation()
   const [saved, setSaved] = useState(false)
   const { getStats, clearFeedback, feedbackCount } = usePredictionFeedback()
   const stats = getStats()
@@ -59,8 +61,8 @@ export function PredictionSettingsSection({
             <TrendingUp className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h2 className="text-lg font-medium text-foreground">Predictive Failure Detection</h2>
-            <p className="text-sm text-muted-foreground">Configure AI-powered prediction settings</p>
+            <h2 className="text-lg font-medium text-foreground">{t('settings.predictions.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('settings.predictions.subtitle')}</p>
           </div>
         </div>
         <button
@@ -69,7 +71,7 @@ export function PredictionSettingsSection({
           title="Reset to defaults"
         >
           <RotateCcw className="w-4 h-4" />
-          Reset
+          {t('settings.predictions.reset')}
         </button>
       </div>
 
@@ -79,9 +81,9 @@ export function PredictionSettingsSection({
           <div className="flex items-center gap-3">
             <Sparkles className={`w-5 h-5 ${settings.aiEnabled ? 'text-blue-400' : 'text-muted-foreground'}`} />
             <div>
-              <p className="text-sm font-medium text-foreground">AI Predictions</p>
+              <p className="text-sm font-medium text-foreground">{t('settings.predictions.aiPredictions')}</p>
               <p className="text-xs text-muted-foreground">
-                Analyze cluster data with AI to detect patterns
+                {t('settings.predictions.aiPredictionsDesc')}
               </p>
             </div>
           </div>
@@ -108,12 +110,12 @@ export function PredictionSettingsSection({
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
                 <label className="text-sm text-foreground">
-                  Analysis Interval: {settings.interval} minutes
+                  {t('settings.predictions.analysisInterval', { minutes: settings.interval })}
                 </label>
                 <div className="relative group">
                   <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-48 p-2 text-xs bg-popover border border-border rounded-lg shadow-lg z-10">
-                    How often AI analyzes cluster data. Lower = more API calls.
+                    {t('settings.predictions.analysisIntervalDesc')}
                   </div>
                 </div>
               </div>
@@ -133,8 +135,8 @@ export function PredictionSettingsSection({
                   [&::-webkit-slider-thumb]:cursor-pointer"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>15 min</span>
-                <span>2 hours</span>
+                <span>{t('settings.predictions.intervalMin')}</span>
+                <span>{t('settings.predictions.intervalMax')}</span>
               </div>
             </div>
 
@@ -143,12 +145,12 @@ export function PredictionSettingsSection({
               <div className="flex items-center gap-2 mb-2">
                 <Percent className="w-4 h-4 text-muted-foreground" />
                 <label className="text-sm text-foreground">
-                  Minimum Confidence: {settings.minConfidence}%
+                  {t('settings.predictions.minConfidence', { percent: settings.minConfidence })}
                 </label>
                 <div className="relative group">
                   <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-48 p-2 text-xs bg-popover border border-border rounded-lg shadow-lg z-10">
-                    Only show predictions with confidence above this threshold.
+                    {t('settings.predictions.minConfidenceDesc')}
                   </div>
                 </div>
               </div>
@@ -167,8 +169,8 @@ export function PredictionSettingsSection({
                   [&::-webkit-slider-thumb]:cursor-pointer"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>50% (more predictions)</span>
-                <span>90% (only high confidence)</span>
+                <span>{t('settings.predictions.confidenceMin')}</span>
+                <span>{t('settings.predictions.confidenceMax')}</span>
               </div>
             </div>
 
@@ -177,9 +179,9 @@ export function PredictionSettingsSection({
               <div className="flex items-center gap-3">
                 <Layers className={`w-4 h-4 ${settings.consensusMode ? 'text-purple-400' : 'text-muted-foreground'}`} />
                 <div>
-                  <p className="text-sm font-medium text-foreground">Multi-Provider Consensus</p>
+                  <p className="text-sm font-medium text-foreground">{t('settings.predictions.multiProvider')}</p>
                   <p className="text-xs text-muted-foreground">
-                    Run analysis on multiple AI providers, boost confidence when they agree
+                    {t('settings.predictions.multiProviderDesc')}
                   </p>
                 </div>
               </div>
@@ -201,16 +203,16 @@ export function PredictionSettingsSection({
         )}
 
         {/* Heuristic Thresholds */}
-        <CollapsibleSection title="Heuristic Thresholds" defaultOpen={false}>
+        <CollapsibleSection title={t('settings.predictions.heuristicThresholds')} defaultOpen={false}>
           <div className="space-y-4 p-4 rounded-lg bg-secondary/20">
             <p className="text-xs text-muted-foreground mb-4">
-              These thresholds trigger instant predictions without AI analysis.
+              {t('settings.predictions.heuristicThresholdsDesc')}
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="restart-threshold" className="block text-xs text-muted-foreground mb-1">
-                  Pod Restart Warning
+                  {t('settings.predictions.podRestartWarning')}
                 </label>
                 <input
                   id="restart-threshold"
@@ -221,12 +223,12 @@ export function PredictionSettingsSection({
                   max="20"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
-                <p className="text-xs text-muted-foreground mt-1">restarts</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('settings.predictions.restarts')}</p>
               </div>
 
               <div>
                 <label htmlFor="cpu-threshold" className="block text-xs text-muted-foreground mb-1">
-                  CPU Pressure Warning
+                  {t('settings.predictions.cpuPressure')}
                 </label>
                 <input
                   id="cpu-threshold"
@@ -237,12 +239,12 @@ export function PredictionSettingsSection({
                   max="99"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
-                <p className="text-xs text-muted-foreground mt-1">% usage</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('settings.predictions.percentUsage')}</p>
               </div>
 
               <div>
                 <label htmlFor="memory-threshold" className="block text-xs text-muted-foreground mb-1">
-                  Memory Pressure Warning
+                  {t('settings.predictions.memoryPressure')}
                 </label>
                 <input
                   id="memory-threshold"
@@ -253,12 +255,12 @@ export function PredictionSettingsSection({
                   max="99"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
-                <p className="text-xs text-muted-foreground mt-1">% usage</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('settings.predictions.percentUsage')}</p>
               </div>
 
               <div>
                 <label htmlFor="gpu-threshold" className="block text-xs text-muted-foreground mb-1">
-                  GPU Memory Pressure
+                  {t('settings.predictions.gpuMemoryPressure')}
                 </label>
                 <input
                   id="gpu-threshold"
@@ -269,7 +271,7 @@ export function PredictionSettingsSection({
                   max="99"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
-                <p className="text-xs text-muted-foreground mt-1">% usage</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('settings.predictions.percentUsage')}</p>
               </div>
             </div>
           </div>
@@ -278,11 +280,11 @@ export function PredictionSettingsSection({
         {/* Feedback Stats */}
         {feedbackCount > 0 && (
           <CollapsibleSection
-            title="Prediction Accuracy"
+            title={t('settings.predictions.predictionAccuracy')}
             defaultOpen={false}
             badge={
               <span className="text-xs text-muted-foreground">
-                {(stats.accuracyRate * 100).toFixed(0)}% accurate
+                {t('settings.predictions.percentAccurate', { percent: (stats.accuracyRate * 100).toFixed(0) })}
               </span>
             }
           >
@@ -290,21 +292,21 @@ export function PredictionSettingsSection({
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-foreground">{stats.totalPredictions}</p>
-                  <p className="text-xs text-muted-foreground">Total Rated</p>
+                  <p className="text-xs text-muted-foreground">{t('settings.predictions.totalRated')}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-400">{stats.accurateFeedback}</p>
-                  <p className="text-xs text-muted-foreground">Accurate</p>
+                  <p className="text-xs text-muted-foreground">{t('settings.predictions.accurate')}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-red-400">{stats.inaccurateFeedback}</p>
-                  <p className="text-xs text-muted-foreground">Inaccurate</p>
+                  <p className="text-xs text-muted-foreground">{t('settings.predictions.inaccurate')}</p>
                 </div>
               </div>
 
               {Object.keys(stats.byProvider).length > 1 && (
                 <div className="border-t border-border pt-3 mt-3">
-                  <p className="text-xs text-muted-foreground mb-2">By Provider:</p>
+                  <p className="text-xs text-muted-foreground mb-2">{t('settings.predictions.byProvider')}</p>
                   <div className="space-y-1">
                     {Object.entries(stats.byProvider).map(([provider, data]) => (
                       <div key={provider} className="flex justify-between text-xs">
@@ -322,7 +324,7 @@ export function PredictionSettingsSection({
                 onClick={clearFeedback}
                 className="mt-4 text-xs text-muted-foreground hover:text-red-400 transition-colors"
               >
-                Clear feedback history
+                {t('settings.predictions.clearFeedback')}
               </button>
             </div>
           </CollapsibleSection>
@@ -332,7 +334,7 @@ export function PredictionSettingsSection({
         {saved && (
           <div className="flex items-center gap-2 text-green-400 text-sm">
             <Save className="w-4 h-4" />
-            Settings saved
+            {t('settings.predictions.settingsSaved')}
           </div>
         )}
       </div>

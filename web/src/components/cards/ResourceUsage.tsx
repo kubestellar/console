@@ -6,8 +6,10 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { Skeleton } from '../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 export function ResourceUsage() {
+  const { t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
   const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
@@ -171,7 +173,7 @@ export function ResourceUsage() {
           />
           <div className="flex items-center gap-1.5 mt-2">
             <Cpu className="w-4 h-4 text-blue-400" />
-            <span className="text-sm text-muted-foreground">CPU</span>
+            <span className="text-sm text-muted-foreground">{t('common.cpu')}</span>
           </div>
         </div>
 
@@ -184,7 +186,7 @@ export function ResourceUsage() {
           />
           <div className="flex items-center gap-1.5 mt-2">
             <MemoryStick className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm text-muted-foreground">Memory</span>
+            <span className="text-sm text-muted-foreground">{t('common.memory')}</span>
           </div>
         </div>
 

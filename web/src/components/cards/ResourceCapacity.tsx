@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Cpu, HardDrive, Zap, Loader2 } from 'lucide-react'
+import { Cpu, HardDrive, Zap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useClusters, useGPUNodes, GPUNode } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
@@ -34,7 +36,8 @@ const SORT_OPTIONS = [
 ]
 
 export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
-  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
+  const { t } = useTranslation(['cards', 'common'])
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, lastRefresh } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const {
@@ -236,9 +239,13 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          {isRefreshing && (
-            <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
-          )}
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
         <div className="flex items-center gap-2">
           <ClusterFilterDropdown
@@ -315,13 +322,13 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
           })
         ) : hasClusters ? (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm py-8">
-            <p>Loading capacity data...</p>
-            <p className="text-xs mt-1">Fetching resource metrics from clusters</p>
+            <p>{t('messages.loadingCapacity')}</p>
+            <p className="text-xs mt-1">{t('messages.fetchingMetrics')}</p>
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm py-8">
-            <p>Waiting for cluster metrics...</p>
-            <p className="text-xs mt-1">Connect to clusters to see capacity</p>
+            <p>{t('messages.waitingForMetrics')}</p>
+            <p className="text-xs mt-1">{t('messages.connectClusters')}</p>
           </div>
         )}
       </div>
@@ -352,11 +359,11 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         </div>
         <div>
           <p className="text-xl font-bold text-foreground">{totals.nodes}</p>
-          <p className="text-xs text-muted-foreground">Nodes</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.nodes')}</p>
         </div>
         <div>
           <p className="text-xl font-bold text-green-400">{totals.pods.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground">Pods</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.pods')}</p>
         </div>
         {totals.totalGPUs > 0 && (
           <div>

@@ -22,6 +22,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ClusterInfo } from '../../../hooks/useMCP'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -180,6 +181,7 @@ function SortableClusterRow({
 }
 
 export function ResourcesDrillDown({ data: _data }: Props) {
+  const { t } = useTranslation()
   const { deduplicatedClusters: initialClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCluster } = useDrillDownActions()
@@ -335,7 +337,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
         <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
           <div className="flex items-center gap-2 mb-1">
             <Server className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-xs text-muted-foreground">Nodes</span>
+            <span className="text-xs text-muted-foreground">{t('common.nodes')}</span>
           </div>
           <div className="text-xl font-bold text-foreground">{totals.nodes}</div>
         </div>
@@ -384,14 +386,14 @@ export function ResourcesDrillDown({ data: _data }: Props) {
         <div className="flex items-center gap-3 px-2.5 py-1.5 text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
           <div className="p-1 flex-shrink-0"><div className="w-4 h-4" /></div> {/* Drag handle spacer */}
           <div className="w-[90px] flex-shrink-0" /> {/* Health + label spacer (icon w-4 + gap-2 + ~60px label) */}
-          <div className="w-[160px] flex-shrink-0">Cluster</div>
+          <div className="w-[160px] flex-shrink-0">{t('common.cluster')}</div>
           <div className="w-[130px] flex-shrink-0 text-center">
             <Cpu className="w-3 h-3 text-blue-400 inline mr-1" />
-            <span>CPU</span>
+            <span>{t('common.cpu')}</span>
           </div>
           <div className="w-[130px] flex-shrink-0 text-center">
             <MemoryStick className="w-3 h-3 text-yellow-400 inline mr-1" />
-            <span>Memory</span>
+            <span>{t('common.memory')}</span>
           </div>
           {activeAccelTypes.map(at => (
             <div key={at.key} className="w-[110px] flex-shrink-0 text-center">

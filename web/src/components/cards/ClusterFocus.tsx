@@ -6,6 +6,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 interface ClusterFocusProps {
   config?: {
@@ -14,6 +15,7 @@ interface ClusterFocusProps {
 }
 
 export function ClusterFocus({ config }: ClusterFocusProps) {
+  const { t } = useTranslation()
   const selectedCluster = config?.cluster
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
@@ -153,7 +155,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         >
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-muted-foreground">Nodes</span>
+            <span className="text-xs text-muted-foreground">{t('common.nodes')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{cluster?.nodeCount || 0}</span>
         </div>
@@ -161,7 +163,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div className="p-3 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2 mb-1">
             <Box className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-muted-foreground">Pods</span>
+            <span className="text-xs text-muted-foreground">{t('common.pods')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{cluster?.podCount || 0}</span>
         </div>
@@ -186,7 +188,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       {/* Issues Summary */}
       <div className="space-y-2">
         <div
-          className="flex items-center justify-between p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
+          className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           onClick={() => {
             if (podIssues.length > 0) {
               const issue = podIssues[0]
@@ -201,10 +203,10 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
           title={podIssues.length > 0 ? `Click to view ${podIssues[0].name}` : 'No pod issues'}
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-orange-400" />
-            <span className="text-sm text-orange-300">Pod Issues</span>
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-sm text-red-400">Pod Issues</span>
           </div>
-          <span className="text-sm font-medium text-orange-400">{clusterPodIssues}</span>
+          <span className="text-sm font-medium text-red-400">{clusterPodIssues}</span>
         </div>
 
         <div

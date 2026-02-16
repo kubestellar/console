@@ -18,7 +18,7 @@ import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { prefetchCardData } from './lib/prefetchCardData'
-import { prefetchDemoCardChunks } from './components/cards/cardRegistry'
+import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 
 // Lazy load all page components for better code splitting
@@ -56,12 +56,14 @@ const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ defa
 const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
 const AIAgents = lazy(() => import('./components/aiagents/AIAgents').then(m => ({ default: m.AIAgents })))
 const LLMdBenchmarks = lazy(() => import('./components/llmd-benchmarks/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
+const ClusterAdmin = lazy(() => import('./components/cluster-admin/ClusterAdmin').then(m => ({ default: m.ClusterAdmin })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
 const Marketplace = lazy(() => import('./components/marketplace/Marketplace').then(m => ({ default: m.Marketplace })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
 const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => ({ default: m.UnifiedCardTest })))
 const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m => ({ default: m.UnifiedStatsTest })))
 const UnifiedDashboardTest = lazy(() => import('./pages/UnifiedDashboardTest').then(m => ({ default: m.UnifiedDashboardTest })))
+const AllCardsPerfTest = lazy(() => import('./pages/AllCardsPerfTest').then(m => ({ default: m.AllCardsPerfTest })))
 
 // Prefetch all lazy route chunks after initial page load.
 // Batched to avoid overwhelming the Vite dev server with simultaneous
@@ -99,6 +101,7 @@ if (typeof window !== 'undefined') {
       () => import('./components/aiml/AIML'),
       () => import('./components/aiagents/AIAgents'),
       () => import('./components/llmd-benchmarks/LLMdBenchmarks'),
+      () => import('./components/cluster-admin/ClusterAdmin'),
       () => import('./components/cicd/CICD'),
       () => import('./components/marketplace/Marketplace'),
     ]
@@ -122,7 +125,7 @@ if (typeof window !== 'undefined') {
     loadBatch()
   }
 
-  // In demo mode, fire immediately. Otherwise defer 1.5s to let
+  // In demo mode, fire immediately. Otherwise defer 500ms to let
   // the first page render, then start caching all chunks so
   // subsequent navigations are instant.
   if (isDemoMode()) {
@@ -207,16 +210,25 @@ function SettingsSyncInit() {
   return null
 }
 
-// Prefetches core Kubernetes data immediately after login so dashboard
-// cards render instantly. Card component chunks are deferred to avoid
-// overwhelming Vite's module transform pipeline on cold start.
+// Default main dashboard card types — prefetched immediately so the first
+// page renders without waiting for Dashboard.tsx to mount and trigger prefetch.
+const DEFAULT_MAIN_CARD_TYPES = [
+  'console_ai_offline_detection', 'hardware_health', 'cluster_health',
+  'resource_usage', 'pod_issues', 'cluster_metrics', 'event_stream',
+  'deployment_status', 'events_timeline',
+]
+
+// Prefetches core Kubernetes data and card chunks immediately after login
+// so dashboard cards render instantly instead of showing skeletons.
 function DataPrefetchInit() {
   const { isAuthenticated } = useAuth()
   useEffect(() => {
     if (!isAuthenticated) return
     prefetchCardData()
-    // Defer card chunk prefetch — in demo mode fire immediately,
-    // otherwise wait 15s so the first page can fully load first.
+    // Prefetch default dashboard card chunks immediately — don't wait for
+    // Dashboard.tsx to lazy-load and mount before starting chunk downloads.
+    prefetchCardChunks(DEFAULT_MAIN_CARD_TYPES)
+    // Demo-only card chunks are lower priority — defer 15s in live mode.
     if (isDemoMode()) {
       prefetchDemoCardChunks()
     } else {
@@ -265,6 +277,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                   <CustomDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/__perf/all-cards"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AllCardsPerfTest />
               </Layout>
             </ProtectedRoute>
           }
@@ -576,6 +598,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                   <LLMdBenchmarks />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cluster-admin"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                  <ClusterAdmin />
               </Layout>
             </ProtectedRoute>
           }

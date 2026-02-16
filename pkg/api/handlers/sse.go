@@ -32,21 +32,25 @@ func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) {
 	w.Flush()
 }
 
+// sseOverallDeadline is the maximum wall-clock time an SSE stream stays open.
+// After this, any still-running goroutines are abandoned and a "done" event
+// is sent with partial results. This prevents the browser from hanging.
+const sseOverallDeadline = 120 * time.Second
+
 // streamClusters is a generic helper that streams per-cluster results as SSE events.
 //
-// For each cluster returned by DeduplicatedClusters, it spawns a goroutine that
-// calls fetchFn. Each successful result is immediately flushed as an SSE
-// "cluster_data" event. After all goroutines finish, a "done" event is sent.
-//
-// fetchFn receives (ctx, clusterName) and returns the data to embed under dataKey
-// in the SSE event payload.
+// It uses HealthyClusters() to skip known-offline clusters (emitting
+// "cluster_skipped" events for them instantly), then spawns goroutines only for
+// healthy/unknown clusters. Each successful result is immediately flushed as an
+// SSE "cluster_data" event. A "done" event fires when all goroutines finish or
+// the overall deadline is reached.
 func streamClusters(
 	c *fiber.Ctx,
 	h *MCPHandlers,
 	cfg sseClusterStreamConfig,
 	fetchFn func(ctx context.Context, clusterName string) (interface{}, error),
 ) error {
-	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+	healthy, offline, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -57,12 +61,22 @@ func streamClusters(
 	c.Set("X-Accel-Buffering", "no")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		var wg sync.WaitGroup
 		var mu sync.Mutex
-		totalClusters := len(clusters)
+		totalClusters := len(healthy) + len(offline)
 		completedClusters := 0
 
-		for _, cl := range clusters {
+		// Instantly emit skipped events for offline clusters
+		for _, cl := range offline {
+			writeSSEEvent(w, "cluster_skipped", fiber.Map{
+				"cluster": cl.Name,
+				"reason":  "offline",
+			})
+			completedClusters++
+		}
+
+		// Spawn goroutines only for healthy/unknown clusters
+		var wg sync.WaitGroup
+		for _, cl := range healthy {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
@@ -81,20 +95,34 @@ func streamClusters(
 				mu.Lock()
 				completedClusters++
 				writeSSEEvent(w, "cluster_data", fiber.Map{
-					"cluster":  clusterName,
+					"cluster":   clusterName,
 					cfg.demoKey: data,
-					"source":   "k8s",
+					"source":    "k8s",
 				})
 				mu.Unlock()
 			}(cl.Name)
 		}
 
-		waitWithDeadline(&wg, maxResponseDeadline)
+		// Wait for all healthy clusters or overall deadline
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+			// All healthy clusters finished
+		case <-time.After(sseOverallDeadline):
+			log.Printf("[SSE] overall deadline reached, sending partial results")
+		}
 
+		mu.Lock()
 		writeSSEEvent(w, "done", fiber.Map{
 			"totalClusters":     totalClusters,
 			"completedClusters": completedClusters,
+			"skippedOffline":    len(offline),
 		})
+		mu.Unlock()
 	})
 
 	return nil
@@ -137,7 +165,7 @@ func (h *MCPHandlers) GetPodsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "pods",
-		clusterTimeout: 10 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		pods, err := h.k8sClient.GetPods(ctx, cluster, namespace)
 		if err != nil {
@@ -159,7 +187,7 @@ func (h *MCPHandlers) FindPodIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
-		clusterTimeout: 5 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindPodIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -181,7 +209,7 @@ func (h *MCPHandlers) GetDeploymentsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "deployments",
-		clusterTimeout: 5 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		deps, err := h.k8sClient.GetDeployments(ctx, cluster, namespace)
 		if err != nil {
@@ -205,7 +233,7 @@ func (h *MCPHandlers) GetEventsStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",
-		clusterTimeout: 5 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		events, err := h.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 		if err != nil {
@@ -227,7 +255,7 @@ func (h *MCPHandlers) GetServicesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "services",
-		clusterTimeout: 5 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		svcs, err := h.k8sClient.GetServices(ctx, cluster, namespace)
 		if err != nil {
@@ -249,7 +277,7 @@ func (h *MCPHandlers) CheckSecurityIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
-		clusterTimeout: 5 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.CheckSecurityIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -271,7 +299,7 @@ func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
-		clusterTimeout: 5 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindDeploymentIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -292,7 +320,7 @@ func (h *MCPHandlers) GetNodesStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "nodes",
-		clusterTimeout: 15 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetNodes(ctx, cluster)
 	})
@@ -309,7 +337,7 @@ func (h *MCPHandlers) GetGPUNodesStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "nodes",
-		clusterTimeout: 30 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetGPUNodes(ctx, cluster)
 	})
@@ -327,8 +355,86 @@ func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",
-		clusterTimeout: 15 * time.Second,
+		clusterTimeout: 60 * time.Second,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetWarningEvents(ctx, cluster, namespace, 50)
+	})
+}
+
+// GetJobsStream streams jobs per cluster via SSE.
+func (h *MCPHandlers) GetJobsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "jobs", getDemoJobs())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "jobs",
+		clusterTimeout: 60 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetJobs(ctx, cluster, namespace)
+	})
+}
+
+// GetConfigMapsStream streams configmaps per cluster via SSE.
+func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "configmaps", getDemoConfigMaps())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "configmaps",
+		clusterTimeout: 60 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetConfigMaps(ctx, cluster, namespace)
+	})
+}
+
+// GetSecretsStream streams secrets per cluster via SSE.
+func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "secrets", getDemoSecrets())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "secrets",
+		clusterTimeout: 60 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetSecrets(ctx, cluster, namespace)
+	})
+}
+
+// GetNVIDIAOperatorStatusStream streams NVIDIA operator status per cluster via SSE.
+func (h *MCPHandlers) GetNVIDIAOperatorStatusStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "operators", getDemoNVIDIAOperatorStatus())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "operators",
+		clusterTimeout: 60 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, cluster)
+		if err != nil {
+			return nil, err
+		}
+		if status.GPUOperator == nil && status.NetworkOperator == nil {
+			return nil, fmt.Errorf("no NVIDIA operators on cluster %s", cluster)
+		}
+		return status, nil
 	})
 }

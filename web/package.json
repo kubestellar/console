@@ -20,6 +20,9 @@
     "test:e2e:firefox": "playwright test --project=firefox",
     "test:e2e:webkit": "playwright test --project=webkit",
     "test:e2e:report": "playwright show-report",
+    "test:e2e:perf": "playwright test --config e2e/perf/perf.config.ts e2e/perf/dashboard-perf.spec.ts",
+    "test:e2e:perf:ttfi": "playwright test --config e2e/perf/perf.config.ts e2e/perf/all-cards-ttfi.spec.ts",
+    "test:e2e:perf:ttfi:gate": "npm run test:e2e:perf:ttfi && node e2e/perf/compare-ttfi.mjs",
     "test:e2e:coverage": "./scripts/run-e2e-coverage.sh",
     "coverage:report": "node scripts/coverage-report.mjs",
     "coverage:clean": "rimraf .nyc_output coverage"
@@ -33,6 +36,8 @@
     "@react-three/fiber": "^8.17.10",
     "@sqlite.org/sqlite-wasm": "^3.51.2-build6",
     "clsx": "^2.1.1",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
     "framer-motion": "^12.31.0",
     "i18next": "^25.7.4",
     "i18next-browser-languagedetector": "^8.2.0",

@@ -18,6 +18,7 @@ import {
   CardAIActions,
   type SortDirection,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -75,10 +76,12 @@ const FILTER_CONFIG = {
 }
 
 export function DeploymentStatus() {
+  const { t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
   const {
     deployments: allDeployments,
     isLoading: hookLoading,
+    isDemoFallback,
     isFailed,
     consecutiveFailures,
   } = useCachedDeployments()
@@ -86,6 +89,7 @@ export function DeploymentStatus() {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton } = useCardLoadingState({
     isLoading: hookLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: allDeployments.length > 0,
     isFailed,
     consecutiveFailures,
@@ -254,7 +258,7 @@ export function DeploymentStatus() {
         <CardSearchInput
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search deployments..."
+          placeholder={t('common.searchDeployments')}
         />
 
         <div className="flex items-center gap-1 flex-wrap">

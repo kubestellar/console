@@ -43,33 +43,34 @@ const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   // Priority dashboards at the top
   { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
   { id: 'clusters', name: 'My Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
-  { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 2 },
-  { id: 'ai-ml', name: 'AI/ML', icon: 'Sparkles', href: '/ai-ml', type: 'link', order: 3 },
-  { id: 'ai-agents', name: 'AI Agents', icon: 'Bot', href: '/ai-agents', type: 'link', order: 4 },
-  { id: 'ci-cd', name: 'CI/CD', icon: 'GitMerge', href: '/ci-cd', type: 'link', order: 5 },
+  { id: 'cluster-admin', name: 'Cluster Admin', icon: 'ShieldAlert', href: '/cluster-admin', type: 'link', order: 2 },
+  { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 3 },
+  { id: 'ai-ml', name: 'AI/ML', icon: 'Sparkles', href: '/ai-ml', type: 'link', order: 4 },
+  { id: 'ai-agents', name: 'AI Agents', icon: 'Bot', href: '/ai-agents', type: 'link', order: 5 },
+  { id: 'ci-cd', name: 'CI/CD', icon: 'GitMerge', href: '/ci-cd', type: 'link', order: 6 },
   // All other dashboards (alphabetical)
-  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 6 },
-  { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 7 },
-  { id: 'compliance', name: 'Compliance', icon: 'ClipboardCheck', href: '/compliance', type: 'link', order: 8 },
-  { id: 'compute', name: 'Compute', icon: 'Monitor', href: '/compute', type: 'link', order: 9 },
-  { id: 'cost', name: 'Cost', icon: 'DollarSign', href: '/cost', type: 'link', order: 10 },
-  { id: 'data-compliance', name: 'Data Compliance', icon: 'Database', href: '/data-compliance', type: 'link', order: 11 },
-  { id: 'deployments', name: 'Deployments', icon: 'Layers', href: '/deployments', type: 'link', order: 12 },
-  { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 13 },
-  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 14 },
-  { id: 'gpu-reservations', name: 'GPU Reservations', icon: 'Cpu', href: '/gpu-reservations', type: 'link', order: 15 },
-  { id: 'helm', name: 'Helm', icon: 'Package', href: '/helm', type: 'link', order: 16 },
-  { id: 'llm-d-benchmarks', name: 'llm-d Benchmarks', icon: 'TrendingUp', href: '/llm-d-benchmarks', type: 'link', order: 17 },
-  { id: 'logs', name: 'Logs', icon: 'FileText', href: '/logs', type: 'link', order: 18 },
-  { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 19 },
-  { id: 'nodes', name: 'Nodes', icon: 'CircuitBoard', href: '/nodes', type: 'link', order: 20 },
-  { id: 'operators', name: 'Operators', icon: 'Cog', href: '/operators', type: 'link', order: 21 },
-  { id: 'pods', name: 'Pods', icon: 'Hexagon', href: '/pods', type: 'link', order: 22 },
-  { id: 'security', name: 'Security', icon: 'Shield', href: '/security', type: 'link', order: 23 },
-  { id: 'security-posture', name: 'Security Posture', icon: 'ShieldCheck', href: '/security-posture', type: 'link', order: 24 },
-  { id: 'services', name: 'Services', icon: 'Network', href: '/services', type: 'link', order: 25 },
-  { id: 'storage', name: 'Storage', icon: 'HardDrive', href: '/storage', type: 'link', order: 26 },
-  { id: 'workloads', name: 'Workloads', icon: 'Box', href: '/workloads', type: 'link', order: 27 },
+  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 7 },
+  { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 8 },
+  { id: 'compliance', name: 'Compliance', icon: 'ClipboardCheck', href: '/compliance', type: 'link', order: 9 },
+  { id: 'compute', name: 'Compute', icon: 'Monitor', href: '/compute', type: 'link', order: 10 },
+  { id: 'cost', name: 'Cost', icon: 'DollarSign', href: '/cost', type: 'link', order: 11 },
+  { id: 'data-compliance', name: 'Data Compliance', icon: 'Database', href: '/data-compliance', type: 'link', order: 12 },
+  { id: 'deployments', name: 'Deployments', icon: 'Layers', href: '/deployments', type: 'link', order: 13 },
+  { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 14 },
+  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 15 },
+  { id: 'gpu-reservations', name: 'GPU Reservations', icon: 'Cpu', href: '/gpu-reservations', type: 'link', order: 16 },
+  { id: 'helm', name: 'Helm', icon: 'Package', href: '/helm', type: 'link', order: 17 },
+  { id: 'llm-d-benchmarks', name: 'llm-d Benchmarks', icon: 'TrendingUp', href: '/llm-d-benchmarks', type: 'link', order: 18 },
+  { id: 'logs', name: 'Logs', icon: 'FileText', href: '/logs', type: 'link', order: 19 },
+  { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 20 },
+  { id: 'nodes', name: 'Nodes', icon: 'CircuitBoard', href: '/nodes', type: 'link', order: 21 },
+  { id: 'operators', name: 'Operators', icon: 'Cog', href: '/operators', type: 'link', order: 22 },
+  { id: 'pods', name: 'Pods', icon: 'Hexagon', href: '/pods', type: 'link', order: 23 },
+  { id: 'security', name: 'Security', icon: 'Shield', href: '/security', type: 'link', order: 24 },
+  { id: 'security-posture', name: 'Security Posture', icon: 'ShieldCheck', href: '/security-posture', type: 'link', order: 25 },
+  { id: 'services', name: 'Services', icon: 'Network', href: '/services', type: 'link', order: 26 },
+  { id: 'storage', name: 'Storage', icon: 'HardDrive', href: '/storage', type: 'link', order: 27 },
+  { id: 'workloads', name: 'Workloads', icon: 'Box', href: '/workloads', type: 'link', order: 28 },
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
@@ -94,6 +95,56 @@ const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v9'
 
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']
+
+// Server-side dashboard filter (fetched from /health endpoint)
+// Stored as array (not Set) to preserve ordering from the env var
+let enabledDashboardIds: string[] | null = null // null = show all
+let enabledDashboardsFetched = false
+
+// IDs that cannot be removed by the user
+export const PROTECTED_SIDEBAR_IDS = ['dashboard', 'clusters', 'deploy']
+
+function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
+  if (!enabledDashboardIds) return config
+  const enabledSet = new Set(enabledDashboardIds)
+  const filtered = config.primaryNav.filter(
+    item => item.isCustom || enabledSet.has(item.id)
+  )
+  // Sort filtered items to match the order specified in ENABLED_DASHBOARDS
+  filtered.sort((a, b) => {
+    if (a.isCustom && b.isCustom) return a.order - b.order
+    if (a.isCustom) return 1 // custom items go after enabled ones
+    if (b.isCustom) return -1
+    const idxA = enabledDashboardIds!.indexOf(a.id)
+    const idxB = enabledDashboardIds!.indexOf(b.id)
+    return idxA - idxB
+  })
+  // Re-assign order numbers after sorting
+  const reordered = filtered.map((item, idx) => ({ ...item, order: idx }))
+  return {
+    ...config,
+    primaryNav: reordered,
+  }
+}
+
+async function fetchEnabledDashboards(): Promise<void> {
+  if (enabledDashboardsFetched) return
+  enabledDashboardsFetched = true
+  try {
+    const resp = await fetch('/health')
+    const data = await resp.json()
+    if (data.enabled_dashboards && Array.isArray(data.enabled_dashboards) && data.enabled_dashboards.length > 0) {
+      enabledDashboardIds = data.enabled_dashboards as string[]
+      if (sharedConfig) {
+        sharedConfig = applyDashboardFilter(sharedConfig)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedConfig))
+        notifyListeners()
+      }
+    }
+  } catch {
+    // Ignore — show all dashboards if health check fails
+  }
+}
 
 // Migrate config to ensure all default routes exist
 function migrateConfig(stored: SidebarConfig): SidebarConfig {
@@ -172,6 +223,11 @@ function initSharedConfig(): SidebarConfig {
     sharedConfig = DEFAULT_CONFIG
   }
 
+  // Apply server-side dashboard filter if already fetched
+  if (enabledDashboardIds) {
+    sharedConfig = applyDashboardFilter(sharedConfig)
+  }
+
   return sharedConfig
 }
 
@@ -186,6 +242,11 @@ export function useSidebarConfig() {
   // Initialize on first use
   if (!sharedConfig) {
     initSharedConfig()
+  }
+
+  // Fetch server-side dashboard filter (once, async)
+  if (!enabledDashboardsFetched) {
+    fetchEnabledDashboards()
   }
 
   // Subscribe to shared state changes
@@ -317,7 +378,7 @@ export function useSidebarConfig() {
   }, [])
 
   const resetToDefault = useCallback(() => {
-    setConfig(DEFAULT_CONFIG)
+    setConfig(applyDashboardFilter(DEFAULT_CONFIG))
   }, [])
 
   const generateFromBehavior = useCallback((frequentlyUsedPaths: string[]) => {

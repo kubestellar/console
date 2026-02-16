@@ -1,12 +1,14 @@
 import { GripVertical } from 'lucide-react'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
+import { useTranslation } from 'react-i18next'
 
 export interface DragPreviewCardProps {
   card: DashboardCard
 }
 
 export function DragPreviewCard({ card }: DragPreviewCardProps) {
+  const { t: _t } = useTranslation()
   const cardWidth = card.position?.w || 4
   return (
     <div

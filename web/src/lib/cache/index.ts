@@ -329,7 +329,6 @@ export async function initCacheWorker(): Promise<CacheWorkerRpc> {
 
     workerRpc = rpc
     cacheStorage = new WorkerStorage(rpc)
-    console.log('[Cache] SQLite Web Worker initialized')
     return rpc
   } catch (e) {
     console.warn('[Cache] SQLite Worker failed, using IndexedDB fallback:', e)
@@ -351,7 +350,6 @@ export function initPreloadedMeta(meta: Record<string, WorkerCacheMeta>): void {
       lastSuccessfulRefresh: value.lastSuccessfulRefresh,
     })
   }
-  console.log(`[Cache] Preloaded ${preloadedMetaMap.size} metadata entries`)
 }
 
 /** Check whether the SQLite worker is active (vs IndexedDB fallback). */
@@ -369,12 +367,8 @@ export function isSQLiteWorkerActive(): boolean {
  * This ensures cards get fresh data for the new mode.
  */
 function clearAllInMemoryCaches(): void {
-  const count = cacheRegistry.size
   for (const store of cacheRegistry.values()) {
     (store as CacheStore<unknown>).resetToInitialData()
-  }
-  if (count > 0) {
-    console.log(`[Cache] Reset ${count} caches to initial data for mode transition`)
   }
 }
 
@@ -872,15 +866,25 @@ export function useCache<T>({
   const shouldFallbackToDemo = effectiveEnabled && demoWhenEmpty && demoData !== undefined
     && !state.isLoading && Array.isArray(state.data) && (state.data as unknown[]).length === 0
 
+  // Optimistic demo: for demoWhenEmpty hooks, show demoData immediately while
+  // the live fetch runs in the background.  This avoids skeleton flicker for
+  // "demo until X is installed" cards — they render demo content instantly and
+  // swap to real data only if the fetch returns non-empty results.
+  const showOptimisticDemo = effectiveEnabled && demoWhenEmpty && demoData !== undefined
+    && state.isLoading
+
   return {
-    data: !effectiveEnabled ? demoDisplayData : shouldFallbackToDemo ? demoData : state.data,
-    isLoading: effectiveEnabled ? (state.isLoading && !shouldFallbackToDemo) : false,
-    isRefreshing: state.isRefreshing,
+    data: !effectiveEnabled ? demoDisplayData
+      : shouldFallbackToDemo ? demoData
+      : showOptimisticDemo ? demoData
+      : state.data,
+    isLoading: effectiveEnabled ? (state.isLoading && !shouldFallbackToDemo && !showOptimisticDemo) : false,
+    isRefreshing: state.isRefreshing || showOptimisticDemo,
     error: state.error,
     isFailed: state.isFailed,
     consecutiveFailures: state.consecutiveFailures,
     lastRefresh: state.lastRefresh,
-    isDemoFallback: shouldFallbackToDemo || !effectiveEnabled,
+    isDemoFallback: shouldFallbackToDemo || !effectiveEnabled || showOptimisticDemo,
     refetch,
     clearAndRefetch,
   }
@@ -972,10 +976,6 @@ export function resetFailuresForCluster(clusterName: string): number {
     }
   }
 
-  if (resetCount > 0) {
-    console.log(`[Cache] Reset failures for ${resetCount} caches related to cluster "${clusterName}"`)
-  }
-
   return resetCount
 }
 
@@ -999,7 +999,6 @@ export async function preloadCacheFromStorage(): Promise<void> {
   const stats = await cacheStorage.getStats()
   if (stats.count === 0) return
 
-  let loadedCount = 0
   const loadPromises = stats.keys.map(async (key) => {
     try {
       const entry = await cacheStorage.get<unknown>(key)
@@ -1017,7 +1016,6 @@ export async function preloadCacheFromStorage(): Promise<void> {
           isRefreshing: true, // Will fetch fresh data in background
           lastRefresh: entry.timestamp,
         }
-        loadedCount++
       }
     } catch {
       // Ignore individual load failures
@@ -1025,7 +1023,6 @@ export async function preloadCacheFromStorage(): Promise<void> {
   })
 
   await Promise.all(loadPromises)
-  console.log(`[Cache] Preloaded ${loadedCount}/${stats.count} cache entries`)
 }
 
 /** Migrate old localStorage cache entries (run once on app startup) */
@@ -1077,10 +1074,6 @@ export async function migrateFromLocalStorage(): Promise<void> {
 
   // Clean up kubectl-history which was a major source of quota issues
   localStorage.removeItem('kubectl-history')
-
-  if (keysToMigrate.length > 0) {
-    console.log(`[Cache] Migrated ${keysToMigrate.length} entries from localStorage to storage`)
-  }
 }
 
 /**
@@ -1143,8 +1136,6 @@ export async function migrateIDBToSQLite(): Promise<void> {
     try {
       indexedDB.deleteDatabase(DB_NAME)
     } catch { /* ignore */ }
-
-    console.log(`[Cache] Migrated ${cacheEntries.length} cache entries and ${metaEntries.length} metadata entries to SQLite`)
   } catch (e) {
     console.error('[Cache] IDB→SQLite migration failed:', e)
   }
@@ -1171,7 +1162,6 @@ async function migrateLocalStorageMetaToSQLite(): Promise<void> {
   if (metaEntries.length > 0) {
     await workerRpc.migrate({ cacheEntries: [], metaEntries })
     keysToRemove.forEach(key => localStorage.removeItem(key))
-    console.log(`[Cache] Migrated ${metaEntries.length} metadata entries to SQLite`)
   }
 }
 

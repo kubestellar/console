@@ -14,6 +14,7 @@ import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
+import { useTranslation } from 'react-i18next'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -131,6 +132,7 @@ function saveRepos(repos: string[]) {
 }
 
 export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
+  const { t } = useTranslation()
   const ghConfig = config as GitHubCIConfig | undefined
 
   // Repo configuration
@@ -439,11 +441,11 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-red-400">{stats.failed}</p>
-          <p className="text-[10px] text-muted-foreground">Failed</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.failed')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-blue-400">{stats.inProgress}</p>
-          <p className="text-[10px] text-muted-foreground">Running</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.running')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-yellow-400">{stats.queued}</p>
@@ -468,7 +470,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search workflows..."
+        placeholder={t('common.searchWorkflows')}
       />
 
       {/* Workflow runs */}

@@ -16,6 +16,7 @@ import {
   CardPaginationFooter,
 } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useTranslation } from 'react-i18next'
 
 interface ArgoCDApplicationsProps {
   config?: {
@@ -58,6 +59,7 @@ const ARGO_SORT_COMPARATORS = {
 }
 
 function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
+  const { t } = useTranslation()
   const {
     applications: allApps,
     isLoading,
@@ -248,12 +250,12 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              onClick={() => setSelectedFilter('all')}>
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
-          <p className="text-xs text-muted-foreground">Healthy</p>
+          <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-red-500/10 cursor-pointer hover:bg-red-500/20"
              onClick={() => setSelectedFilter('unhealthy')}>
           <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>
-          <p className="text-xs text-muted-foreground">Unhealthy</p>
+          <p className="text-xs text-muted-foreground">{t('common.unhealthy')}</p>
         </div>
       </div>
 
@@ -334,6 +336,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 }
 
 export function ArgoCDApplications(props: ArgoCDApplicationsProps) {
+  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="ArgoCDApplications">
       <ArgoCDApplicationsInternal {...props} />

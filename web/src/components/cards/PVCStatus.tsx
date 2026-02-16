@@ -7,6 +7,8 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useTranslation } from 'react-i18next'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 type SortByOption = 'status' | 'name' | 'capacity' | 'age'
 
@@ -66,7 +68,8 @@ function getStatusColor(status: string) {
   }
 }
 
-export function PVCStatus() {
+function PVCStatusInternal() {
+  const { t } = useTranslation()
   const { pvcs, isLoading, error, consecutiveFailures, isFailed } = usePVCs()
   const { drillToPVC } = useDrillDownActions()
 
@@ -210,7 +213,7 @@ export function PVCStatus() {
       <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/50 text-center">
           <div className="text-lg font-bold text-foreground">{stats.total}</div>
-          <div className="text-xs text-muted-foreground">Total</div>
+          <div className="text-xs text-muted-foreground">{t('common.total')}</div>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 text-center">
           <div className="text-lg font-bold text-green-400">{stats.bound}</div>
@@ -218,11 +221,11 @@ export function PVCStatus() {
         </div>
         <div className="p-2 rounded-lg bg-yellow-500/10 text-center">
           <div className="text-lg font-bold text-yellow-400">{stats.pending}</div>
-          <div className="text-xs text-muted-foreground">Pending</div>
+          <div className="text-xs text-muted-foreground">{t('common.pending')}</div>
         </div>
         <div className="p-2 rounded-lg bg-red-500/10 text-center">
           <div className="text-lg font-bold text-red-400">{stats.failed}</div>
-          <div className="text-xs text-muted-foreground">Failed</div>
+          <div className="text-xs text-muted-foreground">{t('common.failed')}</div>
         </div>
       </div>
 
@@ -285,5 +288,13 @@ export function PVCStatus() {
         needsPagination={needsPagination}
       />
     </div>
+  )
+}
+
+export function PVCStatus() {
+  return (
+    <DynamicCardErrorBoundary cardId="PVCStatus">
+      <PVCStatusInternal />
+    </DynamicCardErrorBoundary>
   )
 }

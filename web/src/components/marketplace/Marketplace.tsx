@@ -12,6 +12,7 @@ import { useToast } from '../ui/Toast'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { MarketplaceThumbnail } from './MarketplaceThumbnail'
 import { suggestIconSync } from '../../lib/iconSuggester'
+import { useTranslation } from 'react-i18next'
 
 type ViewMode = 'grid' | 'list'
 type SortField = 'name' | 'author' | 'type' | 'difficulty'
@@ -138,6 +139,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
   onRemove: (item: MarketplaceItem) => void
   isInstalled: boolean
 }) {
+  const { t } = useTranslation()
   const [installing, setInstalling] = useState(false)
   const [removing, setRemoving] = useState(false)
 
@@ -294,7 +296,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
                 onClick={handleRemove}
                 disabled={removing}
                 className="flex items-center gap-1 px-2 py-1 text-[10px] text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
-                title="Remove"
+                title={t('common.remove')}
               >
                 {removing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               </button>
@@ -442,6 +444,7 @@ const filterBtnClass = (active: boolean) =>
   }`
 
 export function Marketplace() {
+  const { t } = useTranslation()
   const {
     items,
     allTags,
@@ -595,7 +598,7 @@ export function Marketplace() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search marketplace..."
+            placeholder={t('common.search')} // TODO marketplace..."
             className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
           />
         </div>

@@ -1,5 +1,6 @@
 import { Sun, Cloud, CloudRain, CloudSnow, CloudFog } from 'lucide-react'
 import type { WeatherCondition } from './types'
+import { useTranslation } from 'react-i18next'
 
 // WMO Weather interpretation codes to condition mapping
 export function getWeatherCondition(code: number): WeatherCondition {
@@ -45,6 +46,7 @@ export function getConditionColor(code: number): string {
 
 // Weather Animation Component with realistic day/night variants
 export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { weatherCode: number; isDaytime: boolean; windSpeed?: number }) {
+  const { t: _t } = useTranslation()
   const condition = getWeatherCondition(weatherCode)
   const type = condition.type
 

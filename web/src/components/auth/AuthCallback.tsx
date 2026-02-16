@@ -3,11 +3,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { getLastRoute } from '../../hooks/useLastRoute'
 import { ROUTES, getLoginWithError } from '../../config/routes'
+import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
 
 export function AuthCallback() {
+  const { t: _t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { setToken, refreshUser } = useAuth()
+  const { showToast } = useToast()
   const [status, setStatus] = useState('Signing you in...')
   const hasProcessed = useRef(false)
 
@@ -47,6 +51,7 @@ export function AuthCallback() {
       }).catch((err) => {
         clearTimeout(timeoutId)
         console.error('Failed to refresh user:', err)
+        showToast('Failed to fetch user info, proceeding anyway', 'warning')
         // Still try to proceed if we have a token
         setStatus('Completing sign in...')
         setTimeout(() => {
@@ -57,7 +62,7 @@ export function AuthCallback() {
       console.warn('[AuthCallback] No token in URL')
       navigate(ROUTES.LOGIN)
     }
-  }, [searchParams, setToken, refreshUser, navigate])
+  }, [searchParams, setToken, refreshUser, navigate, showToast])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">

@@ -20,8 +20,8 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
       <BaseModal.Header
-        title="Reset Dashboard"
-        description="Choose how to reset your dashboard cards"
+        title={t('dashboard.reset.title')}
+        description={t('dashboard.reset.description')}
         icon={RefreshCw}
         onClose={onClose}
         showBack={false}
@@ -39,10 +39,9 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
                 <PlusCircle className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-foreground mb-1">Add Missing Cards</div>
+                <div className="font-medium text-foreground mb-1">{t('dashboard.reset.addMissing')}</div>
                 <p className="text-sm text-muted-foreground">
-                  Keep your current cards and add any default cards that are missing.
-                  Your customizations will be preserved.
+                  {t('dashboard.reset.addMissingDesc')}
                 </p>
               </div>
             </div>
@@ -58,10 +57,9 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
                 <RefreshCw className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-foreground mb-1">Replace All Cards</div>
+                <div className="font-medium text-foreground mb-1">{t('dashboard.reset.replaceAll')}</div>
                 <p className="text-sm text-muted-foreground">
-                  Remove all current cards and replace them with the default set.
-                  This will remove any customizations.
+                  {t('dashboard.reset.replaceAllDesc')}
                 </p>
                 <div className="flex items-center gap-1.5 mt-2 text-xs text-orange-400">
                   <AlertTriangle className="w-3.5 h-3.5" />
@@ -79,7 +77,7 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
           onClick={onClose}
           className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
         >
-          Cancel
+          {t('actions.cancel')}
         </button>
       </BaseModal.Footer>
     </BaseModal>

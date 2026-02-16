@@ -4,11 +4,13 @@ import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { checkOAuthConfigured } from '../../lib/api'
 import { ROUTES } from '../../config/routes'
+import { useTranslation } from 'react-i18next'
 
 // Lazy load the heavy Three.js globe animation
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
 
 export function Login() {
+  const { t: _t } = useTranslation()
   const { login, isAuthenticated, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
   const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
@@ -124,10 +126,7 @@ export function Login() {
 
           {/* Footer */}
           <p className="text-center text-sm text-muted-foreground mt-8">
-            By signing in, you agree to our{' '}
-            <a href="#" className="text-purple-400 hover:text-purple-300">
-              Terms of Service
-            </a>
+            By signing in, you agree to our Terms of Service
           </p>
         </div>
       </div>

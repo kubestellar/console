@@ -6,12 +6,15 @@ import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
 import { useChartFilters } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useTranslation } from 'react-i18next'
 
 export function EventSummary() {
+  const { t } = useTranslation()
   const {
     events,
     isLoading,
     isRefreshing,
+    isDemoFallback,
     refetch,
     isFailed,
     consecutiveFailures,
@@ -22,6 +25,7 @@ export function EventSummary() {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed: isFailed && events.length === 0,
     consecutiveFailures,
@@ -165,7 +169,7 @@ export function EventSummary() {
           <CheckCircle2 className="w-4 h-4 text-green-400" />
           <div>
             <div className="text-lg font-bold text-green-400">{summary.normal}</div>
-            <div className="text-xs text-muted-foreground">Normal</div>
+            <div className="text-xs text-muted-foreground">{t('common.normal')}</div>
           </div>
         </div>
       </div>

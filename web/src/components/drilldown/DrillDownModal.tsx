@@ -21,6 +21,8 @@ const ServiceAccountDrillDown = lazy(() => import('./views/ServiceAccountDrillDo
 const ArgoAppDrillDown = lazy(() => import('./views/ArgoAppDrillDown').then(m => ({ default: m.ArgoAppDrillDown })))
 const HelmReleaseDrillDown = lazy(() => import('./views/HelmReleaseDrillDown').then(m => ({ default: m.HelmReleaseDrillDown })))
 const ConfigMapDrillDown = lazy(() => import('./views/ConfigMapDrillDown').then(m => ({ default: m.ConfigMapDrillDown })))
+const BuildpackDrillDown = lazy(() => import('./views/BuildpackDrillDown').then(m => ({ default: m.BuildpackDrillDown })))
+
 // Keep smaller components as direct imports for immediate loading
 import { NamespaceDrillDown } from './views/NamespaceDrillDown'
 import { LogsDrillDown } from './views/LogsDrillDown'
@@ -72,6 +74,7 @@ const getViewIcon = (type: string) => {
     case 'operator': return <Settings className="w-4 h-4 text-purple-400" />
     case 'policy': return <Shield className="w-4 h-4 text-blue-400" />
     case 'kustomization': return <Layers className="w-4 h-4 text-indigo-400" />
+    case 'buildpack': return <Package className="w-4 h-4 text-indigo-400" />
     case 'crd': return <Package className="w-4 h-4 text-purple-400" />
     case 'drift': return <GitBranch className="w-4 h-4 text-orange-400" />
     // Multi-cluster summary views
@@ -192,6 +195,9 @@ export function DrillDownModal() {
         return <PolicyDrillDown data={data} />
       case 'kustomization':
         return <KustomizationDrillDown data={data} />
+      case 'buildpack':
+        return <BuildpackDrillDown data={data} />
+
       case 'crd':
         return <CRDDrillDown data={data} />
       case 'drift':

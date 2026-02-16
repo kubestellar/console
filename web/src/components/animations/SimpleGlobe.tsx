@@ -3,12 +3,14 @@
  * Much lighter weight - no external dependencies
  */
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface SimpleGlobeProps {
   className?: string
 }
 
 export function SimpleGlobe({ className = '' }: SimpleGlobeProps) {
+  const { t: _t } = useTranslation()
   const [clusters] = useState(() => 
     Array.from({ length: 12 }, (_, i) => ({
       id: i,

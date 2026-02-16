@@ -9,6 +9,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'type' | 'name' | 'namespace' | 'ports'
 
@@ -46,9 +47,11 @@ function getTypeColor(type: string) {
 }
 
 export function ServiceStatus() {
+  const { t } = useTranslation()
   const {
     services,
     isLoading: hookLoading,
+    isDemoFallback,
     isFailed,
     consecutiveFailures,
     error
@@ -59,6 +62,7 @@ export function ServiceStatus() {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton } = useCardLoadingState({
     isLoading: hookLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: services.length > 0,
     isFailed,
     consecutiveFailures,
@@ -181,7 +185,7 @@ export function ServiceStatus() {
       <CardSearchInput
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Search services..."
+        placeholder={t('common.searchServices')}
         className="mb-3"
       />
 
@@ -189,7 +193,7 @@ export function ServiceStatus() {
       <div className="grid grid-cols-4 gap-2 mb-3">
         <div className="p-1.5 rounded-lg bg-secondary/50 text-center">
           <div className="text-sm font-bold text-foreground">{stats.total}</div>
-          <div className="text-[10px] text-muted-foreground">Total</div>
+          <div className="text-[10px] text-muted-foreground">{t('common.total')}</div>
         </div>
         <div className="p-1.5 rounded-lg bg-blue-500/10 text-center">
           <div className="text-sm font-bold text-blue-400">{stats.loadBalancer}</div>

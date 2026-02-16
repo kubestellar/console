@@ -3,9 +3,11 @@ import { useCachedPods } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
+import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'restarts' | 'name' | 'cpu' | 'memory' | 'gpu'
 
@@ -60,6 +62,7 @@ const getEffectiveMemory = (pod: { memoryUsageBytes?: number; memoryRequestBytes
 }
 
 export function TopPods({ config }: TopPodsProps) {
+  const { t } = useTranslation()
   const clusterConfig = config?.cluster
   const namespaceConfig = config?.namespace
   const { drillToPod } = useDrillDownActions()
@@ -68,6 +71,9 @@ export function TopPods({ config }: TopPodsProps) {
   const {
     pods: rawPods,
     isLoading,
+    isDemoFallback,
+    isRefreshing,
+    lastRefresh,
     isFailed,
     consecutiveFailures,
     error
@@ -76,6 +82,7 @@ export function TopPods({ config }: TopPodsProps) {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isDemoData: isDemoFallback,
     hasAnyData: rawPods.length > 0,
     isFailed,
     consecutiveFailures,
@@ -164,6 +171,13 @@ export function TopPods({ config }: TopPodsProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
@@ -199,7 +213,7 @@ export function TopPods({ config }: TopPodsProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search pods..."
+        placeholder={t('common.searchPods')}
         className="mb-3"
       />
 
