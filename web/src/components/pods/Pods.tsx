@@ -160,8 +160,8 @@ export function Pods() {
       ) : filteredPodIssues.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🎉</div>
-          <p className="text-lg text-foreground">No Pod Issues</p>
-          <p className="text-sm text-muted-foreground">All pods are running healthy across your clusters</p>
+          <div className="text-lg text-foreground">No Pod Issues</div>
+          <div className="text-sm text-muted-foreground">All pods are running healthy across your clusters</div>
         </div>
       ) : (
         <div className="space-y-3">

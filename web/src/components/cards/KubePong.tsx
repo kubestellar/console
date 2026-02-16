@@ -344,7 +344,7 @@ export function KubePong() {
           {/* Overlays */}
           {gameState === 'idle' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-2xl font-bold text-blue-400 mb-2">Kube Pong</h3>
+              <div className="text-2xl font-bold text-blue-400 mb-2">Kube Pong</div>
               <p className="text-sm text-muted-foreground mb-4">Arrow keys or W/S to move paddle</p>
 
               {/* Difficulty selector */}
@@ -376,7 +376,7 @@ export function KubePong() {
 
           {gameState === 'paused' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-xl font-bold text-white mb-4">Paused</h3>
+              <div className="text-xl font-bold text-white mb-4">Paused</div>
               <button
                 onClick={togglePause}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
@@ -392,12 +392,12 @@ export function KubePong() {
               {winner === 'player' ? (
                 <>
                   <Trophy className="w-12 h-12 text-yellow-400 mb-2" />
-                  <h3 className="text-2xl font-bold text-green-400 mb-2">You Win!</h3>
+                  <div className="text-2xl font-bold text-green-400 mb-2">You Win!</div>
                 </>
               ) : (
                 <>
                   <Cpu className="w-12 h-12 text-red-400 mb-2" />
-                  <h3 className="text-2xl font-bold text-red-400 mb-2">AI Wins</h3>
+                  <div className="text-2xl font-bold text-red-400 mb-2">AI Wins</div>
                 </>
               )}
               <p className="text-lg text-white mb-4">{playerScore} - {aiScore}</p>

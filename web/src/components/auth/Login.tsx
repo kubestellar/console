@@ -98,8 +98,8 @@ export function Login() {
             <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 text-yellow-300 text-sm">
               <AlertTriangle className="w-5 h-5 shrink-0 text-yellow-400" />
               <div>
-                <p className="font-medium">Session expired</p>
-                <p className="text-xs text-yellow-400/80 mt-0.5">Your session has timed out. Please sign in again.</p>
+                <div className="font-medium">Session expired</div>
+                <div className="text-xs text-yellow-400/80 mt-0.5">Your session has timed out. Please sign in again.</div>
               </div>
             </div>
           )}
@@ -125,9 +125,9 @@ export function Login() {
           </button>
 
           {/* Footer */}
-          <p className="text-center text-sm text-muted-foreground mt-8">
+          <div className="text-center text-sm text-muted-foreground mt-8">
             By signing in, you agree to our Terms of Service
-          </p>
+          </div>
         </div>
       </div>
 

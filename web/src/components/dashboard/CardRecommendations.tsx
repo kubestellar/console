@@ -140,7 +140,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                 >
                   <div className="p-3">
                     {/* Reason */}
-                    <p className="text-xs text-muted-foreground mb-2">{rec.reason}</p>
+                    <div className="text-xs text-muted-foreground mb-2">{rec.reason}</div>
 
                     {/* What this will do */}
                     <div className="text-xs text-muted-foreground mb-3">

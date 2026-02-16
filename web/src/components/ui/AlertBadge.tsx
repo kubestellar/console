@@ -398,13 +398,13 @@ export function AlertBadge() {
                   {stats.firing === 0 ? (
                     <>
                       <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
-                      <p className="text-sm text-foreground">No Active Alerts</p>
-                      <p className="text-xs">All systems are operating normally</p>
+                      <div className="text-sm text-foreground">No Active Alerts</div>
+                      <div className="text-xs">All systems are operating normally</div>
                     </>
                   ) : (
                     <>
                       <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No alerts match your filters</p>
+                      <div className="text-sm">No alerts match your filters</div>
                     </>
                   )}
                 </div>
@@ -436,9 +436,9 @@ export function AlertBadge() {
                           {alert.ruleName}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                      <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                         {alert.message}
-                      </p>
+                      </div>
                       <div className="flex items-center gap-3 mt-1">
                         {alert.cluster && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
