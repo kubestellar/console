@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Layers, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCachedLLMdModels } from '../../../hooks/useCachedData'
@@ -31,7 +32,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
   const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
-  const { models, isLoading } = useCachedLLMdModels(llmdClusters)
+  const { models, isLoading, isRefreshing, lastRefresh } = useCachedLLMdModels(llmdClusters)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
@@ -98,9 +99,18 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
-          {models.filter(m => m.status === 'loaded').length} loaded
-        </span>
+        <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
+          <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+            {models.filter(m => m.status === 'loaded').length} loaded
+          </span>
+        </div>
         <CardControlsRow
           clusterIndicator={
             filters.localClusterFilter.length > 0

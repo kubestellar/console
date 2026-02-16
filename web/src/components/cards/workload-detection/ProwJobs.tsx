@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { CardSearchInput, CardAIActions } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
@@ -27,6 +28,8 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   const {
     jobs,
     isLoading,
+    isRefreshing,
+    lastRefresh,
     isFailed,
     consecutiveFailures,
     formatTimeAgo,
@@ -125,6 +128,13 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
           <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
             {totalItems} jobs
           </span>
