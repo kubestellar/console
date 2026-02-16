@@ -383,5 +383,9 @@ export const className = css\`
   }
   .drag-handle { cursor: grab; }
   .drag-handle:active { cursor: grabbing; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
 \`;`
 }

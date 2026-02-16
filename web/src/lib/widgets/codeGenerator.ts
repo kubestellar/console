@@ -244,7 +244,8 @@ ${wrapOpen}
                     {(g.runs || []).slice(0, 7).map((run, i) => (
                       <span key={i} style={{
                         width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
-                        backgroundColor: run.status === 'in_progress' ? '#eab308' : (conclusionColors[run.conclusion] || '#6b7280'),
+                        backgroundColor: run.status === 'in_progress' ? '#60a5fa' : (conclusionColors[run.conclusion] || '#6b7280'),
+                        animation: run.status === 'in_progress' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
                       }} />
                     ))}
                     {(!g.runs || g.runs.length === 0) && <span style={{color: '#4b5563', fontSize: '9px'}}>no runs</span>}

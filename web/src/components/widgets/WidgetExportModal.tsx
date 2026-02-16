@@ -951,7 +951,7 @@ function NightlyE2EPreview() {
         { acronym: 'PPC', dots: ['g','r','g','g','g','r','g'] },
         { acronym: 'SA', dots: ['g','g','g','g','g','g','g'] },
         { acronym: 'TPC', dots: ['g','g','g','r','g','g','g'] },
-        { acronym: 'WEP', dots: ['g','g','g','g','g','g','y'] },
+        { acronym: 'WEP', dots: ['g','g','g','g','g','g','b'] },
         { acronym: 'WVA', dots: ['g','r','g','g','r','g','g'] },
         { acronym: 'BM', dots: ['r','r','g','r','g','r','g'] },
       ],
@@ -962,7 +962,7 @@ function NightlyE2EPreview() {
         { acronym: 'IS', dots: ['g','g','g','g','g','g','g'] },
         { acronym: 'PD', dots: ['r','g','g','g','g','g','g'] },
         { acronym: 'WEP', dots: ['g','g','g','g','g','g','g'] },
-        { acronym: 'BM', dots: ['y','g','g','r','g','g','g'] },
+        { acronym: 'BM', dots: ['b','g','g','r','g','g','g'] },
       ],
     },
     {
@@ -975,7 +975,7 @@ function NightlyE2EPreview() {
       ],
     },
   ]
-  const dotColor: Record<string, string> = { g: '#22c55e', r: '#ef4444', y: '#eab308' }
+  const dotColor: Record<string, string> = { g: '#22c55e', r: '#ef4444', b: '#60a5fa' }
 
   return (
     <div style={{ ...ps.card, width: 320, fontSize: '10px', padding: '10px 12px' }}>
@@ -993,7 +993,7 @@ function NightlyE2EPreview() {
               <span style={{ width: '24px', fontWeight: 600, color: '#94a3b8' }}>{g.acronym}</span>
               <div style={{ display: 'flex', gap: '2px' }}>
                 {g.dots.length > 0 ? g.dots.map((d, i) => (
-                  <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: dotColor[d], display: 'inline-block' }} />
+                  <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: dotColor[d], display: 'inline-block', ...(d === 'b' ? { animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}) }} />
                 )) : (
                   <span style={{ color: '#4b5563', fontSize: '8px' }}>no runs</span>
                 )}
