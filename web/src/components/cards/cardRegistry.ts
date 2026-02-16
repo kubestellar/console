@@ -847,12 +847,9 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   active_alerts: 4,
   security_issues: 4,
   upgrade_status: 4,
-<<<<<<< HEAD
   crossplane_managed_resources: 4,
-=======
   buildpacks_status: 6,
 
->>>>>>> origin/main
   // MCS cards
   service_exports: 6,
   service_imports: 6,
