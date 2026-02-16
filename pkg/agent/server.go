@@ -36,8 +36,8 @@ var defaultAllowedOrigins = []string{
 	"http://127.0.0.1",
 	"https://127.0.0.1",
 	// Known deployment URLs
-	"https://kubestellarconsole.netlify.app",
-	"http://kubestellarconsole.netlify.app",
+	"https://console.kubestellar.io",
+	"http://console.kubestellar.io",
 	// Wildcard: any *.ibm.com subdomain (OpenShift routes, etc.)
 	"https://*.ibm.com",
 	"http://*.ibm.com",
