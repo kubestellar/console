@@ -136,7 +136,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
                 aria-label="Warning threshold percentage"
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-yellow-400 text-sm">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-yellow-400 text-sm" aria-hidden="true">%</span>
             </div>
             <p className="mt-1 text-xs text-yellow-400/70">
               Warning at {warningThreshold}% usage
@@ -155,7 +155,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
                 aria-label="Critical threshold percentage"
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-sm">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-sm" aria-hidden="true">%</span>
             </div>
             <p className="mt-1 text-xs text-red-400/70">
               Critical at {criticalThreshold}% usage
