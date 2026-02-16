@@ -875,12 +875,12 @@ export function GPUReservations() {
                 <div className="col-span-2 flex gap-3 pt-2 border-t border-border">
                   <button onClick={() => { setEditingReservation(selectedReservation); setShowReservationForm(true); setSelectedReservation(null) }}
                     disabled={deleteConfirmId !== null || showReservationForm}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-purple-400/50">
                     <Pencil className="w-3.5 h-3.5" /> {t('gpuReservations.reservationDetails.actions.edit')}
                   </button>
                   <button onClick={() => { setDeleteConfirmId(selectedReservation.id); setSelectedReservation(null) }}
                     disabled={deleteConfirmId !== null || showReservationForm}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-red-400/50">
                     <Trash2 className="w-3.5 h-3.5" /> {t('gpuReservations.reservationDetails.actions.delete')}
                   </button>
                 </div>
