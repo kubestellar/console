@@ -27,12 +27,16 @@ function EventStreamInternal() {
   const {
     events: rawEvents,
     isLoading: hookLoading,
+    isRefreshing,
+    isDemoFallback,
     error,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
+    isRefreshing,
+    isDemoData: isDemoFallback,
     hasAnyData: rawEvents.length > 0,
     isFailed: !!error && rawEvents.length === 0,
     consecutiveFailures: error ? 1 : 0,

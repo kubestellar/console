@@ -57,8 +57,8 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     }
   }, [demoMode, clusters, selectedCluster])
 
-  const { issues: allPodIssues } = useCachedPodIssues(selectedCluster)
-  const { issues: allDeploymentIssues } = useCachedDeploymentIssues(selectedCluster)
+  const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback } = useCachedPodIssues(selectedCluster)
+  const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback } = useCachedDeploymentIssues(selectedCluster)
 
   // Fetch namespaces for the selected cluster
   const { namespaces } = useNamespaces(selectedCluster || undefined)
@@ -86,6 +86,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
+    isDemoData: podIssuesDemoFallback || deploymentIssuesDemoFallback,
     hasAnyData: allClusters.length > 0,
   })
 

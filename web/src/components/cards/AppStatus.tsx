@@ -53,11 +53,13 @@ interface AppData {
 export function AppStatus(_props: AppStatusProps) {
   const { t: _t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
-  const { deployments, isLoading, isFailed, consecutiveFailures } = useCachedDeployments()
+  const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedDeployments()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
+    isDemoData: isDemoFallback,
     hasAnyData: deployments.length > 0,
     isFailed,
     consecutiveFailures,
