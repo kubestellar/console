@@ -160,8 +160,8 @@ export function useLocalClusterTools() {
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       setIsDeleting(null)
-      // Don't actually remove from demo data - just show it worked
-      setError('Demo mode: Cluster deletion simulated. In live mode, this would delete the cluster.')
+      // In demo mode, we don't actually modify the demo data
+      // The deletion is simulated - clusters will reappear on refresh
       return true
     }
 
