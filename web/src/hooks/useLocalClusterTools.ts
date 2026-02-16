@@ -115,7 +115,7 @@ export function useLocalClusterTools() {
       setIsCreating(false)
       return { 
         status: 'creating', 
-        message: `Demo: Would create ${tool} cluster "${name}". In live mode with kc-agent connected, this would create a real cluster.` 
+        message: `Simulation: ${tool} cluster "${name}" would be created here. Connect kc-agent to create real clusters.` 
       }
     }
 

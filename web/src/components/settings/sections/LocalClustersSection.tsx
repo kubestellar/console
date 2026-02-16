@@ -82,7 +82,7 @@ export function LocalClustersSection() {
             <span className="font-medium">Demo Mode</span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Showing demo local clusters. Connect the kc-agent to manage real local clusters.
+            Showing sample local clusters. Connect the kc-agent to manage real local clusters.
           </p>
         </div>
       )}
