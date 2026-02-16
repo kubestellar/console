@@ -13,6 +13,7 @@ export function LocalClustersSection() {
     isDeleting,
     error,
     isConnected,
+    isDemoMode,
     createCluster,
     deleteCluster,
     refresh,
@@ -73,17 +74,30 @@ export function LocalClustersSection() {
 
   return (
     <div id="local-clusters-settings" className="glass rounded-xl p-6">
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+        <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <div className="flex items-center gap-2 text-yellow-400 text-sm">
+            <AlertCircle className="w-4 h-4" />
+            <span className="font-medium">Demo Mode</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Showing demo local clusters. Connect the kc-agent to manage real local clusters.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${isConnected && installedTools.length > 0 ? 'bg-purple-500/20' : 'bg-secondary'}`}>
-            <Container className={`w-5 h-5 ${isConnected && installedTools.length > 0 ? 'text-purple-400' : 'text-muted-foreground'}`} />
+          <div className={`p-2 rounded-lg ${(isConnected || isDemoMode) && installedTools.length > 0 ? 'bg-purple-500/20' : 'bg-secondary'}`}>
+            <Container className={`w-5 h-5 ${(isConnected || isDemoMode) && installedTools.length > 0 ? 'text-purple-400' : 'text-muted-foreground'}`} />
           </div>
           <div>
             <h2 className="text-lg font-medium text-foreground">{t('settings.localClusters.title')}</h2>
             <p className="text-sm text-muted-foreground">{t('settings.localClusters.subtitle')}</p>
           </div>
         </div>
-        {isConnected && (
+        {(isConnected || isDemoMode) && (
           <button
             onClick={refresh}
             disabled={isLoading}
@@ -96,7 +110,7 @@ export function LocalClustersSection() {
       </div>
 
       {/* Not Connected State */}
-      {!isConnected && (
+      {!isConnected && !isDemoMode && (
         <div className="p-4 rounded-lg bg-secondary/50 border border-border">
           <div className="flex items-center gap-2 text-muted-foreground">
             <AlertCircle className="w-5 h-5" />
@@ -108,8 +122,8 @@ export function LocalClustersSection() {
         </div>
       )}
 
-      {/* Connected - No Tools Found */}
-      {isConnected && installedTools.length === 0 && (
+      {/* Connected or Demo - No Tools Found */}
+      {(isConnected || isDemoMode) && installedTools.length === 0 && (
         <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-2 text-orange-400">
             <AlertCircle className="w-5 h-5" />
@@ -126,8 +140,8 @@ export function LocalClustersSection() {
         </div>
       )}
 
-      {/* Connected - Tools Available */}
-      {isConnected && installedTools.length > 0 && (
+      {/* Connected or Demo - Tools Available */}
+      {(isConnected || isDemoMode) && installedTools.length > 0 && (
         <>
           {/* Detected Tools */}
           <div className="mb-6">
@@ -221,34 +235,54 @@ export function LocalClustersSection() {
               </p>
             ) : (
               <div className="space-y-2">
-                {clusters.map((cluster) => (
-                  <div
-                    key={`${cluster.tool}-${cluster.name}`}
-                    className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{getToolIcon(cluster.tool)}</span>
-                      <div>
-                        <p className="font-medium text-foreground">{cluster.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {cluster.tool} • {cluster.status}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(cluster.tool, cluster.name)}
-                      disabled={isDeleting === cluster.name}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
-                      title="Delete cluster"
+                {clusters.map((cluster) => {
+                  const isRunning = cluster.status === 'running'
+                  const isStopped = cluster.status === 'stopped'
+                  
+                  return (
+                    <div
+                      key={`${cluster.tool}-${cluster.name}`}
+                      className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border"
                     >
-                      {isDeleting === cluster.name ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{getToolIcon(cluster.tool)}</span>
+                        <div>
+                          <p className="font-medium text-foreground">{cluster.name}</p>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-muted-foreground">{cluster.tool}</span>
+                            <span className="text-muted-foreground">•</span>
+                            <div className="flex items-center gap-1.5">
+                              <div className={`w-1.5 h-1.5 rounded-full ${
+                                isRunning ? 'bg-green-500' : 
+                                isStopped ? 'bg-gray-500' : 
+                                'bg-orange-500'
+                              }`} />
+                              <span className={
+                                isRunning ? 'text-green-400' : 
+                                isStopped ? 'text-gray-400' : 
+                                'text-orange-400'
+                              }>
+                                {cluster.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(cluster.tool, cluster.name)}
+                        disabled={isDeleting === cluster.name}
+                        className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                        title="Delete cluster"
+                      >
+                        {isDeleting === cluster.name ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
