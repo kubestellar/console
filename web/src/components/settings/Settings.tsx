@@ -96,7 +96,7 @@ export function Settings() {
   const navigate = useNavigate()
   const { user, refreshUser, isLoading: isUserLoading } = useAuth()
   const { themeId, setTheme, themes, currentTheme } = useTheme()
-  const { usage, updateSettings, resetUsage } = useTokenUsage()
+  const { usage, updateSettings, resetUsage, isDemoData } = useTokenUsage()
   const { mode, setMode, description } = useAIMode()
   const { health, isConnected, refresh } = useLocalAgent()
   const { colorBlindMode, setColorBlindMode, reduceMotion, setReduceMotion, highContrast, setHighContrast } = useAccessibility()
@@ -256,7 +256,7 @@ export function Settings() {
             />
             <AgentSection isConnected={isConnected} health={health} refresh={refresh} />
             <APIKeysSection />
-            <TokenUsageSection usage={usage} updateSettings={updateSettings} resetUsage={resetUsage} />
+            <TokenUsageSection usage={usage} updateSettings={updateSettings} resetUsage={resetUsage} isDemoData={isDemoData} />
           </div>
         </div>
 

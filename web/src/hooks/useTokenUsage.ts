@@ -311,6 +311,7 @@ export function useTokenUsage() {
   const alertLevel = getAlertLevel()
   const percentage = Math.min((usage.used / usage.limit) * 100, 100)
   const remaining = Math.max(usage.limit - usage.used, 0)
+  const isDemoData = getDemoMode()
 
   return {
     usage,
@@ -321,6 +322,7 @@ export function useTokenUsage() {
     updateSettings,
     resetUsage,
     isAIDisabled,
+    isDemoData,
   }
 }
 
