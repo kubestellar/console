@@ -874,11 +874,13 @@ export function GPUReservations() {
                 {/* Actions */}
                 <div className="col-span-2 flex gap-3 pt-2 border-t border-border">
                   <button onClick={() => { setEditingReservation(selectedReservation); setShowReservationForm(true); setSelectedReservation(null) }}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-purple-400 hover:bg-purple-500/10">
+                    disabled={deleteConfirmId !== null}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Pencil className="w-3.5 h-3.5" /> {t('gpuReservations.reservationDetails.actions.edit')}
                   </button>
                   <button onClick={() => { setDeleteConfirmId(selectedReservation.id); setSelectedReservation(null) }}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-red-400 hover:bg-red-500/10">
+                    disabled={deleteConfirmId !== null}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Trash2 className="w-3.5 h-3.5" /> {t('gpuReservations.reservationDetails.actions.delete')}
                   </button>
                 </div>
@@ -931,12 +933,14 @@ export function GPUReservations() {
                       <Eye className="w-4 h-4" />
                     </button>
                     <button onClick={() => { setEditingReservation(r); setShowReservationForm(true) }}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-purple-400"
+                      disabled={deleteConfirmId !== null}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
                       aria-label={t('gpuReservations.list.editReservation', { title: r.title })}>
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button onClick={() => setDeleteConfirmId(r.id)}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-red-400"
+                      disabled={deleteConfirmId !== null}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
                       aria-label={t('gpuReservations.list.deleteReservation', { title: r.title })}>
                       <Trash2 className="w-4 h-4" />
                     </button>
