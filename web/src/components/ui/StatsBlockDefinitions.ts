@@ -43,7 +43,7 @@ export type DashboardStatsType =
 export const CLUSTERS_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'clusters', name: 'Clusters', icon: 'Server', visible: true, color: 'purple' },
   { id: 'healthy', name: 'Healthy', icon: 'CheckCircle2', visible: true, color: 'green' },
-  { id: 'unhealthy', name: 'Unhealthy', icon: 'XCircle', visible: true, color: 'orange' },
+  { id: 'unhealthy', name: 'Unhealthy', icon: 'XCircle', visible: true, color: 'red' },
   { id: 'unreachable', name: 'Offline', icon: 'WifiOff', visible: true, color: 'yellow' },
   { id: 'nodes', name: 'Nodes', icon: 'Box', visible: true, color: 'cyan' },
   { id: 'cpus', name: 'CPUs', icon: 'Cpu', visible: true, color: 'blue' },
