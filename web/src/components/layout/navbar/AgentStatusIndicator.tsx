@@ -140,7 +140,7 @@ export function AgentStatusIndicator() {
     <div className="relative" ref={agentRef}>
       <button
         onClick={() => setShowAgentStatus(!showAgentStatus)}
-        className={cn('flex items-center justify-center gap-2 w-[5.5rem] py-1.5 rounded-lg', pillStyle.bg)}
+        className={cn('flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap', pillStyle.bg)}
         title={pillStyle.title}
       >
         <pillStyle.Icon className="w-4 h-4" />
