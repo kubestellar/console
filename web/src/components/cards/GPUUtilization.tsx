@@ -19,6 +19,14 @@ import {
 import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useTranslation } from 'react-i18next'
+import {
+  CHART_HEIGHT_COMPACT,
+  CHART_GRID_STROKE,
+  CHART_AXIS_STROKE,
+  CHART_TOOLTIP_BG,
+  CHART_TOOLTIP_BORDER,
+  CHART_TICK_COLOR,
+} from '../../lib/constants'
 
 interface GPUPoint {
   time: string
@@ -347,8 +355,8 @@ export function GPUUtilization() {
             Collecting data...
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: 100, height: 100 }}>
-          <ResponsiveContainer width="100%" height={100}>
+          <div style={{ width: '100%', minHeight: CHART_HEIGHT_COMPACT, height: CHART_HEIGHT_COMPACT }}>
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT_COMPACT}>
             <AreaChart data={history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <defs>
                 <linearGradient id="gradientAllocated" x1="0" y1="0" x2="0" y2="1">
@@ -356,15 +364,15 @@ export function GPUUtilization() {
                   <stop offset="95%" stopColor="#9333ea" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
               <XAxis
                 dataKey="time"
-                tick={{ fill: '#888', fontSize: 9 }}
-                axisLine={{ stroke: '#333' }}
+                tick={{ fill: CHART_TICK_COLOR, fontSize: 9 }}
+                axisLine={{ stroke: CHART_AXIS_STROKE }}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: '#888', fontSize: 9 }}
+                tick={{ fill: CHART_TICK_COLOR, fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -372,12 +380,12 @@ export function GPUUtilization() {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1a1a2e',
-                  border: '1px solid #333',
+                  backgroundColor: CHART_TOOLTIP_BG,
+                  border: `1px solid ${CHART_TOOLTIP_BORDER}`,
                   borderRadius: '8px',
                   fontSize: '11px',
                 }}
-                labelStyle={{ color: '#888' }}
+                labelStyle={{ color: CHART_TICK_COLOR }}
               />
               <ReferenceLine
                 y={currentStats.total}

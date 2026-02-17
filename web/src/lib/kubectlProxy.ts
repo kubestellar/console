@@ -14,6 +14,8 @@ import {
   KUBECTL_EXTENDED_TIMEOUT_MS,
   KUBECTL_MAX_TIMEOUT_MS,
   METRICS_SERVER_TIMEOUT_MS,
+  MAX_CONCURRENT_KUBECTL_REQUESTS,
+  POD_RESTART_ISSUE_THRESHOLD,
 } from './constants'
 
 type MessageType = 'kubectl' | 'health' | 'clusters' | 'result' | 'error'
@@ -60,7 +62,7 @@ class KubectlProxy {
   // Request queue to prevent overwhelming the WebSocket
   private requestQueue: QueuedRequest[] = []
   private activeRequests = 0
-  private readonly maxConcurrentRequests = 4 // Limit concurrent requests to local agent
+  private readonly maxConcurrentRequests = MAX_CONCURRENT_KUBECTL_REQUESTS // Limit concurrent requests to local agent
   private lastConnectionFailureAt = 0
 
   /**
@@ -571,7 +573,7 @@ class KubectlProxy {
         reason = status.reason || 'Failed'
       }
 
-      if (problems.length > 0 || restarts > 5) {
+      if (problems.length > 0 || restarts > POD_RESTART_ISSUE_THRESHOLD) {
         issues.push({
           name: pod.metadata.name,
           namespace: pod.metadata.namespace,

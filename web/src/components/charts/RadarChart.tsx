@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts'
+import { CHART_TOOLTIP_BG } from '../../lib/constants'
 
 interface DataPoint {
   name: string
@@ -59,7 +60,7 @@ export function RadarChart({
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1a1a2e',
+              backgroundColor: CHART_TOOLTIP_BG,
               border: '1px solid #333',
               borderRadius: '8px',
               fontSize: '12px',
@@ -120,7 +121,7 @@ export function MultiRadarChart({
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1a1a2e',
+              backgroundColor: CHART_TOOLTIP_BG,
               border: '1px solid #333',
               borderRadius: '8px',
             }}

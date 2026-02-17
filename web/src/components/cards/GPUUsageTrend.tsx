@@ -16,6 +16,14 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import {
+  CHART_HEIGHT_STANDARD,
+  CHART_GRID_STROKE,
+  CHART_AXIS_STROKE,
+  CHART_TOOLTIP_BG,
+  CHART_TOOLTIP_BORDER,
+  CHART_TICK_COLOR,
+} from '../../lib/constants'
 
 interface GPUDataPoint {
   time: string
@@ -344,8 +352,8 @@ export function GPUUsageTrend() {
             No GPU data available
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: 160, height: 160 }}>
-            <ResponsiveContainer width="100%" height={160}>
+          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }}>
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT_STANDARD}>
               <AreaChart data={history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                 <defs>
                   <linearGradient id="gradientAllocated" x1="0" y1="0" x2="0" y2="1">
@@ -357,27 +365,27 @@ export function GPUUsageTrend() {
                     <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
                 <XAxis
                   dataKey="time"
-                  tick={{ fill: '#888', fontSize: 10 }}
-                  axisLine={{ stroke: '#333' }}
+                  tick={{ fill: CHART_TICK_COLOR, fontSize: 10 }}
+                  axisLine={{ stroke: CHART_AXIS_STROKE }}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: '#888', fontSize: 10 }}
+                  tick={{ fill: CHART_TICK_COLOR, fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
                   allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1a1a2e',
-                    border: '1px solid #333',
+                    backgroundColor: CHART_TOOLTIP_BG,
+                    border: `1px solid ${CHART_TOOLTIP_BORDER}`,
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
-                  labelStyle={{ color: '#888' }}
+                  labelStyle={{ color: CHART_TICK_COLOR }}
                   formatter={(value, name) => {
                     const label = name === 'allocated' ? 'In Use' : 'Free'
                     return [`${value} GPUs`, label]
