@@ -49,13 +49,13 @@ export const NIGHTLY_WORKFLOWS: NightlyWorkflowConfig[] = [
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'GKE' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'GKE' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-gke.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'GKE' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking-gke.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'GKE' },
+  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-gke.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'GKE' },
   // CKS
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-cks.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'CKS' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-cks.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'CKS' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-cks.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'CKS' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-cks.yaml', guide: 'WVA', acronym: 'WVA', platform: 'CKS' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking-cks.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'CKS' },
+  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nightly-benchmark-cks.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'CKS' },
 ]
 
 // Seeded patterns per guide for deterministic demo data

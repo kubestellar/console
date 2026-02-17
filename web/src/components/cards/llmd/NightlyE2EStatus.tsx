@@ -47,7 +47,7 @@ const WORKFLOW_META: Record<string, { model: string; gpuType: string; gpuCount: 
   'nightly-e2e-pd-disaggregation-cks.yaml':   { model: 'Qwen3-0.6B',    gpuType: 'H100', gpuCount: 1 },
   'nightly-e2e-wide-ep-lws-cks.yaml':         { model: 'Qwen3-0.6B',    gpuType: 'H100', gpuCount: 1 },
   'nightly-e2e-wva-cks.yaml':                 { model: 'Llama-3.1-8B',  gpuType: 'H100', gpuCount: 2 },
-  'nightly-e2e-benchmarking-cks.yaml':         { model: 'TBD',           gpuType: 'TBD',  gpuCount: 0 },
+  'ci-nightly-benchmark-cks.yaml':             { model: 'TBD',           gpuType: 'TBD',  gpuCount: 0 },
 }
 
 function getWorkflowMeta(workflowFile: string) {

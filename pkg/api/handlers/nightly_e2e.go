@@ -90,7 +90,7 @@ var nightlyWorkflows = []NightlyWorkflow{
 	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "CKS"},
 	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "CKS"},
 	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-cks.yaml", Guide: "WVA", Acronym: "WVA", Platform: "CKS"},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-benchmarking-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS"},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nightly-benchmark-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS"},
 }
 
 // NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
