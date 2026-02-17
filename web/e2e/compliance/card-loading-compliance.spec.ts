@@ -182,13 +182,28 @@ async function setupLiveMocks(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
   )
 
+  // Endpoints that expect array responses (not { items: [] })
+  await page.route('**/api/dashboards**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+  )
+
+  await page.route('**/api/config/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
+  )
+
   await page.route('**/api/**', async (route) => {
     const url = route.request().url()
-    if (url.includes('/api/mcp/') || url.includes('/api/me') || url.includes('/api/workloads')) {
+    if (
+      url.includes('/api/mcp/') ||
+      url.includes('/api/me') ||
+      url.includes('/api/workloads') ||
+      url.includes('/api/dashboards') ||
+      url.includes('/api/config/')
+    ) {
       await route.fallback()
       return
     }
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
   })
 
   await page.route('http://127.0.0.1:8585/**', (route) => {
@@ -341,15 +356,35 @@ async function stopComplianceMonitor(page: Page): Promise<Record<string, CardSta
 // Navigation helpers
 // ---------------------------------------------------------------------------
 
-async function navigateToBatch(page: Page, batch: number): Promise<ManifestData> {
-  await page.goto(`/__compliance/all-cards?batch=${batch + 1}&size=${BATCH_SIZE}`, {
-    waitUntil: 'domcontentloaded',
-  })
+async function navigateToBatch(page: Page, batch: number, manifestTimeoutMs = 60_000): Promise<ManifestData> {
+  const url = `/__compliance/all-cards?batch=${batch + 1}&size=${BATCH_SIZE}`
+  console.log(`[Compliance] Navigating to ${url} (timeout: ${manifestTimeoutMs}ms)`)
+  await page.goto(url, { waitUntil: 'domcontentloaded' })
+  console.log(`[Compliance] DOM loaded, waiting for manifest...`)
+
+  // Periodic debug logging while waiting
+  const debugInterval = setInterval(async () => {
+    try {
+      const state = await page.evaluate(() => ({
+        path: window.location.pathname,
+        hasManifest: !!(window as Window & { __COMPLIANCE_MANIFEST__?: unknown }).__COMPLIANCE_MANIFEST__,
+        hasLoginForm: !!document.querySelector('input[type="password"]'),
+        hasSidebar: !!document.querySelector('[data-testid="sidebar"]'),
+        bodyLen: (document.body.textContent || '').trim().length,
+        bodyPreview: (document.body.textContent || '').trim().slice(0, 100),
+      }))
+      console.log(`[Compliance] Page state: ${JSON.stringify(state)}`)
+    } catch {
+      console.log(`[Compliance] Page state: (evaluate failed)`)
+    }
+  }, 10_000)
+
   try {
     await page.waitForFunction(() => !!(window as Window & { __COMPLIANCE_MANIFEST__?: unknown }).__COMPLIANCE_MANIFEST__, {
-      timeout: 60_000,
+      timeout: manifestTimeoutMs,
     })
   } catch {
+    clearInterval(debugInterval)
     const debug = await page.evaluate(() => ({
       path: window.location.pathname,
       hasManifestEl: !!document.querySelector('[data-testid="compliance-manifest"]'),
@@ -359,6 +394,8 @@ async function navigateToBatch(page: Page, batch: number): Promise<ManifestData>
     }))
     throw new Error(`Compliance manifest did not load: ${JSON.stringify(debug)}`)
   }
+  clearInterval(debugInterval)
+  console.log(`[Compliance] Manifest loaded for batch ${batch}`)
 
   const manifest = await page.evaluate(
     () => (window as Window & { __COMPLIANCE_MANIFEST__?: unknown }).__COMPLIANCE_MANIFEST__
@@ -824,6 +861,12 @@ test('card loading compliance — cold + warm', async ({ page }) => {
   const allBatchResults: BatchResult[] = []
   let totalCards = 0
 
+  // Capture browser console for debugging
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') console.log(`[Browser ERROR] ${msg.text()}`)
+  })
+  page.on('pageerror', (err) => console.log(`[Browser EXCEPTION] ${err.message}`))
+
   // ── Phase 1: Setup mocks ──────────────────────────────────────────────
   await setupAuth(page)
   await setupLiveMocks(page)
@@ -831,20 +874,34 @@ test('card loading compliance — cold + warm', async ({ page }) => {
 
   // ── Phase 2: Warmup — prime Vite module cache ─────────────────────────
   console.log('[Compliance] Phase 1: Warmup — priming Vite module cache')
-  const warmupManifest = await navigateToBatch(page, 0)
+
+  // Use 180s timeout for cold dev server (Vite compiles 174 card modules on first load)
+  const warmupManifest = await navigateToBatch(page, 0, 180_000)
   totalCards = warmupManifest.totalCards
   const totalBatches = Math.ceil(totalCards / BATCH_SIZE)
   console.log(`[Compliance] Total cards: ${totalCards}, batches: ${totalBatches}`)
 
-  // Visit first batch to warm up module loading
-  await page.waitForTimeout(2_000)
+  // Let modules finish loading
+  await page.waitForTimeout(3_000)
 
   // ── Phase 3: Live-Cold — test each batch ──────────────────────────────
   console.log('[Compliance] Phase 2: Live-Cold — testing card loading behavior')
 
   for (let batch = 0; batch < totalBatches; batch++) {
-    // Re-apply cold mode init scripts per batch
-    await setLiveColdMode(page)
+    // Clear caches in-page before each batch (init scripts already set from phase 1)
+    await page.evaluate(() => {
+      // Clear cache-related localStorage entries
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i)
+        if (!key) continue
+        if (key.includes('dashboard-cards') || key.startsWith('cache:') || key.includes('kubestellar-stack-cache')) {
+          localStorage.removeItem(key)
+        }
+      }
+      // Ensure live mode
+      localStorage.setItem('kc-demo-mode', 'false')
+      localStorage.setItem('token', 'test-token')
+    })
 
     sseRequestLog.length = 0
 
