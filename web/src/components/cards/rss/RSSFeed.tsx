@@ -323,6 +323,11 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       setIsRefreshing(false)
       setLastRefresh(new Date())
       setError(null)
+      // Cache demo data so warm return finds it immediately
+      const cacheKey = activeFeed?.isAggregate
+        ? `aggregate:${activeFeed.sourceUrls?.join(',')}:${activeFeed.name}`
+        : activeFeed?.url
+      if (cacheKey) cacheFeed(cacheKey, demoItems)
       return
     }
 

@@ -1028,7 +1028,9 @@ export function CardWrapper({
   // Show demo indicator if:
   // 1. Child reports demo data (isDemoData: true via prop or report), OR
   // 2. Global demo mode is on AND child hasn't explicitly opted out
-  const showDemoIndicator = effectiveIsDemoData || (isDemoMode && !childExplicitlyNotDemo)
+  // BUT suppress during loading phase — users don't need to see "DEMO" badge
+  // flash momentarily while data is loading
+  const showDemoIndicator = !effectiveIsLoading && (effectiveIsDemoData || (isDemoMode && !childExplicitlyNotDemo))
 
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
@@ -1191,6 +1193,7 @@ export function CardWrapper({
           data-card-type={cardType}
           data-card-id={cardId}
           data-loading={shouldShowSkeleton ? 'true' : 'false'}
+          data-effective-loading={effectiveIsLoading ? 'true' : 'false'}
           className={cn(
             'glass rounded-xl overflow-hidden card-hover',
             'flex flex-col transition-all duration-200',
