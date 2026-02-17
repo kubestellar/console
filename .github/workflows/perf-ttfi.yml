@@ -38,7 +38,26 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Start preview server
+        run: |
+          npx vite preview --port 4174 --host &
+          echo "Waiting for preview server..."
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:4174 > /dev/null 2>&1; then
+              echo "Preview server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Preview server failed to start within 30s"
+          exit 1
+
       - name: Run all-card TTFI suite
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:4174
         run: npm run test:e2e:perf:ttfi
 
       - name: Compare against baseline (hard fail)

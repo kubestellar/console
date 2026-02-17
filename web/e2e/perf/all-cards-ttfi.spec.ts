@@ -367,7 +367,13 @@ async function runMode(page: Page, mode: PerfMode): Promise<CardTTFIMetric[]> {
 
 test.describe.configure({ mode: 'serial' })
 
-for (const mode of ['live-cold', 'live-warm', 'demo-cold', 'demo-warm'] as const) {
+// In CI there is no backend, so live-mode mocks (cross-origin SSE to localhost:8080)
+// are unreliable. Only run demo modes in CI; run all modes locally.
+const MODES: PerfMode[] = process.env.CI
+  ? ['demo-cold', 'demo-warm']
+  : ['live-cold', 'live-warm', 'demo-cold', 'demo-warm']
+
+for (const mode of MODES) {
   test(`all cards TTFI (${mode})`, async ({ page }) => {
     const modeResults = await runMode(page, mode)
     report.cards.push(...modeResults)

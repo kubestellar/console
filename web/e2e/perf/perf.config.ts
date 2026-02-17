@@ -20,19 +20,21 @@ function getWebServer() {
 
   if (useDevServer) {
     return {
-      command: `npm run dev -- --port ${DEV_PORT}`,
-      url: `http://localhost:${DEV_PORT}`,
+      command: `npm run dev -- --port ${DEV_PORT} --host`,
+      url: `http://127.0.0.1:${DEV_PORT}`,
       reuseExistingServer: true,
-      timeout: 420_000,
+      timeout: 120_000,
     }
   }
 
-  // Production build + preview server — measures real bundled performance
+  // Production build + preview server — measures real bundled performance.
+  // Uses --host so vite binds on all interfaces (CI runners may resolve
+  // localhost to ::1 while vite only listens on 127.0.0.1 by default).
   return {
-    command: `npm run build && npx vite preview --port ${PREVIEW_PORT}`,
-    url: `http://localhost:${PREVIEW_PORT}`,
+    command: `npm run build && npx vite preview --port ${PREVIEW_PORT} --host`,
+    url: `http://127.0.0.1:${PREVIEW_PORT}`,
     reuseExistingServer: true,
-    timeout: 420_000,
+    timeout: 120_000,
   }
 }
 
@@ -50,7 +52,7 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${port}`,
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${port}`,
     viewport: { width: 1280, height: 900 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

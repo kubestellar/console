@@ -38,6 +38,7 @@ function percentile(values, pct) {
 
 for (const mode of modes) {
   const modeCards = cards.filter((c) => c.mode === mode)
+  if (modeCards.length === 0) continue // mode was skipped (e.g. live modes in CI)
   const budget = baseline.budgets?.[mode]
   if (!budget) {
     failures.push(`Missing budget for mode ${mode}`)
