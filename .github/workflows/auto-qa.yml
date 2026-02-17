@@ -220,8 +220,8 @@ jobs:
             LINES=$(wc -l < "$f")
             if [ "$LINES" -gt 300 ]; then
               BASENAME=$(basename "$f")
-              # Check if it's already lazy-loaded
-              LAZY=$(grep -rl "React.lazy.*${BASENAME%.*}" src/ 2>/dev/null | wc -l || echo "0")
+              # Check if it's already lazy-loaded (matches both React.lazy and lazy patterns)
+              LAZY=$(grep -rl -E "(React\.)?lazy.*${BASENAME%.*}" src/ 2>/dev/null | wc -l || echo "0")
               if [ "$LAZY" -eq 0 ]; then
                 ISSUES="${ISSUES}  - \`${f}\` (${LINES} lines) — not lazy-loaded\n"
               fi
