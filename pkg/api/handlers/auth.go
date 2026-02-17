@@ -27,6 +27,8 @@ const (
 	jwtExpiration = 24 * time.Hour
 	// githubHTTPTimeout is the timeout for HTTP requests to the GitHub API during auth.
 	githubHTTPTimeout = 10 * time.Second
+	// defaultOAuthCallbackURL is the fallback OAuth callback when no backend URL is configured.
+	defaultOAuthCallbackURL = "http://localhost:8080/auth/github/callback"
 )
 
 // oauthStateStore stores OAuth state tokens server-side (Safari blocks cookies in OAuth flows)
@@ -98,7 +100,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	} else if cfg.FrontendURL != "" {
 		// Fallback: derive backend URL from frontend URL (replace port)
 		// Frontend: http://localhost:5174 -> Backend: http://localhost:8080
-		redirectURL = "http://localhost:8080/auth/github/callback"
+		redirectURL = defaultOAuthCallbackURL
 	}
 
 	return &AuthHandler{

@@ -28,9 +28,11 @@ import (
 )
 
 const (
-	serverShutdownTimeout = 30 * time.Second
-	serverHealthTimeout   = 2 * time.Second
-	serverStartupDelay    = 50 * time.Millisecond
+	serverShutdownTimeout  = 30 * time.Second
+	serverHealthTimeout    = 2 * time.Second
+	serverStartupDelay     = 50 * time.Millisecond
+	defaultDevFrontendURL  = "http://localhost:5174"
+	defaultProdFrontendURL = "http://localhost:8080"
 )
 
 // Version is the build version, injected via ldflags at build time.
@@ -91,9 +93,9 @@ func NewServer(cfg Config) (*Server, error) {
 	// Compute default frontend URL if not explicitly set
 	if cfg.FrontendURL == "" {
 		if cfg.DevMode {
-			cfg.FrontendURL = "http://localhost:5174"
+			cfg.FrontendURL = defaultDevFrontendURL
 		} else {
-			cfg.FrontendURL = "http://localhost:8080"
+			cfg.FrontendURL = defaultProdFrontendURL
 		}
 	}
 

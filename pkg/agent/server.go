@@ -30,7 +30,8 @@ const (
 	stabilizationDelay   = 3 * time.Second
 	startupDelay         = 500 * time.Millisecond
 	metricsHistoryTick   = 10 * time.Minute
-	agentFileMode        = 0600
+	agentFileMode           = 0600
+	defaultHealthCheckURL   = "http://127.0.0.1:8080/health"
 )
 
 // Version is set by ldflags during build
@@ -1270,7 +1271,7 @@ func (s *Server) startBackendProcess() error {
 // checkBackendHealth verifies the backend is responding on port 8080
 func (s *Server) checkBackendHealth() bool {
 	client := &http.Client{Timeout: healthCheckTimeout}
-	resp, err := client.Get("http://127.0.0.1:8080/health")
+	resp, err := client.Get(defaultHealthCheckURL)
 	if err != nil {
 		return false
 	}
