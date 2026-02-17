@@ -953,6 +953,21 @@ func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientse
 	return client, nil
 }
 
+// GetRestConfig returns the REST config for the specified cluster context.
+// Ensures the client (and config) is initialized first by calling GetClient.
+func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, error) {
+	if _, err := m.GetClient(contextName); err != nil {
+		return nil, err
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	config, ok := m.configs[contextName]
+	if !ok {
+		return nil, fmt.Errorf("no config for context %s", contextName)
+	}
+	return rest.CopyConfig(config), nil
+}
+
 // GetDynamicClient returns a dynamic kubernetes client for the specified context
 func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Interface, error) {
 	m.mu.RLock()

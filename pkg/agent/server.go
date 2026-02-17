@@ -291,7 +291,10 @@ func (s *Server) Start() error {
 	// Backend process management
 	mux.HandleFunc("/restart-backend", s.handleRestartBackend)
 
-	// Prometheus metrics endpoint
+	// Prometheus query proxy - queries Prometheus in user clusters via K8s API server proxy
+	mux.HandleFunc("/prometheus/query", s.handlePrometheusQuery)
+
+	// Prometheus metrics endpoint (agent's own metrics)
 	mux.Handle("/metrics", GetMetricsHandler())
 
 	// WebSocket endpoint

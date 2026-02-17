@@ -12,6 +12,7 @@ import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 
@@ -516,6 +517,12 @@ export function EPPRouting() {
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
+  // Prometheus metrics for the selected stack (null when unavailable or no stack)
+  const { metrics: prometheusMetrics } = usePrometheusMetrics(
+    selectedStack?.cluster,
+    selectedStack?.namespace,
+  )
+
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
@@ -651,15 +658,57 @@ export function EPPRouting() {
     })
   }
 
-  // Simulate metrics updates
+  // Build node-id → pod-name mapping for Prometheus lookups
+  const nodePodMap = useMemo((): Record<string, string[]> => {
+    if (!selectedStack) return {}
+    const map: Record<string, string[]> = {}
+    let pi = 0
+    for (const comp of selectedStack.components.prefill) {
+      for (let r = 0; r < comp.replicas; r++) {
+        const podName = comp.podNames?.[r]
+        if (podName) map[`prefill-${pi}`] = [podName]
+        pi++
+      }
+    }
+    let di = 0
+    for (const comp of selectedStack.components.decode) {
+      for (let r = 0; r < comp.replicas; r++) {
+        const podName = comp.podNames?.[r]
+        if (podName) map[`decode-${di}`] = [podName]
+        di++
+      }
+    }
+    let si = 0
+    for (const comp of selectedStack.components.both) {
+      for (let r = 0; r < comp.replicas; r++) {
+        const podName = comp.podNames?.[r]
+        if (podName) map[`server-${si}`] = [podName]
+        si++
+      }
+    }
+    return map
+  }, [selectedStack])
+
+  // Update metrics — uses Prometheus when available, falls back to simulated
   useEffect(() => {
     const updateMetrics = () => {
       const newMetrics: Record<string, { load: number; rps: number }> = {}
       dynamicNodes.forEach(node => {
         if (node.type !== 'source') {
-          newMetrics[node.id] = {
-            load: Math.floor(40 + Math.random() * 50),
-            rps: Math.floor(80 + Math.random() * 150),
+          // Try to get real metrics from Prometheus
+          const pods = nodePodMap[node.id]
+          const pod = pods?.[0]
+          const prom = pod && prometheusMetrics?.[pod]
+          if (prom) {
+            newMetrics[node.id] = {
+              load: Math.round(prom.kvCacheUsage * 100),
+              rps: Math.round(prom.throughputTps),
+            }
+          } else {
+            newMetrics[node.id] = {
+              load: Math.floor(40 + Math.random() * 50),
+              rps: Math.floor(80 + Math.random() * 150),
+            }
           }
         }
       })
@@ -684,7 +733,7 @@ export function EPPRouting() {
     updateMetrics()
     const interval = setInterval(updateMetrics, 2000)
     return () => clearInterval(interval)
-  }, [dynamicNodes])
+  }, [dynamicNodes, nodePodMap, prometheusMetrics])
 
   // Get current node with live metrics (skip ghost nodes)
   const getNodeWithMetrics = useCallback((node: FlowNode): FlowNode => {

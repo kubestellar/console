@@ -12,6 +12,7 @@ import { Split, ArrowRight, Cpu, Zap, Clock, Activity, AlertCircle } from 'lucid
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 
@@ -181,6 +182,12 @@ export function PDDisaggregation() {
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
+  // Prometheus metrics for the selected stack (null when unavailable or no stack)
+  const { metrics: prometheusMetrics } = usePrometheusMetrics(
+    selectedStack?.cluster,
+    selectedStack?.namespace,
+  )
+
   // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()
 
@@ -191,7 +198,7 @@ export function PDDisaggregation() {
   const [servers, setServers] = useState<ServerStats[]>([])
   const [packets, setPackets] = useState<TransferPacket[]>([])
 
-  // Build server stats from stack or use demo data
+  // Build server stats from stack or use demo data, using Prometheus when available
   const stackServers = useMemo((): ServerStats[] => {
     // Only show demo servers if demo mode is ON
     if (!selectedStack && isDemoMode) {
@@ -209,15 +216,17 @@ export function PDDisaggregation() {
     let prefillIndex = 0
     for (const comp of selectedStack.components.prefill) {
       for (let i = 0; i < comp.replicas; i++) {
+        const podName = comp.podNames?.[i]
+        const prom = podName && prometheusMetrics?.[podName]
         stats.push({
           id: `prefill-${prefillIndex}`,
           name: `Prefill-${prefillIndex}`,
           type: 'prefill',
-          load: Math.round(60 + wave * 15 + Math.random() * 10),
-          queueDepth: Math.round(2 + Math.random() * 4),
-          throughput: Math.round(100 + wave * 20 + Math.random() * 30),
-          latencyMs: Math.round(40 + wave * 10 + Math.random() * 10),
-          gpuMemory: Math.round(70 + wave * 10 + Math.random() * 10),
+          load: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(60 + wave * 15 + Math.random() * 10),
+          queueDepth: prom ? Math.round(prom.requestsWaiting) : Math.round(2 + Math.random() * 4),
+          throughput: prom ? Math.round(prom.throughputTps) : Math.round(100 + wave * 20 + Math.random() * 30),
+          latencyMs: prom ? Math.round(prom.ttftP50 * 1000) : Math.round(40 + wave * 10 + Math.random() * 10),
+          gpuMemory: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(70 + wave * 10 + Math.random() * 10),
         })
         prefillIndex++
       }
@@ -227,22 +236,24 @@ export function PDDisaggregation() {
     let decodeIndex = 0
     for (const comp of selectedStack.components.decode) {
       for (let i = 0; i < comp.replicas; i++) {
+        const podName = comp.podNames?.[i]
+        const prom = podName && prometheusMetrics?.[podName]
         stats.push({
           id: `decode-${decodeIndex}`,
           name: `Decode-${decodeIndex}`,
           type: 'decode',
-          load: Math.round(45 + wave * 10 + Math.random() * 10),
-          queueDepth: Math.round(1 + Math.random() * 2),
-          throughput: Math.round(160 + wave * 25 + Math.random() * 30),
-          latencyMs: Math.round(6 + wave * 2 + Math.random() * 3),
-          gpuMemory: Math.round(80 + wave * 8 + Math.random() * 10),
+          load: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(45 + wave * 10 + Math.random() * 10),
+          queueDepth: prom ? Math.round(prom.requestsWaiting) : Math.round(1 + Math.random() * 2),
+          throughput: prom ? Math.round(prom.throughputTps) : Math.round(160 + wave * 25 + Math.random() * 30),
+          latencyMs: prom ? Math.round(prom.tpotP50 * 1000) : Math.round(6 + wave * 2 + Math.random() * 3),
+          gpuMemory: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(80 + wave * 8 + Math.random() * 10),
         })
         decodeIndex++
       }
     }
 
     return stats
-  }, [selectedStack, isDemoMode])
+  }, [selectedStack, isDemoMode, prometheusMetrics])
 
   // Check if stack has disaggregation
   const hasDisaggregation = selectedStack?.hasDisaggregation ??

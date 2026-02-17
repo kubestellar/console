@@ -14,6 +14,7 @@ import { generateKVCacheStats, type KVCacheStats } from '../../../lib/llmd/mockD
 import { HorseshoeGauge } from './shared/HorseshoeGauge'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 
@@ -263,10 +264,28 @@ export function KVCacheMonitor() {
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
+  // Prometheus metrics for the selected stack (null when unavailable or no stack)
+  const { metrics: prometheusMetrics } = usePrometheusMetrics(
+    selectedStack?.cluster,
+    selectedStack?.namespace,
+  )
+
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
-  // Generate stats from stack data or demo
+  // Helper: get average KV cache usage from Prometheus for a set of pods
+  const getPromKVCache = useCallback((podNames?: string[]) => {
+    if (!prometheusMetrics || !podNames?.length) return null
+    const matched = podNames.filter(p => prometheusMetrics[p])
+    if (matched.length === 0) return null
+    const avg = (fn: (p: string) => number) =>
+      matched.reduce((sum, p) => sum + fn(p), 0) / matched.length
+    return {
+      utilization: avg(p => prometheusMetrics[p].kvCacheUsage * 100),
+    }
+  }, [prometheusMetrics])
+
+  // Generate stats from stack data or demo, using Prometheus when available
   const generateStats = useCallback((): KVCacheStats[] => {
     // Only show demo data if demo mode is ON
     if (!selectedStack && isDemoMode) {
@@ -290,10 +309,13 @@ export function KVCacheMonitor() {
 
       // Aggregate prefill (if any)
       if (prefillComps.length > 0) {
+        const allPods = prefillComps.flatMap(c => c.podNames || [])
+        const prom = getPromKVCache(allPods)
         const totalReplicas = prefillComps.reduce((sum, c) => sum + Math.max(c.replicas || 1, c.readyReplicas || 0, 1), 0)
         const totalCapacity = totalReplicas * 80 // H100
-        const baseUtil = 55 + Math.random() * 25 + wave * 10
-        const util = Math.round(Math.min(baseUtil, 95))
+        const util = prom
+          ? Math.round(Math.min(prom.utilization, 100))
+          : Math.round(Math.min(55 + Math.random() * 25 + wave * 10, 95))
         stackStats.push({
           podName: `Prefill (${totalReplicas})`,
           cluster: selectedStack.cluster,
@@ -309,10 +331,13 @@ export function KVCacheMonitor() {
 
       // Aggregate decode (if any)
       if (decodeComps.length > 0) {
+        const allPods = decodeComps.flatMap(c => c.podNames || [])
+        const prom = getPromKVCache(allPods)
         const totalReplicas = decodeComps.reduce((sum, c) => sum + Math.max(c.replicas || 1, c.readyReplicas || 0, 1), 0)
         const totalCapacity = totalReplicas * 80
-        const baseUtil = 45 + Math.random() * 20 + wave * 8
-        const util = Math.round(Math.min(baseUtil, 90))
+        const util = prom
+          ? Math.round(Math.min(prom.utilization, 100))
+          : Math.round(Math.min(45 + Math.random() * 20 + wave * 8, 90))
         stackStats.push({
           podName: `Decode (${totalReplicas})`,
           cluster: selectedStack.cluster,
@@ -328,10 +353,13 @@ export function KVCacheMonitor() {
 
       // Aggregate unified (if any)
       if (unifiedComps.length > 0) {
+        const allPods = unifiedComps.flatMap(c => c.podNames || [])
+        const prom = getPromKVCache(allPods)
         const totalReplicas = unifiedComps.reduce((sum, c) => sum + Math.max(c.replicas || 1, c.readyReplicas || 0, 1), 0)
         const totalCapacity = totalReplicas * 48
-        const baseUtil = 50 + Math.random() * 25 + wave * 10
-        const util = Math.round(Math.min(baseUtil, 92))
+        const util = prom
+          ? Math.round(Math.min(prom.utilization, 100))
+          : Math.round(Math.min(50 + Math.random() * 25 + wave * 10, 92))
         stackStats.push({
           podName: `Unified (${totalReplicas})`,
           cluster: selectedStack.cluster,
@@ -350,13 +378,17 @@ export function KVCacheMonitor() {
       selectedStack.components.prefill.forEach((comp) => {
         const replicaCount = Math.max(comp.replicas || 1, comp.readyReplicas || 0, 1)
         for (let r = 0; r < replicaCount; r++) {
-          const baseUtil = 55 + Math.random() * 25 + wave * 10
+          const podName = comp.podNames?.[r]
+          const prom = podName && prometheusMetrics?.[podName]
           const capacity = 80 // H100 GPU memory
+          const baseUtil = prom
+            ? prom.kvCacheUsage * 100
+            : 55 + Math.random() * 25 + wave * 10
           stackStats.push({
             podName: `P-${comp.name.slice(0, 6)}-${r}`,
             cluster: selectedStack.cluster,
             namespace: selectedStack.namespace,
-            utilizationPercent: Math.round(Math.min(baseUtil, 95)),
+            utilizationPercent: Math.round(Math.min(baseUtil, prom ? 100 : 95)),
             totalCapacityGB: capacity,
             usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
             hitRate: 0.88 + Math.random() * 0.08,
@@ -370,13 +402,17 @@ export function KVCacheMonitor() {
       selectedStack.components.decode.forEach((comp) => {
         const replicaCount = Math.max(comp.replicas || 1, comp.readyReplicas || 0, 1)
         for (let r = 0; r < replicaCount; r++) {
-          const baseUtil = 45 + Math.random() * 20 + wave * 8
+          const podName = comp.podNames?.[r]
+          const prom = podName && prometheusMetrics?.[podName]
           const capacity = 80
+          const baseUtil = prom
+            ? prom.kvCacheUsage * 100
+            : 45 + Math.random() * 20 + wave * 8
           stackStats.push({
             podName: `D-${comp.name.slice(0, 6)}-${r}`,
             cluster: selectedStack.cluster,
             namespace: selectedStack.namespace,
-            utilizationPercent: Math.round(Math.min(baseUtil, 90)),
+            utilizationPercent: Math.round(Math.min(baseUtil, prom ? 100 : 90)),
             totalCapacityGB: capacity,
             usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
             hitRate: 0.92 + Math.random() * 0.06,
@@ -390,13 +426,17 @@ export function KVCacheMonitor() {
       selectedStack.components.both.forEach((comp) => {
         const replicaCount = Math.max(comp.replicas || 1, comp.readyReplicas || 0, 1)
         for (let r = 0; r < replicaCount; r++) {
-          const baseUtil = 50 + Math.random() * 25 + wave * 10
+          const podName = comp.podNames?.[r]
+          const prom = podName && prometheusMetrics?.[podName]
           const capacity = 48
+          const baseUtil = prom
+            ? prom.kvCacheUsage * 100
+            : 50 + Math.random() * 25 + wave * 10
           stackStats.push({
             podName: `U-${comp.name.slice(0, 6)}-${r}`,
             cluster: selectedStack.cluster,
             namespace: selectedStack.namespace,
-            utilizationPercent: Math.round(Math.min(baseUtil, 92)),
+            utilizationPercent: Math.round(Math.min(baseUtil, prom ? 100 : 92)),
             totalCapacityGB: capacity,
             usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
             hitRate: 0.85 + Math.random() * 0.10,
@@ -408,7 +448,7 @@ export function KVCacheMonitor() {
     }
 
     return stackStats
-  }, [selectedStack, isDemoMode, aggregationMode])
+  }, [selectedStack, isDemoMode, aggregationMode, getPromKVCache, prometheusMetrics])
 
   // Handle gauge click - calculate portal position
   const handleGaugeClick = (podName: string, element: HTMLDivElement | null) => {

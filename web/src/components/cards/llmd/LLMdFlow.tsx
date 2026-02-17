@@ -13,6 +13,7 @@ import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/moc
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 
@@ -581,6 +582,12 @@ export function LLMdFlow() {
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
+  // Prometheus metrics for the selected stack (null when unavailable or no stack)
+  const { metrics: prometheusMetrics } = usePrometheusMetrics(
+    selectedStack?.cluster,
+    selectedStack?.namespace,
+  )
+
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
@@ -758,7 +765,22 @@ export function LLMdFlow() {
     })
   }
 
-  // Generate metrics based on stack data
+  // Helper: get average Prometheus metric across pods matching a component
+  const getPromMetrics = useCallback((podNames?: string[]) => {
+    if (!prometheusMetrics || !podNames?.length) return null
+    const matched = podNames.filter(p => prometheusMetrics[p])
+    if (matched.length === 0) return null
+    const avg = (fn: (p: string) => number) =>
+      matched.reduce((sum, p) => sum + fn(p), 0) / matched.length
+    return {
+      load: Math.round(avg(p => prometheusMetrics[p].kvCacheUsage * 100)),
+      queueDepth: Math.round(avg(p => prometheusMetrics[p].requestsWaiting)),
+      activeConnections: Math.round(avg(p => prometheusMetrics[p].requestsRunning)),
+      throughputTps: Math.round(avg(p => prometheusMetrics[p].throughputTps)),
+    }
+  }, [prometheusMetrics])
+
+  // Generate metrics based on stack data, using Prometheus when available
   const generateLiveMetrics = useCallback((): ServerMetrics[] => {
     // Only show demo metrics if demo mode is ON
     if (!selectedStack && isDemoMode) {
@@ -773,7 +795,7 @@ export function LLMdFlow() {
     const wave = Math.sin(now / 5000)
     const metrics: ServerMetrics[] = []
 
-    // Gateway metrics
+    // Gateway metrics (no vLLM metrics — always simulated)
     if (selectedStack.components.gateway) {
       metrics.push({
         name: 'Istio Gateway',
@@ -786,7 +808,7 @@ export function LLMdFlow() {
       })
     }
 
-    // EPP metrics
+    // EPP metrics (no vLLM metrics — always simulated)
     if (selectedStack.components.epp) {
       metrics.push({
         name: 'EPP Scheduler',
@@ -802,47 +824,50 @@ export function LLMdFlow() {
     // Prefill metrics
     selectedStack.components.prefill.forEach((comp, i) => {
       const isHealthy = comp.readyReplicas > 0
+      const prom = getPromMetrics(comp.podNames)
       metrics.push({
         name: `Prefill-${i}`,
         type: 'prefill',
-        status: isHealthy ? (wave > 0.3 ? 'healthy' : 'degraded') : 'unhealthy',
-        load: Math.round((isHealthy ? 60 : 10) + wave * 20 + Math.random() * 10),
-        queueDepth: Math.round(2 + Math.random() * 6),
-        activeConnections: Math.round(100 + Math.random() * 20),
-        throughputRps: Math.round((isHealthy ? 100 : 10) + wave * 15),
+        status: isHealthy ? (prom ? 'healthy' : (wave > 0.3 ? 'healthy' : 'degraded')) : 'unhealthy',
+        load: prom?.load ?? Math.round((isHealthy ? 60 : 10) + wave * 20 + Math.random() * 10),
+        queueDepth: prom?.queueDepth ?? Math.round(2 + Math.random() * 6),
+        activeConnections: prom?.activeConnections ?? Math.round(100 + Math.random() * 20),
+        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 100 : 10) + wave * 15),
       })
     })
 
     // Decode metrics
     selectedStack.components.decode.forEach((comp, i) => {
       const isHealthy = comp.readyReplicas > 0
+      const prom = getPromMetrics(comp.podNames)
       metrics.push({
         name: `Decode-${i}`,
         type: 'decode',
         status: isHealthy ? 'healthy' : 'unhealthy',
-        load: Math.round((isHealthy ? 50 : 5) + wave * 15),
-        queueDepth: Math.round(1 + Math.random() * 3),
-        activeConnections: Math.round(180 + Math.random() * 30),
-        throughputRps: Math.round((isHealthy ? 180 : 10) + wave * 20),
+        load: prom?.load ?? Math.round((isHealthy ? 50 : 5) + wave * 15),
+        queueDepth: prom?.queueDepth ?? Math.round(1 + Math.random() * 3),
+        activeConnections: prom?.activeConnections ?? Math.round(180 + Math.random() * 30),
+        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 180 : 10) + wave * 20),
       })
     })
 
     // Unified server metrics
     selectedStack.components.both.forEach((comp, i) => {
       const isHealthy = comp.readyReplicas > 0
+      const prom = getPromMetrics(comp.podNames)
       metrics.push({
         name: `Server-${i}`,
         type: 'prefill', // Unified servers do both
         status: isHealthy ? 'healthy' : 'unhealthy',
-        load: Math.round((isHealthy ? 55 : 5) + wave * 18),
-        queueDepth: Math.round(2 + Math.random() * 5),
-        activeConnections: Math.round(150 + Math.random() * 25),
-        throughputRps: Math.round((isHealthy ? 150 : 10) + wave * 18),
+        load: prom?.load ?? Math.round((isHealthy ? 55 : 5) + wave * 18),
+        queueDepth: prom?.queueDepth ?? Math.round(2 + Math.random() * 5),
+        activeConnections: prom?.activeConnections ?? Math.round(150 + Math.random() * 25),
+        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 150 : 10) + wave * 18),
       })
     })
 
     return metrics
-  }, [selectedStack, isDemoMode])
+  }, [selectedStack, isDemoMode, getPromMetrics])
 
   // Update metrics periodically and track history for all metric types
   useEffect(() => {
