@@ -133,7 +133,7 @@ jobs:
             --set googleDrive.existingSecret=kc-secrets \
             --set route.enabled=true \
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
-            --set-string enabledDashboards="dashboard,clusters,gpu-reservations,llm-d-benchmarks,ai-ml,arcade" \
+            --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
             --wait \
             --timeout 5m
 
@@ -188,7 +188,7 @@ jobs:
             --set googleDrive.existingSecret=kc-kubestellar-console \
             --set route.enabled=true \
             --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
-            --set-string enabledDashboards="dashboard,clusters,gpu-reservations,llm-d-benchmarks,ai-ml,arcade" \
+            --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
             --wait \
             --timeout 5m
 
