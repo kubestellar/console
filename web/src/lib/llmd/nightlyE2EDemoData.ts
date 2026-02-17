@@ -37,23 +37,24 @@ export interface NightlyGuideStatus {
 
 export const NIGHTLY_WORKFLOWS: NightlyWorkflowConfig[] = [
   // OCP
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache.yaml', guide: 'Precise Prefix Cache', acronym: 'PPC', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-ocp.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-ocp.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache-ocp.yaml', guide: 'Precise Prefix Cache', acronym: 'PPC', platform: 'OCP' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-simulated-accelerators.yaml', guide: 'Simulated Accelerators', acronym: 'SA', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-tiered-prefix-cache.yaml', guide: 'Tiered Prefix Cache', acronym: 'TPC', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'OCP' },
-  { repo: 'llm-d/llm-d-workload-variant-autoscaler', workflowFile: 'nightly-e2e-openshift.yaml', guide: 'WVA', acronym: 'WVA', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-tiered-prefix-cache-ocp.yaml', guide: 'Tiered Prefix Cache', acronym: 'TPC', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-ocp.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-ocp.yaml', guide: 'WVA', acronym: 'WVA', platform: 'OCP' },
+  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-ocp.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'OCP' },
   // GKE
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'GKE' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'GKE' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-gke.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'GKE' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking-gke.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'GKE' },
-  // CKS (same tests as GKE — workflows not yet created)
+  // CKS
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-cks.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'CKS' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-cks.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'CKS' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-cks.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'CKS' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-cks.yaml', guide: 'WVA', acronym: 'WVA', platform: 'CKS' },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking-cks.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'CKS' },
 ]
 

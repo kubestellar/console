@@ -29,23 +29,24 @@ const PLATFORM_COLORS: Record<string, string> = {
 /** Static metadata per workflow — model, GPU type, GPU count used in nightly runs */
 const WORKFLOW_META: Record<string, { model: string; gpuType: string; gpuCount: number }> = {
   // OCP
-  'nightly-e2e-inference-scheduling.yaml':   { model: 'Qwen3-32B',       gpuType: 'A100', gpuCount: 2 },
-  'nightly-e2e-pd-disaggregation.yaml':      { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
-  'nightly-e2e-precise-prefix-cache.yaml':   { model: 'Qwen3-32B',       gpuType: 'A100', gpuCount: 2 },
-  'nightly-e2e-simulated-accelerators.yaml': { model: 'Simulated',       gpuType: 'CPU',  gpuCount: 0 },
-  'nightly-e2e-tiered-prefix-cache.yaml':    { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
-  'nightly-e2e-wide-ep-lws.yaml':            { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
-  'nightly-e2e-openshift.yaml':              { model: 'Llama-3.1-8B',    gpuType: 'A100', gpuCount: 2 },
-  'ci-nighly-benchmark-ocp.yaml':            { model: 'opt-125m',        gpuType: 'A100', gpuCount: 1 },
+  'nightly-e2e-inference-scheduling-ocp.yaml': { model: 'Qwen3-32B',       gpuType: 'A100', gpuCount: 2 },
+  'nightly-e2e-pd-disaggregation-ocp.yaml':    { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
+  'nightly-e2e-precise-prefix-cache-ocp.yaml': { model: 'Qwen3-32B',       gpuType: 'A100', gpuCount: 2 },
+  'nightly-e2e-simulated-accelerators.yaml':   { model: 'Simulated',       gpuType: 'CPU',  gpuCount: 0 },
+  'nightly-e2e-tiered-prefix-cache-ocp.yaml':  { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
+  'nightly-e2e-wide-ep-lws-ocp.yaml':          { model: 'Qwen3-0.6B',      gpuType: 'A100', gpuCount: 1 },
+  'nightly-e2e-wva-ocp.yaml':                  { model: 'Llama-3.1-8B',    gpuType: 'A100', gpuCount: 2 },
+  'ci-nighly-benchmark-ocp.yaml':              { model: 'opt-125m',        gpuType: 'A100', gpuCount: 1 },
   // GKE
   'nightly-e2e-inference-scheduling-gke.yaml': { model: 'Qwen3-32B',     gpuType: 'L4',   gpuCount: 2 },
   'nightly-e2e-pd-disaggregation-gke.yaml':   { model: 'Qwen3-0.6B',    gpuType: 'L4',   gpuCount: 1 },
   'nightly-e2e-wide-ep-lws-gke.yaml':         { model: 'DeepSeek-R1',    gpuType: 'L4',   gpuCount: 8 },
   'ci-nighly-benchmark-gke.yaml':             { model: 'Llama-3.2-1B',   gpuType: 'H100', gpuCount: 1 },
-  // CKS (workflows not yet created)
-  'nightly-e2e-inference-scheduling-cks.yaml': { model: 'Qwen3-32B',     gpuType: 'TBD',  gpuCount: 2 },
-  'nightly-e2e-pd-disaggregation-cks.yaml':   { model: 'Qwen3-0.6B',    gpuType: 'TBD',  gpuCount: 1 },
-  'nightly-e2e-wide-ep-lws-cks.yaml':         { model: 'Qwen3-0.6B',    gpuType: 'TBD',  gpuCount: 1 },
+  // CKS
+  'nightly-e2e-inference-scheduling-cks.yaml': { model: 'Qwen3-32B',     gpuType: 'H100', gpuCount: 2 },
+  'nightly-e2e-pd-disaggregation-cks.yaml':   { model: 'Qwen3-0.6B',    gpuType: 'H100', gpuCount: 1 },
+  'nightly-e2e-wide-ep-lws-cks.yaml':         { model: 'Qwen3-0.6B',    gpuType: 'H100', gpuCount: 1 },
+  'nightly-e2e-wva-cks.yaml':                 { model: 'Llama-3.1-8B',  gpuType: 'H100', gpuCount: 2 },
   'nightly-e2e-benchmarking-cks.yaml':         { model: 'TBD',           gpuType: 'TBD',  gpuCount: 0 },
 }
 
