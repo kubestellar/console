@@ -104,6 +104,10 @@ let enabledDashboardsFetched = false
 // IDs that cannot be removed by the user
 export const PROTECTED_SIDEBAR_IDS = ['dashboard', 'clusters', 'deploy']
 
+export function getEnabledDashboardIds(): string[] | null {
+  return enabledDashboardIds
+}
+
 function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
   if (!enabledDashboardIds) return config
   const enabledSet = new Set(enabledDashboardIds)
@@ -127,7 +131,7 @@ function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
   }
 }
 
-async function fetchEnabledDashboards(): Promise<void> {
+export async function fetchEnabledDashboards(): Promise<void> {
   if (enabledDashboardsFetched) return
   enabledDashboardsFetched = true
   try {

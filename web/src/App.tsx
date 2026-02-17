@@ -21,6 +21,7 @@ import { prefetchCardData } from './lib/prefetchCardData'
 import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
+import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
 
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
@@ -66,46 +67,64 @@ const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m =>
 const UnifiedDashboardTest = lazy(() => import('./pages/UnifiedDashboardTest').then(m => ({ default: m.UnifiedDashboardTest })))
 const AllCardsPerfTest = lazy(() => import('./pages/AllCardsPerfTest').then(m => ({ default: m.AllCardsPerfTest })))
 
-// Prefetch all lazy route chunks after initial page load.
+// Dashboard ID → chunk import map for selective prefetching.
+// Only chunks for enabled dashboards are prefetched; disabled ones
+// still lazy-load on demand if the user navigates directly via URL.
+const DASHBOARD_CHUNKS: Record<string, () => Promise<unknown>> = {
+  'dashboard': () => import('./components/dashboard/Dashboard'),
+  'clusters': () => import('./components/clusters/Clusters'),
+  'workloads': () => import('./components/workloads/Workloads'),
+  'compute': () => import('./components/compute/Compute'),
+  'events': () => import('./components/events/Events'),
+  'nodes': () => import('./components/nodes/Nodes'),
+  'deployments': () => import('./components/deployments/Deployments'),
+  'pods': () => import('./components/pods/Pods'),
+  'services': () => import('./components/services/Services'),
+  'storage': () => import('./components/storage/Storage'),
+  'network': () => import('./components/network/Network'),
+  'security': () => import('./components/security/Security'),
+  'gitops': () => import('./components/gitops/GitOps'),
+  'alerts': () => import('./components/alerts/Alerts'),
+  'cost': () => import('./components/cost/Cost'),
+  'compliance': () => import('./components/compliance/Compliance'),
+  'operators': () => import('./components/operators/Operators'),
+  'helm': () => import('./components/helm/HelmReleases'),
+  'settings': () => import('./components/settings/Settings'),
+  'gpu-reservations': () => import('./components/gpu/GPUReservations'),
+  'data-compliance': () => import('./components/data-compliance/DataCompliance'),
+  'logs': () => import('./components/logs/Logs'),
+  'arcade': () => import('./components/arcade/Arcade'),
+  'deploy': () => import('./components/deploy/Deploy'),
+  'ai-ml': () => import('./components/aiml/AIML'),
+  'ai-agents': () => import('./components/aiagents/AIAgents'),
+  'llm-d-benchmarks': () => import('./components/llmd-benchmarks/LLMdBenchmarks'),
+  'cluster-admin': () => import('./components/cluster-admin/ClusterAdmin'),
+  'ci-cd': () => import('./components/cicd/CICD'),
+  'marketplace': () => import('./components/marketplace/Marketplace'),
+}
+
+// Dashboard always prefetched (it's the home page)
+const ALWAYS_PREFETCH = new Set(['dashboard'])
+
+// Prefetch lazy route chunks after initial page load.
 // Batched to avoid overwhelming the Vite dev server with simultaneous
 // module transformation requests (which delays navigation on cold start).
 if (typeof window !== 'undefined') {
   const PREFETCH_BATCH_SIZE = 5
   const PREFETCH_BATCH_DELAY = 100
 
-  const prefetchRoutes = () => {
-    const chunks = [
-      () => import('./components/dashboard/Dashboard'),
-      () => import('./components/clusters/Clusters'),
-      () => import('./components/workloads/Workloads'),
-      () => import('./components/compute/Compute'),
-      () => import('./components/events/Events'),
-      () => import('./components/nodes/Nodes'),
-      () => import('./components/deployments/Deployments'),
-      () => import('./components/pods/Pods'),
-      () => import('./components/services/Services'),
-      () => import('./components/storage/Storage'),
-      () => import('./components/network/Network'),
-      () => import('./components/security/Security'),
-      () => import('./components/gitops/GitOps'),
-      () => import('./components/alerts/Alerts'),
-      () => import('./components/cost/Cost'),
-      () => import('./components/compliance/Compliance'),
-      () => import('./components/operators/Operators'),
-      () => import('./components/helm/HelmReleases'),
-      () => import('./components/settings/Settings'),
-      () => import('./components/gpu/GPUReservations'),
-      () => import('./components/data-compliance/DataCompliance'),
-      () => import('./components/logs/Logs'),
-      () => import('./components/arcade/Arcade'),
-      () => import('./components/deploy/Deploy'),
-      () => import('./components/aiml/AIML'),
-      () => import('./components/aiagents/AIAgents'),
-      () => import('./components/llmd-benchmarks/LLMdBenchmarks'),
-      () => import('./components/cluster-admin/ClusterAdmin'),
-      () => import('./components/cicd/CICD'),
-      () => import('./components/marketplace/Marketplace'),
-    ]
+  const prefetchRoutes = async () => {
+    // Wait for the enabled dashboards list from /health so we only
+    // prefetch chunks the user will actually see.
+    await fetchEnabledDashboards()
+    const enabledIds = getEnabledDashboardIds()
+
+    // null = show all dashboards, otherwise only enabled + always-needed
+    const chunks = enabledIds
+      ? Object.entries(DASHBOARD_CHUNKS)
+          .filter(([id]) => enabledIds.includes(id) || ALWAYS_PREFETCH.has(id))
+          .map(([, load]) => load)
+      : Object.values(DASHBOARD_CHUNKS)
 
     if (isDemoMode()) {
       // Demo mode: fire all immediately (synchronous data, no server load)
