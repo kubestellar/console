@@ -23,6 +23,7 @@
     "test:e2e:perf": "playwright test --config e2e/perf/perf.config.ts e2e/perf/dashboard-perf.spec.ts",
     "test:e2e:perf:ttfi": "playwright test --config e2e/perf/perf.config.ts e2e/perf/all-cards-ttfi.spec.ts",
     "test:e2e:perf:ttfi:gate": "npm run test:e2e:perf:ttfi && node e2e/perf/compare-ttfi.mjs",
+    "test:e2e:perf:nav": "playwright test --config e2e/perf/perf.config.ts e2e/perf/dashboard-nav.spec.ts",
     "test:e2e:ui-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/card-loading-compliance.spec.ts",
     "test:e2e:ui-compliance:gate": "npm run test:e2e:ui-compliance && node e2e/compliance/compare-compliance.mjs",
     "test:e2e:coverage": "./scripts/run-e2e-coverage.sh",

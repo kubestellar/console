@@ -309,7 +309,9 @@ async function setupLiveMocks(page: Page) {
     })
   )
 
-  // kc-agent (port 8585)
+  // kc-agent (port 8585) — must return 200 for /health so AgentManager stays
+  // 'connected'. Other endpoints return valid empty data so hooks complete
+  // their fetch cycle instead of forcing skeleton state via forceSkeletonForOffline.
   await page.route('http://127.0.0.1:8585/**', (route) => {
     const url = route.request().url()
     if (url.endsWith('/health') || url.includes('/health?')) {
@@ -318,9 +320,17 @@ async function setupLiveMocks(page: Page) {
         contentType: 'application/json',
         body: JSON.stringify({ status: 'ok', version: 'perf-test', clusters: 1, hasClaude: false }),
       })
-    } else {
-      route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
+      return
     }
+    if (url.includes('/settings')) {
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+      return
+    }
+    if (url.includes('/clusters')) {
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      return
+    }
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
 
   // WebSocket
