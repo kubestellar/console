@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { api, checkBackendAvailability, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
+import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
 
 interface User {
   id: string
@@ -24,7 +25,7 @@ interface AuthContextType {
   refreshUser: (overrideToken?: string) => Promise<void>
 }
 
-const AUTH_USER_CACHE_KEY = 'kc-user-cache'
+const AUTH_USER_CACHE_KEY = STORAGE_KEY_USER_CACHE
 
 function getCachedUser(): User | null {
   try {
@@ -48,15 +49,15 @@ const AuthContext = createContext<AuthContextType | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getCachedUser)
   const [token, setTokenState] = useState<string | null>(() =>
-    localStorage.getItem('token')
+    localStorage.getItem(STORAGE_KEY_TOKEN)
   )
   // Skip loading if we have both a token and a cached user (stale-while-revalidate)
   const [isLoading, setIsLoading] = useState(() => {
-    return !!localStorage.getItem('token') && !getCachedUser()
+    return !!localStorage.getItem(STORAGE_KEY_TOKEN) && !getCachedUser()
   })
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token')
+    localStorage.removeItem(STORAGE_KEY_TOKEN)
     cacheUser(null)
     setTokenState(null)
     setUser(null)
@@ -68,9 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isNetlifyPreview = import.meta.env.VITE_DEMO_MODE === 'true' ||
       window.location.hostname.includes('netlify.app') ||
       window.location.hostname.includes('deploy-preview-')
-    const demoOnboarded = isNetlifyPreview || localStorage.getItem('demo-user-onboarded') === 'true'
-    localStorage.setItem('token', 'demo-token')
-    setTokenState('demo-token')
+    const demoOnboarded = isNetlifyPreview || localStorage.getItem(STORAGE_KEY_ONBOARDED) === 'true'
+    localStorage.setItem(STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE)
+    setTokenState(DEMO_TOKEN_VALUE)
     const demoUser: User = {
       id: 'demo-user',
       github_id: '12345',
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const refreshUser = useCallback(async (overrideToken?: string) => {
-    const effectiveToken = overrideToken || localStorage.getItem('token')
+    const effectiveToken = overrideToken || localStorage.getItem(STORAGE_KEY_TOKEN)
     if (!effectiveToken) {
       setDemoMode()
       return
@@ -95,8 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // If the user explicitly enabled demo mode (via the toggle), keep it even if
     // the backend is available. Otherwise, clear the stale demo token so the user
     // can authenticate with a real JWT.
-    if (effectiveToken === 'demo-token') {
-      const userExplicitlyEnabledDemo = localStorage.getItem('kc-demo-mode') === 'true'
+    if (effectiveToken === DEMO_TOKEN_VALUE) {
+      const userExplicitlyEnabledDemo = localStorage.getItem(STORAGE_KEY_DEMO_MODE) === 'true'
       if (!userExplicitlyEnabledDemo) {
         const { backendUp, oauthConfigured } = await checkOAuthConfigured()
         if (backendUp) {
@@ -106,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return
           }
           // OAuth configured — clear demo token so login page appears
-          localStorage.removeItem('token')
+          localStorage.removeItem(STORAGE_KEY_TOKEN)
           cacheUser(null)
           setTokenState(null)
           setUser(null)
@@ -160,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const setToken = useCallback((newToken: string, onboarded: boolean) => {
-    localStorage.setItem('token', newToken)
+    localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
     setTokenState(newToken)
     // Set temporary user until we fetch full user data
     const tempUser: User = { id: '', github_id: '', github_login: '', onboarded }

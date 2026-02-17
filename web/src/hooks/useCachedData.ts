@@ -21,7 +21,7 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 import { fetchSSE } from '../lib/sseClient'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
-import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import type {
   PodInfo,
   PodIssue,
@@ -40,7 +40,7 @@ import type { Workload } from './useWorkloads'
 // API Fetchers
 // ============================================================================
 
-const getToken = () => localStorage.getItem('token')
+const getToken = () => localStorage.getItem(STORAGE_KEY_TOKEN)
 
 const AGENT_HTTP_TIMEOUT_MS = 5000
 

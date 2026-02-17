@@ -3,6 +3,7 @@ import { fetchSSE } from '../../lib/sseClient'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
@@ -184,7 +185,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       const url = `/api/gitops/drifts?${params}`
 
       // Skip API calls when using demo token
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       if (isDemoMode()) {
         const demoData = getDemoGitOpsDrifts()
         setDrifts(demoData)

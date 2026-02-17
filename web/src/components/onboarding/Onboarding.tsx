@@ -4,6 +4,7 @@ import { ChevronRight, ChevronLeft, Check, GripVertical, ArrowUp, ArrowDown } fr
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
+import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
 import { useTranslation } from 'react-i18next'
 
 interface Question {
@@ -118,13 +119,13 @@ export function Onboarding() {
       }))
 
       // Check if demo mode (no backend available)
-      const token = localStorage.getItem('token')
-      const isDemoMode = token === 'demo-token'
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const isDemoMode = token === DEMO_TOKEN_VALUE
 
       if (isDemoMode) {
         // Demo mode: save onboarding responses to localStorage
-        localStorage.setItem('demo-onboarding-responses', JSON.stringify(responses))
-        localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem(STORAGE_KEY_ONBOARDING_RESPONSES, JSON.stringify(responses))
+        localStorage.setItem(STORAGE_KEY_ONBOARDED, 'true')
       } else {
         // Real user: save to backend
         await api.post('/api/onboarding/responses', responses)
@@ -138,9 +139,9 @@ export function Onboarding() {
     } catch (error) {
       console.error('Failed to complete onboarding:', error)
       // For demo mode, still allow navigation even if there's an error
-      const token = localStorage.getItem('token')
-      if (token === 'demo-token') {
-        localStorage.setItem('demo-user-onboarded', 'true')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      if (token === DEMO_TOKEN_VALUE) {
+        localStorage.setItem(STORAGE_KEY_ONBOARDED, 'true')
         await refreshUser()
         navigate(ROUTES.HOME)
       }

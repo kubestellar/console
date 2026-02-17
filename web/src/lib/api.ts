@@ -1,6 +1,9 @@
 import {
   MCP_HOOK_TIMEOUT_MS,
   BACKEND_HEALTH_CHECK_TIMEOUT_MS,
+  STORAGE_KEY_TOKEN,
+  STORAGE_KEY_USER_CACHE,
+  DEMO_TOKEN_VALUE,
 } from './constants'
 
 const API_BASE = ''
@@ -40,8 +43,8 @@ function handle401(): void {
   showSessionExpiredBanner()
 
   // Clear auth state
-  localStorage.removeItem('token')
-  localStorage.removeItem('kc-user-cache')
+  localStorage.removeItem(STORAGE_KEY_TOKEN)
+  localStorage.removeItem(STORAGE_KEY_USER_CACHE)
 
   // Redirect to login after a delay so the user sees the banner
   setTimeout(() => {
@@ -238,7 +241,7 @@ class ApiClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
@@ -246,9 +249,9 @@ class ApiClient {
   }
 
   private hasToken(): boolean {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     // Demo token doesn't count as a real token for backend API calls
-    return !!token && token !== 'demo-token'
+    return !!token && token !== DEMO_TOKEN_VALUE
   }
 
   private createAbortController(timeout: number): { controller: AbortController; timeoutId: ReturnType<typeof setTimeout> } {

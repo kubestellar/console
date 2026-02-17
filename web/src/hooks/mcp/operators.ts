@@ -4,6 +4,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { fetchSSE } from '../../lib/sseClient'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import type { Operator, OperatorSubscription } from './types'
 
@@ -106,7 +107,7 @@ export function useOperators(cluster?: string) {
       setIsRefreshing(true)
 
       // Try SSE streaming first for progressive rendering
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const sseAvailable = token && token !== 'demo-token'
 
       if (sseAvailable) {
@@ -268,7 +269,7 @@ export function useOperatorSubscriptions(cluster?: string) {
       setIsRefreshing(true)
 
       // Try SSE streaming first — backend handles multi-cluster parallelism
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const sseAvailable = token && token !== 'demo-token'
 
       if (sseAvailable) {

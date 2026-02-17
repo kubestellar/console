@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
+import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
@@ -258,7 +259,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
   const org = config?.org
   // Note: Token stored in localStorage base64 encoded - decode before use
-  const encodedToken = config?.token || localStorage.getItem('github_token') || ''
+  const encodedToken = config?.token || localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN) || ''
   const token = encodedToken ? decodeToken(encodedToken) : ''
   const reposKey = useMemo(() => repos.join(','), [repos.join(',')])
 

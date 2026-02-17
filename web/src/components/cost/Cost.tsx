@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
+import { STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES } from '../../lib/constants'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -42,7 +43,7 @@ export function Cost() {
   // Read provider overrides from localStorage (same key as ClusterCosts card)
   const [providerOverrides, setProviderOverrides] = useState<Record<string, CloudProvider>>(() => {
     try {
-      const saved = localStorage.getItem('kubestellar-cluster-provider-overrides')
+      const saved = localStorage.getItem(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES)
       return saved ? JSON.parse(saved) : {}
     } catch { return {} }
   })
@@ -51,7 +52,7 @@ export function Cost() {
   useEffect(() => {
     const handleStorageChange = () => {
       try {
-        const saved = localStorage.getItem('kubestellar-cluster-provider-overrides')
+        const saved = localStorage.getItem(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES)
         setProviderOverrides(saved ? JSON.parse(saved) : {})
       } catch { /* ignore */ }
     }

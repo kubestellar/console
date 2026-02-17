@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2 } from 'lucide-react'
+import { STORAGE_KEY_GITHUB_TOKEN } from '../../../lib/constants'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -29,7 +30,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   // Load GitHub token status on mount and test existing token
   useEffect(() => {
     const loadToken = async () => {
-      const encodedToken = localStorage.getItem('github_token')
+      const encodedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
       setHasGithubToken(!!encodedToken)
       if (encodedToken) {
         const token = decodeToken(encodedToken)
@@ -125,7 +126,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 
     if (isValid) {
       // Store base64 encoded (obfuscation)
-      localStorage.setItem('github_token', encodeToken(githubToken.trim()))
+      localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(githubToken.trim()))
       window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
       setHasGithubToken(true)
       setGithubToken('')
@@ -139,7 +140,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   }
 
   const handleClearGithubToken = () => {
-    localStorage.removeItem('github_token')
+    localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN)
     setHasGithubToken(false)
     setGithubRateLimit(null)
     setGithubTokenError(null)

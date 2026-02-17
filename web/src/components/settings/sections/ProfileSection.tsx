@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { STORAGE_KEY_TOKEN } from '../../../lib/constants'
 
 interface ProfileSectionProps {
   initialEmail: string
@@ -32,7 +33,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
     setIsSaving(true)
     setError(null)
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const response = await fetch('/api/me', {
         method: 'PUT',
         headers: {

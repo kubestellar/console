@@ -17,9 +17,10 @@
  */
 
 import { clearAllRegisteredCaches } from './modeTransition'
+import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE } from './constants'
 
-const DEMO_MODE_KEY = 'kc-demo-mode'
-const DEMO_TOKEN = 'demo-token'
+const DEMO_MODE_KEY = STORAGE_KEY_DEMO_MODE
+const DEMO_TOKEN = DEMO_TOKEN_VALUE
 const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
 
 // ============================================================================
@@ -62,7 +63,7 @@ const listeners = new Set<(value: boolean) => void>()
 // Initialize from localStorage or environment
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
-  const hasDemoToken = localStorage.getItem('token') === DEMO_TOKEN
+  const hasDemoToken = localStorage.getItem(STORAGE_KEY_TOKEN) === DEMO_TOKEN
   const userExplicitlyDisabled = stored === 'false'
 
   // Priority: Netlify > explicit preference > demo token fallback
@@ -183,7 +184,7 @@ export function subscribeDemoMode(callback: (value: boolean) => void): () => voi
  * Replaces all `!token || token === 'demo-token'` patterns.
  */
 export function isDemoToken(): boolean {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return !token || token === DEMO_TOKEN
 }
 
@@ -191,7 +192,7 @@ export function isDemoToken(): boolean {
  * Check if we have a real (non-demo) authentication token.
  */
 export function hasRealToken(): boolean {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return !!token && token !== DEMO_TOKEN
 }
 
@@ -199,7 +200,7 @@ export function hasRealToken(): boolean {
  * Set the demo token (used when falling back to demo mode).
  */
 export function setDemoToken(): void {
-  localStorage.setItem('token', DEMO_TOKEN)
+  localStorage.setItem(STORAGE_KEY_TOKEN, DEMO_TOKEN)
 }
 
 // ============================================================================

@@ -21,6 +21,7 @@ import {
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { registerDynamicCardType } from './components/cards/cardRegistry'
+import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
 
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn
@@ -70,10 +71,10 @@ enableMocking()
       const rpc = await initCacheWorker()
 
       // One-time migration from IndexedDB + localStorage to SQLite
-      if (!localStorage.getItem('kc-sqlite-migrated')) {
+      if (!localStorage.getItem(STORAGE_KEY_SQLITE_MIGRATED)) {
         await migrateFromLocalStorage() // Clean up legacy ksc_ keys first
         await migrateIDBToSQLite()      // Move IDB data + localStorage meta to SQLite
-        localStorage.setItem('kc-sqlite-migrated', '2')
+        localStorage.setItem(STORAGE_KEY_SQLITE_MIGRATED, '2')
       }
 
       // Seed cache from perf test data if available (set by Playwright addInitScript)

@@ -5,6 +5,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { Service, Ingress, NetworkPolicy } from './types'
 
@@ -237,7 +238,7 @@ export function useServices(cluster?: string, namespace?: string) {
       const url = `/api/mcp/services?${params}`
 
       // Use direct fetch with timeout to prevent hanging
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
       const controller = new AbortController()

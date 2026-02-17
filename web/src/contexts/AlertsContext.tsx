@@ -8,7 +8,7 @@ import type {
   AlertStats,
   AlertChannel,
 } from '../types/alerts'
-import { BACKEND_DEFAULT_URL } from '../lib/constants'
+import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN } from '../lib/constants'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 
 // Generate unique ID
@@ -293,7 +293,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   // Send notifications for an alert (best-effort, silent on auth failures)
   const sendNotifications = async (alert: Alert, channels: AlertChannel[]) => {
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
       // Skip notification if not authenticated - notifications require login
       if (!token) return
 

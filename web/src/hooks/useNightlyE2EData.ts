@@ -15,6 +15,7 @@ import {
   generateDemoNightlyData,
   type NightlyGuideStatus,
 } from '../lib/llmd/nightlyE2EDemoData'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
 const REFRESH_IDLE_MS = 5 * 60 * 1000    // 5 minutes when idle
 const REFRESH_ACTIVE_MS = 2 * 60 * 1000  // 2 minutes when jobs are running
@@ -27,7 +28,7 @@ export interface NightlyE2EData {
 }
 
 function getAuthHeaders(): Record<string, string> {
-  const jwt = localStorage.getItem('token')
+  const jwt = localStorage.getItem(STORAGE_KEY_TOKEN)
   if (!jwt) return {}
   return { Authorization: `Bearer ${jwt}` }
 }

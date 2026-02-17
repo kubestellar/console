@@ -26,6 +26,7 @@
 import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 import { isDemoMode, subscribeDemoMode } from '../demoMode'
 import { registerCacheReset, registerRefetch } from '../modeTransition'
+import { STORAGE_KEY_KUBECTL_HISTORY } from '../constants'
 import { CacheWorkerRpc } from './workerRpc'
 import type { CacheEntry as WorkerCacheEntry, CacheMeta as WorkerCacheMeta } from './workerMessages'
 
@@ -1073,7 +1074,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
   }
 
   // Clean up kubectl-history which was a major source of quota issues
-  localStorage.removeItem('kubectl-history')
+  localStorage.removeItem(STORAGE_KEY_KUBECTL_HISTORY)
 }
 
 /**

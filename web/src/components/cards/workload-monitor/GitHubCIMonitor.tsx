@@ -3,6 +3,7 @@ import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
   Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
 } from 'lucide-react'
+import { STORAGE_KEY_GITHUB_TOKEN } from '../../../lib/constants'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -150,7 +151,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
     demoData: { workflows: DEMO_WORKFLOWS, isDemo: true },
     persist: true,
     fetcher: async () => {
-      const storedToken = localStorage.getItem('github_token')
+      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
       const token = ghConfig?.token || (storedToken ? decodeToken(storedToken) : null)
       if (!token) {
         return { workflows: DEMO_WORKFLOWS, isDemo: true }

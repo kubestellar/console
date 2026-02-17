@@ -40,6 +40,7 @@ import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
 import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
 import { BaseModal } from '../../lib/modals'
 // NOTE: Wildcard import is required for dynamic icon resolution
@@ -283,7 +284,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     await new Promise(resolve => setTimeout(resolve, 1500))
 
     // Get navigation history from localStorage
-    const navHistory = JSON.parse(localStorage.getItem('kubestellar-nav-history') || '[]')
+    const navHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_NAV_HISTORY) || '[]')
 
     // Count page visits
     const visitCounts: Record<string, number> = {}

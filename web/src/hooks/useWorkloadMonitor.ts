@@ -6,9 +6,10 @@ import type {
   ResourceHealthStatus,
 } from '../types/workloadMonitor'
 import { DEFAULT_REFRESH_MS } from '../types/workloadMonitor'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

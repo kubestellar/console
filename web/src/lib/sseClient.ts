@@ -5,6 +5,8 @@
  * incrementally as it arrives. Falls back to regular fetch on failure.
  */
 
+import { STORAGE_KEY_TOKEN } from './constants'
+
 export interface SSEFetchOptions<T> {
   /** SSE endpoint URL path (e.g. '/api/mcp/pods/stream') */
   url: string
@@ -28,7 +30,7 @@ const SSE_TIMEOUT = 180_000 // 180s — backend has 120s overall deadline, slow 
  */
 export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const { url, params, onClusterData, onDone, itemsKey, signal } = options
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
 
   return new Promise((resolve, reject) => {
     const searchParams = new URLSearchParams()

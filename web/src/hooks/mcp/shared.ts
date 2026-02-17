@@ -8,6 +8,7 @@ import {
   LOCAL_AGENT_HTTP_URL,
   MCP_HOOK_TIMEOUT_MS,
   METRICS_SERVER_TIMEOUT_MS,
+  STORAGE_KEY_TOKEN,
 } from '../../lib/constants'
 import type { ClusterInfo, ClusterHealth } from './types'
 
@@ -660,7 +661,7 @@ export function connectSharedWebSocket() {
 
     ws.onopen = () => {
       // Send authentication message - backend requires this within 5 seconds
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {
@@ -857,7 +858,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   }
 
   // Fall back to backend API
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   try {
     const response = await fetch(
       `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
@@ -971,7 +972,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     return {}
   }
 
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
 
   // Helper to extract namespaces from API response
@@ -1248,7 +1249,7 @@ export async function fullFetchClusters() {
   // On forced demo mode deployments (Netlify), skip fetching entirely to avoid flicker.
   // Demo data is already in the initial cache state, so no loading indicators needed.
   if (isNetlifyDeployment) {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     if (!token || token === 'demo-token') {
       // Only update if cache is empty (first load) - otherwise preserve existing demo data
       if (clusterCache.clusters.length === 0) {
@@ -1359,7 +1360,7 @@ export async function fullFetchClusters() {
     }
 
     // Skip backend if not authenticated
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     if (!token) {
       await finishWithMinDuration({ isLoading: false, isRefreshing: false })
       return

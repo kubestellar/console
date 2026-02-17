@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
 export interface ActiveUsersInfo {
   activeUsers: number
@@ -84,7 +85,7 @@ function startHeartbeat() {
 function startPresenceConnection() {
   if (presenceStarted) return
 
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   if (!token) return
 
   // Set flag AFTER token check so a missing token doesn't permanently block
@@ -103,7 +104,7 @@ function startPresenceConnection() {
 
     presenceWs.onopen = () => {
       // Read token fresh to avoid stale closure on reconnects
-      const currentToken = localStorage.getItem('token')
+      const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
       presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
       // Keep-alive ping every 30 seconds
       presencePingInterval = setInterval(() => {
@@ -129,7 +130,7 @@ function startPresenceConnection() {
       if (presencePingInterval) clearInterval(presencePingInterval)
       // Reconnect after delay
       setTimeout(() => {
-        if (presenceStarted && localStorage.getItem('token')) connect()
+        if (presenceStarted && localStorage.getItem(STORAGE_KEY_TOKEN)) connect()
       }, WS_RECONNECT_DELAY)
     }
 

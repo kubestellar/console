@@ -20,6 +20,7 @@ import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { prefetchCardData } from './lib/prefetchCardData'
 import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
+import { STORAGE_KEY_TOKEN } from './lib/constants'
 
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
@@ -190,7 +191,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // to avoid a blank flash. Auth resolves almost instantly from localStorage
     // cache. The stale-while-revalidate pattern in AuthProvider means isLoading
     // is only true when there's no cached user, so this is safe.
-    if (localStorage.getItem('token')) {
+    if (localStorage.getItem(STORAGE_KEY_TOKEN)) {
       return <>{children}</>
     }
     return null

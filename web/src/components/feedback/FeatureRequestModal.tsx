@@ -13,7 +13,7 @@ import {
   type NotificationType,
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
-import { BACKEND_DEFAULT_URL } from '../../lib/constants'
+import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE } from '../../lib/constants'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 
@@ -124,7 +124,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const isRefreshing = requestsRefreshing || notificationsRefreshing
   // User can't perform actions if not authenticated or if using demo token
-  const canPerformActions = isAuthenticated && token !== 'demo-token'
+  const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
   const [activeTab, setActiveTab] = useState<TabType>('submit')
   const [updatesSubTab, setUpdatesSubTab] = useState<'requests' | 'activity'>('requests')
   const [requestType, setRequestType] = useState<RequestType>('bug')
@@ -139,7 +139,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
 
   const handleLoginRedirect = () => {
     // Clear demo token and redirect to GitHub login via backend
-    localStorage.removeItem('token')
+    localStorage.removeItem(STORAGE_KEY_TOKEN)
     // Use full backend URL to ensure proper OAuth flow
     window.location.href = `${BACKEND_DEFAULT_URL}/auth/github`
   }

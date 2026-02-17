@@ -7,6 +7,7 @@ import type {
   ReleasesCache,
 } from '../types/updates'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
+import { STORAGE_KEY_GITHUB_TOKEN } from '../lib/constants'
 
 declare const __APP_VERSION__: string
 declare const __COMMIT_HASH__: string
@@ -273,7 +274,7 @@ export function useVersionCheck() {
       }
 
       // Use GitHub token if available (base64 encoded in localStorage)
-      const storedToken = localStorage.getItem('github_token')
+      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
       if (storedToken) {
         try {
           const token = atob(storedToken)

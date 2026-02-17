@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Loader2, Database } from 'lucide-react'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
 import { Skeleton } from '../ui/Skeleton'
@@ -84,7 +85,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     setApiLoading(true)
     setApiError(null)
 
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     fetch(cardDefinition.apiEndpoint, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

@@ -3,10 +3,10 @@ import { useCardSubscribe } from '../lib/cardEvents'
 import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
-import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
 
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -90,14 +90,14 @@ function loadMissions(): DeployMission[] {
     const stored = localStorage.getItem(MISSIONS_KEY)
     if (stored) return JSON.parse(stored)
     // Migrate from old split keys
-    const oldActive = localStorage.getItem('kubestellar-missions-active')
-    const oldHistory = localStorage.getItem('kubestellar-missions-history')
+    const oldActive = localStorage.getItem(STORAGE_KEY_MISSIONS_ACTIVE)
+    const oldHistory = localStorage.getItem(STORAGE_KEY_MISSIONS_HISTORY)
     if (oldActive || oldHistory) {
       const active: DeployMission[] = oldActive ? JSON.parse(oldActive) : []
       const history: DeployMission[] = oldHistory ? JSON.parse(oldHistory) : []
       const merged = [...active, ...history].slice(0, MAX_MISSIONS)
-      localStorage.removeItem('kubestellar-missions-active')
-      localStorage.removeItem('kubestellar-missions-history')
+      localStorage.removeItem(STORAGE_KEY_MISSIONS_ACTIVE)
+      localStorage.removeItem(STORAGE_KEY_MISSIONS_HISTORY)
       if (merged.length > 0) {
         localStorage.setItem(MISSIONS_KEY, JSON.stringify(merged))
         return merged

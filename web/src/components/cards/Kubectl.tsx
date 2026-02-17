@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, ChevronDown, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { STORAGE_KEY_KUBECTL_HISTORY } from '../../lib/constants'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
@@ -69,7 +70,7 @@ export function Kubectl() {
 
   // Load command history from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('kubectl-history')
+    const saved = localStorage.getItem(STORAGE_KEY_KUBECTL_HISTORY)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -86,7 +87,7 @@ export function Kubectl() {
   // Save command history to localStorage
   useEffect(() => {
     if (commandHistory.length > 0) {
-      localStorage.setItem('kubectl-history', JSON.stringify(commandHistory.slice(-100)))
+      localStorage.setItem(STORAGE_KEY_KUBECTL_HISTORY, JSON.stringify(commandHistory.slice(-100)))
     }
   }, [commandHistory])
 

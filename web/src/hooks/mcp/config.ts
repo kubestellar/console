@@ -5,6 +5,7 @@ import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { LOCAL_AGENT_URL } from './shared'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
 
@@ -52,7 +53,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       }
     }
     // Try SSE streaming for progressive display
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     if (token && token !== 'demo-token') {
       try {
         const sseParams: Record<string, string> = {}
@@ -159,7 +160,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
       }
     }
     // Try SSE streaming for progressive display
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     if (token && token !== 'demo-token') {
       try {
         const sseParams: Record<string, string> = {}

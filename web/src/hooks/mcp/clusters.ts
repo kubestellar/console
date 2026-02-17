@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
 import { triggerAggressiveDetection } from '../useLocalAgent'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import type { ClusterHealth, MCPStatus } from './types'
 import {
   REFRESH_INTERVAL_MS,
@@ -115,7 +116,7 @@ export function useClusters() {
       }
 
       // Don't attempt WebSocket if not authenticated
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       if (!token) {
         return
       }

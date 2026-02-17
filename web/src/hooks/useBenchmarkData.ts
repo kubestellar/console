@@ -17,9 +17,10 @@ import {
   generateBenchmarkReports,
   type BenchmarkReport,
 } from '../lib/llmd/benchmarkMockData'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -100,7 +101,7 @@ function startGlobalStream(since: string) {
   streamState = { ...streamState, isStreaming: true, status: 'connecting', since }
   notifySubscribers()
 
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   abortController = new AbortController()
 
   fetch(`/api/benchmarks/reports/stream?since=${encodeURIComponent(since)}`, {

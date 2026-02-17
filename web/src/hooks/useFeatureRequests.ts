@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
 // Check if user is in demo mode — no token or explicit demo-token
 function isDemoUser(): boolean {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return !token || token === 'demo-token'
 }
 

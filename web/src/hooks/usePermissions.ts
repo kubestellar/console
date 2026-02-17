@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { isBackendUnavailable } from '../lib/api'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
 export interface ClusterPermissions {
   isClusterAdmin: boolean
@@ -55,7 +56,7 @@ export function usePermissions() {
       return
     }
 
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
 
     // Skip if backend is unavailable or using demo token
     if (isBackendUnavailable() || !token || token === 'demo-token') {
@@ -181,7 +182,7 @@ export function useCanI() {
     setResult(null)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const response = await fetch(`${API_BASE}/api/rbac/can-i`, {
         method: 'POST',
         headers: {
