@@ -1,0 +1,21 @@
+{
+  "min_pass_rates": {
+    "a": 0.90,
+    "b": 0.85,
+    "c": 0.50,
+    "d": 0.90,
+    "e": 0.10,
+    "f": 0.80,
+    "g": 0.85,
+    "h": 0.80
+  },
+  "max_fail_count": 20,
+  "zero_tolerance_cards": [
+    "cluster_health",
+    "pod_issues",
+    "event_stream",
+    "deployment_status",
+    "security_issues",
+    "node_status"
+  ]
+}

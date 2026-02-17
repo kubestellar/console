@@ -66,6 +66,7 @@ const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => (
 const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m => ({ default: m.UnifiedStatsTest })))
 const UnifiedDashboardTest = lazy(() => import('./pages/UnifiedDashboardTest').then(m => ({ default: m.UnifiedDashboardTest })))
 const AllCardsPerfTest = lazy(() => import('./pages/AllCardsPerfTest').then(m => ({ default: m.AllCardsPerfTest })))
+const CompliancePerfTest = lazy(() => import('./pages/CompliancePerfTest').then(m => ({ default: m.CompliancePerfTest })))
 
 // Dashboard ID → chunk import map for selective prefetching.
 // Only chunks for enabled dashboards are prefetched; disabled ones
@@ -307,6 +308,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <AllCardsPerfTest />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/__compliance/all-cards"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <CompliancePerfTest />
               </Layout>
             </ProtectedRoute>
           }

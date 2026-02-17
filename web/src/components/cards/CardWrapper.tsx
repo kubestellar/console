@@ -1213,6 +1213,7 @@ export function CardWrapper({
             {/* Demo data indicator - shows if card uses demo data (respects child opt-out) */}
             {showDemoIndicator && (
               <span
+                data-testid="demo-badge"
                 className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
                 title={effectiveIsDemoData ? t('cardWrapper.demoBadgeTitle') : t('cardWrapper.demoModeTitle')}
               >
