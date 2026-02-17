@@ -70,7 +70,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
         accumulated.push(...tagged)
         onClusterData(clusterName, tagged)
       } catch (e) {
-        console.warn('[SSE] Failed to parse cluster_data:', e)
+        console.error('[SSE] Failed to parse cluster_data:', e)
       }
     })
 

@@ -332,7 +332,7 @@ export async function initCacheWorker(): Promise<CacheWorkerRpc> {
     cacheStorage = new WorkerStorage(rpc)
     return rpc
   } catch (e) {
-    console.warn('[Cache] SQLite Worker failed, using IndexedDB fallback:', e)
+    console.error('[Cache] SQLite Worker failed, using IndexedDB fallback:', e)
     cacheStorage = new IndexedDBStorage()
     throw e
   }
