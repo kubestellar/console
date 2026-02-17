@@ -610,7 +610,7 @@ Based on feature requests:
 
 ---
 
-### Inline Modals (7 Total)
+### Inline Modals (6 Total)
 
 These modals are defined within card/page components rather than as standalone files:
 
@@ -620,9 +620,8 @@ These modals are defined within card/page components rather than as standalone f
 | 2 | ClusterOPAModal | `cards/OPAPolicies.tsx` | Click violations count | Full cluster OPA status with policies and violations management |
 | 3 | QuotaModal | `cards/NamespaceQuotas.tsx` | Add/Edit quota button | Create or edit namespace resource quotas with GPU presets |
 | 4 | ResourceDetailModal | `clusters/Clusters.tsx` | Click pod/event item | Generic resource details with tabs: Overview/Labels/Related/Describe/Logs/Events/YAML |
-| 5 | InstallModal | `onboarding/DemoInstallGuide.tsx` | Demo mode banner | Installation guide with copy-paste commands and OAuth configuration |
-| 6 | GitHubInviteModal | `rewards/GitHubInvite.tsx` | Invite action | Invite users to GitHub repository and earn coins in rewards system |
-| 7 | Violations Display | `cards/OPAPolicies.tsx` | Policy violation actions | Shows policy violation details rendered in BaseModal (not a separate modal component) |
+| 5 | GitHubInviteModal | `rewards/GitHubInvite.tsx` | Invite action | Invite users to GitHub repository and earn coins in rewards system |
+| 6 | Violations Display | `cards/OPAPolicies.tsx` | Policy violation actions | Shows policy violation details rendered in BaseModal (not a separate modal component) |
 
 **Note:** The GPUDetailModal exported from `ResourceDetailModals.tsx` is listed as standalone modal #16 above, not as an inline modal.
 
