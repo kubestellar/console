@@ -14,6 +14,11 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
+const (
+	predictionInitialDelay = 30 * time.Second
+	predictionTimeout      = 60 * time.Second
+)
+
 // PredictionSettings holds configuration from the frontend
 type PredictionSettings struct {
 	AIEnabled      bool `json:"aiEnabled"`
@@ -182,7 +187,7 @@ func (w *PredictionWorker) IsAnalyzing() bool {
 // runLoop is the main background loop
 func (w *PredictionWorker) runLoop() {
 	// Initial analysis after short delay
-	time.Sleep(30 * time.Second)
+	time.Sleep(predictionInitialDelay)
 
 	for {
 		w.mu.RLock()
@@ -218,7 +223,7 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 	log.Println("[PredictionWorker] Starting AI prediction analysis")
 
 	// Gather cluster data
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), predictionTimeout)
 	defer cancel()
 
 	clusterData, err := w.gatherClusterData(ctx)

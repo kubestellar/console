@@ -37,6 +37,9 @@ func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) {
 // is sent with partial results. This prevents the browser from hanging.
 const sseOverallDeadline = 120 * time.Second
 
+// ssePerClusterTimeout is the per-cluster fetch timeout for SSE streaming endpoints.
+const ssePerClusterTimeout = 60 * time.Second
+
 // streamClusters is a generic helper that streams per-cluster results as SSE events.
 //
 // It uses HealthyClusters() to skip known-offline clusters (emitting
@@ -165,7 +168,7 @@ func (h *MCPHandlers) GetPodsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "pods",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		pods, err := h.k8sClient.GetPods(ctx, cluster, namespace)
 		if err != nil {
@@ -187,7 +190,7 @@ func (h *MCPHandlers) FindPodIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindPodIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -209,7 +212,7 @@ func (h *MCPHandlers) GetDeploymentsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "deployments",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		deps, err := h.k8sClient.GetDeployments(ctx, cluster, namespace)
 		if err != nil {
@@ -233,7 +236,7 @@ func (h *MCPHandlers) GetEventsStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		events, err := h.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 		if err != nil {
@@ -255,7 +258,7 @@ func (h *MCPHandlers) GetServicesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "services",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		svcs, err := h.k8sClient.GetServices(ctx, cluster, namespace)
 		if err != nil {
@@ -277,7 +280,7 @@ func (h *MCPHandlers) CheckSecurityIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.CheckSecurityIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -299,7 +302,7 @@ func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindDeploymentIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -320,7 +323,7 @@ func (h *MCPHandlers) GetNodesStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "nodes",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetNodes(ctx, cluster)
 	})
@@ -337,7 +340,7 @@ func (h *MCPHandlers) GetGPUNodesStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "nodes",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetGPUNodes(ctx, cluster)
 	})
@@ -355,7 +358,7 @@ func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetWarningEvents(ctx, cluster, namespace, 50)
 	})
@@ -373,7 +376,7 @@ func (h *MCPHandlers) GetJobsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "jobs",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetJobs(ctx, cluster, namespace)
 	})
@@ -391,7 +394,7 @@ func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "configmaps",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	})
@@ -409,7 +412,7 @@ func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "secrets",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetSecrets(ctx, cluster, namespace)
 	})
@@ -426,7 +429,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatusStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "operators",
-		clusterTimeout: 60 * time.Second,
+		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, cluster)
 		if err != nil {

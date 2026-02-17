@@ -254,7 +254,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		var allKustomizations []Kustomization
-		clusterTimeout := 15 * time.Second
+		clusterTimeout := gitopsClusterTimeout
 
 		for _, cl := range clusters {
 			wg.Add(1)
@@ -376,6 +376,10 @@ const (
 	subscriptionPerClusterTimeout = 30 * time.Second
 	helmStreamPerClusterTimeout   = 30 * time.Second
 	operatorCacheTTL              = 5 * time.Minute
+	gitopsClusterTimeout          = 15 * time.Second
+	gitopsRetryDelay              = 2 * time.Second
+	gitopsLookupTimeout           = 10 * time.Second
+	gitopsDefaultTimeout          = 30 * time.Second
 )
 
 // operatorCacheEntry holds cached operators for a single cluster.
@@ -562,7 +566,7 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 		// Retry once for transient errors (HTTP/2 stream errors, connection resets)
 		if ctx.Err() == nil {
 			log.Printf("Retrying operator fetch for cluster %s after transient error", cluster)
-			time.Sleep(2 * time.Second)
+			time.Sleep(gitopsRetryDelay)
 			operators, err = h.fetchOperatorsFromCluster(ctx, cluster)
 		}
 	}
@@ -1555,7 +1559,7 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 		args = append(args, "--kube-context", cluster)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "helm", args...)
@@ -1589,7 +1593,7 @@ func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
 
 	// If namespace not provided, look it up from helm list (with timeout)
 	if namespace == "" {
-		lookupCtx, lookupCancel := context.WithTimeout(c.Context(), 10*time.Second)
+		lookupCtx, lookupCancel := context.WithTimeout(c.Context(), gitopsLookupTimeout)
 		defer lookupCancel()
 		namespace = h.findReleaseNamespace(lookupCtx, cluster, release)
 	}
@@ -1602,7 +1606,7 @@ func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
 		args = append(args, "--kube-context", cluster)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "helm", args...)

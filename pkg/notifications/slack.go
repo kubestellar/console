@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+const (
+	slackHTTPTimeout = 10 * time.Second
+)
+
 // SlackNotifier handles Slack webhook notifications
 type SlackNotifier struct {
 	WebhookURL string
@@ -20,7 +24,7 @@ func NewSlackNotifier(webhookURL, channel string) *SlackNotifier {
 	return &SlackNotifier{
 		WebhookURL: webhookURL,
 		Channel:    channel,
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		HTTPClient: &http.Client{Timeout: slackHTTPTimeout},
 	}
 }
 

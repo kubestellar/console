@@ -19,6 +19,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+const (
+	// workloadListTimeout is the timeout for listing workloads across clusters.
+	workloadListTimeout = 30 * time.Second
+	// workloadPodsTimeout is the timeout for fetching pod/health context for AI queries.
+	workloadPodsTimeout = 15 * time.Second
+)
+
 // WorkloadHandlers handles workload API endpoints
 type WorkloadHandlers struct {
 	k8sClient *k8s.MultiClusterClient
@@ -408,7 +415,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid query: " + err.Error()})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
 	defer cancel()
 
 	// Deduplicate clusters — multiple kubeconfig contexts can point to the
@@ -653,7 +660,7 @@ func (h *WorkloadHandlers) GenerateClusterQuery(c *fiber.Ctx) error {
 	// Build cluster context for the AI
 	var clusterContext string
 	if h.k8sClient != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
+		ctx, cancel := context.WithTimeout(c.Context(), workloadPodsTimeout)
 		defer cancel()
 		healthData, _ := h.k8sClient.GetAllClusterHealth(ctx)
 		clusterContext = buildClusterContextForAI(healthData)

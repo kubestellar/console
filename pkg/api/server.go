@@ -27,6 +27,12 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+const (
+	serverShutdownTimeout = 30 * time.Second
+	serverHealthTimeout   = 2 * time.Second
+	serverStartupDelay    = 50 * time.Millisecond
+)
+
 // Version is the build version, injected via ldflags at build time.
 // Used in /health response for stale-frontend detection.
 var Version = "dev"
@@ -166,7 +172,7 @@ func NewServer(cfg Config) (*Server, error) {
 			Kubeconfig:            cfg.Kubeconfig,
 		})
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 			defer cancel()
 			if err := bridge.Start(ctx); err != nil {
 				// MCP tools not installed — expected for local binary quickstart
@@ -237,7 +243,7 @@ func startLoadingServer(addr string) *http.Server {
 		}
 	}()
 	// Give the listener time to bind
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(serverStartupDelay)
 	return srv
 }
 
@@ -688,12 +694,12 @@ func (s *Server) backendURL() string {
 func (s *Server) Start() error {
 	// Shut down the temporary loading page server to free the port
 	if s.loadingSrv != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
 		defer cancel()
 		s.loadingSrv.Shutdown(ctx)
 		s.loadingSrv = nil
 		// Brief pause to ensure the port is fully released
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(serverStartupDelay)
 	}
 
 	addr := fmt.Sprintf(":%d", s.config.Port)

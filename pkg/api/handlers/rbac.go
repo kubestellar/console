@@ -13,6 +13,9 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+// rbacAnalysisTimeout is the timeout for RBAC analysis queries on large clusters.
+const rbacAnalysisTimeout = 60 * time.Second
+
 // parseUUID parses a UUID string
 func parseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
@@ -375,7 +378,7 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	}
 
 	// Use a longer timeout for this query as large clusters can be slow
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), rbacAnalysisTimeout)
 	defer cancel()
 
 	users, err := h.k8sClient.ListOpenShiftUsers(ctx, cluster)

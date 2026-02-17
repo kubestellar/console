@@ -23,6 +23,17 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+const (
+	clusterHealthCheckTimeout = 8 * time.Second
+	clusterProbeTimeout       = 5 * time.Second
+	k8sClientTimeout          = 45 * time.Second
+	clusterCacheTTL           = 60 * time.Second
+	podIssueAgeThreshold      = 5 * time.Minute
+	podPendingAgeThreshold    = 2 * time.Minute
+	clusterEventDebounce      = 500 * time.Millisecond
+	clusterEventPollInterval  = 5 * time.Second
+)
+
 // MultiClusterClient manages connections to multiple Kubernetes clusters
 type MultiClusterClient struct {
 	mu              sync.RWMutex
@@ -472,7 +483,7 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 		dynamicClients: make(map[string]dynamic.Interface),
 		configs:        make(map[string]*rest.Config),
 		healthCache:    make(map[string]*ClusterHealth),
-		cacheTTL:       60 * time.Second,
+		cacheTTL:       clusterCacheTTL,
 		cacheTime:      make(map[string]time.Time),
 	}
 
@@ -582,11 +593,11 @@ func (m *MultiClusterClient) reloadAndNotify() {
 func (m *MultiClusterClient) watchLoop() {
 	// Debounce timer to avoid reloading multiple times for rapid changes
 	var debounceTimer *time.Timer
-	debounceDelay := 500 * time.Millisecond
+	debounceDelay := clusterEventDebounce
 
 	// Polling fallback: check file mtime every 5s to catch changes fsnotify misses.
 	// macOS kqueue can silently lose watches after atomic file replacements.
-	pollTicker := time.NewTicker(5 * time.Second)
+	pollTicker := time.NewTicker(clusterEventPollInterval)
 	defer pollTicker.Stop()
 	var lastModTime time.Time
 	if info, err := os.Stat(m.kubeconfig); err == nil {
@@ -777,7 +788,7 @@ func (m *MultiClusterClient) DeduplicatedClusters(ctx context.Context) ([]Cluste
 // Uses a lightweight namespace list (Limit=1) with a 5s per-cluster timeout.
 // Blocks for at most 8s total.
 func (m *MultiClusterClient) WarmupHealthCache() {
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), clusterHealthCheckTimeout)
 	defer cancel()
 
 	clusters, err := m.DeduplicatedClusters(ctx)
@@ -792,7 +803,7 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 		wg.Add(1)
 		go func(name, ctxName string) {
 			defer wg.Done()
-			probeCtx, probeCancel := context.WithTimeout(ctx, 5*time.Second)
+			probeCtx, probeCancel := context.WithTimeout(ctx, clusterProbeTimeout)
 			defer probeCancel()
 
 			client, clientErr := m.GetClient(ctxName)
@@ -930,7 +941,7 @@ func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientse
 
 	// Set reasonable timeouts — large OpenShift clusters (18+ nodes) can return
 	// 800KB+ node payloads that take >10s over higher-latency links
-	config.Timeout = 45 * time.Second
+	config.Timeout = k8sClientTimeout
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -974,7 +985,7 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 				return nil, fmt.Errorf("failed to get config for context %s: %w", contextName, err)
 			}
 		}
-		config.Timeout = 45 * time.Second
+		config.Timeout = k8sClientTimeout
 		m.configs[contextName] = config
 	}
 
@@ -1366,7 +1377,7 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 			// Container running but not ready for over 5 minutes
 			if cs.State.Running != nil && !cs.Ready {
 				age := now.Sub(cs.State.Running.StartedAt.Time)
-				if age > 5*time.Minute {
+				if age > podIssueAgeThreshold {
 					podIssues = append(podIssues, "Not ready")
 				}
 			}
@@ -1393,7 +1404,7 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 			// Only add "Pending" if no more specific issue was found
 			if len(podIssues) == 0 {
 				// Pending for over 2 minutes is suspicious
-				if pod.CreationTimestamp.Time.Before(now.Add(-2 * time.Minute)) {
+				if pod.CreationTimestamp.Time.Before(now.Add(-podPendingAgeThreshold)) {
 					podIssues = append(podIssues, "Pending")
 				}
 			}
@@ -1410,7 +1421,7 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 		// Stuck terminating (has deletion timestamp but still exists)
 		if pod.DeletionTimestamp != nil {
 			age := now.Sub(pod.DeletionTimestamp.Time)
-			if age > 5*time.Minute {
+			if age > podIssueAgeThreshold {
 				podIssues = append(podIssues, fmt.Sprintf("Stuck terminating (%dm)", int(age.Minutes())))
 				effectiveStatus = "Terminating"
 			}

@@ -11,6 +11,13 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
+const (
+	// wsInactiveCutoff is how long a client can be idle before being considered inactive.
+	wsInactiveCutoff = 60 * time.Second
+	// wsReadDeadline is the read deadline for WebSocket ping/pong frames.
+	wsReadDeadline = 5 * time.Second
+)
+
 // Message represents a WebSocket message
 type Message struct {
 	Type string `json:"type"`
@@ -152,7 +159,7 @@ func (h *Hub) GetDemoSessionCount() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	cutoff := time.Now().Add(-60 * time.Second)
+	cutoff := time.Now().Add(-wsInactiveCutoff)
 	count := 0
 	for id, lastSeen := range h.demoSessions {
 		if lastSeen.After(cutoff) {
@@ -193,7 +200,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	var authenticated bool
 
 	// Set read deadline for authentication message (5 seconds)
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(wsReadDeadline))
 
 	// Read first message which should contain authentication token
 	var authMsg struct {

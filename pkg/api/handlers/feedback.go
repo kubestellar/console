@@ -24,6 +24,9 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+// githubAPITimeout is the timeout for HTTP requests to the GitHub API.
+const githubAPITimeout = 10 * time.Second
+
 // FeedbackHandler handles feature requests and feedback
 type FeedbackHandler struct {
 	store         store.Store
@@ -349,7 +352,7 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 		req.Header.Set("Authorization", "Bearer "+h.githubToken)
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-		client := &http.Client{Timeout: 10 * time.Second}
+		client := &http.Client{Timeout: githubAPITimeout}
 		resp, err := client.Do(req)
 		if err != nil {
 			continue
@@ -407,7 +410,7 @@ func (h *FeedbackHandler) fetchGitHubIssues() ([]GitHubIssue, error) {
 	req.Header.Set("Authorization", "Bearer "+h.githubToken)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -615,7 +618,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to close GitHub issue: %v", err)
@@ -647,7 +650,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string) {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to add issue comment: %v", err)
@@ -1075,7 +1078,7 @@ func (h *FeedbackHandler) getLatestBotComment(issueNumber int) string {
 	req.Header.Set("Authorization", "Bearer "+h.githubToken)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return ""
@@ -1303,7 +1306,7 @@ func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, "", err
@@ -1360,7 +1363,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to add PR comment: %v", err)

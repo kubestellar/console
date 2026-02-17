@@ -13,9 +13,12 @@ import (
 )
 
 const (
-	maxSnapshots         = 144 // 24 hours at 10-min intervals
-	metricsHistoryFile   = "metrics_history.json"
-	snapshotRetentionHrs = 24
+	maxSnapshots          = 144 // 24 hours at 10-min intervals
+	metricsHistoryFile    = "metrics_history.json"
+	snapshotRetentionHrs  = 24
+	metricsHistoryTimeout = 30 * time.Second
+	metricsFileMode       = 0600
+	metricsDirMode        = 0700
 )
 
 // MetricsSnapshot holds a point-in-time metrics capture
@@ -153,7 +156,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 		return nil // No client available
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), metricsHistoryTimeout)
 	defer cancel()
 
 	snapshot := MetricsSnapshot{
@@ -265,13 +268,13 @@ func (mh *MetricsHistory) saveToDisk() {
 	}
 
 	// Ensure directory exists
-	if err := os.MkdirAll(mh.dataDir, 0700); err != nil {
+	if err := os.MkdirAll(mh.dataDir, metricsDirMode); err != nil {
 		log.Printf("[MetricsHistory] Error creating data dir: %v", err)
 		return
 	}
 
 	filePath := filepath.Join(mh.dataDir, metricsHistoryFile)
-	if err := os.WriteFile(filePath, data, 0600); err != nil {
+	if err := os.WriteFile(filePath, data, metricsFileMode); err != nil {
 		log.Printf("[MetricsHistory] Error writing history file: %v", err)
 	}
 }

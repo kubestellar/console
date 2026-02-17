@@ -10,6 +10,11 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
+const (
+	deviceTrackerPoll    = 60 * time.Second
+	deviceTrackerTimeout = 30 * time.Second
+)
+
 // DeviceCounts tracks hardware device counts for a node
 type DeviceCounts struct {
 	GPUCount        int  `json:"gpuCount"`
@@ -99,7 +104,7 @@ func (t *DeviceTracker) runLoop() {
 	// Initial scan
 	t.scanDevices()
 
-	ticker := time.NewTicker(60 * time.Second) // Check every minute
+	ticker := time.NewTicker(deviceTrackerPoll) // Check every minute
 	defer ticker.Stop()
 
 	for {
@@ -113,7 +118,7 @@ func (t *DeviceTracker) runLoop() {
 }
 
 func (t *DeviceTracker) scanDevices() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), deviceTrackerTimeout)
 	defer cancel()
 
 	// Use ListClusters to get ALL cluster contexts - deduplication happens in frontend

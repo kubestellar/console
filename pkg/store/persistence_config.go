@@ -14,6 +14,11 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	configDirMode  = 0755
+	configFileMode = 0644
+)
+
 // PersistenceConfig holds the configuration for CRD-based persistence
 type PersistenceConfig struct {
 	// Enabled indicates whether persistence is active
@@ -143,7 +148,7 @@ func (p *PersistenceStore) Save() error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(p.configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, configDirMode); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -154,7 +159,7 @@ func (p *PersistenceStore) Save() error {
 		return fmt.Errorf("failed to marshal persistence config: %w", err)
 	}
 
-	if err := os.WriteFile(p.configPath, data, 0644); err != nil {
+	if err := os.WriteFile(p.configPath, data, configFileMode); err != nil {
 		return fmt.Errorf("failed to write persistence config: %w", err)
 	}
 

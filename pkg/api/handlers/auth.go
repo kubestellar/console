@@ -20,6 +20,15 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+const (
+	// oauthStateExpiration is how long an OAuth state token remains valid.
+	oauthStateExpiration = 10 * time.Minute
+	// jwtExpiration is the lifetime of issued JWT tokens.
+	jwtExpiration = 24 * time.Hour
+	// githubHTTPTimeout is the timeout for HTTP requests to the GitHub API during auth.
+	githubHTTPTimeout = 10 * time.Second
+)
+
 // oauthStateStore stores OAuth state tokens server-side (Safari blocks cookies in OAuth flows)
 var oauthStateStore = struct {
 	sync.RWMutex
@@ -32,7 +41,7 @@ func storeOAuthState(state string) {
 	// Clean up expired states (older than 10 minutes)
 	now := time.Now()
 	for s, t := range oauthStateStore.states {
-		if now.Sub(t) > 10*time.Minute {
+		if now.Sub(t) > oauthStateExpiration {
 			delete(oauthStateStore.states, s)
 		}
 	}
@@ -45,7 +54,7 @@ func validateAndConsumeOAuthState(state string) bool {
 	if t, ok := oauthStateStore.states[state]; ok {
 		delete(oauthStateStore.states, state)
 		// Valid if less than 10 minutes old
-		return time.Since(t) < 10*time.Minute
+		return time.Since(t) < oauthStateExpiration
 	}
 	return false
 }
@@ -346,7 +355,7 @@ func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: githubHTTPTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -370,7 +379,7 @@ func (h *AuthHandler) generateJWT(user *models.User) (string, error) {
 		UserID:      user.ID,
 		GitHubLogin: user.GitHubLogin,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(jwtExpiration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Subject:   user.ID.String(),
 		},

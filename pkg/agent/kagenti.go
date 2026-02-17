@@ -11,6 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	kagentiTimeout = 30 * time.Second
+)
+
 // Kagenti CRD Group/Version/Resource definitions
 var (
 	kagentiAgentGVR = schema.GroupVersionResource{
@@ -128,7 +132,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), kagentiTimeout)
 	defer cancel()
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
@@ -204,7 +208,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), kagentiTimeout)
 	defer cancel()
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
@@ -275,7 +279,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), kagentiTimeout)
 	defer cancel()
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
@@ -338,7 +342,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), kagentiTimeout)
 	defer cancel()
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
@@ -404,7 +408,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), kagentiTimeout)
 	defer cancel()
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
