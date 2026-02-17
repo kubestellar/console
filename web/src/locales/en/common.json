@@ -1725,6 +1725,7 @@
     "alibabaAck": "Alibaba ACK",
     "digitalocean": "DigitalOcean",
     "rancher": "Rancher",
+    "coreweave": "CoreWeave",
     "kind": "Kind",
     "minikube": "Minikube",
     "k3s": "K3s",

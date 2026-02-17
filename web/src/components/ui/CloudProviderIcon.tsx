@@ -2,7 +2,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 
-export type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'kind' | 'minikube' | 'k3s' | 'kubernetes'
+export type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'kubernetes'
 
 interface CloudProviderIconProps {
   provider: CloudProvider
@@ -178,6 +178,33 @@ const RancherIcon: React.FC<{ size: number; className?: string }> = ({ size, cla
   </svg>
 )
 
+// CoreWeave icon - blue rounded rect with stylized CW wave mark
+const CoreWeaveIcon: React.FC<{ size: number; className?: string }> = ({ size, className }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
+    <defs>
+      <linearGradient id="cwGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#3B5BFF" />
+        <stop offset="100%" stopColor="#2741E7" />
+      </linearGradient>
+    </defs>
+    {/* Background */}
+    <rect width="24" height="24" rx="4" fill="url(#cwGradient)" />
+    {/* Stylized double-wave / CW mark */}
+    <path
+      d="M4 14 C6 10, 8 10, 10 14 C12 18, 14 18, 16 14"
+      stroke="white" strokeWidth="2.2" strokeLinecap="round" fill="none"
+    />
+    <path
+      d="M8 14 C10 10, 12 10, 14 14 C16 18, 18 18, 20 14"
+      stroke="white" strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.6"
+    />
+    {/* Small cloud dots above */}
+    <circle cx="7" cy="8" r="1" fill="white" opacity="0.5" />
+    <circle cx="12" cy="7" r="1.3" fill="white" opacity="0.7" />
+    <circle cx="17" cy="8" r="1" fill="white" opacity="0.5" />
+  </svg>
+)
+
 // Kind icon - official logo (ship in bottle)
 const KindIcon: React.FC<{ size: number; className?: string }> = ({ size, className }) => (
   <img
@@ -293,6 +320,8 @@ export function CloudProviderIcon({ provider, size = 16, className }: CloudProvi
       return <DigitalOceanIcon {...iconProps} />
     case 'rancher':
       return <RancherIcon {...iconProps} />
+    case 'coreweave':
+      return <CoreWeaveIcon {...iconProps} />
     case 'kind':
       return <KindIcon {...iconProps} />
     case 'minikube':
@@ -315,6 +344,7 @@ export function getProviderLabel(provider: CloudProvider): string {
     case 'alibaba': return 'Alibaba ACK'
     case 'digitalocean': return 'DigitalOcean'
     case 'rancher': return 'Rancher'
+    case 'coreweave': return 'CoreWeave'
     case 'kind': return 'Kind'
     case 'minikube': return 'Minikube'
     case 'k3s': return 'K3s'
@@ -335,6 +365,7 @@ export function useProviderLabel(provider: CloudProvider): string {
     case 'alibaba': return t('cloudProviders.alibabaAck')
     case 'digitalocean': return t('cloudProviders.digitalocean')
     case 'rancher': return t('cloudProviders.rancher')
+    case 'coreweave': return t('cloudProviders.coreweave')
     case 'kind': return t('cloudProviders.kind')
     case 'minikube': return t('cloudProviders.minikube')
     case 'k3s': return t('cloudProviders.k3s')
@@ -353,6 +384,7 @@ export function getProviderColor(provider: CloudProvider): string {
     case 'alibaba': return '#FF6A00'     // Alibaba Orange
     case 'digitalocean': return '#0080FF' // DO Blue
     case 'rancher': return '#2453FF'     // Rancher Blue
+    case 'coreweave': return '#2741E7'   // CoreWeave Blue
     case 'kind': return '#2496ED'        // Kind Blue
     case 'minikube': return '#326CE5'    // K8s Blue
     case 'k3s': return '#FFC61C'         // K3s Yellow
@@ -371,6 +403,7 @@ export function getProviderBorderClass(provider: CloudProvider): string {
     case 'alibaba': return 'border-orange-500/40'
     case 'digitalocean': return 'border-blue-400/40'
     case 'rancher': return 'border-blue-600/40'
+    case 'coreweave': return 'border-indigo-600/40'
     case 'kind': return 'border-blue-400/40'
     case 'minikube': return 'border-blue-500/40'
     case 'k3s': return 'border-yellow-500/40'
@@ -417,6 +450,8 @@ export function getConsoleUrl(provider: CloudProvider, clusterName: string, apiS
       return 'https://cs.console.aliyun.com/#/k8s/cluster/list'
     case 'digitalocean':
       return 'https://cloud.digitalocean.com/kubernetes/clusters'
+    case 'coreweave':
+      return 'https://cloud.coreweave.com/kubernetes'
     default:
       return null
   }
@@ -497,6 +532,8 @@ export function detectCloudProvider(
   if (name.includes('digitalocean') || name.includes('do-') || name.includes('doks')) {
     return 'digitalocean'
   }
+  // CoreWeave by name
+  if (name.includes('coreweave')) return 'coreweave'
   // Rancher by name
   if (name.includes('rancher')) return 'rancher'
   // Local development clusters by name
@@ -528,6 +565,10 @@ export function detectCloudProvider(
   // DigitalOcean by URL
   if (serverUrl.includes('.digitalocean.com') || serverUrl.includes('k8s.ondigitalocean')) {
     return 'digitalocean'
+  }
+  // CoreWeave by URL
+  if (serverUrl.includes('.coreweave.com')) {
+    return 'coreweave'
   }
   // OpenShift by URL - check for specific OpenShift domains (NOT just :6443 port)
   if (serverUrl.includes('openshift.com') || serverUrl.includes('openshiftapps.com') || serverUrl.includes('.openshift.')) {

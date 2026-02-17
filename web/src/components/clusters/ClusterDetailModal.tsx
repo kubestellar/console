@@ -13,7 +13,7 @@ import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, ge
 import { useTranslation } from 'react-i18next'
 
 // Cloud provider types
-type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'kind' | 'minikube' | 'k3s' | 'unknown'
+type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
 
 // Get console URL for a specific provider
 function getConsoleUrlForProvider(provider: string, clusterName: string, apiServerUrl?: string): string | null {
@@ -55,6 +55,8 @@ function getConsoleUrlForProvider(provider: string, clusterName: string, apiServ
       return 'https://cs.console.aliyun.com/#/k8s/cluster/list'
     case 'digitalocean':
       return 'https://cloud.digitalocean.com/kubernetes/clusters'
+    case 'coreweave':
+      return 'https://cloud.coreweave.com/kubernetes'
     default:
       return null
   }
@@ -70,6 +72,7 @@ function getProviderInfo(provider: CloudProvider): { color: string; bgColor: str
     case 'alibaba': return { color: 'text-orange-300', bgColor: 'bg-orange-500/20' }
     case 'digitalocean': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
     case 'rancher': return { color: 'text-green-400', bgColor: 'bg-green-500/20' }
+    case 'coreweave': return { color: 'text-indigo-400', bgColor: 'bg-indigo-500/20' }
     case 'kind': return { color: 'text-blue-300', bgColor: 'bg-blue-500/20' }
     case 'minikube': return { color: 'text-purple-400', bgColor: 'bg-purple-500/20' }
     case 'k3s': return { color: 'text-green-300', bgColor: 'bg-green-500/20' }
