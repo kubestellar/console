@@ -20,6 +20,7 @@ echo -e "${GREEN}=== KubeStellar Console - Demo Mode ===${NC}"
 echo ""
 
 # Environment
+unset CLAUDECODE  # Allow AI Missions to spawn claude-code even when started from a Claude Code session
 export DEV_MODE=true
 export SKIP_ONBOARDING=true
 export FRONTEND_URL=http://localhost:5174

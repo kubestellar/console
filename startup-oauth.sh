@@ -144,6 +144,7 @@ if [ -z "$JWT_SECRET" ]; then
 fi
 
 # Environment
+unset CLAUDECODE  # Allow AI Missions to spawn claude-code even when started from a Claude Code session
 export SKIP_ONBOARDING=true
 if [ "$USE_DEV_SERVER" = true ]; then
     export DEV_MODE=true
