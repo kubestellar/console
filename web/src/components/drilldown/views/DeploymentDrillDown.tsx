@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -47,7 +48,7 @@ export function DeploymentDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 

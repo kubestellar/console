@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
-
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 export interface LocalClusterTool {
   name: 'kind' | 'k3d' | 'minikube'
@@ -38,7 +37,7 @@ export function useLocalClusterTools() {
     }
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_URL}/local-cluster-tools`)
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-tools`)
       if (response.ok) {
         const data = await response.json()
         setTools(data.tools || [])
@@ -59,7 +58,7 @@ export function useLocalClusterTools() {
 
     setIsLoading(true)
     try {
-      const response = await fetch(`${LOCAL_AGENT_URL}/local-clusters`)
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`)
       if (response.ok) {
         const data = await response.json()
         setClusters(data.clusters || [])
@@ -83,7 +82,7 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_URL}/local-clusters`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool, name }),
@@ -115,7 +114,7 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_URL}/local-clusters?tool=${tool}&name=${name}`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters?tool=${tool}&name=${name}`, {
         method: 'DELETE',
       })
 

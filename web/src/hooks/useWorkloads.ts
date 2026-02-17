@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 // Types
 export interface Workload {
@@ -57,8 +58,6 @@ function authHeaders(): Record<string, string> {
 }
 
 
-const AGENT_URL = 'http://127.0.0.1:8585'
-
 function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
   const workloads: Workload[] = [
     { name: 'api-server', namespace: 'production', type: 'Deployment', cluster: 'eks-prod-us-east-1', replicas: 3, readyReplicas: 3, status: 'Running', image: 'api-server:v2.1.0', createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
@@ -99,7 +98,7 @@ async function fetchWorkloadsViaAgent(opts?: {
 
       const ctrl = new AbortController()
       const tid = setTimeout(() => ctrl.abort(), 15000)
-      const res = await fetch(`${AGENT_URL}/deployments?${params}`, {
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
         signal: ctrl.signal,
         headers: { Accept: 'application/json' },
       })

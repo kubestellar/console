@@ -9,6 +9,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory, type DeviceCounts } from '../../hooks/useCachedData'
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 
 // Sort field options
 type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType'
@@ -294,7 +295,7 @@ export function HardwareHealthCard() {
   // Clear an alert (after power cycle) — triggers refetch to update cached data
   const clearAlert = async (alertId: string) => {
     try {
-      await fetch('http://127.0.0.1:8585/devices/alerts/clear', {
+      await fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alertId }),

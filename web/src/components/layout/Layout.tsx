@@ -17,6 +17,7 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
@@ -127,7 +128,7 @@ export function Layout({ children }: LayoutProps) {
   const handleRestartBackend = useCallback(async () => {
     setRestartState('restarting')
     try {
-      const resp = await fetch('http://127.0.0.1:8585/restart-backend', {
+      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/restart-backend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

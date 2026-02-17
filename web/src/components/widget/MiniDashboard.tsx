@@ -12,6 +12,7 @@ import { RefreshCw, Maximize2, Download } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 
 // Node data type from agent
 interface NodeData {
@@ -96,7 +97,7 @@ export function MiniDashboard() {
 
   const fetchNodes = useCallback(async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8585/nodes')
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`)
       if (response.ok) {
         const data = await response.json()
         setAllNodes(data.nodes || [])

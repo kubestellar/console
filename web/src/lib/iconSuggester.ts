@@ -6,8 +6,7 @@
  */
 
 import { getDemoMode } from '../hooks/useDemoMode'
-
-const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+import { LOCAL_AGENT_WS_URL } from './constants'
 
 // All Lucide icons available in the sidebar
 const ICON_POOL = [
@@ -98,7 +97,7 @@ function askAgentForIcon(name: string): Promise<string | null> {
     }, 5000)
 
     try {
-      const ws = new WebSocket(KC_AGENT_WS_URL)
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       let response = ''
       const requestId = `icon-suggest-${Date.now()}`
 

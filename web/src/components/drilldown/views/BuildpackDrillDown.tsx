@@ -6,6 +6,7 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import type { BuildpackStatus } from '../../cards/buildpacks-status/BuildpacksStatus'
 import { Package, Layers, Server, Clock, FileText, History, Loader2, Stethoscope, Box, RefreshCw, GitBranch, AlertCircle, Check, Copy } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -137,7 +138,7 @@ export function BuildpackDrillDown({ data }: Props) {
 
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 

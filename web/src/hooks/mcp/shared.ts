@@ -4,6 +4,11 @@ import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from 
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset } from '../../lib/modeTransition'
 import { resetFailuresForCluster } from '../../lib/cache'
+import {
+  LOCAL_AGENT_HTTP_URL,
+  MCP_HOOK_TIMEOUT_MS,
+  METRICS_SERVER_TIMEOUT_MS,
+} from '../../lib/constants'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
@@ -20,8 +25,8 @@ export function getEffectiveInterval(baseInterval: number): number {
 // Minimum time to show the "Updating" indicator (ensures visibility for fast API responses)
 export const MIN_REFRESH_INDICATOR_MS = 500
 
-// Local agent URL for direct cluster access
-export const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+// Re-export for backward compatibility
+export const LOCAL_AGENT_URL = LOCAL_AGENT_HTTP_URL
 
 // ============================================================================
 // Shared Cluster State - ensures all useClusters() consumers see the same data
@@ -829,7 +834,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout — offline clusters fail fast
+      const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
       const response = await fetch(`${LOCAL_AGENT_URL}/cluster-health?cluster=${encodeURIComponent(context)}`, {
         signal: controller.signal,
         headers: { 'Accept': 'application/json' },
@@ -857,7 +862,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     const response = await fetch(
       `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
       {
-        signal: AbortSignal.timeout(15000), // 15s — offline clusters fail fast
+        signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       }
     )
@@ -980,7 +985,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   try {
     const response = await fetch(
       `/api/mcp/pods?cluster=${encodeURIComponent(clusterName)}&limit=500`,
-      { signal: AbortSignal.timeout(5000), headers }
+      { signal: AbortSignal.timeout(METRICS_SERVER_TIMEOUT_MS), headers }
     )
     if (response.ok) {
       distributionDetectionFailures = 0 // Reset on success
@@ -1001,7 +1006,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   try {
     const response = await fetch(
       `/api/mcp/events?cluster=${encodeURIComponent(clusterName)}&limit=200`,
-      { signal: AbortSignal.timeout(5000), headers }
+      { signal: AbortSignal.timeout(METRICS_SERVER_TIMEOUT_MS), headers }
     )
     if (response.ok) {
       distributionDetectionFailures = 0
@@ -1022,7 +1027,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   try {
     const response = await fetch(
       `/api/mcp/deployments?cluster=${encodeURIComponent(clusterName)}`,
-      { signal: AbortSignal.timeout(5000), headers }
+      { signal: AbortSignal.timeout(METRICS_SERVER_TIMEOUT_MS), headers }
     )
     if (response.ok) {
       distributionDetectionFailures = 0

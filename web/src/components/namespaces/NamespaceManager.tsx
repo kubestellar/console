@@ -25,8 +25,7 @@ import { DashboardHeader } from '../shared/DashboardHeader'
 import { api } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
-
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 
 type GroupByMode = 'cluster' | 'type'
 
@@ -153,7 +152,7 @@ export function NamespaceManager() {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 8000)
           const response = await fetch(
-            `${LOCAL_AGENT_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`,
+            `${LOCAL_AGENT_HTTP_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`,
             { signal: controller.signal, headers: { 'Accept': 'application/json' } }
           )
           clearTimeout(timeoutId)

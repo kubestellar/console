@@ -17,6 +17,7 @@ import type { PredictedRisk, TrendDirection } from '../../../types/predictions'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../../lib/cards/CardComponents'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
 
 // ============================================================================
 // Unified Item Type for all card items
@@ -168,7 +169,7 @@ async function fetchAllNodes(): Promise<NodeData[]> {
 
   nodesFetchInProgress = true
   try {
-    const response = await fetch('http://127.0.0.1:8585/nodes')
+    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`)
     if (response.ok) {
       const data = await response.json()
       nodesCache = data.nodes || []

@@ -7,15 +7,15 @@ import {
   isLocalStorageEmpty,
   SETTINGS_CHANGED_EVENT,
 } from '../lib/settingsSync'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 const DEBOUNCE_MS = 1000
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
 export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 
 /** Fetch helper that routes settings calls to the local kc-agent (saves to ~/.kc/settings.json). */
 async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${LOCAL_AGENT_URL}${path}`, {
+  const response = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ export function usePersistedSettings() {
   // Export settings as encrypted backup file
   const exportSettings = useCallback(async () => {
     try {
-      const response = await fetch(`${LOCAL_AGENT_URL}/settings/export`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

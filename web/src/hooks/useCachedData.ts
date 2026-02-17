@@ -21,6 +21,7 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 import { fetchSSE } from '../lib/sseClient'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import type {
   PodInfo,
   PodIssue,
@@ -41,7 +42,6 @@ import type { Workload } from './useWorkloads'
 
 const getToken = () => localStorage.getItem('token')
 
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const AGENT_HTTP_TIMEOUT_MS = 5000
 
 async function fetchAPI<T>(
@@ -225,7 +225,7 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
-    const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
     })
@@ -556,7 +556,7 @@ export function useCachedDeploymentIssues(
               if (namespace) params.append('namespace', namespace)
               const ctrl = new AbortController()
               const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-              const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+              const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                 signal: ctrl.signal, headers: { Accept: 'application/json' },
               })
               clearTimeout(tid)
@@ -634,7 +634,7 @@ export function useCachedDeployments(
 
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
-          const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+          const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
             signal: controller.signal,
             headers: { Accept: 'application/json' },
           })
@@ -1321,7 +1321,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
 
     const ctrl = new AbortController()
     const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-    const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: ctrl.signal,
       headers: { Accept: 'application/json' },
     })
@@ -1991,12 +1991,12 @@ async function fetchHardwareHealth(): Promise<HardwareHealthData> {
 
   try {
     const [alertsRes, inventoryRes] = await Promise.all([
-      fetch(`${LOCAL_AGENT_URL}/devices/alerts`, {
+      fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal,
       }).catch(() => null),
-      fetch(`${LOCAL_AGENT_URL}/devices/inventory`, {
+      fetch(`${LOCAL_AGENT_HTTP_URL}/devices/inventory`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal,

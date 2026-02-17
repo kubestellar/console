@@ -23,9 +23,8 @@ import {
 import type { Mission } from '../../hooks/useMissions'
 import { useResolutions, detectIssueSignature, type IssueSignature, type ResolutionSteps } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
+import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
 import { useTranslation } from 'react-i18next'
-
-const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
 
 interface AISummary {
   title: string
@@ -49,7 +48,7 @@ interface SaveResolutionDialogProps {
  */
 async function generateAISummary(mission: Mission): Promise<AISummary> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(KC_AGENT_WS_URL)
+    const ws = new WebSocket(LOCAL_AGENT_WS_URL)
     const timeout = setTimeout(() => {
       ws.close()
       reject(new Error('Timeout waiting for AI summary'))

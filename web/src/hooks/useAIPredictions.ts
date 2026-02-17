@@ -10,8 +10,9 @@ import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from
 import { setActiveTokenCategory } from './useTokenUsage'
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
-const AGENT_HTTP_URL = 'http://127.0.0.1:8585'
-const AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+
+const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL = 30000 // Poll every 30 seconds as fallback
 
 // Demo mode predictions
@@ -140,7 +141,7 @@ function connectWebSocket(): void {
   if (getDemoMode() || ws) return
 
   try {
-    ws = new WebSocket(AGENT_WS_URL)
+    ws = new WebSocket(LOCAL_AGENT_WS_URL)
 
     ws.onopen = () => {
       wsConnected = true

@@ -9,6 +9,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
 import { useTranslation } from 'react-i18next'
 
 interface UpgradeStatusProps {
@@ -100,7 +101,7 @@ function ensureVersionWs(): Promise<WebSocket> {
 
   return new Promise((resolve, reject) => {
     try {
-      versionWs = new WebSocket('ws://127.0.0.1:8585/ws')
+      versionWs = new WebSocket(LOCAL_AGENT_WS_URL)
     } catch (err) {
       wsConnecting = false
       reject(new Error('Failed to create WebSocket'))

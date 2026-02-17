@@ -3,8 +3,7 @@ import { getDemoMode } from './useDemoMode'
 import { useClusters } from './mcp/clusters'
 import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudProviderIcon'
 import type { CloudProvider } from '../components/ui/CloudProviderIcon'
-
-const KC_AGENT_URL = 'http://127.0.0.1:8585'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 const REFRESH_INTERVAL = 60_000 // 60 seconds
 const STATUS_CHECK_TIMEOUT = 5_000
 
@@ -47,7 +46,7 @@ async function checkServiceHealth(providerIds: string[]): Promise<Map<string, He
   // Skip in demo mode — no local agent on Netlify deployments
   if (!getDemoMode()) {
     try {
-      const response = await fetch(`${KC_AGENT_URL}/providers/health`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
         signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT),
       })
       if (response.ok) {
@@ -175,7 +174,7 @@ export function useProviderHealth() {
     // --- AI Providers from /settings/keys ---
     const unconfiguredProviders: string[] = []
     try {
-      const response = await fetch(`${KC_AGENT_URL}/settings/keys`)
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`)
       if (response.ok) {
         const data: KeysStatusResponse = await response.json()
         const seen = new Set<string>()

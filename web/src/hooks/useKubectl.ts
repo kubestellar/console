@@ -9,8 +9,7 @@
  */
 
 import { getDemoMode } from './useDemoMode'
-
-const AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+import { LOCAL_AGENT_WS_URL } from '../lib/constants'
 const RECONNECT_DELAY = 1000
 const REQUEST_TIMEOUT = 30000
 
@@ -53,7 +52,7 @@ class KubectlService {
 
     this.isConnecting = true
     try {
-      this.ws = new WebSocket(AGENT_WS_URL)
+      this.ws = new WebSocket(LOCAL_AGENT_WS_URL)
 
       this.ws.onopen = () => {
         this.isConnecting = false

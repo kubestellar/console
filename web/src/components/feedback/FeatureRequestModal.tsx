@@ -13,6 +13,7 @@ import {
   type NotificationType,
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
+import { BACKEND_DEFAULT_URL } from '../../lib/constants'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 
@@ -140,7 +141,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
     // Clear demo token and redirect to GitHub login via backend
     localStorage.removeItem('token')
     // Use full backend URL to ensure proper OAuth flow
-    window.location.href = 'http://localhost:8080/auth/github'
+    window.location.href = `${BACKEND_DEFAULT_URL}/auth/github`
   }
 
   const handleRequestUpdate = async (requestId: string) => {

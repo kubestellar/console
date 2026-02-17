@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Loader2, Copy, Check, Layers, Server, Lock, User } from 'lucide-react'
@@ -34,7 +35,7 @@ export function ServiceAccountDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 

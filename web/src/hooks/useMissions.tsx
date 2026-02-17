@@ -3,6 +3,7 @@ import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayl
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
+import { LOCAL_AGENT_WS_URL } from '../lib/constants'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed'
 
@@ -99,7 +100,6 @@ interface StartMissionParams {
 
 const MissionContext = createContext<MissionContextValue | null>(null)
 
-const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
 const MISSIONS_STORAGE_KEY = 'kc_missions'
 const UNREAD_MISSIONS_KEY = 'kc_unread_missions'
 const SELECTED_AGENT_KEY = 'kc_selected_agent'
@@ -236,7 +236,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       }, 5000)
 
       try {
-        wsRef.current = new WebSocket(KC_AGENT_WS_URL)
+        wsRef.current = new WebSocket(LOCAL_AGENT_WS_URL)
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)

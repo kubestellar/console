@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { PredictionFeedback, StoredFeedback, PredictionType, PredictionStats } from '../types/predictions'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 const STORAGE_KEY = 'kubestellar-prediction-feedback'
 const FEEDBACK_CHANGED_EVENT = 'kubestellar-prediction-feedback-changed'
@@ -182,7 +183,7 @@ export function usePredictionFeedback() {
  * Send feedback to backend
  */
 async function sendFeedbackToBackend(predictionId: string, feedback: PredictionFeedback): Promise<void> {
-  const response = await fetch('http://127.0.0.1:8585/predictions/feedback', {
+  const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/predictions/feedback`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ predictionId, feedback }),

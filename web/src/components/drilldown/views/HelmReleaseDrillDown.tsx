@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -126,7 +127,7 @@ export function HelmReleaseDrillDown({ data }: Props) {
   // Helper to run helm commands via the agent
   const runHelm = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `helm-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 

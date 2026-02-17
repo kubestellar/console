@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import { Alert, AlertChannel } from '../types/alerts'
+import { BACKEND_DEFAULT_URL } from '../lib/constants'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
 
 interface TestNotificationRequest {
   type: 'slack' | 'email' | 'webhook'

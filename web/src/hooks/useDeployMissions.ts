@@ -3,13 +3,12 @@ import { useCardSubscribe } from '../lib/cardEvents'
 import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem('token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
-
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
 /** Fetch K8s events for a deployment via kubectlProxy.
  *  Fetches all events in the namespace and filters client-side to include
@@ -216,7 +215,7 @@ export function useDeployMissions() {
                   params.append('namespace', mission.namespace)
                   const ctrl = new AbortController()
                   const tid = setTimeout(() => ctrl.abort(), 10000)
-                  const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+                  const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                     signal: ctrl.signal,
                     headers: { Accept: 'application/json' },
                   })

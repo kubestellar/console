@@ -8,6 +8,7 @@
 import { useState, useMemo } from 'react'
 import { Download, Monitor, Smartphone, Copy, Check, ExternalLink, Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { BACKEND_DEFAULT_URL } from '../../lib/constants'
 import { BaseModal } from '../../lib/modals'
 import {
   WIDGET_CARDS,
@@ -33,7 +34,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const [selectedCard, setSelectedCard] = useState<string | null>(cardType || null)
   const [selectedStats, setSelectedStats] = useState<string[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
-  const [apiEndpoint, setApiEndpoint] = useState('http://localhost:8080')
+  const [apiEndpoint, setApiEndpoint] = useState(BACKEND_DEFAULT_URL)
   const [refreshInterval, setRefreshInterval] = useState(30)
   const [copied, setCopied] = useState(false)
   const [showCode, setShowCode] = useState(false)

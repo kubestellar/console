@@ -8,6 +8,7 @@ import type {
   AlertStats,
   AlertChannel,
 } from '../types/alerts'
+import { BACKEND_DEFAULT_URL } from '../lib/constants'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 
 // Generate unique ID
@@ -296,7 +297,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       // Skip notification if not authenticated - notifications require login
       if (!token) return
 
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
 
       const response = await fetch(`${API_BASE}/api/notifications/send`, {
         method: 'POST',

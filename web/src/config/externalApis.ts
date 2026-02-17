@@ -1,16 +1,18 @@
 /**
  * External API Configuration
- * 
+ *
  * This file centralizes external API endpoints and documentation URLs.
- * 
+ *
  * SECURITY NOTE: All URLs in this file are intentionally hardcoded and safe:
  * - Documentation links to official public resources (not credentials)
  * - Public API endpoints with environment variable overrides where needed
  * - Installation commands referencing public GitHub releases
- * 
+ *
  * This is NOT a security vulnerability - these are public URLs required for
  * application functionality and user guidance.
  */
+
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 /**
  * Weather and Geocoding APIs
@@ -67,6 +69,6 @@ export const K8S_DOCS = {
  * Local agent URL for API key management
  */
 export const KC_AGENT = {
-  url: 'http://127.0.0.1:8585',
+  url: LOCAL_AGENT_HTTP_URL,
   installCommand: 'brew install kubestellar/tap/kc-agent && kc-agent',
 } as const

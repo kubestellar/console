@@ -11,6 +11,7 @@ import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useToast } from '../ui/Toast'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -1089,7 +1090,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const [agentClusters, setAgentClusters] = useState<{ name: string; healthy?: boolean }[]>([])
   useEffect(() => {
     if (shouldUseDemoData) return
-    fetch('http://127.0.0.1:8585/clusters')
+    fetch(`${LOCAL_AGENT_HTTP_URL}/clusters`)
       .then(res => res.json())
       .then(data => {
         if (data.clusters) {

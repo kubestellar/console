@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -258,7 +259,7 @@ export function PodDrillDown({ data }: Props) {
     setDescribeLoading(true)
 
     try {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `describe-${Date.now()}`
 
       ws.onopen = () => {
@@ -321,7 +322,7 @@ export function PodDrillDown({ data }: Props) {
     setLogsLoading(true)
 
     try {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `logs-${Date.now()}`
 
       ws.onopen = () => {
@@ -356,7 +357,7 @@ export function PodDrillDown({ data }: Props) {
     setEventsLoading(true)
 
     try {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `events-${Date.now()}`
 
       ws.onopen = () => {
@@ -394,7 +395,7 @@ export function PodDrillDown({ data }: Props) {
       // Helper to run a kubectl command and get output
       const runKubectl = (args: string[]): Promise<string> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
           const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 
@@ -517,7 +518,7 @@ ${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\
 `.trim()
 
       // Now request AI analysis via Claude
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `ai-analyze-${Date.now()}`
 
       ws.onopen = () => {
@@ -577,7 +578,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setPodStatusLoading(true)
 
     try {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `status-${Date.now()}`
 
       ws.onopen = () => {
@@ -612,7 +613,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setYamlLoading(true)
 
     try {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `yaml-${Date.now()}`
 
       ws.onopen = () => {
@@ -766,7 +767,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
     setDeleteError(null)
 
     try {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
       const requestId = `delete-pod-${Date.now()}`
 
       ws.onopen = () => {
@@ -817,7 +818,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
           const requestId = `label-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -944,7 +945,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
           const requestId = `annotate-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -1070,7 +1071,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
     try {
       const runKubectl = (args: string[]): Promise<string> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket('ws://127.0.0.1:8585/ws')
+          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
           const requestId = `related-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 

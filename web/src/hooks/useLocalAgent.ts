@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isDemoModeForced } from './useDemoMode'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 export interface AgentHealth {
   status: string
@@ -26,7 +27,6 @@ export interface ConnectionEvent {
   message: string
 }
 
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 10000 // Check every 10 seconds when connected
 const DISCONNECTED_POLL_INTERVAL = 60000 // Check every 60 seconds when disconnected
 const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before disconnecting
@@ -198,7 +198,7 @@ class AgentManager {
     this.isChecking = true
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_URL}/health`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
       })

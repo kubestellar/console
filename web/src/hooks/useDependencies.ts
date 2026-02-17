@@ -2,8 +2,7 @@ import { useState, useCallback } from 'react'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
-
-const AGENT_URL = 'http://127.0.0.1:8585'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 export interface ResolvedDependency {
   kind: string
@@ -32,7 +31,7 @@ async function agentFetch(path: string, timeout = 15000): Promise<Record<string,
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), timeout)
   try {
-    const res = await fetch(`${AGENT_URL}${path}`, {
+    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
       signal: ctrl.signal,
       headers: { Accept: 'application/json' },
     })

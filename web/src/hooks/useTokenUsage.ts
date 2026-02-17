@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 
 export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
 
@@ -27,7 +28,6 @@ export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
 const SETTINGS_KEY = 'kubestellar-token-settings'
 const CATEGORY_KEY = 'kubestellar-token-categories'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
-const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 30000 // Poll every 30 seconds
 
 const DEFAULT_SETTINGS = {
@@ -162,7 +162,7 @@ async function fetchTokenUsage() {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 3000)
-    const response = await fetch(`${LOCAL_AGENT_URL}/health`, {
+    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: controller.signal,
