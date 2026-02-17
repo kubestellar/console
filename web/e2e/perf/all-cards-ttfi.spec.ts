@@ -138,14 +138,58 @@ async function setupLiveMocks(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
   )
 
+  // /api/dashboards expects an array response (not {items:[]})
+  await page.route('**/api/dashboards**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  )
+
   await page.route('**/api/**', async (route) => {
     const url = route.request().url()
-    if (url.includes('/api/mcp/') || url.includes('/api/me') || url.includes('/api/workloads')) {
+    if (
+      url.includes('/api/mcp/') ||
+      url.includes('/api/me') ||
+      url.includes('/api/workloads') ||
+      url.includes('/api/dashboards')
+    ) {
       await route.fallback()
       return
     }
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
   })
+
+  // Mock external requests that would otherwise hang
+  await page.route('**/api.github.com/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  )
+
+  // RSS feed CORS proxy mocks (prevent hanging external requests)
+  await page.route('**/api.rss2json.com/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        items: [
+          { title: 'Test Article 1', link: 'https://example.com/1', description: 'Test', pubDate: new Date().toISOString(), author: 'Test' },
+          { title: 'Test Article 2', link: 'https://example.com/2', description: 'Test', pubDate: new Date().toISOString(), author: 'Test' },
+        ],
+      }),
+    })
+  )
+  await page.route('**/api.allorigins.win/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/xml',
+      body: `<?xml version="1.0"?><rss version="2.0"><channel><title>Test</title><item><title>Test</title><link>https://example.com/1</link><description>Test</description><pubDate>${new Date().toUTCString()}</pubDate></item></channel></rss>`,
+    })
+  )
+  await page.route('**/corsproxy.io/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/xml',
+      body: `<?xml version="1.0"?><rss version="2.0"><channel><title>Test</title><item><title>Test</title><link>https://example.com/1</link><description>Test</description><pubDate>${new Date().toUTCString()}</pubDate></item></channel></rss>`,
+    })
+  )
 
   await page.route('http://127.0.0.1:8585/**', (route) => {
     const url = route.request().url()
@@ -157,7 +201,16 @@ async function setupLiveMocks(page: Page) {
       })
       return
     }
-    route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
+    // Return empty but valid data for all kc-agent endpoints
+    if (url.includes('/settings')) {
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+      return
+    }
+    if (url.includes('/clusters')) {
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      return
+    }
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
 
   await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
