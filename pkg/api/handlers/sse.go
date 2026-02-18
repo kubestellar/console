@@ -33,12 +33,42 @@ func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) {
 }
 
 // sseOverallDeadline is the maximum wall-clock time an SSE stream stays open.
-// After this, any still-running goroutines are abandoned and a "done" event
-// is sent with partial results. This prevents the browser from hanging.
-const sseOverallDeadline = 120 * time.Second
+const sseOverallDeadline = 30 * time.Second
 
 // ssePerClusterTimeout is the per-cluster fetch timeout for SSE streaming endpoints.
-const ssePerClusterTimeout = 60 * time.Second
+const ssePerClusterTimeout = 10 * time.Second
+
+// sseSlowClusterTimeout is a reduced timeout for clusters that recently timed out.
+const sseSlowClusterTimeout = 3 * time.Second
+
+// sseCacheTTL is how long cached SSE responses are considered fresh.
+const sseCacheTTL = 15 * time.Second
+
+// SSE response cache — avoids re-fetching when the user navigates away and back.
+var (
+	sseCache   = map[string]*sseCacheEntry{}
+	sseCacheMu sync.RWMutex
+)
+
+type sseCacheEntry struct {
+	data      interface{}
+	fetchedAt time.Time
+}
+
+func sseCacheGet(key string) interface{} {
+	sseCacheMu.RLock()
+	defer sseCacheMu.RUnlock()
+	if e, ok := sseCache[key]; ok && time.Since(e.fetchedAt) < sseCacheTTL {
+		return e.data
+	}
+	return nil
+}
+
+func sseCacheSet(key string, data interface{}) {
+	sseCacheMu.Lock()
+	sseCache[key] = &sseCacheEntry{data: data, fetchedAt: time.Now()}
+	sseCacheMu.Unlock()
+}
 
 // streamClusters is a generic helper that streams per-cluster results as SSE events.
 //
@@ -47,6 +77,11 @@ const ssePerClusterTimeout = 60 * time.Second
 // healthy/unknown clusters. Each successful result is immediately flushed as an
 // SSE "cluster_data" event. A "done" event fires when all goroutines finish or
 // the overall deadline is reached.
+//
+// Performance optimizations:
+//   - Cached results (< 15s old) are served instantly without goroutines
+//   - Clusters that recently timed out get a reduced 3s timeout
+//   - Clusters exceeding 5s are marked slow for future requests
 func streamClusters(
 	c *fiber.Ctx,
 	h *MCPHandlers,
@@ -80,19 +115,54 @@ func streamClusters(
 		// Spawn goroutines only for healthy/unknown clusters
 		var wg sync.WaitGroup
 		for _, cl := range healthy {
+			cacheKey := cfg.demoKey + ":" + cl.Name
+
+			// Check response cache — serve instantly if fresh
+			if cached := sseCacheGet(cacheKey); cached != nil {
+				mu.Lock()
+				completedClusters++
+				writeSSEEvent(w, "cluster_data", fiber.Map{
+					"cluster":   cl.Name,
+					cfg.demoKey: cached,
+					"source":    "cache",
+				})
+				mu.Unlock()
+				continue
+			}
+
 			wg.Add(1)
-			go func(clusterName string) {
+			go func(clusterName, cKey string) {
 				defer wg.Done()
-				ctx, cancel := context.WithTimeout(context.Background(), cfg.clusterTimeout)
+
+				// Use shorter timeout for clusters that recently timed out
+				timeout := cfg.clusterTimeout
+				if h.k8sClient.IsSlow(clusterName) {
+					timeout = sseSlowClusterTimeout
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 				defer cancel()
 
+				start := time.Now()
 				data, fetchErr := fetchFn(ctx, clusterName)
+				elapsed := time.Since(start)
+
 				if fetchErr != nil {
-					log.Printf("[SSE] cluster %s fetch failed: %v", clusterName, fetchErr)
+					log.Printf("[SSE] cluster %s fetch failed (%v): %v", clusterName, elapsed, fetchErr)
+					if elapsed > 5*time.Second {
+						h.k8sClient.MarkSlow(clusterName)
+					}
 					mu.Lock()
 					completedClusters++
 					mu.Unlock()
 					return
+				}
+
+				// Cache successful result
+				sseCacheSet(cKey, data)
+
+				if elapsed > 5*time.Second {
+					h.k8sClient.MarkSlow(clusterName)
 				}
 
 				mu.Lock()
@@ -103,7 +173,7 @@ func streamClusters(
 					"source":    "k8s",
 				})
 				mu.Unlock()
-			}(cl.Name)
+			}(cl.Name, cacheKey)
 		}
 
 		// Wait for all healthy clusters or overall deadline

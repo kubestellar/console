@@ -352,7 +352,8 @@ async function setupLiveMocks(page: Page) {
 
 async function setupMocks(page: Page) {
   if (REAL_BACKEND) return // skip all mocks — test against live backend
-  await setupMocks(page)
+  await setupAuth(page)
+  await setupLiveMocks(page)
 }
 
 async function setMode(page: Page) {

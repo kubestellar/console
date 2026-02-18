@@ -3,6 +3,10 @@
  *
  * Connects to backend /stream endpoints and delivers per-cluster data
  * incrementally as it arrives. Falls back to regular fetch on failure.
+ *
+ * Performance optimizations:
+ * - Result cache (10s TTL) serves cached data on re-navigation
+ * - In-flight dedup prevents duplicate concurrent requests to same URL
  */
 
 import { STORAGE_KEY_TOKEN } from './constants'
@@ -22,7 +26,14 @@ export interface SSEFetchOptions<T> {
   signal?: AbortSignal
 }
 
-const SSE_TIMEOUT = 180_000 // 180s — backend has 120s overall deadline, slow clusters need time
+const SSE_TIMEOUT = 60_000 // 60s — backend has 30s overall deadline
+
+// Dedup: prevent duplicate concurrent SSE requests to the same URL
+const inflightRequests = new Map<string, Promise<unknown[]>>()
+
+// Result cache: serve cached data on re-navigation within 10s
+const resultCache = new Map<string, { data: unknown[]; at: number }>()
+const RESULT_CACHE_TTL = 10_000
 
 /**
  * Open an SSE connection and progressively collect data.
@@ -32,25 +43,54 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const { url, params, onClusterData, onDone, itemsKey, signal } = options
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
 
-  return new Promise((resolve, reject) => {
-    const searchParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) searchParams.append(key, String(value))
-      })
+  const searchParams = new URLSearchParams()
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, String(value))
+    })
+  }
+  if (token) searchParams.append('_token', token)
+
+  const fullUrl = `${url}?${searchParams}`
+
+  // Check result cache — if fresh, replay cached data via callbacks and resolve
+  const cached = resultCache.get(fullUrl)
+  if (cached && Date.now() - cached.at < RESULT_CACHE_TTL) {
+    const items = cached.data as T[]
+    // Replay per-cluster grouping for onClusterData callbacks
+    const byCluster = new Map<string, T[]>()
+    for (const item of items) {
+      const cluster = (item as Record<string, unknown>).cluster as string || 'unknown'
+      const list = byCluster.get(cluster) || []
+      list.push(item)
+      byCluster.set(cluster, list)
     }
-    // EventSource doesn't support custom headers — pass token as query param
-    if (token) searchParams.append('_token', token)
+    for (const [cluster, clusterItems] of byCluster) {
+      onClusterData(cluster, clusterItems)
+    }
+    onDone?.({ cached: true })
+    return Promise.resolve(items)
+  }
 
-    const fullUrl = `${url}?${searchParams}`
+  // Dedup: if same URL is already in-flight, return the existing promise
+  const inflight = inflightRequests.get(fullUrl)
+  if (inflight) {
+    return inflight as Promise<T[]>
+  }
+
+  const promise = new Promise<T[]>((resolve, reject) => {
     const accumulated: T[] = []
-
     const eventSource = new EventSource(fullUrl)
 
-    // Handle abort
+    const cleanup = () => {
+      inflightRequests.delete(fullUrl)
+      resultCache.set(fullUrl, { data: accumulated, at: Date.now() })
+    }
+
     if (signal) {
       signal.addEventListener('abort', () => {
         eventSource.close()
+        cleanup()
         reject(new DOMException('Aborted', 'AbortError'))
       })
     }
@@ -61,7 +101,6 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
         const items = (data[itemsKey] || []) as T[]
         const clusterName = (data.cluster as string) || 'unknown'
 
-        // Tag items with cluster name if they don't already have one
         const tagged = items.map((item) => {
           const rec = item as Record<string, unknown>
           return rec.cluster ? item : ({ ...item, cluster: clusterName } as T)
@@ -76,6 +115,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
 
     eventSource.addEventListener('done', (event: MessageEvent) => {
       eventSource.close()
+      cleanup()
       try {
         const summary = JSON.parse(event.data) as Record<string, unknown>
         onDone?.(summary)
@@ -87,7 +127,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
 
     eventSource.addEventListener('error', () => {
       eventSource.close()
-      // If we got partial data, resolve with what we have
+      cleanup()
       if (accumulated.length > 0) {
         resolve(accumulated)
       } else {
@@ -95,15 +135,17 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
       }
     })
 
-    // Safety timeout
     const timeoutId = setTimeout(() => {
       if (eventSource.readyState !== EventSource.CLOSED) {
         eventSource.close()
+        cleanup()
         resolve(accumulated)
       }
     }, SSE_TIMEOUT)
 
-    // Clear timeout when stream ends normally
     eventSource.addEventListener('done', () => clearTimeout(timeoutId))
   })
+
+  inflightRequests.set(fullUrl, promise as Promise<unknown[]>)
+  return promise
 }

@@ -32,6 +32,7 @@ const (
 	podPendingAgeThreshold    = 2 * time.Minute
 	clusterEventDebounce      = 500 * time.Millisecond
 	clusterEventPollInterval  = 5 * time.Second
+	slowClusterTTL            = 2 * time.Minute
 )
 
 // MultiClusterClient manages connections to multiple Kubernetes clusters
@@ -47,8 +48,9 @@ type MultiClusterClient struct {
 	cacheTime       map[string]time.Time
 	watcher         *fsnotify.Watcher
 	stopWatch       chan struct{}
-	onReload        func()       // Callback when config is reloaded
-	inClusterConfig *rest.Config // In-cluster config when running inside k8s
+	onReload        func()                // Callback when config is reloaded
+	inClusterConfig *rest.Config          // In-cluster config when running inside k8s
+	slowClusters    map[string]time.Time  // clusters that recently timed out (reduced timeout)
 }
 
 // IsInCluster returns true if the server is running inside a Kubernetes cluster
@@ -533,6 +535,7 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 		healthCache:    make(map[string]*ClusterHealth),
 		cacheTTL:       clusterCacheTTL,
 		cacheTime:      make(map[string]time.Time),
+		slowClusters:   make(map[string]time.Time),
 	}
 
 	// Try to detect if we're running in-cluster
@@ -937,6 +940,25 @@ func (m *MultiClusterClient) HealthyClusters(ctx context.Context) (healthy []Clu
 		}
 	}
 	return healthy, offline, nil
+}
+
+// MarkSlow flags a cluster as slow (recently timed out or took >5s).
+// Slow clusters receive a reduced timeout for slowClusterTTL.
+func (m *MultiClusterClient) MarkSlow(clusterName string) {
+	m.mu.Lock()
+	m.slowClusters[clusterName] = time.Now()
+	m.mu.Unlock()
+	log.Printf("[Slow] cluster %s marked as slow (reduced timeout for %v)", clusterName, slowClusterTTL)
+}
+
+// IsSlow returns true if the cluster was recently marked as slow.
+func (m *MultiClusterClient) IsSlow(clusterName string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if t, ok := m.slowClusters[clusterName]; ok {
+		return time.Since(t) < slowClusterTTL
+	}
+	return false
 }
 
 // isBetterClusterName returns true if candidate is a better (more user-friendly)
