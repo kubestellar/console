@@ -25,7 +25,7 @@ export const upgradeStatusConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'ArrowUpCircle', title: 'All Current', message: 'All clusters are up to date', variant: 'success' },
   loadingState: { type: 'list', rows: 4 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default upgradeStatusConfig

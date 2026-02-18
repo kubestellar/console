@@ -23,7 +23,7 @@ export const resourceCapacityConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'BarChart3', title: 'No Data', message: 'No capacity data available', variant: 'info' },
   loadingState: { type: 'chart' },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default resourceCapacityConfig

@@ -25,7 +25,7 @@ export const gpuWorkloadsConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'Zap', title: 'No Workloads', message: 'No GPU workloads found', variant: 'info' },
   loadingState: { type: 'list', rows: 5 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default gpuWorkloadsConfig

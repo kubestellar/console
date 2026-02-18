@@ -73,5 +73,6 @@ export const gitopsDriftConfig: UnifiedCardConfig = {
     params: ['resource', 'kind', 'namespace'],
   },
 
-  isDemoData: true,
+  isDemoData: false,
+  isLive: true,
 }

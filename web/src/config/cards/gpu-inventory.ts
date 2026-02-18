@@ -29,7 +29,7 @@ export const gpuInventoryConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'Cpu', title: 'No GPUs', message: 'No GPU resources found', variant: 'info' },
   loadingState: { type: 'list', rows: 5 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default gpuInventoryConfig

@@ -101,7 +101,7 @@ export const serviceStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  isDemoData: false,
   isLive: true,
 }
 

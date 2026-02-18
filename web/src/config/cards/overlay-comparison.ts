@@ -19,7 +19,7 @@ export const overlayComparisonConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'GitCompare', title: 'No Overlays', message: 'Select overlays to compare', variant: 'info' },
   loadingState: { type: 'custom' },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default overlayComparisonConfig

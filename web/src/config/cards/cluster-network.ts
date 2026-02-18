@@ -19,7 +19,7 @@ export const clusterNetworkConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'Network', title: 'No Network Data', message: 'Network data not available', variant: 'info' },
   loadingState: { type: 'custom' },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default clusterNetworkConfig

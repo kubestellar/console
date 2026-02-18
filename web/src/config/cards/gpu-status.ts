@@ -25,7 +25,7 @@ export const gpuStatusConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'Activity', title: 'No GPUs', message: 'No GPU status available', variant: 'info' },
   loadingState: { type: 'list', rows: 5 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default gpuStatusConfig

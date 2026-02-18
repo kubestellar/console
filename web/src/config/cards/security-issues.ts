@@ -16,7 +16,8 @@ export const securityIssuesConfig: UnifiedCardConfig = {
   defaultWidth: 6,
   defaultHeight: 3,
 
-  isDemoData: true, // Uses demo data hook in registerHooks.ts
+  isDemoData: false,
+  isLive: true,
 
   dataSource: {
     type: 'hook',

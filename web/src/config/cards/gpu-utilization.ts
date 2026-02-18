@@ -23,7 +23,7 @@ export const gpuUtilizationConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'TrendingUp', title: 'No Data', message: 'No GPU utilization data', variant: 'info' },
   loadingState: { type: 'chart' },
-  isDemoData: true,
+  isDemoData: false,
   isLive: true,
 }
 export default gpuUtilizationConfig

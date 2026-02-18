@@ -16,7 +16,7 @@ export const storageOverviewConfig: UnifiedCardConfig = {
   defaultWidth: 4,
   defaultHeight: 3,
 
-  isDemoData: true, // Uses demo data hook in registerHooks.ts
+  isDemoData: false,
 
   dataSource: {
     type: 'hook',

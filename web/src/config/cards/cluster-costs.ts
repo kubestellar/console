@@ -23,7 +23,7 @@ export const clusterCostsConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'DollarSign', title: 'No Cost Data', message: 'Cost data not available', variant: 'info' },
   loadingState: { type: 'chart' },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default clusterCostsConfig

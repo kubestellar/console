@@ -25,7 +25,7 @@ export const chartVersionsConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'Package', title: 'No Charts', message: 'No chart versions found', variant: 'info' },
   loadingState: { type: 'list', rows: 5 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default chartVersionsConfig

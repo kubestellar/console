@@ -482,7 +482,6 @@ export const DEMO_DATA_CARDS = new Set([
   'argocd_sync_status',
   // GitOps cards - use mock data
   'kustomization_status',
-  'overlay_comparison',
   // Helm cards - all now use real data via helm CLI backend
   // Namespace cards - namespace_quotas, namespace_rbac, resource_capacity, and helm_release_status now have real data support
   // Cost management integrations - demo until connected

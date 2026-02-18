@@ -114,7 +114,7 @@ export const pvcStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: true,
+  isDemoData: false,
   isLive: true,
 }
 

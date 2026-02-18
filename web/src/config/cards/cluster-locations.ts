@@ -19,7 +19,7 @@ export const clusterLocationsConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'MapPin', title: 'No Location Data', message: 'Cluster location data not available', variant: 'info' },
   loadingState: { type: 'custom' },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default clusterLocationsConfig

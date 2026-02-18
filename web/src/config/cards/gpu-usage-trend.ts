@@ -23,7 +23,7 @@ export const gpuUsageTrendConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'BarChart2', title: 'No Data', message: 'No GPU trend data', variant: 'info' },
   loadingState: { type: 'chart' },
-  isDemoData: true,
+  isDemoData: false,
   isLive: true,
 }
 export default gpuUsageTrendConfig

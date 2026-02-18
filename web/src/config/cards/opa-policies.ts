@@ -28,7 +28,7 @@ export const opaPoliciesConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'Shield', title: 'No Policies', message: 'No OPA policies found', variant: 'info' },
   loadingState: { type: 'list', rows: 5 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default opaPoliciesConfig

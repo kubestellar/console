@@ -28,7 +28,7 @@ export const crdHealthConfig: UnifiedCardConfig = {
   },
   emptyState: { icon: 'FileCode', title: 'No CRDs', message: 'No Custom Resource Definitions found', variant: 'info' },
   loadingState: { type: 'list', rows: 5 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default crdHealthConfig
