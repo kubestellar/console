@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Types
 // ---------------------------------------------------------------------------
 
-type Scenario = 'cold-nav' | 'warm-nav' | 'rapid-nav'
+type Scenario = 'cold-nav' | 'warm-nav' | 'from-main' | 'from-clusters' | 'rapid-nav'
 
 interface NavMetric {
   from: string
@@ -759,6 +759,114 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page })
   console.log(`[NAV] warm-nav: ${summarizeScenario(warmMetrics)}`)
 })
 
+test('from-main — navigate away from Main Dashboard to various dashboards', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+
+  await setupAuth(page)
+  await setupLiveMocks(page)
+  await setMode(page)
+
+  // Pre-warm all dashboards so we isolate the "leaving Main Dashboard" transition
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  try {
+    await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
+  } catch { /* continue */ }
+  for (const dashboard of DASHBOARDS) {
+    await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
+    try {
+      await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
+    } catch { /* ignore */ }
+  }
+
+  // Diverse set of target dashboards to navigate TO from Main Dashboard
+  const targets = DASHBOARDS.filter((d) =>
+    ['clusters', 'compute', 'security', 'pods', 'deployments', 'events', 'workloads',
+     'helm', 'compliance', 'cost', 'ai-ml', 'deploy', 'ai-agents'].includes(d.id)
+  )
+
+  for (const target of targets) {
+    // Return to Main Dashboard before each navigation
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    try {
+      await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
+      await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
+      await page.waitForTimeout(500) // let Main Dashboard fully settle
+    } catch { /* continue */ }
+
+    // Now measure the navigation FROM / TO the target
+    const metric = await measureNavigation(page, '/', target, 'from-main')
+    if (metric) {
+      navReport.metrics.push(metric)
+      console.log(
+        `  from-main → ${target.name}: total=${metric.totalMs}ms click→url=${metric.clickToUrlChangeMs}ms url→first=${metric.urlChangeToFirstCardMs}ms url→all=${metric.urlChangeToAllCardsMs}ms cards=${metric.cardsFound}/${metric.cardsLoaded}`
+      )
+    }
+  }
+
+  if (pageErrors.length > 0) {
+    console.log(`  JS ERRORS (from-main): ${pageErrors.slice(0, 5).map(e => e.slice(0, 120)).join(' | ')}`)
+  }
+
+  const fromMainMetrics = navReport.metrics.filter((m) => m.scenario === 'from-main')
+  console.log(`[NAV] from-main: ${summarizeScenario(fromMainMetrics)}`)
+})
+
+test('from-clusters — navigate away from My Clusters to various dashboards', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+
+  await setupAuth(page)
+  await setupLiveMocks(page)
+  await setMode(page)
+
+  // Pre-warm all dashboards so we isolate the "leaving My Clusters" transition
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  try {
+    await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
+  } catch { /* continue */ }
+  for (const dashboard of DASHBOARDS) {
+    await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
+    try {
+      await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
+    } catch { /* ignore */ }
+  }
+
+  // Diverse set of target dashboards to navigate TO from My Clusters
+  const targets = DASHBOARDS.filter((d) =>
+    ['compute', 'security', 'pods', 'deployments', 'events', 'workloads',
+     'helm', 'compliance', 'cost', 'ai-ml', 'deploy', 'ai-agents', 'arcade'].includes(d.id)
+  )
+
+  const clustersDb = DASHBOARDS.find((d) => d.id === 'clusters')!
+
+  for (const target of targets) {
+    // Return to My Clusters before each navigation
+    await page.goto('/clusters', { waitUntil: 'domcontentloaded' })
+    try {
+      await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
+      await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
+      await page.waitForTimeout(500) // let My Clusters fully settle
+    } catch { /* continue */ }
+
+    // Now measure the navigation FROM /clusters TO the target
+    const metric = await measureNavigation(page, '/clusters', target, 'from-clusters')
+    if (metric) {
+      navReport.metrics.push(metric)
+      console.log(
+        `  from-clusters → ${target.name}: total=${metric.totalMs}ms click→url=${metric.clickToUrlChangeMs}ms url→first=${metric.urlChangeToFirstCardMs}ms url→all=${metric.urlChangeToAllCardsMs}ms cards=${metric.cardsFound}/${metric.cardsLoaded}`
+      )
+    }
+  }
+
+  if (pageErrors.length > 0) {
+    console.log(`  JS ERRORS (from-clusters): ${pageErrors.slice(0, 5).map(e => e.slice(0, 120)).join(' | ')}`)
+  }
+
+  const fromClustersMetrics = navReport.metrics.filter((m) => m.scenario === 'from-clusters')
+  console.log(`[NAV] from-clusters: ${summarizeScenario(fromClustersMetrics)}`)
+})
+
 test('rapid-nav — quick clicks through dashboards', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -871,7 +979,7 @@ test.afterAll(async () => {
     '',
   ]
 
-  for (const scenario of ['cold-nav', 'warm-nav', 'rapid-nav'] as const) {
+  for (const scenario of ['cold-nav', 'warm-nav', 'from-main', 'from-clusters', 'rapid-nav'] as const) {
     const metrics = navReport.metrics.filter((m) => m.scenario === scenario)
     lines.push(`- **${scenario}**: ${summarizeScenario(metrics)}`)
   }
