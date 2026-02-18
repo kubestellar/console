@@ -11,6 +11,9 @@ export interface NightlyWorkflowConfig {
   guide: string
   acronym: string
   platform: 'OCP' | 'GKE' | 'CKS'
+  model: string
+  gpuType: string
+  gpuCount: number
 }
 
 export interface NightlyRun {
@@ -33,29 +36,32 @@ export interface NightlyGuideStatus {
   passRate: number
   trend: 'up' | 'down' | 'steady'
   latestConclusion: string | null
+  model: string
+  gpuType: string
+  gpuCount: number
 }
 
 export const NIGHTLY_WORKFLOWS: NightlyWorkflowConfig[] = [
-  // OCP
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-ocp.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-ocp.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache-ocp.yaml', guide: 'Precise Prefix Cache', acronym: 'PPC', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-simulated-accelerators.yaml', guide: 'Simulated Accelerators', acronym: 'SA', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-tiered-prefix-cache-ocp.yaml', guide: 'Tiered Prefix Cache', acronym: 'TPC', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-ocp.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-ocp.yaml', guide: 'WVA', acronym: 'WVA', platform: 'OCP' },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-ocp.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'OCP' },
-  // GKE
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'GKE' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'GKE' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-gke.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'GKE' },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-gke.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'GKE' },
-  // CKS
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-cks.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'CKS' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-cks.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'CKS' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-cks.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'CKS' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-cks.yaml', guide: 'WVA', acronym: 'WVA', platform: 'CKS' },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nightly-benchmark-cks.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'CKS' },
+  // OCP — all OCP guides run on H100 except WVA (A100) and SA (CPU)
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-ocp.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'OCP', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-ocp.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'OCP', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache-ocp.yaml', guide: 'Precise Prefix Cache', acronym: 'PPC', platform: 'OCP', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-simulated-accelerators.yaml', guide: 'Simulated Accelerators', acronym: 'SA', platform: 'OCP', model: 'Simulated', gpuType: 'CPU', gpuCount: 0 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-tiered-prefix-cache-ocp.yaml', guide: 'Tiered Prefix Cache', acronym: 'TPC', platform: 'OCP', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 1 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-ocp.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'OCP', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-ocp.yaml', guide: 'WVA', acronym: 'WVA', platform: 'OCP', model: 'Llama-3.1-8B', gpuType: 'A100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-ocp.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'OCP', model: 'opt-125m', gpuType: 'A100', gpuCount: 1 },
+  // GKE — all GKE guides run on L4
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'GKE', model: 'Qwen3-32B', gpuType: 'L4', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'GKE', model: 'Qwen3-0.6B', gpuType: 'L4', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-gke.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'GKE', model: 'Qwen3-0.6B', gpuType: 'L4', gpuCount: 2 },
+  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-gke.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'GKE', model: 'opt-125m', gpuType: 'L4', gpuCount: 1 },
+  // CKS — all CKS guides run on H100
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-cks.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'CKS', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-cks.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'CKS', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-cks.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'CKS', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-cks.yaml', guide: 'WVA', acronym: 'WVA', platform: 'CKS', model: 'Llama-3.1-8B', gpuType: 'H100', gpuCount: 2 },
+  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nightly-benchmark-cks.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'CKS', model: 'opt-125m', gpuType: 'H100', gpuCount: 1 },
 ]
 
 // Seeded patterns per guide for deterministic demo data
@@ -128,6 +134,9 @@ export function generateDemoNightlyData(): NightlyGuideStatus[] {
       passRate: computePassRate(runs),
       trend: computeTrend(runs),
       latestConclusion: runs[0]?.conclusion ?? runs[0]?.status ?? null,
+      model: wf.model,
+      gpuType: wf.gpuType,
+      gpuCount: wf.gpuCount,
     }
   })
 }
