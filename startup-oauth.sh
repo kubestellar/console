@@ -215,8 +215,10 @@ fi
 
 if [ "$USE_DEV_SERVER" = true ]; then
     # Dev mode: Vite dev server with HMR (slower initial load, live reload on code changes)
-    echo -e "${GREEN}Starting backend (OAuth + dev mode)...${NC}"
-    GOWORK=off go run ./cmd/console --dev &
+    # NOTE: Do NOT pass --dev to the backend — that bypasses OAuth and creates "dev-user".
+    # The --dev flag in startup-oauth.sh only controls using Vite dev server vs built assets.
+    echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
+    GOWORK=off go run ./cmd/console &
     BACKEND_PID=$!
     sleep 2
 
