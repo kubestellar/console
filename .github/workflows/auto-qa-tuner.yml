@@ -514,7 +514,6 @@ jobs:
           # Frontend-heavy CNCF & cloud-native projects (dashboards, web UIs, consoles)
           # Pick 4 random per run — these all have React/TS/Vue frontends
           REPOS=(
-            # Tier 1: Large React/TS dashboards (most similar to us)
             "backstage/backstage"              # React, TypeScript, plugin architecture
             "grafana/grafana"                  # React, TypeScript, dashboard panels
             "kubernetes/dashboard"             # React, TypeScript, K8s UI
@@ -522,19 +521,10 @@ jobs:
             "rancher/dashboard"                # Vue, TypeScript, K8s management UI
             "headlamp-k8s/headlamp"            # React, TypeScript, K8s UI
             "kubevirt/kubevirt-ui"              # React, TypeScript, VM management
-            # Tier 2: Significant web UIs
             "goharbor/harbor"                  # React frontend for container registry
             "meshery/meshery"                  # React, Next.js, service mesh UI
             "opencost/opencost"                # React dashboard for K8s cost monitoring
-            "kubecost/cost-analyzer-helm-chart" # React cost dashboard
-            "loft-sh/vcluster"                 # React UI for virtual clusters
             "jaegertracing/jaeger-ui"          # React, trace visualization
-            "prometheus/prometheus"             # React UI for metrics
-            # Tier 3: Other frontend-relevant CNCF projects
-            "thanos-io/thanos"                 # React UI for metrics at scale
-            "fluxcd/flux2"                     # Web UI components
-            "open-telemetry/opentelemetry-js"  # TypeScript, browser telemetry SDK
-            "vitessio/vitess"                  # React vtadmin dashboard
             "cilium/hubble-ui"                 # React, network observability UI
             "kiali/kiali"                      # React, Istio service mesh UI
           )
@@ -556,117 +546,160 @@ jobs:
           echo "Selected repos: ${SELECTED[*]}"
           echo "selected=${SELECTED[*]}" >> "$GITHUB_OUTPUT"
 
-          # Pattern counters
-          declare -A PATTERNS
-          PATTERN_NAMES=("error_handling" "testing" "observability" "security" "performance" "ci_cd" "documentation")
+          # ── UX Theme definitions ──
+          # These are the lenses we use to evaluate what CNCF projects are doing
+          # that makes them more adoptable and better for users
+          declare -A THEME_REGEX
+          THEME_REGEX[error_ux]='error.boundar|error.message|error.state|user.friendly.error|fallback.ui|error.page|error.display|toast|snackbar|notification|alert.component'
+          THEME_REGEX[loading_ux]='loading|skeleton|spinner|placeholder|progressive|lazy.load|suspense|shimmer|empty.state|no.data|zero.state'
+          THEME_REGEX[accessibility]='a11y|aria|screen.reader|keyboard.nav|focus.trap|focus.management|tab.order|wcag|contrast|semantic.html|role='
+          THEME_REGEX[navigation_ux]='breadcrumb|sidebar|nav|route|deep.link|back.button|browser.history|url.param|search|filter|sort|pagination'
+          THEME_REGEX[responsive_design]='responsive|mobile|breakpoint|media.query|viewport|touch|swipe|collapse|drawer|adaptive'
+          THEME_REGEX[data_viz]='chart|graph|visualization|sparkline|tooltip|legend|axis|time.series|heatmap|treemap|table.sort|column.resize'
+          THEME_REGEX[form_ux]='form|validation|input|select|dropdown|autocomplete|typeahead|date.picker|file.upload|multi.select|combobox'
+          THEME_REGEX[realtime_ux]='websocket|sse|streaming|live.update|real.time|poll|refresh|auto.refresh|watch|subscribe|event.source'
+          THEME_REGEX[onboarding]='onboard|wizard|stepper|tour|walkthrough|getting.started|setup|first.run|welcome|empty.state.action'
+          THEME_REGEX[dark_mode]='dark.mode|theme|color.scheme|light.mode|appearance|prefers-color-scheme|css.variable|design.token'
+          THEME_NAMES=("error_ux" "loading_ux" "accessibility" "navigation_ux" "responsive_design" "data_viz" "form_ux" "realtime_ux" "onboarding" "dark_mode")
 
-          # Initialize report
-          cat > /tmp/cncf-report.md << 'HEADER_EOF'
-          ## CNCF Landscape Intelligence Report
+          # Human-readable theme labels for the report
+          declare -A THEME_LABELS
+          THEME_LABELS[error_ux]="Error UX & User Feedback"
+          THEME_LABELS[loading_ux]="Loading States & Empty States"
+          THEME_LABELS[accessibility]="Accessibility"
+          THEME_LABELS[navigation_ux]="Navigation & Search"
+          THEME_LABELS[responsive_design]="Responsive & Mobile"
+          THEME_LABELS[data_viz]="Data Visualization"
+          THEME_LABELS[form_ux]="Forms & Input"
+          THEME_LABELS[realtime_ux]="Real-time & Live Updates"
+          THEME_LABELS[onboarding]="Onboarding & Guided Setup"
+          THEME_LABELS[dark_mode]="Theming & Dark Mode"
 
-          HEADER_EOF
-          echo "**Scanned repos:** ${SELECTED[*]}" >> /tmp/cncf-report.md
-          echo "**Period:** Last 7 days" >> /tmp/cncf-report.md
-          echo "" >> /tmp/cncf-report.md
+          declare -A THEME_TOTALS
+          for T in "${THEME_NAMES[@]}"; do THEME_TOTALS[$T]=0; done
 
-          # Table header
-          echo "### Pattern Distribution" >> /tmp/cncf-report.md
-          echo "" >> /tmp/cncf-report.md
-          HEADER="| Pattern |"
-          SEPARATOR="|---------|"
-          for REPO in "${SELECTED[@]}"; do
-            SHORT=$(echo "$REPO" | cut -d/ -f2)
-            HEADER="$HEADER $SHORT |"
-            SEPARATOR="$SEPARATOR------|"
-          done
-          HEADER="$HEADER Total |"
-          SEPARATOR="$SEPARATOR------|"
-          echo "$HEADER" >> /tmp/cncf-report.md
-          echo "$SEPARATOR" >> /tmp/cncf-report.md
+          # ── Scan each repo: fetch title + body, filter for frontend PRs ──
+          > /tmp/cncf-insights-detail.md
+          TOTAL_FRONTEND_PRS=0
 
-          # Scan each repo
-          > /tmp/cncf-notable.md
           for REPO in "${SELECTED[@]}"; do
             echo "Scanning $REPO..."
             FILE="/tmp/cncf-$(echo "$REPO" | tr '/' '-').json"
+            SHORT=$(echo "$REPO" | cut -d/ -f2)
 
-            # Fetch merged PRs as a proper JSON array
-            gh pr list --repo "$REPO" --state merged --limit 30 \
-              --json title,mergedAt,url \
-              --jq "[.[] | select(.mergedAt > \"$WEEK_AGO\")]" \
+            # Fetch merged PRs with title AND body (first 300 chars of body for context)
+            gh pr list --repo "$REPO" --state merged --limit 50 \
+              --json title,body,url,mergedAt,labels \
+              --jq "[.[] | select(.mergedAt > \"$WEEK_AGO\") | {title, body: (.body[:300] // \"\"), url, labels: [.labels[].name]}]" \
               > "$FILE" 2>/dev/null || echo "[]" > "$FILE"
 
-            # Ensure valid JSON array
             if ! jq empty "$FILE" 2>/dev/null; then
               echo "[]" > "$FILE"
             fi
 
-            PR_COUNT=$(jq length "$FILE")
-            echo "  Found $PR_COUNT merged PRs in last 7 days"
+            ALL_COUNT=$(jq length "$FILE")
+            echo "  Total merged PRs: $ALL_COUNT"
 
-            # Count patterns by scanning titles
-            TITLES=$(jq -r '.[].title' "$FILE" 2>/dev/null)
+            # Filter for frontend/UX-relevant PRs by scanning title + body
+            jq '[.[] | select(
+              (.title + " " + .body) | test("react|component|hook|tsx|jsx|css|style|ui|frontend|dashboard|panel|widget|modal|dialog|drawer|sidebar|nav|theme|dark.mode|a11y|aria|loading|skeleton|spinner|error.boundar|toast|form|input|select|table|chart|graph|responsive|mobile|onboard|wizard|empty.state|tooltip|dropdown|popover|badge|icon|animation|transition|i18n|locale|rtl"; "i")
+            )]' "$FILE" > "/tmp/cncf-${SHORT}-frontend.json" 2>/dev/null || echo "[]" > "/tmp/cncf-${SHORT}-frontend.json"
 
-            for PATTERN in "${PATTERN_NAMES[@]}"; do
-              case $PATTERN in
-                error_handling) REGEX='error|handle|recover|retry|fallback|panic|catch|exception' ;;
-                testing) REGEX='test|coverage|e2e|unit|integration|benchmark|spec|cypress|playwright' ;;
-                observability) REGEX='metric|trace|log|monitor|alert|telemetry|dashboard|grafana' ;;
-                security) REGEX='auth|rbac|token|permission|vuln|CVE|security|deps|dependabot' ;;
-                performance) REGEX='cache|optim|reduce|memory|latency|perf|speed|bundle|lazy|chunk' ;;
-                ci_cd) REGEX='ci|workflow|pipeline|action|build|release|deploy|docker|helm' ;;
-                documentation) REGEX='doc|readme|guide|example|tutorial|changelog|comment' ;;
-              esac
-              COUNT=$(echo "$TITLES" | grep -ciE "$REGEX" 2>/dev/null || true)
+            FE_COUNT=$(jq length "/tmp/cncf-${SHORT}-frontend.json")
+            echo "  Frontend-relevant PRs: $FE_COUNT"
+            TOTAL_FRONTEND_PRS=$((TOTAL_FRONTEND_PRS + FE_COUNT))
+
+            # Scan frontend PRs for UX themes
+            COMBINED=$(jq -r '.[] | .title + " " + .body' "/tmp/cncf-${SHORT}-frontend.json" 2>/dev/null)
+
+            for THEME in "${THEME_NAMES[@]}"; do
+              REGEX="${THEME_REGEX[$THEME]}"
+              COUNT=$(echo "$COMBINED" | grep -ciE "$REGEX" 2>/dev/null || true)
               COUNT=${COUNT:-0}
-              PATTERNS["${REPO}:${PATTERN}"]=$COUNT
-              [ "$COUNT" -gt 0 ] && echo "  $PATTERN: $COUNT"
+              THEME_TOTALS[$THEME]=$((${THEME_TOTALS[$THEME]} + COUNT))
+              [ "$COUNT" -gt 0 ] && echo "  ${THEME_LABELS[$THEME]}: $COUNT"
             done
 
-            # Find notable PRs (ones with interesting titles)
-            jq -r '.[] | select(.title | test("error|test|security|perf|observ|metric|a11y|accessib|component|hook|react|typescript|css|style|ui|dashboard|frontend"; "i")) | "- [\(.title)](\(.url)) — *'"$REPO"'*"' "$FILE" 2>/dev/null | head -5 >> /tmp/cncf-notable.md
+            # ── Extract contextual insights from each frontend PR ──
+            # For each frontend PR, extract what it does and why it matters
+            if [ "$FE_COUNT" -gt 0 ]; then
+              echo "" >> /tmp/cncf-insights-detail.md
+              echo "#### $REPO ($FE_COUNT frontend PRs)" >> /tmp/cncf-insights-detail.md
+              echo "" >> /tmp/cncf-insights-detail.md
+
+              # Get the most interesting PRs (skip pure dep bumps)
+              jq -r '.[] | select(.title | test("bump|renovate|dependabot"; "i") | not) | {title, body: (if (.body | length) > 0 then .body else "(no description)" end), url}' "/tmp/cncf-${SHORT}-frontend.json" | \
+              jq -s '.[0:8]' | \
+              jq -r '.[] | "- **[\(.title)](\(.url))**\n  > \(.body | gsub("\n"; " ") | gsub("\\s+"; " ") | .[:200])\n"' >> /tmp/cncf-insights-detail.md 2>/dev/null || true
+            fi
 
             sleep 2  # Rate limiting
           done
 
-          # Build pattern rows
-          for PATTERN in "${PATTERN_NAMES[@]}"; do
-            ROW="| $PATTERN |"
-            TOTAL_P=0
-            for REPO in "${SELECTED[@]}"; do
-              C="${PATTERNS["${REPO}:${PATTERN}"]:-0}"
-              C=$((C + 0))  # Ensure numeric
-              ROW="$ROW $C |"
-              TOTAL_P=$((TOTAL_P + C))
-            done
-            ROW="$ROW $TOTAL_P |"
-            echo "$ROW" >> /tmp/cncf-report.md
-          done
-
-          # Notable PRs section
-          if [ -s /tmp/cncf-notable.md ]; then
-            echo "" >> /tmp/cncf-report.md
-            echo "### Notable PRs" >> /tmp/cncf-report.md
-            echo "" >> /tmp/cncf-report.md
-            head -15 /tmp/cncf-notable.md >> /tmp/cncf-report.md
-          fi
-
-          # Suggestions section
+          # ── Build the report ──
+          echo "## CNCF Landscape Intelligence Report" > /tmp/cncf-report.md
           echo "" >> /tmp/cncf-report.md
-          echo "### Actionable Suggestions for kubestellar/console" >> /tmp/cncf-report.md
+          echo "**Scanned repos:** ${SELECTED[*]}" >> /tmp/cncf-report.md
+          echo "**Period:** Last 7 days | **Frontend-relevant PRs found:** $TOTAL_FRONTEND_PRS" >> /tmp/cncf-report.md
           echo "" >> /tmp/cncf-report.md
 
-          # Find top patterns across all repos
-          for PATTERN in "${PATTERN_NAMES[@]}"; do
-            TOTAL_P=0
-            for REPO in "${SELECTED[@]}"; do
-              C=${PATTERNS["${REPO}:${PATTERN}"]:-0}
-              TOTAL_P=$((TOTAL_P + C))
-            done
-            if [ "$TOTAL_P" -ge 5 ]; then
-              echo "- **$PATTERN** — seen $TOTAL_P times across scanned repos. Consider adding or boosting auto-qa checks in this area." >> /tmp/cncf-report.md
+          # UX Theme summary table
+          echo "### UX Theme Distribution" >> /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+          echo "| Theme | Hits | Relevance to Console |" >> /tmp/cncf-report.md
+          echo "|-------|------|---------------------|" >> /tmp/cncf-report.md
+
+          declare -A THEME_RELEVANCE
+          THEME_RELEVANCE[error_ux]="Error boundaries, toast notifications, fallback UIs"
+          THEME_RELEVANCE[loading_ux]="Skeleton screens, loading spinners, empty states for cards"
+          THEME_RELEVANCE[accessibility]="ARIA labels, keyboard navigation, screen reader support"
+          THEME_RELEVANCE[navigation_ux]="Sidebar navigation, deep linking, search/filter/sort"
+          THEME_RELEVANCE[responsive_design]="Mobile-friendly dashboard layouts, collapsible panels"
+          THEME_RELEVANCE[data_viz]="Charts, graphs, time series for metrics cards"
+          THEME_RELEVANCE[form_ux]="Cluster creation forms, config editors, validation"
+          THEME_RELEVANCE[realtime_ux]="SSE streams, live dashboard updates, auto-refresh"
+          THEME_RELEVANCE[onboarding]="First-run experience, setup wizards, empty state CTAs"
+          THEME_RELEVANCE[dark_mode]="Theme switching, CSS variables, design tokens"
+
+          for THEME in "${THEME_NAMES[@]}"; do
+            TOTAL_T=${THEME_TOTALS[$THEME]:-0}
+            if [ "$TOTAL_T" -gt 0 ]; then
+              echo "| ${THEME_LABELS[$THEME]} | $TOTAL_T | ${THEME_RELEVANCE[$THEME]} |" >> /tmp/cncf-report.md
             fi
           done
+
+          # Detailed insights section
+          echo "" >> /tmp/cncf-report.md
+          echo "### What These Projects Are Doing (with context)" >> /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+          echo "Each PR below includes its description so you can see *what* they changed and *why* — not just a title." >> /tmp/cncf-report.md
+
+          if [ -s /tmp/cncf-insights-detail.md ]; then
+            cat /tmp/cncf-insights-detail.md >> /tmp/cncf-report.md
+          else
+            echo "" >> /tmp/cncf-report.md
+            echo "*No frontend-relevant PRs found in selected repos this week.*" >> /tmp/cncf-report.md
+          fi
+
+          # Actionable suggestions — tied to specific themes
+          echo "" >> /tmp/cncf-report.md
+          echo "### Actionable Takeaways for KubeStellar Console" >> /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+
+          FOUND_SUGGESTION=false
+          for THEME in "${THEME_NAMES[@]}"; do
+            TOTAL_T=${THEME_TOTALS[$THEME]:-0}
+            if [ "$TOTAL_T" -ge 2 ]; then
+              FOUND_SUGGESTION=true
+              LABEL="${THEME_LABELS[$THEME]}"
+              REL="${THEME_RELEVANCE[$THEME]}"
+              echo "- **${LABEL}** (${TOTAL_T} PRs across repos) — CNCF projects are actively investing here. For our console: ${REL}." >> /tmp/cncf-report.md
+            fi
+          done
+
+          if [ "$FOUND_SUGGESTION" = false ]; then
+            echo "*No strong patterns detected this week. Try again next scan.*" >> /tmp/cncf-report.md
+          fi
 
           echo "" >> /tmp/cncf-report.md
           echo "---" >> /tmp/cncf-report.md
@@ -688,7 +721,7 @@ jobs:
           done
 
           gh issue create \
-            --title "[CNCF Insights] Patterns from $(date +%Y-%m-%d)" \
+            --title "[CNCF Insights] UX patterns from $(date +%Y-%m-%d)" \
             --label "cncf-insights" \
             --body-file /tmp/cncf-report.md
 
@@ -697,28 +730,34 @@ jobs:
           CONFIG="$CONFIG_FILE"
           [ ! -f "$CONFIG" ] && exit 0
 
-          # Add top suggestions to config
+          # Build suggestions from themes that had enough signal
           SUGGESTIONS='[]'
-          for PATTERN in error_handling testing observability security performance ci_cd documentation; do
+          THEME_NAMES=("error_ux" "loading_ux" "accessibility" "navigation_ux" "responsive_design" "data_viz" "form_ux" "realtime_ux" "onboarding" "dark_mode")
+
+          for THEME in "${THEME_NAMES[@]}"; do
             TOTAL_P=0
             for REPO in ${{ steps.scan.outputs.selected }}; do
-              FILE="/tmp/cncf-$(echo "$REPO" | tr '/' '-').json"
-              case $PATTERN in
-                error_handling) REGEX='error|handle|recover|retry|fallback|panic|catch|exception' ;;
-                testing) REGEX='test|coverage|e2e|unit|integration|benchmark|spec|cypress|playwright' ;;
-                observability) REGEX='metric|trace|log|monitor|alert|telemetry|dashboard|grafana' ;;
-                security) REGEX='auth|rbac|token|permission|vuln|CVE|security|deps|dependabot' ;;
-                performance) REGEX='cache|optim|reduce|memory|latency|perf|speed|bundle|lazy|chunk' ;;
-                ci_cd) REGEX='ci|workflow|pipeline|action|build|release|deploy|docker|helm' ;;
-                documentation) REGEX='doc|readme|guide|example|tutorial|changelog|comment' ;;
+              FILE="/tmp/cncf-$(echo "$REPO" | cut -d/ -f2)-frontend.json"
+              [ ! -f "$FILE" ] && continue
+              case $THEME in
+                error_ux) REGEX='error.boundar|error.message|error.state|fallback.ui|toast|snackbar|notification' ;;
+                loading_ux) REGEX='loading|skeleton|spinner|placeholder|lazy.load|suspense|empty.state' ;;
+                accessibility) REGEX='a11y|aria|screen.reader|keyboard.nav|focus|wcag|contrast' ;;
+                navigation_ux) REGEX='breadcrumb|sidebar|nav|route|deep.link|search|filter|sort|pagination' ;;
+                responsive_design) REGEX='responsive|mobile|breakpoint|media.query|viewport|touch' ;;
+                data_viz) REGEX='chart|graph|visualization|sparkline|tooltip|legend|time.series' ;;
+                form_ux) REGEX='form|validation|input|select|dropdown|autocomplete|date.picker' ;;
+                realtime_ux) REGEX='websocket|sse|streaming|live.update|real.time|poll|refresh' ;;
+                onboarding) REGEX='onboard|wizard|stepper|tour|walkthrough|getting.started|setup' ;;
+                dark_mode) REGEX='dark.mode|theme|color.scheme|appearance|css.variable|design.token' ;;
               esac
-              C=$(jq -r '.[].title' "$FILE" 2>/dev/null | grep -ciE "$REGEX" || true)
+              C=$(jq -r '.[] | .title + " " + .body' "$FILE" 2>/dev/null | grep -ciE "$REGEX" || true)
               C=${C:-0}
               C=$((C + 0))
               TOTAL_P=$((TOTAL_P + C))
             done
             if [ "$TOTAL_P" -ge 5 ]; then
-              SUGGESTIONS=$(echo "$SUGGESTIONS" | jq --arg pattern "$PATTERN" --argjson count "$TOTAL_P" \
+              SUGGESTIONS=$(echo "$SUGGESTIONS" | jq --arg pattern "$THEME" --argjson count "$TOTAL_P" \
                 '. + [{"pattern": $pattern, "count": $count, "added": (now | strftime("%Y-%m-%d")), "priority": "medium"}]')
             fi
           done
