@@ -144,7 +144,7 @@ export function ProactiveGPUNodeHealthMonitor() {
         n.nodeName.toLowerCase().includes(q) ||
         n.cluster.toLowerCase().includes(q) ||
         n.gpuType.toLowerCase().includes(q) ||
-        n.issues.some((i: string) => i.toLowerCase().includes(q))
+        (n.issues || []).some((i: string) => i.toLowerCase().includes(q))
       )
     }
 
@@ -284,7 +284,7 @@ export function ProactiveGPUNodeHealthMonitor() {
                     cluster: node.cluster,
                     status: node.status,
                   }}
-                  issues={node.issues.map((issue: string, idx: number) => ({
+                  issues={(node.issues || []).map((issue: string, idx: number) => ({
                     name: `Issue ${idx + 1}`,
                     message: issue,
                   }))}
@@ -305,16 +305,16 @@ export function ProactiveGPUNodeHealthMonitor() {
 
                   {/* Health checks */}
                   <div className="space-y-0.5">
-                    {node.checks.map((check: GPUNodeHealthCheck) => (
+                    {(node.checks || []).map((check: GPUNodeHealthCheck) => (
                       <CheckRow key={check.name} check={check} />
                     ))}
                   </div>
 
                   {/* Issues summary */}
-                  {node.issues.length > 0 && (
+                  {(node.issues || []).length > 0 && (
                     <div className="mt-2 pt-2 border-t border-white/[0.06]">
                       <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Issues</div>
-                      {node.issues.map((issue: string, i: number) => (
+                      {(node.issues || []).map((issue: string, i: number) => (
                         <div key={i} className="flex items-start gap-1.5 text-xs text-red-300/80 py-0.5">
                           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-red-400/60" />
                           {issue}
@@ -327,7 +327,7 @@ export function ProactiveGPUNodeHealthMonitor() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      drillToNode(node.cluster, node.nodeName, { issue: node.issues[0] })
+                      drillToNode(node.cluster, node.nodeName, { issue: (node.issues || [])[0] })
                     }}
                     className="mt-2 px-3 py-1 text-xs bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded text-white/60 hover:text-white/80 transition-colors"
                   >

@@ -1966,8 +1966,8 @@ func (m *MultiClusterClient) GetGPUNodeHealth(ctx context.Context, contextName s
 			continue
 		}
 
-		var checks []GPUNodeHealthCheck
-		var issues []string
+		checks := []GPUNodeHealthCheck{}
+		issues := []string{}
 
 		// Check 1: Node Ready
 		nodeReady := false
