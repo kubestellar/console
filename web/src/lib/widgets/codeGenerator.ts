@@ -306,7 +306,7 @@ ${wrapOpen}
                       <span key={i} className={'dot-tip-wrap' + (isFailed ? ' has-links' : '')} onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
                         <span className="tip">
                           {dotLabel}
-                          {isFailed && r.htmlUrl && <span><br/><a href={r.htmlUrl + '#logs'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }}>Logs</a><a href={r.htmlUrl + '/artifacts'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}/artifacts"\`); }}>Artifacts</a></span>}
+                          {isFailed && r.htmlUrl && <span><br/><a href={r.htmlUrl + '#logs'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }}>View Logs</a></span>}
                         </span>
                         <span style={{
                           width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',

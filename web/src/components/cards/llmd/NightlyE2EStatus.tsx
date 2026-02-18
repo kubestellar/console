@@ -116,18 +116,11 @@ function RunDot({ run, isHighlighted, onMouseEnter, onMouseLeave }: {
             <div className="text-slate-300 mb-1">
               Run #{run.runNumber} &middot; {isGPUFailure ? <span className="text-amber-400">GPU unavailable</span> : <span className="text-red-400">failed</span>} &middot; {formatTimeAgo(run.createdAt)}
             </div>
-            <div className="flex items-center gap-2">
-              <a href={logsUrl} target="_blank" rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
-                onClick={e => e.stopPropagation()}>
-                View Logs <ExternalLink size={8} />
-              </a>
-              <a href={`${run.htmlUrl}/artifacts`} target="_blank" rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
-                onClick={e => e.stopPropagation()}>
-                Artifacts <ExternalLink size={8} />
-              </a>
-            </div>
+            <a href={logsUrl} target="_blank" rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
+              onClick={e => e.stopPropagation()}>
+              View Logs <ExternalLink size={8} />
+            </a>
             <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-600" />
           </div>
         </div>
