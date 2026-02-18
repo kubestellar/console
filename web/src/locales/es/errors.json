@@ -28,7 +28,11 @@
     "required": "This field is required",
     "invalidFormat": "Invalid format",
     "minLength": "Must be at least {{count}} characters",
+    "minLength_one": "Must be at least {{count}} character",
+    "minLength_other": "Must be at least {{count}} characters",
     "maxLength": "Must be no more than {{count}} characters",
+    "maxLength_one": "Must be no more than {{count}} character",
+    "maxLength_other": "Must be no more than {{count}} characters",
     "invalidEmail": "Invalid email address",
     "invalidUrl": "Invalid URL",
     "nameTaken": "This name is already taken"
