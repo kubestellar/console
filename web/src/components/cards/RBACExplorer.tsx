@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useCardLoadingState } from './CardDataContext'
 
 interface RBACFinding {
   id: string
@@ -20,6 +21,7 @@ const DEMO_FINDINGS: RBACFinding[] = [
 ]
 
 export function RBACExplorer() {
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
   const [riskFilter, setRiskFilter] = useState<string | null>(null)
 
   const findings = DEMO_FINDINGS
