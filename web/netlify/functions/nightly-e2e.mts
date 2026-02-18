@@ -92,7 +92,6 @@ const NIGHTLY_WORKFLOWS: NightlyWorkflow[] = [
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-cks.yaml", guide: "WVA", acronym: "WVA", platform: "CKS", model: "Llama-3.1-8B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nightly-benchmark-cks.yaml", guide: "Benchmarking", acronym: "BM", platform: "CKS", model: "opt-125m", gpuType: "H100", gpuCount: 1 },
 ];
 
 // ---------------------------------------------------------------------------
