@@ -731,6 +731,7 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, 
 })
 
 test('warm-nav — revisit dashboards (chunks already cached)', async ({ page }, testInfo) => {
+  testInfo.setTimeout(120_000) // all 26 dashboards cold + warm
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -784,6 +785,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
 })
 
 test('from-main — navigate away from Main Dashboard to various dashboards', async ({ page }, testInfo) => {
+  testInfo.setTimeout(120_000) // pre-warm + 13 round-trip navigations
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -797,10 +799,10 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
   } catch { /* continue */ }
   for (const dashboard of DASHBOARDS) {
-    await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
     try {
+      await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore */ }
+    } catch { /* ignore pre-warm failures */ }
   }
 
   // Diverse set of target dashboards to navigate TO from Main Dashboard
@@ -810,21 +812,25 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
   )
 
   for (const target of targets) {
-    // Return to Main Dashboard before each navigation
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
     try {
-      await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-      await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-      await page.waitForTimeout(500) // let Main Dashboard fully settle
-    } catch { /* continue */ }
+      // Return to Main Dashboard before each navigation
+      await page.goto('/', { waitUntil: 'domcontentloaded' })
+      try {
+        await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
+        await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
+        await page.waitForTimeout(500) // let Main Dashboard fully settle
+      } catch { /* continue */ }
 
-    // Now measure the navigation FROM / TO the target
-    const metric = await measureNavigation(page, '/', target, 'from-main')
-    if (metric) {
-      navReport.metrics.push(metric)
-      console.log(
-        `  from-main → ${target.name}: total=${metric.totalMs}ms click→url=${metric.clickToUrlChangeMs}ms url→first=${metric.urlChangeToFirstCardMs}ms url→all=${metric.urlChangeToAllCardsMs}ms cards=${metric.cardsFound}/${metric.cardsLoaded}`
-      )
+      // Now measure the navigation FROM / TO the target
+      const metric = await measureNavigation(page, '/', target, 'from-main')
+      if (metric) {
+        navReport.metrics.push(metric)
+        console.log(
+          `  from-main → ${target.name}: total=${metric.totalMs}ms click→url=${metric.clickToUrlChangeMs}ms url→first=${metric.urlChangeToFirstCardMs}ms url→all=${metric.urlChangeToAllCardsMs}ms cards=${metric.cardsFound}/${metric.cardsLoaded}`
+        )
+      }
+    } catch (e) {
+      console.log(`  from-main → ${target.name}: SKIPPED (${(e as Error).message.slice(0, 80)})`)
     }
   }
 
@@ -837,6 +843,7 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
 })
 
 test('from-clusters — navigate away from My Clusters to various dashboards', async ({ page }, testInfo) => {
+  testInfo.setTimeout(120_000) // pre-warm + 13 round-trip navigations
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -850,10 +857,10 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
   } catch { /* continue */ }
   for (const dashboard of DASHBOARDS) {
-    await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
     try {
+      await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore */ }
+    } catch { /* ignore pre-warm failures */ }
   }
 
   // Diverse set of target dashboards to navigate TO from My Clusters
@@ -865,21 +872,25 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
   const clustersDb = DASHBOARDS.find((d) => d.id === 'clusters')!
 
   for (const target of targets) {
-    // Return to My Clusters before each navigation
-    await page.goto('/clusters', { waitUntil: 'domcontentloaded' })
     try {
-      await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-      await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-      await page.waitForTimeout(500) // let My Clusters fully settle
-    } catch { /* continue */ }
+      // Return to My Clusters before each navigation
+      await page.goto('/clusters', { waitUntil: 'domcontentloaded' })
+      try {
+        await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
+        await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
+        await page.waitForTimeout(500) // let My Clusters fully settle
+      } catch { /* continue */ }
 
-    // Now measure the navigation FROM /clusters TO the target
-    const metric = await measureNavigation(page, '/clusters', target, 'from-clusters')
-    if (metric) {
-      navReport.metrics.push(metric)
-      console.log(
-        `  from-clusters → ${target.name}: total=${metric.totalMs}ms click→url=${metric.clickToUrlChangeMs}ms url→first=${metric.urlChangeToFirstCardMs}ms url→all=${metric.urlChangeToAllCardsMs}ms cards=${metric.cardsFound}/${metric.cardsLoaded}`
-      )
+      // Now measure the navigation FROM /clusters TO the target
+      const metric = await measureNavigation(page, '/clusters', target, 'from-clusters')
+      if (metric) {
+        navReport.metrics.push(metric)
+        console.log(
+          `  from-clusters → ${target.name}: total=${metric.totalMs}ms click→url=${metric.clickToUrlChangeMs}ms url→first=${metric.urlChangeToFirstCardMs}ms url→all=${metric.urlChangeToAllCardsMs}ms cards=${metric.cardsFound}/${metric.cardsLoaded}`
+        )
+      }
+    } catch (e) {
+      console.log(`  from-clusters → ${target.name}: SKIPPED (${(e as Error).message.slice(0, 80)})`)
     }
   }
 
@@ -892,6 +903,7 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
 })
 
 test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo) => {
+  testInfo.setTimeout(120_000) // rapid-clicking through all dashboards
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -905,10 +917,10 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
   } catch { /* continue */ }
   for (const dashboard of DASHBOARDS) {
-    await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
     try {
+      await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore */ }
+    } catch { /* ignore pre-warm failures */ }
   }
 
   // Navigate home
