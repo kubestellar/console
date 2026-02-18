@@ -544,12 +544,7 @@ async function captureWarmSnapshots(
             if (!card) continue
             const textLen = (card.textContent || '').trim().length
             const hasVisual = !!card.querySelector('canvas,svg,iframe,table,img,video,pre,code,[role="img"]')
-            const hasSkeleton = (() => {
-              for (const el of card.querySelectorAll('.animate-pulse')) {
-                if ((el as HTMLElement).getBoundingClientRect().height > 40) return true
-              }
-              return false
-            })()
+            const hasSkeleton = !!card.querySelector('[data-card-skeleton="true"]')
             if ((textLen > 10 || hasVisual) && !hasSkeleton) {
               firstContentTime[id] = elapsed
             }
@@ -570,12 +565,7 @@ async function captureWarmSnapshots(
               }
               const textLen = (card.textContent || '').trim().length
               const hasVisual = !!card.querySelector('canvas,svg,iframe,table,img,video,pre,code,[role="img"]')
-              const hasSkeleton = (() => {
-                for (const el of card.querySelectorAll('.animate-pulse')) {
-                  if ((el as HTMLElement).getBoundingClientRect().height > 40) return true
-                }
-                return false
-              })()
+              const hasSkeleton = !!card.querySelector('[data-card-skeleton="true"]')
               return {
                 cardId: id,
                 cardType: card.getAttribute('data-card-type') || '',

@@ -578,14 +578,7 @@ async function measureDashboard(
           const el = document.querySelector(`[data-card-id="${id}"]`)
           if (!el) continue // temporarily unmounted — keep polling
           if (el.getAttribute('data-loading') === 'true') continue
-          let hasSkeleton = false
-          for (const p of el.querySelectorAll('.animate-pulse')) {
-            if ((p as HTMLElement).getBoundingClientRect().height > 40) {
-              hasSkeleton = true
-              break
-            }
-          }
-          if (hasSkeleton) continue
+          if (el.querySelector('[data-card-skeleton="true"]')) continue
           if ((el.textContent || '').trim().length <= 10) continue
           st.tracked[id].t = Math.round(now)
         }

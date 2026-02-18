@@ -447,12 +447,9 @@ async function startComplianceMonitor(page: Page, cardIds: string[]) {
             hasVisualContent: !!card.querySelector('canvas,svg,iframe,table,img,video,pre,code,[role="img"]'),
           }
 
-          // Check for large skeleton placeholders
-          for (const el of card.querySelectorAll('.animate-pulse')) {
-            if ((el as HTMLElement).getBoundingClientRect().height > 40) {
-              snap.hasLargeSkeleton = true
-              break
-            }
+          // Check for CardWrapper skeleton overlay (precise attribute — ignores card-internal animate-pulse decorations)
+          if (card.querySelector('[data-card-skeleton="true"]')) {
+            snap.hasLargeSkeleton = true
           }
 
           cardHistory[id].push(snap)

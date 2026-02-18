@@ -525,14 +525,7 @@ async function measureNavigation(
           const el = document.querySelector(`[data-card-id="${id}"]`)
           if (!el) continue
           if (el.getAttribute('data-loading') === 'true') continue
-          let hasSkeleton = false
-          for (const p of el.querySelectorAll('.animate-pulse')) {
-            if ((p as HTMLElement).getBoundingClientRect().height > 40) {
-              hasSkeleton = true
-              break
-            }
-          }
-          if (hasSkeleton) continue
+          if (el.querySelector('[data-card-skeleton="true"]')) continue
           const text = (el.textContent || '').trim()
           const hasVisual = !!el.querySelector('canvas,svg,iframe,table,img,video,pre,code,[role="img"]')
           if (text.length <= 10 && !hasVisual) continue

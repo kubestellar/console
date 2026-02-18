@@ -311,15 +311,7 @@ async function monitorBatch(page: Page, cardIds: string[], timeoutMs: number): P
         const isLoading = card.getAttribute('data-loading') === 'true'
         if (isLoading) continue
 
-        let hasLargeSkeleton = false
-        for (const pulse of card.querySelectorAll('.animate-pulse')) {
-          const rect = (pulse as HTMLElement).getBoundingClientRect()
-          if (rect.height > 40) {
-            hasLargeSkeleton = true
-            break
-          }
-        }
-        if (hasLargeSkeleton) continue
+        if (card.querySelector('[data-card-skeleton="true"]')) continue
 
         const textLen = (card.textContent || '').trim().length
         const hasVisualContent = !!card.querySelector('canvas,svg,iframe,table,img,video,pre,code,[role="img"]')

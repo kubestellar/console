@@ -1452,7 +1452,9 @@ export function CardWrapper({
               <>
                 {/* Show skeleton overlay when loading with no cached data */}
                 {shouldShowSkeleton && (
-                  <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader />
+                  <div data-card-skeleton="true">
+                    <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader />
+                  </div>
                 )}
                 {/* ALWAYS render children so they can report their data state via useCardLoadingState.
                     Hide visually when skeleton is showing, but keep mounted so useLayoutEffect runs.
