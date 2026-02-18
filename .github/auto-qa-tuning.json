@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "last_updated": "",
+  "rolling_window_days": 30,
+  "categories": {},
+  "weekly_insights": {
+    "best_pr_size": "",
+    "size_acceptance": {},
+    "type_acceptance": {},
+    "common_rejection_reasons": []
+  },
+  "cncf_insights": {
+    "last_scan_date": "",
+    "suggested_checks": []
+  },
+  "history": []
+}

@@ -75,6 +75,22 @@ jobs:
         working-directory: web
         run: npm ci
 
+      - name: Read tuning config
+        id: tuning
+        run: |
+          CONFIG=".github/auto-qa-tuning.json"
+          if [ -f "$CONFIG" ]; then
+            BLOCKED=$(jq -r '[.categories | to_entries[] | select(.value.status == "blocked") | .key] | join(",")' "$CONFIG")
+            BOOSTED=$(jq -r '[.categories | to_entries[] | select(.value.status == "boosted") | .key] | join(",")' "$CONFIG")
+            echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
+            echo "boosted=$BOOSTED" >> "$GITHUB_OUTPUT"
+            echo "Tuning config loaded — blocked: ${BLOCKED:-none}, boosted: ${BOOSTED:-none}"
+          else
+            echo "blocked=" >> "$GITHUB_OUTPUT"
+            echo "boosted=" >> "$GITHUB_OUTPUT"
+            echo "No tuning config found, running all checks"
+          fi
+
       - name: Determine daily focus
         id: focus
         run: |
@@ -3133,6 +3149,9 @@ jobs:
           FOCUS_ARIA_GAPS: ${{ steps.focus_aria_gaps.outputs.found }}
           FOCUS_MODAL_SAFETY: ${{ steps.focus_modal_safety.outputs.found }}
           FOCUS_EVENT_PARITY: ${{ steps.focus_event_parity.outputs.found }}
+          # Tuning (from auto-qa-tuner feedback loop)
+          BLOCKED_CATEGORIES: ${{ steps.tuning.outputs.blocked }}
+          BOOSTED_CATEGORIES: ${{ steps.tuning.outputs.boosted }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -4021,14 +4040,47 @@ jobs:
               });
             }
 
+            // ── Apply tuning: filter blocked categories, prioritize boosted ──
+
+            const blockedSet = new Set((process.env.BLOCKED_CATEGORIES || '').split(',').filter(Boolean));
+            const boostedSet = new Set((process.env.BOOSTED_CATEGORIES || '').split(',').filter(Boolean));
+
+            const beforeCount = checks.length;
+            const filteredChecks = checks.filter(check => {
+              const cat = (check.labels || []).find(l => l.startsWith('auto-qa:') && l !== 'auto-qa');
+              const catName = cat ? cat.replace('auto-qa:', '') : null;
+              if (catName && blockedSet.has(catName)) {
+                core.info(`TUNING BLOCKED: Skipping "${check.title}" (category "${catName}" has <20% acceptance rate)`);
+                return false;
+              }
+              return true;
+            });
+
+            // Sort: boosted categories first
+            filteredChecks.sort((a, b) => {
+              const catA = (a.labels || []).find(l => l.startsWith('auto-qa:'))?.replace('auto-qa:', '') || '';
+              const catB = (b.labels || []).find(l => l.startsWith('auto-qa:'))?.replace('auto-qa:', '') || '';
+              const aBoost = boostedSet.has(catA) ? 0 : 1;
+              const bBoost = boostedSet.has(catB) ? 0 : 1;
+              return aBoost - bBoost;
+            });
+
+            if (beforeCount !== filteredChecks.length) {
+              core.info(`Tuning filtered out ${beforeCount - filteredChecks.length} check(s) from blocked categories`);
+            }
+
+            // Replace checks with filtered+sorted version
+            checks.length = 0;
+            checks.push(...filteredChecks);
+
             // ── Create issues ──
 
             if (checks.length === 0) {
-              core.info(`All checks passed (focus: ${focusArea}). No issues to create.`);
+              core.info(`All checks passed or blocked by tuning (focus: ${focusArea}). No issues to create.`);
               return;
             }
 
-            core.info(`${checks.length} finding(s) detected (focus: ${focusArea}). Processing...`);
+            core.info(`${checks.length} finding(s) to process (focus: ${focusArea}). Creating issues...`);
 
             // Fetch both open AND recently closed issues to prevent duplicates after PR merges
             const [{ data: openIssues }, { data: closedIssues }] = await Promise.all([
