@@ -313,15 +313,12 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
         continue-on-error: true
 
-  # Visual regression tests - DISABLED until tests are stable
-  # TODO: Re-enable after test stabilization
   visual-regression:
     name: Visual Regression
-    if: false  # Disabled until tests are stable
+    if: github.event_name == 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Original condition: if: github.event_name == 'pull_request'
     defaults:
       run:
         working-directory: web

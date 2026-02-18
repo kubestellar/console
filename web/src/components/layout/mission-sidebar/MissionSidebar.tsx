@@ -129,7 +129,7 @@ export function MissionSidebar() {
       <div
         data-tour="ai-missions"
         className={cn(
-          "fixed bg-card/95 backdrop-blur-sm border-border z-40 flex flex-col overflow-hidden",
+          "fixed bg-card border-border z-40 flex flex-col overflow-hidden shadow-2xl",
           "transition-[width,top,border,transform] duration-300 ease-in-out",
           // Mobile: bottom sheet
           isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80vh]",

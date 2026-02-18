@@ -170,7 +170,7 @@ function FilterControl({
           onChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
             onChange(e.target.value || undefined),
           className:
-            'px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-blue-500 text-gray-200',
+            'px-3 py-1.5 text-sm bg-gray-900 border border-gray-600 rounded focus:outline-none focus:border-blue-500 text-gray-200',
         },
         createElement('option', { value: '' }, config.placeholder ?? 'All'),
         config.options?.map((opt) =>
