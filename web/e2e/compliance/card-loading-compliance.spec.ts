@@ -1219,14 +1219,13 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
   }
 
   // ── Assertions ──────────────────────────────────────────────────────────
-  // Critical criteria (c: skeleton shown during load, d: no demo badge in live mode, f: data-loading attr)
+  // Criterion a (no demo badge during loading) must be 100% — was the main issue, now fixed
+  expect(criterionPassRates['a'], `Criterion a pass rate ${Math.round(criterionPassRates['a'] * 100)}% should be 100%`).toBe(1)
+  // Critical criteria (c: SSE streaming, d: skeleton→content transition, f: persistent cache)
   for (const criterion of ['c', 'd', 'f'] as const) {
     const rate = criterionPassRates[criterion]
     expect(rate, `Criterion ${criterion} pass rate ${Math.round(rate * 100)}% should be >= 95%`).toBeGreaterThanOrEqual(0.95)
   }
-  // Overall fail count — allow known card-level issues (demo badge contamination is nondeterministic)
-  if (report.summary.failCount > 0) {
-    console.log(`[Compliance] WARNING: ${report.summary.failCount} card compliance failures (demo badge contamination)`)
-  }
-  expect(report.summary.failCount, `${report.summary.failCount} card compliance failures exceeds tolerance of 20`).toBeLessThan(20)
+  // Overall fail count — allow 1-2 nondeterministic edge cases (timing-sensitive criterion B)
+  expect(report.summary.failCount, `${report.summary.failCount} card compliance failures exceeds tolerance`).toBeLessThanOrEqual(2)
 })
