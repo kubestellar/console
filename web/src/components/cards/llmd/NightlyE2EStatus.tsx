@@ -5,7 +5,7 @@
  * and aggregate statistics. Grouped by platform (OCP, GKE).
  * Fetches from GitHub Actions API; falls back to demo data without a token.
  */
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   TestTube2, ExternalLink, TrendingUp, TrendingDown, Minus,
@@ -669,6 +669,20 @@ export function NightlyE2EStatus() {
   const { shouldSummarize } = useAIMode()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [hoveredRun, setHoveredRun] = useState<NightlyRun | null>(null)
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleRunHover = useCallback((run: NightlyRun | null) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    if (run) {
+      setHoveredRun(run)
+    } else {
+      // Delay clearing so moving between adjacent dots doesn't flash to null
+      hoverTimeoutRef.current = setTimeout(() => setHoveredRun(null), 50)
+    }
+  }, [])
 
   const { showSkeleton } = useCardLoadingState({
     isLoading,
@@ -786,7 +800,7 @@ export function NightlyE2EStatus() {
       {/* Two-column layout: guide rows (left) + detail panel (right) */}
       <div className="flex flex-1 min-h-0 gap-3">
         {/* Guide rows grouped by platform */}
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-2" onMouseLeave={() => { setSelectedKey(null); setHoveredRun(null) }}>
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-2" onMouseLeave={() => { setSelectedKey(null); if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null }; setHoveredRun(null) }}>
           {[...grouped.entries()].map(([platform, platformGuides]) => (
             <div key={platform}>
               <div className="flex items-center gap-2 px-2 mb-1">
@@ -809,7 +823,7 @@ export function NightlyE2EStatus() {
                     delay={0.25 + gi * 0.04}
                     isSelected={selectedKey === key}
                     onMouseEnter={() => setSelectedKey(key)}
-                    onRunHover={setHoveredRun}
+                    onRunHover={handleRunHover}
                   />
                 )
               })}
@@ -820,7 +834,7 @@ export function NightlyE2EStatus() {
         {/* Detail panel (right side) */}
         <div className="w-[420px] shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
           {selectedGuide ? (
-            <GuideDetailPanel guide={selectedGuide} hoveredRun={hoveredRun} onRunHover={setHoveredRun} />
+            <GuideDetailPanel guide={selectedGuide} hoveredRun={hoveredRun} onRunHover={handleRunHover} />
           ) : shouldSummarize ? (
             <NightlySummaryPanel guides={guides} />
           ) : (
