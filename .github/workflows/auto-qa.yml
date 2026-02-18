@@ -82,12 +82,21 @@ jobs:
           if [ -f "$CONFIG" ]; then
             BLOCKED=$(jq -r '[.categories | to_entries[] | select(.value.status == "blocked") | .key] | join(",")' "$CONFIG")
             BOOSTED=$(jq -r '[.categories | to_entries[] | select(.value.status == "boosted") | .key] | join(",")' "$CONFIG")
+            MAX_ISSUES=$(jq -r '.max_issues_override // 0' "$CONFIG")
+            PR_GUIDANCE=$(jq -r '.pr_guidance // ""' "$CONFIG")
+            # Export rotation weights as JSON for the focus step
+            jq -r '.rotation_weights // {}' "$CONFIG" > /tmp/rotation-weights.json
             echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
             echo "boosted=$BOOSTED" >> "$GITHUB_OUTPUT"
-            echo "Tuning config loaded — blocked: ${BLOCKED:-none}, boosted: ${BOOSTED:-none}"
+            echo "max_issues=$MAX_ISSUES" >> "$GITHUB_OUTPUT"
+            echo "pr_guidance=$PR_GUIDANCE" >> "$GITHUB_OUTPUT"
+            echo "Tuning config loaded — blocked: ${BLOCKED:-none}, boosted: ${BOOSTED:-none}, max_issues: ${MAX_ISSUES:-default}"
           else
             echo "blocked=" >> "$GITHUB_OUTPUT"
             echo "boosted=" >> "$GITHUB_OUTPUT"
+            echo "max_issues=0" >> "$GITHUB_OUTPUT"
+            echo "pr_guidance=" >> "$GITHUB_OUTPUT"
+            echo '{}' > /tmp/rotation-weights.json
             echo "No tuning config found, running all checks"
           fi
 
@@ -99,20 +108,69 @@ jobs:
             echo "area=$OVERRIDE" >> "$GITHUB_OUTPUT"
             echo "Focus override: $OVERRIDE"
           else
-            DOY=$(date -u +%j)  # Day of year (1-366)
-            SLOT=$(( 10#$DOY % 8 ))  # 10# forces base-10 (date +%j zero-pads, which bash reads as octal)
-            case $SLOT in
-              0) FOCUS="performance" ;;
-              1) FOCUS="security" ;;
-              2) FOCUS="a11y" ;;
-              3) FOCUS="operator" ;;
-              4) FOCUS="sre" ;;
-              5) FOCUS="features" ;;
-              6) FOCUS="resilience" ;;
-              7) FOCUS="consistency" ;;
-            esac
-            echo "area=$FOCUS" >> "$GITHUB_OUTPUT"
-            echo "Day-of-year $DOY slot $SLOT focus: $FOCUS"
+            # All 8 focus areas
+            AREAS=("performance" "security" "a11y" "operator" "sre" "features" "resilience" "consistency")
+
+            # Try weighted selection from tuning config
+            WEIGHTS_FILE="/tmp/rotation-weights.json"
+            HAS_WEIGHTS=false
+            if [ -f "$WEIGHTS_FILE" ] && [ "$(jq 'length' "$WEIGHTS_FILE" 2>/dev/null)" -gt 0 ]; then
+              HAS_WEIGHTS=true
+            fi
+
+            if [ "$HAS_WEIGHTS" = true ]; then
+              # Weighted random: build a pool where each area appears N times based on weight
+              # Weight 0 = skip, weight 1.0 = 10 entries, weight 2.0 = 20 entries, weight 0.5 = 5 entries
+              POOL=()
+              for AREA in "${AREAS[@]}"; do
+                W=$(jq -r --arg a "$AREA" '.[$a] // 1.0' "$WEIGHTS_FILE")
+                # Convert weight to integer pool entries (weight * 10)
+                ENTRIES=$(echo "$W * 10" | bc 2>/dev/null | cut -d. -f1)
+                ENTRIES=${ENTRIES:-10}
+                [ "$ENTRIES" -le 0 ] && continue
+                [ "$ENTRIES" -gt 20 ] && ENTRIES=20
+                for ((i=0; i<ENTRIES; i++)); do
+                  POOL+=("$AREA")
+                done
+              done
+
+              if [ ${#POOL[@]} -gt 0 ]; then
+                # Use time-based seed for reproducible-per-hour selection
+                HOUR_SEED=$(date -u +%Y%m%d%H)
+                IDX=$(( ( $(echo "$HOUR_SEED" | cksum | cut -d' ' -f1) ) % ${#POOL[@]} ))
+                FOCUS="${POOL[$IDX]}"
+                echo "area=$FOCUS" >> "$GITHUB_OUTPUT"
+                echo "Weighted selection: $FOCUS (pool size: ${#POOL[@]}, seed: $HOUR_SEED)"
+                # Log weights for debugging
+                for AREA in "${AREAS[@]}"; do
+                  W=$(jq -r --arg a "$AREA" '.[$a] // 1.0' "$WEIGHTS_FILE")
+                  echo "  $AREA: weight=$W"
+                done
+              else
+                # All weights are 0 — fall back to fixed rotation
+                DOY=$(date -u +%j)
+                SLOT=$(( 10#$DOY % 8 ))
+                FOCUS="${AREAS[$SLOT]}"
+                echo "area=$FOCUS" >> "$GITHUB_OUTPUT"
+                echo "All weights zero, fallback to slot $SLOT: $FOCUS"
+              fi
+            else
+              # No tuning config — use original fixed rotation
+              DOY=$(date -u +%j)  # Day of year (1-366)
+              SLOT=$(( 10#$DOY % 8 ))  # 10# forces base-10 (date +%j zero-pads, which bash reads as octal)
+              case $SLOT in
+                0) FOCUS="performance" ;;
+                1) FOCUS="security" ;;
+                2) FOCUS="a11y" ;;
+                3) FOCUS="operator" ;;
+                4) FOCUS="sre" ;;
+                5) FOCUS="features" ;;
+                6) FOCUS="resilience" ;;
+                7) FOCUS="consistency" ;;
+              esac
+              echo "area=$FOCUS" >> "$GITHUB_OUTPUT"
+              echo "Day-of-year $(date -u +%j) slot $SLOT focus: $FOCUS (no tuning weights)"
+            fi
           fi
 
       # ── Layer 1: Baseline Quality Checks ──────────────────────────
@@ -3152,6 +3210,8 @@ jobs:
           # Tuning (from auto-qa-tuner feedback loop)
           BLOCKED_CATEGORIES: ${{ steps.tuning.outputs.blocked }}
           BOOSTED_CATEGORIES: ${{ steps.tuning.outputs.boosted }}
+          TUNED_MAX_ISSUES: ${{ steps.tuning.outputs.max_issues }}
+          PR_GUIDANCE: ${{ steps.tuning.outputs.pr_guidance }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -3160,7 +3220,10 @@ jobs:
           script: |
             const fs = require('fs');
             const prefix = process.env.ISSUE_PREFIX;
-            const maxIssues = parseInt(process.env.MAX_ISSUES_PER_RUN);
+            const tunedMax = parseInt(process.env.TUNED_MAX_ISSUES || '0');
+            const maxIssues = tunedMax > 0 ? tunedMax : parseInt(process.env.MAX_ISSUES_PER_RUN);
+            const prGuidance = process.env.PR_GUIDANCE || '';
+            if (tunedMax > 0) core.info(`Using tuned max issues: ${tunedMax} (default was ${process.env.MAX_ISSUES_PER_RUN})`);
             const sha = process.env.COMMIT_SHA.substring(0, 7);
             const fullSha = process.env.COMMIT_SHA;
             const runUrl = process.env.RUN_URL;
@@ -3195,6 +3258,7 @@ jobs:
                 '',
                 '### How to Fix',
                 ...fixes.map(f => `- ${f}`),
+                ...(prGuidance ? ['', `> **PR Guidance:** ${prGuidance}`] : []),
                 '',
                 '---',
                 `*This issue was automatically created by the [Auto-QA workflow](${runUrl}).*`,
@@ -3215,6 +3279,7 @@ jobs:
                 '',
                 `### ${isEnhancement ? 'Suggested Improvements' : 'How to Fix'}`,
                 ...fixes.map(f => `- ${f}`),
+                ...(prGuidance ? ['', `> **PR Guidance:** ${prGuidance}`] : []),
                 '',
                 '---',
                 `*This issue was automatically created by the [Auto-QA workflow](${runUrl}) during **${areaName}** focus day.*`,

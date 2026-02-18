@@ -180,8 +180,61 @@ jobs:
             }])
           ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
 
+          # ── Compute rotation weights from acceptance rates ──
+          # High-acceptance categories get more focus days, blocked get 0
+          # Formula: weight = acceptance_rate * 1.5 (capped at 2.0, min 0.3)
+          #   blocked → 0, boosted → 2.0, normal scales linearly
+          TMP=$(mktemp)
+          jq '
+            .rotation_weights = (
+              .categories | to_entries | map(
+                if .value.status == "blocked" then {key: .key, value: 0}
+                elif .value.status == "boosted" then {key: .key, value: 2.0}
+                elif (.value.merged + .value.closed) < 3 then {key: .key, value: 1.0}
+                else {key: .key, value: ((.value.acceptance_rate * 1.5 * 100 | round) / 100 | if . > 2.0 then 2.0 elif . < 0.3 then 0.3 else . end)}
+                end
+              ) | from_entries
+            )
+          ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          # ── Compute dynamic max issues per run ──
+          # High overall acceptance → more issues (5), low → fewer (2)
+          TOTAL_M=$(jq '[.categories[].merged] | add // 0' "$CONFIG")
+          TOTAL_C=$(jq '[.categories[].closed] | add // 0' "$CONFIG")
+          TOTAL_ALL=$((TOTAL_M + TOTAL_C))
+          if [ "$TOTAL_ALL" -gt 0 ]; then
+            RATE=$(echo "scale=2; $TOTAL_M * 100 / $TOTAL_ALL" | bc)
+            RATE_INT=${RATE%.*}
+            if [ "$RATE_INT" -ge 70 ]; then
+              MAX_ISSUES=5
+            elif [ "$RATE_INT" -ge 50 ]; then
+              MAX_ISSUES=3
+            else
+              MAX_ISSUES=2
+            fi
+          else
+            MAX_ISSUES=3
+          fi
+          TMP=$(mktemp)
+          jq --argjson mi "$MAX_ISSUES" '.max_issues_override = $mi' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          # ── Compute PR guidance from size data ──
+          BEST_SIZE=$(jq -r '.weekly_insights.best_pr_size // "S"' "$CONFIG")
+          case "$BEST_SIZE" in
+            XS) GUIDANCE="Keep changes under 10 lines for best acceptance rate." ;;
+            S)  GUIDANCE="Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs." ;;
+            M)  GUIDANCE="Changes up to 200 lines (size M) are acceptable. Avoid PRs over 200 lines." ;;
+            *)  GUIDANCE="Keep PRs small and focused. Smaller PRs have higher acceptance rates." ;;
+          esac
+          TMP=$(mktemp)
+          jq --arg g "$GUIDANCE" '.pr_guidance = $g' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
           echo "Updated tuning config:"
           jq '.categories | to_entries[] | "\(.key): merged=\(.value.merged) closed=\(.value.closed) rate=\(.value.acceptance_rate) status=\(.value.status)"' -r "$CONFIG"
+          echo "Rotation weights:"
+          jq -r '.rotation_weights | to_entries[] | "  \(.key): \(.value)"' "$CONFIG"
+          echo "Max issues: $(jq '.max_issues_override' "$CONFIG")"
+          echo "PR guidance: $(jq -r '.pr_guidance' "$CONFIG")"
 
       - name: Commit tuning config
         run: |
