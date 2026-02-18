@@ -508,7 +508,8 @@ export const DEMO_DATA_CARDS = new Set([
   // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
   // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
   'llmd_configurator',
-  // LLM-d benchmark dashboard cards — all now use live data via useCachedBenchmarkReports()
+  // LLM-d benchmark dashboard cards — nightly E2E falls back to demo when no GH token
+  'nightly_e2e_status',
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
   // Cluster admin cards - demo until backend endpoints exist

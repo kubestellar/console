@@ -799,6 +799,10 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
 
     const cardIds = selected.map((item) => item.cardId)
     await waitForCardsToLoad(page, cardIds, BATCH_LOAD_TIMEOUT_MS)
+    // Allow lazy (code-split) components to mount and report state.
+    // StackContext cards dynamically report isDemoData via useReportCardDataState —
+    // without this wait the cold snapshot may capture before the child reports.
+    await page.waitForTimeout(500)
 
     // Capture cold load state
     const snapshots = await captureColdSnapshots(page, cardIds)
