@@ -686,12 +686,9 @@ export function NightlyE2EStatus() {
     }
   }, [])
 
-  // Show skeleton while fetching real data — don't flash demo data on initial load.
-  // hasAnyData is only true when we have REAL data (not demo fallback).
-  const hasRealData = guides.length > 0 && !isDemoFallback
   const { showSkeleton } = useCardLoadingState({
     isLoading,
-    hasAnyData: hasRealData,
+    hasAnyData: guides.length > 0,
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback,

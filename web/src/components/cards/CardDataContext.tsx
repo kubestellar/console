@@ -141,9 +141,12 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     isDemoData,
   } = options
 
-  // hasData is true once loading completes (even with empty data) OR if we have cached data
-  // This prevents flickering when data array is momentarily empty during refresh
-  const hasData = !isLoading || hasAnyData
+  // During initial load, demo data from initialData doesn't count as "real" data.
+  // Show skeleton instead of flashing demo content (yellow border + Demo badge).
+  // Once loading finishes, demo fallback data is shown normally with the badge.
+  // When refreshing with cached REAL data, show cached content + refresh animation.
+  const hasRealData = isLoading ? (hasAnyData && !isDemoData) : hasAnyData
+  const hasData = !isLoading || hasRealData
 
   // Report state to CardWrapper for refresh animation and status badges
   useReportCardDataState({
@@ -159,12 +162,12 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
   return {
     /** Whether the card has data to display (true once loading completes or has cached data) */
     hasData,
-    /** Whether to show skeleton loading state (only when loading with no cached data) */
-    showSkeleton: isLoading && !hasAnyData,
+    /** Whether to show skeleton loading state (only when loading with no cached/real data) */
+    showSkeleton: isLoading && !hasRealData,
     /** Whether to show empty state (loading finished but no data exists) */
     showEmptyState: !isLoading && !hasAnyData,
     /** Whether data is being refreshed (has cache, fetching update) */
-    isRefreshing: isLoading && hasData,
+    isRefreshing: isLoading && hasRealData,
   }
 }
 

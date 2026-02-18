@@ -181,52 +181,63 @@ async function setupLiveMocks(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok' }) })
   })
 
-  await page.route('**/api/workloads**', (route) =>
+  await page.route('**/api/workloads**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
-  )
+  })
 
   // Endpoints that expect array responses (not { items: [] })
-  await page.route('**/api/dashboards**', (route) =>
+  await page.route('**/api/dashboards**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
-  )
+  })
 
-  await page.route('**/api/config/**', (route) =>
+  await page.route('**/api/config/**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
-  )
+  })
 
   // Richer mock data for old MCP hook endpoints — ensures caches have non-empty data
-  // so warm return (criterion g) finds real data in localStorage
-  await page.route('**/api/gitops/buildpack-images**', (route) =>
+  // so warm return (criterion g) finds real data in localStorage.
+  // All routes have 150ms delay so loading phase is observable by the 50ms monitor.
+  await page.route('**/api/gitops/buildpack-images**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ images: [{ name: 'test-image', namespace: 'default', cluster: MOCK_CLUSTER, status: 'succeeded', builder: 'paketo' }] }) })
-  )
+  })
 
   await page.route('**/api/mcp/gpu-nodes**', async (route) => {
     if (route.request().url().includes('/stream')) { await route.fallback(); return }
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpus: [{ model: 'A100', memory: '80Gi', index: 0 }], labels: {}, allocatable: {}, capacity: {} }] }) })
   })
 
   await page.route('**/api/mcp/helm-releases**', async (route) => {
     if (route.request().url().includes('/stream')) { await route.fallback(); return }
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: new Date().toISOString() }] }) })
   })
 
   await page.route('**/api/mcp/operators**', async (route) => {
     if (route.request().url().includes('/stream')) { await route.fallback(); return }
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] }) })
   })
 
   await page.route('**/api/mcp/operator-subscriptions**', async (route) => {
     if (route.request().url().includes('/stream')) { await route.fallback(); return }
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ subscriptions: [{ name: 'test-sub', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, package: 'test-operator', channel: 'stable', currentCSV: 'test-operator.v1.0.0', installedCSV: 'test-operator.v1.0.0' }] }) })
   })
 
   await page.route('**/api/mcp/resource-quotas**', async (route) => {
     if (route.request().url().includes('/stream')) { await route.fallback(); return }
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ quotas: [{ name: 'default-quota', namespace: 'default', cluster: MOCK_CLUSTER, hard: { cpu: '4', memory: '8Gi' }, used: { cpu: '1', memory: '2Gi' } }] }) })
   })
 
   await page.route('**/api/mcp/nodes**', async (route) => {
     if (route.request().url().includes('/stream')) { await route.fallback(); return }
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nodes: [{ name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['control-plane'], kubeletVersion: 'v1.28.0', conditions: [{ type: 'Ready', status: 'True' }] }] }) })
   })
 
@@ -280,6 +291,8 @@ async function setupLiveMocks(page: Page) {
       await route.fallback()
       return
     }
+    // Delay ALL API responses so every card's loading phase is observable by the 50ms monitor
+    await new Promise((resolve) => setTimeout(resolve, 150))
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
   })
 
