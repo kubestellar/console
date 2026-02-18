@@ -26,6 +26,7 @@
     "test:e2e:perf:nav": "playwright test --config e2e/perf/perf.config.ts e2e/perf/dashboard-nav.spec.ts",
     "test:e2e:ui-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/card-loading-compliance.spec.ts",
     "test:e2e:ui-compliance:gate": "npm run test:e2e:ui-compliance && node e2e/compliance/compare-compliance.mjs",
+    "test:e2e:cache-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/card-cache-compliance.spec.ts",
     "test:e2e:coverage": "./scripts/run-e2e-coverage.sh",
     "coverage:report": "node scripts/coverage-report.mjs",
     "coverage:clean": "rimraf .nyc_output coverage"
