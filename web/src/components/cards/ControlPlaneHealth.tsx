@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
 
@@ -11,6 +12,7 @@ const CP_LABELS: Record<string, string[]> = {
 }
 
 export function ControlPlaneHealth() {
+  const { t } = useTranslation('cards')
   const { pods, isLoading } = useCachedPods(undefined, 'kube-system')
   const { clusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
@@ -59,8 +61,8 @@ export function ControlPlaneHealth() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4">
         <div className="text-2xl mb-2">☁️</div>
-        <div className="font-medium">Managed Cluster</div>
-        <div className="text-xs text-center mt-1">Control plane components are managed by your cloud provider</div>
+        <div className="font-medium">{t('controlPlaneHealth.managedCluster')}</div>
+        <div className="text-xs text-center mt-1">{t('controlPlaneHealth.managedClusterDescription')}</div>
       </div>
     )
   }
@@ -75,7 +77,7 @@ export function ControlPlaneHealth() {
               !selectedCluster ? 'bg-primary text-primary-foreground' : 'bg-muted/50 hover:bg-muted text-muted-foreground'
             }`}
           >
-            All
+            {t('controlPlaneHealth.all')}
           </button>
           {clusterNames.map(name => (
             <button
@@ -103,7 +105,7 @@ export function ControlPlaneHealth() {
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>{comp.ready}/{comp.total}</span>
             {comp.restarts > 0 && (
-              <span className="text-orange-400">{comp.restarts} restarts</span>
+              <span className="text-orange-400">{t('controlPlaneHealth.restarts', { count: comp.restarts })}</span>
             )}
           </div>
         </div>

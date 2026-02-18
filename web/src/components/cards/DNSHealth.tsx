@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 
 export function DNSHealth() {
+  const { t } = useTranslation('cards')
   const { pods, isLoading } = useCachedPods(undefined, 'kube-system')
 
   const dnsPods = useMemo(() => {
@@ -34,8 +36,8 @@ export function DNSHealth() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4">
         <div className="text-2xl mb-2">🌐</div>
-        <div className="font-medium">No DNS pods found</div>
-        <div className="text-xs mt-1">CoreDNS/kube-dns pods will appear here</div>
+        <div className="font-medium">{t('dnsHealth.noDnsPods')}</div>
+        <div className="text-xs mt-1">{t('dnsHealth.dnsPodsHint')}</div>
       </div>
     )
   }
@@ -43,7 +45,7 @@ export function DNSHealth() {
   return (
     <div className="space-y-2 p-1">
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-        <span>{dnsPods.length} DNS pods across {byCluster.length} clusters</span>
+        <span>{t('dnsHealth.podsSummary', { pods: dnsPods.length, clusters: byCluster.length })}</span>
       </div>
       {byCluster.map(([cluster, clusterPods]) => {
         const running = clusterPods.filter(p => p.status === 'Running')
@@ -58,9 +60,9 @@ export function DNSHealth() {
                 <span className="text-sm font-medium">{cluster}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{running.length}/{clusterPods.length} ready</span>
+                <span>{t('dnsHealth.readyCount', { ready: running.length, total: clusterPods.length })}</span>
                 {totalRestarts > 0 && (
-                  <span className="text-orange-400">{totalRestarts} restarts</span>
+                  <span className="text-orange-400">{t('dnsHealth.restarts', { count: totalRestarts })}</span>
                 )}
               </div>
             </div>

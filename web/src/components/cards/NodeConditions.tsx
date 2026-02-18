@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { useKubectl } from '../../hooks/useKubectl'
 
 type ConditionFilter = 'all' | 'healthy' | 'cordoned' | 'pressure'
 
 export function NodeConditions() {
+  const { t } = useTranslation('cards')
   const { nodes, isLoading } = useCachedNodes()
   const { execute } = useKubectl()
   const [filter, setFilter] = useState<ConditionFilter>('all')
@@ -87,6 +89,12 @@ export function NodeConditions() {
             cordoned: 'bg-yellow-500/10 text-yellow-400',
             pressure: 'bg-red-500/10 text-red-400',
           }
+          const filterLabels: Record<ConditionFilter, string> = {
+            all: t('nodeConditions.filterAll'),
+            healthy: t('nodeConditions.filterHealthy'),
+            cordoned: t('nodeConditions.filterCordoned'),
+            pressure: t('nodeConditions.filterPressure'),
+          }
           return (
             <button
               key={f}
@@ -95,7 +103,7 @@ export function NodeConditions() {
                 filter === f ? colors[f] + ' ring-1 ring-current' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
               }`}
             >
-              {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}: {count}
+              {filterLabels[f]}: {count}
             </button>
           )
         })}
@@ -123,7 +131,7 @@ export function NodeConditions() {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {node.unschedulable && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400">Cordoned</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400">{t('nodeConditions.cordoned')}</span>
                 )}
                 {pressures.map(p => (
                   <span key={p.type} className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">
@@ -139,7 +147,7 @@ export function NodeConditions() {
                     }
                     className="ml-1 text-xs px-1.5 py-0.5 rounded bg-muted/50 hover:bg-muted text-muted-foreground transition-colors disabled:opacity-50"
                   >
-                    {actionPending === node.name ? '...' : node.unschedulable ? 'Uncordon' : 'Cordon'}
+                    {actionPending === node.name ? '...' : node.unschedulable ? t('nodeConditions.uncordon') : t('nodeConditions.cordon')}
                   </button>
                 )}
               </div>
@@ -148,7 +156,7 @@ export function NodeConditions() {
         })}
         {filtered.length > 20 && (
           <div className="text-xs text-muted-foreground text-center py-1">
-            +{filtered.length - 20} more nodes
+            {t('nodeConditions.moreNodes', { count: filtered.length - 20 })}
           </div>
         )}
       </div>

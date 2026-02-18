@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server } from 'lucide-react'
 import { useClusters, useBuildpackImages, BuildpackImage } from '../../../hooks/useMCP'
 import { Skeleton } from '../../ui/Skeleton'
@@ -75,6 +76,7 @@ const formatTime = (timestamp: string | number | Date): string => {
 }
 
 export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
+  const { t } = useTranslation('cards')
   const { isLoading: clustersLoading } = useClusters()
 
   const {
@@ -184,13 +186,13 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
         {error ? (
           <>
             <p className="text-sm text-red-400">{error}</p>
-            <p className="text-xs mt-1">Failed to load buildpack images</p>
+            <p className="text-xs mt-1">{t('buildpacksStatus.loadFailed')}</p>
           </>
         ) : (
           <>
-            <p className="text-sm">No Buildpack images</p>
+            <p className="text-sm">{t('buildpacksStatus.noImages')}</p>
             <p className="text-xs mt-1">
-              Create kpack Image resources to track builds
+              {t('buildpacksStatus.createHint')}
             </p>
           </>
         )}
@@ -241,7 +243,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
           onChange={(e) => setSelectedNamespace(e.target.value)}
           className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">All namespaces</option>
+          <option value="">{t('buildpacksStatus.allNamespaces')}</option>
           {namespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}
@@ -254,11 +256,11 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
           <ClusterBadge cluster={localClusterFilter[0]} />
         ) : localClusterFilter.length > 1 ? (
           <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">
-            {localClusterFilter.length} clusters
+            {t('buildpacksStatus.clustersCount', { count: localClusterFilter.length })}
           </span>
         ) : (
           <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">
-            All clusters
+            {t('buildpacksStatus.allClusters')}
           </span>
         )}
 
@@ -274,16 +276,16 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search buildpack images..."
+        placeholder={t('buildpacksStatus.searchPlaceholder')}
         className="mb-4"
       />
 
       {/* Summary */}
       <div className="flex gap-2 mb-4">
-        <Summary label="Total" value={totalItems} color="blue" />
-        <Summary label="Succeeded" value={successCount} color="green" />
-        <Summary label="Building" value={buildingCount} color="blue" />
-        <Summary label="Failed" value={failedCount} color="red" />
+        <Summary label={t('buildpacksStatus.total')} value={totalItems} color="blue" />
+        <Summary label={t('buildpacksStatus.succeeded')} value={successCount} color="green" />
+        <Summary label={t('buildpacksStatus.building')} value={buildingCount} color="blue" />
+        <Summary label={t('buildpacksStatus.failed')} value={failedCount} color="red" />
       </div>
 
       {/* List */}

@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
 
 export function EtcdStatus() {
+  const { t } = useTranslation('cards')
   const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
   const { showSkeleton } = useCardLoadingState({
     isLoading,
@@ -40,8 +42,8 @@ export function EtcdStatus() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4">
         <div className="text-2xl mb-2">🗄️</div>
-        <div className="font-medium">etcd Managed by Provider</div>
-        <div className="text-xs text-center mt-1">etcd is managed by your cloud provider or not visible in kube-system</div>
+        <div className="font-medium">{t('etcdStatus.managedByProvider')}</div>
+        <div className="text-xs text-center mt-1">{t('etcdStatus.managedDescription')}</div>
       </div>
     )
   }
@@ -49,7 +51,7 @@ export function EtcdStatus() {
   return (
     <div className="space-y-2 p-1">
       <div className="text-xs text-muted-foreground">
-        {etcdPods.length} etcd members across {byCluster.length} clusters
+        {t('etcdStatus.membersSummary', { members: etcdPods.length, clusters: byCluster.length })}
       </div>
       {byCluster.map(([cluster, clusterPods]) => {
         const running = clusterPods.filter(p => p.status === 'Running')
@@ -64,8 +66,8 @@ export function EtcdStatus() {
                 <span className="text-sm font-medium">{cluster}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{running.length}/{clusterPods.length} members</span>
-                {totalRestarts > 0 && <span className="text-orange-400">{totalRestarts} restarts</span>}
+                <span>{t('etcdStatus.membersCount', { ready: running.length, total: clusterPods.length })}</span>
+                {totalRestarts > 0 && <span className="text-orange-400">{t('etcdStatus.restarts', { count: totalRestarts })}</span>}
               </div>
             </div>
             <div className="flex gap-1 mt-1 flex-wrap">

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 
 interface NamespaceUsage {
@@ -9,6 +10,7 @@ interface NamespaceUsage {
 }
 
 export function QuotaHeatmap() {
+  const { t } = useTranslation('cards')
   const { pods, isLoading } = useCachedPods(undefined, undefined, { limit: 500 })
   const [selectedNs, setSelectedNs] = useState<string | null>(null)
 
@@ -44,8 +46,8 @@ export function QuotaHeatmap() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4">
         <div className="text-2xl mb-2">📊</div>
-        <div className="font-medium">No namespace data</div>
-        <div className="text-xs mt-1">Namespace resource usage will appear here</div>
+        <div className="font-medium">{t('quotaHeatmap.noNamespaceData')}</div>
+        <div className="text-xs mt-1">{t('quotaHeatmap.namespaceUsageHint')}</div>
       </div>
     )
   }
@@ -60,7 +62,7 @@ export function QuotaHeatmap() {
   return (
     <div className="space-y-2 p-1">
       <div className="text-xs text-muted-foreground">
-        {namespaceData.length} namespaces across {new Set(namespaceData.map(d => d.cluster)).size} clusters
+        {t('quotaHeatmap.summary', { namespaces: namespaceData.length, clusters: new Set(namespaceData.map(d => d.cluster)).size })}
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 max-h-[350px] overflow-y-auto">
         {namespaceData.slice(0, 60).map(ns => {
@@ -76,7 +78,7 @@ export function QuotaHeatmap() {
               title={`${ns.namespace} (${ns.cluster}): ${ns.podCount} pods`}
             >
               <div className="truncate font-medium">{ns.namespace}</div>
-              <div className="text-[10px] opacity-75">{ns.podCount} pods</div>
+              <div className="text-[10px] opacity-75">{t('quotaHeatmap.podsCount', { count: ns.podCount })}</div>
             </button>
           )
         })}
@@ -87,13 +89,13 @@ export function QuotaHeatmap() {
         return (
           <div className="mt-2 p-2 rounded-lg bg-muted/30 text-xs">
             <div className="font-medium">{ns.namespace}</div>
-            <div className="text-muted-foreground">Cluster: {ns.cluster}</div>
-            <div className="text-muted-foreground">Pods: {ns.podCount}</div>
+            <div className="text-muted-foreground">{t('quotaHeatmap.cluster')} {ns.cluster}</div>
+            <div className="text-muted-foreground">{t('quotaHeatmap.pods')} {ns.podCount}</div>
           </div>
         )
       })()}
       {namespaceData.length > 60 && (
-        <div className="text-xs text-muted-foreground text-center">+{namespaceData.length - 60} more</div>
+        <div className="text-xs text-muted-foreground text-center">{t('quotaHeatmap.more', { count: namespaceData.length - 60 })}</div>
       )}
     </div>
   )

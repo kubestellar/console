@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
 
@@ -11,6 +12,7 @@ interface NamespaceCoverage {
 }
 
 export function NetworkPolicyCoverage() {
+  const { t } = useTranslation('cards')
   const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
   const [showUncovered, setShowUncovered] = useState(false)
   const { showSkeleton } = useCardLoadingState({
@@ -82,8 +84,8 @@ export function NetworkPolicyCoverage() {
           </div>
         </div>
         <div className="text-xs text-muted-foreground">
-          <div><span className="text-foreground font-medium">{coveredCount}</span> of {totalCount} namespaces</div>
-          <div>have network policies</div>
+          <div>{t('networkPolicyCoverage.namespacesOf', { covered: coveredCount, total: totalCount })}</div>
+          <div>{t('networkPolicyCoverage.haveNetworkPolicies')}</div>
         </div>
       </div>
 
@@ -94,7 +96,7 @@ export function NetworkPolicyCoverage() {
           showUncovered ? 'bg-red-500/10 text-red-400' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
         }`}
       >
-        {showUncovered ? `Uncovered only (${totalCount - coveredCount})` : 'Show uncovered'}
+        {showUncovered ? t('networkPolicyCoverage.uncoveredOnly', { count: totalCount - coveredCount }) : t('networkPolicyCoverage.showUncovered')}
       </button>
 
       {/* Namespace list */}
@@ -109,7 +111,7 @@ export function NetworkPolicyCoverage() {
               </div>
             </div>
             <div className="text-xs text-muted-foreground shrink-0">
-              {ns.podCount} pods
+              {t('networkPolicyCoverage.podsCount', { count: ns.podCount })}
             </div>
           </div>
         ))}

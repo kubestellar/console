@@ -1,4 +1,5 @@
 import { CheckCircle, AlertTriangle, XCircle, Loader2, Cloud } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput,CardControlsRow,CardPaginationFooter,CardAIActions } from '../../../lib/cards/CardComponents'
@@ -50,6 +51,7 @@ const SORT_OPTIONS = [
 ]
 
 export function CrossplaneManagedResources() {
+  const { t } = useTranslation('cards')
   const {
   resources: rawResources,
   isLoading,
@@ -130,7 +132,7 @@ export function CrossplaneManagedResources() {
         {error ? (
           <p className="text-sm text-red-400">{error}</p>
         ) : (
-          <p className="text-sm">No managed resources found</p>
+          <p className="text-sm">{t('crossplaneManagedResources.noResources')}</p>
         )}
       </div>
     )
@@ -141,7 +143,7 @@ export function CrossplaneManagedResources() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-          {rawResources.length} managed resources
+          {t('crossplaneManagedResources.resourceCount', { count: rawResources.length })}
         </span>
         {isRefreshing && (
           <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
@@ -161,15 +163,15 @@ export function CrossplaneManagedResources() {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search managed resources..."
+        placeholder={t('crossplaneManagedResources.searchPlaceholder')}
         className="mb-4"
       />
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <StatBox label="Ready" value={readyCount} color="green" />
-        <StatBox label="Not Ready" value={notReadyCount} color="orange" />
-        <StatBox label="Error" value={errorCount} color="red" />
-        <StatBox label="Synced" value={syncedCount} color="blue" />
+        <StatBox label={t('crossplaneManagedResources.ready')} value={readyCount} color="green" />
+        <StatBox label={t('crossplaneManagedResources.notReady')} value={notReadyCount} color="orange" />
+        <StatBox label={t('crossplaneManagedResources.error')} value={errorCount} color="red" />
+        <StatBox label={t('crossplaneManagedResources.synced')} value={syncedCount} color="blue" />
       </div>
       {/* List */}
       <div className="flex-1 space-y-2 overflow-y-auto">

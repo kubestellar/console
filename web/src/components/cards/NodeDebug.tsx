@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useCardLoadingState } from './CardDataContext'
@@ -53,16 +54,17 @@ const CATEGORY_COLORS: Record<string, { bg: string; hover: string; text: string 
   storage: { bg: 'bg-purple-500/10', hover: 'hover:bg-purple-500/20', text: 'text-purple-400' },
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  system: 'System',
-  kubernetes: 'Kubernetes',
-  network: 'Network',
-  storage: 'Storage',
+const CATEGORY_KEYS: Record<string, 'nodeDebug.categorySystem' | 'nodeDebug.categoryKubernetes' | 'nodeDebug.categoryNetwork' | 'nodeDebug.categoryStorage'> = {
+  system: 'nodeDebug.categorySystem',
+  kubernetes: 'nodeDebug.categoryKubernetes',
+  network: 'nodeDebug.categoryNetwork',
+  storage: 'nodeDebug.categoryStorage',
 }
 
 type TabMode = 'inspect' | 'exec'
 
 export function NodeDebug() {
+  const { t } = useTranslation('cards')
   const { nodes, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
   const { execute } = useKubectl()
   const { showSkeleton } = useCardLoadingState({
@@ -139,7 +141,7 @@ export function NodeDebug() {
           onChange={e => { setSelectedCluster(e.target.value); setSelectedNode('') }}
           className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="">All clusters</option>
+          <option value="">{t('nodeDebug.allClusters')}</option>
           {clusters.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <select
@@ -147,7 +149,7 @@ export function NodeDebug() {
           onChange={e => setSelectedNode(e.target.value)}
           className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="">Select node...</option>
+          <option value="">{t('nodeDebug.selectNode')}</option>
           {clusterNodes.map(n => (
             <option key={`${n.cluster}-${n.name}`} value={n.name}>
               {n.name} {n.cluster ? `(${n.cluster})` : ''}
@@ -166,7 +168,7 @@ export function NodeDebug() {
               : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
           }`}
         >
-          Node Exec
+          {t('nodeDebug.nodeExec')}
         </button>
         <button
           onClick={() => setMode('inspect')}
@@ -176,7 +178,7 @@ export function NodeDebug() {
               : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
           }`}
         >
-          Inspect
+          {t('nodeDebug.inspect')}
         </button>
       </div>
 
@@ -207,14 +209,14 @@ export function NodeDebug() {
                 <option key={img.value} value={img.value}>{img.label}</option>
               ))}
             </select>
-            <span className="text-[10px] text-muted-foreground">debug image</span>
+            <span className="text-[10px] text-muted-foreground">{t('nodeDebug.debugImage')}</span>
           </div>
           {(['system', 'kubernetes', 'network', 'storage'] as const).map(cat => {
             const cmds = EXEC_COMMANDS.filter(c => c.category === cat)
             const colors = CATEGORY_COLORS[cat]
             return (
               <div key={cat} className="flex gap-1 items-center flex-wrap">
-                <span className={`text-[10px] ${colors.text} opacity-60 w-12 shrink-0`}>{CATEGORY_LABELS[cat]}</span>
+                <span className={`text-[10px] ${colors.text} opacity-60 w-12 shrink-0`}>{t(CATEGORY_KEYS[cat])}</span>
                 {cmds.map(cmd => (
                   <button
                     key={cmd.label}
@@ -235,7 +237,7 @@ export function NodeDebug() {
             <input
               value={customCmd}
               onChange={e => setCustomCmd(e.target.value)}
-              placeholder="Custom command (e.g. ls -la /var/log)"
+              placeholder={t('nodeDebug.customCommandPlaceholder')}
               disabled={!selectedNode || isRunning}
               className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-orange-500/50 placeholder:text-muted-foreground/50 disabled:opacity-40"
             />
@@ -244,7 +246,7 @@ export function NodeDebug() {
               disabled={!selectedNode || isRunning || !customCmd.trim()}
               className="px-2 py-1 text-xs rounded bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Run
+              {t('nodeDebug.run')}
             </button>
           </form>
         </div>
@@ -256,9 +258,9 @@ export function NodeDebug() {
           <span className="text-muted-foreground">
             {selectedNode
               ? mode === 'exec'
-                ? 'Run a command on the node via kubectl debug'
-                : 'Click a command above to run diagnostics'
-              : 'Select a node to begin debugging'}
+                ? t('nodeDebug.execHint')
+                : t('nodeDebug.inspectHint')
+              : t('nodeDebug.selectNodeHint')}
           </span>
         )}
         {isRunning && <span className="animate-pulse ml-1">▊</span>}

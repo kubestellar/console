@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
 
@@ -12,6 +13,7 @@ const CHANGE_REASONS = new Set([
 type TimeRange = '1h' | '6h' | '24h' | '7d'
 
 export function ClusterChangelog() {
+  const { t } = useTranslation('cards')
   const { events, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedEvents(undefined, undefined, { limit: 200 })
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const { showSkeleton } = useCardLoadingState({
@@ -66,7 +68,7 @@ export function ClusterChangelog() {
     const d = new Date(ts)
     const now = new Date()
     const diff = now.getTime() - d.getTime()
-    if (diff < 60000) return 'just now'
+    if (diff < 60000) return t('clusterChangelog.justNow')
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
     return `${Math.floor(diff / 86400000)}d ago`
@@ -90,7 +92,7 @@ export function ClusterChangelog() {
 
       <div className="space-y-1 max-h-[350px] overflow-y-auto">
         {changeEvents.length === 0 ? (
-          <div className="text-sm text-muted-foreground text-center py-4">No changes in selected time range</div>
+          <div className="text-sm text-muted-foreground text-center py-4">{t('clusterChangelog.noChanges')}</div>
         ) : (
           changeEvents.map((event, i) => {
             const ts = event.lastSeen || event.firstSeen || ''

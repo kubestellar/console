@@ -1691,5 +1691,108 @@
       "cancel": "Cancel",
       "delete": "Delete"
     }
+  },
+  "nodeDebug": {
+    "allClusters": "All clusters",
+    "selectNode": "Select node...",
+    "nodeExec": "Node Exec",
+    "inspect": "Inspect",
+    "debugImage": "debug image",
+    "customCommandPlaceholder": "Custom command (e.g. ls -la /var/log)",
+    "run": "Run",
+    "execHint": "Run a command on the node via kubectl debug",
+    "inspectHint": "Click a command above to run diagnostics",
+    "selectNodeHint": "Select a node to begin debugging",
+    "categorySystem": "System",
+    "categoryKubernetes": "Kubernetes",
+    "categoryNetwork": "Network",
+    "categoryStorage": "Storage"
+  },
+  "predictiveHealth": {
+    "criticalCount": "{{count}} critical",
+    "warningCount": "{{count}} warnings",
+    "totalPredictions": "{{count}} total predictions",
+    "allClear": "All Clear",
+    "noExhaustionPredicted": "No resource exhaustion predicted",
+    "confidence": "Confidence:",
+    "timeToExhaustion": "Estimated time to exhaustion:"
+  },
+  "controlPlaneHealth": {
+    "managedCluster": "Managed Cluster",
+    "managedClusterDescription": "Control plane components are managed by your cloud provider",
+    "all": "All",
+    "restarts": "{{count}} restarts"
+  },
+  "nodeConditions": {
+    "filterAll": "All",
+    "filterHealthy": "Healthy",
+    "filterCordoned": "Cordoned",
+    "filterPressure": "Pressure",
+    "cordoned": "Cordoned",
+    "uncordon": "Uncordon",
+    "cordon": "Cordon",
+    "moreNodes": "+{{count}} more nodes"
+  },
+  "clusterChangelog": {
+    "noChanges": "No changes in selected time range",
+    "justNow": "just now"
+  },
+  "etcdStatus": {
+    "managedByProvider": "etcd Managed by Provider",
+    "managedDescription": "etcd is managed by your cloud provider or not visible in kube-system",
+    "membersSummary": "{{members}} etcd members across {{clusters}} clusters",
+    "membersCount": "{{ready}}/{{total}} members",
+    "restarts": "{{count}} restarts"
+  },
+  "dnsHealth": {
+    "noDnsPods": "No DNS pods found",
+    "dnsPodsHint": "CoreDNS/kube-dns pods will appear here",
+    "podsSummary": "{{pods}} DNS pods across {{clusters}} clusters",
+    "readyCount": "{{ready}}/{{total}} ready",
+    "restarts": "{{count}} restarts"
+  },
+  "admissionWebhooks": {
+    "allTab": "All ({{count}})",
+    "mutatingTab": "Mutating ({{count}})",
+    "validatingTab": "Validating ({{count}})",
+    "rulesCount": "{{count}} rules"
+  },
+  "networkPolicyCoverage": {
+    "namespacesOf": "{{covered}} of {{total}} namespaces",
+    "haveNetworkPolicies": "have network policies",
+    "uncoveredOnly": "Uncovered only ({{count}})",
+    "showUncovered": "Show uncovered",
+    "podsCount": "{{count}} pods"
+  },
+  "quotaHeatmap": {
+    "noNamespaceData": "No namespace data",
+    "namespaceUsageHint": "Namespace resource usage will appear here",
+    "summary": "{{namespaces}} namespaces across {{clusters}} clusters",
+    "podsCount": "{{count}} pods",
+    "cluster": "Cluster:",
+    "pods": "Pods:",
+    "more": "+{{count}} more"
+  },
+  "buildpacksStatus": {
+    "allNamespaces": "All namespaces",
+    "clustersCount": "{{count}} clusters",
+    "allClusters": "All clusters",
+    "searchPlaceholder": "Search buildpack images...",
+    "total": "Total",
+    "succeeded": "Succeeded",
+    "building": "Building",
+    "failed": "Failed",
+    "loadFailed": "Failed to load buildpack images",
+    "noImages": "No Buildpack images",
+    "createHint": "Create kpack Image resources to track builds"
+  },
+  "crossplaneManagedResources": {
+    "resourceCount": "{{count}} managed resources",
+    "searchPlaceholder": "Search managed resources...",
+    "ready": "Ready",
+    "notReady": "Not Ready",
+    "error": "Error",
+    "synced": "Synced",
+    "noResources": "No managed resources found"
   }
 }

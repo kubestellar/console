@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from './CardDataContext'
 
 interface Webhook {
@@ -22,6 +23,7 @@ const DEMO_WEBHOOKS: Webhook[] = [
 ]
 
 export function AdmissionWebhooks() {
+  const { t } = useTranslation('cards')
   const [tab, setTab] = useState<'all' | 'mutating' | 'validating'>('all')
   useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
 
@@ -33,15 +35,15 @@ export function AdmissionWebhooks() {
   return (
     <div className="space-y-2 p-1">
       <div className="flex gap-2 items-center">
-        {(['all', 'mutating', 'validating'] as const).map(t => (
+        {(['all', 'mutating', 'validating'] as const).map(tabKey => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
             className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-              tab === t ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+              tab === tabKey ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             }`}
           >
-            {t === 'all' ? `All (${webhooks.length})` : t === 'mutating' ? `Mutating (${mutatingCount})` : `Validating (${validatingCount})`}
+            {tabKey === 'all' ? t('admissionWebhooks.allTab', { count: webhooks.length }) : tabKey === 'mutating' ? t('admissionWebhooks.mutatingTab', { count: mutatingCount }) : t('admissionWebhooks.validatingTab', { count: validatingCount })}
           </button>
         ))}
       </div>
@@ -58,7 +60,7 @@ export function AdmissionWebhooks() {
                 </span>
                 <span className="text-sm font-medium truncate">{wh.name}</span>
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">{wh.cluster} · {wh.rules} rules</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{wh.cluster} · {t('admissionWebhooks.rulesCount', { count: wh.rules })}</div>
             </div>
             <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${
               wh.failurePolicy === 'Fail' ? 'bg-red-500/10 text-red-400' : 'bg-yellow-500/10 text-yellow-400'

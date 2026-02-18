@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCachedNodes, useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
 
@@ -13,6 +14,7 @@ interface Prediction {
 }
 
 export function PredictiveHealth() {
+  const { t } = useTranslation('cards')
   const { nodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
   const { pods, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -126,16 +128,16 @@ export function PredictiveHealth() {
     <div className="space-y-2 p-1">
       {/* Summary */}
       <div className="flex gap-2 text-xs">
-        <span className="text-red-400">{predictions.filter(p => p.severity === 'critical').length} critical</span>
-        <span className="text-yellow-400">{predictions.filter(p => p.severity === 'warning').length} warnings</span>
-        <span className="text-muted-foreground">{predictions.length} total predictions</span>
+        <span className="text-red-400">{t('predictiveHealth.criticalCount', { count: predictions.filter(p => p.severity === 'critical').length })}</span>
+        <span className="text-yellow-400">{t('predictiveHealth.warningCount', { count: predictions.filter(p => p.severity === 'warning').length })}</span>
+        <span className="text-muted-foreground">{t('predictiveHealth.totalPredictions', { count: predictions.length })}</span>
       </div>
 
       {predictions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
           <div className="text-2xl mb-2">✨</div>
-          <div className="font-medium">All Clear</div>
-          <div className="text-xs mt-1">No resource exhaustion predicted</div>
+          <div className="font-medium">{t('predictiveHealth.allClear')}</div>
+          <div className="text-xs mt-1">{t('predictiveHealth.noExhaustionPredicted')}</div>
         </div>
       ) : (
         <div className="space-y-1 max-h-[350px] overflow-y-auto">
@@ -165,8 +167,8 @@ export function PredictiveHealth() {
                 </div>
                 {isExpanded && (
                   <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
-                    <div>Confidence: {Math.round(pred.confidence * 100)}%</div>
-                    {pred.timeToExhaustion && <div>Estimated time to exhaustion: {pred.timeToExhaustion}</div>}
+                    <div>{t('predictiveHealth.confidence')} {Math.round(pred.confidence * 100)}%</div>
+                    {pred.timeToExhaustion && <div>{t('predictiveHealth.timeToExhaustion')} {pred.timeToExhaustion}</div>}
                   </div>
                 )}
               </button>
