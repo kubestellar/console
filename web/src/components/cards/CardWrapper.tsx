@@ -1028,7 +1028,7 @@ export function CardWrapper({
   // 2. Global demo mode is on AND child hasn't explicitly opted out
   // Suppress during loading phase UNLESS the card is a known demo-only card (isDemoData prop).
   // Demo-only cards should always show the badge immediately — they never transition to real data.
-  const showDemoIndicator = (!effectiveIsLoading || isDemoData) && (effectiveIsDemoData || (isDemoMode && !childExplicitlyNotDemo))
+  const showDemoIndicator = !effectiveIsLoading && (effectiveIsDemoData || (isDemoMode && !childExplicitlyNotDemo))
 
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
