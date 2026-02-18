@@ -53,6 +53,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { DeployConfirmDialog } from '../deploy/DeployConfirmDialog'
+import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 // Module-level cache for dashboard data (survives navigation)
 interface CachedDashboard {
@@ -820,6 +821,7 @@ export function Dashboard() {
         autoRefreshId="dashboard-auto-refresh"
         lastUpdated={lastUpdated}
         error={clustersError}
+        afterTitle={<DashboardHealthIndicator />}
       />
 
       {/* Configurable Stats Overview */}

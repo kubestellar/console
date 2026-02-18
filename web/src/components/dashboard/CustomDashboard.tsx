@@ -44,6 +44,7 @@ import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 interface Card {
   id: string
@@ -468,6 +469,7 @@ export function CustomDashboard() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         lastUpdated={lastUpdated}
+        afterTitle={<DashboardHealthIndicator />}
         rightExtra={
           <button
             onClick={() => setIsDeleteConfirmOpen(true)}

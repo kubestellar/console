@@ -25,6 +25,7 @@ import { DashboardTemplate } from '../../components/dashboard/templates'
 import { StatsOverview, StatBlockValue } from '../../components/ui/StatsOverview'
 import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
 import { DashboardHeader } from '../../components/shared/DashboardHeader'
+import { DashboardHealthIndicator } from '../../components/dashboard/DashboardHealthIndicator'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { prefetchCardChunks } from '../../components/cards/cardRegistry'
@@ -233,6 +234,7 @@ export function DashboardPage({
         autoRefreshId={`${storageKey}-auto-refresh`}
         lastUpdated={lastUpdated}
         error={error}
+        afterTitle={<DashboardHealthIndicator />}
       />
 
       {/* Extra header content (e.g., stack selector) */}
