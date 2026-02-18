@@ -152,11 +152,12 @@ function TrendIndicator({ trend, passRate }: { trend: 'up' | 'down' | 'steady'; 
   )
 }
 
-function GuideRow({ guide, delay, isSelected, onMouseEnter }: {
+function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }: {
   guide: NightlyGuideStatus
   delay: number
   isSelected: boolean
   onMouseEnter: () => void
+  onRunHover: (run: NightlyRun | null) => void
 }) {
   const workflowUrl = `https://github.com/${guide.repo}/actions/workflows/${guide.workflowFile}`
   const StatusIcon = guide.latestConclusion === 'success'
@@ -192,7 +193,10 @@ function GuideRow({ guide, delay, isSelected, onMouseEnter }: {
       </span>
       <div className="flex items-center gap-1.5 shrink-0">
         {guide.runs.map((run) => (
-          <RunDot key={run.id} run={run} />
+          <RunDot key={run.id} run={run}
+            onMouseEnter={() => { onMouseEnter(); onRunHover(run) }}
+            onMouseLeave={() => onRunHover(null)}
+          />
         ))}
         {/* Pad with empty dots if fewer than 7 runs */}
         {Array.from({ length: Math.max(0, 7 - guide.runs.length) }).map((_, i) => (
@@ -474,9 +478,12 @@ function computeRunDurationMin(run: NightlyRun): number | null {
   return Math.round((new Date(run.updatedAt).getTime() - new Date(run.createdAt).getTime()) / 60_000)
 }
 
-function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
+function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
+  guide: NightlyGuideStatus
+  hoveredRun: NightlyRun | null
+  onRunHover: (run: NightlyRun | null) => void
+}) {
   const { t } = useTranslation(['cards', 'common'])
-  const [hoveredRun, setHoveredRun] = useState<NightlyRun | null>(null)
   const completedRuns = guide.runs.filter(r => r.status === 'completed')
   const passed = completedRuns.filter(r => r.conclusion === 'success').length
   const failedAll = completedRuns.filter(r => r.conclusion === 'failure')
@@ -644,8 +651,8 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
               key={run.id}
               run={run}
               isHighlighted={hoveredRun?.id === run.id}
-              onMouseEnter={() => setHoveredRun(run)}
-              onMouseLeave={() => setHoveredRun(null)}
+              onMouseEnter={() => onRunHover(run)}
+              onMouseLeave={() => onRunHover(null)}
             />
           ))}
         </div>
@@ -668,6 +675,7 @@ export function NightlyE2EStatus() {
   const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useNightlyE2EData()
   const { shouldSummarize } = useAIMode()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [hoveredRun, setHoveredRun] = useState<NightlyRun | null>(null)
 
   const { showSkeleton } = useCardLoadingState({
     isLoading,
@@ -785,7 +793,7 @@ export function NightlyE2EStatus() {
       {/* Two-column layout: guide rows (left) + detail panel (right) */}
       <div className="flex flex-1 min-h-0 gap-3">
         {/* Guide rows grouped by platform */}
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-2" onMouseLeave={() => setSelectedKey(null)}>
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-2" onMouseLeave={() => { setSelectedKey(null); setHoveredRun(null) }}>
           {[...grouped.entries()].map(([platform, platformGuides]) => (
             <div key={platform}>
               <div className="flex items-center gap-2 px-2 mb-1">
@@ -808,6 +816,7 @@ export function NightlyE2EStatus() {
                     delay={0.25 + gi * 0.04}
                     isSelected={selectedKey === key}
                     onMouseEnter={() => setSelectedKey(key)}
+                    onRunHover={setHoveredRun}
                   />
                 )
               })}
@@ -818,7 +827,7 @@ export function NightlyE2EStatus() {
         {/* Detail panel (right side) */}
         <div className="w-[420px] shrink-0 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3 overflow-y-auto">
           {selectedGuide ? (
-            <GuideDetailPanel guide={selectedGuide} />
+            <GuideDetailPanel guide={selectedGuide} hoveredRun={hoveredRun} onRunHover={setHoveredRun} />
           ) : shouldSummarize ? (
             <NightlySummaryPanel guides={guides} />
           ) : (
