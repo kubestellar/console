@@ -423,9 +423,9 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
       } else break
     }
     if (sType === 'success' && streak >= 3) {
-      para2Parts.push(`${g.acronym} (${g.platform}) has ${streak} consecutive passes.`)
+      para2Parts.push(`${g.acronym} (${g.platform}) has ${streak} consecutive ${streak === 1 ? 'pass' : 'passes'}.`)
     } else if (sType === 'failure' && streak >= 3 && g.runs.some(r => r.conclusion === 'success')) {
-      para2Parts.push(`${g.acronym} (${g.platform}) has regressed with ${streak} consecutive failures.`)
+      para2Parts.push(`${g.acronym} (${g.platform}) has regressed with ${streak} consecutive ${streak === 1 ? 'failure' : 'failures'}.`)
     }
   }
 
@@ -572,7 +572,9 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
             <TrendingDown size={13} className="text-red-400" />
           )}
           <span className="text-xs text-slate-300">
-            {streak} {streakType === 'success' ? t('cards:llmd.consecutivePasses') : t('cards:llmd.consecutiveFailures')}
+            {streak} {streakType === 'success'
+              ? t(streak === 1 ? 'cards:llmd.consecutivePass' : 'cards:llmd.consecutivePasses')
+              : t(streak === 1 ? 'cards:llmd.consecutiveFailure' : 'cards:llmd.consecutiveFailures')}
           </span>
         </div>
       )}
