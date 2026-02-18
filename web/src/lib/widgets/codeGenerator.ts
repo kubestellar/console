@@ -236,23 +236,45 @@ ${wrapOpen}
           return (
             <div key={platform} style={{marginBottom: '6px'}}>
               <div style={{color: platformColors[platform], fontWeight: 600, fontSize: '10px', marginBottom: '2px'}}>{platform}</div>
-              {platGuides.map(g => (
-                <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}}>
-                  <span style={{width: '28px', fontSize: '10px', fontWeight: 600, color: '#94a3b8'}}>{g.acronym}</span>
+              {platGuides.map(g => {
+                const workflowUrl = 'https://github.com/' + g.repo + '/actions/workflows/' + g.workflowFile;
+                const runs = (g.runs || []).slice(0, 7);
+                const completed = runs.filter(r => r.status === 'completed');
+                const passed = completed.filter(r => r.conclusion === 'success').length;
+                const failed = completed.filter(r => r.conclusion === 'failure').length;
+                const lastRun = runs[0];
+                const timeAgo = (ts) => {
+                  if (!ts) return '';
+                  const ms = Date.now() - new Date(ts).getTime();
+                  const h = Math.floor(ms / 3600000);
+                  if (h < 1) return Math.floor(ms / 60000) + 'm ago';
+                  if (h < 24) return h + 'h ago';
+                  return Math.floor(h / 24) + 'd ago';
+                };
+                const tooltip = g.guide + ' (' + platform + ')\\n' +
+                  'Pass rate: ' + g.passRate + '% (' + passed + '/' + completed.length + ')\\n' +
+                  (failed > 0 ? 'Failed: ' + failed + '\\n' : '') +
+                  (lastRun ? 'Last run: ' + (lastRun.conclusion || lastRun.status) + ' ' + timeAgo(lastRun.updatedAt || lastRun.createdAt) : '');
+                return (
+                <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}} title={tooltip}>
+                  <a href={workflowUrl} target="_blank" rel="noopener noreferrer" style={{width: '28px', fontSize: '10px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none', cursor: 'pointer'}}>{g.acronym}</a>
                   <span style={{fontSize: '10px', color: '#cbd5e1', width: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{g.guide}</span>
                   <div style={{display: 'flex', gap: '2px'}}>
-                    {(g.runs || []).slice(0, 7).map((run, i) => (
-                      <span key={i} style={{
-                        width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
+                    {runs.map((run, i) => {
+                      const dotTitle = (run.conclusion || run.status) + ' — ' + timeAgo(run.updatedAt || run.createdAt);
+                      return (
+                      <a key={i} href={run.htmlUrl} target="_blank" rel="noopener noreferrer" title={dotTitle} style={{
+                        width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
                         backgroundColor: run.status !== 'completed' ? '#60a5fa' : (conclusionColors[run.conclusion] || '#6b7280'),
                         animation: run.status !== 'completed' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
                       }} />
-                    ))}
-                    {(!g.runs || g.runs.length === 0) && <span style={{color: '#4b5563', fontSize: '9px'}}>no runs</span>}
+                    )})}
+                    {runs.length === 0 && <span style={{color: '#4b5563', fontSize: '9px'}}>no runs</span>}
                   </div>
                   <span style={{fontSize: '9px', color: '#9ca3af', marginLeft: 'auto'}}>{g.passRate}%</span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           );
         })}${wrapClose}

@@ -191,8 +191,8 @@ function GuideRow({ guide, delay, isSelected, onMouseEnter }: {
 function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
   const { t } = useTranslation(['cards'])
   // Build data points: 1 = success, 0 = failure/cancelled, 0.5 = in_progress
-  // Reversed so oldest is on left, newest on right
-  const points = [...runs].reverse().map(r => {
+  // Newest on left, oldest on right (matches run history dots)
+  const points = runs.map(r => {
     if (r.status === 'in_progress') return 0.5
     return r.conclusion === 'success' ? 1 : 0
   })
@@ -200,7 +200,7 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
   if (points.length < 2) return null
 
   const width = 200
-  const height = 48
+  const height = 52
   const padX = 12
   const padY = 8
   const chartW = width - padX * 2
@@ -225,8 +225,8 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
   // Area fill path (same curve, closed at bottom)
   const areaPath = `${linePath} L ${pathPoints[pathPoints.length - 1].x} ${height - padY + 4} L ${pathPoints[0].x} ${height - padY + 4} Z`
 
-  // Gradient color based on latest point
-  const latest = points[points.length - 1]
+  // Gradient color based on latest (newest) point — now at index 0
+  const latest = points[0]
   const gradientId = `sparkGrad-${latest}`
   const strokeColor = latest >= 1 ? '#34d399' : latest > 0 ? '#fbbf24' : '#f87171'
   const fillOpacity = 0.15
@@ -248,6 +248,9 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
         {/* Y-axis labels */}
         <text x={padX - 2} y={padY + 3} textAnchor="end" fontSize="7" fill="#64748b">{t('cards:llmd.pass')}</text>
         <text x={padX - 2} y={padY + chartH + 3} textAnchor="end" fontSize="7" fill="#64748b">{t('cards:llmd.fail')}</text>
+        {/* X-axis direction labels */}
+        <text x={padX} y={height - 2} textAnchor="start" fontSize="6" fill="#475569">new</text>
+        <text x={width - padX} y={height - 2} textAnchor="end" fontSize="6" fill="#475569">old</text>
         {/* Area fill */}
         <path d={areaPath} fill={`url(#${gradientId})`} />
         {/* Line */}
@@ -261,7 +264,7 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
               key={i}
               cx={pt.x}
               cy={pt.y}
-              r={i === pathPoints.length - 1 ? 3.5 : 2.5}
+              r={i === 0 ? 3.5 : 2.5}
               fill={dotColor}
               stroke="#0f172a"
               strokeWidth="1.5"
