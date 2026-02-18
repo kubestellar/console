@@ -85,6 +85,9 @@ export function useNightlyE2EData() {
                   passRate: g.passRate,
                   trend: g.trend,
                   latestConclusion: g.latestConclusion,
+                  model: g.model ?? 'Unknown',
+                  gpuType: g.gpuType ?? 'Unknown',
+                  gpuCount: g.gpuCount ?? 0,
                 }))
                 return { guides, isDemo: false }
               }
