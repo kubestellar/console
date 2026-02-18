@@ -247,7 +247,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
               </div>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 gap-2 min-w-0">
-              <span className="truncate min-w-0 flex-1">{stats.types.join(', ')}</span>
+              <span className="truncate min-w-0 flex-1">{(stats.types || []).join(', ')}</span>
               <span className="shrink-0">{stats.used}/{stats.total} {t('gpuStatus.gpus')}</span>
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
