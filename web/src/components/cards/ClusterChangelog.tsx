@@ -69,9 +69,9 @@ export function ClusterChangelog() {
     const now = new Date()
     const diff = now.getTime() - d.getTime()
     if (diff < 60000) return t('clusterChangelog.justNow')
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-    return `${Math.floor(diff / 86400000)}d ago`
+    if (diff < 3600000) return t('clusterChangelog.minutesAgo', { count: Math.floor(diff / 60000) })
+    if (diff < 86400000) return t('clusterChangelog.hoursAgo', { count: Math.floor(diff / 3600000) })
+    return t('clusterChangelog.daysAgo', { count: Math.floor(diff / 86400000) })
   }
 
   return (

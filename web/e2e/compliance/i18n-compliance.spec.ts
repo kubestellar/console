@@ -345,7 +345,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
     while ((node = walker.nextNode())) {
       const text = node.textContent?.trim() || ''
       if (text.length > 3 && text.length < 100) {
-        if (keyPattern.test(text) || (dotKeyPattern.test(text) && !text.includes('.'))) {
+        if (keyPattern.test(text) || dotKeyPattern.test(text)) {
           rawKeys.push(text.substring(0, 80))
         }
       }

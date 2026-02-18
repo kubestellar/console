@@ -644,13 +644,15 @@
     "loadingClusters": "Loading clusters...",
     "describeClusters": "Describe the clusters you want",
     "generateQuery": "Generate Query",
-    "groupCount": "{{count}} group(s)",
+    "groupCount_one": "{{count}} group",
+    "groupCount_other": "{{count}} groups",
     "storedAsCRs": "Groups are stored as Kubernetes Custom Resources",
     "crBadge": "CR",
     "lastEvaluated": "Last evaluated {{time}}",
     "evaluateQuery": "Evaluate query",
     "evaluated": "Evaluated {{time}}",
-    "matchCount": "{{count}} match(es)",
+    "matchCount_one": "{{count}} match",
+    "matchCount_other": "{{count}} matches",
     "none": "none"
   },
   "namespaceQuotas": {
@@ -1830,7 +1832,13 @@
   },
   "clusterChangelog": {
     "noChanges": "No changes in selected time range",
-    "justNow": "just now"
+    "justNow": "just now",
+    "minutesAgo_one": "{{count}}m ago",
+    "minutesAgo_other": "{{count}}m ago",
+    "hoursAgo_one": "{{count}}h ago",
+    "hoursAgo_other": "{{count}}h ago",
+    "daysAgo_one": "{{count}}d ago",
+    "daysAgo_other": "{{count}}d ago"
   },
   "etcdStatus": {
     "managedByProvider": "etcd Managed by Provider",
@@ -2153,7 +2161,8 @@
     "noClusters": "No clusters available",
     "deployed": "Deployed",
     "footer": "{{count}} releases {{scope}}",
-    "nClustersScope": "across {{count}} clusters"
+    "nClustersScope_one": "across {{count}} cluster",
+    "nClustersScope_other": "across {{count}} clusters"
   },
   "namespaceEvents": {
     "time": "Time",
@@ -2196,12 +2205,14 @@
     "noOperators": "No operators",
     "noOperatorsHint": "Operators will appear when installed",
     "nOperators": "{{count}} operators",
-    "nClustersSelected": "{{count}} clusters selected",
+    "nClustersSelected_one": "{{count}} cluster selected",
+    "nClustersSelected_other": "{{count}} clusters selected",
     "allClusters": "All Clusters ({{count}})",
     "searchOperators": "Search operators...",
     "other": "Other",
     "footer": "{{count}} operators {{scope}}",
-    "nClustersScope": "across {{count}} clusters"
+    "nClustersScope_one": "across {{count}} cluster",
+    "nClustersScope_other": "across {{count}} clusters"
   },
   "operatorSubscriptions": {
     "pendingFirst": "Pending First",
@@ -2210,7 +2221,8 @@
     "noSubscriptions": "No subscriptions",
     "noSubscriptionsHint": "Operator subscriptions will appear here",
     "nPending": "{{count}} pending",
-    "nClustersSelected": "{{count}} clusters selected",
+    "nClustersSelected_one": "{{count}} cluster selected",
+    "nClustersSelected_other": "{{count}} clusters selected",
     "allClusters": "All Clusters ({{count}})",
     "searchSubscriptions": "Search subscriptions...",
     "nAuto": "{{count}} Auto",
@@ -2218,7 +2230,8 @@
     "channelLabel": "Channel",
     "upgradePending": "Upgrade pending",
     "footer": "{{count}} subscriptions {{scope}}",
-    "nClustersScope": "across {{count}} clusters"
+    "nClustersScope_one": "across {{count}} cluster",
+    "nClustersScope_other": "across {{count}} clusters"
   },
   "providerHealth": {
     "operational": "Operational",
@@ -2275,13 +2288,18 @@
     "zoomOut": "Zoom out",
     "resetZoom": "Reset zoom",
     "zoomIn": "Zoom in",
-    "nClusters": "{{count}} clusters",
-    "nServices": "{{count}} services",
-    "nGateways": "{{count}} gateways",
-    "nConnections": "{{count}} connections",
+    "nClusters_one": "{{count}} cluster",
+    "nClusters_other": "{{count}} clusters",
+    "nServices_one": "{{count}} service",
+    "nServices_other": "{{count}} services",
+    "nGateways_one": "{{count}} gateway",
+    "nGateways_other": "{{count}} gateways",
+    "nConnections_one": "{{count}} connection",
+    "nConnections_other": "{{count}} connections",
     "exported": "Exported",
     "imported": "Imported",
-    "nEndpoints": "{{count}} endpoints"
+    "nEndpoints_one": "{{count}} endpoint",
+    "nEndpoints_other": "{{count}} endpoints"
   },
   "crdHealth": {
     "group": "Group",

@@ -2134,7 +2134,8 @@
     "inherited": "Inherited",
     "overridden": "Overridden",
     "noClustersAvailable": "No clusters available",
-    "nClusters": "{{count}} clusters",
+    "nClusters_one": "{{count}} cluster",
+    "nClusters_other": "{{count}} clusters",
     "allClusters": "All clusters",
     "allNamespaces": "All namespaces",
     "warnings": "Warnings"
