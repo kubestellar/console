@@ -275,23 +275,32 @@ export function StatsOverview({
  * Helper to format large numbers (1000 -> 1K, 1000000 -> 1M)
  */
 export function formatStatNumber(value: number): string {
-  if (value >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`
   }
-  if (value >= 1000) {
+  if (value >= 10_000) {
     return `${(value / 1000).toFixed(1)}K`
   }
-  return value.toString()
+  return value.toLocaleString()
 }
 
 /**
  * Helper to format memory/storage values
  */
 export function formatMemoryValue(gb: number): string {
+  if (gb >= 1024 * 1024) {
+    return `${(gb / (1024 * 1024)).toFixed(1)} PB`
+  }
   if (gb >= 1024) {
     return `${(gb / 1024).toFixed(1)} TB`
   }
-  return `${Math.round(gb)} GB`
+  if (gb >= 1) {
+    return `${Math.round(gb)} GB`
+  }
+  if (gb >= 0.001) {
+    return `${Math.round(gb * 1024)} MB`
+  }
+  return '0 GB'
 }
 
 /**
