@@ -66,6 +66,7 @@ const ConsoleKubeconfigAuditCard = lazy(() => import('./console-missions/Console
 const ConsoleHealthCheckCard = lazy(() => import('./console-missions/ConsoleHealthCheckCard').then(m => ({ default: m.ConsoleHealthCheckCard })))
 const ConsoleOfflineDetectionCard = lazy(() => import('./console-missions/ConsoleOfflineDetectionCard').then(m => ({ default: m.ConsoleOfflineDetectionCard })))
 const HardwareHealthCard = lazy(() => import('./HardwareHealthCard').then(m => ({ default: m.HardwareHealthCard })))
+const ProactiveGPUNodeHealthMonitor = lazy(() => import('./ProactiveGPUNodeHealthMonitor').then(m => ({ default: m.ProactiveGPUNodeHealthMonitor })))
 const ActiveAlerts = lazy(() => import('./ActiveAlerts').then(m => ({ default: m.ActiveAlerts })))
 const AlertRulesCard = lazy(() => import('./AlertRules').then(m => ({ default: m.AlertRulesCard })))
 const OpenCostOverview = lazy(() => import('./OpenCostOverview').then(m => ({ default: m.OpenCostOverview })))
@@ -277,6 +278,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   console_ai_health_check: ConsoleHealthCheckCard,
   console_ai_offline_detection: ConsoleOfflineDetectionCard,
   hardware_health: HardwareHealthCard,
+  gpu_node_health: ProactiveGPUNodeHealthMonitor,
   // Alerting cards
   active_alerts: ActiveAlerts,
   alert_rules: AlertRulesCard,
@@ -653,6 +655,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   // GitHub & misc
   github_activity: () => import('./GitHubActivity'),
   hardware_health: () => import('./HardwareHealthCard'),
+  gpu_node_health: () => import('./ProactiveGPUNodeHealthMonitor'),
   console_ai_offline_detection: () => import('./console-missions/ConsoleOfflineDetectionCard'),
   provider_health: () => import('./ProviderHealth'),
   // MCS & Gateway
@@ -807,6 +810,8 @@ export const LIVE_DATA_CARDS = new Set([
   'prow_ci_monitor',
   'github_ci_monitor',
   'cluster_health_monitor',
+  // GPU node health monitoring
+  'gpu_node_health',
   // Nightly E2E status card
   'nightly_e2e_status',
   // Cluster admin cards with live data
@@ -971,6 +976,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   console_ai_health_check: 6,
   console_ai_offline_detection: 6,
   hardware_health: 6,
+  gpu_node_health: 6,
   user_management: 6,
   // Weather card
   weather: 6,

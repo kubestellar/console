@@ -55,6 +55,7 @@ import { gpuOverviewConfig } from './gpu-overview'
 import { gpuStatusConfig } from './gpu-status'
 import { gpuUsageTrendConfig } from './gpu-usage-trend'
 import { gpuUtilizationConfig } from './gpu-utilization'
+import { gpuNodeHealthConfig } from './gpu-node-health'
 import { gpuWorkloadsConfig } from './gpu-workloads'
 import { hardwareHealthConfig } from './hardware-health'
 import { helmHistoryConfig } from './helm-history'
@@ -198,6 +199,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   github_ci_monitor: githubCiMonitorConfig,
   gitops_drift: gitopsDriftConfig,
   gpu_inventory: gpuInventoryConfig,
+  gpu_node_health: gpuNodeHealthConfig,
   gpu_overview: gpuOverviewConfig,
   gpu_status: gpuStatusConfig,
   gpu_usage_trend: gpuUsageTrendConfig,
@@ -363,6 +365,7 @@ export {
   gpuStatusConfig,
   gpuUsageTrendConfig,
   gpuUtilizationConfig,
+  gpuNodeHealthConfig,
   gpuWorkloadsConfig,
   helmHistoryConfig,
   helmReleaseStatusConfig,

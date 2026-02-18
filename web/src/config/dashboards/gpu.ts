@@ -17,6 +17,7 @@ export const gpuDashboardConfig: UnifiedDashboardConfig = {
     { id: 'gpu-usage-trend-1', cardType: 'gpu_usage_trend', position: { w: 6, h: 3 } },
     { id: 'gpu-workloads-1', cardType: 'gpu_workloads', position: { w: 6, h: 3 } },
     { id: 'gpu-namespace-alloc-1', cardType: 'gpu_namespace_allocations', position: { w: 6, h: 3 } },
+    { id: 'gpu-node-health-1', cardType: 'gpu_node_health', title: 'GPU Node Health Monitor', position: { w: 6, h: 3 } },
     { id: 'hardware-health-1', cardType: 'hardware_health', title: 'Hardware Health', position: { w: 6, h: 3 } },
   ],
   features: {
