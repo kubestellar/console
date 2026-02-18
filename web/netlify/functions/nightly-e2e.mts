@@ -92,6 +92,7 @@ const NIGHTLY_WORKFLOWS: NightlyWorkflow[] = [
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-cks.yaml", guide: "WVA", acronym: "WVA", platform: "CKS", model: "Llama-3.1-8B", gpuType: "H100", gpuCount: 2 },
+  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nightly-benchmark-cks.yaml", guide: "Benchmarking", acronym: "BM", platform: "CKS", model: "opt-125m", gpuType: "H100", gpuCount: 1 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -160,31 +161,33 @@ async function fetchWorkflowRuns(
   }
 
   const data = await res.json();
-  const runs: NightlyRun[] = (data.workflow_runs ?? []).map(
-    (r: {
-      id: number;
-      status: string;
-      conclusion: string | null;
-      created_at: string;
-      updated_at: string;
-      html_url: string;
-      run_number: number;
-      event: string;
-    }) => ({
-      id: r.id,
-      status: r.status,
-      conclusion: r.conclusion,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-      htmlUrl: r.html_url,
-      runNumber: r.run_number,
-      failureReason: "",
-      model: wf.model,
-      gpuType: wf.gpuType,
-      gpuCount: wf.gpuCount,
-      event: r.event,
-    })
-  );
+  const runs: NightlyRun[] = (data.workflow_runs ?? [])
+    .filter((r: { status: string }) => r.status !== "queued")
+    .map(
+      (r: {
+        id: number;
+        status: string;
+        conclusion: string | null;
+        created_at: string;
+        updated_at: string;
+        html_url: string;
+        run_number: number;
+        event: string;
+      }) => ({
+        id: r.id,
+        status: r.status,
+        conclusion: r.conclusion,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        htmlUrl: r.html_url,
+        runNumber: r.run_number,
+        failureReason: "",
+        model: wf.model,
+        gpuType: wf.gpuType,
+        gpuCount: wf.gpuCount,
+        event: r.event,
+      })
+    );
 
   // Classify GPU failures
   await classifyFailures(wf.repo, runs, token);

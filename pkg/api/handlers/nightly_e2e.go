@@ -108,6 +108,7 @@ var nightlyWorkflows = []NightlyWorkflow{
 	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2},
 	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2},
 	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-cks.yaml", Guide: "WVA", Acronym: "WVA", Platform: "CKS", Model: "Llama-3.1-8B", GPUType: "H100", GPUCount: 2},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nightly-benchmark-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS", Model: "opt-125m", GPUType: "H100", GPUCount: 1},
 }
 
 // NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
@@ -279,9 +280,13 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 		return nil, err
 	}
 
-	runs := make([]NightlyRun, len(data.WorkflowRuns))
-	for i, r := range data.WorkflowRuns {
-		runs[i] = NightlyRun{
+	runs := make([]NightlyRun, 0, len(data.WorkflowRuns))
+	for _, r := range data.WorkflowRuns {
+		// Skip runs that are still queued (never started executing)
+		if r.Status == "queued" {
+			continue
+		}
+		runs = append(runs, NightlyRun{
 			ID:         r.ID,
 			Status:     r.Status,
 			Conclusion: r.Conclusion,
@@ -293,7 +298,7 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 			GPUType:    wf.GPUType,
 			GPUCount:   wf.GPUCount,
 			Event:      r.Event,
-		}
+		})
 	}
 
 	// Classify failures (GPU unavailable vs test failure)
