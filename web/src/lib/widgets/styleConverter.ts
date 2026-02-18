@@ -430,6 +430,15 @@ export const className = css\`
   .dot-tip-wrap.has-links .tip {
     pointer-events: auto;
     padding: 4px 8px;
+    bottom: calc(100% + 1px);
+  }
+  .dot-tip-wrap.has-links .tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 8px;
   }
   .dot-tip-wrap.has-links .tip a {
     color: #60a5fa;
