@@ -379,7 +379,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   const isDemo = demoMode
 
   // Fetch real workloads from cache (handles demo mode internally via useCache)
-  const { data: realWorkloads, isLoading: workloadsLoading, isFailed, consecutiveFailures } = useCachedWorkloads()
+  const { data: realWorkloads, isLoading: workloadsLoading, isFailed, consecutiveFailures, isDemoFallback } = useCachedWorkloads()
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton } = useCardLoadingState({
@@ -387,6 +387,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     hasAnyData: isDemo ? DEMO_WORKLOADS.length > 0 : (realWorkloads?.length ?? 0) > 0,
     isFailed,
     consecutiveFailures,
+    isDemoData: isDemoFallback || isDemo,
   })
   const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
     try {

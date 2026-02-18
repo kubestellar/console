@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useCardLoadingState } from './CardDataContext'
 
 interface Webhook {
   name: string
@@ -22,6 +23,7 @@ const DEMO_WEBHOOKS: Webhook[] = [
 
 export function AdmissionWebhooks() {
   const [tab, setTab] = useState<'all' | 'mutating' | 'validating'>('all')
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
 
   const webhooks = DEMO_WEBHOOKS
   const filtered = tab === 'all' ? webhooks : webhooks.filter(w => w.type === tab)

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useCachedEvents } from '../../hooks/useCachedData'
+import { useCardLoadingState } from './CardDataContext'
 
 const CHANGE_REASONS = new Set([
   'ScalingReplicaSet', 'SuccessfulCreate', 'SuccessfulDelete',
@@ -11,8 +12,15 @@ const CHANGE_REASONS = new Set([
 type TimeRange = '1h' | '6h' | '24h' | '7d'
 
 export function ClusterChangelog() {
-  const { events, isLoading } = useCachedEvents(undefined, undefined, { limit: 200 })
+  const { events, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedEvents(undefined, undefined, { limit: 200 })
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: events.length > 0,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
 
   const cutoff = useMemo(() => {
     const now = Date.now()
@@ -36,7 +44,7 @@ export function ClusterChangelog() {
       .slice(0, 50)
   }, [events, cutoff])
 
-  if (isLoading && events.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-2 p-1">
         {[1, 2, 3, 4, 5].map(i => (

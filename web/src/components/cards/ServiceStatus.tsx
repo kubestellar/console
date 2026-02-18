@@ -67,7 +67,6 @@ export function ServiceStatus() {
     isFailed,
     consecutiveFailures,
   })
-  const isLoading = showSkeleton
 
   const typeOrder: Record<string, number> = { 'LoadBalancer': 0, 'NodePort': 1, 'ClusterIP': 2, 'ExternalName': 3 }
 
@@ -125,7 +124,7 @@ export function ServiceStatus() {
     clusterIP: services.filter(s => s.type === 'ClusterIP').length,
   }
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

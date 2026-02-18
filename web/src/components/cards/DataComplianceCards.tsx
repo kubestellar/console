@@ -87,6 +87,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
 // External Secrets Operator Card
 export function ExternalSecrets({ config: _config }: CardConfig) {
   const { t } = useTranslation()
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
   const demoData = {
     totalSecrets: 89,
     synced: 85,

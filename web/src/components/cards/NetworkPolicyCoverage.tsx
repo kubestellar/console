@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useCachedPods } from '../../hooks/useCachedData'
+import { useCardLoadingState } from './CardDataContext'
 
 interface NamespaceCoverage {
   namespace: string
@@ -10,8 +11,15 @@ interface NamespaceCoverage {
 }
 
 export function NetworkPolicyCoverage() {
-  const { pods, isLoading } = useCachedPods()
+  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
   const [showUncovered, setShowUncovered] = useState(false)
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: pods.length > 0,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Build namespace coverage from pod data
   // In a real implementation, this would also fetch NetworkPolicy resources
@@ -42,7 +50,7 @@ export function NetworkPolicyCoverage() {
 
   const displayed = showUncovered ? coverage.filter(c => !c.hasPolicies) : coverage
 
-  if (isLoading && pods.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-2 p-1">
         <div className="h-16 rounded bg-muted/50 animate-pulse" />

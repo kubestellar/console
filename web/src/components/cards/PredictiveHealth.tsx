@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useCachedNodes, useCachedPods } from '../../hooks/useCachedData'
+import { useCardLoadingState } from './CardDataContext'
 
 interface Prediction {
   id: string
@@ -12,11 +13,18 @@ interface Prediction {
 }
 
 export function PredictiveHealth() {
-  const { nodes, isLoading: nodesLoading } = useCachedNodes()
-  const { pods, isLoading: podsLoading } = useCachedPods()
+  const { nodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
+  const { pods, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const isLoading = nodesLoading || podsLoading
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: nodes.length > 0 || pods.length > 0,
+    isDemoData: nodesDemoFallback || podsDemoFallback,
+    isFailed: nodesFailed || podsFailed,
+    consecutiveFailures: Math.max(nodesFailures, podsFailures),
+  })
 
   const predictions = useMemo((): Prediction[] => {
     if (nodes.length === 0 && pods.length === 0) return []
@@ -98,7 +106,7 @@ export function PredictiveHealth() {
     })
   }, [nodes, pods])
 
-  if (isLoading && nodes.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-2 p-1">
         {[1, 2, 3].map(i => (

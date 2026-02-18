@@ -16,6 +16,7 @@ import {
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import {
   useCardData,
   commonComparators,
@@ -336,6 +337,7 @@ function QuotaModal({
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { isDemoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'all')
@@ -370,7 +372,8 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading: isInitialLoading || isFetchingData,
-    hasAnyData: allClusters.length > 0,
+    hasAnyData: allClusters.length > 0 || resourceQuotas.length > 0 || limitRanges.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Handle save quota

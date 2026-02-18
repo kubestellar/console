@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { useKubectl } from '../../hooks/useKubectl'
+import { useCardLoadingState } from './CardDataContext'
 
 const DEBUG_COMMANDS = [
   { label: 'Node Info', cmd: (node: string) => [`describe`, `node`, node] },
@@ -62,8 +63,15 @@ const CATEGORY_LABELS: Record<string, string> = {
 type TabMode = 'inspect' | 'exec'
 
 export function NodeDebug() {
-  const { nodes, isLoading } = useCachedNodes()
+  const { nodes, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
   const { execute } = useKubectl()
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: nodes.length > 0,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNode, setSelectedNode] = useState<string>('')
   const [output, setOutput] = useState<string>('')
@@ -112,7 +120,7 @@ export function NodeDebug() {
     }
   }, [selectedNode, selectedCluster, execImage, execute])
 
-  if (isLoading && nodes.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-2 p-1">
         <div className="h-8 rounded bg-muted/50 animate-pulse" />

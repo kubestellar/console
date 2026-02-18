@@ -1,8 +1,16 @@
 import { useMemo } from 'react'
 import { useCachedPods } from '../../hooks/useCachedData'
+import { useCardLoadingState } from './CardDataContext'
 
 export function EtcdStatus() {
-  const { pods, isLoading } = useCachedPods(undefined, 'kube-system')
+  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: pods.length > 0,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
 
   const etcdPods = useMemo(() => {
     return pods.filter(p => p.name?.includes('etcd') && !p.name?.includes('operator'))
@@ -18,7 +26,7 @@ export function EtcdStatus() {
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [etcdPods])
 
-  if (isLoading && pods.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-2 p-1">
         {[1, 2, 3].map(i => (

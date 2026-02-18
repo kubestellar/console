@@ -57,7 +57,6 @@ export function CrossplaneManagedResources() {
   error,
   consecutiveFailures,
   isFailed,
-  lastRefresh,
   isDemoData,
   } = useCrossplaneManagedResources()
 
@@ -102,14 +101,13 @@ export function CrossplaneManagedResources() {
     defaultLimit: 5
   })
 
-  const hasCompletedInitialFetch = lastRefresh !== null
   const hasData = rawResources.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-  isLoading: isLoading || !hasCompletedInitialFetch,
-  hasAnyData: hasData,
-  isFailed,
-  consecutiveFailures,
-  isDemoData,
+    isLoading,
+    hasAnyData: hasData,
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
   })
 
   const readyCount = rawResources.filter(isReady).length

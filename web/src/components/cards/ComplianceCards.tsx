@@ -14,6 +14,7 @@ interface CardConfig {
 // Falco Runtime Security Card
 export function FalcoAlerts({ config: _config }: CardConfig) {
   const { t: _t } = useTranslation()
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
   // Integration approach: Detect Falco installation via K8s API, query Falco alerts from its API/CRDs
   // UI already displays integration notice with install guide when Falco is not detected
   const demoAlerts = [
