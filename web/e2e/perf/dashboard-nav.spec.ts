@@ -73,6 +73,8 @@ const REAL_USER = process.env.REAL_USER || ''
 const NAV_CARD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : 15_000
 // How long to wait for initial app load
 const APP_LOAD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : 15_000
+// Real-backend tests need much longer timeouts (25 dashboards, some taking 30s+)
+const REAL_BACKEND_TEST_TIMEOUT = 5 * 60_000 // 5 minutes
 
 // ---------------------------------------------------------------------------
 // Mock data & helpers (reused from dashboard-perf.spec.ts)
@@ -411,12 +413,24 @@ async function measureNavigation(
 
   const link = page.locator(linkSelector).first()
 
-  // Check if link exists and is visible
+  // Check if link exists and is visible (scroll into view for long sidebars)
   try {
-    await link.waitFor({ state: 'visible', timeout: 3_000 })
+    await link.waitFor({ state: 'attached', timeout: 3_000 })
+    await link.scrollIntoViewIfNeeded()
+    await link.waitFor({ state: 'visible', timeout: 2_000 })
   } catch {
-    console.log(`  SKIP ${target.name}: sidebar link not found (${linkSelector})`)
-    return null
+    // If sidebar link not found, the page may have crashed from a previous nav.
+    // Try recovering by reloading and waiting for the sidebar.
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.waitForSelector('[data-testid="sidebar"]', { timeout: 10_000 })
+      await link.waitFor({ state: 'attached', timeout: 3_000 })
+      await link.scrollIntoViewIfNeeded()
+      await link.waitFor({ state: 'visible', timeout: 2_000 })
+    } catch {
+      console.log(`  SKIP ${target.name}: sidebar link not found after recovery (${linkSelector})`)
+      return null
+    }
   }
 
   // Clear browser-side perf state before navigation
@@ -662,7 +676,8 @@ if (REAL_BACKEND) {
   if (!REAL_TOKEN) console.log('[NAV] WARNING: REAL_TOKEN not set — auth may fail')
 }
 
-test('warmup — prime module cache', async ({ page }) => {
+test('warmup — prime module cache', async ({ page }, testInfo) => {
+  if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   await setupMocks(page)
   await setMode(page)
 
@@ -681,7 +696,8 @@ test('warmup — prime module cache', async ({ page }) => {
   }
 })
 
-test('cold-nav — first visit to each dashboard via sidebar', async ({ page }) => {
+test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, testInfo) => {
+  if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
@@ -721,7 +737,8 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }) 
   console.log(`[NAV] cold-nav: ${summarizeScenario(coldMetrics)}`)
 })
 
-test('warm-nav — revisit dashboards (chunks already cached)', async ({ page }) => {
+test('warm-nav — revisit dashboards (chunks already cached)', async ({ page }, testInfo) => {
+  if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
@@ -773,7 +790,8 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page })
   console.log(`[NAV] warm-nav: ${summarizeScenario(warmMetrics)}`)
 })
 
-test('from-main — navigate away from Main Dashboard to various dashboards', async ({ page }) => {
+test('from-main — navigate away from Main Dashboard to various dashboards', async ({ page }, testInfo) => {
+  if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
@@ -825,7 +843,8 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
   console.log(`[NAV] from-main: ${summarizeScenario(fromMainMetrics)}`)
 })
 
-test('from-clusters — navigate away from My Clusters to various dashboards', async ({ page }) => {
+test('from-clusters — navigate away from My Clusters to various dashboards', async ({ page }, testInfo) => {
+  if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
@@ -879,7 +898,8 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
   console.log(`[NAV] from-clusters: ${summarizeScenario(fromClustersMetrics)}`)
 })
 
-test('rapid-nav — quick clicks through dashboards', async ({ page }) => {
+test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo) => {
+  if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
