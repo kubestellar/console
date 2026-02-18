@@ -549,6 +549,94 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
       `${hardcodedStrings.length} potential hardcoded strings — consider extracting to locale files`, 'medium')
   }
 
+  // Phase 5b: Classify hardcoded strings by element type (severity based on context)
+  const classifiedStrings = await page.evaluate(() => {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    const results: Array<{ text: string; element: string; severity: 'high' | 'medium' | 'low' }> = []
+    const highPriorityTags = ['BUTTON', 'LABEL', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'A', 'TH']
+    const mediumPriorityTags = ['P', 'SPAN', 'LI', 'TD', 'LEGEND', 'SUMMARY']
+    const userFacingPatterns = [
+      /^(Click|Press|Select|Choose|Enter|Please|You can|This will)/i,
+      /\b(failed|success|error|warning|loading|saving)\b.*\./i,
+    ]
+
+    let node: Node | null
+    while ((node = walker.nextNode())) {
+      const text = node.textContent?.trim() || ''
+      if (text.length < 20 || text.length > 200) continue
+      const parent = node.parentElement
+      if (!parent || parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') continue
+      if (!userFacingPatterns.some(p => p.test(text))) continue
+
+      const tag = parent.tagName
+      let severity: 'high' | 'medium' | 'low' = 'low'
+      if (highPriorityTags.includes(tag)) severity = 'high'
+      else if (mediumPriorityTags.includes(tag)) severity = 'medium'
+
+      results.push({ text: text.substring(0, 60), element: tag, severity })
+    }
+    return results
+  })
+
+  const highPriority = classifiedStrings.filter(s => s.severity === 'high')
+  const medPriority = classifiedStrings.filter(s => s.severity === 'medium')
+
+  if (highPriority.length > 0) {
+    addCheck('Hardcoded Strings', 'High-priority untranslated strings', 'fail',
+      `${highPriority.length} in buttons/headings/labels: ${highPriority.slice(0, 2).map(s => `<${s.element}> "${s.text}"`).join('; ')}`, 'high')
+  }
+  if (medPriority.length > 0) {
+    addCheck('Hardcoded Strings', 'Medium-priority untranslated strings', 'warn',
+      `${medPriority.length} in body text: ${medPriority.slice(0, 2).map(s => `<${s.element}> "${s.text}"`).join('; ')}`, 'medium')
+  }
+  if (highPriority.length === 0 && medPriority.length === 0 && classifiedStrings.length === 0) {
+    addCheck('Hardcoded Strings', 'No classified hardcoded strings', 'pass',
+      'No user-facing strings found in high/medium priority elements', 'medium')
+  }
+
+  // ── Phase 5c: Known translation spot-checks ─────────────────────────
+  console.log('[i18n] Phase 5c: Known translation spot-checks')
+
+  // Verify known UI strings are actually translated (not raw keys)
+  const spotCheckRoutes = [
+    { route: '/', checks: ['Dashboard', 'Clusters', 'Settings'] },
+    { route: '/clusters', checks: ['Clusters', 'Status', 'Nodes'] },
+    { route: '/settings', checks: ['Settings', 'Theme', 'Language'] },
+    { route: '/security', checks: ['Security'] },
+    { route: '/deployments', checks: ['Deployments'] },
+  ]
+
+  let spotChecksPassed = 0
+  let spotChecksFailed = 0
+
+  for (const { route, checks: expectedTexts } of spotCheckRoutes) {
+    try {
+      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 10_000 })
+      await page.waitForTimeout(1_500)
+
+      const bodyText = await page.evaluate(() => document.body.innerText || '')
+
+      for (const expected of expectedTexts) {
+        if (bodyText.includes(expected)) {
+          spotChecksPassed++
+        } else {
+          spotChecksFailed++
+          addCheck('SpotCheck', `"${expected}" on ${route}`, 'warn',
+            `Expected text "${expected}" not found on ${route} — may be untranslated or missing`, 'medium')
+        }
+      }
+    } catch {
+      addCheck('SpotCheck', `Route ${route}`, 'skip',
+        `Could not load ${route} for spot-check`, 'low')
+    }
+  }
+
+  const totalSpotChecks = spotChecksPassed + spotChecksFailed
+  if (totalSpotChecks > 0) {
+    addCheck('SpotCheck', `Known translations verification`, spotChecksFailed === 0 ? 'pass' : 'warn',
+      `${spotChecksPassed}/${totalSpotChecks} known translations found`, 'medium')
+  }
+
   // ── Phase 6: Navigate multiple pages to expand coverage ──────────────
   console.log('[i18n] Phase 6: Multi-page navigation checks')
 

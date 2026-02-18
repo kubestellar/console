@@ -790,9 +790,137 @@ test('security compliance — frontend security audit', async ({ page }, testInf
   }
 
   // ══════════════════════════════════════════════════════════════════════
+  // Category 13: Cookie Security
+  // ══════════════════════════════════════════════════════════════════════
+  console.log('[Security] Phase 15: Cookie security audit')
+
+  try {
+    const cookies = await page.context().cookies()
+    const sessionCookies = cookies.filter(c =>
+      c.name.toLowerCase().includes('session') ||
+      c.name.toLowerCase().includes('token') ||
+      c.name.toLowerCase().includes('auth')
+    )
+
+    if (sessionCookies.length === 0) {
+      addCheck('CookieSecurity', 'Session cookies present', 'info',
+        `No session/auth cookies found (${cookies.length} total cookies — app may use localStorage for auth)`, 'medium')
+    } else {
+      for (const cookie of sessionCookies) {
+        // Check HttpOnly
+        if (cookie.httpOnly) {
+          addCheck('CookieSecurity', `${cookie.name} HttpOnly`, 'pass',
+            `Cookie "${cookie.name}" has HttpOnly flag`, 'high')
+        } else {
+          addCheck('CookieSecurity', `${cookie.name} HttpOnly`, 'warn',
+            `Cookie "${cookie.name}" missing HttpOnly flag — vulnerable to XSS cookie theft`, 'high')
+        }
+
+        // Check Secure
+        if (cookie.secure) {
+          addCheck('CookieSecurity', `${cookie.name} Secure`, 'pass',
+            `Cookie "${cookie.name}" has Secure flag`, 'medium')
+        } else {
+          // localhost typically doesn't use Secure
+          addCheck('CookieSecurity', `${cookie.name} Secure`, 'info',
+            `Cookie "${cookie.name}" missing Secure flag (expected on localhost)`, 'medium')
+        }
+
+        // Check SameSite
+        if (cookie.sameSite && cookie.sameSite !== 'None') {
+          addCheck('CookieSecurity', `${cookie.name} SameSite`, 'pass',
+            `Cookie "${cookie.name}" has SameSite=${cookie.sameSite}`, 'medium')
+        } else {
+          addCheck('CookieSecurity', `${cookie.name} SameSite`, 'warn',
+            `Cookie "${cookie.name}" missing or has SameSite=None — CSRF risk`, 'medium')
+        }
+      }
+    }
+  } catch (err) {
+    addCheck('CookieSecurity', 'Cookie audit', 'skip',
+      `Could not audit cookies: ${(err as Error).message?.slice(0, 100)}`, 'medium')
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Category 14: CSP Headers
+  // ══════════════════════════════════════════════════════════════════════
+  console.log('[Security] Phase 16: Content Security Policy audit')
+
+  try {
+    // Intercept the main page response to get CSP headers
+    const mainResponse = await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 10_000 })
+    const headers = mainResponse?.headers() || {}
+
+    const csp = headers['content-security-policy'] || ''
+    const cspReportOnly = headers['content-security-policy-report-only'] || ''
+
+    if (csp) {
+      addCheck('CSPHeaders', 'CSP header present', 'pass',
+        `Content-Security-Policy header found (${csp.length} chars)`, 'high')
+
+      // Check for unsafe directives
+      if (csp.includes("'unsafe-eval'")) {
+        addCheck('CSPHeaders', 'No unsafe-eval', 'warn',
+          "CSP contains 'unsafe-eval' — allows arbitrary code execution", 'high')
+      } else {
+        addCheck('CSPHeaders', 'No unsafe-eval', 'pass',
+          "CSP does not contain 'unsafe-eval'", 'high')
+      }
+
+      if (csp.includes("'unsafe-inline'")) {
+        addCheck('CSPHeaders', 'No unsafe-inline', 'warn',
+          "CSP contains 'unsafe-inline' — weakens XSS protection", 'medium')
+      } else {
+        addCheck('CSPHeaders', 'No unsafe-inline', 'pass',
+          "CSP does not contain 'unsafe-inline'", 'medium')
+      }
+
+      // Check for default-src
+      if (csp.includes('default-src')) {
+        addCheck('CSPHeaders', 'default-src defined', 'pass',
+          'CSP has default-src fallback directive', 'medium')
+      } else {
+        addCheck('CSPHeaders', 'default-src defined', 'warn',
+          'CSP missing default-src — individual directives may not cover all resource types', 'medium')
+      }
+    } else if (cspReportOnly) {
+      addCheck('CSPHeaders', 'CSP header present', 'warn',
+        'Only CSP-Report-Only header found (not enforcing)', 'high')
+    } else {
+      addCheck('CSPHeaders', 'CSP header present', 'warn',
+        'No Content-Security-Policy header found — XSS protection relies on other measures', 'high')
+    }
+
+    // Check X-Frame-Options or frame-ancestors
+    const xfo = headers['x-frame-options'] || ''
+    const hasFrameAncestors = csp.includes('frame-ancestors')
+
+    if (xfo || hasFrameAncestors) {
+      addCheck('CSPHeaders', 'Clickjacking protection', 'pass',
+        xfo ? `X-Frame-Options: ${xfo}` : 'CSP frame-ancestors directive present', 'medium')
+    } else {
+      addCheck('CSPHeaders', 'Clickjacking protection', 'warn',
+        'No X-Frame-Options or CSP frame-ancestors — vulnerable to clickjacking', 'medium')
+    }
+
+    // Check X-Content-Type-Options
+    const xcto = headers['x-content-type-options'] || ''
+    if (xcto.toLowerCase().includes('nosniff')) {
+      addCheck('CSPHeaders', 'X-Content-Type-Options', 'pass',
+        'X-Content-Type-Options: nosniff is set', 'low')
+    } else {
+      addCheck('CSPHeaders', 'X-Content-Type-Options', 'warn',
+        'Missing X-Content-Type-Options: nosniff header', 'low')
+    }
+  } catch (err) {
+    addCheck('CSPHeaders', 'CSP audit', 'skip',
+      `Could not audit CSP headers: ${(err as Error).message?.slice(0, 100)}`, 'high')
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
   // Generate Report
   // ══════════════════════════════════════════════════════════════════════
-  console.log('[Security] Phase 15: Generating report')
+  console.log('[Security] Phase 17: Generating report')
 
   const passCount = checks.filter((c) => c.status === 'pass').length
   const failCount = checks.filter((c) => c.status === 'fail').length

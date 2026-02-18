@@ -2,6 +2,16 @@ import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import {
+  setupAuth,
+  setupLiveMocks,
+  setLiveColdMode,
+  navigateToBatch,
+  waitForCardsToLoad,
+  type MockControl,
+  type ManifestData,
+  type ManifestItem,
+} from '../mocks/liveMocks'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -9,18 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Types
 // ---------------------------------------------------------------------------
 
-interface ManifestItem {
-  cardType: string
-  cardId: string
-}
-
-interface ManifestData {
-  allCardTypes: string[]
-  totalCards: number
-  batch: number
-  batchSize: number
-  selected: ManifestItem[]
-}
+// ManifestItem and ManifestData imported from ../mocks/liveMocks
 
 interface CardStateSnapshot {
   timestamp: number
@@ -85,319 +84,10 @@ const BATCH_LOAD_TIMEOUT_MS = 20_000
 const MONITOR_POLL_INTERVAL_MS = 50
 const WARM_RETURN_WAIT_MS = 3_000
 
-const MOCK_CLUSTER = 'compliance-test-cluster'
 
-const mockUser = {
-  id: '1',
-  github_id: '12345',
-  github_login: 'compliancetest',
-  email: 'compliance@test.com',
-  onboarded: true,
-}
-
-const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
-  clusters: { clusters: [{ name: MOCK_CLUSTER, reachable: true, status: 'Ready' }] },
-  pods: {
-    pods: [
-      { name: 'nginx-1', namespace: 'default', cluster: MOCK_CLUSTER, status: 'Running' },
-      { name: 'api-1', namespace: 'kube-system', cluster: MOCK_CLUSTER, status: 'Running' },
-    ],
-  },
-  events: {
-    events: [
-      { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled', cluster: MOCK_CLUSTER },
-      { type: 'Warning', reason: 'BackOff', message: 'Restarting container', cluster: MOCK_CLUSTER },
-    ],
-  },
-  'pod-issues': { issues: [{ name: 'api-1', namespace: 'kube-system', cluster: MOCK_CLUSTER }] },
-  deployments: { deployments: [{ name: 'nginx', namespace: 'default', cluster: MOCK_CLUSTER }] },
-  'deployment-issues': { issues: [] },
-  services: { services: [{ name: 'nginx-svc', namespace: 'default', cluster: MOCK_CLUSTER }] },
-  'security-issues': { issues: [{ name: 'nginx-1', namespace: 'default', cluster: MOCK_CLUSTER }] },
-}
-
-// ---------------------------------------------------------------------------
-// Mock setup (mirrors all-cards-ttfi.spec.ts)
-// ---------------------------------------------------------------------------
-
-function buildSSEResponse(endpoint: string): string {
-  const data = MOCK_DATA[endpoint] || { items: [] }
-  const key = Object.keys(data)[0] || 'items'
-  const items = data[key] || []
-  return [
-    'event: cluster_data',
-    `data: ${JSON.stringify({ cluster: MOCK_CLUSTER, [key]: items })}`,
-    '',
-    'event: done',
-    `data: ${JSON.stringify({ totalClusters: 1, source: 'mock' })}`,
-    '',
-  ].join('\n')
-}
-
-function getMockRESTData(url: string): Record<string, unknown> {
-  const match = url.match(/\/api\/mcp\/([^/?]+)/)
-  const endpoint = match?.[1] || ''
-  return MOCK_DATA[endpoint] ? { ...MOCK_DATA[endpoint], source: 'mock' } : { items: [], source: 'mock' }
-}
-
-const sseRequestLog: string[] = []
-
-async function setupAuth(page: Page) {
-  await page.route('**/api/me', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockUser) })
-  )
-}
-
-async function setupLiveMocks(page: Page) {
-  // Mock SSE streams with a small delay so the loading phase is observable by the 50ms monitor
-  await page.route('**/api/mcp/*/stream**', async (route) => {
-    const url = route.request().url()
-    sseRequestLog.push(url)
-    const endpoint = url.match(/\/api\/mcp\/([^/]+)\/stream/)?.[1] || ''
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      headers: { 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-      body: buildSSEResponse(endpoint),
-    })
-  })
-
-  await page.route('**/api/mcp/**', async (route) => {
-    if (route.request().url().includes('/stream')) {
-      await route.fallback()
-      return
-    }
-    const delay = 100 + Math.random() * 150
-    await new Promise((resolve) => setTimeout(resolve, delay))
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(getMockRESTData(route.request().url())),
-    })
-  })
-
-  await page.route('**/health', (route) => {
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok' }) })
-  })
-
-  await page.route('**/api/workloads**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
-  })
-
-  // Endpoints that expect array responses (not { items: [] })
-  await page.route('**/api/dashboards**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
-  })
-
-  await page.route('**/api/config/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
-  })
-
-  // Richer mock data for old MCP hook endpoints — ensures caches have non-empty data
-  // so warm return (criterion g) finds real data in localStorage.
-  // All routes have 150ms delay so loading phase is observable by the 50ms monitor.
-  await page.route('**/api/gitops/buildpack-images**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ images: [{ name: 'test-image', namespace: 'default', cluster: MOCK_CLUSTER, status: 'succeeded', builder: 'paketo' }] }) })
-  })
-
-  await page.route('**/api/mcp/gpu-nodes**', async (route) => {
-    if (route.request().url().includes('/stream')) { await route.fallback(); return }
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpus: [{ model: 'A100', memory: '80Gi', index: 0 }], labels: {}, allocatable: {}, capacity: {} }] }) })
-  })
-
-  await page.route('**/api/mcp/helm-releases**', async (route) => {
-    if (route.request().url().includes('/stream')) { await route.fallback(); return }
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: new Date().toISOString() }] }) })
-  })
-
-  await page.route('**/api/mcp/operators**', async (route) => {
-    if (route.request().url().includes('/stream')) { await route.fallback(); return }
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] }) })
-  })
-
-  await page.route('**/api/mcp/operator-subscriptions**', async (route) => {
-    if (route.request().url().includes('/stream')) { await route.fallback(); return }
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ subscriptions: [{ name: 'test-sub', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, package: 'test-operator', channel: 'stable', currentCSV: 'test-operator.v1.0.0', installedCSV: 'test-operator.v1.0.0' }] }) })
-  })
-
-  await page.route('**/api/mcp/resource-quotas**', async (route) => {
-    if (route.request().url().includes('/stream')) { await route.fallback(); return }
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ quotas: [{ name: 'default-quota', namespace: 'default', cluster: MOCK_CLUSTER, hard: { cpu: '4', memory: '8Gi' }, used: { cpu: '1', memory: '2Gi' } }] }) })
-  })
-
-  await page.route('**/api/mcp/nodes**', async (route) => {
-    if (route.request().url().includes('/stream')) { await route.fallback(); return }
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nodes: [{ name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['control-plane'], kubeletVersion: 'v1.28.0', conditions: [{ type: 'Ready', status: 'True' }] }] }) })
-  })
-
-  // Nightly E2E runs — mock with delay so loading/skeleton phase is observable
-  const nightlyMockData = {
-    guides: [
-      {
-        guide: 'vLLM with Autoscaling', acronym: 'WVA', platform: 'OpenShift',
-        repo: 'llm-d/llm-d', workflowFile: 'nightly-wva.yaml',
-        model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1,
-        passRate: 85, trend: 'improving', latestConclusion: 'success',
-        runs: [
-          { id: 100001, status: 'completed', conclusion: 'success', createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date(Date.now() - 3000000).toISOString(), htmlUrl: 'https://github.com/llm-d/llm-d/actions/runs/100001', runNumber: 42, failureReason: '', model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1, event: 'schedule' },
-          { id: 100002, status: 'completed', conclusion: 'failure', createdAt: new Date(Date.now() - 86400000).toISOString(), updatedAt: new Date(Date.now() - 85800000).toISOString(), htmlUrl: 'https://github.com/llm-d/llm-d/actions/runs/100002', runNumber: 41, failureReason: 'Pod timeout', model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1, event: 'schedule' },
-        ],
-      },
-      {
-        guide: 'Prefix Cache Aware Routing', acronym: 'PCAR', platform: 'OpenShift',
-        repo: 'llm-d/llm-d', workflowFile: 'nightly-pcar.yaml',
-        model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1,
-        passRate: 100, trend: 'stable', latestConclusion: 'success',
-        runs: [
-          { id: 100003, status: 'completed', conclusion: 'success', createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 6600000).toISOString(), htmlUrl: 'https://github.com/llm-d/llm-d/actions/runs/100003', runNumber: 15, failureReason: '', model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1, event: 'schedule' },
-        ],
-      },
-    ],
-  }
-
-  await page.route('**/api/nightly-e2e/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(nightlyMockData) })
-  })
-
-  await page.route('**/api/public/nightly-e2e/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(nightlyMockData) })
-  })
-
-  await page.route('**/api/**', async (route) => {
-    const url = route.request().url()
-    if (
-      url.includes('/api/mcp/') ||
-      url.includes('/api/me') ||
-      url.includes('/api/workloads') ||
-      url.includes('/api/dashboards') ||
-      url.includes('/api/config/') ||
-      url.includes('/api/gitops/') ||
-      url.includes('/api/nightly-e2e/') ||
-      url.includes('/api/public/nightly-e2e/')
-    ) {
-      await route.fallback()
-      return
-    }
-    // Delay ALL API responses so every card's loading phase is observable by the 50ms monitor
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
-  })
-
-  // RSS feed CORS proxy mocks (for rss_feed card which fetches external URLs)
-  await page.route('**/api.rss2json.com/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        status: 'ok',
-        items: [
-          { title: 'Kubernetes 1.32 Released', link: 'https://example.com/1', description: 'Major release with new features', pubDate: new Date().toISOString(), author: 'CNCF' },
-          { title: 'Cloud Native Best Practices', link: 'https://example.com/2', description: 'Guide to cloud native development', pubDate: new Date().toISOString(), author: 'Tech Blog' },
-          { title: 'Container Security in 2026', link: 'https://example.com/3', description: 'Latest security trends', pubDate: new Date().toISOString(), author: 'Security Weekly' },
-        ],
-      }),
-    })
-  })
-
-  await page.route('**/api.allorigins.win/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    route.fulfill({
-      status: 200,
-      contentType: 'application/xml',
-      body: `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel><title>Test Feed</title>
-<item><title>Kubernetes 1.32 Released</title><link>https://example.com/1</link><description>Major release</description><pubDate>${new Date().toUTCString()}</pubDate></item>
-<item><title>Cloud Native Best Practices</title><link>https://example.com/2</link><description>Guide to development</description><pubDate>${new Date().toUTCString()}</pubDate></item>
-</channel></rss>`,
-    })
-  })
-
-  await page.route('**/corsproxy.io/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    route.fulfill({
-      status: 200,
-      contentType: 'application/xml',
-      body: `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel><title>Test Feed</title>
-<item><title>Test Article</title><link>https://example.com/1</link><description>Test content</description><pubDate>${new Date().toUTCString()}</pubDate></item>
-</channel></rss>`,
-    })
-  })
-
-  await page.route('http://127.0.0.1:8585/**', (route) => {
-    const url = route.request().url()
-    if (url.endsWith('/health') || url.includes('/health?')) {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: 'ok', version: 'compliance-test' }),
-      })
-      return
-    }
-    route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
-  })
-
-  await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
-    ws.onMessage((data) => {
-      try {
-        const msg = JSON.parse(String(data))
-        ws.send(JSON.stringify({ id: msg.id, type: 'result', payload: { output: '{"items":[]}', exitCode: 0 } }))
-      } catch {
-        // ignore
-      }
-    })
-  })
-}
-
-async function setLiveColdMode(page: Page) {
-  await page.addInitScript(
-    ({ user }: { user: unknown }) => {
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('kc-demo-mode', 'false')
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('kubestellar-console-tour-completed', 'true')
-      localStorage.setItem('kc-user-cache', JSON.stringify(user))
-      localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
-      localStorage.setItem('kc-sqlite-migrated', '2')
-
-      // Clear all caches for cold start
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i)
-        if (!key) continue
-        if (key.includes('dashboard-cards') || key.startsWith('cache:') || key.includes('kubestellar-stack-cache')) {
-          localStorage.removeItem(key)
-        }
-      }
-    },
-    { user: mockUser }
-  )
-
-  // Clear IndexedDB caches
-  await page.addInitScript(() => {
-    const databases = ['kc_cache', 'kubestellar-cache']
-    for (const name of databases) {
-      try {
-        indexedDB.deleteDatabase(name)
-      } catch {
-        // ignore
-      }
-    }
-  })
-}
+// Mock data, setupAuth, setupLiveMocks, setLiveColdMode imported from ../mocks/liveMocks
+// navigateToBatch, waitForCardsToLoad imported from ../mocks/liveMocks
+let mockControl: MockControl
 
 // ---------------------------------------------------------------------------
 // Compliance monitor — injected into the page
@@ -486,77 +176,6 @@ async function stopComplianceMonitor(page: Page): Promise<Record<string, CardSta
 // ---------------------------------------------------------------------------
 // Navigation helpers
 // ---------------------------------------------------------------------------
-
-async function navigateToBatch(page: Page, batch: number, manifestTimeoutMs = 60_000): Promise<ManifestData> {
-  const url = `/__compliance/all-cards?batch=${batch + 1}&size=${BATCH_SIZE}`
-  console.log(`[Compliance] Navigating to ${url} (timeout: ${manifestTimeoutMs}ms)`)
-  await page.goto(url, { waitUntil: 'domcontentloaded' })
-  console.log(`[Compliance] DOM loaded, waiting for manifest...`)
-
-  // Periodic debug logging while waiting
-  const debugInterval = setInterval(async () => {
-    try {
-      const state = await page.evaluate(() => ({
-        path: window.location.pathname,
-        hasManifest: !!(window as Window & { __COMPLIANCE_MANIFEST__?: unknown }).__COMPLIANCE_MANIFEST__,
-        hasLoginForm: !!document.querySelector('input[type="password"]'),
-        hasSidebar: !!document.querySelector('[data-testid="sidebar"]'),
-        bodyLen: (document.body.textContent || '').trim().length,
-        bodyPreview: (document.body.textContent || '').trim().slice(0, 100),
-      }))
-      console.log(`[Compliance] Page state: ${JSON.stringify(state)}`)
-    } catch {
-      console.log(`[Compliance] Page state: (evaluate failed)`)
-    }
-  }, 10_000)
-
-  try {
-    await page.waitForFunction(() => !!(window as Window & { __COMPLIANCE_MANIFEST__?: unknown }).__COMPLIANCE_MANIFEST__, {
-      timeout: manifestTimeoutMs,
-    })
-  } catch {
-    clearInterval(debugInterval)
-    const debug = await page.evaluate(() => ({
-      path: window.location.pathname,
-      hasManifestEl: !!document.querySelector('[data-testid="compliance-manifest"]'),
-      hasSidebar: !!document.querySelector('[data-testid="sidebar"]'),
-      bodyPreview: (document.body.textContent || '').slice(0, 300),
-      hasLoginForm: !!document.querySelector('input[type="password"]'),
-    }))
-    throw new Error(`Compliance manifest did not load: ${JSON.stringify(debug)}`)
-  }
-  clearInterval(debugInterval)
-  console.log(`[Compliance] Manifest loaded for batch ${batch}`)
-
-  const manifest = await page.evaluate(
-    () => (window as Window & { __COMPLIANCE_MANIFEST__?: unknown }).__COMPLIANCE_MANIFEST__
-  )
-  if (!manifest) throw new Error('Missing __COMPLIANCE_MANIFEST__ from compliance route')
-  return manifest as ManifestData
-}
-
-async function waitForCardsToLoad(page: Page, cardIds: string[], timeoutMs: number) {
-  await page.waitForFunction(
-    ({ ids, timeout }: { ids: string[]; timeout: number }) => {
-      const win = window as Window & {
-        __COMPLIANCE_LOAD_START__?: number
-      }
-      const now = performance.now()
-      if (!win.__COMPLIANCE_LOAD_START__) win.__COMPLIANCE_LOAD_START__ = now
-
-      const allDone = ids.every((id) => {
-        const card = document.querySelector(`[data-card-id="${id}"]`)
-        if (!card) return false
-        return card.getAttribute('data-loading') === 'false'
-      })
-      if (allDone) return true
-      if (now - win.__COMPLIANCE_LOAD_START__ > timeout) return true
-      return false
-    },
-    { ids: cardIds, timeout: timeoutMs },
-    { timeout: timeoutMs + 5_000, polling: 200 }
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Criterion evaluators
@@ -1042,7 +661,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
 
   // ── Phase 1: Setup mocks ──────────────────────────────────────────────
   await setupAuth(page)
-  await setupLiveMocks(page)
+  mockControl = await setupLiveMocks(page, { trackSSERequests: true })
   await setLiveColdMode(page)
 
   // ── Phase 2: Warmup — prime Vite module cache ─────────────────────────
@@ -1076,7 +695,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
       localStorage.setItem('token', 'test-token')
     })
 
-    sseRequestLog.length = 0
+    mockControl.sseRequestLog.length = 0
 
     const manifest = await navigateToBatch(page, batch)
     const selected = manifest.selected || []
@@ -1103,7 +722,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
       const criteria: Record<string, CriterionResult> = {
         a: checkCriterionA(item.cardId, item.cardType, history),
         b: checkCriterionB(item.cardId, item.cardType, history),
-        c: checkCriterionC(item.cardId, item.cardType, sseRequestLog),
+        c: checkCriterionC(item.cardId, item.cardType, mockControl.sseRequestLog),
         d: checkCriterionD(item.cardId, item.cardType, history),
         e: checkCriterionE(item.cardId, item.cardType, history),
         f: criterionFResult,

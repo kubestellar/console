@@ -4,12 +4,17 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+import {
+  setupAuth,
+  setupLiveMocks,
+  mockUser,
+} from '../mocks/liveMocks'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type Scenario = 'cold-nav' | 'warm-nav' | 'from-main' | 'from-clusters' | 'rapid-nav'
+type Scenario = 'cold-nav' | 'warm-nav' | 'from-main' | 'from-clusters' | 'rapid-nav' | 'back-nav'
 
 interface NavMetric {
   from: string
@@ -76,281 +81,9 @@ const APP_LOAD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : 15_000
 // Real-backend tests need much longer timeouts (25 dashboards, some taking 30s+)
 const REAL_BACKEND_TEST_TIMEOUT = 5 * 60_000 // 5 minutes
 
-// ---------------------------------------------------------------------------
-// Mock data & helpers (reused from dashboard-perf.spec.ts)
-// ---------------------------------------------------------------------------
 
-const mockUser = {
-  id: '1',
-  github_id: '12345',
-  github_login: 'perftest',
-  email: 'perf@test.com',
-  onboarded: true,
-}
+// Mock data, setupAuth, setupLiveMocks imported from ../mocks/liveMocks
 
-const MOCK_CLUSTER = 'perf-test-cluster'
-
-const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
-  clusters: {
-    clusters: [
-      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: 4 },
-    ],
-  },
-  pods: {
-    pods: [
-      { name: 'nginx-7d4f8b', namespace: 'default', cluster: MOCK_CLUSTER, status: 'Running', ready: '1/1', restarts: 0, age: '2d' },
-      { name: 'api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, status: 'Running', ready: '1/1', restarts: 1, age: '5d' },
-    ],
-  },
-  events: {
-    events: [
-      { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned default/nginx to node-1', object: 'Pod/nginx-7d4f8b', namespace: 'default', cluster: MOCK_CLUSTER, count: 1 },
-      { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'Pod/api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, count: 3 },
-    ],
-  },
-  'pod-issues': {
-    issues: [
-      { name: 'api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, status: 'CrashLoopBackOff', reason: 'BackOff', issues: ['Container restarting'], restarts: 5 },
-    ],
-  },
-  deployments: {
-    deployments: [
-      { name: 'nginx', namespace: 'default', cluster: MOCK_CLUSTER, replicas: 2, ready: 2, available: 2, age: '10d' },
-      { name: 'api-server', namespace: 'kube-system', cluster: MOCK_CLUSTER, replicas: 1, ready: 1, available: 1, age: '30d' },
-    ],
-  },
-  'deployment-issues': { issues: [] },
-  services: {
-    services: [
-      { name: 'kubernetes', namespace: 'default', cluster: MOCK_CLUSTER, type: 'ClusterIP', clusterIP: '10.96.0.1', ports: ['443/TCP'], age: '30d' },
-      { name: 'nginx-svc', namespace: 'default', cluster: MOCK_CLUSTER, type: 'LoadBalancer', clusterIP: '10.96.1.10', ports: ['80/TCP'], age: '10d' },
-    ],
-  },
-  nodes: {
-    nodes: [
-      { name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['control-plane'], version: '1.28.0', cpu: '4', memory: '8Gi' },
-      { name: 'node-2', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['worker'], version: '1.28.0', cpu: '8', memory: '16Gi' },
-    ],
-  },
-  'security-issues': {
-    issues: [
-      { name: 'nginx-7d4f8b', namespace: 'default', cluster: MOCK_CLUSTER, issue: 'Running as root', severity: 'medium', details: 'Container runs as root user' },
-    ],
-  },
-  releases: {
-    releases: [
-      { name: 'nginx-release', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2025-01-15' },
-    ],
-  },
-  'warning-events': {
-    events: [
-      { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'Pod/api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, count: 3 },
-    ],
-  },
-  namespaces: {
-    namespaces: [
-      { name: 'default', cluster: MOCK_CLUSTER, status: 'Active', pods: 4, age: '30d' },
-      { name: 'kube-system', cluster: MOCK_CLUSTER, status: 'Active', pods: 8, age: '30d' },
-    ],
-  },
-  'resource-limits': {
-    limits: [
-      { namespace: 'default', cluster: MOCK_CLUSTER, cpuRequest: '500m', cpuLimit: '1', memoryRequest: '256Mi', memoryLimit: '512Mi' },
-    ],
-  },
-}
-
-function buildSSEResponse(endpoint: string): string {
-  const data = MOCK_DATA[endpoint]
-  const itemsKey = Object.keys(data || {})[0] || 'items'
-  const items = data ? data[itemsKey] || [] : []
-  return [
-    'event: cluster_data',
-    `data: ${JSON.stringify({ cluster: MOCK_CLUSTER, [itemsKey]: items })}`,
-    '',
-    'event: done',
-    `data: ${JSON.stringify({ totalClusters: 1, source: 'mock' })}`,
-    '',
-  ].join('\n')
-}
-
-function getMockRESTData(url: string): Record<string, unknown> {
-  const match = url.match(/\/api\/mcp\/([^/?]+)/)
-  const endpoint = match?.[1] || ''
-  const data = MOCK_DATA[endpoint]
-  if (data) return { ...data, source: 'mock' }
-  return { items: [], message: 'No data available for this endpoint', source: 'mock' }
-}
-
-// ---------------------------------------------------------------------------
-// Page setup
-// ---------------------------------------------------------------------------
-
-async function setupAuth(page: Page) {
-  await page.route('**/api/me', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockUser) })
-  )
-}
-
-async function setupLiveMocks(page: Page) {
-  // SSE streams
-  await page.route('**/api/mcp/*/stream**', (route) => {
-    const url = route.request().url()
-    const endpoint = url.match(/\/api\/mcp\/([^/]+)\/stream/)?.[1] || ''
-    route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      headers: { 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-      body: buildSSEResponse(endpoint),
-    })
-  })
-
-  // REST MCP endpoints
-  await page.route('**/api/mcp/**', async (route) => {
-    if (route.request().url().includes('/stream')) {
-      await route.fallback()
-      return
-    }
-    const delay = 100 + Math.random() * 200
-    await new Promise((r) => setTimeout(r, delay))
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(getMockRESTData(route.request().url())),
-    })
-  })
-
-  // Health
-  await page.route('**/health', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', uptime: 3600 }) })
-  )
-
-  // Utility endpoints
-  await page.route('**/api/active-users', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-  )
-  await page.route('**/api/notifications/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: 0 }) })
-  )
-  await page.route('**/api/user/preferences', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-  )
-  await page.route('**/api/permissions/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clusters: {} }) })
-  )
-  await page.route('**/api/workloads**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        items: [
-          { name: 'nginx-deploy', namespace: 'default', type: 'Deployment', cluster: MOCK_CLUSTER, replicas: 2, readyReplicas: 2, status: 'Running', image: 'nginx:1.25' },
-          { name: 'api-gateway', namespace: 'production', type: 'Deployment', cluster: MOCK_CLUSTER, replicas: 3, readyReplicas: 3, status: 'Running', image: 'api:v2' },
-        ],
-      }),
-    })
-  )
-
-  // kubectl proxy
-  await page.route('**/api/kubectl/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], message: 'No kubectl data in test mode' }) })
-  )
-
-  // Array endpoints (must return [] not {items:[]})
-  const arrayEndpoints = [
-    '**/api/dashboards**',
-    '**/api/gpu/reservations**',
-    '**/api/feedback/queue**',
-    '**/api/notifications**',
-    '**/api/persistence/**',
-  ]
-  for (const pattern of arrayEndpoints) {
-    await page.route(pattern, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-    )
-  }
-
-  // Catch-all for remaining /api/ routes
-  await page.route('**/api/**', async (route) => {
-    const url = route.request().url()
-    if (url.includes('/api/mcp/') || url.includes('/api/me') || url.includes('/api/workloads') ||
-        url.includes('/api/kubectl/') || url.includes('/api/active-users') ||
-        url.includes('/api/notifications') || url.includes('/api/user/preferences') ||
-        url.includes('/api/permissions/') || url.includes('/health') ||
-        url.includes('/api/dashboards') || url.includes('/api/gpu/') ||
-        url.includes('/api/feedback/') || url.includes('/api/persistence/')) {
-      await route.fallback()
-      return
-    }
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], source: 'mock-catchall' }) })
-  })
-
-  // External requests
-  await page.route('**/api.github.com/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-  )
-  await page.route('**/api.rss2json.com/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        status: 'ok',
-        items: [
-          { title: 'Test Article 1', link: 'https://example.com/1', description: 'Test', pubDate: new Date().toISOString(), author: 'Test' },
-          { title: 'Test Article 2', link: 'https://example.com/2', description: 'Test', pubDate: new Date().toISOString(), author: 'Test' },
-        ],
-      }),
-    })
-  )
-  await page.route('**/api.allorigins.win/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/xml',
-      body: `<?xml version="1.0"?><rss version="2.0"><channel><title>Test</title><item><title>Test</title><link>https://example.com/1</link><description>Test</description><pubDate>${new Date().toUTCString()}</pubDate></item></channel></rss>`,
-    })
-  )
-  await page.route('**/corsproxy.io/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/xml',
-      body: `<?xml version="1.0"?><rss version="2.0"><channel><title>Test</title><item><title>Test</title><link>https://example.com/1</link><description>Test</description><pubDate>${new Date().toUTCString()}</pubDate></item></channel></rss>`,
-    })
-  )
-
-  // kc-agent (port 8585) — must return 200 for /health so AgentManager stays
-  // 'connected'. Other endpoints return valid empty data so hooks complete
-  // their fetch cycle instead of forcing skeleton state via forceSkeletonForOffline.
-  await page.route('http://127.0.0.1:8585/**', (route) => {
-    const url = route.request().url()
-    if (url.endsWith('/health') || url.includes('/health?')) {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: 'ok', version: 'perf-test', clusters: 1, hasClaude: false }),
-      })
-      return
-    }
-    if (url.includes('/settings')) {
-      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-      return
-    }
-    if (url.includes('/clusters')) {
-      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-      return
-    }
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-  })
-
-  // WebSocket
-  await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
-    ws.onMessage((data) => {
-      try {
-        const msg = JSON.parse(String(data))
-        ws.send(JSON.stringify({ id: msg.id, type: 'result', payload: { output: '{"items":[]}', exitCode: 0 } }))
-      } catch { /* ignore */ }
-    })
-  })
-}
 
 async function setupMocks(page: Page) {
   if (REAL_BACKEND) return // skip all mocks — test against live backend
@@ -994,6 +727,68 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
 })
 
 // ---------------------------------------------------------------------------
+// Scenario 6: Back-button navigation (browser history traversal)
+// ---------------------------------------------------------------------------
+
+test('back-button navigation through 10 dashboards', async ({ page }) => {
+  test.setTimeout(180_000)
+  const pageErrors: string[] = []
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+
+  await setupMocks(page)
+  await setMode(page)
+
+  // Navigate forward through 10 dashboards
+  const forwardTargets = DASHBOARDS.slice(0, 10)
+  for (const dashboard of forwardTargets) {
+    await page.goto(dashboard.route, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+    await page.waitForTimeout(500) // ensure history entry
+  }
+
+  console.log(`[NAV] Navigated forward through ${forwardTargets.length} dashboards, now going back`)
+
+  // Navigate back through all 10, measuring each back-button press
+  for (let i = forwardTargets.length - 2; i >= 0; i--) {
+    const expected = forwardTargets[i]
+    const backStart = Date.now()
+    await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10_000 })
+    const backDoneMs = Date.now() - backStart
+
+    // Wait for cards to appear
+    const cardStart = Date.now()
+    let cardsFound = 0
+    try {
+      await page.waitForSelector('[data-card-id]', { timeout: 5_000 })
+      cardsFound = await page.locator('[data-card-id]').count()
+    } catch {
+      // Some pages may not have cards
+    }
+    const cardLoadMs = Date.now() - cardStart
+
+    navReport.metrics.push({
+      from: forwardTargets[i + 1]?.route ?? '(unknown)',
+      to: expected.route,
+      targetName: expected.name,
+      scenario: 'back-nav' as Scenario,
+      clickToUrlChangeMs: backDoneMs,
+      urlChangeToFirstCardMs: cardLoadMs,
+      urlChangeToAllCardsMs: cardLoadMs,
+      totalMs: backDoneMs + cardLoadMs,
+      cardsFound,
+      cardsLoaded: cardsFound,
+      cardsTimedOut: 0,
+    })
+  }
+
+  const backMetrics = navReport.metrics.filter((m) => m.scenario === ('back-nav' as Scenario))
+  console.log(`[NAV] back-nav: ${backMetrics.length} navigations, avg ${Math.round(backMetrics.reduce((s, m) => s + m.totalMs, 0) / Math.max(1, backMetrics.length))}ms`)
+
+  if (pageErrors.length > 0) {
+    console.log(`  JS ERRORS (back-nav): ${pageErrors.slice(0, 5).map(e => e.slice(0, 120)).join(' | ')}`)
+  }
+})
+
+// ---------------------------------------------------------------------------
 // Write report after all tests
 // ---------------------------------------------------------------------------
 
@@ -1017,7 +812,7 @@ test.afterAll(async () => {
     '',
   ]
 
-  for (const scenario of ['cold-nav', 'warm-nav', 'from-main', 'from-clusters', 'rapid-nav'] as const) {
+  for (const scenario of ['cold-nav', 'warm-nav', 'from-main', 'from-clusters', 'rapid-nav', 'back-nav'] as const) {
     const metrics = navReport.metrics.filter((m) => m.scenario === scenario)
     lines.push(`- **${scenario}**: ${summarizeScenario(metrics)}`)
   }
@@ -1064,12 +859,33 @@ test.afterAll(async () => {
   const totalTimes = validMetrics.map((m) => m.totalMs)
 
   if (totalTimes.length > 0) {
-    lines.push('## Latency Percentiles')
+    lines.push('## Overall Latency Percentiles')
     lines.push('')
     lines.push(`- **p50**: ${percentile(totalTimes, 50)}ms`)
     lines.push(`- **p90**: ${percentile(totalTimes, 90)}ms`)
     lines.push(`- **p95**: ${percentile(totalTimes, 95)}ms`)
     lines.push(`- **p99**: ${percentile(totalTimes, 99)}ms`)
+    lines.push('')
+  }
+
+  // Per-scenario percentiles
+  const scenarios: Scenario[] = ['cold-nav', 'warm-nav', 'from-main', 'from-clusters', 'rapid-nav', 'back-nav']
+  const scenarioPercentileRows: string[] = []
+  for (const scenario of scenarios) {
+    const sTimes = navReport.metrics
+      .filter((m) => m.scenario === scenario && m.cardsFound > 0 && m.totalMs > 0)
+      .map((m) => m.totalMs)
+    if (sTimes.length === 0) continue
+    scenarioPercentileRows.push(
+      `| ${scenario} | ${sTimes.length} | ${percentile(sTimes, 50)} | ${percentile(sTimes, 95)} | ${percentile(sTimes, 99)} |`
+    )
+  }
+  if (scenarioPercentileRows.length > 0) {
+    lines.push('## Per-Scenario Percentiles')
+    lines.push('')
+    lines.push('| Scenario | N | p50(ms) | p95(ms) | p99(ms) |')
+    lines.push('|----------|---|---------|---------|---------|')
+    lines.push(...scenarioPercentileRows)
     lines.push('')
   }
 

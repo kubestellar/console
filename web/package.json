@@ -29,6 +29,10 @@
     "test:e2e:cache-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/card-cache-compliance.spec.ts",
     "test:e2e:security-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/security-compliance.spec.ts",
     "test:e2e:i18n-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/i18n-compliance.spec.ts",
+    "test:e2e:a11y-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/a11y-compliance.spec.ts",
+    "test:e2e:interaction-compliance": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/interaction-compliance.spec.ts",
+    "test:e2e:error-resilience": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/error-resilience.spec.ts",
+    "test:e2e:all-compliance": "playwright test --config e2e/compliance/compliance.config.ts",
     "test:e2e:coverage": "./scripts/run-e2e-coverage.sh",
     "coverage:report": "node scripts/coverage-report.mjs",
     "coverage:clean": "rimraf .nyc_output coverage"
