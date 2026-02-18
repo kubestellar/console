@@ -299,11 +299,15 @@ ${wrapOpen}
                   <div style={{display: 'flex', gap: '2px', alignItems: 'center'}}>
                     {runs.map((r, i) => {
                       const isGpu = r.conclusion === 'failure' && r.failureReason === 'gpu_unavailable';
+                      const isFailed = r.conclusion === 'failure';
                       const dotLabel = (r.conclusion || r.status) + (isGpu ? ' (GPU)' : '') + ' — ' + timeAgo(r.updatedAt || r.createdAt);
                       const dotColor = r.status !== 'completed' ? '#60a5fa' : isGpu ? '#f59e0b' : (conclusionColors[r.conclusion] || '#6b7280');
                       return (
-                      <span key={i} className="dot-tip-wrap" onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
-                        <span className="tip">{dotLabel}</span>
+                      <span key={i} className={'dot-tip-wrap' + (isFailed ? ' has-links' : '')} onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
+                        <span className="tip">
+                          {dotLabel}
+                          {isFailed && r.htmlUrl && <><br/><a href={r.htmlUrl + '#logs'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }}>Logs</a><a href={r.htmlUrl + '/artifacts'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}/artifacts"\`); }}>Artifacts</a></>}
+                        </span>
                         <span style={{
                           width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
                           backgroundColor: dotColor,

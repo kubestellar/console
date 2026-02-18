@@ -427,6 +427,16 @@ export const className = css\`
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
   .dot-tip-wrap:hover .tip { display: block; }
+  .dot-tip-wrap.has-links .tip {
+    pointer-events: auto;
+    padding: 4px 8px;
+  }
+  .dot-tip-wrap.has-links .tip a {
+    color: #60a5fa;
+    text-decoration: none;
+    margin-left: 6px;
+  }
+  .dot-tip-wrap.has-links .tip a:hover { color: #93bbfc; text-decoration: underline; }
   .spark-tip-wrap { position: relative; }
   .spark-tip-wrap .spark-tip {
     display: none;

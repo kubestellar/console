@@ -68,15 +68,17 @@ function RunDot({ run, isHighlighted, onMouseEnter, onMouseLeave }: {
   onMouseEnter?: () => void
   onMouseLeave?: () => void
 }) {
+  const [showPopup, setShowPopup] = useState(false)
   const isRunning = run.status !== 'completed'
-  const isGPUFailure = run.conclusion === 'failure' && run.failureReason === 'gpu_unavailable'
+  const isFailed = run.conclusion === 'failure'
+  const isGPUFailure = isFailed && run.failureReason === 'gpu_unavailable'
   const color = isRunning
     ? 'bg-blue-400'
     : run.conclusion === 'success'
       ? 'bg-emerald-400'
       : isGPUFailure
         ? 'bg-amber-400'
-        : run.conclusion === 'failure'
+        : isFailed
           ? 'bg-red-400'
           : run.conclusion === 'cancelled'
             ? 'bg-slate-500'
@@ -89,21 +91,48 @@ function RunDot({ run, isHighlighted, onMouseEnter, onMouseLeave }: {
       ? `${run.conclusion} (${reasonLabel}) — ${formatTimeAgo(run.createdAt)}`
       : `${run.conclusion} — ${formatTimeAgo(run.createdAt)}`
 
+  const logsUrl = `${run.htmlUrl}#logs`
+
   return (
-    <a
-      href={run.htmlUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={title}
+    <div
       className="group relative"
-      onClick={e => e.stopPropagation()}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseEnter={() => { setShowPopup(true); onMouseEnter?.() }}
+      onMouseLeave={() => { setShowPopup(false); onMouseLeave?.() }}
     >
-      <div className={`w-3 h-3 rounded-full ${color} ${isRunning ? 'animate-pulse' : ''} ${
-        isHighlighted ? 'ring-2 ring-white/50 scale-125' : 'group-hover:ring-2 group-hover:ring-white/30'
-      } transition-all`} />
-    </a>
+      <a
+        href={run.htmlUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={!isFailed ? title : undefined}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={`w-3 h-3 rounded-full ${color} ${isRunning ? 'animate-pulse' : ''} ${
+          isHighlighted ? 'ring-2 ring-white/50 scale-125' : 'group-hover:ring-2 group-hover:ring-white/30'
+        } transition-all`} />
+      </a>
+      {isFailed && showPopup && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 pointer-events-auto">
+          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-2.5 py-1.5 whitespace-nowrap text-[10px]">
+            <div className="text-slate-300 mb-1">
+              Run #{run.runNumber} &middot; {isGPUFailure ? <span className="text-amber-400">GPU unavailable</span> : <span className="text-red-400">failed</span>} &middot; {formatTimeAgo(run.createdAt)}
+            </div>
+            <div className="flex items-center gap-2">
+              <a href={logsUrl} target="_blank" rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
+                onClick={e => e.stopPropagation()}>
+                View Logs <ExternalLink size={8} />
+              </a>
+              <a href={`${run.htmlUrl}/artifacts`} target="_blank" rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
+                onClick={e => e.stopPropagation()}>
+                Artifacts <ExternalLink size={8} />
+              </a>
+            </div>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-600" />
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
