@@ -1687,6 +1687,98 @@ export function useCachedNodes(
 }
 
 // ============================================================================
+// GPU Node Health Cached Hooks (SSE-enabled, proactive monitoring)
+// ============================================================================
+
+import type { GPUNodeHealthStatus } from './useMCP'
+
+const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
+  {
+    nodeName: 'gpu-node-1', cluster: 'vllm-gpu-cluster', status: 'healthy',
+    gpuCount: 8, gpuType: 'NVIDIA A100-SXM4-80GB',
+    checks: [
+      { name: 'node_ready', passed: true },
+      { name: 'scheduling', passed: true },
+      { name: 'gpu-feature-discovery', passed: true },
+      { name: 'nvidia-device-plugin', passed: true },
+      { name: 'dcgm-exporter', passed: true },
+      { name: 'stuck_pods', passed: true },
+      { name: 'gpu_events', passed: true },
+    ],
+    issues: [], stuckPods: 0, checkedAt: new Date().toISOString(),
+  },
+  {
+    nodeName: 'gpu-node-2', cluster: 'vllm-gpu-cluster', status: 'degraded',
+    gpuCount: 8, gpuType: 'NVIDIA A100-SXM4-80GB',
+    checks: [
+      { name: 'node_ready', passed: true },
+      { name: 'scheduling', passed: true },
+      { name: 'gpu-feature-discovery', passed: false, message: 'CrashLoopBackOff (12 restarts)' },
+      { name: 'nvidia-device-plugin', passed: true },
+      { name: 'dcgm-exporter', passed: true },
+      { name: 'stuck_pods', passed: true },
+      { name: 'gpu_events', passed: true },
+    ],
+    issues: ['gpu-feature-discovery: CrashLoopBackOff (12 restarts)'], stuckPods: 0, checkedAt: new Date().toISOString(),
+  },
+  {
+    nodeName: 'gpu-node-3', cluster: 'eks-prod-us-east-1', status: 'unhealthy',
+    gpuCount: 4, gpuType: 'NVIDIA V100',
+    checks: [
+      { name: 'node_ready', passed: false, message: 'Node is NotReady' },
+      { name: 'scheduling', passed: false, message: 'Node is cordoned (SchedulingDisabled)' },
+      { name: 'gpu-feature-discovery', passed: false, message: 'CrashLoopBackOff (128 restarts)' },
+      { name: 'nvidia-device-plugin', passed: false, message: 'CrashLoopBackOff (64 restarts)' },
+      { name: 'dcgm-exporter', passed: true },
+      { name: 'stuck_pods', passed: false, message: '54 pods stuck (ContainerStatusUnknown/Terminating)' },
+      { name: 'gpu_events', passed: false, message: '3 GPU warning events in last hour' },
+    ],
+    issues: ['Node is NotReady', 'Node is cordoned', 'gpu-feature-discovery: CrashLoopBackOff (128 restarts)', '54 pods stuck'],
+    stuckPods: 54, checkedAt: new Date().toISOString(),
+  },
+]
+
+/**
+ * Hook for fetching GPU node health data with caching and SSE streaming.
+ */
+export function useCachedGPUNodeHealth(
+  cluster?: string,
+): CachedHookResult<GPUNodeHealthStatus[]> & { nodes: GPUNodeHealthStatus[] } {
+  const key = `gpu-node-health:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category: 'pods' as RefreshCategory,
+    initialData: [] as GPUNodeHealthStatus[],
+    demoData: getDemoCachedGPUNodeHealth(),
+    persist: true,
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ nodes: GPUNodeHealthStatus[] }>('gpu-nodes/health', { cluster })
+        return (data.nodes || []).map(n => ({ ...n, cluster }))
+      }
+      return fetchFromAllClusters<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {})
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return fetchViaSSE<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {}, onProgress)
+    },
+  })
+
+  return {
+    nodes: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+// ============================================================================
 // Warning Events Cached Hooks (SSE-enabled)
 // ============================================================================
 

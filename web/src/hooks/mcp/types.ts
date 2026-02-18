@@ -180,6 +180,25 @@ export interface GPUNode {
   manufacturer?: string     // Manufacturer (NVIDIA, AMD, Intel, Google, IBM)
 }
 
+// GPU Node Health Check types (proactive monitoring)
+export interface GPUNodeHealthCheck {
+  name: string
+  passed: boolean
+  message?: string
+}
+
+export interface GPUNodeHealthStatus {
+  nodeName: string
+  cluster: string
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  gpuCount: number
+  gpuType: string
+  checks: GPUNodeHealthCheck[]
+  issues: string[]
+  stuckPods: number
+  checkedAt: string
+}
+
 // NVIDIA Operator Status types
 export interface OperatorComponent {
   name: string
