@@ -230,6 +230,41 @@ async function setupLiveMocks(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nodes: [{ name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['control-plane'], kubeletVersion: 'v1.28.0', conditions: [{ type: 'Ready', status: 'True' }] }] }) })
   })
 
+  // Nightly E2E runs — mock with delay so loading/skeleton phase is observable
+  const nightlyMockData = {
+    guides: [
+      {
+        guide: 'vLLM with Autoscaling', acronym: 'WVA', platform: 'OpenShift',
+        repo: 'llm-d/llm-d', workflowFile: 'nightly-wva.yaml',
+        model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1,
+        passRate: 85, trend: 'improving', latestConclusion: 'success',
+        runs: [
+          { id: 100001, status: 'completed', conclusion: 'success', createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date(Date.now() - 3000000).toISOString(), htmlUrl: 'https://github.com/llm-d/llm-d/actions/runs/100001', runNumber: 42, failureReason: '', model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1, event: 'schedule' },
+          { id: 100002, status: 'completed', conclusion: 'failure', createdAt: new Date(Date.now() - 86400000).toISOString(), updatedAt: new Date(Date.now() - 85800000).toISOString(), htmlUrl: 'https://github.com/llm-d/llm-d/actions/runs/100002', runNumber: 41, failureReason: 'Pod timeout', model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1, event: 'schedule' },
+        ],
+      },
+      {
+        guide: 'Prefix Cache Aware Routing', acronym: 'PCAR', platform: 'OpenShift',
+        repo: 'llm-d/llm-d', workflowFile: 'nightly-pcar.yaml',
+        model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1,
+        passRate: 100, trend: 'stable', latestConclusion: 'success',
+        runs: [
+          { id: 100003, status: 'completed', conclusion: 'success', createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 6600000).toISOString(), htmlUrl: 'https://github.com/llm-d/llm-d/actions/runs/100003', runNumber: 15, failureReason: '', model: 'granite-3.2-2b-instruct', gpuType: 'NVIDIA L40S', gpuCount: 1, event: 'schedule' },
+        ],
+      },
+    ],
+  }
+
+  await page.route('**/api/nightly-e2e/**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(nightlyMockData) })
+  })
+
+  await page.route('**/api/public/nightly-e2e/**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(nightlyMockData) })
+  })
+
   await page.route('**/api/**', async (route) => {
     const url = route.request().url()
     if (
@@ -238,7 +273,9 @@ async function setupLiveMocks(page: Page) {
       url.includes('/api/workloads') ||
       url.includes('/api/dashboards') ||
       url.includes('/api/config/') ||
-      url.includes('/api/gitops/')
+      url.includes('/api/gitops/') ||
+      url.includes('/api/nightly-e2e/') ||
+      url.includes('/api/public/nightly-e2e/')
     ) {
       await route.fallback()
       return
