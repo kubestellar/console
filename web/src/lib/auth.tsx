@@ -163,10 +163,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setToken = useCallback((newToken: string, onboarded: boolean) => {
     localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
     setTokenState(newToken)
-    // Set temporary user until we fetch full user data
-    const tempUser: User = { id: '', github_id: '', github_login: '', onboarded }
-    setUser(tempUser)
-    cacheUser(tempUser)
+    // Clear stale cached user — refreshUser() will fetch and cache real data.
+    // Do NOT cache the temp user: if refreshUser fails, the empty-field temp
+    // user persists in localStorage and the profile shows "No email set".
+    cacheUser(null)
+    setUser({ id: '', github_id: '', github_login: '', onboarded } as User)
   }, [])
 
   useEffect(() => {
