@@ -84,7 +84,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
     const newErrors: Record<string, string> = {}
 
     if (!name.trim()) {
-      newErrors.name = 'Name is required'
+      newErrors.name = t('alerts.nameRequired')
     }
 
     if (conditionType === 'gpu_usage' || conditionType === 'memory_pressure') {
@@ -343,7 +343,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 {weatherCondition === 'extreme_heat' && (
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">
-                      Temperature Threshold (°F)
+                      {t('alerts.temperatureThreshold')}
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -367,7 +367,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 {weatherCondition === 'high_wind' && (
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">
-                      Wind Speed Threshold (mph)
+                      {t('alerts.windSpeedThreshold')}
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -393,7 +393,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             {/* Duration */}
             <div>
               <label className="block text-xs text-muted-foreground mb-1">
-                Duration (seconds before alerting)
+                {t('alerts.durationSeconds')}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -404,7 +404,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   onChange={e => setDuration(Number(e.target.value))}
                   className="w-24 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
-                <span className="text-sm text-muted-foreground">seconds (0 = immediate)</span>
+                <span className="text-sm text-muted-foreground">{t('alerts.durationHint')}</span>
               </div>
             </div>
 
@@ -437,28 +437,28 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
           {/* Notification Channels */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-foreground">Notification Channels</h4>
+              <h4 className="text-sm font-medium text-foreground">{t('alerts.notificationChannels')}</h4>
               <div className="flex gap-2">
                 <button
                   onClick={() => addChannel('browser')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
                 >
                   <Bell className="w-3 h-3" />
-                  Browser
+                  {t('alerts.browser')}
                 </button>
                 <button
                   onClick={() => addChannel('slack')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
                 >
                   <Slack className="w-3 h-3" />
-                  Slack
+                  {t('alerts.slack')}
                 </button>
                 <button
                   onClick={() => addChannel('webhook')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
                 >
                   <Webhook className="w-3 h-3" />
-                  Webhook
+                  {t('alerts.webhook')}
                 </button>
               </div>
             </div>
@@ -549,7 +549,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
           {/* AI Diagnosis */}
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-foreground">AI Integration</h4>
+            <h4 className="text-sm font-medium text-foreground">{t('alerts.aiIntegration')}</h4>
             <button
               onClick={() => setAiDiagnose(!aiDiagnose)}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
@@ -562,10 +562,10 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 <Bot className={`w-5 h-5 ${aiDiagnose ? 'text-purple-400' : 'text-muted-foreground'}`} />
                 <div>
                   <span className="text-sm font-medium text-foreground">
-                    AI Diagnosis
+                    {t('alerts.aiDiagnosis')}
                   </span>
                   <p className="text-xs text-muted-foreground">
-                    Automatically analyze alerts and suggest remediation actions
+                    {t('alerts.aiDiagnosisDesc')}
                   </p>
                 </div>
               </div>
@@ -581,13 +581,13 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             onClick={onCancel}
             className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
           >
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             onClick={handleSave}
             className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
           >
-            {rule ? 'Save Changes' : 'Create Rule'}
+            {rule ? t('alerts.saveChanges') : t('alerts.createRule')}
           </button>
         </div>
       </BaseModal.Footer>

@@ -12,7 +12,7 @@ const SNOOZED_KEY = 'kc-agent-setup-snoozed'
 const SNOOZE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 export function AgentSetupDialog() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('common')
   const { status, isConnected } = useLocalAgent()
   const [show, setShow] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -59,8 +59,8 @@ export function AgentSetupDialog() {
   return (
     <BaseModal isOpen={show} onClose={() => handleDismiss(false)} size="md">
       <BaseModal.Header
-        title="Welcome to KubeStellar Console"
-        description="To access your local clusters and Claude Code, install our lightweight agent."
+        title={t('agentSetup.welcomeTitle')}
+        description={t('agentSetup.welcomeDescription')}
         icon={Download}
         onClose={() => handleDismiss(false)}
         showBack={false}
@@ -69,9 +69,9 @@ export function AgentSetupDialog() {
       <BaseModal.Content>
         {/* Install Option */}
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-          <div className="font-medium">Quick Install (recommended)</div>
+          <div className="font-medium">{t('agentSetup.quickInstall')}</div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Copy this command and run it in your terminal:
+            {t('agentSetup.copyAndRun')}
           </p>
           <div className="mt-3 flex items-center gap-2">
             <code className="flex-1 rounded bg-muted px-3 py-2 text-sm font-mono select-all overflow-x-auto">
@@ -81,18 +81,18 @@ export function AgentSetupDialog() {
               onClick={copyToClipboard}
               className="shrink-0 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? t('agentSetup.copied') : t('agentSetup.copy')}
             </button>
           </div>
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <span>✓ Your kubeconfig clusters</span>
-            <span>✓ Real-time token usage</span>
-            <span>✓ Local & secure</span>
+            <span>✓ {t('agentSetup.kubeconfigClusters')}</span>
+            <span>✓ {t('agentSetup.realtimeTokenUsage')}</span>
+            <span>✓ {t('agentSetup.localAndSecure')}</span>
           </div>
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">
-          You can install the agent anytime from Settings.
+          {t('agentSetup.installFromSettings')}
         </p>
       </BaseModal.Content>
 
@@ -101,7 +101,7 @@ export function AgentSetupDialog() {
           onClick={() => handleDismiss(true)}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          Don't show again
+          {t('agentSetup.dontShowAgain')}
         </button>
         <div className="flex-1" />
         <div className="flex gap-3">
@@ -109,13 +109,13 @@ export function AgentSetupDialog() {
             onClick={() => handleDismiss(false)}
             className="rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
           >
-            Continue with Demo Data
+            {t('agentSetup.continueWithDemoData')}
           </button>
           <button
             onClick={handleSnooze}
             className="rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
           >
-            Remind Me Later
+            {t('agentSetup.remindMeLater')}
           </button>
         </div>
       </BaseModal.Footer>

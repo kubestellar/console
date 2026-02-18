@@ -7,12 +7,12 @@ import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 
 export function AuthCallback() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { setToken, refreshUser } = useAuth()
   const { showToast } = useToast()
-  const [status, setStatus] = useState('Signing you in...')
+  const [status, setStatus] = useState(t('authCallback.signingIn'))
   const hasProcessed = useRef(false)
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export function AuthCallback() {
 
     if (token) {
       setToken(token, true)
-      setStatus('Fetching user info...')
+      setStatus(t('authCallback.fetchingUserInfo'))
 
       // Navigate directly to the last visited dashboard route instead of '/'
       // to avoid a flash of the default dashboard before useLastRoute redirects.
@@ -51,9 +51,9 @@ export function AuthCallback() {
       }).catch((err) => {
         clearTimeout(timeoutId)
         console.error('Failed to refresh user:', err)
-        showToast('Failed to fetch user info, proceeding anyway', 'warning')
+        showToast(t('authCallback.failedToFetchUser'), 'warning')
         // Still try to proceed if we have a token
-        setStatus('Completing sign in...')
+        setStatus(t('authCallback.completingSignIn'))
         setTimeout(() => {
           navigate(destination)
         }, 500)

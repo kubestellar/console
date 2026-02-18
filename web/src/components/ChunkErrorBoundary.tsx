@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { RefreshCw } from 'lucide-react'
+import i18next from 'i18next'
 
 // Reload throttle interval in milliseconds to prevent infinite reload loops
 const RELOAD_THROTTLE_MS = 30_000 // 30 seconds
@@ -62,16 +63,16 @@ export class ChunkErrorBoundary extends Component<Props, State> {
           <div className="text-center p-8 max-w-md">
             <RefreshCw className="w-12 h-12 text-purple-400 mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              App Updated
+              {i18next.t('common:chunkError.appUpdated')}
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
-              A new version was deployed. Please reload to continue.
+              {i18next.t('common:chunkError.newVersionDeployed')}
             </p>
             <button
               onClick={this.handleReload}
               className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-colors"
             >
-              Reload Page
+              {i18next.t('common:chunkError.reloadPage')}
             </button>
           </div>
         </div>

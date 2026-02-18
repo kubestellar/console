@@ -120,7 +120,7 @@ export function Pagination({
         {/* Items per page selector */}
         {showItemsPerPage && onItemsPerPageChange && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Per page:</span>
+            <span className="text-muted-foreground">{t('pagination.perPage')}</span>
             <select
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
@@ -141,7 +141,7 @@ export function Pagination({
             onClick={() => onPageChange(1)}
             disabled={!canGoPrevious}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
-            title="First page"
+            title={t('pagination.firstPage')}
           >
             <ChevronsLeft className="w-4 h-4" />
           </button>
@@ -149,7 +149,7 @@ export function Pagination({
             onClick={() => onPageChange(currentPage - 1)}
             disabled={!canGoPrevious}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
-            title="Previous page"
+            title={t('pagination.previousPage')}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -162,7 +162,7 @@ export function Pagination({
             onClick={() => onPageChange(currentPage + 1)}
             disabled={!canGoNext}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
-            title="Next page"
+            title={t('pagination.nextPage')}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -170,7 +170,7 @@ export function Pagination({
             onClick={() => onPageChange(totalPages)}
             disabled={!canGoNext}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
-            title="Last page"
+            title={t('pagination.lastPage')}
           >
             <ChevronsRight className="w-4 h-4" />
           </button>

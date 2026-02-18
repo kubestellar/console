@@ -1082,6 +1082,26 @@
     "allReasons": "All Reasons"
   },
   "alerts": {
+    "title": "Alerts",
+    "subtitle": "Monitor alerts and rules across clusters",
+    "dashboardTitle": "Alerts Dashboard",
+    "errorLoading": "Error loading alert data",
+    "resource": "Resource:",
+    "fired": "Fired:",
+    "acknowledged": "Acknowledged:",
+    "showDetails": "Show Details",
+    "hideDetails": "Hide Details",
+    "runDiagnosis": "Run Diagnosis",
+    "analyzing": "Analyzing...",
+    "summary": "Summary",
+    "rootCause": "Root Cause",
+    "suggestedActions": "Suggested Actions",
+    "viewAIMission": "View AI Mission",
+    "noDiagnosisYet": "No AI diagnosis yet. Click \"Run Diagnosis\" to analyze this alert with AI.",
+    "sendToSlack": "Send to Slack",
+    "slackSent": "Notification sent to Slack!",
+    "acknowledge": "Acknowledge",
+    "resolve": "Resolve",
     "weather": {
       "severeStorm": "Severe Storm",
       "extremeHeat": "Extreme Heat",
@@ -1658,7 +1678,26 @@
   },
   "pagination": {
     "showing": "Showing {{start}}-{{end}} of {{total}}",
-    "noItems": "No items"
+    "noItems": "No items",
+    "perPage": "Per page:",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page"
+  },
+  "clusterFilter": {
+    "filterByCluster": "Filter by cluster",
+    "allClusters": "All clusters",
+    "degraded": "degraded",
+    "needsAuth": "needs auth",
+    "offline": "offline"
+  },
+  "statsOverview": {
+    "title": "Stats Overview",
+    "configureStats": "Configure stats",
+    "demo": "Demo",
+    "notAvailable": "Not available",
+    "updated": "Updated {{time}}"
   },
   "refresh": {
     "failed": "Failed"
@@ -1759,6 +1798,7 @@
     "searchGPUClusters": "Search GPU clusters...",
     "searchStacks": "Search stacks...",
     "searchHardware": "Search hardware, model...",
+    "clearSearch": "Clear search",
     "filter": "Filter",
     "filterBy": "Filter by...",
     "noResults": "No results found",
@@ -2382,5 +2422,77 @@
     "pod": "Pod",
     "deploy": "Deploy",
     "ns": "NS"
+  },
+  "chunkError": {
+    "appUpdated": "App Updated",
+    "newVersionDeployed": "A new version was deployed. Please reload to continue.",
+    "reloadPage": "Reload Page"
+  },
+  "agentSetup": {
+    "welcomeTitle": "Welcome to KubeStellar Console",
+    "welcomeDescription": "To access your local clusters and Claude Code, install our lightweight agent.",
+    "quickInstall": "Quick Install (recommended)",
+    "copyAndRun": "Copy this command and run it in your terminal:",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "kubeconfigClusters": "Your kubeconfig clusters",
+    "realtimeTokenUsage": "Real-time token usage",
+    "localAndSecure": "Local & secure",
+    "installFromSettings": "You can install the agent anytime from Settings.",
+    "dontShowAgain": "Don't show again",
+    "continueWithDemoData": "Continue with Demo Data",
+    "remindMeLater": "Remind Me Later"
+  },
+  "agentStatus": {
+    "connectingToAgent": "Connecting to local agent...",
+    "demoModeTitle": "Demo Mode - Local Agent Not Connected",
+    "demoModeDefaultMessage": "Install the local agent to access your clusters and Claude Code.",
+    "connectedToAgent": "Connected to local agent v{{version}}",
+    "clustersCount": " - {{count}} clusters",
+    "claudeAvailable": " - Claude available",
+    "connectToLocalEnv": "Connect to Your Local Environment",
+    "installAgentDescription": "Install the local agent to access your kubeconfig clusters and Claude Code.",
+    "copyAndPaste": "Copy and paste this command:",
+    "accessAllClusters": "Access all your clusters",
+    "realtimeTokenTracking": "Real-time token tracking",
+    "runsLocally": "Runs locally (secure)"
+  },
+  "login": {
+    "sessionExpired": "Session expired",
+    "sessionTimedOut": "Your session has timed out. Please sign in again.",
+    "welcomeBack": "Welcome back",
+    "signInDescription": "Sign in to manage your multi-cluster deployments",
+    "continueWithGitHub": "Continue with GitHub",
+    "termsOfService": "By signing in, you agree to our Terms of Service"
+  },
+  "authCallback": {
+    "signingIn": "Signing you in...",
+    "fetchingUserInfo": "Fetching user info...",
+    "failedToFetchUser": "Failed to fetch user info, proceeding anyway",
+    "completingSignIn": "Completing sign in..."
+  },
+  "aiAgents": {
+    "title": "AI Agents",
+    "subtitle": "Kagenti agent platform — deploy, secure, and manage AI agents",
+    "emptyStateTitle": "AI Agents Dashboard",
+    "emptyStateDescription": "Add cards to monitor kagenti agents, MCP tools, build pipelines, and security posture across your clusters.",
+    "errorLoading": "Error loading kagenti data"
+  },
+  "aiml": {
+    "title": "AI/ML",
+    "subtitle": "Monitor AI and Machine Learning workloads",
+    "emptyStateTitle": "AI/ML Dashboard",
+    "emptyStateDescription": "Add cards to monitor GPU utilization, ML workloads, and model training across your clusters.",
+    "errorLoading": "Error loading cluster data"
+  },
+  "arcade": {
+    "title": "Arcade",
+    "subtitle": "Take a break with Kubernetes-themed games",
+    "gamesAvailable": "Games Available:",
+    "arcadeGames": "Arcade Games ({{count}})",
+    "emptyStateTitle": "Arcade Dashboard",
+    "emptyStateDescription": "Add games to your arcade! Choose from Kubernetes-themed classics like Flappy Pod, Container Tetris, and more.",
+    "addGames": "Add Games",
+    "dragToReorder": "Drag to reorder"
   }
 }

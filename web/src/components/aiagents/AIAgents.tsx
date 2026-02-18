@@ -11,7 +11,7 @@ const AI_AGENTS_CARDS_KEY = 'kubestellar-aiagents-cards'
 const DEFAULT_AIAGENTS_CARDS = getDefaultCards('ai-agents')
 
 export function AIAgents() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('common')
   const { summary, isLoading, refetch, error } = useKagentiSummary()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -44,8 +44,8 @@ export function AIAgents() {
 
   return (
     <DashboardPage
-      title="AI Agents"
-      subtitle="Kagenti agent platform — deploy, secure, and manage AI agents"
+      title={t('aiAgents.title')}
+      subtitle={t('aiAgents.subtitle')}
       icon="Bot"
       storageKey={AI_AGENTS_CARDS_KEY}
       defaultCards={DEFAULT_AIAGENTS_CARDS}
@@ -58,13 +58,13 @@ export function AIAgents() {
       hasData={hasData}
       isDemoData={isDemoData}
       emptyState={{
-        title: 'AI Agents Dashboard',
-        description: 'Add cards to monitor kagenti agents, MCP tools, build pipelines, and security posture across your clusters.',
+        title: t('aiAgents.emptyStateTitle'),
+        description: t('aiAgents.emptyStateDescription'),
       }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-          <div className="font-medium">Error loading kagenti data</div>
+          <div className="font-medium">{t('aiAgents.errorLoading')}</div>
           <div className="text-sm text-muted-foreground">{error}</div>
         </div>
       )}

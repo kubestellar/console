@@ -84,6 +84,7 @@ const SortableArcadeCard = memo(function SortableArcadeCard({
     transition,
   } = useSortable({ id: card.id })
 
+  const { t } = useTranslation('common')
   const { isMobile } = useMobile()
   const cardWidth = card.position?.w || 4
   const style = {
@@ -115,7 +116,7 @@ const SortableArcadeCard = memo(function SortableArcadeCard({
             {...attributes}
             {...listeners}
             className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
-            title="Drag to reorder"
+            title={t('arcade.dragToReorder')}
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -146,7 +147,7 @@ function ArcadeDragPreviewCard({ card }: { card: DashboardCard }) {
 }
 
 export function Arcade() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
 
@@ -252,9 +253,9 @@ export function Arcade() {
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <Gamepad2 className="w-6 h-6 text-pink-400" />
-                Arcade
+                {t('arcade.title')}
               </h1>
-              <p className="text-muted-foreground">Take a break with Kubernetes-themed games</p>
+              <p className="text-muted-foreground">{t('arcade.subtitle')}</p>
             </div>
           </div>
           <label
@@ -282,7 +283,7 @@ export function Arcade() {
         <div className="flex items-center justify-center gap-8 flex-wrap">
           <div className="flex items-center gap-2 text-sm">
             <Gamepad2 className="w-5 h-5 text-pink-400" />
-            <span className="text-muted-foreground">Games Available:</span>
+            <span className="text-muted-foreground">{t('arcade.gamesAvailable')}</span>
             <span className="font-bold text-pink-400">{cards.length}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -307,7 +308,7 @@ export function Arcade() {
             className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <LayoutGrid className="w-4 h-4" />
-            <span>Arcade Games ({cards.length})</span>
+            <span>{t('arcade.arcadeGames', { count: cards.length })}</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
         </div>
@@ -320,16 +321,16 @@ export function Arcade() {
                 <div className="flex justify-center mb-4">
                   <Gamepad2 className="w-12 h-12 text-pink-400" />
                 </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">Arcade Dashboard</h3>
+                <h3 className="text-lg font-medium text-foreground mb-2">{t('arcade.emptyStateTitle')}</h3>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
-                  Add games to your arcade! Choose from Kubernetes-themed classics like Flappy Pod, Container Tetris, and more.
+                  {t('arcade.emptyStateDescription')}
                 </p>
                 <button
                   onClick={() => setShowAddCard(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Games
+                  {t('arcade.addGames')}
                 </button>
               </div>
             ) : (

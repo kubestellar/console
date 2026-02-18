@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Server, CheckCircle2, XCircle, WifiOff, Box, Cpu, MemoryStick, HardDrive, Zap, Layers,
   FolderOpen, AlertCircle, AlertTriangle, AlertOctagon, Package, Ship, Settings, Clock,
@@ -148,10 +149,12 @@ export function StatsOverview({
   collapsedStorageKey,
   lastUpdated,
   className = '',
-  title = 'Stats Overview',
+  title,
   showConfigButton = true,
   isDemoData = false,
 }: StatsOverviewProps) {
+  const { t } = useTranslation()
+  const resolvedTitle = title ?? t('statsOverview.title')
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType)
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
@@ -206,24 +209,24 @@ export function StatsOverview({
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <Activity className="w-4 h-4" />
-              <span>{title}</span>
+              <span>{resolvedTitle}</span>
               {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
           ) : (
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Activity className="w-4 h-4" />
-              <span>{title}</span>
+              <span>{resolvedTitle}</span>
             </div>
           )}
           {isDemoData && (
             <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
               <FlaskConical className="w-2.5 h-2.5" />
-              Demo
+              {t('statsOverview.demo')}
             </span>
           )}
           {lastUpdated && (
             <span className="text-xs text-muted-foreground/60">
-              Updated {lastUpdated.toLocaleTimeString()}
+              {t('statsOverview.updated', { time: lastUpdated.toLocaleTimeString() })}
             </span>
           )}
         </div>
@@ -231,7 +234,7 @@ export function StatsOverview({
           <button
             onClick={() => setIsConfigOpen(true)}
             className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
-            title="Configure stats"
+            title={t('statsOverview.configureStats')}
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -244,7 +247,7 @@ export function StatsOverview({
           {visibleBlocks.map(block => {
             const data = effectiveIsLoading
               ? { value: '-' as string | number, sublabel: undefined }
-              : (getStatValue(block.id) ?? { value: '-' as string | number, sublabel: 'Not available' })
+              : (getStatValue(block.id) ?? { value: '-' as string | number, sublabel: t('statsOverview.notAvailable') })
             return (
               <StatBlock
                 key={block.id}
@@ -265,7 +268,7 @@ export function StatsOverview({
         blocks={blocks}
         onSave={saveBlocks}
         defaultBlocks={defaultBlocks}
-        title={`Configure ${title}`}
+        title={`${t('actions.configure')} ${resolvedTitle}`}
       />
     </div>
   )

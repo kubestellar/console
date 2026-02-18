@@ -15,7 +15,7 @@ const ALERTS_STORAGE_KEY = 'kubestellar-alerts-dashboard-cards'
 const DEFAULT_ALERT_CARDS = getDefaultCards('alerts')
 
 export function Alerts() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { stats, evaluateConditions } = useAlerts()
   const { rules } = useAlertRules()
   const { isRefreshing: dataRefreshing, refetch, error } = useClusters()
@@ -71,8 +71,8 @@ export function Alerts() {
 
   return (
     <DashboardPage
-      title="Alerts"
-      subtitle="Monitor alerts and rules across clusters"
+      title={t('alerts.title')}
+      subtitle={t('alerts.subtitle')}
       icon="Bell"
       storageKey={ALERTS_STORAGE_KEY}
       defaultCards={DEFAULT_ALERT_CARDS}
@@ -84,7 +84,7 @@ export function Alerts() {
       lastUpdated={lastUpdated}
       hasData={stats.firing > 0 || enabledRulesCount > 0}
       emptyState={{
-        title: 'Alerts Dashboard',
+        title: t('alerts.dashboardTitle'),
         description: 'Add cards to monitor alerts, rules, and issues across your clusters.',
       }}
     >
@@ -93,7 +93,7 @@ export function Alerts() {
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-400">Error loading alert data</p>
+            <p className="text-sm font-medium text-red-400">{t('alerts.errorLoading')}</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>
           </div>
         </div>

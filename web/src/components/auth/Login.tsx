@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
 
 export function Login() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('common')
   const { login, isAuthenticated, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
   const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
@@ -98,8 +98,8 @@ export function Login() {
             <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 text-yellow-300 text-sm">
               <AlertTriangle className="w-5 h-5 shrink-0 text-yellow-400" />
               <div>
-                <div className="font-medium">Session expired</div>
-                <div className="text-xs text-yellow-400/80 mt-0.5">Your session has timed out. Please sign in again.</div>
+                <div className="font-medium">{t('login.sessionExpired')}</div>
+                <div className="text-xs text-yellow-400/80 mt-0.5">{t('login.sessionTimedOut')}</div>
               </div>
             </div>
           )}
@@ -107,10 +107,10 @@ export function Login() {
           {/* Welcome text */}
           <div className="text-center mb-8">
             <h2 data-testid="login-welcome-heading" className="text-xl font-semibold text-foreground mb-2">
-              {sessionExpired ? 'Session expired' : 'Welcome back'}
+              {sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
             </h2>
             <p className="text-muted-foreground">
-              Sign in to manage your multi-cluster deployments
+              {t('login.signInDescription')}
             </p>
           </div>
 
@@ -121,12 +121,12 @@ export function Login() {
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 transition-all duration-200 hover:shadow-lg"
           >
             <Github className="w-5 h-5" />
-            Continue with GitHub
+            {t('login.continueWithGitHub')}
           </button>
 
           {/* Footer */}
           <div className="text-center text-sm text-muted-foreground mt-8">
-            By signing in, you agree to our Terms of Service
+            {t('login.termsOfService')}
           </div>
         </div>
       </div>

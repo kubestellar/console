@@ -16,7 +16,7 @@ const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
 const DEFAULT_AIML_CARDS = getDefaultCards('ai-ml')
 
 export function AIML() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('common')
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
@@ -83,8 +83,8 @@ export function AIML() {
   return (
     <StackProvider>
       <DashboardPage
-        title="AI/ML"
-        subtitle="Monitor AI and Machine Learning workloads"
+        title={t('aiml.title')}
+        subtitle={t('aiml.subtitle')}
         icon="Brain"
         storageKey={AIML_CARDS_KEY}
         defaultCards={DEFAULT_AIML_CARDS}
@@ -97,14 +97,14 @@ export function AIML() {
         hasData={reachableClusters.length > 0 || hasRealData}
         isDemoData={isDemoData}
         emptyState={{
-          title: 'AI/ML Dashboard',
-          description: 'Add cards to monitor GPU utilization, ML workloads, and model training across your clusters.',
+          title: t('aiml.emptyStateTitle'),
+          description: t('aiml.emptyStateDescription'),
         }}
         headerExtra={<StackSelector />}
       >
         {error && (
           <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-            <div className="font-medium">Error loading cluster data</div>
+            <div className="font-medium">{t('aiml.errorLoading')}</div>
             <div className="text-sm text-muted-foreground">{error}</div>
           </div>
         )}

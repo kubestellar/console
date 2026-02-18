@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Filter, ChevronDown, Server } from 'lucide-react'
 import { ClusterStatusDot, getClusterState, type ClusterState } from './ClusterStatusBadge'
 import type { ClusterErrorType } from '../../lib/errorClassifier'
@@ -30,6 +31,7 @@ export function ClusterFilterDropdown({
   clusterFilterRef,
   minClusters = 1,
 }: ClusterFilterDropdownProps) {
+  const { t } = useTranslation()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left?: number; right?: number } | null>(null)
 
@@ -92,7 +94,7 @@ export function ClusterFilterDropdown({
               ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
               : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
           }`}
-          title="Filter by cluster"
+          title={t('clusterFilter.filterByCluster')}
         >
           <Filter className="w-3 h-3" />
           <ChevronDown className="w-3 h-3" />
@@ -115,7 +117,7 @@ export function ClusterFilterDropdown({
                   localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                 }`}
               >
-                All clusters
+                {t('clusterFilter.allClusters')}
               </button>
               {availableClusters.map(cluster => {
                 const clusterState: ClusterState = cluster.healthy !== undefined || cluster.reachable !== undefined
@@ -130,10 +132,10 @@ export function ClusterFilterDropdown({
 
                 const isUnreachable = cluster.reachable === false
                 const stateLabel = clusterState === 'healthy' ? '' :
-                  clusterState === 'degraded' ? 'degraded' :
-                  clusterState === 'unreachable-auth' ? 'needs auth' :
-                  clusterState === 'unreachable-timeout' ? 'offline' :
-                  clusterState.startsWith('unreachable') ? 'offline' : ''
+                  clusterState === 'degraded' ? t('clusterFilter.degraded') :
+                  clusterState === 'unreachable-auth' ? t('clusterFilter.needsAuth') :
+                  clusterState === 'unreachable-timeout' ? t('clusterFilter.offline') :
+                  clusterState.startsWith('unreachable') ? t('clusterFilter.offline') : ''
 
                 return (
                   <button

@@ -28,8 +28,9 @@ interface AlertDetailProps {
   onClose?: () => void
 }
 
-// Format relative time
-function formatRelativeTime(dateString: string): string {
+// Format relative time using i18n keys from the time section
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatRelativeTime(dateString: string, t: (key: any, opts?: any) => string): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -37,10 +38,10 @@ function formatRelativeTime(dateString: string): string {
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < MINUTES_PER_HOUR) return `${diffMins} minutes ago`
-  if (diffHours < HOURS_PER_DAY) return `${diffHours} hours ago`
-  return `${diffDays} days ago`
+  if (diffMins < 1) return t('time.justNow')
+  if (diffMins < MINUTES_PER_HOUR) return t('time.minutesAgo', { count: diffMins })
+  if (diffHours < HOURS_PER_DAY) return t('time.hoursAgo', { count: diffHours })
+  return t('time.daysAgo', { count: diffDays })
 }
 
 export function AlertDetail({ alert, onClose }: AlertDetailProps) {
@@ -163,20 +164,20 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           {alert.resource && (
             <div className="flex items-center gap-2 text-sm">
               <AlertTriangle className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Resource:</span>
+              <span className="text-muted-foreground">{t('alerts.resource')}</span>
               <span className="text-foreground">{alert.resource}</span>
             </div>
           )}
           <div className="flex items-center gap-2 text-sm">
             <Clock className="w-4 h-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Fired:</span>
-            <span className="text-foreground">{formatRelativeTime(alert.firedAt)}</span>
+            <span className="text-muted-foreground">{t('alerts.fired')}</span>
+            <span className="text-foreground">{formatRelativeTime(alert.firedAt, t)}</span>
           </div>
           {alert.acknowledgedAt && (
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle className="w-4 h-4 text-green-400" />
-              <span className="text-muted-foreground">Acknowledged:</span>
-              <span className="text-green-400">{formatRelativeTime(alert.acknowledgedAt)}</span>
+              <span className="text-muted-foreground">{t('alerts.acknowledged')}</span>
+              <span className="text-green-400">{formatRelativeTime(alert.acknowledgedAt, t)}</span>
             </div>
           )}
         </div>
@@ -187,7 +188,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          {showDetails ? 'Hide Details' : 'Show Details'}
+          {showDetails ? t('alerts.hideDetails') : t('alerts.showDetails')}
         </button>
 
         {showDetails && alert.details && (
@@ -203,7 +204,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">AI Diagnosis</span>
+              <span className="text-sm font-medium text-foreground">{t('alerts.aiDiagnosis')}</span>
             </div>
             {!alert.aiDiagnosis?.missionId && (
               <button
@@ -214,12 +215,12 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
                 {isRunningDiagnosis ? (
                   <>
                     <RefreshCw className="w-3 h-3 animate-spin" />
-                    Analyzing...
+                    {t('alerts.analyzing')}
                   </>
                 ) : (
                   <>
                     <Bot className="w-3 h-3" />
-                    Run Diagnosis
+                    {t('alerts.runDiagnosis')}
                   </>
                 )}
               </button>
@@ -230,21 +231,21 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
             <div className="space-y-3">
               {alert.aiDiagnosis.summary && (
                 <div>
-                  <span className="text-xs text-muted-foreground">Summary</span>
+                  <span className="text-xs text-muted-foreground">{t('alerts.summary')}</span>
                   <p className="text-sm text-foreground mt-1">{alert.aiDiagnosis.summary}</p>
                 </div>
               )}
 
               {alert.aiDiagnosis.rootCause && (
                 <div>
-                  <span className="text-xs text-muted-foreground">Root Cause</span>
+                  <span className="text-xs text-muted-foreground">{t('alerts.rootCause')}</span>
                   <p className="text-sm text-foreground mt-1">{alert.aiDiagnosis.rootCause}</p>
                 </div>
               )}
 
               {alert.aiDiagnosis.suggestions && alert.aiDiagnosis.suggestions.length > 0 && (
                 <div>
-                  <span className="text-xs text-muted-foreground">Suggested Actions</span>
+                  <span className="text-xs text-muted-foreground">{t('alerts.suggestedActions')}</span>
                   <ul className="mt-1 space-y-1">
                     {alert.aiDiagnosis.suggestions.map((suggestion, idx) => (
                       <li key={idx} className="text-sm text-foreground flex items-start gap-2">
@@ -262,13 +263,13 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
                   className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  View AI Mission
+                  {t('alerts.viewAIMission')}
                 </button>
               )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No AI diagnosis yet. Click "Run Diagnosis" to analyze this alert with AI.
+              {t('alerts.noDiagnosisYet')}
             </p>
           )}
         </div>
@@ -278,7 +279,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           <div className="border-t border-border/50 pt-4">
             <div className="flex items-center gap-2 mb-2">
               <Slack className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">Send to Slack</span>
+              <span className="text-sm font-medium text-foreground">{t('alerts.sendToSlack')}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {webhooks.map(webhook => (
@@ -295,7 +296,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
             </div>
             {slackSent && (
               <p className="text-xs text-green-400 mt-2">
-                Notification sent to Slack!
+                {t('alerts.slackSent')}
               </p>
             )}
           </div>
@@ -310,7 +311,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               onClick={handleAcknowledge}
               className="px-3 py-1.5 text-sm rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
             >
-              Acknowledge
+              {t('alerts.acknowledge')}
             </button>
           )}
           {alert.status === 'firing' && (
@@ -318,7 +319,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               onClick={handleResolve}
               className="px-3 py-1.5 text-sm rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors"
             >
-              Resolve
+              {t('alerts.resolve')}
             </button>
           )}
         </div>
@@ -327,7 +328,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
             onClick={onClose}
             className="px-3 py-1.5 text-sm rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
           >
-            Close
+            {t('actions.close')}
           </button>
         )}
       </div>

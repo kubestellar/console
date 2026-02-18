@@ -28,13 +28,14 @@ interface CardSearchProps {
 export function CardSearch({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder,
   className,
   debounceMs = 300,
   defaultExpanded = false,
   size = 'sm',
 }: CardSearchProps) {
   const { t } = useTranslation()
+  const resolvedPlaceholder = placeholder ?? t('common.search')
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || !!value)
   const [localValue, setLocalValue] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -109,7 +110,7 @@ export function CardSearch({
         value={localValue}
         onChange={(e) => handleChange(e.target.value)}
         onBlur={handleBlur}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         className={cn(
           'w-28 rounded-lg bg-secondary/50 border border-border/50 text-foreground placeholder:text-muted-foreground',
           'focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20',
@@ -122,7 +123,7 @@ export function CardSearch({
         <button
           onClick={handleClear}
           className="absolute right-2 p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
-          title="Clear search"
+          title={t('common.clearSearch')}
         >
           <X className={cn(iconSize, 'w-3 h-3')} />
         </button>
