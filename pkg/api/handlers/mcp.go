@@ -372,6 +372,56 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
 }
 
+// GetGPUNodeHealth returns proactive health check results for GPU nodes
+func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return demoResponse(c, "nodes", getDemoGPUNodeHealth())
+	}
+
+	cluster := c.Query("cluster")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			var allNodes []k8s.GPUNodeHealthStatus
+			clusterTimeout := mcpExtendedTimeout
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					nodes, err := h.k8sClient.GetGPUNodeHealth(ctx, clusterName)
+					if err == nil && len(nodes) > 0 {
+						mu.Lock()
+						allNodes = append(allNodes, nodes...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			waitWithDeadline(&wg, maxResponseDeadline)
+			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
+		}
+
+		nodes, err := h.k8sClient.GetGPUNodeHealth(c.Context(), cluster)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
 // GetNVIDIAOperatorStatus returns NVIDIA GPU and Network operator status
 func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately

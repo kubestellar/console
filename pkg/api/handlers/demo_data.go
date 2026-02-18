@@ -242,6 +242,56 @@ func getDemoLimitRanges() []k8s.LimitRange {
 }
 
 // Demo GPU nodes
+func getDemoGPUNodeHealth() []k8s.GPUNodeHealthStatus {
+	return []k8s.GPUNodeHealthStatus{
+		{
+			NodeName: "gpu-node-1", Cluster: "vllm-gpu-cluster", Status: "healthy",
+			GPUCount: 8, GPUType: "NVIDIA A100-SXM4-80GB",
+			Checks: []k8s.GPUNodeHealthCheck{
+				{Name: "node_ready", Passed: true},
+				{Name: "scheduling", Passed: true},
+				{Name: "gpu-feature-discovery", Passed: true},
+				{Name: "nvidia-device-plugin", Passed: true},
+				{Name: "dcgm-exporter", Passed: true},
+				{Name: "stuck_pods", Passed: true},
+				{Name: "gpu_events", Passed: true},
+			},
+			CheckedAt: "2026-02-18T12:00:00Z",
+		},
+		{
+			NodeName: "gpu-node-2", Cluster: "vllm-gpu-cluster", Status: "degraded",
+			GPUCount: 8, GPUType: "NVIDIA A100-SXM4-80GB",
+			Checks: []k8s.GPUNodeHealthCheck{
+				{Name: "node_ready", Passed: true},
+				{Name: "scheduling", Passed: true},
+				{Name: "gpu-feature-discovery", Passed: false, Message: "CrashLoopBackOff (12 restarts)"},
+				{Name: "nvidia-device-plugin", Passed: true},
+				{Name: "dcgm-exporter", Passed: true},
+				{Name: "stuck_pods", Passed: true},
+				{Name: "gpu_events", Passed: true},
+			},
+			Issues:    []string{"gpu-feature-discovery: CrashLoopBackOff (12 restarts)"},
+			CheckedAt: "2026-02-18T12:00:00Z",
+		},
+		{
+			NodeName: "gpu-node-3", Cluster: "eks-prod-us-east-1", Status: "unhealthy",
+			GPUCount: 4, GPUType: "NVIDIA V100",
+			Checks: []k8s.GPUNodeHealthCheck{
+				{Name: "node_ready", Passed: false, Message: "Node is NotReady"},
+				{Name: "scheduling", Passed: false, Message: "Node is cordoned (SchedulingDisabled)"},
+				{Name: "gpu-feature-discovery", Passed: false, Message: "CrashLoopBackOff (128 restarts)"},
+				{Name: "nvidia-device-plugin", Passed: false, Message: "CrashLoopBackOff (64 restarts)"},
+				{Name: "dcgm-exporter", Passed: true},
+				{Name: "stuck_pods", Passed: false, Message: "54 pods stuck (ContainerStatusUnknown/Terminating)"},
+				{Name: "gpu_events", Passed: false, Message: "3 GPU warning events in last hour"},
+			},
+			Issues:    []string{"Node is NotReady", "Node is cordoned", "gpu-feature-discovery: CrashLoopBackOff (128 restarts)", "nvidia-device-plugin: CrashLoopBackOff (64 restarts)", "54 pods stuck (ContainerStatusUnknown/Terminating)", "3 GPU warning events in last hour"},
+			StuckPods: 54,
+			CheckedAt: "2026-02-18T12:00:00Z",
+		},
+	}
+}
+
 func getDemoGPUNodes() []k8s.GPUNode {
 	return []k8s.GPUNode{
 		{Name: "gpu-node-1", Cluster: "vllm-gpu-cluster", GPUCount: 8, GPUType: "nvidia.com/gpu", GPUAllocated: 6, GPUMemoryMB: 81920, GPUFamily: "ampere", Manufacturer: "NVIDIA"},

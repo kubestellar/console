@@ -416,6 +416,23 @@ func (h *MCPHandlers) GetGPUNodesStream(c *fiber.Ctx) error {
 	})
 }
 
+// GetGPUNodeHealthStream streams GPU node health results per cluster via SSE.
+func (h *MCPHandlers) GetGPUNodeHealthStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "nodes", getDemoGPUNodeHealth())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "nodes",
+		clusterTimeout: ssePerClusterTimeout,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetGPUNodeHealth(ctx, cluster)
+	})
+}
+
 // GetWarningEventsStream streams warning events per cluster via SSE.
 func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 	if isDemoMode(c) {
