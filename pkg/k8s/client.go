@@ -12,7 +12,11 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	authorizationv1 "k8s.io/api/authorization/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -296,6 +300,32 @@ type GPUNodeHealthStatus struct {
 	StuckPods int                  `json:"stuckPods"` // count of stuck pods on this node
 	CheckedAt string               `json:"checkedAt"` // RFC3339 timestamp
 }
+
+// GPUHealthCronJobStatus represents the status of the GPU health check CronJob on a cluster
+type GPUHealthCronJobStatus struct {
+	Installed   bool   `json:"installed"`
+	Cluster     string `json:"cluster"`
+	Namespace   string `json:"namespace,omitempty"`
+	Schedule    string `json:"schedule,omitempty"`
+	LastRun     string `json:"lastRun,omitempty"`     // RFC3339 timestamp of last job completion
+	LastResult  string `json:"lastResult,omitempty"`  // "success" or "failed"
+	NextRun     string `json:"nextRun,omitempty"`     // RFC3339 timestamp of next scheduled run
+	CanInstall  bool   `json:"canInstall"`            // user has RBAC permissions to manage CronJobs
+	ActiveJobs  int    `json:"activeJobs"`            // currently running jobs
+	FailedJobs  int    `json:"failedJobs"`            // recent failed jobs
+	SuccessJobs int    `json:"successJobs"`           // recent successful jobs
+}
+
+// GPU health CronJob constants
+const (
+	gpuHealthCronJobName     = "gpu-health-check"
+	gpuHealthServiceAccount  = "gpu-health-checker"
+	gpuHealthClusterRole     = "gpu-health-checker"
+	gpuHealthClusterRoleBinding = "gpu-health-checker"
+	gpuHealthDefaultSchedule = "*/5 * * * *" // every 5 minutes
+	gpuHealthDefaultNS       = "nvidia-gpu-operator"
+	gpuHealthCheckerImage    = "bitnami/kubectl:latest"
+)
 
 // Deployment represents a Kubernetes deployment with rollout status
 type Deployment struct {
@@ -2164,6 +2194,318 @@ func deriveGPUNodeStatus(checks []GPUNodeHealthCheck) string {
 		return "degraded"
 	}
 	return "healthy"
+}
+
+// ============================================================================
+// GPU Health CronJob Management
+// ============================================================================
+
+// GetGPUHealthCronJobStatus checks if the GPU health CronJob is installed and returns its status.
+func (m *MultiClusterClient) GetGPUHealthCronJobStatus(ctx context.Context, contextName string) (*GPUHealthCronJobStatus, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	status := &GPUHealthCronJobStatus{
+		Cluster: contextName,
+	}
+
+	// Check RBAC permissions first
+	status.CanInstall = m.canManageCronJobs(ctx, client, gpuHealthDefaultNS)
+
+	// Look for the CronJob in known namespaces
+	for _, ns := range []string{gpuHealthDefaultNS, "gpu-operator", "kube-system"} {
+		cj, getErr := client.BatchV1().CronJobs(ns).Get(ctx, gpuHealthCronJobName, metav1.GetOptions{})
+		if getErr != nil {
+			if errors.IsNotFound(getErr) {
+				continue
+			}
+			continue // namespace may not exist
+		}
+
+		// Found it
+		status.Installed = true
+		status.Namespace = ns
+		status.Schedule = cj.Spec.Schedule
+		status.ActiveJobs = len(cj.Status.Active)
+
+		if cj.Status.LastScheduleTime != nil {
+			status.LastRun = cj.Status.LastScheduleTime.UTC().Format(time.RFC3339)
+		}
+		if cj.Status.LastSuccessfulTime != nil {
+			status.LastResult = "success"
+			status.SuccessJobs = 1 // At least one
+		}
+
+		// Count recent jobs for the CronJob
+		jobs, jobErr := client.BatchV1().Jobs(ns).List(ctx, metav1.ListOptions{
+			LabelSelector: "app=" + gpuHealthCronJobName,
+		})
+		if jobErr == nil {
+			status.SuccessJobs = 0
+			status.FailedJobs = 0
+			for _, j := range jobs.Items {
+				if j.Status.Succeeded > 0 {
+					status.SuccessJobs++
+				}
+				if j.Status.Failed > 0 {
+					status.FailedJobs++
+				}
+			}
+			if status.FailedJobs > 0 && status.SuccessJobs == 0 {
+				status.LastResult = "failed"
+			} else if status.SuccessJobs > 0 {
+				status.LastResult = "success"
+			}
+		}
+
+		return status, nil
+	}
+
+	// Not found
+	return status, nil
+}
+
+// InstallGPUHealthCronJob installs the GPU health check CronJob on a cluster.
+// It creates: Namespace (if needed), ServiceAccount, ClusterRole, ClusterRoleBinding, CronJob.
+func (m *MultiClusterClient) InstallGPUHealthCronJob(ctx context.Context, contextName, namespace, schedule string) error {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	if namespace == "" {
+		namespace = gpuHealthDefaultNS
+	}
+	if schedule == "" {
+		schedule = gpuHealthDefaultSchedule
+	}
+
+	// Ensure namespace exists
+	_, nsErr := client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if nsErr != nil {
+		if errors.IsNotFound(nsErr) {
+			_, createErr := client.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   namespace,
+					Labels: map[string]string{"app.kubernetes.io/managed-by": "kubestellar-console"},
+				},
+			}, metav1.CreateOptions{})
+			if createErr != nil && !errors.IsAlreadyExists(createErr) {
+				return fmt.Errorf("creating namespace %s: %w", namespace, createErr)
+			}
+		}
+	}
+
+	// Create ServiceAccount
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gpuHealthServiceAccount,
+			Namespace: namespace,
+			Labels:    map[string]string{"app": gpuHealthCronJobName, "app.kubernetes.io/managed-by": "kubestellar-console"},
+		},
+	}
+	if _, saErr := client.CoreV1().ServiceAccounts(namespace).Create(ctx, sa, metav1.CreateOptions{}); saErr != nil && !errors.IsAlreadyExists(saErr) {
+		return fmt.Errorf("creating ServiceAccount: %w", saErr)
+	}
+
+	// Create ClusterRole with minimal permissions needed for health checks
+	cr := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   gpuHealthClusterRole,
+			Labels: map[string]string{"app": gpuHealthCronJobName, "app.kubernetes.io/managed-by": "kubestellar-console"},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{APIGroups: []string{""}, Resources: []string{"nodes"}, Verbs: []string{"get", "list"}},
+			{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list"}},
+			{APIGroups: []string{""}, Resources: []string{"events"}, Verbs: []string{"get", "list", "create"}},
+		},
+	}
+	if _, crErr := client.RbacV1().ClusterRoles().Create(ctx, cr, metav1.CreateOptions{}); crErr != nil && !errors.IsAlreadyExists(crErr) {
+		return fmt.Errorf("creating ClusterRole: %w", crErr)
+	}
+
+	// Create ClusterRoleBinding
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   gpuHealthClusterRoleBinding,
+			Labels: map[string]string{"app": gpuHealthCronJobName, "app.kubernetes.io/managed-by": "kubestellar-console"},
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      gpuHealthServiceAccount,
+			Namespace: namespace,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     gpuHealthClusterRole,
+		},
+	}
+	if _, crbErr := client.RbacV1().ClusterRoleBindings().Create(ctx, crb, metav1.CreateOptions{}); crbErr != nil && !errors.IsAlreadyExists(crbErr) {
+		return fmt.Errorf("creating ClusterRoleBinding: %w", crbErr)
+	}
+
+	// Create the CronJob
+	healthCheckScript := `#!/bin/sh
+set -e
+echo "GPU Health Check starting at $(date)"
+GPU_NODES=$(kubectl get nodes -l nvidia.com/gpu.present=true -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
+if [ -z "$GPU_NODES" ]; then
+  # Fallback: check for any node with nvidia.com/gpu in allocatable
+  GPU_NODES=$(kubectl get nodes -o json | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+for n in data.get('items',[]):
+  alloc=n.get('status',{}).get('allocatable',{})
+  if any(k for k in alloc if 'gpu' in k.lower() or 'gaudi' in k.lower()):
+    print(n['metadata']['name'])
+" 2>/dev/null || echo "")
+fi
+if [ -z "$GPU_NODES" ]; then
+  echo "No GPU nodes found"
+  exit 0
+fi
+ISSUES=0
+for NODE in $GPU_NODES; do
+  READY=$(kubectl get node "$NODE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
+  if [ "$READY" != "True" ]; then
+    echo "WARNING: GPU node $NODE is NotReady"
+    kubectl annotate node "$NODE" kubestellar-console/gpu-health-issue="NotReady" --overwrite 2>/dev/null || true
+    ISSUES=$((ISSUES+1))
+  fi
+  UNSCHEDULABLE=$(kubectl get node "$NODE" -o jsonpath='{.spec.unschedulable}')
+  if [ "$UNSCHEDULABLE" = "true" ]; then
+    echo "WARNING: GPU node $NODE is cordoned"
+    ISSUES=$((ISSUES+1))
+  fi
+  STUCK=$(kubectl get pods --field-selector=spec.nodeName="$NODE" --all-namespaces --no-headers 2>/dev/null | grep -cE "Unknown|Terminating|ContainerStatusUnknown" || echo "0")
+  if [ "$STUCK" -gt "0" ]; then
+    echo "WARNING: $STUCK stuck pods on GPU node $NODE"
+    ISSUES=$((ISSUES+1))
+  fi
+done
+echo "GPU Health Check complete: $ISSUES issues found across $(echo $GPU_NODES | wc -w | tr -d ' ') nodes"
+if [ "$ISSUES" -gt "0" ]; then exit 1; fi
+`
+	backoffLimit := int32(1)
+	ttlSeconds := int32(3600) // Clean up finished jobs after 1 hour
+	cj := &batchv1.CronJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gpuHealthCronJobName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app":                          gpuHealthCronJobName,
+				"app.kubernetes.io/managed-by": "kubestellar-console",
+				"app.kubernetes.io/component":  "gpu-health-monitoring",
+			},
+		},
+		Spec: batchv1.CronJobSpec{
+			Schedule:          schedule,
+			ConcurrencyPolicy: batchv1.ForbidConcurrent,
+			JobTemplate: batchv1.JobTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": gpuHealthCronJobName},
+				},
+				Spec: batchv1.JobSpec{
+					BackoffLimit:            &backoffLimit,
+					TTLSecondsAfterFinished: &ttlSeconds,
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							ServiceAccountName: gpuHealthServiceAccount,
+							RestartPolicy:      corev1.RestartPolicyNever,
+							Containers: []corev1.Container{{
+								Name:    "gpu-health-checker",
+								Image:   gpuHealthCheckerImage,
+								Command: []string{"/bin/sh", "-c", healthCheckScript},
+							}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if _, cjErr := client.BatchV1().CronJobs(namespace).Create(ctx, cj, metav1.CreateOptions{}); cjErr != nil {
+		if errors.IsAlreadyExists(cjErr) {
+			// Update existing
+			existing, getErr := client.BatchV1().CronJobs(namespace).Get(ctx, gpuHealthCronJobName, metav1.GetOptions{})
+			if getErr != nil {
+				return fmt.Errorf("getting existing CronJob: %w", getErr)
+			}
+			existing.Spec = cj.Spec
+			if _, updateErr := client.BatchV1().CronJobs(namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
+				return fmt.Errorf("updating CronJob: %w", updateErr)
+			}
+		} else {
+			return fmt.Errorf("creating CronJob: %w", cjErr)
+		}
+	}
+
+	log.Printf("[GPUHealthCronJob] Installed on cluster %s in namespace %s with schedule %s", contextName, namespace, schedule)
+	return nil
+}
+
+// UninstallGPUHealthCronJob removes the GPU health check CronJob and associated RBAC from a cluster.
+func (m *MultiClusterClient) UninstallGPUHealthCronJob(ctx context.Context, contextName, namespace string) error {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	if namespace == "" {
+		namespace = gpuHealthDefaultNS
+	}
+
+	// Delete CronJob
+	if delErr := client.BatchV1().CronJobs(namespace).Delete(ctx, gpuHealthCronJobName, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
+		return fmt.Errorf("deleting CronJob: %w", delErr)
+	}
+
+	// Delete associated Jobs
+	if delErr := client.BatchV1().Jobs(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
+		LabelSelector: "app=" + gpuHealthCronJobName,
+	}); delErr != nil {
+		log.Printf("[GPUHealthCronJob] Warning: could not clean up jobs: %v", delErr)
+	}
+
+	// Delete ClusterRoleBinding
+	if delErr := client.RbacV1().ClusterRoleBindings().Delete(ctx, gpuHealthClusterRoleBinding, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
+		log.Printf("[GPUHealthCronJob] Warning: could not delete ClusterRoleBinding: %v", delErr)
+	}
+
+	// Delete ClusterRole
+	if delErr := client.RbacV1().ClusterRoles().Delete(ctx, gpuHealthClusterRole, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
+		log.Printf("[GPUHealthCronJob] Warning: could not delete ClusterRole: %v", delErr)
+	}
+
+	// Delete ServiceAccount
+	if delErr := client.CoreV1().ServiceAccounts(namespace).Delete(ctx, gpuHealthServiceAccount, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
+		log.Printf("[GPUHealthCronJob] Warning: could not delete ServiceAccount: %v", delErr)
+	}
+
+	log.Printf("[GPUHealthCronJob] Uninstalled from cluster %s namespace %s", contextName, namespace)
+	return nil
+}
+
+// canManageCronJobs checks if the current user has permissions to create/delete CronJobs in the given namespace.
+func (m *MultiClusterClient) canManageCronJobs(ctx context.Context, client kubernetes.Interface, namespace string) bool {
+	review := &authorizationv1.SelfSubjectAccessReview{
+		Spec: authorizationv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authorizationv1.ResourceAttributes{
+				Namespace: namespace,
+				Verb:      "create",
+				Group:     "batch",
+				Resource:  "cronjobs",
+			},
+		},
+	}
+	result, err := client.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
+	if err != nil {
+		return false
+	}
+	return result.Status.Allowed
 }
 
 // GetNodes returns detailed information about all nodes in a cluster

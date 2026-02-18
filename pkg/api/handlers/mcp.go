@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -420,6 +421,85 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 	}
 
 	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetGPUHealthCronJobStatus returns the installation status of the GPU health CronJob
+func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{"status": k8s.GPUHealthCronJobStatus{CanInstall: true}})
+	}
+
+	cluster := c.Query("cluster")
+	if cluster == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "cluster parameter is required"})
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	status, err := h.k8sClient.GetGPUHealthCronJobStatus(c.Context(), cluster)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"status": status})
+}
+
+// InstallGPUHealthCronJob installs the GPU health check CronJob on a cluster
+func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{"success": true, "message": "CronJob installed (demo mode)"})
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	var body struct {
+		Cluster   string `json:"cluster"`
+		Namespace string `json:"namespace"`
+		Schedule  string `json:"schedule"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if body.Cluster == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
+	}
+
+	if err := h.k8sClient.InstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace, body.Schedule); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob installed on %s", body.Cluster)})
+}
+
+// UninstallGPUHealthCronJob removes the GPU health check CronJob from a cluster
+func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{"success": true, "message": "CronJob removed (demo mode)"})
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	var body struct {
+		Cluster   string `json:"cluster"`
+		Namespace string `json:"namespace"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if body.Cluster == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
+	}
+
+	if err := h.k8sClient.UninstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob removed from %s", body.Cluster)})
 }
 
 // GetNVIDIAOperatorStatus returns NVIDIA GPU and Network operator status

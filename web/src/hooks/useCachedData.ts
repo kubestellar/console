@@ -15,6 +15,7 @@
  * The hooks maintain the same return interface for easy migration.
  */
 
+import { useState, useCallback, useEffect } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -1690,7 +1691,7 @@ export function useCachedNodes(
 // GPU Node Health Cached Hooks (SSE-enabled, proactive monitoring)
 // ============================================================================
 
-import type { GPUNodeHealthStatus } from './useMCP'
+import type { GPUNodeHealthStatus, GPUHealthCronJobStatus } from './useMCP'
 
 const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
   {
@@ -1776,6 +1777,105 @@ export function useCachedGPUNodeHealth(
     lastRefresh: result.lastRefresh,
     refetch: result.refetch,
   }
+}
+
+// ============================================================================
+// GPU Health CronJob Management Hook
+// ============================================================================
+
+/**
+ * Hook for managing GPU health CronJob installation per cluster.
+ * Unlike cached hooks, this is action-oriented: fetch status, install, uninstall.
+ */
+export function useGPUHealthCronJob(cluster?: string) {
+  const [status, setStatus] = useState<GPUHealthCronJobStatus | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [actionInProgress, setActionInProgress] = useState<'install' | 'uninstall' | null>(null)
+
+  const fetchStatus = useCallback(async () => {
+    if (!cluster) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await fetchAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
+      setStatus(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch CronJob status')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster])
+
+  // Fetch on mount and when cluster changes
+  useEffect(() => {
+    fetchStatus()
+  }, [fetchStatus])
+
+  const install = useCallback(async (opts?: { namespace?: string; schedule?: string }) => {
+    if (!cluster) return
+    setActionInProgress('install')
+    setError(null)
+    try {
+      const token = getToken()
+      if (!token) throw new Error('No authentication token')
+      const response = await fetch('/api/mcp/gpu-nodes/health/cronjob', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          cluster,
+          namespace: opts?.namespace,
+          schedule: opts?.schedule,
+        }),
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || `Install failed: ${response.status}`)
+      }
+      // Refetch status after install
+      await fetchStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to install CronJob')
+    } finally {
+      setActionInProgress(null)
+    }
+  }, [cluster, fetchStatus])
+
+  const uninstall = useCallback(async (opts?: { namespace?: string }) => {
+    if (!cluster) return
+    setActionInProgress('uninstall')
+    setError(null)
+    try {
+      const token = getToken()
+      if (!token) throw new Error('No authentication token')
+      const response = await fetch('/api/mcp/gpu-nodes/health/cronjob', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          cluster,
+          namespace: opts?.namespace,
+        }),
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || `Uninstall failed: ${response.status}`)
+      }
+      // Refetch status after uninstall
+      await fetchStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to uninstall CronJob')
+    } finally {
+      setActionInProgress(null)
+    }
+  }, [cluster, fetchStatus])
+
+  return { status, isLoading, error, actionInProgress, install, uninstall, refetch: fetchStatus }
 }
 
 // ============================================================================
