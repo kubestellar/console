@@ -17,6 +17,18 @@
   VITE_DEMO_MODE = "true"
   NODE_VERSION = "20"
 
+# Nightly E2E status API — proxy to Netlify Function
+# Serves live GitHub Actions data (GITHUB_TOKEN set in Netlify dashboard)
+[[redirects]]
+  from = "/api/nightly-e2e/runs"
+  to = "/.netlify/functions/nightly-e2e"
+  status = 200
+
+[[redirects]]
+  from = "/api/public/nightly-e2e/runs"
+  to = "/.netlify/functions/nightly-e2e"
+  status = 200
+
 # Presence tracking API — proxy to Netlify Function
 [[redirects]]
   from = "/api/active-users"
