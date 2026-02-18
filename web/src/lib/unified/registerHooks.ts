@@ -620,14 +620,6 @@ const DEMO_NAMESPACE_EVENTS = [
   { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: Date.now() - 60000 },
 ]
 
-// GPU overview demo data
-const DEMO_GPU_OVERVIEW = {
-  totalGPUs: 24,
-  allocatedGPUs: 18,
-  utilizationAvg: 72,
-  memoryUsageAvg: 68,
-}
-
 // GPU workloads demo data
 const DEMO_GPU_WORKLOADS = [
   { name: 'llm-inference-7d8f', namespace: 'ml-serving', gpus: 4, model: 'A100', utilization: 85, cluster: 'vllm-d' },
@@ -1035,10 +1027,6 @@ function useNamespaceEvents(params?: Record<string, unknown>) {
   }
 }
 
-function useGPUOverview() {
-  return useDemoDataHook([DEMO_GPU_OVERVIEW])
-}
-
 function useGPUWorkloads() {
   return useDemoDataHook(DEMO_GPU_WORKLOADS)
 }
@@ -1244,7 +1232,6 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCRDHealth', useCRDHealth)
   registerDataHook('useComplianceScore', useComplianceScore)
   registerDataHook('useNamespaceEvents', useNamespaceEvents)
-  registerDataHook('useGPUOverview', useGPUOverview)
   registerDataHook('useGPUWorkloads', useGPUWorkloads)
   registerDataHook('useDeploymentProgress', useDeploymentProgress)
 

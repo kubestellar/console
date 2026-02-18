@@ -121,7 +121,6 @@ export const UNIFIED_READY_CARDS = new Set<string>([
 
   // GPU cards
   'gpu_inventory',          // useGPUInventory
-  'gpu_overview',           // useGPUOverview
   'gpu_workloads',          // useGPUWorkloads
 
   // ML cards

@@ -12,19 +12,13 @@ export const gpuOverviewConfig: UnifiedCardConfig = {
   iconColor: 'text-green-400',
   defaultWidth: 4,
   defaultHeight: 3,
-  dataSource: { type: 'hook', hook: 'useGPUOverview' },
+  dataSource: { type: 'hook', hook: 'useGPUNodes' },
   content: {
-    type: 'stats-grid',
-    stats: [
-      { field: 'total', label: 'Total GPUs', color: 'blue' },
-      { field: 'available', label: 'Available', color: 'green' },
-      { field: 'inUse', label: 'In Use', color: 'orange' },
-      { field: 'avgUtilization', label: 'Avg Util %', color: 'purple', format: 'percentage' },
-    ],
+    type: 'custom',
   },
   emptyState: { icon: 'Cpu', title: 'No GPUs', message: 'No GPU data available', variant: 'info' },
   loadingState: { type: 'stats', count: 4 },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default gpuOverviewConfig
