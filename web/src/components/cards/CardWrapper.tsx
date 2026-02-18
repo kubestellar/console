@@ -1132,14 +1132,37 @@ export function CardWrapper({
     }
   }, [showMenu])
 
-  // Calculate menu position when menu opens
+  // Keep menu anchored to button on scroll/resize
   useEffect(() => {
-    if (showMenu && menuButtonRef.current) {
-      const rect = menuButtonRef.current.getBoundingClientRect()
-      setMenuPosition({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-      })
+    if (!showMenu || !menuButtonRef.current) return
+
+    const updatePosition = () => {
+      if (menuButtonRef.current) {
+        const rect = menuButtonRef.current.getBoundingClientRect()
+        setMenuPosition({
+          top: rect.bottom + 4,
+          right: window.innerWidth - rect.right,
+        })
+      }
+    }
+
+    // Find the scrollable parent (the main content area)
+    let scrollParent: HTMLElement | Window = window
+    let el = menuButtonRef.current.parentElement
+    while (el) {
+      const overflow = window.getComputedStyle(el).overflowY
+      if (overflow === 'auto' || overflow === 'scroll') {
+        scrollParent = el
+        break
+      }
+      el = el.parentElement
+    }
+
+    scrollParent.addEventListener('scroll', updatePosition, { passive: true })
+    window.addEventListener('resize', updatePosition, { passive: true })
+    return () => {
+      scrollParent.removeEventListener('scroll', updatePosition)
+      window.removeEventListener('resize', updatePosition)
     }
   }, [showMenu])
 
@@ -1295,7 +1318,16 @@ export function CardWrapper({
             <div className="relative" data-tour="card-menu">
               <button
                 ref={menuButtonRef}
-                onClick={() => setShowMenu(!showMenu)}
+                onClick={() => {
+                  if (!showMenu && menuButtonRef.current) {
+                    const rect = menuButtonRef.current.getBoundingClientRect()
+                    setMenuPosition({
+                      top: rect.bottom + 4,
+                      right: window.innerWidth - rect.right,
+                    })
+                  }
+                  setShowMenu(!showMenu)
+                }}
                 className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
                 title={t('cardWrapper.cardMenuTooltip')}
               >
