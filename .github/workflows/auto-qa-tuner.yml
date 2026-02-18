@@ -587,10 +587,11 @@ jobs:
             FILE="/tmp/cncf-$(echo "$REPO" | tr '/' '-').json"
             SHORT=$(echo "$REPO" | cut -d/ -f2)
 
-            # Fetch merged PRs with title AND body (first 300 chars of body for context)
+            # Fetch merged PRs with title AND body
+            # Strip HTML comments and common template prefixes to get actual description
             gh pr list --repo "$REPO" --state merged --limit 50 \
               --json title,body,url,mergedAt,labels \
-              --jq "[.[] | select(.mergedAt > \"$WEEK_AGO\") | {title, body: (.body[:300] // \"\"), url, labels: [.labels[].name]}]" \
+              --jq "[.[] | select(.mergedAt > \"$WEEK_AGO\") | {title, body: ((.body // \"\") | gsub(\"<!--[^>]*-->\"; \"\") | gsub(\"^[\\\\s\\\\n]+\"; \"\") | .[:300]), url, labels: [.labels[].name]}]" \
               > "$FILE" 2>/dev/null || echo "[]" > "$FILE"
 
             if ! jq empty "$FILE" 2>/dev/null; then
@@ -627,10 +628,10 @@ jobs:
               echo "#### $REPO ($FE_COUNT frontend PRs)" >> /tmp/cncf-insights-detail.md
               echo "" >> /tmp/cncf-insights-detail.md
 
-              # Get the most interesting PRs (skip pure dep bumps)
-              jq -r '.[] | select(.title | test("bump|renovate|dependabot"; "i") | not) | {title, body: (if (.body | length) > 0 then .body else "(no description)" end), url}' "/tmp/cncf-${SHORT}-frontend.json" | \
-              jq -s '.[0:8]' | \
-              jq -r '.[] | "- **[\(.title)](\(.url))**\n  > \(.body | gsub("\n"; " ") | gsub("\\s+"; " ") | .[:200])\n"' >> /tmp/cncf-insights-detail.md 2>/dev/null || true
+              # Get the most interesting PRs (skip pure dep bumps and automation)
+              jq -r '.[] | select(.title | test("bump|renovate|dependabot|\\[bot\\]"; "i") | not) | {title, body: ((.body // "") | gsub("### Summary"; "") | gsub("### Occurred changes.*"; "") | gsub("### Technical notes.*"; "") | gsub("Fixes #[0-9]+"; "") | gsub("Fixes https://[^ ]+"; "") | gsub("Signed-off-by:.*"; "") | gsub("^[\\s\\n]+"; "") | if (. | length) > 0 then . else "(no description)" end), url}' "/tmp/cncf-${SHORT}-frontend.json" | \
+              jq -s '.[0:6]' | \
+              jq -r '.[] | "- **[\(.title)](\(.url))**\n  > \(.body | gsub("\n"; " ") | gsub("\\s+"; " ") | .[:250])\n"' >> /tmp/cncf-insights-detail.md 2>/dev/null || true
             fi
 
             sleep 2  # Rate limiting
