@@ -62,7 +62,12 @@ function formatTimeAgo(iso: string): string {
   return `${days}d ago`
 }
 
-function RunDot({ run }: { run: NightlyRun }) {
+function RunDot({ run, isHighlighted, onMouseEnter, onMouseLeave }: {
+  run: NightlyRun
+  isHighlighted?: boolean
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
+}) {
   const isRunning = run.status !== 'completed'
   const isGPUFailure = run.conclusion === 'failure' && run.failureReason === 'gpu_unavailable'
   const color = isRunning
@@ -92,8 +97,12 @@ function RunDot({ run }: { run: NightlyRun }) {
       title={title}
       className="group relative"
       onClick={e => e.stopPropagation()}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
-      <div className={`w-3 h-3 rounded-full ${color} ${isRunning ? 'animate-pulse' : ''} group-hover:ring-2 group-hover:ring-white/30 transition-all`} />
+      <div className={`w-3 h-3 rounded-full ${color} ${isRunning ? 'animate-pulse' : ''} ${
+        isHighlighted ? 'ring-2 ring-white/50 scale-125' : 'group-hover:ring-2 group-hover:ring-white/30'
+      } transition-all`} />
     </a>
   )
 }
@@ -431,8 +440,14 @@ function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }) {
   )
 }
 
+function computeRunDurationMin(run: NightlyRun): number | null {
+  if (run.status !== 'completed' || !run.createdAt || !run.updatedAt) return null
+  return Math.round((new Date(run.updatedAt).getTime() - new Date(run.createdAt).getTime()) / 60_000)
+}
+
 function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
   const { t } = useTranslation(['cards', 'common'])
+  const [hoveredRun, setHoveredRun] = useState<NightlyRun | null>(null)
   const completedRuns = guide.runs.filter(r => r.status === 'completed')
   const passed = completedRuns.filter(r => r.conclusion === 'success').length
   const failedAll = completedRuns.filter(r => r.conclusion === 'failure')
@@ -442,6 +457,12 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
   const running = guide.runs.filter(r => r.status === 'in_progress').length
   const meta = getGuideMeta(guide)
   const avgDur = computeAvgDurationMin(completedRuns)
+
+  // Per-run overrides when hovering a specific dot
+  const displayModel = hoveredRun?.model || meta.model
+  const displayGpuType = hoveredRun?.gpuType || meta.gpuType
+  const displayGpuCount = hoveredRun ? hoveredRun.gpuCount : meta.gpuCount
+  const runDur = hoveredRun ? computeRunDurationMin(hoveredRun) : null
 
   // Consecutive streak
   let streak = 0
@@ -529,22 +550,37 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
 
       {/* Infrastructure + timestamps */}
       <div className="space-y-1 flex-1">
+        {hoveredRun && (
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              hoveredRun.status !== 'completed' ? 'bg-blue-400' : hoveredRun.conclusion === 'success' ? 'bg-emerald-400' : 'bg-red-400'
+            }`} />
+            <span className="text-[10px] text-slate-400 font-mono">
+              Run #{hoveredRun.runNumber} &middot; {formatTimeAgo(hoveredRun.createdAt)}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-slate-500">{t('cards:llmd.model')}</span>
-          <span className="text-slate-300 font-mono text-[10px] truncate max-w-[140px]" title={meta.model}>{meta.model}</span>
+          <span className={`font-mono text-[10px] truncate max-w-[140px] ${hoveredRun ? 'text-slate-200' : 'text-slate-300'}`} title={displayModel}>{displayModel}</span>
         </div>
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-slate-500">{t('cards:llmd.gpu')}</span>
-          <span className="text-slate-300 font-mono text-[10px]">
-            {meta.gpuCount > 0 ? `${meta.gpuCount}× ${meta.gpuType}` : meta.gpuType}
+          <span className={`font-mono text-[10px] ${hoveredRun ? 'text-slate-200' : 'text-slate-300'}`}>
+            {displayGpuCount > 0 ? `${displayGpuCount}× ${displayGpuType}` : displayGpuType}
           </span>
         </div>
-        {avgDur !== null && (
+        {hoveredRun && runDur !== null ? (
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">{t('cards:llmd.duration')}</span>
+            <span className="text-slate-200 font-mono">{formatDuration(runDur)}</span>
+          </div>
+        ) : avgDur !== null ? (
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-slate-500">{t('cards:llmd.avgDuration')}</span>
             <span className="text-slate-300 font-mono">{formatDuration(avgDur)}</span>
           </div>
-        )}
+        ) : null}
         <div className="h-px bg-slate-700/30 my-0.5" />
         {lastSuccess && (
           <div className="flex items-center justify-between text-[11px]">
@@ -568,12 +604,20 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
         </div>
       </div>
 
-      {/* Run history dots */}
+      {/* Run history dots — hover to see per-run details above */}
       <div className="mt-auto pt-2 border-t border-slate-700/30">
-        <div className="text-[10px] text-slate-500 mb-1.5">{t('cards:llmd.runHistoryNewest')}</div>
+        <div className="text-[10px] text-slate-500 mb-1.5">
+          {hoveredRun ? t('cards:llmd.runHistoryNewest') : `${t('cards:llmd.runHistoryNewest')} — ${t('cards:llmd.hoverDotForDetails')}`}
+        </div>
         <div className="flex items-center gap-1 flex-wrap">
           {guide.runs.map((run) => (
-            <RunDot key={run.id} run={run} />
+            <RunDot
+              key={run.id}
+              run={run}
+              isHighlighted={hoveredRun?.id === run.id}
+              onMouseEnter={() => setHoveredRun(run)}
+              onMouseLeave={() => setHoveredRun(null)}
+            />
           ))}
         </div>
       </div>

@@ -890,6 +890,8 @@
     "model": "Model",
     "gpu": "GPU",
     "avgDuration": "Avg duration",
+    "duration": "Duration",
+    "hoverDotForDetails": "hover dot for details",
     "lastPass": "Last pass",
     "lastFail": "Last fail",
     "totalRuns": "Total runs",

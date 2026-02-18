@@ -25,6 +25,10 @@ export interface NightlyRun {
   htmlUrl: string
   runNumber: number
   failureReason?: 'gpu_unavailable' | 'test_failure' | ''
+  model: string
+  gpuType: string
+  gpuCount: number
+  event: string
 }
 
 export interface NightlyGuideStatus {
@@ -122,6 +126,10 @@ export function generateDemoNightlyData(): NightlyGuideStatus[] {
         updatedAt: updatedAt.toISOString(),
         htmlUrl: `https://github.com/${wf.repo}/actions/workflows/${wf.workflowFile}`,
         runNumber: 100 - i,
+        model: wf.model,
+        gpuType: wf.gpuType,
+        gpuCount: wf.gpuCount,
+        event: 'schedule',
       }
     })
 

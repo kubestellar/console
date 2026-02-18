@@ -36,6 +36,8 @@ type NightlyWorkflow struct {
 }
 
 // NightlyRun represents a single workflow run from the GitHub Actions API.
+// Per-run metadata (Model, GPUType, GPUCount) is populated from the workflow
+// defaults so the UI can display infrastructure details per dot on hover.
 type NightlyRun struct {
 	ID            int64   `json:"id"`
 	Status        string  `json:"status"`
@@ -45,6 +47,10 @@ type NightlyRun struct {
 	HTMLURL       string  `json:"htmlUrl"`
 	RunNumber     int     `json:"runNumber"`
 	FailureReason string  `json:"failureReason,omitempty"`
+	Model         string  `json:"model"`
+	GPUType       string  `json:"gpuType"`
+	GPUCount      int     `json:"gpuCount"`
+	Event         string  `json:"event"`
 }
 
 // NightlyGuideStatus holds runs and computed stats for a single guide.
@@ -267,6 +273,7 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 			UpdatedAt  string  `json:"updated_at"`
 			HTMLURL    string  `json:"html_url"`
 			RunNumber  int     `json:"run_number"`
+			Event      string  `json:"event"`
 		} `json:"workflow_runs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
@@ -283,6 +290,10 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 			UpdatedAt:  r.UpdatedAt,
 			HTMLURL:    r.HTMLURL,
 			RunNumber:  r.RunNumber,
+			Model:      wf.Model,
+			GPUType:    wf.GPUType,
+			GPUCount:   wf.GPUCount,
+			Event:      r.Event,
 		}
 	}
 

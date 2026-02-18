@@ -81,6 +81,10 @@ export function useNightlyE2EData() {
                       htmlUrl: r.htmlUrl,
                       runNumber: r.runNumber,
                       failureReason: r.failureReason || '',
+                      model: r.model ?? g.model ?? 'Unknown',
+                      gpuType: r.gpuType ?? g.gpuType ?? 'Unknown',
+                      gpuCount: r.gpuCount ?? g.gpuCount ?? 0,
+                      event: r.event ?? 'schedule',
                     })
                   ),
                   passRate: g.passRate,
