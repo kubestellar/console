@@ -29,12 +29,18 @@ interface RBACItem {
 
 type SortByOption = 'name' | 'rules'
 
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'rules' as const, label: 'Rules' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'rules' as const, labelKey: 'namespaceRBAC.rules' },
 ]
 
 function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
@@ -163,9 +169,9 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   })
 
   const tabs = [
-    { key: 'roles' as const, label: 'Roles', icon: Key, count: rbacRoles.length },
-    { key: 'bindings' as const, label: 'Bindings', icon: Lock, count: rbacBindings.length },
-    { key: 'serviceaccounts' as const, label: 'SAs', icon: Users, count: rbacServiceAccounts.length },
+    { key: 'roles' as const, label: t('namespaceRBAC.roles'), icon: Key, count: rbacRoles.length },
+    { key: 'bindings' as const, label: t('namespaceRBAC.bindings'), icon: Lock, count: rbacBindings.length },
+    { key: 'serviceaccounts' as const, label: t('namespaceRBAC.serviceAccounts'), icon: Users, count: rbacServiceAccounts.length },
   ]
 
   if (showSkeleton) {
@@ -188,8 +194,8 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No RBAC data</p>
-        <p className="text-xs mt-1">RBAC roles and bindings will appear here</p>
+        <p className="text-sm">{t('namespaceRBAC.noData')}</p>
+        <p className="text-xs mt-1">{t('namespaceRBAC.noDataHint')}</p>
       </div>
     )
   }
@@ -200,7 +206,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-            {activeTab === 'roles' ? `${rbacRoles.length} roles` : activeTab === 'bindings' ? `${rbacBindings.length} bindings` : `${rbacServiceAccounts.length} service accounts`}
+            {activeTab === 'roles' ? t('namespaceRBAC.nRoles', { count: rbacRoles.length }) : activeTab === 'bindings' ? t('namespaceRBAC.nBindings', { count: rbacBindings.length }) : t('namespaceRBAC.nServiceAccounts', { count: rbacServiceAccounts.length })}
           </span>
         </div>
         <CardControlsRow
@@ -240,7 +246,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">Select cluster...</option>
+          <option value="">{t('namespaceRBAC.selectCluster')}</option>
           {filteredClusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -251,7 +257,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
           disabled={!selectedCluster}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
-          <option value="">Select namespace...</option>
+          <option value="">{t('namespaceRBAC.selectNamespace')}</option>
           {namespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}
@@ -263,7 +269,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-xs font-medium text-red-400">Error loading RBAC data</p>
+            <p className="text-xs font-medium text-red-400">{t('namespaceRBAC.errorLoading')}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">{error}</p>
           </div>
         </div>
@@ -271,7 +277,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
 
       {!selectedCluster || !selectedNamespace ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          {!selectedCluster ? 'Select a cluster to view RBAC' : 'Select a namespace to view RBAC'}
+          {!selectedCluster ? t('namespaceRBAC.selectClusterPrompt') : t('namespaceRBAC.selectNamespacePrompt')}
         </div>
       ) : (
         <>
@@ -279,7 +285,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
           <CardSearchInput
             value={filters.search}
             onChange={filters.setSearch}
-            placeholder="Search RBAC..."
+            placeholder={t('namespaceRBAC.searchRBAC')}
             className="mb-4"
           />
 
@@ -322,7 +328,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
               </>
             ) : paginatedItems.length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm py-8">
-                No {activeTab} found
+                {t('namespaceRBAC.noneFound', { type: activeTab })}
               </div>
             ) : (
               paginatedItems.map((item, idx) => (
@@ -346,12 +352,12 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
                   </div>
                   {item.rules && (
                     <p className="text-xs text-muted-foreground mt-1 ml-6">
-                      {item.rules} rules
+                      {t('namespaceRBAC.nRulesCount', { count: item.rules })}
                     </p>
                   )}
                   {item.subjects && (
                     <p className="text-xs text-muted-foreground mt-1 ml-6">
-                      Subjects: {item.subjects.join(', ')}
+                      {t('namespaceRBAC.subjects')}: {item.subjects.join(', ')}
                     </p>
                   )}
                 </div>
@@ -371,9 +377,9 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
 
           {/* Summary */}
           <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{rbacRoles.length} Roles</span>
-            <span>{rbacBindings.length} Bindings</span>
-            <span>{rbacServiceAccounts.length} ServiceAccounts</span>
+            <span>{t('namespaceRBAC.nRoles', { count: rbacRoles.length })}</span>
+            <span>{t('namespaceRBAC.nBindings', { count: rbacBindings.length })}</span>
+            <span>{t('namespaceRBAC.nServiceAccounts', { count: rbacServiceAccounts.length })}</span>
           </div>
         </>
       )}
@@ -382,7 +388,6 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
 }
 
 export function NamespaceRBAC(props: NamespaceRBACProps) {
-  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="NamespaceRBAC">
       <NamespaceRBACInternal {...props} />

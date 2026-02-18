@@ -35,7 +35,7 @@ const GPU_SORT_COMPARATORS: Record<SortByOption, (a: GPUNode, b: GPUNode) => num
 }
 
 export function GPUInventory({ config }: GPUInventoryProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const cluster = config?.cluster as string | undefined
   const {
     nodes: rawNodes,
@@ -136,8 +136,8 @@ export function GPUInventory({ config }: GPUInventoryProps) {
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Cpu className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-foreground font-medium">No GPU Nodes</p>
-          <p className="text-sm text-muted-foreground">No GPU resources detected</p>
+          <p className="text-foreground font-medium">{t('gpuInventory.noGPUNodes')}</p>
+          <p className="text-sm text-muted-foreground">{t('gpuInventory.noGPUResourcesDetected')}</p>
         </div>
       </div>
     )
@@ -149,7 +149,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-            {stats.totalGPUs} GPUs
+            {t('gpuInventory.gpuCount', { count: stats.totalGPUs })}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -189,7 +189,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search GPU nodes..."
+        placeholder={t('gpuInventory.searchPlaceholder')}
         className="mb-4"
       />
 
@@ -197,15 +197,15 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-foreground">{stats.totalGPUs}</p>
-          <p className="text-xs text-muted-foreground">{t('common.total')}</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-purple-400">{stats.allocatedGPUs}</p>
-          <p className="text-xs text-muted-foreground">In Use</p>
+          <p className="text-xs text-muted-foreground">{t('gpuInventory.inUse')}</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
           <p className="text-lg font-bold text-green-400">{stats.availableGPUs}</p>
-          <p className="text-xs text-muted-foreground">{t('common.available')}</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.available')}</p>
         </div>
       </div>
 
@@ -263,7 +263,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       )}
 
       {error && (
-        <div className="mt-2 text-xs text-yellow-400">Using simulated data</div>
+        <div className="mt-2 text-xs text-yellow-400">{t('gpuInventory.usingSimulatedData')}</div>
       )}
     </div>
   )

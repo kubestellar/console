@@ -81,7 +81,7 @@ interface ServiceTopologyProps {
 }
 
 export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
@@ -132,21 +132,21 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
           <button
             onClick={handleZoomOut}
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
-            title="Zoom out"
+            title={t('serviceTopology.zoomOut')}
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleResetZoom}
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
-            title="Reset zoom"
+            title={t('serviceTopology.resetZoom')}
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleZoomIn}
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
-            title="Zoom in"
+            title={t('serviceTopology.zoomIn')}
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
@@ -157,19 +157,19 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
       <div className="flex items-center gap-3 mb-2 text-[10px]">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-purple-500" />
-          <span className="text-muted-foreground">{DEMO_STATS.clusters} clusters</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nClusters', { count: DEMO_STATS.clusters })}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <span className="text-muted-foreground">{DEMO_STATS.services} services</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nServices', { count: DEMO_STATS.services })}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-muted-foreground">{DEMO_STATS.gateways} gateways</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nGateways', { count: DEMO_STATS.gateways })}</span>
         </div>
         <div className="flex items-center gap-1">
           <ArrowRight className="w-3 h-3 text-cyan-400" />
-          <span className="text-muted-foreground">{DEMO_STATS.totalEdges} connections</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nConnections', { count: DEMO_STATS.totalEdges })}</span>
         </div>
       </div>
 
@@ -358,15 +358,15 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
             <ClusterBadge cluster={selectedNodeData.cluster} />
           </div>
           {selectedNodeData.namespace && (
-            <p className="text-muted-foreground text-[10px]">Namespace: {selectedNodeData.namespace}</p>
+            <p className="text-muted-foreground text-[10px]">{t('common:common.namespace')}: {selectedNodeData.namespace}</p>
           )}
           {selectedNodeData.metadata && (
             <div className="flex flex-wrap gap-1 mt-1">
               {selectedNodeData.metadata.exported && (
-                <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[9px]">Exported</span>
+                <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[9px]">{t('serviceTopology.exported')}</span>
               )}
               {selectedNodeData.metadata.imported && (
-                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[9px]">Imported</span>
+                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[9px]">{t('serviceTopology.imported')}</span>
               )}
               {selectedNodeData.metadata.gatewayClass && (
                 <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 text-[9px]">
@@ -375,7 +375,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
               )}
               {typeof selectedNodeData.metadata.endpoints === 'number' && (
                 <span className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground text-[9px]">
-                  {selectedNodeData.metadata.endpoints} endpoints
+                  {t('serviceTopology.nEndpoints', { count: selectedNodeData.metadata.endpoints as number })}
                 </span>
               )}
             </div>

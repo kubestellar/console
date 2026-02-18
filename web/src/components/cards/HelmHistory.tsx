@@ -23,10 +23,10 @@ interface HelmHistoryProps {
 
 type SortByOption = 'revision' | 'status' | 'updated'
 
-const SORT_OPTIONS = [
-  { value: 'revision' as const, label: 'Revision' },
-  { value: 'status' as const, label: 'Status' },
-  { value: 'updated' as const, label: 'Updated' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'revision' as const, labelKey: 'helmHistory.revision' },
+  { value: 'status' as const, labelKey: 'common.status' },
+  { value: 'updated' as const, labelKey: 'helmHistory.updated' },
 ]
 
 const STATUS_ORDER: Record<string, number> = {
@@ -38,7 +38,12 @@ const STATUS_ORDER: Record<string, number> = {
 }
 
 export function HelmHistory({ config }: HelmHistoryProps) {
-  const { t } = useTranslation(['common', 'cards'])
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const { deduplicatedClusters: allClusters } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -254,8 +259,8 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No Helm releases</p>
-        <p className="text-xs mt-1">Install Helm charts to see history</p>
+        <p className="text-sm">{t('helmHistory.noReleases')}</p>
+        <p className="text-xs mt-1">{t('helmHistory.noReleasesHint')}</p>
       </div>
     )
   }
@@ -267,7 +272,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400">
-              {totalItems} revisions
+              {t('helmHistory.nRevisions', { count: totalItems })}
             </span>
           )}
         </div>
@@ -308,7 +313,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">{t('selectors.selectCluster')}</option>
+          <option value="">{t('common:selectors.selectCluster')}</option>
           {clusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -319,7 +324,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           disabled={!selectedCluster || releasesLoading}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
-          <option value="">{t('selectors.selectRelease')}</option>
+          <option value="">{t('common:selectors.selectRelease')}</option>
           {releases.map(r => (
             <option key={r} value={r}>{r}</option>
           ))}
@@ -328,13 +333,13 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
       {!selectedCluster || !selectedRelease ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          Select a cluster and release to view history
+          {t('helmHistory.selectClusterRelease')}
         </div>
       ) : (historyLoading || historyRefreshing) && rawHistory.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <div className="flex items-center gap-2 text-sm text-blue-400">
             <RotateCcw className="w-4 h-4 animate-spin" />
-            <span>Loading history for {selectedRelease}...</span>
+            <span>{t('helmHistory.loadingHistory', { release: selectedRelease })}</span>
           </div>
           <Skeleton variant="rounded" height={50} className="w-full" />
           <Skeleton variant="rounded" height={50} className="w-full" />
@@ -360,7 +365,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           <CardSearchInput
             value={localSearch}
             onChange={setLocalSearch}
-            placeholder={t('cards:kubectl.searchHistory')}
+            placeholder={t('kubectl.searchHistory')}
             className="mb-4"
           />
 
@@ -368,7 +373,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           <div className="flex-1 overflow-y-auto">
             {history.length === 0 ? (
               <div className="flex items-center justify-center text-muted-foreground text-sm py-4">
-                No history found for this release
+                {t('helmHistory.noHistoryFound')}
               </div>
             ) : (
               <div className="relative">
@@ -403,10 +408,10 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                         <div className={`p-2 rounded-lg transition-colors ${isCurrent ? 'bg-green-500/10 border border-green-500/20 group-hover:bg-green-500/20' : 'bg-secondary/30 group-hover:bg-secondary/50'}`}>
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">Rev {entry.revision}</span>
+                              <span className="text-sm font-medium text-foreground">{t('helmHistory.rev', { revision: entry.revision })}</span>
                               {isCurrent && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-                                  current
+                                  {t('helmHistory.current')}
                                 </span>
                               )}
                             </div>
@@ -445,7 +450,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            Showing {history.length} of {totalItems} revisions
+            {t('helmHistory.showingRevisions', { shown: history.length, total: totalItems })}
           </div>
         </>
       )}

@@ -50,7 +50,7 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 }
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { pods: allPods, isLoading: podsLoading } = useAllPods()
   const { drillToGPUNamespace } = useDrillDownActions()
@@ -153,8 +153,8 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Box className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-foreground font-medium">No GPU Workloads</p>
-          <p className="text-sm text-muted-foreground">No namespaces with GPU allocations detected</p>
+          <p className="text-foreground font-medium">{t('gpuNamespaceAllocations.noGPUWorkloads')}</p>
+          <p className="text-sm text-muted-foreground">{t('gpuNamespaceAllocations.noNamespacesWithGPU')}</p>
         </div>
       </div>
     )
@@ -166,7 +166,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-            {totalGPUs} GPUs across {namespaceAllocations.length} ns
+            {t('gpuNamespaceAllocations.gpusAcrossNamespaces', { gpus: totalGPUs, count: namespaceAllocations.length })}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder={t('common.searchNamespaces')}
+        placeholder={t('common:common.searchNamespaces')}
         className="mb-4"
       />
 
@@ -239,8 +239,8 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
                 )}
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <span className="text-muted-foreground">{ns.podCount} pods</span>
-                <span className="font-mono text-purple-400 font-medium">{ns.gpuRequested} GPUs</span>
+                <span className="text-muted-foreground">{t('gpuNamespaceAllocations.podCount', { count: ns.podCount })}</span>
+                <span className="font-mono text-purple-400 font-medium">{t('gpuNamespaceAllocations.gpuCountLabel', { count: ns.gpuRequested })}</span>
               </div>
             </div>
             {/* Proportion bar */}

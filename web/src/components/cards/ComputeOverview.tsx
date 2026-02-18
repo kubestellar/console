@@ -10,7 +10,7 @@ import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { useTranslation } from 'react-i18next'
 
 export function ComputeOverview() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -107,7 +107,7 @@ export function ComputeOverview() {
   if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading compute data...</div>
+        <div className="animate-pulse text-muted-foreground">{t('computeOverview.loadingComputeData')}</div>
       </div>
     )
   }
@@ -115,8 +115,8 @@ export function ComputeOverview() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No compute data</p>
-        <p className="text-xs mt-1">Connect to clusters to see compute metrics</p>
+        <p className="text-sm">{t('computeOverview.noComputeData')}</p>
+        <p className="text-xs mt-1">{t('computeOverview.connectToClusters')}</p>
       </div>
     )
   }
@@ -127,23 +127,23 @@ export function ComputeOverview() {
       {filteredClusters.length > 0 && (
         <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
           <Activity className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          <span className="text-xs text-muted-foreground">{t('computeOverview.clusterHealth')}:</span>
           {stats.healthyClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="healthy" size="sm" />
-              <span className="text-green-400">{stats.healthyClusters} healthy</span>
+              <span className="text-green-400">{t('computeOverview.healthyCount', { count: stats.healthyClusters })}</span>
             </span>
           )}
           {stats.degradedClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="degraded" size="sm" />
-              <span className="text-orange-400">{stats.degradedClusters} degraded</span>
+              <span className="text-orange-400">{t('computeOverview.degradedCount', { count: stats.degradedClusters })}</span>
             </span>
           )}
           {stats.offlineClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="unreachable-timeout" size="sm" />
-              <span className="text-yellow-400">{stats.offlineClusters} offline</span>
+              <span className="text-yellow-400">{t('computeOverview.offlineCount', { count: stats.offlineClusters })}</span>
             </span>
           )}
         </div>
@@ -180,31 +180,31 @@ export function ComputeOverview() {
         <div
           className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors"
           onClick={drillToResources}
-          title={hasRealData ? `${stats.totalCPUs} CPU cores allocatable across all nodes - Click for details` : 'No data available - clusters may be offline'}
+          title={hasRealData ? t('computeOverview.cpuCoresTitle', { count: stats.totalCPUs }) : t('computeOverview.noDataOffline')}
         >
           <div className="flex items-center gap-2 mb-1">
             <Cpu className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-blue-400">CPU Cores</span>
+            <span className="text-xs text-blue-400">{t('computeOverview.cpuCores')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalCPUs) : '-'}
           </span>
-          <div className="text-xs text-muted-foreground mt-1">allocatable</div>
+          <div className="text-xs text-muted-foreground mt-1">{t('computeOverview.allocatable')}</div>
         </div>
 
         <div
           className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 cursor-pointer hover:bg-green-500/20 transition-colors"
           onClick={drillToResources}
-          title={hasRealData ? `${formatMemoryStat(stats.totalMemoryGB)} memory allocatable across all nodes - Click for details` : 'No data available - clusters may be offline'}
+          title={hasRealData ? t('computeOverview.memoryTitle', { memory: formatMemoryStat(stats.totalMemoryGB) }) : t('computeOverview.noDataOffline')}
         >
           <div className="flex items-center gap-2 mb-1">
             <MemoryStick className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-green-400">{t('common.memory')}</span>
+            <span className="text-xs text-green-400">{t('common:common.memory')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">
             {formatMemoryStat(stats.totalMemoryGB, hasRealData)}
           </span>
-          <div className="text-xs text-muted-foreground mt-1">allocatable</div>
+          <div className="text-xs text-muted-foreground mt-1">{t('computeOverview.allocatable')}</div>
         </div>
       </div>
 
@@ -213,11 +213,11 @@ export function ComputeOverview() {
         <div
           className="p-2 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary/70 transition-colors"
           onClick={drillToResources}
-          title={hasRealData ? `${stats.totalNodes} worker nodes across all clusters - Click for details` : t('common.noData')}
+          title={hasRealData ? t('computeOverview.nodesTitle', { count: stats.totalNodes }) : t('common:common.noData')}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Server className="w-3 h-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{t('common.nodes')}</span>
+            <span className="text-xs text-muted-foreground">{t('common:common.nodes')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalNodes) : '-'}
@@ -226,11 +226,11 @@ export function ComputeOverview() {
         <div
           className="p-2 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary/70 transition-colors"
           onClick={drillToResources}
-          title={hasRealData ? `${stats.totalPods} running pods across all clusters - Click for details` : t('common.noData')}
+          title={hasRealData ? t('computeOverview.podsTitle', { count: stats.totalPods }) : t('common:common.noData')}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Box className="w-3 h-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{t('common.pods')}</span>
+            <span className="text-xs text-muted-foreground">{t('common:common.pods')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalPods) : '-'}
@@ -242,16 +242,16 @@ export function ComputeOverview() {
       <div
         className={`p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.totalGPUs > 0 ? 'cursor-pointer hover:bg-purple-500/20' : 'cursor-default'} transition-colors`}
         onClick={() => stats.totalGPUs > 0 && drillToResources()}
-        title={stats.totalGPUs > 0 ? `${stats.allocatedGPUs} of ${stats.totalGPUs} GPUs allocated (${stats.gpuUtilization}% utilization) - Click for details` : 'No GPUs detected in selected clusters'}
+        title={stats.totalGPUs > 0 ? t('computeOverview.gpuAllocatedTitle', { allocated: stats.allocatedGPUs, total: stats.totalGPUs, percent: stats.gpuUtilization }) : t('computeOverview.noGPUsInClusters')}
       >
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-purple-400" />
-            <span className="text-xs text-purple-400">GPUs</span>
+            <span className="text-xs text-purple-400">{t('computeOverview.gpus')}</span>
           </div>
           {stats.totalGPUs > 0 && (
-            <span className="text-xs text-muted-foreground" title={`GPU utilization: ${stats.gpuUtilization}%`}>
-              {stats.gpuUtilization}% utilized
+            <span className="text-xs text-muted-foreground" title={t('computeOverview.gpuUtilizationTooltip', { percent: stats.gpuUtilization })}>
+              {t('computeOverview.utilizedPercent', { percent: stats.gpuUtilization })}
             </span>
           )}
         </div>
@@ -260,11 +260,11 @@ export function ComputeOverview() {
           <>
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-2xl font-bold text-foreground">{formatStat(stats.allocatedGPUs)}</span>
-              <span className="text-sm text-muted-foreground">/ {formatStat(stats.totalGPUs)} allocated</span>
+              <span className="text-sm text-muted-foreground">/ {formatStat(stats.totalGPUs)} {t('computeOverview.allocated')}</span>
             </div>
 
             {/* GPU utilization bar */}
-            <div className="h-2 bg-secondary rounded-full overflow-hidden mb-2" title={`${stats.gpuUtilization}% of GPUs allocated`}>
+            <div className="h-2 bg-secondary rounded-full overflow-hidden mb-2" title={t('computeOverview.gpuBarTooltip', { percent: stats.gpuUtilization })}>
               <div
                 className="h-full bg-purple-500 transition-all"
                 style={{ width: `${stats.gpuUtilization}%` }}
@@ -275,7 +275,7 @@ export function ComputeOverview() {
             {stats.gpuTypes.length > 0 && (
               <div className="space-y-1">
                 {stats.gpuTypes.slice(0, 3).map(([type, count]) => (
-                  <div key={type} className="flex items-center justify-between text-xs cursor-default" title={`${count} ${type} GPU${count !== 1 ? 's' : ''}`}>
+                  <div key={type} className="flex items-center justify-between text-xs cursor-default" title={t('computeOverview.gpuTypeCountTitle', { count, type })}>
                     <span className="text-muted-foreground truncate" title={type}>{type}</span>
                     <span className="text-foreground">{count}</span>
                   </div>
@@ -284,16 +284,16 @@ export function ComputeOverview() {
             )}
           </>
         ) : (
-          <div className="text-sm text-muted-foreground">No GPUs detected</div>
+          <div className="text-sm text-muted-foreground">{t('computeOverview.noGPUsDetected')}</div>
         )}
       </div>
 
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        {gpuLoading ? 'Loading GPU data...' :
+        {gpuLoading ? t('computeOverview.loadingGPUData') :
           stats.totalGPUs > 0
-            ? `${stats.totalGPUs} GPUs across ${stats.clustersWithGPU} clusters`
-            : `${filteredClusters.length} clusters, no GPUs detected`
+            ? t('computeOverview.gpusAcrossClusters', { gpus: stats.totalGPUs, clusters: stats.clustersWithGPU })
+            : t('computeOverview.clustersNoGPUs', { count: filteredClusters.length })
         }
       </div>
     </div>

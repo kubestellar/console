@@ -12,11 +12,11 @@ import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
 
-const SORT_OPTIONS = [
-  { value: 'severity' as const, label: 'Severity' },
-  { value: 'type' as const, label: 'Type' },
-  { value: 'resource' as const, label: 'Resource' },
-  { value: 'cluster' as const, label: 'Cluster' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'severity' as const, labelKey: 'gitOpsDrift.severity' },
+  { value: 'type' as const, labelKey: 'gitOpsDrift.type' },
+  { value: 'resource' as const, labelKey: 'gitOpsDrift.resource' },
+  { value: 'cluster' as const, labelKey: 'common.cluster' },
 ]
 
 const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 }
@@ -33,19 +33,19 @@ const driftTypeConfig = {
     icon: RefreshCw,
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/20',
-    label: 'Modified',
+    labelKey: 'gitOpsDrift.modified',
   },
   deleted: {
     icon: Minus,
     color: 'text-red-400',
     bg: 'bg-red-500/20',
-    label: 'Missing in Cluster',
+    labelKey: 'gitOpsDrift.missingInCluster',
   },
   added: {
     icon: Plus,
     color: 'text-blue-400',
     bg: 'bg-blue-500/20',
-    label: 'Not in Git',
+    labelKey: 'gitOpsDrift.notInGit',
   },
 }
 
@@ -56,7 +56,12 @@ const severityColors = {
 }
 
 export function GitOpsDrift({ config }: GitOpsDriftProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const cluster = config?.cluster
   const namespace = config?.namespace
 
@@ -174,8 +179,8 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No drift detected</p>
-        <p className="text-xs mt-1">GitOps resources are in sync</p>
+        <p className="text-sm">{t('gitOpsDrift.noDrift')}</p>
+        <p className="text-xs mt-1">{t('gitOpsDrift.inSync')}</p>
       </div>
     )
   }
@@ -205,12 +210,12 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
           {highSeverityCount > 0 && (
             <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
-              {highSeverityCount} critical
+              {t('gitOpsDrift.nCritical', { count: highSeverityCount })}
             </span>
           )}
           {totalDrifts > 0 && (
             <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
-              {totalDrifts} drift{totalDrifts !== 1 ? 's' : ''}
+              {t('gitOpsDrift.nDrifts', { count: totalDrifts })}
             </span>
           )}
         </div>
@@ -242,7 +247,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search drifts..."
+        placeholder={t('gitOpsDrift.searchDrifts')}
       />
 
       {/* Drifts list */}
@@ -251,9 +256,9 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
           <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-3">
             <GitBranch className="w-6 h-6 text-green-400" />
           </div>
-          <p className="text-sm font-medium text-green-400">No Drift Detected</p>
+          <p className="text-sm font-medium text-green-400">{t('gitOpsDrift.noDriftDetected')}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {drifts.length > 0 ? 'All drifts filtered out' : 'All clusters are in sync with Git'}
+            {drifts.length > 0 ? t('gitOpsDrift.allFiltered') : t('gitOpsDrift.inSync')}
           </p>
         </div>
       ) : (
@@ -282,6 +287,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
 }
 
 function DriftItem({ drift }: { drift: GitOpsDriftType }) {
+  const { t } = useTranslation(['cards', 'common'])
   const typeConfig = driftTypeConfig[drift.driftType]
   const TypeIcon = typeConfig.icon
   const { drillToDrift } = useDrillDownActions()
@@ -316,7 +322,8 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs px-2 py-0.5 rounded ${typeConfig.bg} ${typeConfig.color}`}>
-            {typeConfig.label}
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {String(t(typeConfig.labelKey as any))}
           </span>
           <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
@@ -333,7 +340,7 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
       )}
 
       <div className="flex items-center gap-2 mt-2 text-xs">
-        <span className="text-muted-foreground">Git:</span>
+        <span className="text-muted-foreground">{t('gitOpsDrift.gitLabel')}</span>
         <code className="px-1.5 py-0.5 rounded bg-secondary text-purple-400 font-mono text-[10px]">
           {drift.gitVersion}
         </code>

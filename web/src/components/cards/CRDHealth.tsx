@@ -26,17 +26,22 @@ interface CRD {
 
 type SortByOption = 'status' | 'name' | 'group' | 'instances'
 
-const SORT_OPTIONS = [
-  { value: 'status' as const, label: 'Status' },
-  { value: 'name' as const, label: 'Name' },
-  { value: 'group' as const, label: 'Group' },
-  { value: 'instances' as const, label: 'Instances' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'status' as const, labelKey: 'common.status' },
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'group' as const, labelKey: 'crdHealth.group' },
+  { value: 'instances' as const, labelKey: 'crdHealth.instances' },
 ]
 
 const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1, Established: 2 }
 
 export function CRDHealth({ config: _config }: CRDHealthProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const { isLoading, deduplicatedClusters } = useClusters()
 
   const [filterGroup, setFilterGroup] = useState<string>('')
@@ -199,8 +204,8 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No CRDs found</p>
-        <p className="text-xs mt-1">Custom Resource Definitions will appear here</p>
+        <p className="text-sm">{t('crdHealth.noCRDs')}</p>
+        <p className="text-xs mt-1">{t('crdHealth.noCRDsHint')}</p>
       </div>
     )
   }
@@ -241,13 +246,13 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search CRDs..."
+        placeholder={t('crdHealth.searchCRDs')}
         className="mb-4"
       />
 
       {availableClusters.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          No clusters available
+          {t('common:common.noClustersAvailable')}
         </div>
       ) : (
         <>
@@ -256,16 +261,16 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
             {localClusterFilter.length === 1 ? (
               <ClusterBadge cluster={localClusterFilter[0]} />
             ) : localClusterFilter.length > 1 ? (
-              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{localClusterFilter.length} clusters</span>
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{t('common:common.nClusters', { count: localClusterFilter.length })}</span>
             ) : (
-              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">All clusters</span>
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{t('common:common.allClusters')}</span>
             )}
             <select
               value={filterGroup}
               onChange={(e) => setFilterGroup(e.target.value)}
               className="ml-auto px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground"
             >
-              <option value="">All groups</option>
+              <option value="">{t('crdHealth.allGroups')}</option>
               {groups.map(g => (
                 <option key={g} value={g}>{g}</option>
               ))}
@@ -276,19 +281,19 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
           <div className="grid grid-cols-4 gap-2 mb-4">
             <div className="p-2 rounded-lg bg-teal-500/10 text-center">
               <span className="text-lg font-bold text-teal-400">{totalItems}</span>
-              <p className="text-xs text-muted-foreground">CRDs</p>
+              <p className="text-xs text-muted-foreground">{t('crdHealth.crds')}</p>
             </div>
             <div className="p-2 rounded-lg bg-green-500/10 text-center">
               <span className="text-lg font-bold text-green-400">{healthyCount}</span>
-              <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
+              <p className="text-xs text-muted-foreground">{t('common:common.healthy')}</p>
             </div>
             <div className="p-2 rounded-lg bg-red-500/10 text-center">
               <span className="text-lg font-bold text-red-400">{unhealthyCount}</span>
-              <p className="text-xs text-muted-foreground">Issues</p>
+              <p className="text-xs text-muted-foreground">{t('crdHealth.issues')}</p>
             </div>
             <div className="p-2 rounded-lg bg-blue-500/10 text-center">
               <span className="text-lg font-bold text-blue-400">{totalInstances}</span>
-              <p className="text-xs text-muted-foreground">Instances</p>
+              <p className="text-xs text-muted-foreground">{t('crdHealth.instances')}</p>
             </div>
           </div>
 
@@ -345,7 +350,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {groups.length} API groups {localClusterFilter.length === 1 ? `on ${localClusterFilter[0]}` : `across ${availableClusters.length} cluster${availableClusters.length !== 1 ? 's' : ''}`}
+            {localClusterFilter.length === 1 ? t('crdHealth.footerSingle', { count: groups.length, cluster: localClusterFilter[0] }) : t('crdHealth.footerMulti', { count: groups.length, clusters: availableClusters.length })}
           </div>
         </>
       )}

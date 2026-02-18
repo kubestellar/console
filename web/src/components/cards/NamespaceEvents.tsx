@@ -19,11 +19,11 @@ interface NamespaceEventsProps {
 
 type SortByOption = 'time' | 'type' | 'object' | 'count'
 
-const SORT_OPTIONS = [
-  { value: 'time' as const, label: 'Time' },
-  { value: 'type' as const, label: 'Type' },
-  { value: 'object' as const, label: 'Object' },
-  { value: 'count' as const, label: 'Count' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'time' as const, labelKey: 'namespaceEvents.time' },
+  { value: 'type' as const, labelKey: 'namespaceEvents.type' },
+  { value: 'object' as const, labelKey: 'namespaceEvents.object' },
+  { value: 'count' as const, labelKey: 'namespaceEvents.count' },
 ]
 
 const EVENT_SORT_COMPARATORS: Record<SortByOption, (a: ClusterEvent, b: ClusterEvent) => number> = {
@@ -38,7 +38,12 @@ const EVENT_SORT_COMPARATORS: Record<SortByOption, (a: ClusterEvent, b: ClusterE
 }
 
 export function NamespaceEvents({ config }: NamespaceEventsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const { isLoading: clustersLoading } = useClusters()
   const { events: allEvents, isLoading: eventsLoading } = useWarningEvents()
   const { drillToEvents } = useDrillDownActions()
@@ -147,10 +152,10 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     const now = new Date()
     const diff = now.getTime() - date.getTime()
 
-    if (diff < 60000) return 'Just now'
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-    return `${Math.floor(diff / 86400000)}d ago`
+    if (diff < 60000) return t('namespaceEvents.justNow')
+    if (diff < 3600000) return t('namespaceEvents.minutesAgo', { count: Math.floor(diff / 60000) })
+    if (diff < 86400000) return t('namespaceEvents.hoursAgo', { count: Math.floor(diff / 3600000) })
+    return t('namespaceEvents.daysAgo', { count: Math.floor(diff / 86400000) })
   }
 
   if (showSkeleton) {
@@ -160,8 +165,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No events</p>
-        <p className="text-xs mt-1">Namespace events will appear here</p>
+        <p className="text-sm">{t('namespaceEvents.noEvents')}</p>
+        <p className="text-xs mt-1">{t('namespaceEvents.noEventsHint')}</p>
       </div>
     )
   }
@@ -173,7 +178,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-              {totalItems} events
+              {t('namespaceEvents.nEvents', { count: totalItems })}
             </span>
           )}
         </div>
@@ -211,7 +216,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
           onChange={(e) => setSelectedCluster(e.target.value)}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">All clusters</option>
+          <option value="">{t('common:common.allClusters')}</option>
           {clusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -221,7 +226,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
           onChange={(e) => setSelectedNamespace(e.target.value)}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">All namespaces</option>
+          <option value="">{t('common:common.allNamespaces')}</option>
           {namespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}
@@ -245,7 +250,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common.searchEvents')}
+        placeholder={t('common:common.searchEvents')}
         className="mb-4"
       />
 
@@ -258,8 +263,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="text-sm text-foreground">No Warning Events</p>
-            <p className="text-xs text-muted-foreground">All systems operating normally</p>
+            <p className="text-sm text-foreground">{t('namespaceEvents.noWarningEvents')}</p>
+            <p className="text-xs text-muted-foreground">{t('namespaceEvents.allNormal')}</p>
           </div>
         ) : (
           filteredEvents.map((event, idx) => {
@@ -287,7 +292,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
                     <p className="text-xs text-muted-foreground line-clamp-2">{event.message}</p>
                     <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                       <Clock className="w-3 h-3" />
-                      <span>{event.lastSeen ? formatTime(event.lastSeen) : 'Unknown'}</span>
+                      <span>{event.lastSeen ? formatTime(event.lastSeen) : t('common:common.unknown')}</span>
                       {event.count > 1 && (
                         <span className="ml-2">({event.count}x)</span>
                       )}
@@ -312,7 +317,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
 
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        {totalItems} warning events{selectedNamespace ? ` in ${selectedNamespace}` : ''}
+        {t('namespaceEvents.footer', { count: totalItems, namespace: selectedNamespace || '' })}
       </div>
     </div>
   )

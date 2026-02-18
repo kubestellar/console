@@ -22,7 +22,7 @@ const SORT_OPTIONS = [
 ]
 
 export function GPUOverview({ config: _config }: GPUOverviewProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const {
     nodes: rawNodes,
     isLoading: hookLoading,
@@ -121,7 +121,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     return (
       <div className="h-full flex flex-col">
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          No reachable clusters
+          {t('gpuOverview.noReachableClusters')}
         </div>
       </div>
     )
@@ -161,23 +161,23 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       {filteredClusters.length > 0 && (
         <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
           <Activity className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          <span className="text-xs text-muted-foreground">{t('gpuOverview.clusterHealth')}:</span>
           {healthyClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="healthy" size="sm" />
-              <span className="text-green-400">{healthyClusters} healthy</span>
+              <span className="text-green-400">{t('gpuOverview.healthyCount', { count: healthyClusters })}</span>
             </span>
           )}
           {degradedClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="degraded" size="sm" />
-              <span className="text-orange-400">{degradedClusters} degraded</span>
+              <span className="text-orange-400">{t('gpuOverview.degradedCount', { count: degradedClusters })}</span>
             </span>
           )}
           {offlineClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="unreachable-timeout" size="sm" />
-              <span className="text-yellow-400">{offlineClusters} offline</span>
+              <span className="text-yellow-400">{t('gpuOverview.offlineCount', { count: offlineClusters })}</span>
             </span>
           )}
         </div>
@@ -221,7 +221,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder={t('common.searchGPUTypes')}
+        placeholder={t('common:common.searchGPUTypes')}
         className="mb-3"
       />
 
@@ -232,7 +232,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           onChange={(e) => setSelectedGpuType(e.target.value)}
           className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-3"
         >
-          <option value="all">All GPU Types</option>
+          <option value="all">{t('gpuOverview.allGPUTypes')}</option>
           {allGpuTypes.map(type => (
             <option key={type} value={type}>{type}</option>
           ))}
@@ -240,7 +240,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       )}
 
       {/* Main gauge */}
-      <div className="flex justify-center mb-4" title={`GPU Utilization: ${allocatedGPUs} of ${totalGPUs} GPUs allocated (${gpuUtilization.toFixed(0)}%)`}>
+      <div className="flex justify-center mb-4" title={t('gpuOverview.gaugeTooltip', { allocated: allocatedGPUs, total: totalGPUs, percent: gpuUtilization.toFixed(0) })}>
         <div className="relative w-32 h-32 cursor-default">
           <svg className="w-32 h-32 transform -rotate-90">
             <circle
@@ -270,7 +270,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-2xl font-bold text-foreground">{gpuUtilization.toFixed(0)}%</span>
-            <span className="text-xs text-muted-foreground">Utilized</span>
+            <span className="text-xs text-muted-foreground">{t('gpuOverview.utilized')}</span>
           </div>
         </div>
       </div>
@@ -280,40 +280,40 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
         <div
           className={`text-center ${totalGPUs > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => totalGPUs > 0 && drillToResources()}
-          title={totalGPUs > 0 ? `${totalGPUs} total GPUs - Click for details` : 'No GPUs available'}
+          title={totalGPUs > 0 ? t('gpuOverview.totalGPUsTitle', { count: totalGPUs }) : t('gpuOverview.noGPUsAvailable')}
         >
           <p className="text-lg font-bold text-foreground">{totalGPUs}</p>
-          <p className="text-xs text-muted-foreground">Total GPUs</p>
+          <p className="text-xs text-muted-foreground">{t('gpuOverview.totalGPUs')}</p>
         </div>
         <div
           className={`text-center ${allocatedGPUs > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => allocatedGPUs > 0 && drillToResources()}
-          title={allocatedGPUs > 0 ? `${allocatedGPUs} GPUs allocated - Click for details` : 'No GPUs allocated'}
+          title={allocatedGPUs > 0 ? t('gpuOverview.allocatedGPUsTitle', { count: allocatedGPUs }) : t('gpuOverview.noGPUsAllocated')}
         >
           <p className="text-lg font-bold text-purple-400">{allocatedGPUs}</p>
-          <p className="text-xs text-muted-foreground">{t('common.allocated')}</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.allocated')}</p>
         </div>
         <div
           className={`text-center ${clusterCount > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => clusterCount > 0 && drillToResources()}
-          title={clusterCount > 0 ? `${clusterCount} cluster${clusterCount !== 1 ? 's' : ''} with GPUs - Click for details` : 'No clusters with GPUs'}
+          title={clusterCount > 0 ? t('gpuOverview.clustersWithGPUsTitle', { count: clusterCount }) : t('gpuOverview.noClustersWithGPUs')}
         >
           <p className="text-lg font-bold text-green-400">{clusterCount}</p>
-          <p className="text-xs text-muted-foreground">Clusters</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.clusters')}</p>
         </div>
       </div>
 
       {/* GPU Types */}
       {sortedGpuTypes.length > 0 && (
         <div className="flex-1">
-          <p className="text-xs text-muted-foreground mb-2">GPU Types</p>
+          <p className="text-xs text-muted-foreground mb-2">{t('gpuOverview.gpuTypes')}</p>
           <div className="space-y-1">
             {sortedGpuTypes.map(([type, count]) => (
               <div
                 key={type}
                 className="flex items-center justify-between text-sm cursor-pointer hover:bg-secondary/50 rounded px-1 transition-colors"
                 onClick={() => drillToResources()}
-                title={`${count} ${type} GPU${count !== 1 ? 's' : ''} - Click to view nodes with this GPU type`}
+                title={t('gpuOverview.gpuTypeRowTitle', { count, type })}
               >
                 <span className="text-foreground">{type}</span>
                 <span className="text-muted-foreground">{count}</span>

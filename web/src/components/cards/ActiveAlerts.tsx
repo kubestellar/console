@@ -23,7 +23,8 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
 // Format relative time
-function formatRelativeTime(dateString: string): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatRelativeTime(dateString: string, t: (key: any, opts?: any) => string): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -31,16 +32,16 @@ function formatRelativeTime(dateString: string): string {
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins} min ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${diffDays}d ago`
+  if (diffMins < 1) return t('activeAlerts.justNow')
+  if (diffMins < 60) return t('activeAlerts.minutesAgo', { count: diffMins })
+  if (diffHours < 24) return t('activeAlerts.hoursAgo', { count: diffHours })
+  return t('activeAlerts.daysAgo', { count: diffDays })
 }
 
 type SortField = 'severity' | 'time'
 
 export function ActiveAlerts() {
-  const { t } = useTranslation()
+  const { t } = useTranslation('cards')
   const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
@@ -205,7 +206,7 @@ export function ActiveAlerts() {
         <div className="flex items-center gap-2">
           {stats.firing > 0 && (
             <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-              {stats.firing} firing
+              {t('activeAlerts.firingCount', { count: stats.firing })}
             </span>
           )}
           {localClusterFilter.length > 0 && (
@@ -225,10 +226,10 @@ export function ActiveAlerts() {
                 ? 'bg-green-500/20 border-green-500/30 text-green-400'
                 : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
             }`}
-            title={showAcknowledged ? 'Hide acknowledged alerts' : 'Show acknowledged alerts'}
+            title={showAcknowledged ? t('activeAlerts.hideAcknowledged') : t('activeAlerts.showAcknowledged')}
           >
             {showAcknowledged ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-            <span>Ack'd</span>
+            <span>{t('activeAlerts.ackd')}</span>
             {acknowledgedAlerts.length > 0 && (
               <span className="ml-0.5 px-1 py-0 text-[10px] rounded-full bg-green-500/30">
                 {acknowledgedAlerts.length}
@@ -253,8 +254,8 @@ export function ActiveAlerts() {
             sortBy={sortBy}
             onSortChange={setSortBy}
             sortOptions={[
-              { value: 'severity', label: 'Severity' },
-              { value: 'time', label: 'Time' },
+              { value: 'severity', label: t('activeAlerts.sortSeverity') },
+              { value: 'time', label: t('activeAlerts.sortTime') },
             ]}
           />
           {/* 4. RefreshButton */}
@@ -265,7 +266,7 @@ export function ActiveAlerts() {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common.searchAlerts')}
+        placeholder={t('activeAlerts.searchAlerts')}
       />
 
       {/* Stats Row */}
@@ -273,21 +274,21 @@ export function ActiveAlerts() {
         <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span className="text-xs text-red-400">{t('common.critical')}</span>
+            <span className="text-xs text-red-400">{t('activeAlerts.critical')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{stats.critical}</span>
         </div>
         <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-orange-400" />
-            <span className="text-xs text-orange-400">{t('common.warning')}</span>
+            <span className="text-xs text-orange-400">{t('activeAlerts.warning')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{stats.warning}</span>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">Ack'd</span>
+            <span className="text-xs text-green-400">{t('activeAlerts.ackd')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{stats.acknowledged}</span>
         </div>
@@ -298,8 +299,8 @@ export function ActiveAlerts() {
         {displayedAlerts.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
             <CheckCircle className="w-8 h-8 mb-2 text-green-400" />
-            <span>No active alerts</span>
-            <span className="text-xs">All systems operational</span>
+            <span>{t('activeAlerts.noActiveAlerts')}</span>
+            <span className="text-xs">{t('activeAlerts.allSystemsOperational')}</span>
           </div>
         ) : (
           displayedAlerts.map((alert: Alert) => (
@@ -329,7 +330,7 @@ export function ActiveAlerts() {
                     )}
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {formatRelativeTime(alert.firedAt)}
+                      {formatRelativeTime(alert.firedAt, t)}
                     </span>
                     {getMissionForAlert(alert) && (
                       <span className="text-xs text-purple-400 flex items-center gap-1">
@@ -338,7 +339,7 @@ export function ActiveAlerts() {
                       </span>
                     )}
                     {alert.acknowledgedAt && (
-                      <span className="text-xs text-green-400">Acknowledged</span>
+                      <span className="text-xs text-green-400">{t('activeAlerts.acknowledged')}</span>
                     )}
                   </div>
                 </div>
@@ -352,7 +353,7 @@ export function ActiveAlerts() {
                     onClick={e => handleAcknowledge(e, alert.id)}
                     className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
                   >
-                    Acknowledge
+                    {t('activeAlerts.acknowledge')}
                   </button>
                 )}
                 {(() => {
@@ -364,7 +365,7 @@ export function ActiveAlerts() {
                         className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
                       >
                         <ExternalLink className="w-3 h-3" />
-                        View Diagnosis
+                        {t('activeAlerts.viewDiagnosis')}
                       </button>
                     )
                   } else {

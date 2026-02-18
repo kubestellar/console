@@ -1915,6 +1915,7 @@
     "pvcs": "PVCs",
     "gpus": "GPUs",
     "cpus": "CPUs",
+    "cpuCores": "CPU Cores",
     "ephemeralStorage": "Ephemeral Storage",
     "noGpusAvailable": "No GPUs available in this cluster",
     "noClustersMatch": "No clusters match the current filter",
@@ -2131,7 +2132,12 @@
     "granted": "Granted",
     "revoked": "Revoked",
     "inherited": "Inherited",
-    "overridden": "Overridden"
+    "overridden": "Overridden",
+    "noClustersAvailable": "No clusters available",
+    "nClusters": "{{count}} clusters",
+    "allClusters": "All clusters",
+    "allNamespaces": "All namespaces",
+    "warnings": "Warnings"
   },
   "namespaces": {
     "createNamespace": "Create Namespace",

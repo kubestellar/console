@@ -58,7 +58,7 @@ function normalizeClusterName(cluster: string): string {
 
 
 export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const {
     nodes: gpuNodes,
     isLoading: gpuLoading,
@@ -208,8 +208,8 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Cpu className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-foreground font-medium">No GPU Nodes</p>
-          <p className="text-sm text-muted-foreground">No GPU resources detected in any cluster</p>
+          <p className="text-foreground font-medium">{t('gpuWorkloads.noGPUNodes')}</p>
+          <p className="text-sm text-muted-foreground">{t('gpuWorkloads.noGPUResourcesInClusters')}</p>
         </div>
       </div>
     )
@@ -221,7 +221,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       <div className="flex items-center justify-between mb-3">
         {summary.failed > 0 ? (
           <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-            {summary.failed} failed
+            {t('gpuWorkloads.failedCount', { count: summary.failed })}
           </span>
         ) : <div />}
         <div className="flex items-center gap-2">
@@ -261,26 +261,26 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search workloads..."
+        placeholder={t('gpuWorkloads.searchPlaceholder')}
       />
 
       {/* Summary stats */}
       <div className="grid grid-cols-4 gap-2 mb-3">
-        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.total} total GPU workloads`}>
+        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={t('gpuWorkloads.totalGPUWorkloads', { count: summary.total })}>
           <p className="text-lg font-bold text-foreground">{summary.total}</p>
-          <p className="text-xs text-muted-foreground">{t('common.total')}</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>
         </div>
-        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.running} running`}>
+        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={t('gpuWorkloads.runningTitle', { count: summary.running })}>
           <p className="text-lg font-bold text-green-400">{summary.running}</p>
-          <p className="text-xs text-muted-foreground">{t('common.running')}</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.running')}</p>
         </div>
-        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.pending} pending`}>
+        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={t('gpuWorkloads.pendingTitle', { count: summary.pending })}>
           <p className="text-lg font-bold text-yellow-400">{summary.pending}</p>
-          <p className="text-xs text-muted-foreground">{t('common.pending')}</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.pending')}</p>
         </div>
-        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={`${summary.failed} failed`}>
+        <div className="p-2 rounded-lg bg-secondary/30 text-center" title={t('gpuWorkloads.failedTitle', { count: summary.failed })}>
           <p className="text-lg font-bold text-red-400">{summary.failed}</p>
-          <p className="text-xs text-muted-foreground">{t('common.failed')}</p>
+          <p className="text-xs text-muted-foreground">{t('common:common.failed')}</p>
         </div>
       </div>
 
@@ -288,7 +288,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       <div className="flex-1 space-y-2 overflow-y-auto">
         {displayWorkloads.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            No GPU workloads found
+            {t('gpuWorkloads.noGPUWorkloadsFound')}
           </div>
         ) : (
           displayWorkloads.map((pod) => {
@@ -300,7 +300,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                 key={`${pod.cluster}-${pod.namespace}-${pod.name}`}
                 onClick={() => handlePodClick(pod)}
                 className="p-3 rounded-lg bg-secondary/30 border border-border/50 cursor-pointer hover:bg-secondary/50 hover:border-border transition-colors group"
-                title={`Click to view details for ${pod.name}`}
+                title={t('gpuWorkloads.clickViewDetails', { name: pod.name })}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -315,11 +315,11 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                       <span className="text-sm font-medium text-foreground truncate">{pod.name}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                      <span title={`Namespace: ${pod.namespace}`}>{pod.namespace}</span>
+                      <span title={t('gpuWorkloads.namespaceTooltip', { namespace: pod.namespace })}>{pod.namespace}</span>
                       {pod.node && (
                         <>
                           <span className="text-border">|</span>
-                          <span title={`Node: ${pod.node}`}>{pod.node}</span>
+                          <span title={t('gpuWorkloads.nodeTooltip', { node: pod.node })}>{pod.node}</span>
                         </>
                       )}
                     </div>
@@ -327,7 +327,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                   {pod.status !== 'Running' && pod.status !== 'Succeeded' && pod.status !== 'Completed' && (
                     <CardAIActions
                       resource={{ kind: 'Pod', name: pod.name, namespace: pod.namespace, cluster: pod.cluster, status: pod.status }}
-                      issues={[{ name: `Pod ${pod.status}`, message: `GPU workload pod is in ${pod.status} state` }]}
+                      issues={[{ name: t('gpuWorkloads.podStatusName', { status: pod.status }), message: t('gpuWorkloads.podStatusMessage', { status: pod.status }) }]}
                     />
                   )}
                   <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />

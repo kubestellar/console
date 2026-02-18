@@ -10,7 +10,7 @@ interface ArgoCDSyncStatusProps {
 }
 
 export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('cards')
   // Local cluster filter
   const {
     localClusterFilter,
@@ -61,8 +61,8 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No ArgoCD data</p>
-        <p className="text-xs mt-1">Connect ArgoCD to see sync status</p>
+        <p className="text-sm">{t('argoCDSyncStatus.noData')}</p>
+        <p className="text-xs mt-1">{t('argoCDSyncStatus.connectArgoCD')}</p>
       </div>
     )
   }
@@ -97,7 +97,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="ArgoCD Documentation"
+            title={t('argoCDSyncStatus.argocdDocumentation')}
           >
             <ExternalLink className="w-4 h-4" />
           </a>
@@ -108,11 +108,11 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
       <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-orange-400 font-medium">ArgoCD Integration</p>
+          <p className="text-orange-400 font-medium">{t('argoCDSyncStatus.argocdIntegration')}</p>
           <p className="text-muted-foreground">
-            Install ArgoCD for GitOps-based sync.{' '}
+            {t('argoCDSyncStatus.installArgoCD')}{' '}
             <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
-              Install guide →
+              {t('argoCDSyncStatus.installGuide')}
             </a>
           </p>
         </div>
@@ -160,7 +160,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-xl font-bold text-foreground">{total}</span>
-            <span className="text-xs text-muted-foreground">Apps</span>
+            <span className="text-xs text-muted-foreground">{t('argoCDSyncStatus.apps')}</span>
           </div>
         </div>
       </div>
@@ -170,21 +170,21 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
         <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-400" />
-            <span className="text-sm text-foreground">Synced</span>
+            <span className="text-sm text-foreground">{t('argoCDSyncStatus.synced')}</span>
           </div>
           <span className="text-sm font-bold text-green-400">{stats.synced}</span>
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg bg-yellow-500/10">
           <div className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm text-foreground">Out of Sync</span>
+            <span className="text-sm text-foreground">{t('argoCDSyncStatus.outOfSync')}</span>
           </div>
           <span className="text-sm font-bold text-yellow-400">{stats.outOfSync}</span>
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-foreground">{t('common.unknown')}</span>
+            <span className="text-sm text-foreground">{t('argoCDSyncStatus.unknown')}</span>
           </div>
           <span className="text-sm font-bold text-gray-400">{stats.unknown}</span>
         </div>

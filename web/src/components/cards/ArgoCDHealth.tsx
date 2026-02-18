@@ -9,15 +9,15 @@ interface ArgoCDHealthProps {
 }
 
 const healthConfig = {
-  healthy: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', label: 'Healthy' },
-  degraded: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Degraded' },
-  progressing: { icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10', label: 'Progressing' },
-  missing: { icon: AlertTriangle, color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'Missing' },
-  unknown: { icon: AlertTriangle, color: 'text-gray-400', bg: 'bg-secondary/30', label: 'Unknown' },
+  healthy: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', labelKey: 'argoCDHealth.healthy' },
+  degraded: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', labelKey: 'argoCDHealth.degraded' },
+  progressing: { icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10', labelKey: 'argoCDHealth.progressing' },
+  missing: { icon: AlertTriangle, color: 'text-orange-400', bg: 'bg-orange-500/10', labelKey: 'argoCDHealth.missing' },
+  unknown: { icon: AlertTriangle, color: 'text-gray-400', bg: 'bg-secondary/30', labelKey: 'argoCDHealth.unknown' },
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('cards')
   const {
     stats,
     total,
@@ -54,8 +54,8 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No ArgoCD data</p>
-        <p className="text-xs mt-1">Connect ArgoCD to see health status</p>
+        <p className="text-sm">{t('argoCDHealth.noData')}</p>
+        <p className="text-xs mt-1">{t('argoCDHealth.connectArgoCD')}</p>
       </div>
     )
   }
@@ -70,7 +70,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="ArgoCD Documentation"
+            title={t('argoCDHealth.argocdDocumentation')}
           >
             <ExternalLink className="w-4 h-4" />
           </a>
@@ -81,11 +81,11 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
       <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-orange-400 font-medium">ArgoCD Integration</p>
+          <p className="text-orange-400 font-medium">{t('argoCDHealth.argocdIntegration')}</p>
           <p className="text-muted-foreground">
-            Install ArgoCD for application health tracking.{' '}
+            {t('argoCDHealth.installArgoCD')}{' '}
             <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
-              Install guide →
+              {t('argoCDHealth.installGuide')}
             </a>
           </p>
         </div>
@@ -95,12 +95,12 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
       <div className="flex items-center justify-center gap-4 mb-4 p-4 rounded-lg bg-secondary/30">
         <div className="text-center">
           <p className="text-3xl font-bold text-foreground">{healthyPercent.toFixed(0)}%</p>
-          <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
+          <p className="text-xs text-muted-foreground">{t('argoCDHealth.healthy')}</p>
         </div>
         <div className="w-px h-12 bg-border" />
         <div className="text-center">
           <p className="text-3xl font-bold text-foreground">{total}</p>
-          <p className="text-xs text-muted-foreground">Total Apps</p>
+          <p className="text-xs text-muted-foreground">{t('argoCDHealth.totalApps')}</p>
         </div>
       </div>
 
@@ -114,7 +114,8 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
             <div key={key} className={`flex items-center justify-between p-2 rounded-lg ${config.bg}`}>
               <div className="flex items-center gap-2">
                 <Icon className={`w-4 h-4 ${config.color}`} />
-                <span className="text-sm text-foreground">{config.label}</span>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <span className="text-sm text-foreground">{t(config.labelKey as any)}</span>
               </div>
               <span className={`text-sm font-bold ${config.color}`}>{count}</span>
             </div>

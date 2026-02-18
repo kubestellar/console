@@ -15,7 +15,7 @@ interface ClusterFocusProps {
 }
 
 export function ClusterFocus({ config }: ClusterFocusProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const selectedCluster = config?.cluster
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
@@ -90,8 +90,8 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No clusters available</p>
-        <p className="text-xs mt-1">Add clusters to your kubeconfig</p>
+        <p className="text-sm">{t('cards:clusterFocus.noClustersAvailable')}</p>
+        <p className="text-xs mt-1">{t('cards:clusterFocus.addClustersToKubeconfig')}</p>
       </div>
     )
   }
@@ -105,14 +105,14 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             onChange={(e) => setInternalCluster(e.target.value)}
             className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground max-w-full truncate"
           >
-            <option value="">Select cluster...</option>
+            <option value="">{t('cards:clusterFocus.selectCluster')}</option>
             {clusters.map(c => (
               <option key={c.name} value={c.name}>{c.name}</option>
             ))}
           </select>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          Select a cluster to view details
+          {t('cards:clusterFocus.selectClusterToView')}
         </div>
       </div>
     )
@@ -155,7 +155,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         >
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-muted-foreground">{t('common.nodes')}</span>
+            <span className="text-xs text-muted-foreground">{t('common:common.nodes')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{cluster?.nodeCount || 0}</span>
         </div>
@@ -163,7 +163,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div className="p-3 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2 mb-1">
             <Box className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-muted-foreground">{t('common.pods')}</span>
+            <span className="text-xs text-muted-foreground">{t('common:common.pods')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{cluster?.podCount || 0}</span>
         </div>
@@ -171,7 +171,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div className="p-3 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2 mb-1">
             <Cpu className="w-4 h-4 text-purple-400" />
-            <span className="text-xs text-muted-foreground">GPUs</span>
+            <span className="text-xs text-muted-foreground">{t('common:common.gpus')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{clusterGPUs}</span>
         </div>
@@ -179,7 +179,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div className="p-3 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2 mb-1">
             <HardDrive className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs text-muted-foreground">CPU Cores</span>
+            <span className="text-xs text-muted-foreground">{t('common:common.cpuCores')}</span>
           </div>
           <span className="text-xl font-bold text-foreground">{cluster?.cpuCores || 0}</span>
         </div>
@@ -200,11 +200,11 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
               })
             }
           }}
-          title={podIssues.length > 0 ? `Click to view ${podIssues[0].name}` : 'No pod issues'}
+          title={podIssues.length > 0 ? t('cards:clusterFocus.clickToView', { name: podIssues[0].name }) : t('cards:clusterFocus.noPodIssues')}
         >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-sm text-red-400">Pod Issues</span>
+            <span className="text-sm text-red-400">{t('cards:clusterFocus.podIssues')}</span>
           </div>
           <span className="text-sm font-medium text-red-400">{clusterPodIssues}</span>
         </div>
@@ -222,11 +222,11 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
               })
             }
           }}
-          title={deploymentIssues.length > 0 ? `Click to view ${deploymentIssues[0].name}` : 'No deployment issues'}
+          title={deploymentIssues.length > 0 ? t('cards:clusterFocus.clickToView', { name: deploymentIssues[0].name }) : t('cards:clusterFocus.noDeploymentIssues')}
         >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-sm text-red-300">Deployment Issues</span>
+            <span className="text-sm text-red-300">{t('cards:clusterFocus.deploymentIssues')}</span>
           </div>
           <span className="text-sm font-medium text-red-400">{clusterDeploymentIssues}</span>
         </div>

@@ -28,11 +28,11 @@ interface OperatorStatusProps {
 
 type SortByOption = 'status' | 'name' | 'namespace' | 'version'
 
-const SORT_OPTIONS = [
-  { value: 'status' as const, label: 'Status' },
-  { value: 'name' as const, label: 'Name' },
-  { value: 'namespace' as const, label: 'Namespace' },
-  { value: 'version' as const, label: 'Version' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'status' as const, labelKey: 'common.status' },
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'namespace' as const, labelKey: 'common.namespace' },
+  { value: 'version' as const, labelKey: 'operatorStatus.version' },
 ]
 
 const STATUS_ORDER: Record<string, number> = { Failed: 0, Installing: 1, Upgrading: 2, Succeeded: 3 }
@@ -53,7 +53,12 @@ const FILTER_CONFIG = {
 }
 
 function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
@@ -159,8 +164,8 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No operators</p>
-        <p className="text-xs mt-1">Operators will appear when installed</p>
+        <p className="text-sm">{t('operatorStatus.noOperators')}</p>
+        <p className="text-xs mt-1">{t('operatorStatus.noOperatorsHint')}</p>
       </div>
     )
   }
@@ -172,7 +177,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-              {totalItems} operators
+              {t('operatorStatus.nOperators', { count: totalItems })}
             </span>
           )}
         </div>
@@ -211,11 +216,11 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
               <ClusterBadge cluster={localClusterFilter[0]} />
             ) : localClusterFilter.length > 1 ? (
               <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
-                {localClusterFilter.length} clusters selected
+                {t('operatorStatus.nClustersSelected', { count: localClusterFilter.length })}
               </span>
             ) : (
               <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
-                All Clusters ({availableClusters.length})
+                {t('operatorStatus.allClusters', { count: availableClusters.length })}
               </span>
             )}
           </div>
@@ -224,7 +229,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           <CardSearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search operators..."
+            placeholder={t('operatorStatus.searchOperators')}
             className="mb-4"
           />
 
@@ -232,15 +237,15 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center">
               <span className="text-lg font-bold text-green-400">{statusCounts.succeeded}</span>
-              <p className="text-xs text-muted-foreground">{t('common.running')}</p>
+              <p className="text-xs text-muted-foreground">{t('common:common.running')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-red-500/10 text-center">
               <span className="text-lg font-bold text-red-400">{statusCounts.failed}</span>
-              <p className="text-xs text-muted-foreground">{t('common.failed')}</p>
+              <p className="text-xs text-muted-foreground">{t('common:common.failed')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-blue-500/10 text-center">
               <span className="text-lg font-bold text-blue-400">{statusCounts.other}</span>
-              <p className="text-xs text-muted-foreground">Other</p>
+              <p className="text-xs text-muted-foreground">{t('operatorStatus.other')}</p>
             </div>
           </div>
 
@@ -308,7 +313,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} operator{totalItems !== 1 ? 's' : ''} {localClusterFilter.length === 1 ? `on ${localClusterFilter[0]}` : `across ${availableClusters.length} cluster${availableClusters.length !== 1 ? 's' : ''}`}
+            {t('operatorStatus.footer', { count: totalItems, scope: localClusterFilter.length === 1 ? localClusterFilter[0] : t('operatorStatus.nClustersScope', { count: availableClusters.length }) })}
           </div>
         </>
       )}
@@ -317,7 +322,6 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
 }
 
 export function OperatorStatus(props: OperatorStatusProps) {
-  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="OperatorStatus">
       <OperatorStatusInternal {...props} />

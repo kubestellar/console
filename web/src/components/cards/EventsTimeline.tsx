@@ -37,11 +37,11 @@ interface TimePoint {
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
-const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; bucketMinutes: number; numBuckets: number }[] = [
-  { value: '15m', label: '15 min', bucketMinutes: 1, numBuckets: 15 },
-  { value: '1h', label: '1 hour', bucketMinutes: 5, numBuckets: 12 },
-  { value: '6h', label: '6 hours', bucketMinutes: 30, numBuckets: 12 },
-  { value: '24h', label: '24 hours', bucketMinutes: 60, numBuckets: 24 },
+const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: string; bucketMinutes: number; numBuckets: number }[] = [
+  { value: '15m', labelKey: 'eventsTimeline.range15m', bucketMinutes: 1, numBuckets: 15 },
+  { value: '1h', labelKey: 'eventsTimeline.range1h', bucketMinutes: 5, numBuckets: 12 },
+  { value: '6h', labelKey: 'eventsTimeline.range6h', bucketMinutes: 30, numBuckets: 12 },
+  { value: '24h', labelKey: 'eventsTimeline.range24h', bucketMinutes: 60, numBuckets: 24 },
 ]
 
 // Group events by time buckets
@@ -89,7 +89,12 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 }
 
 function EventsTimelineInternal() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const TIME_RANGE_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const {
     events,
     isLoading: hookLoading,
@@ -196,8 +201,8 @@ function EventsTimelineInternal() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No events</p>
-        <p className="text-xs mt-1">Cluster events will appear here</p>
+        <p className="text-sm">{t('eventsTimeline.noEvents')}</p>
+        <p className="text-xs mt-1">{t('eventsTimeline.noEventsHint')}</p>
       </div>
     )
   }
@@ -229,7 +234,7 @@ function EventsTimelineInternal() {
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value as TimeRange)}
               className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground cursor-pointer"
-              title="Select time range"
+              title={t('eventsTimeline.selectTimeRange')}
             >
               {TIME_RANGE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -257,21 +262,21 @@ function EventsTimelineInternal() {
         <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-orange-400" />
-            <span className="text-xs text-orange-400">Warnings</span>
+            <span className="text-xs text-orange-400">{t('common:common.warnings')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{totalWarnings}</span>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">{t('common.normal')}</span>
+            <span className="text-xs text-green-400">{t('common:common.normal')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{totalNormal}</span>
         </div>
         <div className="p-2 rounded-lg bg-secondary/50">
           <div className="flex items-center gap-1.5 mb-1">
             <Activity className="w-3 h-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Peak</span>
+            <span className="text-xs text-muted-foreground">{t('eventsTimeline.peak')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{peakEvents}</span>
         </div>
@@ -281,7 +286,7 @@ function EventsTimelineInternal() {
       <div className="flex-1 min-h-[160px]">
         {filteredEvents.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            No events in the last hour
+            {t('eventsTimeline.noEventsInRange')}
           </div>
         ) : (
           <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }}>
@@ -326,7 +331,7 @@ function EventsTimelineInternal() {
                 stroke="#f97316"
                 strokeWidth={2}
                 fill="url(#gradientWarnings)"
-                name="Warnings"
+                name={t('common:common.warnings')}
               />
               <Area
                 type="stepAfter"
@@ -335,7 +340,7 @@ function EventsTimelineInternal() {
                 stroke="#22c55e"
                 strokeWidth={2}
                 fill="url(#gradientNormal)"
-                name="Normal"
+                name={t('common:common.normal')}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -347,11 +352,11 @@ function EventsTimelineInternal() {
       <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-center gap-6 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-orange-500/60" />
-          <span className="text-muted-foreground">Warnings</span>
+          <span className="text-muted-foreground">{t('common:common.warnings')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-green-500/60" />
-          <span className="text-muted-foreground">{t('common.normal')}</span>
+          <span className="text-muted-foreground">{t('common:common.normal')}</span>
         </div>
       </div>
     </div>

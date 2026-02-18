@@ -9,7 +9,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
 
 export function ResourceUsage() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { isLoading: clustersLoading } = useClusters()
   const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
@@ -102,8 +102,8 @@ export function ResourceUsage() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No clusters available</p>
-        <p className="text-xs mt-1">Connect to clusters to see resource usage</p>
+        <p className="text-sm">{t('resourceUsage.noClusters')}</p>
+        <p className="text-xs mt-1">{t('resourceUsage.noClustersHint')}</p>
       </div>
     )
   }
@@ -139,7 +139,7 @@ export function ResourceUsage() {
           )}
           {localClusterFilter.length === 0 && (
             <span className="text-xs text-muted-foreground">
-              {clusters.length} cluster{clusters.length !== 1 ? 's' : ''}
+              {t('common:common.nClusters', { count: clusters.length })}
             </span>
           )}
         </div>
@@ -173,7 +173,7 @@ export function ResourceUsage() {
           />
           <div className="flex items-center gap-1.5 mt-2">
             <Cpu className="w-4 h-4 text-blue-400" />
-            <span className="text-sm text-muted-foreground">{t('common.cpu')}</span>
+            <span className="text-sm text-muted-foreground">{t('common:common.cpu')}</span>
           </div>
         </div>
 
@@ -186,7 +186,7 @@ export function ResourceUsage() {
           />
           <div className="flex items-center gap-1.5 mt-2">
             <MemoryStick className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm text-muted-foreground">{t('common.memory')}</span>
+            <span className="text-sm text-muted-foreground">{t('common:common.memory')}</span>
           </div>
         </div>
 
@@ -208,16 +208,16 @@ export function ResourceUsage() {
 
       <div className={`mt-4 pt-3 border-t border-border/50 grid gap-2 text-center`} style={{ gridTemplateColumns: `repeat(${footerCols}, minmax(0, 1fr))` }}>
         <div>
-          <p className="text-xs text-muted-foreground">Total CPU</p>
-          <p className="text-sm font-medium text-foreground">{totals.cpu.total} cores</p>
+          <p className="text-xs text-muted-foreground">{t('resourceUsage.totalCPU')}</p>
+          <p className="text-sm font-medium text-foreground">{totals.cpu.total} {t('resourceUsage.cores')}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Total RAM</p>
+          <p className="text-xs text-muted-foreground">{t('resourceUsage.totalRAM')}</p>
           <p className="text-sm font-medium text-foreground">{totals.memory.total} GB</p>
         </div>
         {accelerators.map(accel => (
           <div key={accel.key}>
-            <p className="text-xs text-muted-foreground">Total {accel.label}</p>
+            <p className="text-xs text-muted-foreground">{t('resourceUsage.totalLabel', { label: accel.label })}</p>
             <p className="text-sm font-medium text-foreground">
               <span className={accel.color}>{accel.data.used}</span>/{accel.data.total}
             </p>

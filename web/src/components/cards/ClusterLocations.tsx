@@ -213,7 +213,7 @@ function extractRegion(cluster: ClusterInfo): string | null {
 type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToCluster } = useDrillDownActions()
 
@@ -400,8 +400,8 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No clusters available</p>
-        <p className="text-xs mt-1">Add clusters to see their locations</p>
+        <p className="text-sm">{t('cards:clusterLocations.noClustersAvailable')}</p>
+        <p className="text-xs mt-1">{t('cards:clusterLocations.addClustersToSeeLocations')}</p>
       </div>
     )
   }
@@ -414,7 +414,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`p-1.5 rounded-md hover:bg-secondary transition-colors ${showFilters ? 'bg-secondary text-purple-400' : 'text-muted-foreground'}`}
-            title="Toggle filters"
+            title={t('cards:clusterLocations.toggleFilters')}
           >
             <Filter className="w-3.5 h-3.5" />
           </button>
@@ -429,7 +429,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder={t('common.searchClusters')}
+              placeholder={t('common:common.searchClusters')}
               className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             />
             {searchFilter && (
@@ -439,7 +439,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Status:</span>
+            <span className="text-xs text-muted-foreground">{t('common:common.status')}:</span>
             <div className="flex gap-1">
               {(['all', 'healthy', 'unhealthy'] as StatusFilter[]).map((status) => (
                 <button
@@ -453,7 +453,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                       : 'bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {t(`cards:clusterLocations.status.${status}`)}
                 </button>
               ))}
             </div>
@@ -469,7 +469,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
         </div>
         <div className="flex items-center gap-1">
           <Globe className="w-3 h-3" />
-          <span>{stats.uniqueRegions} regions</span>
+          <span>{t('cards:clusterLocations.regionCount', { count: stats.uniqueRegions })}</span>
         </div>
         <div className="flex items-center gap-1">
           <Cloud className="w-3 h-3" />
@@ -491,21 +491,21 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <Globe className="w-8 h-8 mx-auto mb-2 opacity-50 animate-pulse" />
-              <p className="text-sm">Loading map...</p>
+              <p className="text-sm">{t('cards:clusterLocations.loadingMap')}</p>
             </div>
           </div>
         ) : mapError ? (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Failed to load map</p>
+              <p className="text-sm">{t('cards:clusterLocations.failedToLoadMap')}</p>
             </div>
           </div>
         ) : regionGroups.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No clusters found</p>
+              <p className="text-sm">{t('cards:clusterLocations.noClustersFound')}</p>
             </div>
           </div>
         ) : (
@@ -585,9 +585,9 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                             <span className="text-xs font-medium text-foreground">{cluster.name}</span>
                           </div>
                           <div className="text-[10px] text-muted-foreground space-y-0.5">
-                            <div>Region: {group.displayName}</div>
-                            <div>Status: <span className={cluster.healthy ? 'text-emerald-400' : 'text-red-400'}>{cluster.healthy ? 'Healthy' : 'Unhealthy'}</span></div>
-                            {cluster.context && <div className="truncate">Context: {cluster.context}</div>}
+                            <div>{t('cards:clusterLocations.region')}: {group.displayName}</div>
+                            <div>{t('common:common.status')}: <span className={cluster.healthy ? 'text-emerald-400' : 'text-red-400'}>{cluster.healthy ? t('common:common.healthy') : t('common:common.unhealthy')}</span></div>
+                            {cluster.context && <div className="truncate">{t('cards:clusterLocations.context')}: {cluster.context}</div>}
                           </div>
                         </div>
                       </div>
@@ -604,21 +604,21 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
           <button
             onClick={handleZoomIn}
             className="p-1 bg-secondary/80 hover:bg-secondary rounded border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-            title="Zoom in"
+            title={t('cards:clusterLocations.zoomIn')}
           >
             <ZoomIn className="w-3 h-3" />
           </button>
           <button
             onClick={handleZoomOut}
             className="p-1 bg-secondary/80 hover:bg-secondary rounded border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-            title="Zoom out"
+            title={t('cards:clusterLocations.zoomOut')}
           >
             <ZoomOut className="w-3 h-3" />
           </button>
           <button
             onClick={handleReset}
             className="p-1 bg-secondary/80 hover:bg-secondary rounded border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-            title="Reset view"
+            title={t('cards:clusterLocations.resetView')}
           >
             <Maximize2 className="w-3 h-3" />
           </button>
@@ -644,11 +644,11 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
             ))}
             <div className="flex items-center gap-1 ml-auto">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>{t('common.healthy')}</span>
+              <span>{t('common:common.healthy')}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span>Issues</span>
+              <span>{t('cards:clusterLocations.issues')}</span>
             </div>
           </div>
         </div>

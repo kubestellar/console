@@ -33,15 +33,20 @@ interface HelmReleaseDisplay {
 
 type SortByOption = 'status' | 'name' | 'chart' | 'updated'
 
-const SORT_OPTIONS = [
-  { value: 'status' as const, label: 'Status' },
-  { value: 'name' as const, label: 'Name' },
-  { value: 'chart' as const, label: 'Chart' },
-  { value: 'updated' as const, label: 'Updated' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'status' as const, labelKey: 'common.status' },
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'chart' as const, labelKey: 'helmReleaseStatus.chart' },
+  { value: 'updated' as const, labelKey: 'helmReleaseStatus.updated' },
 ]
 
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const { isLoading: clustersLoading } = useClusters()
   const { drillToHelm } = useDrillDownActions()
 
@@ -197,8 +202,8 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No Helm releases</p>
-        <p className="text-xs mt-1">Install Helm charts to track releases</p>
+        <p className="text-sm">{t('helmReleaseStatus.noReleases')}</p>
+        <p className="text-xs mt-1">{t('helmReleaseStatus.installToTrack')}</p>
       </div>
     )
   }
@@ -244,9 +249,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
           value={selectedNamespace}
           onChange={(e) => setSelectedNamespace(e.target.value)}
           className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-          title="Filter by namespace"
+          title={t('helmReleaseStatus.filterByNamespace')}
         >
-          <option value="">All namespaces</option>
+          <option value="">{t('common:common.allNamespaces')}</option>
           {namespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}
@@ -255,7 +260,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
       {availableClusters.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          No clusters available
+          {t('helmReleaseStatus.noClusters')}
         </div>
       ) : (
         <>
@@ -264,9 +269,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
             {localClusterFilter.length === 1 ? (
               <ClusterBadge cluster={localClusterFilter[0]} />
             ) : localClusterFilter.length > 1 ? (
-              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{localClusterFilter.length} clusters</span>
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{t('common:common.nClusters', { count: localClusterFilter.length })}</span>
             ) : (
-              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">All clusters</span>
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{t('common:common.allClusters')}</span>
             )}
             {selectedNamespace && (
               <>
@@ -280,7 +285,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
           <CardSearchInput
             value={localSearch}
             onChange={setLocalSearch}
-            placeholder={t('common.searchReleases')}
+            placeholder={t('common:common.searchReleases')}
             className="mb-4"
           />
 
@@ -288,15 +293,15 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-blue-500/10 text-center cursor-default" title={`${totalItems} total Helm release${totalItems !== 1 ? 's' : ''}`}>
               <span className="text-lg font-bold text-blue-400">{totalItems}</span>
-              <p className="text-xs text-muted-foreground">{t('common.total')}</p>
+              <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center cursor-default" title={`${deployedCount} release${deployedCount !== 1 ? 's' : ''} successfully deployed`}>
               <span className="text-lg font-bold text-green-400">{deployedCount}</span>
-              <p className="text-xs text-muted-foreground">Deployed</p>
+              <p className="text-xs text-muted-foreground">{t('helmReleaseStatus.deployed')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-red-500/10 text-center cursor-default" title={`${failedCount} release${failedCount !== 1 ? 's' : ''} in failed state`}>
               <span className="text-lg font-bold text-red-400">{failedCount}</span>
-              <p className="text-xs text-muted-foreground">{t('common.failed')}</p>
+              <p className="text-xs text-muted-foreground">{t('common:common.failed')}</p>
             </div>
           </div>
 
@@ -361,7 +366,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} release{totalItems !== 1 ? 's' : ''}{localClusterFilter.length === 1 ? (selectedNamespace ? ` in ${localClusterFilter[0]}/${selectedNamespace}` : ` in ${localClusterFilter[0]}`) : ` across ${availableClusters.length} cluster${availableClusters.length !== 1 ? 's' : ''}`}
+            {t('helmReleaseStatus.footer', { count: totalItems, scope: localClusterFilter.length === 1 ? (selectedNamespace ? `${localClusterFilter[0]}/${selectedNamespace}` : localClusterFilter[0]) : t('helmReleaseStatus.nClustersScope', { count: availableClusters.length }) })}
           </div>
         </>
       )}

@@ -43,10 +43,11 @@ const loadPersistedOverrides = (configOverrides?: Record<string, CloudProvider>)
 type PricingMode = 'uniform' | 'per-cluster'
 type SortByOption = 'cost' | 'name' | 'cpus'
 
-const SORT_OPTIONS = [
-  { value: 'cost' as const, label: 'Cost' },
-  { value: 'name' as const, label: 'Name' },
-  { value: 'cpus' as const, label: 'CPUs' },
+// Labels are set at render time via t() — see getSortOptions()
+const SORT_OPTIONS_KEYS = [
+  { value: 'cost' as const, labelKey: 'clusterCosts.sortCost' },
+  { value: 'name' as const, labelKey: 'clusterCosts.sortName' },
+  { value: 'cpus' as const, labelKey: 'clusterCosts.sortCPUs' },
 ]
 
 // Cloud provider icons (simple text badges for now, could be SVG logos)
@@ -183,6 +184,13 @@ const SORT_COMPARATORS = {
 
 export function ClusterCosts({ config }: ClusterCostsProps) {
   const { t } = useTranslation(['cards', 'common'])
+
+  // Build sort options with translated labels
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: t(opt.labelKey as any) as string })),
+    [t]
+  )
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
@@ -369,7 +377,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
-            {totalItems} clusters
+            {t('cards:clusterCosts.clusterCount', { count: totalItems })}
           </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -530,7 +538,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-            title={`View ${pricing.name} pricing`}
+            title={t('cards:clusterCosts.viewProviderPricing', { provider: pricing.name })}
           >
             <ExternalLink className="w-3 h-3" />
           </a>
@@ -544,7 +552,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             // Uniform mode - show single provider rates
             <>
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-foreground">{pricing.name} Pricing Rates</span>
+                <span className="font-medium text-foreground">{t('cards:clusterCosts.pricingRates', { provider: pricing.name })}</span>
                 {pricing.pricingUrl && (
                   <a
                     href={pricing.pricingUrl}
@@ -574,7 +582,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                   <p className="text-[10px] text-muted-foreground">{t('cards:clusterCosts.perGPU')}</p>
                 </div>
               </div>
-              <p className="text-muted-foreground italic">{pricing.notes}</p>
+              <p className="text-muted-foreground italic">{t(`cards:clusterCosts.notes.${selectedProvider}`, { defaultValue: pricing.notes })}</p>
             </>
           ) : (
             // Per-cluster mode - show all providers' rates
@@ -596,7 +604,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                       </span>
                       <span className="flex-1 text-foreground">{p.name}</span>
                       <span className="text-muted-foreground">
-                        CPU ${p.cpu.toFixed(3)} • Mem ${p.memory.toFixed(4)} • GPU ${p.gpu.toFixed(2)}
+                        {t('common:common.cpu')} ${p.cpu.toFixed(3)} • {t('common:common.memory')} ${p.memory.toFixed(4)} • {t('cards:clusterCosts.gpu')} ${p.gpu.toFixed(2)}
                       </span>
                       {count > 0 && (
                         <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400">
@@ -680,8 +688,8 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                         ? 'ring-1 ring-purple-500/50'
                         : ''
                     } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-sm hover:shadow`}
-                    title={`${providerPricing.name}${isOverridden ? ' (manually set)' : pricingMode === 'per-cluster' ? ' (auto-detected)' : ''}\nClick to change • Right-click to reset`}
-                    aria-label={`Change provider pricing for ${cluster.name}: currently ${providerPricing.name}`}
+                    title={`${providerPricing.name}${isOverridden ? ` (${t('cards:clusterCosts.manuallySet')})` : pricingMode === 'per-cluster' ? ` (${t('cards:clusterCosts.autoDetected')})` : ''}\n${t('cards:clusterCosts.clickToChange')}`}
+                    aria-label={t('cards:clusterCosts.changeProviderPricing', { cluster: cluster.name, provider: providerPricing.name })}
                     onClick={(e) => {
                       e.stopPropagation()
                       // Cycle through providers
@@ -733,16 +741,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <div className="flex gap-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Cpu className="w-3 h-3" />
-                  {cluster.cpus} CPUs
+                  {t('cards:clusterCosts.cpuCount', { count: cluster.cpus })}
                 </span>
                 <span className="flex items-center gap-1">
                   <HardDrive className="w-3 h-3" />
-                  {cluster.memory}GB
+                  {t('cards:clusterCosts.memoryGB', { value: cluster.memory })}
                 </span>
                 {cluster.gpus > 0 && (
                   <span className="flex items-center gap-1 text-purple-400">
                     <Cpu className="w-3 h-3" />
-                    {cluster.gpus} GPUs
+                    {t('cards:clusterCosts.gpuCount', { count: cluster.gpus })}
                   </span>
                 )}
               </div>
@@ -767,14 +775,14 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           <div className="flex items-center gap-1.5 flex-wrap">
             {pricingMode === 'uniform' ? (
               <>
-                <span>Based on {pricing.name} rates</span>
+                <span>{t('cards:clusterCosts.basedOnRates', { provider: pricing.name })}</span>
                 {pricing.pricingUrl && (
                   <a
                     href={pricing.pricingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-purple-400 hover:text-purple-300 transition-colors"
-                    title="View official pricing"
+                    title={t('cards:clusterCosts.viewOfficialPricing')}
                   >
                     <ExternalLink className="w-3 h-3" />
                   </a>
@@ -782,7 +790,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               </>
             ) : (
               <>
-                <span>Mixed pricing:</span>
+                <span>{t('cards:clusterCosts.mixedPricing')}</span>
                 {/* Show unique providers used */}
                 {Array.from(new Set(clusterCosts.map(c => c.provider))).map(provider => {
                   const count = clusterCosts.filter(c => c.provider === provider).length
@@ -791,7 +799,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                     <span
                       key={provider}
                       className={`px-1.5 py-0.5 text-[9px] font-medium rounded ${icon.bg} ${icon.color}`}
-                      title={`${count} cluster${count > 1 ? 's' : ''} using ${CLOUD_PRICING[provider].name}`}
+                      title={t('cards:clusterCosts.clustersUsingProvider', { count, provider: CLOUD_PRICING[provider].name })}
                     >
                       {icon.short} ({count})
                     </span>
@@ -802,7 +810,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           </div>
           <span className="flex items-center gap-1">
             <TrendingUp className="w-3 h-3" />
-            {totalItems} clusters
+            {t('cards:clusterCosts.clusterCount', { count: totalItems })}
           </span>
         </div>
         {/* Estimation methodology links */}
@@ -812,9 +820,9 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground/70 hover:text-purple-400 transition-colors"
-            title="Learn about cloud cost management"
+            title={t('cards:clusterCosts.cloudCostMgmt')}
           >
-            FinOps Foundation
+            {t('cards:clusterCosts.finOpsFoundation')}
           </a>
           <span className="text-muted-foreground/30">•</span>
           <a
@@ -822,9 +830,9 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground/70 hover:text-purple-400 transition-colors"
-            title="Learn about Kubernetes resource management"
+            title={t('cards:clusterCosts.k8sResourceMgmt')}
           >
-            K8s Resource Mgmt
+            {t('cards:clusterCosts.k8sResourceMgmtLink')}
           </a>
           <span className="text-muted-foreground/30">•</span>
           <a
@@ -832,9 +840,9 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground/70 hover:text-purple-400 transition-colors"
-            title="OpenCost cost allocation specification"
+            title={t('cards:clusterCosts.openCostSpec')}
           >
-            OpenCost Spec
+            {t('cards:clusterCosts.openCostSpecLink')}
           </a>
         </div>
       </div>

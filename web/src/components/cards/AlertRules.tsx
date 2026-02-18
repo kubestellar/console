@@ -22,10 +22,10 @@ import { useTranslation } from 'react-i18next'
 
 type SortField = 'name' | 'severity' | 'enabled'
 
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'severity' as const, label: 'Severity' },
-  { value: 'enabled' as const, label: 'Status' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'name' as const, labelKey: 'alertRules.sortName' },
+  { value: 'severity' as const, labelKey: 'alertRules.sortSeverity' },
+  { value: 'enabled' as const, labelKey: 'alertRules.sortStatus' },
 ]
 
 const SEVERITY_ORDER: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
@@ -37,7 +37,7 @@ const ALERT_SORT_COMPARATORS = {
 }
 
 export function AlertRulesCard() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('cards')
   const { rules, createRule, updateRule, toggleRule, deleteRule } = useAlertRules()
   const [showEditor, setShowEditor] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)
@@ -83,6 +83,10 @@ export function AlertRulesCard() {
     defaultLimit: 5,
   })
 
+  // Translated sort options
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey as any) as string }))
+
   // Count enabled rules
   const enabledCount = rules.filter(r => r.enabled).length
 
@@ -109,7 +113,7 @@ export function AlertRulesCard() {
 
   const handleDelete = (e: React.MouseEvent, ruleId: string) => {
     e.stopPropagation()
-    if (confirm('Are you sure you want to delete this alert rule?')) {
+    if (confirm(t('alertRules.confirmDelete'))) {
       deleteRule(ruleId)
     }
   }
@@ -146,7 +150,7 @@ export function AlertRulesCard() {
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
-            {enabledCount} active
+            {t('alertRules.activeCount', { count: enabledCount })}
           </span>
         </div>
 
@@ -155,7 +159,7 @@ export function AlertRulesCard() {
           <button
             onClick={handleCreateNew}
             className="p-1 rounded hover:bg-secondary/50 text-purple-400 transition-colors"
-            title="Create new rule"
+            title={t('alertRules.createNewRule')}
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -165,7 +169,7 @@ export function AlertRulesCard() {
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
               sortBy,
-              sortOptions: SORT_OPTIONS,
+              sortOptions,
               onSortChange: (v) => setSortBy(v as SortField),
               sortDirection,
               onSortDirectionChange: setSortDirection,
@@ -179,7 +183,7 @@ export function AlertRulesCard() {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search rules..."
+        placeholder={t('alertRules.searchRules')}
         className="mb-3"
       />
 
@@ -188,13 +192,13 @@ export function AlertRulesCard() {
         {displayedRules.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
             <Bell className="w-8 h-8 mb-2" />
-            <span>No alert rules configured</span>
+            <span>{t('alertRules.noRulesConfigured')}</span>
             <button
               onClick={handleCreateNew}
               className="mt-2 px-3 py-1.5 text-xs rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors flex items-center gap-1"
             >
               <Plus className="w-3 h-3" />
-              Create Rule
+              {t('alertRules.createRule')}
             </button>
           </div>
         ) : (
@@ -250,7 +254,7 @@ export function AlertRulesCard() {
                   <button
                     onClick={e => handleEdit(e, rule)}
                     className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                    title="Edit rule"
+                    title={t('alertRules.editRule')}
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -261,7 +265,7 @@ export function AlertRulesCard() {
                         ? 'hover:bg-secondary/50 text-green-400'
                         : 'hover:bg-secondary/50 text-muted-foreground'
                     }`}
-                    title={rule.enabled ? 'Disable rule' : 'Enable rule'}
+                    title={rule.enabled ? t('alertRules.disableRule') : t('alertRules.enableRule')}
                   >
                     {rule.enabled ? (
                       <Bell className="w-4 h-4" />
@@ -272,7 +276,7 @@ export function AlertRulesCard() {
                   <button
                     onClick={e => handleDelete(e, rule.id)}
                     className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                    title="Delete rule"
+                    title={t('alertRules.deleteRule')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

@@ -9,7 +9,7 @@ import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useTranslation } from 'react-i18next'
 
 export function StorageOverview() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { pvcs, isLoading: pvcsLoading, consecutiveFailures, isFailed } = usePVCs()
 
@@ -95,7 +95,7 @@ export function StorageOverview() {
   if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading storage data...</div>
+        <div className="animate-pulse text-muted-foreground">{t('storageOverview.loading')}</div>
       </div>
     )
   }
@@ -103,8 +103,8 @@ export function StorageOverview() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No storage data</p>
-        <p className="text-xs mt-1">Storage data will appear here</p>
+        <p className="text-sm">{t('storageOverview.noData')}</p>
+        <p className="text-xs mt-1">{t('storageOverview.noDataHint')}</p>
       </div>
     )
   }
@@ -146,13 +146,13 @@ export function StorageOverview() {
         >
           <div className="flex items-center gap-2 mb-1">
             <Database className="w-4 h-4 text-purple-400" />
-            <span className="text-xs text-purple-400">Total Capacity</span>
+            <span className="text-xs text-purple-400">{t('storageOverview.totalCapacity')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">
             {formatStorageStat(stats.totalStorageGB, hasRealData)}
           </span>
           <div className="text-xs text-muted-foreground mt-1">
-            across {formatStat(stats.clustersWithStorage)} cluster{stats.clustersWithStorage !== 1 ? 's' : ''}
+            {t('storageOverview.acrossClusters', { count: stats.clustersWithStorage })}
           </div>
         </div>
 
@@ -167,11 +167,11 @@ export function StorageOverview() {
         >
           <div className="flex items-center gap-2 mb-1">
             <HardDrive className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-blue-400">PVCs</span>
+            <span className="text-xs text-blue-400">{t('storageOverview.pvcs')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{formatStat(stats.totalPVCs)}</span>
           <div className="text-xs text-muted-foreground mt-1">
-            persistent volume claims
+            {t('storageOverview.persistentVolumeClaims')}
           </div>
         </div>
       </div>
@@ -190,7 +190,7 @@ export function StorageOverview() {
         >
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">Bound</span>
+            <span className="text-xs text-green-400">{t('storageOverview.bound')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{formatStat(stats.boundPVCs)}</span>
         </div>
@@ -206,7 +206,7 @@ export function StorageOverview() {
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Clock className="w-3 h-3 text-yellow-400" />
-            <span className="text-xs text-yellow-400">{t('common.pending')}</span>
+            <span className="text-xs text-yellow-400">{t('common:common.pending')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{formatStat(stats.pendingPVCs)}</span>
         </div>
@@ -222,7 +222,7 @@ export function StorageOverview() {
         >
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span className="text-xs text-red-400">{t('common.failed')}</span>
+            <span className="text-xs text-red-400">{t('common:common.failed')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{formatStat(stats.failedPVCs)}</span>
         </div>
@@ -231,12 +231,12 @@ export function StorageOverview() {
       {/* Storage Classes */}
       {stats.storageClasses.length > 0 && (
         <div className="flex-1">
-          <div className="text-xs text-muted-foreground mb-2">Storage Classes</div>
+          <div className="text-xs text-muted-foreground mb-2">{t('storageOverview.storageClasses')}</div>
           <div className="space-y-1.5">
             {stats.storageClasses.slice(0, 5).map(([name, count]) => (
               <div key={name} className="flex items-center justify-between p-2 rounded bg-secondary/30 cursor-default" title={`Storage class "${name}" has ${count} PVC${count !== 1 ? 's' : ''}`}>
                 <span className="text-sm text-foreground truncate" title={name}>{name}</span>
-                <span className="text-xs text-muted-foreground">{count} PVCs</span>
+                <span className="text-xs text-muted-foreground">{t('storageOverview.nPVCs', { count })}</span>
               </div>
             ))}
           </div>
@@ -245,7 +245,7 @@ export function StorageOverview() {
 
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        {pvcsLoading ? 'Loading PVC data...' : `${stats.totalPVCs} PVCs across ${filteredClusters.length} clusters`}
+        {pvcsLoading ? t('storageOverview.loadingPVCs') : t('storageOverview.footer', { pvcs: stats.totalPVCs, clusters: filteredClusters.length })}
       </div>
     </div>
   )

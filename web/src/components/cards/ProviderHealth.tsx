@@ -17,14 +17,15 @@ const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   unknown: 'bg-gray-400',
 }
 
-const STATUS_LABELS: Record<ProviderHealthInfo['status'], string> = {
-  operational: 'Operational',
-  degraded: 'Degraded',
-  down: 'Down',
-  unknown: 'Unknown',
+const STATUS_LABEL_KEYS: Record<ProviderHealthInfo['status'], string> = {
+  operational: 'providerHealth.operational',
+  degraded: 'providerHealth.degraded',
+  down: 'providerHealth.down',
+  unknown: 'common.unknown',
 }
 
 function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; onConfigure?: () => void }) {
+  const { t } = useTranslation(['cards', 'common'])
   return (
     <div className="flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-secondary/30 transition-colors">
       {/* Icon */}
@@ -47,10 +48,11 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
       {/* Status dot + label */}
       <div className="flex items-center gap-1.5 shrink-0">
         <div className={cn('w-2 h-2 rounded-full', STATUS_COLORS[provider.status])} />
-        <span className="text-xs text-muted-foreground">{STATUS_LABELS[provider.status]}</span>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <span className="text-xs text-muted-foreground">{String(t(STATUS_LABEL_KEYS[provider.status] as any))}</span>
         {!provider.configured && (
           <span className="text-[10px] text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full font-medium">
-            No Key
+            {t('providerHealth.noKey')}
           </span>
         )}
       </div>
@@ -60,7 +62,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
         <button
           onClick={(e) => { e.stopPropagation(); onConfigure() }}
           className="shrink-0 p-1 hover:bg-purple-500/20 rounded transition-colors text-muted-foreground hover:text-purple-400"
-          title="Configure in Settings"
+          title={t('providerHealth.configureInSettings')}
         >
           <Settings className="w-3.5 h-3.5" />
         </button>
@@ -73,7 +75,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
           target="_blank"
           rel="noopener noreferrer"
           className="shrink-0 p-1 hover:bg-secondary/50 rounded transition-colors text-muted-foreground hover:text-foreground"
-          title="View status page"
+          title={t('providerHealth.viewStatusPage')}
           onClick={e => e.stopPropagation()}
         >
           <ExternalLink className="w-3.5 h-3.5" />
@@ -84,7 +86,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
 }
 
 export function ProviderHealth() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { aiProviders, cloudProviders, isLoading } = useProviderHealth()
   const navigate = useNavigate()
 
@@ -105,12 +107,12 @@ export function ProviderHealth() {
   if (!hasAny) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-        <p className="text-sm">No providers detected</p>
+        <p className="text-sm">{t('providerHealth.noProviders')}</p>
         <p className="text-xs mt-1">
           <button onClick={goToSettings} className="text-purple-400 hover:underline">
-            Configure AI keys
+            {t('providerHealth.configureAIKeys')}
           </button>
-          {' '}or connect clusters to see provider health
+          {' '}{t('providerHealth.orConnectClusters')}
         </p>
       </div>
     )
@@ -122,7 +124,7 @@ export function ProviderHealth() {
       {aiProviders.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            AI Providers
+            {t('providerHealth.aiProviders')}
           </h4>
           <div className="space-y-0.5">
             {aiProviders.map(p => (
@@ -136,7 +138,7 @@ export function ProviderHealth() {
       {cloudProviders.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Cloud Providers
+            {t('providerHealth.cloudProviders')}
           </h4>
           <div className="space-y-0.5">
             {cloudProviders.map(p => (

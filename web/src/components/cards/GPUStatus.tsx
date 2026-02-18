@@ -30,7 +30,7 @@ interface ClusterGPUStats {
 }
 
 export function GPUStatus({ config }: GPUStatusProps) {
-  const { t } = useTranslation('common')
+  const { t } = useTranslation(['cards', 'common'])
   const cluster = config?.cluster as string | undefined
   const {
     nodes: rawNodes,
@@ -153,8 +153,8 @@ export function GPUStatus({ config }: GPUStatusProps) {
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Activity className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-foreground font-medium">No GPU Data</p>
-          <p className="text-sm text-muted-foreground">GPU metrics not available</p>
+          <p className="text-foreground font-medium">{t('gpuStatus.noGPUData')}</p>
+          <p className="text-sm text-muted-foreground">{t('gpuStatus.gpuMetricsNotAvailable')}</p>
         </div>
       </div>
     )
@@ -166,7 +166,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-            {totalItems} clusters
+            {t('gpuStatus.clusterCount', { count: totalItems })}
           </span>
         </div>
         <CardControlsRow
@@ -200,7 +200,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common.searchGPUClusters')}
+        placeholder={t('common:common.searchGPUClusters')}
         className="mb-2"
       />
 
@@ -211,7 +211,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
           onChange={(e) => setSelectedGpuType(e.target.value)}
           className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-3"
         >
-          <option value="all">{t('selectors.allGpuTypes')}</option>
+          <option value="all">{t('gpuStatus.allGPUTypes')}</option>
           {gpuTypes.map(type => (
             <option key={type} value={type}>{type}</option>
           ))}
@@ -241,14 +241,14 @@ export function GPUStatus({ config }: GPUStatusProps) {
                   stats.utilization > 50 ? 'bg-yellow-500/20 text-yellow-400' :
                   'bg-green-500/20 text-green-400'
                 }`}>
-                  {stats.utilization.toFixed(0)}% used
+                  {t('gpuStatus.usedPercent', { percent: stats.utilization.toFixed(0) })}
                 </span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 gap-2 min-w-0">
               <span className="truncate min-w-0 flex-1">{stats.types.join(', ')}</span>
-              <span className="shrink-0">{stats.used}/{stats.total} GPUs</span>
+              <span className="shrink-0">{stats.used}/{stats.total} {t('gpuStatus.gpus')}</span>
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
               <div

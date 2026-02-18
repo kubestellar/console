@@ -13,7 +13,7 @@ interface ClusterNetworkProps {
 }
 
 export function ClusterNetwork({ config }: ClusterNetworkProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
 
@@ -83,8 +83,8 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No network data</p>
-        <p className="text-xs mt-1">Connect to clusters to see network status</p>
+        <p className="text-sm">{t('cards:clusterNetwork.noNetworkData')}</p>
+        <p className="text-xs mt-1">{t('cards:clusterNetwork.connectToSeeStatus')}</p>
       </div>
     )
   }
@@ -98,14 +98,14 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
             onChange={(e) => setSelectedCluster(e.target.value)}
             className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
           >
-            <option value="">Select cluster...</option>
+            <option value="">{t('cards:clusterNetwork.selectCluster')}</option>
             {clusters.map(c => (
               <option key={c.name} value={c.name}>{c.name}</option>
             ))}
           </select>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          Select a cluster to view network info
+          {t('cards:clusterNetwork.selectClusterToView')}
         </div>
       </div>
     )
@@ -139,19 +139,19 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
         <div className="p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Globe className="w-4 h-4 text-cyan-400" />
-            <span className="text-sm font-medium text-cyan-300">API Server</span>
+            <span className="text-sm font-medium text-cyan-300">{t('cards:clusterNetwork.apiServer')}</span>
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 min-w-0">
-              <span className="text-xs text-muted-foreground shrink-0">Host</span>
+              <span className="text-xs text-muted-foreground shrink-0">{t('cards:clusterNetwork.host')}</span>
               <span className="text-sm text-foreground font-mono truncate">{serverInfo.host}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{t('common.port')}</span>
+              <span className="text-xs text-muted-foreground">{t('common:common.port')}</span>
               <span className="text-sm text-foreground font-mono">{serverInfo.port}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{t('common.protocol')}</span>
+              <span className="text-xs text-muted-foreground">{t('common:common.protocol')}</span>
               <span className="text-sm text-foreground font-mono uppercase">{serverInfo.protocol}</span>
             </div>
           </div>
@@ -164,10 +164,10 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-              <span className="text-sm text-muted-foreground">Connection Status</span>
+              <span className="text-sm text-muted-foreground">{t('cards:clusterNetwork.connectionStatus')}</span>
             </div>
             <span className={`text-sm font-medium ${cluster?.healthy ? 'text-green-400' : 'text-red-400'}`}>
-              {cluster?.healthy ? 'Connected' : 'Disconnected'}
+              {cluster?.healthy ? t('cards:clusterNetwork.connected') : t('cards:clusterNetwork.disconnected')}
             </span>
           </div>
         </div>
@@ -178,7 +178,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <Shield className="w-4 h-4 text-purple-400" />
               <span className="text-sm text-muted-foreground">TLS</span>
             </div>
-            <span className="text-sm font-medium text-green-400">{t('common.enabled')}</span>
+            <span className="text-sm font-medium text-green-400">{t('common:common.enabled')}</span>
           </div>
         </div>
 
@@ -186,7 +186,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-muted-foreground">{t('common.nodes')}</span>
+              <span className="text-sm text-muted-foreground">{t('common:common.nodes')}</span>
             </div>
             <span className="text-sm font-medium text-foreground">{cluster?.nodeCount || 0}</span>
           </div>

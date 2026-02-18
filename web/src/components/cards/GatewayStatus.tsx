@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CheckCircle2, Clock, XCircle, AlertCircle, ExternalLink, Globe, ArrowRight, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -143,10 +144,10 @@ const getStatusColors = (status: GatewayStatusType) => {
 
 type SortByOption = 'name' | 'cluster' | 'status'
 
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'cluster' as const, label: 'Cluster' },
-  { value: 'status' as const, label: 'Status' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'cluster' as const, labelKey: 'common.cluster' },
+  { value: 'status' as const, labelKey: 'common.status' },
 ]
 
 const GATEWAY_SORT_COMPARATORS: Record<SortByOption, (a: Gateway, b: Gateway) => number> = {
@@ -160,7 +161,12 @@ interface GatewayStatusProps {
 }
 
 export function GatewayStatus({ config: _config }: GatewayStatusProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -233,12 +239,12 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card p-6">
         <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-        <p className="text-sm text-muted-foreground mb-4">Failed to load gateway status</p>
+        <p className="text-sm text-muted-foreground mb-4">{t('gatewayStatus.loadFailed')}</p>
         <button
           onClick={() => window.location.reload()}
           className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm"
         >
-          Retry
+          {t('common:common.retry')}
         </button>
       </div>
     )
@@ -250,14 +256,14 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
-            {totalItems} gateways
+            {t('gatewayStatus.nGateways', { count: totalItems })}
           </span>
           <a
             href={K8S_DOCS.gatewayApi}
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="Gateway API Documentation"
+            title={t('gatewayStatus.apiDocs')}
           >
             <ExternalLink className="w-4 h-4" />
           </a>
@@ -295,7 +301,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common.searchGateways')}
+        placeholder={t('common:common.searchGateways')}
         className="mb-3"
       />
 
@@ -303,16 +309,16 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-purple-400 font-medium">Kubernetes Gateway API</p>
+          <p className="text-purple-400 font-medium">{t('gatewayStatus.gatewayApiTitle')}</p>
           <p className="text-muted-foreground">
-            Next-gen ingress API with role-based resource model.{' '}
+            {t('gatewayStatus.gatewayApiDesc')}{' '}
             <a
               href={K8S_DOCS.gatewayApiGettingStarted}
               target="_blank"
               rel="noopener noreferrer"
               className="text-purple-400 hover:underline"
             >
-              Install guide
+              {t('gatewayStatus.installGuide')}
             </a>
           </p>
         </div>
@@ -321,15 +327,15 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center">
-          <p className="text-[10px] text-purple-400">Gateways</p>
+          <p className="text-[10px] text-purple-400">{t('gatewayStatus.gateways')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalGateways}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">Programmed</p>
+          <p className="text-[10px] text-green-400">{t('gatewayStatus.programmed')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.programmedCount}</p>
         </div>
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-          <p className="text-[10px] text-blue-400">Routes</p>
+          <p className="text-[10px] text-blue-400">{t('gatewayStatus.routes')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalRoutes}</p>
         </div>
       </div>
@@ -353,7 +359,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {gw.attachedRoutes} route{gw.attachedRoutes !== 1 ? 's' : ''}
+                  {t('gatewayStatus.nRoutes', { count: gw.attachedRoutes })}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
@@ -403,7 +409,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
 
       {/* Quick install command */}
       <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-[10px] text-muted-foreground font-medium mb-2">Quick Install (CRDs)</p>
+        <p className="text-[10px] text-muted-foreground font-medium mb-2">{t('gatewayStatus.quickInstall')}</p>
         <code className="block p-2 rounded bg-secondary text-[10px] text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
           {K8S_DOCS.gatewayApiInstallCommand}
         </code>
@@ -417,7 +423,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
         >
-          Gateway API Docs
+          {t('gatewayStatus.apiDocsLink')}
         </a>
         <span className="text-muted-foreground/30">|</span>
         <a
@@ -426,7 +432,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
         >
-          Implementations
+          {t('gatewayStatus.implementations')}
         </a>
         <span className="text-muted-foreground/30">|</span>
         <a

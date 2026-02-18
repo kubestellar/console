@@ -156,15 +156,15 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-gray-300">
-            {groups.length} group{groups.length !== 1 ? 's' : ''}
+            {t('cards:clusterGroups.groupCount', { count: groups.length })}
           </span>
           {isPersisted && (
             <span
               className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium rounded bg-green-500/20 text-green-400 border border-green-500/30"
-              title="Groups are stored as Kubernetes CRs"
+              title={t('cards:clusterGroups.storedAsCRs')}
             >
               <Database className="w-2.5 h-2.5" />
-              CR
+              {t('cards:clusterGroups.crBadge')}
             </span>
           )}
         </div>
@@ -339,7 +339,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
             onClick={(e) => { e.stopPropagation(); onRefresh() }}
             disabled={isRefreshing}
             className="p-1 rounded hover:bg-white/10 text-purple-400 hover:text-purple-300 transition-colors"
-            title={group.lastEvaluated ? `Last evaluated: ${relativeTime(group.lastEvaluated)}` : 'Evaluate query'}
+            title={group.lastEvaluated ? t('cards:clusterGroups.lastEvaluated', { time: relativeTime(group.lastEvaluated) }) : t('cards:clusterGroups.evaluateQuery')}
           >
             <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           </button>
@@ -388,7 +388,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
                 </div>
               ))}
               {group.lastEvaluated && (
-                <div className="text-gray-600">Evaluated {relativeTime(group.lastEvaluated)}</div>
+                <div className="text-gray-600">{t('cards:clusterGroups.evaluated', { time: relativeTime(group.lastEvaluated) })}</div>
               )}
             </div>
           )}
@@ -674,9 +674,9 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
             </button>
             {previewClusters !== null && (
               <div className="text-[10px] text-gray-400">
-                {previewClusters.length} cluster{previewClusters.length !== 1 ? 's' : ''} match:
+                {t('cards:clusterGroups.matchCount', { count: previewClusters.length })}
                 <span className="ml-1 text-purple-400">
-                  {previewClusters.length > 0 ? previewClusters.join(', ') : 'none'}
+                  {previewClusters.length > 0 ? previewClusters.join(', ') : t('cards:clusterGroups.none')}
                 </span>
               </div>
             )}
@@ -1127,13 +1127,13 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
             )}
           >
             {isPreviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-            Preview Matches
+            {t('cards:clusterGroups.previewMatches')}
           </button>
           {previewClusters !== null && (
             <div className="text-[10px] text-gray-400">
-              {previewClusters.length} cluster{previewClusters.length !== 1 ? 's' : ''} match:
+              {t('cards:clusterGroups.matchCount', { count: previewClusters.length })}
               <span className="ml-1 text-purple-400">
-                {previewClusters.length > 0 ? previewClusters.join(', ') : 'none'}
+                {previewClusters.length > 0 ? previewClusters.join(', ') : t('cards:clusterGroups.none')}
               </span>
             </div>
           )}

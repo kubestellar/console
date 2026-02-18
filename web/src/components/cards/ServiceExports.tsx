@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CheckCircle2, Clock, XCircle, HelpCircle, AlertCircle, ExternalLink, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import {
@@ -98,10 +99,10 @@ const getStatusColors = (status: ServiceExportStatus) => {
 
 type SortByOption = 'name' | 'status' | 'cluster'
 
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'status' as const, label: 'Status' },
-  { value: 'cluster' as const, label: 'Cluster' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'status' as const, labelKey: 'common.status' },
+  { value: 'cluster' as const, labelKey: 'common.cluster' },
 ]
 
 const statusOrder: Record<string, number> = { Failed: 0, Pending: 1, Ready: 2 }
@@ -117,7 +118,12 @@ interface ServiceExportsProps {
 }
 
 export function ServiceExports({ config: _config }: ServiceExportsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -190,12 +196,12 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card p-6">
         <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-        <p className="text-sm text-muted-foreground mb-4">Failed to load service exports</p>
+        <p className="text-sm text-muted-foreground mb-4">{t('serviceExports.loadFailed')}</p>
         <button
           onClick={() => window.location.reload()}
           className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm"
         >
-          Retry
+          {t('common:common.retry')}
         </button>
       </div>
     )
@@ -211,12 +217,12 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="MCS API Documentation"
+            title={t('serviceExports.mcsApiDocs')}
           >
             <ExternalLink className="w-4 h-4" />
           </a>
           <span className="text-sm font-medium text-muted-foreground">
-            {DEMO_STATS.totalExports} exports
+            {t('serviceExports.nExports', { count: DEMO_STATS.totalExports })}
           </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -252,16 +258,16 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
       <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-blue-400 font-medium">Multi-Cluster Services (MCS)</p>
+          <p className="text-blue-400 font-medium">{t('serviceExports.mcsTitle')}</p>
           <p className="text-muted-foreground">
-            MCS API enables cross-cluster service discovery using ServiceExport/ServiceImport CRDs.{' '}
+            {t('serviceExports.mcsDesc')}{' '}
             <a
               href={K8S_DOCS.mcsApiInstall}
               target="_blank"
               rel="noopener noreferrer"
               className="text-purple-400 hover:underline"
             >
-              Install guide →
+              {t('serviceExports.installGuide')}
             </a>
           </p>
         </div>
@@ -270,15 +276,15 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-          <p className="text-[10px] text-blue-400">Exports</p>
+          <p className="text-[10px] text-blue-400">{t('serviceExports.exports')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalExports}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">{t('common.ready')}</p>
+          <p className="text-[10px] text-green-400">{t('common:common.ready')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.readyCount}</p>
         </div>
         <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-          <p className="text-[10px] text-amber-400">{t('common.pending')}</p>
+          <p className="text-[10px] text-amber-400">{t('common:common.pending')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.pendingCount}</p>
         </div>
       </div>
@@ -287,7 +293,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search exports..."
+        placeholder={t('serviceExports.searchExports')}
         className="mb-3"
       />
 
@@ -311,7 +317,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
                 </div>
                 {exp.targetClusters && exp.targetClusters.length > 0 && (
                   <span className="text-xs text-muted-foreground" title={exp.targetClusters.join(', ')}>
-                    → {exp.targetClusters.length} clusters
+                    → {t('common:common.nClusters', { count: exp.targetClusters.length })}
                   </span>
                 )}
               </div>
@@ -350,7 +356,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
 
       {/* Quick install command */}
       <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-[10px] text-muted-foreground font-medium mb-2">Quick Install</p>
+        <p className="text-[10px] text-muted-foreground font-medium mb-2">{t('serviceExports.quickInstall')}</p>
         <code className="block p-2 rounded bg-secondary text-[10px] text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
           {K8S_DOCS.mcsApiInstallCommand}
         </code>
@@ -364,7 +370,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
         >
-          MCS API Docs
+          {t('serviceExports.mcsApiDocsLink')}
         </a>
         <span className="text-muted-foreground/30">•</span>
         <a
@@ -373,7 +379,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
         >
-          GAMMA Initiative
+          {t('serviceExports.gammaInitiative')}
         </a>
       </div>
     </div>

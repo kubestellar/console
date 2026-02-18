@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { AlertTriangle, AlertCircle, Clock, Scale, CheckCircle } from 'lucide-react'
 import { useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import type { DeploymentIssue } from '../../hooks/useMCP'
@@ -16,25 +17,31 @@ import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'cluster'
 
-const SORT_OPTIONS = [
-  { value: 'status' as const, label: 'Status' },
-  { value: 'name' as const, label: 'Name' },
-  { value: 'cluster' as const, label: 'Cluster' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'status' as const, labelKey: 'common.status' },
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'cluster' as const, labelKey: 'common.cluster' },
 ]
 
 interface DeploymentIssuesProps {
   config?: Record<string, unknown>
 }
 
-const getIssueIcon = (status: string): { icon: typeof AlertCircle; tooltip: string } => {
-  if (status.includes('Unavailable')) return { icon: AlertCircle, tooltip: 'Deployment unavailable - Not enough replicas are ready' }
-  if (status.includes('Progressing')) return { icon: Clock, tooltip: 'Deployment in progress - Rollout is ongoing' }
-  if (status.includes('ReplicaFailure')) return { icon: Scale, tooltip: 'Replica failure - Failed to create or maintain replicas' }
-  return { icon: AlertTriangle, tooltip: 'Deployment issue - Check deployment status' }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getIssueIcon = (status: string, t: (key: any) => string): { icon: typeof AlertCircle; tooltip: string } => {
+  if (status.includes('Unavailable')) return { icon: AlertCircle, tooltip: t('deploymentIssues.tooltipUnavailable') }
+  if (status.includes('Progressing')) return { icon: Clock, tooltip: t('deploymentIssues.tooltipProgressing') }
+  if (status.includes('ReplicaFailure')) return { icon: Scale, tooltip: t('deploymentIssues.tooltipReplicaFailure') }
+  return { icon: AlertTriangle, tooltip: t('deploymentIssues.tooltipGeneric') }
 }
 
 function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
   const {
@@ -123,8 +130,8 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
     return (
       <CardEmptyState
         icon={CheckCircle}
-        title="All deployments healthy"
-        message="No issues detected"
+        title={t('deploymentIssues.allHealthy')}
+        message={t('deploymentIssues.noIssuesDetected')}
         variant="success"
       />
     )
@@ -133,8 +140,8 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No deployment issues</p>
-        <p className="text-xs mt-1">All deployments are healthy</p>
+        <p className="text-sm">{t('deploymentIssues.noIssues')}</p>
+        <p className="text-xs mt-1">{t('deploymentIssues.allHealthy')}</p>
       </div>
     )
   }
@@ -144,8 +151,8 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${rawIssues.length} deployments with issues`}>
-            {rawIssues.length} issues
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={t('deploymentIssues.issuesTitle', { count: rawIssues.length })}>
+            {t('deploymentIssues.nIssues', { count: rawIssues.length })}
           </span>
         </div>
         <CardControlsRow
@@ -179,14 +186,14 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common.searchIssues')}
+        placeholder={t('common:common.searchIssues')}
         className="mb-3"
       />
 
       {/* Issues list */}
       <div className="flex-1 space-y-3 overflow-y-auto min-h-card-content">
         {issues.map((issue, idx) => {
-          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.reason || '')
+          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.reason || '', t)
 
           return (
             <CardListItem
@@ -194,7 +201,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
               onClick={() => handleDeploymentClick(issue)}
               bgClass="bg-red-500/10"
               borderClass="border-red-500/20"
-              title={`Click to view details for ${issue.name}`}
+              title={t('deploymentIssues.clickToView', { name: issue.name })}
             >
               <div className="flex items-start gap-3 group">
                 <div className="p-2 rounded-lg bg-red-500/20 flex-shrink-0" title={iconTooltip}>
@@ -210,8 +217,8 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
                     <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400" title={`Issue: ${issue.reason || 'Unknown'}`}>
                       {issue.reason || 'Issue'}
                     </span>
-                    <span className="text-xs text-muted-foreground" title={`${issue.readyReplicas} of ${issue.replicas} replicas are ready`}>
-                      {issue.readyReplicas}/{issue.replicas} ready
+                    <span className="text-xs text-muted-foreground" title={t('deploymentIssues.replicasReady', { ready: issue.readyReplicas, total: issue.replicas })}>
+                      {issue.readyReplicas}/{issue.replicas} {t('common:common.ready')}
                     </span>
                   </div>
                   {issue.message && (
@@ -254,7 +261,6 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
 }
 
 export function DeploymentIssues(props: DeploymentIssuesProps) {
-  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="DeploymentIssues">
       <DeploymentIssuesInternal {...props} />

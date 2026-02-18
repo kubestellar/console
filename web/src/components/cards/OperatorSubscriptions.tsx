@@ -26,11 +26,11 @@ interface OperatorSubscriptionsProps {
 
 type SortByOption = 'pending' | 'name' | 'approval' | 'channel'
 
-const SORT_OPTIONS = [
-  { value: 'pending' as const, label: 'Pending First' },
-  { value: 'name' as const, label: 'Name' },
-  { value: 'approval' as const, label: 'Approval' },
-  { value: 'channel' as const, label: 'Channel' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'pending' as const, labelKey: 'operatorSubscriptions.pendingFirst' },
+  { value: 'name' as const, labelKey: 'common.name' },
+  { value: 'approval' as const, labelKey: 'operatorSubscriptions.approval' },
+  { value: 'channel' as const, labelKey: 'operatorSubscriptions.channel' },
 ]
 
 const SUBSCRIPTION_SORT_COMPARATORS = {
@@ -49,7 +49,12 @@ const FILTER_CONFIG = {
 }
 
 export function OperatorSubscriptions({ config: _config }: OperatorSubscriptionsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    [t]
+  )
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
@@ -134,8 +139,8 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No subscriptions</p>
-        <p className="text-xs mt-1">Operator subscriptions will appear here</p>
+        <p className="text-sm">{t('operatorSubscriptions.noSubscriptions')}</p>
+        <p className="text-xs mt-1">{t('operatorSubscriptions.noSubscriptionsHint')}</p>
       </div>
     )
   }
@@ -147,7 +152,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
         <div className="flex items-center gap-2">
           {pendingCount > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-              {pendingCount} pending
+              {t('operatorSubscriptions.nPending', { count: pendingCount })}
             </span>
           )}
         </div>
@@ -186,11 +191,11 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
               <ClusterBadge cluster={localClusterFilter[0]} />
             ) : localClusterFilter.length > 1 ? (
               <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400">
-                {localClusterFilter.length} clusters selected
+                {t('operatorSubscriptions.nClustersSelected', { count: localClusterFilter.length })}
               </span>
             ) : (
               <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400">
-                All Clusters ({availableClusters.length})
+                {t('operatorSubscriptions.allClusters', { count: availableClusters.length })}
               </span>
             )}
           </div>
@@ -199,7 +204,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           <CardSearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search subscriptions..."
+            placeholder={t('operatorSubscriptions.searchSubscriptions')}
             className="mb-4"
           />
 
@@ -207,16 +212,16 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           <div className="flex gap-2 mb-4 text-xs">
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400">
               <Settings className="w-3 h-3" />
-              <span>{autoCount} Auto</span>
+              <span>{t('operatorSubscriptions.nAuto', { count: autoCount })}</span>
             </div>
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400">
               <Clock className="w-3 h-3" />
-              <span>{manualCount} Manual</span>
+              <span>{t('operatorSubscriptions.nManual', { count: manualCount })}</span>
             </div>
             {pendingCount > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/10 text-orange-400">
                 <AlertTriangle className="w-3 h-3" />
-                <span>{pendingCount} Pending</span>
+                <span>{t('operatorSubscriptions.nPending', { count: pendingCount })}</span>
               </div>
             )}
           </div>
@@ -255,7 +260,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">
                   <div className="flex items-center justify-between">
-                    <span>Channel: {sub.channel}</span>
+                    <span>{t('operatorSubscriptions.channelLabel')}: {sub.channel}</span>
                     <span>{sub.namespace}</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -264,7 +269,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
                   {sub.pendingUpgrade && (
                     <div className="flex items-center gap-1 text-orange-400 mt-1">
                       <AlertTriangle className="w-3 h-3" />
-                      <span>Upgrade pending: {sub.pendingUpgrade}</span>
+                      <span>{t('operatorSubscriptions.upgradePending')}: {sub.pendingUpgrade}</span>
                     </div>
                   )}
                 </div>
@@ -284,7 +289,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} subscription{totalItems !== 1 ? 's' : ''} {localClusterFilter.length === 1 ? `on ${localClusterFilter[0]}` : `across ${availableClusters.length} cluster${availableClusters.length !== 1 ? 's' : ''}`}
+            {t('operatorSubscriptions.footer', { count: totalItems, scope: localClusterFilter.length === 1 ? localClusterFilter[0] : t('operatorSubscriptions.nClustersScope', { count: availableClusters.length }) })}
           </div>
         </>
       )}

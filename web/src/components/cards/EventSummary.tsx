@@ -9,7 +9,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
 export function EventSummary() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const {
     events,
     isLoading,
@@ -90,8 +90,8 @@ export function EventSummary() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No events</p>
-        <p className="text-xs mt-1">Cluster events will appear here</p>
+        <p className="text-sm">{t('eventSummary.noEvents')}</p>
+        <p className="text-xs mt-1">{t('eventSummary.noEventsHint')}</p>
       </div>
     )
   }
@@ -103,7 +103,7 @@ export function EventSummary() {
       {/* Header controls */}
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
-          {total} event{total !== 1 ? 's' : ''}
+          {t('eventSummary.nEvents', { count: total })}
         </span>
         <div className="flex items-center gap-2">
           {/* Cluster filter */}
@@ -114,13 +114,13 @@ export function EventSummary() {
                 className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 transition-colors"
               >
                 <Server className="w-3 h-3" />
-                {localClusterFilter.length > 0 ? `${localClusterFilter.length} cluster${localClusterFilter.length > 1 ? 's' : ''}` : 'All'}
+                {localClusterFilter.length > 0 ? t('common:common.nClusters', { count: localClusterFilter.length }) : t('common:common.all')}
                 <ChevronDown className="w-3 h-3" />
               </button>
               {showClusterFilter && (
                 <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[160px]">
                   <button onClick={clearClusterFilter} className="w-full text-left text-xs px-2 py-1 rounded hover:bg-secondary text-muted-foreground">
-                    All Clusters
+                    {t('common:common.allClusters')}
                   </button>
                   {availableClusters.map(cluster => (
                     <button
@@ -150,8 +150,8 @@ export function EventSummary() {
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-xs font-medium text-red-400">Error loading events</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Failed to fetch event data ({consecutiveFailures} attempts)</p>
+            <p className="text-xs font-medium text-red-400">{t('eventSummary.errorLoading')}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{t('eventSummary.fetchFailed', { count: consecutiveFailures })}</p>
           </div>
         </div>
       )}
@@ -162,14 +162,14 @@ export function EventSummary() {
           <AlertTriangle className="w-4 h-4 text-yellow-400" />
           <div>
             <div className="text-lg font-bold text-yellow-400">{summary.warnings}</div>
-            <div className="text-xs text-muted-foreground">Warnings</div>
+            <div className="text-xs text-muted-foreground">{t('common:common.warnings')}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
           <CheckCircle2 className="w-4 h-4 text-green-400" />
           <div>
             <div className="text-lg font-bold text-green-400">{summary.normal}</div>
-            <div className="text-xs text-muted-foreground">{t('common.normal')}</div>
+            <div className="text-xs text-muted-foreground">{t('common:common.normal')}</div>
           </div>
         </div>
       </div>
@@ -177,7 +177,7 @@ export function EventSummary() {
       {/* Top reasons */}
       {summary.topReasons.length > 0 && (
         <div>
-          <div className="text-xs font-medium text-muted-foreground mb-2">Top Reasons</div>
+          <div className="text-xs font-medium text-muted-foreground mb-2">{t('eventSummary.topReasons')}</div>
           <div className="space-y-1">
             {summary.topReasons.map(([reason, count]) => (
               <div key={reason} className="flex items-center justify-between text-xs">
@@ -200,7 +200,7 @@ export function EventSummary() {
       {/* Cluster distribution */}
       {summary.topClusters.length > 1 && (
         <div>
-          <div className="text-xs font-medium text-muted-foreground mb-2">By Cluster</div>
+          <div className="text-xs font-medium text-muted-foreground mb-2">{t('eventSummary.byCluster')}</div>
           <div className="space-y-1">
             {summary.topClusters.map(([cluster, count]) => (
               <div key={cluster} className="flex items-center justify-between text-xs">
@@ -223,7 +223,7 @@ export function EventSummary() {
       {total === 0 && (
         <div className="text-center py-4">
           <Activity className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-          <p className="text-sm text-muted-foreground">No events</p>
+          <p className="text-sm text-muted-foreground">{t('eventSummary.noEvents')}</p>
         </div>
       )}
     </div>

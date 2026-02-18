@@ -27,11 +27,11 @@ interface ArgoCDApplicationsProps {
 
 type SortByOption = 'syncStatus' | 'healthStatus' | 'name' | 'namespace'
 
-const SORT_OPTIONS = [
-  { value: 'syncStatus' as const, label: 'Sync Status' },
-  { value: 'healthStatus' as const, label: 'Health' },
-  { value: 'name' as const, label: 'Name' },
-  { value: 'namespace' as const, label: 'Namespace' },
+const SORT_OPTIONS_KEYS = [
+  { value: 'syncStatus' as const, labelKey: 'argoCDApplications.sortSyncStatus' },
+  { value: 'healthStatus' as const, labelKey: 'argoCDApplications.sortHealth' },
+  { value: 'name' as const, labelKey: 'argoCDApplications.sortName' },
+  { value: 'namespace' as const, labelKey: 'argoCDApplications.sortNamespace' },
 ]
 
 const syncStatusConfig = {
@@ -59,7 +59,7 @@ const ARGO_SORT_COMPARATORS = {
 }
 
 function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('cards')
   const {
     applications: allApps,
     isLoading,
@@ -75,6 +75,10 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
     isFailed,
     consecutiveFailures,
   })
+
+  // Translated sort options
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey as any) as string }))
 
   // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
@@ -157,8 +161,8 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No ArgoCD applications</p>
-        <p className="text-xs mt-1">Deploy applications with ArgoCD to see them here</p>
+        <p className="text-sm">{t('argoCDApplications.noApplications')}</p>
+        <p className="text-xs mt-1">{t('argoCDApplications.deployWithArgoCD')}</p>
       </div>
     )
   }
@@ -169,7 +173,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-            {totalItems} apps
+            {t('argoCDApplications.appsCount', { count: totalItems })}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -192,7 +196,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
               sortBy,
-              sortOptions: SORT_OPTIONS,
+              sortOptions,
               onSortChange: (v) => setSortBy(v as SortByOption),
               sortDirection,
               onSortDirectionChange: setSortDirection,
@@ -203,7 +207,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-                title="ArgoCD Documentation"
+                title={t('argoCDApplications.argocdDocumentation')}
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
@@ -217,11 +221,11 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-orange-400 font-medium">ArgoCD Integration</p>
+          <p className="text-orange-400 font-medium">{t('argoCDApplications.argocdIntegration')}</p>
           <p className="text-muted-foreground">
-            Install ArgoCD to manage GitOps workflows.{' '}
+            {t('argoCDApplications.installArgoCD')}{' '}
             <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
-              Install guide →
+              {t('argoCDApplications.installGuide')}
             </a>
           </p>
         </div>
@@ -231,7 +235,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       <CardSearchInput
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Search applications..."
+        placeholder={t('argoCDApplications.searchApplications')}
         className="mb-3"
       />
 
@@ -240,34 +244,34 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              onClick={() => setSelectedFilter('all')}>
           <p className="text-lg font-bold text-green-400">{stats.synced}</p>
-          <p className="text-xs text-muted-foreground">Synced</p>
+          <p className="text-xs text-muted-foreground">{t('argoCDApplications.synced')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-yellow-500/10 cursor-pointer hover:bg-yellow-500/20"
              onClick={() => setSelectedFilter('outOfSync')}>
           <p className="text-lg font-bold text-yellow-400">{stats.outOfSync}</p>
-          <p className="text-xs text-muted-foreground">Out of Sync</p>
+          <p className="text-xs text-muted-foreground">{t('argoCDApplications.outOfSync')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              onClick={() => setSelectedFilter('all')}>
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
-          <p className="text-xs text-muted-foreground">{t('common.healthy')}</p>
+          <p className="text-xs text-muted-foreground">{t('argoCDApplications.healthy')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-red-500/10 cursor-pointer hover:bg-red-500/20"
              onClick={() => setSelectedFilter('unhealthy')}>
           <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>
-          <p className="text-xs text-muted-foreground">{t('common.unhealthy')}</p>
+          <p className="text-xs text-muted-foreground">{t('argoCDApplications.unhealthy')}</p>
         </div>
       </div>
 
       {/* Filter indicator */}
       {selectedFilter !== 'all' && (
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs text-muted-foreground">Showing:</span>
+          <span className="text-xs text-muted-foreground">{t('argoCDApplications.showing')}:</span>
           <button
             onClick={() => setSelectedFilter('all')}
             className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 flex items-center gap-1"
           >
-            {selectedFilter === 'outOfSync' ? 'Out of Sync' : 'Unhealthy'}
+            {selectedFilter === 'outOfSync' ? t('argoCDApplications.outOfSync') : t('argoCDApplications.unhealthy')}
             <XCircle className="w-3 h-3" />
           </button>
         </div>
@@ -277,7 +281,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
         {applications.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            No applications match the current filters
+            {t('argoCDApplications.noMatchingApplications')}
           </div>
         ) : (
           applications.map((app, idx) => {
@@ -296,7 +300,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
                   lastSynced: app.lastSynced,
                 })}
                 className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group"
-                title={`Click to view ${app.name} details`}
+                title={t('argoCDApplications.clickToView', { name: app.name })}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -336,7 +340,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 }
 
 export function ArgoCDApplications(props: ArgoCDApplicationsProps) {
-  const { t: _t } = useTranslation()
+  const { t: _t } = useTranslation('cards')
   return (
     <DynamicCardErrorBoundary cardId="ArgoCDApplications">
       <ArgoCDApplicationsInternal {...props} />

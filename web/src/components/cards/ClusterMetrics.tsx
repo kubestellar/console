@@ -8,22 +8,22 @@ import { useTranslation } from 'react-i18next'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
-const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number; intervalMs: number }[] = [
-  { value: '15m', label: '15 min', points: 15, intervalMs: 60000 },
-  { value: '1h', label: '1 hour', points: 20, intervalMs: 180000 },
-  { value: '6h', label: '6 hours', points: 24, intervalMs: 900000 },
-  { value: '24h', label: '24 hours', points: 24, intervalMs: 3600000 },
+const TIME_RANGE_KEYS: { value: TimeRange; labelKey: string; points: number; intervalMs: number }[] = [
+  { value: '15m', labelKey: 'clusterMetrics.timeRange15m', points: 15, intervalMs: 60000 },
+  { value: '1h', labelKey: 'clusterMetrics.timeRange1h', points: 20, intervalMs: 180000 },
+  { value: '6h', labelKey: 'clusterMetrics.timeRange6h', points: 24, intervalMs: 900000 },
+  { value: '24h', labelKey: 'clusterMetrics.timeRange24h', points: 24, intervalMs: 3600000 },
 ]
 
 
 type MetricType = 'cpu' | 'memory' | 'pods' | 'nodes'
 type ChartMode = 'total' | 'per-cluster'
 
-const metricConfig = {
-  cpu: { label: 'CPU Cores', color: '#9333ea', unit: '', baseValue: 65, variance: 30 },
-  memory: { label: 'Memory', color: '#3b82f6', unit: ' GB', baseValue: 72, variance: 20 },
-  pods: { label: 'Pods', color: '#10b981', unit: '', baseValue: 150, variance: 100 },
-  nodes: { label: 'Nodes', color: '#f59e0b', unit: '', baseValue: 10, variance: 5 },
+const metricConfigBase = {
+  cpu: { labelKey: 'clusterMetrics.cpuCores', color: '#9333ea', unit: '', baseValue: 65, variance: 30 },
+  memory: { labelKey: 'clusterMetrics.memory', color: '#3b82f6', unit: ' GB', baseValue: 72, variance: 20 },
+  pods: { labelKey: 'clusterMetrics.pods', color: '#10b981', unit: '', baseValue: 150, variance: 100 },
+  nodes: { labelKey: 'clusterMetrics.nodes', color: '#f59e0b', unit: '', baseValue: 10, variance: 5 },
 }
 
 interface ClusterMetricValues {
@@ -48,11 +48,27 @@ const STORAGE_KEY = 'cluster-metrics-history'
 const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes TTL
 
 export function ClusterMetrics() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { isLoading, deduplicatedClusters } = useClusters()
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cpu')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [chartMode, setChartMode] = useState<ChartMode>('total')
+
+  // Build translated metric config and time range options
+  const metricConfig = useMemo(() => {
+    const result: Record<MetricType, { label: string; color: string; unit: string; baseValue: number; variance: number }> = {} as typeof result
+    for (const [key, val] of Object.entries(metricConfigBase)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      result[key as MetricType] = { ...val, label: t(val.labelKey as any) as string }
+    }
+    return result
+  }, [t])
+
+  const TIME_RANGE_OPTIONS = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TIME_RANGE_KEYS.map(opt => ({ ...opt, label: t(opt.labelKey as any) as string })),
+    [t]
+  )
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
@@ -278,7 +294,7 @@ export function ClusterMetrics() {
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as TimeRange)}
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground cursor-pointer"
-            title="Select time range"
+            title={t('cards:clusterMetrics.selectTimeRange')}
           >
             {TIME_RANGE_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -308,10 +324,10 @@ export function ClusterMetrics() {
                   ? 'bg-purple-500/20 text-purple-400'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
-              title="Show aggregated total"
+              title={t('cards:clusterMetrics.showTotal')}
             >
               <TrendingUp className="w-3 h-3" />
-              Total
+              {t('cards:clusterMetrics.total')}
             </button>
             <button
               onClick={() => setChartMode('per-cluster')}
@@ -320,10 +336,10 @@ export function ClusterMetrics() {
                   ? 'bg-purple-500/20 text-purple-400'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
-              title="Show per-cluster comparison"
+              title={t('cards:clusterMetrics.showPerCluster')}
             >
               <Layers className="w-3 h-3" />
-              Per Cluster
+              {t('cards:clusterMetrics.perCluster')}
             </button>
           </div>
         )}
@@ -334,13 +350,13 @@ export function ClusterMetrics() {
       <div className="flex-1 min-h-[160px]">
         {clusters.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            No clusters selected
+            {t('cards:clusterMetrics.noClustersSelected')}
           </div>
         ) : data.length < 2 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm gap-2">
             <Clock className="w-5 h-5" />
-            <span>{data.length === 0 ? 'Collecting data...' : 'Waiting for next data point...'}</span>
-            <span className="text-xs text-muted-foreground/70">Chart will appear after collecting more data</span>
+            <span>{data.length === 0 ? t('cards:clusterMetrics.collectingData') : t('cards:clusterMetrics.waitingForData')}</span>
+            <span className="text-xs text-muted-foreground/70">{t('cards:clusterMetrics.chartWillAppear')}</span>
           </div>
         ) : chartMode === 'per-cluster' && perClusterData.series.length > 0 ? (
           <MultiSeriesChart
@@ -364,19 +380,19 @@ export function ClusterMetrics() {
       {data.length > 0 && (
         <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
           <div>
-            <p className="text-xs text-muted-foreground">Min</p>
+            <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.min')}</p>
             <p className="text-sm font-medium text-foreground">
               {Math.round(Math.min(...data.map((d) => d.value)))}{config.unit}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Avg</p>
+            <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.avg')}</p>
             <p className="text-sm font-medium text-foreground">
               {Math.round(data.reduce((a, b) => a + b.value, 0) / data.length)}{config.unit}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Max</p>
+            <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.max')}</p>
             <p className="text-sm font-medium text-foreground">
               {Math.round(Math.max(...data.map((d) => d.value)))}{config.unit}
             </p>
