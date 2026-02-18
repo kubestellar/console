@@ -1,4 +1,4 @@
-import { test, type Page } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
@@ -965,5 +965,12 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
   console.log(`[CacheTest] Cache hit rate: ${Math.round(cacheHitRate * 100)}%`)
   if (avgTtc !== null) {
     console.log(`[CacheTest] Avg warm time-to-content: ${Math.round(avgTtc)}ms`)
+  }
+
+  // ── Assertions ──────────────────────────────────────────────────────────
+  expect(cacheHitRate, `Cache hit rate ${Math.round(cacheHitRate * 100)}% should be >= 80%`).toBeGreaterThanOrEqual(0.80)
+  expect(failCount, `${failCount} cache failures found`).toBe(0)
+  if (avgTtc !== null) {
+    expect(avgTtc, `Avg warm time-to-content ${Math.round(avgTtc)}ms should be < 500ms`).toBeLessThan(500)
   }
 })

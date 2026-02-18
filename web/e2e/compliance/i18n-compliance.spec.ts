@@ -266,6 +266,39 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
       `${uniqueDupes.length} shared top-level keys across namespaces (may be intentional)`, 'info')
   }
 
+  // Check for plural rules — keys with {{count}} should have _one/_other pairs
+  const pluralKeys: string[] = []
+  const missingPluralForms: string[] = []
+  for (const [ns, keys] of Object.entries(allNamespaceKeys)) {
+    const filePath = path.join(localeDir, `${ns}.json`)
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+    for (const key of keys) {
+      const parts = key.split('.')
+      let val: unknown = data
+      for (const p of parts) val = (val as Record<string, unknown>)?.[p]
+      if (typeof val === 'string' && val.includes('{{count}}')) {
+        pluralKeys.push(`${ns}:${key}`)
+        const baseKey = key.replace(/_one$|_other$|_zero$|_two$|_few$|_many$/, '')
+        const hasOne = keys.includes(`${baseKey}_one`)
+        const hasOther = keys.includes(`${baseKey}_other`)
+        if (!hasOne && !hasOther && !key.endsWith('_one') && !key.endsWith('_other')) {
+          missingPluralForms.push(`${ns}:${key}`)
+        }
+      }
+    }
+  }
+
+  if (pluralKeys.length === 0) {
+    addCheck('Locale Files', 'Plural rules', 'info',
+      'No keys with {{count}} interpolation found', 'info')
+  } else if (missingPluralForms.length === 0) {
+    addCheck('Locale Files', 'Plural rules', 'pass',
+      `${pluralKeys.length} plural keys — all have _one/_other forms`, 'medium')
+  } else {
+    addCheck('Locale Files', 'Plural rules', 'warn',
+      `${missingPluralForms.length}/${pluralKeys.length} plural keys missing _one/_other: ${missingPluralForms.slice(0, 5).join(', ')}`, 'medium')
+  }
+
   // ── Phase 2: i18n config validation ──────────────────────────────────
   console.log('[i18n] Phase 2: i18n config validation')
 
@@ -519,7 +552,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
   // ── Phase 6: Navigate multiple pages to expand coverage ──────────────
   console.log('[i18n] Phase 6: Multi-page navigation checks')
 
-  const pages = ['/clusters', '/settings']
+  const pages = ['/clusters', '/settings', '/compute', '/security', '/deployments', '/gpu-reservations', '/helm']
   let pagesWithRawKeys = 0
 
   for (const pagePath of pages) {
@@ -622,6 +655,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
   console.log(`[i18n] Summary: ${path.join(outDir, 'i18n-compliance-summary.md')}`)
   console.log(`[i18n] Pass: ${passCount}, Fail: ${failCount}, Warn: ${warnCount}, Skip: ${skipCount}`)
 
-  // Fail the test only on critical issues
+  // Fail the test only on critical or high-severity issues
   expect(criticalFails, `${criticalFails} critical i18n failures found`).toBe(0)
+  expect(highFails, `${highFails} high-severity i18n failures found`).toBe(0)
 })

@@ -1,4 +1,4 @@
-import { test, type Page } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
@@ -1040,6 +1040,42 @@ test.afterAll(async () => {
     lines.push('')
   }
 
+  // Percentile reporting
+  function percentile(values: number[], p: number): number {
+    if (values.length === 0) return -1
+    const sorted = [...values].sort((a, b) => a - b)
+    const idx = Math.ceil((p / 100) * sorted.length) - 1
+    return sorted[Math.max(0, idx)]
+  }
+
+  const validMetrics = navReport.metrics.filter((m) => m.cardsFound > 0 && m.totalMs > 0)
+  const totalTimes = validMetrics.map((m) => m.totalMs)
+
+  if (totalTimes.length > 0) {
+    lines.push('## Latency Percentiles')
+    lines.push('')
+    lines.push(`- **p50**: ${percentile(totalTimes, 50)}ms`)
+    lines.push(`- **p90**: ${percentile(totalTimes, 90)}ms`)
+    lines.push(`- **p95**: ${percentile(totalTimes, 95)}ms`)
+    lines.push(`- **p99**: ${percentile(totalTimes, 99)}ms`)
+    lines.push('')
+  }
+
   fs.writeFileSync(path.join(outDir, 'nav-summary.md'), lines.join('\n'))
   console.log(lines.join('\n'))
+
+  // ── Navigation threshold assertions ───────────────────────────────────
+  const warmMetrics = navReport.metrics.filter(
+    (m) => m.scenario === 'warm-nav' && m.cardsFound > 0 && m.totalMs > 0
+  )
+  if (warmMetrics.length > 0) {
+    const avgWarmTotal = Math.round(
+      warmMetrics.reduce((s, m) => s + m.totalMs, 0) / warmMetrics.length
+    )
+    console.log(`[Nav] warm-nav avg total: ${avgWarmTotal}ms (threshold: 3000ms)`)
+    expect(
+      avgWarmTotal,
+      `warm-nav avg total ${avgWarmTotal}ms exceeds 3000ms threshold`
+    ).toBeLessThan(3000)
+  }
 })

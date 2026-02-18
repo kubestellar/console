@@ -691,9 +691,107 @@ test('security compliance — frontend security audit', async ({ page }) => {
   }
 
   // ══════════════════════════════════════════════════════════════════════
+  // Category 11: Multi-Page DOM Security
+  // ══════════════════════════════════════════════════════════════════════
+  console.log('[Security] Phase 13: Multi-page DOM security checks')
+
+  const additionalPages = ['/clusters', '/settings']
+  for (const pagePath of additionalPages) {
+    await page.goto(`http://localhost:5174${pagePath}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(2000)
+
+    const pageSecurityCheck = await page.evaluate((route: string) => {
+      const issues: string[] = []
+
+      // Inline event handlers
+      const inlineHandlers = document.querySelectorAll('[onclick],[onload],[onerror],[onmouseover]')
+      if (inlineHandlers.length > 0) {
+        issues.push(`${inlineHandlers.length} inline event handlers`)
+      }
+
+      // javascript: hrefs
+      const jsLinks = document.querySelectorAll('a[href^="javascript:"]')
+      if (jsLinks.length > 0) {
+        issues.push(`${jsLinks.length} javascript: links`)
+      }
+
+      // Sensitive data in DOM (tokens, passwords, API keys)
+      const bodyText = document.body.innerText || ''
+      const sensitivePatterns = [
+        /Bearer\s+[A-Za-z0-9\-._~+/]+=*/,
+        /eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+/,  // JWT
+        /password['"]\s*:\s*['"][^'"]+/i,
+      ]
+      for (const pattern of sensitivePatterns) {
+        if (pattern.test(bodyText)) {
+          issues.push(`Sensitive data pattern found: ${pattern.source.substring(0, 30)}...`)
+        }
+      }
+
+      return { route, issues }
+    }, pagePath)
+
+    if (pageSecurityCheck.issues.length === 0) {
+      addCheck('MultiPageDOM', `DOM security on ${pagePath}`, 'pass',
+        `No DOM security issues on ${pagePath}`, 'high')
+    } else {
+      addCheck('MultiPageDOM', `DOM security on ${pagePath}`, 'fail',
+        `Issues on ${pagePath}: ${pageSecurityCheck.issues.join('; ')}`, 'high')
+    }
+  }
+
+  // Navigate back to main dashboard for remaining checks
+  await page.goto('http://localhost:5174/', { waitUntil: 'networkidle' })
+  await page.waitForTimeout(1000)
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Category 12: Auth Bypass Check
+  // ══════════════════════════════════════════════════════════════════════
+  console.log('[Security] Phase 14: Auth bypass check')
+
+  const noAuthContext = await page.context().browser()!.newContext()
+  const noAuthPage = await noAuthContext.newPage()
+
+  // Mock all API calls to return 401
+  await noAuthPage.route('**/api/**', (route) => {
+    route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthorized"}' })
+  })
+
+  try {
+    await noAuthPage.goto('http://localhost:5174/clusters', { waitUntil: 'networkidle', timeout: 10000 })
+    await noAuthPage.waitForTimeout(2000)
+
+    // Check if protected content is visible
+    const protectedContent = await noAuthPage.evaluate(() => {
+      const body = document.body.innerText || ''
+      const protectedPatterns = [
+        /\d+ (pods?|nodes?|deployments?|namespaces?)/i,
+        /CPU:|Memory:/i,
+        /Ready|NotReady/i,
+      ]
+      const found = protectedPatterns.filter((p) => p.test(body))
+      return { bodyLength: body.length, protectedPatternsFound: found.length }
+    })
+
+    if (protectedContent.protectedPatternsFound === 0) {
+      addCheck('AuthBypass', 'Unauthenticated access blocked', 'pass',
+        'No protected content visible without authentication', 'critical')
+    } else {
+      addCheck('AuthBypass', 'Unauthenticated access blocked', 'fail',
+        `${protectedContent.protectedPatternsFound} protected content patterns visible without auth`, 'critical')
+    }
+  } catch {
+    addCheck('AuthBypass', 'Unauthenticated access blocked', 'pass',
+      'Page failed to load without auth (expected behavior)', 'critical')
+  } finally {
+    await noAuthPage.close()
+    await noAuthContext.close()
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
   // Generate Report
   // ══════════════════════════════════════════════════════════════════════
-  console.log('[Security] Phase 13: Generating report')
+  console.log('[Security] Phase 15: Generating report')
 
   const passCount = checks.filter((c) => c.status === 'pass').length
   const failCount = checks.filter((c) => c.status === 'fail').length
@@ -726,6 +824,7 @@ test('security compliance — frontend security audit', async ({ page }) => {
     console.log(`[Security] CRITICAL FAILURES: ${criticalFails}`)
   }
 
-  // Fail the test if any critical security issues found
+  // Fail the test if any critical or high-severity security issues found
   expect(criticalFails, `${criticalFails} critical security failures found`).toBe(0)
+  expect(highFails, `${highFails} high-severity security failures found`).toBe(0)
 })

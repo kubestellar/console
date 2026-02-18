@@ -1,4 +1,4 @@
-import { test, type Page } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
@@ -46,7 +46,7 @@ const DASHBOARDS = [
 ]
 
 // Max cards to measure per dashboard (prevent very long tests)
-const MAX_CARDS_PER_DASHBOARD = 20
+const MAX_CARDS_PER_DASHBOARD = 30
 // How long to wait for a card to show content before marking as timed out
 const CARD_CONTENT_TIMEOUT = 25_000
 
@@ -811,4 +811,27 @@ test.afterAll(async () => {
 
   // Also write a text summary
   fs.writeFileSync(path.join(outDir, 'perf-summary.txt'), summary)
+
+  // ── Performance threshold assertions ──────────────────────────────────
+  const THRESHOLDS: Record<string, number> = {
+    demo: 3000,        // demo mode: first card should appear within 3s
+    live: 5000,        // live mode: first card within 5s (includes mock API latency)
+    'live+cache': 2000 // cached mode: first card within 2s
+  }
+
+  for (const [mode, threshold] of Object.entries(THRESHOLDS)) {
+    const dashboardsForMode = perfReport.dashboards.filter(
+      (d) => d.mode === mode && d.cards.length > 0 && d.firstCardVisibleMs > 0
+    )
+    if (dashboardsForMode.length === 0) continue
+
+    const avgFirstCard = Math.round(
+      dashboardsForMode.reduce((s, d) => s + d.firstCardVisibleMs, 0) / dashboardsForMode.length
+    )
+    console.log(`[Perf] ${mode} avg first-card: ${avgFirstCard}ms (threshold: ${threshold}ms)`)
+    expect(
+      avgFirstCard,
+      `${mode} mode avg first-card time ${avgFirstCard}ms exceeds ${threshold}ms threshold`
+    ).toBeLessThan(threshold)
+  }
 })
