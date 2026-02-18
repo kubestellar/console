@@ -387,5 +387,65 @@ export const className = css\`
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
   }
+  .tip-wrap { position: relative; }
+  .tip-wrap .tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 9px;
+    line-height: 1.4;
+    color: #cbd5e1;
+    white-space: pre;
+    z-index: 100;
+    pointer-events: none;
+    min-width: 120px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .tip-wrap:hover .tip { display: block; }
+  .dot-tip-wrap { position: relative; display: inline-block; }
+  .dot-tip-wrap .tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 8px;
+    color: #94a3b8;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .dot-tip-wrap:hover .tip { display: block; }
+  .spark-tip-wrap { position: relative; }
+  .spark-tip-wrap .spark-tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: rgba(15, 23, 42, 0.97);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 9px;
+    line-height: 1.4;
+    color: #cbd5e1;
+    white-space: normal;
+    z-index: 100;
+    pointer-events: none;
+    min-width: 170px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+  .spark-tip-wrap:hover .spark-tip { display: block; }
 \`;`
 }

@@ -256,18 +256,50 @@ ${wrapOpen}
                   (failed > 0 ? 'Failed: ' + failed + '\\n' : '') +
                   (lastRun ? 'Last run: ' + (lastRun.conclusion || lastRun.status) + ' ' + timeAgo(lastRun.updatedAt || lastRun.createdAt) : '');
                 return (
-                <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}} title={tooltip}>
-                  <a href={workflowUrl} target="_blank" rel="noopener noreferrer" style={{width: '28px', fontSize: '10px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none', cursor: 'pointer'}}>{g.acronym}</a>
-                  <span style={{fontSize: '10px', color: '#cbd5e1', width: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{g.guide}</span>
-                  <div style={{display: 'flex', gap: '2px'}}>
-                    {runs.map((run, i) => {
-                      const dotTitle = (run.conclusion || run.status) + ' — ' + timeAgo(run.updatedAt || run.createdAt);
+                <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}}>
+                  <span className="tip-wrap" style={{width: '28px', fontSize: '10px', fontWeight: 600, color: '#94a3b8', cursor: 'pointer'}} onClick={() => run(\`open "\${workflowUrl}"\`)}>
+                    <span className="tip">{tooltip}</span>
+                    {g.acronym}
+                  </span>
+                  <span className="spark-tip-wrap" style={{width: '90px', cursor: 'default'}}>
+                    <span className="spark-tip">
+                      <div style={{fontWeight: 600, color: '#f1f5f9', marginBottom: 3}}>{g.guide}</div>
+                      <div style={{color: platformColors[platform], fontSize: '8px', marginBottom: 4}}>{platform}</div>
+                      <div style={{marginBottom: 2}}>Pass rate: <span style={{color: g.passRate >= 80 ? '#22c55e' : g.passRate >= 50 ? '#eab308' : '#ef4444', fontWeight: 600}}>{g.passRate}%</span> ({passed}/{completed.length})</div>
+                      {failed > 0 && <div style={{color: '#ef4444', marginBottom: 2}}>Failed: {failed}</div>}
+                      {lastRun && <div style={{marginBottom: 4}}>Last: {lastRun.conclusion || lastRun.status} {timeAgo(lastRun.updatedAt || lastRun.createdAt)}</div>}
+                      {runs.length > 1 && (() => {
+                        const sw = 150, sh = 28, sp = 10;
+                        const pts = runs.map((rr, ii) => ({
+                          x: sp + (runs.length > 1 ? ii * (sw - 2 * sp) / (runs.length - 1) : sw / 2),
+                          y: rr.conclusion === 'success' ? 6 : rr.conclusion === 'failure' ? 22 : 14,
+                          c: rr.status !== 'completed' ? '#60a5fa' : rr.conclusion === 'success' ? '#22c55e' : rr.conclusion === 'failure' ? '#ef4444' : '#6b7280',
+                        }));
+                        return (
+                          <svg width={sw} height={sh} style={{display: 'block'}}>
+                            <polyline points={pts.map(p => p.x + ',' + p.y).join(' ')} fill="none" stroke="#334155" strokeWidth="1.5" strokeLinejoin="round" />
+                            {pts.map((p, pi) => <circle key={pi} cx={p.x} cy={p.y} r={3} fill={p.c} />)}
+                            <text x={sp} y={sh} textAnchor="start" fontSize="6" fill="#475569">new</text>
+                            <text x={sw - sp} y={sh} textAnchor="end" fontSize="6" fill="#475569">old</text>
+                          </svg>
+                        );
+                      })()}
+                      {runs.length === 1 && <div style={{fontSize: '8px', color: '#64748b'}}>Only 1 run — no trend yet</div>}
+                    </span>
+                    <span style={{fontSize: '10px', color: '#cbd5e1', display: 'inline-block', width: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{g.guide}</span>
+                  </span>
+                  <div style={{display: 'flex', gap: '2px', alignItems: 'center'}}>
+                    {runs.map((r, i) => {
+                      const dotLabel = (r.conclusion || r.status) + ' — ' + timeAgo(r.updatedAt || r.createdAt);
                       return (
-                      <a key={i} href={run.htmlUrl} target="_blank" rel="noopener noreferrer" title={dotTitle} style={{
-                        width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
-                        backgroundColor: run.status !== 'completed' ? '#60a5fa' : (conclusionColors[run.conclusion] || '#6b7280'),
-                        animation: run.status !== 'completed' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
-                      }} />
+                      <span key={i} className="dot-tip-wrap" onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
+                        <span className="tip">{dotLabel}</span>
+                        <span style={{
+                          width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
+                          backgroundColor: r.status !== 'completed' ? '#60a5fa' : (conclusionColors[r.conclusion] || '#6b7280'),
+                          animation: r.status !== 'completed' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
+                        }} />
+                      </span>
                     )})}
                     {runs.length === 0 && <span style={{color: '#4b5563', fontSize: '9px'}}>no runs</span>}
                   </div>
