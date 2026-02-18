@@ -15,7 +15,7 @@
  * The hooks maintain the same return interface for easy migration.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -1785,37 +1785,30 @@ export function useCachedGPUNodeHealth(
 
 /**
  * Hook for managing GPU health CronJob installation per cluster.
- * Unlike cached hooks, this is action-oriented: fetch status, install, uninstall.
+ * Uses useCache for persistent status caching; install/uninstall are imperative actions.
  */
 export function useGPUHealthCronJob(cluster?: string) {
-  const [status, setStatus] = useState<GPUHealthCronJobStatus | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const key = `gpu-cronjob-status:${cluster || 'none'}`
   const [actionInProgress, setActionInProgress] = useState<'install' | 'uninstall' | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  const fetchStatus = useCallback(async () => {
-    if (!cluster) return
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await fetchAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
-      setStatus(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch CronJob status')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [cluster])
-
-  // Fetch on mount and when cluster changes
-  useEffect(() => {
-    fetchStatus()
-  }, [fetchStatus])
+  const result = useCache<GPUHealthCronJobStatus | null>({
+    key,
+    category: 'pods' as RefreshCategory,
+    initialData: null,
+    demoData: null,
+    persist: true,
+    enabled: !!cluster,
+    fetcher: async () => {
+      if (!cluster) return null
+      return fetchAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
+    },
+  })
 
   const install = useCallback(async (opts?: { namespace?: string; schedule?: string; tier?: number }) => {
     if (!cluster) return
     setActionInProgress('install')
-    setError(null)
+    setActionError(null)
     try {
       const token = getToken()
       if (!token) throw new Error('No authentication token')
@@ -1836,19 +1829,18 @@ export function useGPUHealthCronJob(cluster?: string) {
         const text = await response.text()
         throw new Error(text || `Install failed: ${response.status}`)
       }
-      // Refetch status after install
-      await fetchStatus()
+      await result.refetch()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to install CronJob')
+      setActionError(err instanceof Error ? err.message : 'Failed to install CronJob')
     } finally {
       setActionInProgress(null)
     }
-  }, [cluster, fetchStatus])
+  }, [cluster, result.refetch])
 
   const uninstall = useCallback(async (opts?: { namespace?: string }) => {
     if (!cluster) return
     setActionInProgress('uninstall')
-    setError(null)
+    setActionError(null)
     try {
       const token = getToken()
       if (!token) throw new Error('No authentication token')
@@ -1867,16 +1859,23 @@ export function useGPUHealthCronJob(cluster?: string) {
         const text = await response.text()
         throw new Error(text || `Uninstall failed: ${response.status}`)
       }
-      // Refetch status after uninstall
-      await fetchStatus()
+      await result.refetch()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to uninstall CronJob')
+      setActionError(err instanceof Error ? err.message : 'Failed to uninstall CronJob')
     } finally {
       setActionInProgress(null)
     }
-  }, [cluster, fetchStatus])
+  }, [cluster, result.refetch])
 
-  return { status, isLoading, error, actionInProgress, install, uninstall, refetch: fetchStatus }
+  return {
+    status: result.data,
+    isLoading: result.isLoading,
+    error: actionError || result.error,
+    actionInProgress,
+    install,
+    uninstall,
+    refetch: result.refetch,
+  }
 }
 
 // ============================================================================

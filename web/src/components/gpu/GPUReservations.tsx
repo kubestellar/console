@@ -47,6 +47,7 @@ import { CARD_COMPONENTS, getDefaultCardWidth } from '../cards/cardRegistry'
 import { CardWrapper, CARD_TITLES } from '../cards/CardWrapper'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 // GPU utilization thresholds for visual indicators
 const UTILIZATION_HIGH_THRESHOLD = 80
@@ -79,9 +80,16 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function GPUReservations() {
   const { t } = useTranslation(['cards', 'common'])
-  const { nodes: rawNodes, isLoading: nodesLoading } = useGPUNodes()
+  const { nodes: rawNodes, isLoading: nodesLoading, refetch: refetchGPUNodes } = useGPUNodes()
   const { resourceQuotas } = useResourceQuotas()
-  useClusters()
+  const { refetch: refetchClusters } = useClusters()
+
+  // Refresh indicator for dashboard tab — refreshes GPU nodes + clusters
+  const refetchAll = useCallback(() => {
+    refetchGPUNodes()
+    refetchClusters()
+  }, [refetchGPUNodes, refetchClusters])
+  const { showIndicator: isRefreshingDashboard, triggerRefresh } = useRefreshIndicator(refetchAll)
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode: demoMode } = useDemoMode()
   const { user } = useAuth()
@@ -1091,6 +1099,8 @@ export function GPUReservations() {
                       cardWidth={card.width}
                       onRemove={() => handleRemoveDashboardCard(index)}
                       onWidthChange={(newWidth) => handleDashCardWidthChange(index, newWidth)}
+                      onRefresh={triggerRefresh}
+                      isRefreshing={isRefreshingDashboard}
                     >
                       <Component />
                     </CardWrapper>
