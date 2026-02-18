@@ -62,7 +62,6 @@ const LARGE_EXPANDED_CARDS = new Set([
   // AI-ML cards that need more space when expanded
   'kvcache_monitor',
   'pd_disaggregation',
-  'llmd_benchmarks',
   'llmd_ai_insights',
 ])
 
@@ -328,7 +327,6 @@ export const CARD_TITLES: Record<string, string> = {
   llm_inference: 'llm-d Inference',
   llm_models: 'llm-d Models',
   llmd_flow: 'llm-d Request Flow',
-  llmd_benchmarks: 'llm-d Benchmarks',
   llmd_ai_insights: 'llm-d AI Insights',
   llmd_configurator: 'llm-d Configurator',
   kvcache_monitor: 'KV Cache Monitor',
@@ -494,7 +492,6 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   llm_inference: 'llm-d inference endpoint status and request metrics.',
   llm_models: 'LLM models deployed via llm-d with version info.',
   llmd_flow: 'Animated visualization of inference request flow through the llm-d stack: load balancer → EPP → prefill/decode pods.',
-  llmd_benchmarks: 'Performance benchmarks for llm-d inference: throughput, latency percentiles, and comparison across models.',
   llmd_ai_insights: 'AI-generated insights about llm-d performance, bottlenecks, and optimization recommendations.',
   llmd_configurator: 'Configure llm-d deployment parameters: replicas, autoscaling, model variants, and resource limits.',
   kvcache_monitor: 'Real-time KV cache utilization across inference pods with hit rates and memory usage.',
@@ -682,7 +679,6 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   llm_inference: { icon: Cpu, color: 'text-purple-400' },
   llm_models: { icon: Database, color: 'text-blue-400' },
   llmd_flow: { icon: Workflow, color: 'text-cyan-400' },
-  llmd_benchmarks: { icon: Gauge, color: 'text-orange-400' },
   llmd_ai_insights: { icon: Wand2, color: 'text-purple-400' },
   llmd_configurator: { icon: Settings, color: 'text-blue-400' },
   kvcache_monitor: { icon: Database, color: 'text-cyan-400' },

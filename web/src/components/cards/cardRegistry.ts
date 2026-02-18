@@ -144,7 +144,6 @@ const LLMdFlow = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdFlow })))
 const KVCacheMonitor = lazy(() => _llmdBundle.then(m => ({ default: m.KVCacheMonitor })))
 const EPPRouting = lazy(() => _llmdBundle.then(m => ({ default: m.EPPRouting })))
 const PDDisaggregation = lazy(() => _llmdBundle.then(m => ({ default: m.PDDisaggregation })))
-const LLMdBenchmarks = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdBenchmarks })))
 const LLMdAIInsights = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdAIInsights })))
 const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConfigurator })))
 // LLM-d benchmark dashboard cards (share the same barrel bundle)
@@ -415,7 +414,6 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kvcache_monitor: KVCacheMonitor,
   epp_routing: EPPRouting,
   pd_disaggregation: PDDisaggregation,
-  llmd_benchmarks: LLMdBenchmarks,
   llmd_ai_insights: LLMdAIInsights,
   llmd_configurator: LLMdConfigurator,
 
@@ -507,7 +505,7 @@ export const DEMO_DATA_CARDS = new Set([
   // Note: llm_inference, llm_models now use real data via useLLMd hook
   'ml_jobs',
   'ml_notebooks',
-  // Note: LLM-d cards (llmd_flow, kvcache_monitor, epp_routing, pd_disaggregation, llmd_benchmarks, llmd_ai_insights)
+  // Note: LLM-d cards (llmd_flow, kvcache_monitor, epp_routing, pd_disaggregation, llmd_ai_insights)
   // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
   // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
   'llmd_configurator',
@@ -680,7 +678,6 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kvcache_monitor: () => import('./llmd'),
   epp_routing: () => import('./llmd'),
   pd_disaggregation: () => import('./llmd'),
-  llmd_benchmarks: () => import('./llmd'),
   llmd_ai_insights: () => import('./llmd'),
   llmd_configurator: () => import('./llmd'),
   // LLM-d benchmark dashboard cards — all share the llmd barrel bundle
@@ -893,7 +890,6 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kvcache_monitor: 4,     // KV cache gauges
   epp_routing: 6,         // EPP Sankey diagram
   pd_disaggregation: 6,   // Prefill/Decode split view
-  llmd_benchmarks: 6,     // Benchmark charts
   llmd_ai_insights: 6,    // AI insights panel
   llmd_configurator: 4,   // Configurator showcase
 

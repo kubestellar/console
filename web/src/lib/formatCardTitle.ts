@@ -10,7 +10,6 @@ const CUSTOM_TITLES: Record<string, string> = {
   // llm-d cards - use lowercase "llm-d" per project convention
   llmd_flow: 'llm-d Request Flow',
   llmd_stack_monitor: 'llm-d Stack Monitor',
-  llmd_benchmarks: 'llm-d Benchmarks',
   llmd_ai_insights: 'llm-d AI Insights',
   llmd_configurator: 'llm-d Configurator',
   llm_inference: 'llm-d Inference',

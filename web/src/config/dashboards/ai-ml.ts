@@ -19,7 +19,6 @@ export const aiMlDashboardConfig: UnifiedDashboardConfig = {
     { id: 'pd-disagg-1', cardType: 'pd_disaggregation', title: 'P/D Disaggregation', position: { w: 6, h: 4 } },
 
     // Performance and intelligence
-    { id: 'llmd-benchmarks-1', cardType: 'llmd_benchmarks', title: 'Benchmarks', position: { w: 6, h: 4 } },
     { id: 'llmd-ai-insights-1', cardType: 'llmd_ai_insights', title: 'AI Insights', position: { w: 6, h: 4 } },
 
     // Configuration and existing cards
