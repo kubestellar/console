@@ -69,8 +69,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 // Trivy Vulnerability Scanner Card
 export function TrivyScan({ config: _config }: CardConfig) {
   const { t } = useTranslation()
-  // Integration approach: Query VulnerabilityReport CRDs from Trivy Operator
-  // UI already displays integration notice with install guide when Trivy is not detected
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
   const demoVulns = {
     critical: 3,
     high: 12,
@@ -123,8 +122,7 @@ export function TrivyScan({ config: _config }: CardConfig) {
 
 // Kubescape Security Posture Card
 export function KubescapeScan({ config: _config }: CardConfig) {
-  // Integration approach: Query Kubescape scan results from ConfigurationScanSummary CRDs
-  // UI already displays integration notice with install guide when Kubescape is not detected
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
   const score = 78
   const frameworks = [
     { name: 'NSA-CISA', score: 82 },
@@ -182,6 +180,7 @@ export function KubescapeScan({ config: _config }: CardConfig) {
 
 // Policy Violations Aggregated Card
 export function PolicyViolations({ config: _config }: CardConfig) {
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
   const violations = [
     { policy: 'require-labels', count: 12, tool: 'Gatekeeper' },
     { policy: 'disallow-privileged', count: 5, tool: 'Kyverno' },

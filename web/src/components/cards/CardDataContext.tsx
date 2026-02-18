@@ -141,11 +141,10 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     isDemoData,
   } = options
 
-  // During initial load, demo data from initialData doesn't count as "real" data.
-  // Show skeleton instead of flashing demo content (yellow border + Demo badge).
-  // Once loading finishes, demo fallback data is shown normally with the badge.
-  // When refreshing with cached REAL data, show cached content + refresh animation.
-  const hasRealData = isLoading ? (hasAnyData && !isDemoData) : hasAnyData
+  // Data is considered "real" (displayable) if there is any data at all.
+  // Demo data should be shown immediately with the Demo badge — not hidden behind a skeleton.
+  // When refreshing with cached data, show cached content + refresh animation.
+  const hasRealData = hasAnyData
   const hasData = !isLoading || hasRealData
 
   // Report state to CardWrapper for refresh animation and status badges

@@ -17,6 +17,7 @@ interface CardConfig {
 // HashiCorp Vault - Secrets Management Card
 export function VaultSecrets({ config: _config }: CardConfig) {
   const { t } = useTranslation()
+  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
   const demoData = {
     status: 'unsealed',
     secrets: 156,
