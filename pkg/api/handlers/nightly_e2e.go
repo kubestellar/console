@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,9 @@ const (
 	nightlyCacheActiveTTL = 2 * time.Minute // cache when jobs are in progress
 	nightlyRunsPerPage    = 7
 	githubAPIBase         = "https://api.github.com"
+
+	failureReasonGPU  = "gpu_unavailable"
+	failureReasonTest = "test_failure"
 )
 
 // NightlyWorkflow defines a GitHub Actions workflow to monitor.
@@ -33,13 +37,14 @@ type NightlyWorkflow struct {
 
 // NightlyRun represents a single workflow run from the GitHub Actions API.
 type NightlyRun struct {
-	ID         int64   `json:"id"`
-	Status     string  `json:"status"`
-	Conclusion *string `json:"conclusion"`
-	CreatedAt  string  `json:"createdAt"`
-	UpdatedAt  string  `json:"updatedAt"`
-	HTMLURL    string  `json:"htmlUrl"`
-	RunNumber  int     `json:"runNumber"`
+	ID            int64   `json:"id"`
+	Status        string  `json:"status"`
+	Conclusion    *string `json:"conclusion"`
+	CreatedAt     string  `json:"createdAt"`
+	UpdatedAt     string  `json:"updatedAt"`
+	HTMLURL       string  `json:"htmlUrl"`
+	RunNumber     int     `json:"runNumber"`
+	FailureReason string  `json:"failureReason,omitempty"`
 }
 
 // NightlyGuideStatus holds runs and computed stats for a single guide.
@@ -280,7 +285,81 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 			RunNumber:  r.RunNumber,
 		}
 	}
+
+	// Classify failures (GPU unavailable vs test failure)
+	h.classifyFailures(wf.Repo, runs)
+
 	return runs, nil
+}
+
+// classifyFailures fetches jobs for failed runs and sets FailureReason.
+func (h *NightlyE2EHandler) classifyFailures(repo string, runs []NightlyRun) {
+	var wg sync.WaitGroup
+	for i := range runs {
+		if runs[i].Conclusion == nil || *runs[i].Conclusion != "failure" {
+			continue
+		}
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			runs[idx].FailureReason = h.detectGPUFailure(repo, runs[idx].ID)
+		}(i)
+	}
+	wg.Wait()
+}
+
+// detectGPUFailure checks if a run failed due to GPU unavailability.
+func (h *NightlyE2EHandler) detectGPUFailure(repo string, runID int64) string {
+	url := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
+		githubAPIBase, repo, runID)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return failureReasonTest
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return failureReasonTest
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return failureReasonTest
+	}
+
+	var jobData struct {
+		Jobs []struct {
+			Conclusion *string `json:"conclusion"`
+			Steps      []struct {
+				Name       string  `json:"name"`
+				Conclusion *string `json:"conclusion"`
+			} `json:"steps"`
+		} `json:"jobs"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&jobData); err != nil {
+		return failureReasonTest
+	}
+
+	for _, job := range jobData.Jobs {
+		for _, step := range job.Steps {
+			if step.Conclusion != nil && *step.Conclusion == "failure" &&
+				isGPUStep(step.Name) {
+				return failureReasonGPU
+			}
+		}
+	}
+	return failureReasonTest
+}
+
+// isGPUStep returns true if the step name indicates a GPU availability check.
+func isGPUStep(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.Contains(lower, "gpu") && strings.Contains(lower, "availab")
 }
 
 func computePassRate(runs []NightlyRun) int {

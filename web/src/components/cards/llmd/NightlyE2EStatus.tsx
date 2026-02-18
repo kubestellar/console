@@ -64,19 +64,25 @@ function formatTimeAgo(iso: string): string {
 
 function RunDot({ run }: { run: NightlyRun }) {
   const isRunning = run.status !== 'completed'
+  const isGPUFailure = run.conclusion === 'failure' && run.failureReason === 'gpu_unavailable'
   const color = isRunning
     ? 'bg-blue-400'
     : run.conclusion === 'success'
       ? 'bg-emerald-400'
-      : run.conclusion === 'failure'
-        ? 'bg-red-400'
-        : run.conclusion === 'cancelled'
-          ? 'bg-slate-500'
-          : 'bg-yellow-400'
+      : isGPUFailure
+        ? 'bg-amber-400'
+        : run.conclusion === 'failure'
+          ? 'bg-red-400'
+          : run.conclusion === 'cancelled'
+            ? 'bg-slate-500'
+            : 'bg-yellow-400'
 
+  const reasonLabel = isGPUFailure ? 'GPU unavailable' : ''
   const title = isRunning
     ? `Running (started ${formatTimeAgo(run.createdAt)})`
-    : `${run.conclusion} — ${formatTimeAgo(run.createdAt)}`
+    : reasonLabel
+      ? `${run.conclusion} (${reasonLabel}) — ${formatTimeAgo(run.createdAt)}`
+      : `${run.conclusion} — ${formatTimeAgo(run.createdAt)}`
 
   return (
     <a
@@ -329,6 +335,13 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
     }
   }
 
+  // Count GPU failures across all runs
+  const gpuFailCount = allWithRuns.flatMap(g => g.runs)
+    .filter(r => r.failureReason === 'gpu_unavailable').length
+  if (gpuFailCount > 0) {
+    para1Parts.push(`${gpuFailCount} recent failure${gpuFailCount > 1 ? 's were' : ' was'} due to GPU unavailability (shown in amber).`)
+  }
+
   // Paragraph 2: Notable patterns + per-guide duration outliers
   const para2Parts: string[] = []
 
@@ -422,7 +435,9 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
   const { t } = useTranslation(['cards', 'common'])
   const completedRuns = guide.runs.filter(r => r.status === 'completed')
   const passed = completedRuns.filter(r => r.conclusion === 'success').length
-  const failed = completedRuns.filter(r => r.conclusion === 'failure').length
+  const failedAll = completedRuns.filter(r => r.conclusion === 'failure')
+  const gpuFails = failedAll.filter(r => r.failureReason === 'gpu_unavailable').length
+  const failed = failedAll.length - gpuFails
   const cancelled = completedRuns.filter(r => r.conclusion === 'cancelled').length
   const running = guide.runs.filter(r => r.status === 'in_progress').length
   const meta = getGuideMeta(guide)
@@ -478,7 +493,7 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
       </div>
 
       {/* Pass rate + stats in a row */}
-      <div className="grid grid-cols-5 gap-1.5 mb-2">
+      <div className={`grid ${gpuFails > 0 ? 'grid-cols-6' : 'grid-cols-5'} gap-1.5 mb-2`}>
         <div className="col-span-1 bg-slate-800/60 border border-slate-700/50 rounded-lg p-2 text-center">
           <div className={`text-lg font-bold ${
             guide.passRate >= 90 ? 'text-emerald-400' : guide.passRate >= 70 ? 'text-yellow-400' : guide.passRate > 0 ? 'text-red-400' : 'text-slate-500'
@@ -489,6 +504,7 @@ function GuideDetailPanel({ guide }: { guide: NightlyGuideStatus }) {
         </div>
         <StatBox label={t('cards:llmd.pass')} value={String(passed)} color="text-emerald-400" />
         <StatBox label={t('cards:llmd.fail')} value={String(failed)} color="text-red-400" />
+        {gpuFails > 0 && <StatBox label="GPU" value={String(gpuFails)} color="text-amber-400" />}
         <StatBox label={t('cards:llmd.skip')} value={String(cancelled)} color="text-slate-400" />
         <StatBox label={t('cards:llmd.run')} value={String(running)} color="text-blue-400" />
       </div>
@@ -750,6 +766,10 @@ export function NightlyE2EStatus() {
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-red-400" />
           <span>{t('cards:llmd.fail')}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-amber-400" />
+          <span>GPU</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-blue-400" />

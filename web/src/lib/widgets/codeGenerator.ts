@@ -241,7 +241,9 @@ ${wrapOpen}
                 const runs = (g.runs || []).slice(0, 7);
                 const completed = runs.filter(r => r.status === 'completed');
                 const passed = completed.filter(r => r.conclusion === 'success').length;
-                const failed = completed.filter(r => r.conclusion === 'failure').length;
+                const failedAll = completed.filter(r => r.conclusion === 'failure');
+                const gpuFails = failedAll.filter(r => r.failureReason === 'gpu_unavailable').length;
+                const failed = failedAll.length;
                 const lastRun = runs[0];
                 const timeAgo = (ts) => {
                   if (!ts) return '';
@@ -266,15 +268,21 @@ ${wrapOpen}
                       <div style={{fontWeight: 600, color: '#f1f5f9', marginBottom: 3}}>{g.guide}</div>
                       <div style={{color: platformColors[platform], fontSize: '8px', marginBottom: 4}}>{platform}</div>
                       <div style={{marginBottom: 2}}>Pass rate: <span style={{color: g.passRate >= 80 ? '#22c55e' : g.passRate >= 50 ? '#eab308' : '#ef4444', fontWeight: 600}}>{g.passRate}%</span> ({passed}/{completed.length})</div>
-                      {failed > 0 && <div style={{color: '#ef4444', marginBottom: 2}}>Failed: {failed}</div>}
+                      {failed > 0 && <div style={{marginBottom: 2}}>
+                        <span style={{color: '#ef4444'}}>Failed: {failed - gpuFails}</span>
+                        {gpuFails > 0 && <span style={{color: '#f59e0b', marginLeft: 6}}>GPU: {gpuFails}</span>}
+                      </div>}
                       {lastRun && <div style={{marginBottom: 4}}>Last: {lastRun.conclusion || lastRun.status} {timeAgo(lastRun.updatedAt || lastRun.createdAt)}</div>}
                       {runs.length > 1 && (() => {
                         const sw = 150, sh = 28, sp = 10;
-                        const pts = runs.map((rr, ii) => ({
-                          x: sp + (runs.length > 1 ? ii * (sw - 2 * sp) / (runs.length - 1) : sw / 2),
-                          y: rr.conclusion === 'success' ? 6 : rr.conclusion === 'failure' ? 22 : 14,
-                          c: rr.status !== 'completed' ? '#60a5fa' : rr.conclusion === 'success' ? '#22c55e' : rr.conclusion === 'failure' ? '#ef4444' : '#6b7280',
-                        }));
+                        const pts = runs.map((rr, ii) => {
+                          const isGpuFail = rr.conclusion === 'failure' && rr.failureReason === 'gpu_unavailable';
+                          return {
+                            x: sp + (runs.length > 1 ? ii * (sw - 2 * sp) / (runs.length - 1) : sw / 2),
+                            y: rr.conclusion === 'success' ? 6 : rr.conclusion === 'failure' ? 22 : 14,
+                            c: rr.status !== 'completed' ? '#60a5fa' : rr.conclusion === 'success' ? '#22c55e' : isGpuFail ? '#f59e0b' : rr.conclusion === 'failure' ? '#ef4444' : '#6b7280',
+                          };
+                        });
                         return (
                           <svg width={sw} height={sh} style={{display: 'block'}}>
                             <polyline points={pts.map(p => p.x + ',' + p.y).join(' ')} fill="none" stroke="#334155" strokeWidth="1.5" strokeLinejoin="round" />
@@ -290,13 +298,15 @@ ${wrapOpen}
                   </span>
                   <div style={{display: 'flex', gap: '2px', alignItems: 'center'}}>
                     {runs.map((r, i) => {
-                      const dotLabel = (r.conclusion || r.status) + ' — ' + timeAgo(r.updatedAt || r.createdAt);
+                      const isGpu = r.conclusion === 'failure' && r.failureReason === 'gpu_unavailable';
+                      const dotLabel = (r.conclusion || r.status) + (isGpu ? ' (GPU)' : '') + ' — ' + timeAgo(r.updatedAt || r.createdAt);
+                      const dotColor = r.status !== 'completed' ? '#60a5fa' : isGpu ? '#f59e0b' : (conclusionColors[r.conclusion] || '#6b7280');
                       return (
                       <span key={i} className="dot-tip-wrap" onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
                         <span className="tip">{dotLabel}</span>
                         <span style={{
                           width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
-                          backgroundColor: r.status !== 'completed' ? '#60a5fa' : (conclusionColors[r.conclusion] || '#6b7280'),
+                          backgroundColor: dotColor,
                           animation: r.status !== 'completed' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
                         }} />
                       </span>

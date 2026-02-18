@@ -24,6 +24,7 @@ export interface NightlyRun {
   updatedAt: string
   htmlUrl: string
   runNumber: number
+  failureReason?: 'gpu_unavailable' | 'test_failure' | ''
 }
 
 export interface NightlyGuideStatus {

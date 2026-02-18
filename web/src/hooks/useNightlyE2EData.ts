@@ -80,6 +80,7 @@ export function useNightlyE2EData() {
                       updatedAt: r.updatedAt,
                       htmlUrl: r.htmlUrl,
                       runNumber: r.runNumber,
+                      failureReason: r.failureReason || '',
                     })
                   ),
                   passRate: g.passRate,
