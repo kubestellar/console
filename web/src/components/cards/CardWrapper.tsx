@@ -1335,7 +1335,7 @@ export function CardWrapper({
               </button>
               {showMenu && menuPosition && createPortal(
                 <div
-                  className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl"
+                  className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl !bg-[rgba(10,15,25,0.98)]"
                   style={{ top: menuPosition.top, right: menuPosition.right }}
                 >
                   <button
