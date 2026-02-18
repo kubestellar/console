@@ -268,6 +268,7 @@ export const CARD_TITLES: Record<string, string> = {
   gpu_utilization: 'GPU Utilization',
   gpu_usage_trend: 'GPU Usage Trend',
   gpu_namespace_allocations: 'GPU Namespace Allocations',
+  gpu_node_health: 'GPU Node Health Monitor',
   hardware_health: 'Hardware Health',
 
   // Security, RBAC, and compliance
@@ -451,6 +452,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   gpu_workloads: 'Workloads running on GPU-enabled nodes.',
   gpu_utilization: 'Real-time GPU utilization percentage and temperature.',
   gpu_usage_trend: 'Historical GPU usage trends over time.',
+  gpu_node_health: 'Proactive health monitoring for GPU nodes — checks node readiness, GPU operator pods, stuck pods, and GPU reset events.',
   hardware_health: 'Detects hardware device disappearances (GPUs, NICs, NVMe, InfiniBand) that often require a power cycle to recover. Common with SuperMicro/HGX systems. Also shows full device inventory per node.',
   security_issues: 'Security vulnerabilities and misconfigurations detected.',
   rbac_overview: 'Overview of RBAC roles, bindings, and permissions.',
