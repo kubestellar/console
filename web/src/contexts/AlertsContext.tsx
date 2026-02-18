@@ -8,8 +8,10 @@ import type {
   AlertStats,
   AlertChannel,
 } from '../types/alerts'
+import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN } from '../lib/constants'
 import { PRESET_ALERT_RULES } from '../types/alerts'
+import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
 
 // Generate unique ID
 function generateId(): string {
@@ -106,6 +108,52 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   clustersRef.current = clusters
   const rulesRef = useRef(rules)
   rulesRef.current = rules
+
+  // CronJob health results cache — fetched async, read synchronously by evaluator
+  const cronJobResultsRef = useRef<Record<string, GPUHealthCheckResult[]>>({})
+
+  // Fetch CronJob results for all clusters periodically
+  useEffect(() => {
+    const fetchCronJobResults = async () => {
+      const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
+      if (!token) return
+      const currentClusters = clustersRef.current
+      if (!currentClusters.length) return
+
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
+      const results: Record<string, GPUHealthCheckResult[]> = {}
+
+      await Promise.allSettled(
+        currentClusters.map(async (cluster) => {
+          try {
+            const resp = await fetch(
+              `${API_BASE}/api/mcp/gpu-nodes/health/cronjob/results?cluster=${encodeURIComponent(cluster.name)}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            )
+            if (resp.ok) {
+              const data = await resp.json()
+              if (data.results && data.results.length > 0) {
+                results[cluster.name] = data.results
+              }
+            }
+          } catch {
+            // Silent — CronJob may not be installed on this cluster
+          }
+        })
+      )
+
+      cronJobResultsRef.current = results
+    }
+
+    // Initial fetch after short delay
+    const timer = setTimeout(fetchCronJobResults, 5000)
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchCronJobResults, 60000)
+    return () => {
+      clearTimeout(timer)
+      clearInterval(interval)
+    }
+  }, [])
 
   // Aggregate loading and error states from dependencies
   const isLoadingData = isGPULoading || isPodIssuesLoading || isClustersLoading
@@ -588,6 +636,89 @@ Please provide:
     [createAlert]
   )
 
+  // Evaluate GPU Health CronJob — reads cached results from ref
+  const evaluateGPUHealthCronJob = useCallback(
+    (rule: AlertRule) => {
+      const cachedResults = cronJobResultsRef.current
+      const currentClusters = clustersRef.current
+      const relevantClusters = rule.condition.clusters?.length
+        ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
+        : currentClusters
+
+      for (const cluster of relevantClusters) {
+        const results = cachedResults[cluster.name]
+        if (!results || results.length === 0) continue
+
+        // Find nodes with failed checks
+        const failedNodes = results.filter(
+          r => r.status === 'unhealthy' || r.status === 'degraded'
+        )
+
+        if (failedNodes.length > 0) {
+          const totalIssues = failedNodes.reduce(
+            (sum, n) => sum + (n.issues?.length || 0),
+            0
+          )
+          const nodeNames = failedNodes.map(n => n.nodeName).join(', ')
+
+          createAlert(
+            rule,
+            `GPU health check found ${totalIssues} issue(s) on ${failedNodes.length} node(s): ${nodeNames}`,
+            {
+              failedNodes: failedNodes.length,
+              totalIssues,
+              nodeNames,
+              checks: failedNodes.flatMap(n =>
+                (n.checks || []).filter(c => !c.passed).map(c => ({
+                  node: n.nodeName,
+                  check: c.name,
+                  message: c.message,
+                }))
+              ),
+            },
+            cluster.name,
+            undefined,
+            nodeNames,
+            'Node'
+          )
+
+          // Send browser notification with deep link to GPU node
+          if (rule.channels?.some(ch => ch.type === 'browser' && ch.enabled)) {
+            const firstNode = failedNodes[0]
+            sendNotificationWithDeepLink(
+              `GPU Health Alert: ${cluster.name}`,
+              `${totalIssues} issue(s) on ${failedNodes.length} GPU node(s)`,
+              {
+                drilldown: 'node',
+                cluster: cluster.name,
+                node: firstNode.nodeName,
+              }
+            )
+          }
+        } else {
+          // Auto-resolve if all nodes are healthy
+          setAlerts(prev => {
+            const firingAlert = prev.find(
+              a =>
+                a.ruleId === rule.id &&
+                a.status === 'firing' &&
+                a.cluster === cluster.name
+            )
+            if (firingAlert) {
+              return prev.map(a =>
+                a.id === firingAlert.id
+                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
+                  : a
+              )
+            }
+            return prev
+          })
+        }
+      }
+    },
+    [createAlert]
+  )
+
   // Evaluate alert conditions — uses refs so callback identity is stable
   const isEvaluatingRef = useRef(false)
   const evaluateConditions = useCallback(() => {
@@ -602,6 +733,9 @@ Please provide:
         switch (rule.condition.type) {
           case 'gpu_usage':
             evaluateGPUUsage(rule)
+            break
+          case 'gpu_health_cronjob':
+            evaluateGPUHealthCronJob(rule)
             break
           case 'node_not_ready':
             evaluateNodeReady(rule)
@@ -620,7 +754,7 @@ Please provide:
       isEvaluatingRef.current = false
       setIsEvaluating(false)
     }
-  }, [evaluateGPUUsage, evaluateNodeReady, evaluatePodCrash, evaluateWeatherAlerts])
+  }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateWeatherAlerts])
 
   // Stable ref for evaluateConditions so the interval never resets
   const evaluateConditionsRef = useRef(evaluateConditions)

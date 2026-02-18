@@ -459,6 +459,7 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 		Cluster   string `json:"cluster"`
 		Namespace string `json:"namespace"`
 		Schedule  string `json:"schedule"`
+		Tier      int    `json:"tier"`
 	}
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
@@ -467,11 +468,11 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
-	if err := h.k8sClient.InstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace, body.Schedule); err != nil {
+	if err := h.k8sClient.InstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob installed on %s", body.Cluster)})
+	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob installed on %s (tier %d)", body.Cluster, body.Tier)})
 }
 
 // UninstallGPUHealthCronJob removes the GPU health check CronJob from a cluster
@@ -500,6 +501,29 @@ func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob removed from %s", body.Cluster)})
+}
+
+// GetGPUHealthCronJobResults returns the latest health check results from the ConfigMap.
+// This is the endpoint used by the AlertsContext to evaluate gpu_health_cronjob conditions.
+func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{"results": []k8s.GPUHealthCheckResult{}})
+	}
+
+	cluster := c.Query("cluster")
+	if cluster == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "cluster parameter is required"})
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	status, err := h.k8sClient.GetGPUHealthCronJobStatus(c.Context(), cluster)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"results": status.LastResults, "cluster": cluster})
 }
 
 // GetNVIDIAOperatorStatus returns NVIDIA GPU and Network operator status

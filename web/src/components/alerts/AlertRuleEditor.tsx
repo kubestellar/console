@@ -32,6 +32,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
   const CONDITION_TYPES: { value: AlertConditionType; label: string; description: string }[] = [
     { value: 'gpu_usage', label: t('alerts.conditions.gpuUsage'), description: t('alerts.conditions.gpuUsageDesc') },
+    { value: 'gpu_health_cronjob', label: 'GPU Health CronJob', description: 'Alert when CronJob health checks detect issues on GPU nodes' },
     { value: 'node_not_ready', label: t('alerts.conditions.nodeNotReady'), description: t('alerts.conditions.nodeNotReadyDesc') },
     { value: 'pod_crash', label: t('alerts.conditions.podCrash'), description: t('alerts.conditions.podCrashDesc') },
     { value: 'memory_pressure', label: t('alerts.conditions.memoryPressure'), description: t('alerts.conditions.memoryPressureDesc') },

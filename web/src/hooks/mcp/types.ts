@@ -199,11 +199,22 @@ export interface GPUNodeHealthStatus {
   checkedAt: string
 }
 
+export interface GPUHealthCheckResult {
+  nodeName: string
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  gpuCount?: number
+  checks: GPUNodeHealthCheck[]
+  issues: string[]
+}
+
 export interface GPUHealthCronJobStatus {
   installed: boolean
   cluster: string
   namespace?: string
   schedule?: string
+  tier: number
+  version: number
+  updateAvailable: boolean
   lastRun?: string
   lastResult?: string
   nextRun?: string
@@ -211,6 +222,7 @@ export interface GPUHealthCronJobStatus {
   activeJobs: number
   failedJobs: number
   successJobs: number
+  lastResults?: GPUHealthCheckResult[]
 }
 
 // NVIDIA Operator Status types

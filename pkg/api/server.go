@@ -499,6 +499,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/gpu-nodes/health/cronjob", mcpHandlers.GetGPUHealthCronJobStatus)
 	api.Post("/mcp/gpu-nodes/health/cronjob", mcpHandlers.InstallGPUHealthCronJob)
 	api.Delete("/mcp/gpu-nodes/health/cronjob", mcpHandlers.UninstallGPUHealthCronJob)
+	api.Get("/mcp/gpu-nodes/health/cronjob/results", mcpHandlers.GetGPUHealthCronJobResults)
 	api.Get("/mcp/nvidia-operators", mcpHandlers.GetNVIDIAOperatorStatus)
 	api.Get("/mcp/nodes", mcpHandlers.GetNodes)
 	api.Get("/mcp/events", mcpHandlers.GetEvents)

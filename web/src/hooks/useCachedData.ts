@@ -1812,7 +1812,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     fetchStatus()
   }, [fetchStatus])
 
-  const install = useCallback(async (opts?: { namespace?: string; schedule?: string }) => {
+  const install = useCallback(async (opts?: { namespace?: string; schedule?: string; tier?: number }) => {
     if (!cluster) return
     setActionInProgress('install')
     setError(null)
@@ -1829,6 +1829,7 @@ export function useGPUHealthCronJob(cluster?: string) {
           cluster,
           namespace: opts?.namespace,
           schedule: opts?.schedule,
+          tier: opts?.tier ?? 2,
         }),
       })
       if (!response.ok) {

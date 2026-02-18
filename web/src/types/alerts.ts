@@ -1,6 +1,7 @@
 // Alert condition types
 export type AlertConditionType =
   | 'gpu_usage'
+  | 'gpu_health_cronjob'
   | 'node_not_ready'
   | 'pod_crash'
   | 'memory_pressure'
@@ -175,6 +176,18 @@ export const PRESET_ALERT_RULES: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt
     aiDiagnose: false,
   },
   {
+    name: 'GPU Health CronJob',
+    description: 'Alert when GPU health CronJob detects issues (requires CronJob installed)',
+    enabled: false,
+    condition: {
+      type: 'gpu_health_cronjob',
+      duration: 0, // Immediate — CronJob already ran checks
+    },
+    severity: 'warning',
+    channels: [{ type: 'browser', enabled: true, config: {} }],
+    aiDiagnose: true,
+  },
+  {
     name: 'Severe Weather Alert',
     description: 'Alert on extreme weather conditions',
     enabled: false,
@@ -222,6 +235,8 @@ export function formatCondition(condition: AlertCondition): string {
   switch (condition.type) {
     case 'gpu_usage':
       return `GPU usage > ${condition.threshold}%`
+    case 'gpu_health_cronjob':
+      return 'GPU health CronJob detects issues'
     case 'node_not_ready':
       return 'Node not in Ready state'
     case 'pod_crash':

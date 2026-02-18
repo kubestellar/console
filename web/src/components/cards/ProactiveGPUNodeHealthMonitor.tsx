@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { CheckCircle, AlertTriangle, XCircle, ChevronRight, ChevronDown, Server, Clock, Play, Trash2, Loader2, Settings2 } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, ChevronRight, ChevronDown, Server, Clock, Play, Trash2, Loader2, Settings2, RefreshCw, Shield } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
@@ -25,6 +25,14 @@ const PAGE_SIZE = 5
 
 const DEFAULT_SCHEDULE = '*/5 * * * *'
 const DEFAULT_NAMESPACE = 'nvidia-gpu-operator'
+const DEFAULT_TIER = 2
+
+const TIER_OPTIONS = [
+  { value: 1, label: 'Tier 1 — Critical', description: 'Node ready, cordoned, stuck pods, operator pods, GPU events' },
+  { value: 2, label: 'Tier 2 — Standard', description: '+ GPU capacity, pending pods, driver, node conditions, quotas' },
+  { value: 3, label: 'Tier 3 — Full', description: '+ Utilization, MIG drift, RDMA, failed jobs, evictions' },
+  { value: 4, label: 'Tier 4 — Deep', description: '+ nvidia-smi, dmesg, NVLink (requires privileged access)' },
+]
 
 // Human-readable check names
 const CHECK_LABELS: Record<string, string> = {
@@ -77,18 +85,32 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
   const { status, isLoading, error, actionInProgress, install, uninstall, refetch } = useGPUHealthCronJob(cluster)
   const [showInstallDialog, setShowInstallDialog] = useState(false)
   const [showConfirmUninstall, setShowConfirmUninstall] = useState(false)
+  const [showResults, setShowResults] = useState(false)
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE)
   const [namespace, setNamespace] = useState(DEFAULT_NAMESPACE)
+  const [tier, setTier] = useState(DEFAULT_TIER)
+
+  // Sync tier from status when loaded
+  useEffect(() => {
+    if (status?.tier && status.tier > 0) setTier(status.tier)
+  }, [status?.tier])
 
   const handleInstall = useCallback(async () => {
-    await install({ namespace, schedule })
+    await install({ namespace, schedule, tier })
     setShowInstallDialog(false)
-  }, [install, namespace, schedule])
+  }, [install, namespace, schedule, tier])
+
+  const handleUpdateTier = useCallback(async () => {
+    if (!status) return
+    await install({ namespace: status.namespace, schedule: status.schedule, tier })
+  }, [install, status, tier])
 
   const handleUninstall = useCallback(async () => {
     await uninstall({ namespace: status?.namespace })
     setShowConfirmUninstall(false)
   }, [uninstall, status?.namespace])
+
+  const tierChanged = status?.installed && status.tier > 0 && tier !== status.tier
 
   if (isLoading && !status) {
     return (
@@ -105,7 +127,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
         <ClusterBadge cluster={cluster} size="sm" />
         <div className="flex-1 min-w-0">
           {status?.installed ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span className="text-xs text-emerald-300">Installed</span>
               {status.schedule && (
@@ -113,6 +135,13 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
                   <Clock className="w-3 h-3" />
                   {status.schedule}
                 </span>
+              )}
+              <span className="text-[10px] text-white/30 flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Tier {status.tier || 1}
+              </span>
+              {status.version > 0 && (
+                <span className="text-[10px] text-white/20">v{status.version}</span>
               )}
             </div>
           ) : (
@@ -137,6 +166,19 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
                 )}>
                   Last: {status.lastResult}
                 </span>
+              )}
+              {/* Results toggle */}
+              {status.lastResults && status.lastResults.length > 0 && (
+                <button
+                  onClick={() => setShowResults(prev => !prev)}
+                  className={cn(
+                    'p-1 rounded transition-colors',
+                    showResults ? 'bg-blue-500/15 text-blue-400' : 'text-white/30 hover:text-white/50'
+                  )}
+                  title="View results"
+                >
+                  <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showResults && 'rotate-180')} />
+                </button>
               )}
               {/* Uninstall button */}
               {!showConfirmUninstall ? (
@@ -209,6 +251,28 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
               />
             </div>
           </div>
+          {/* Tier selector */}
+          <div>
+            <label className="text-[10px] text-white/40 block mb-0.5">Check Tier</label>
+            <select
+              value={tier}
+              onChange={e => setTier(Number(e.target.value))}
+              className="w-full px-2 py-1 text-xs rounded border border-white/10 bg-white/[0.03] text-white/80 focus:outline-none focus:border-white/20"
+            >
+              {TIER_OPTIONS.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-white/30 mt-0.5">
+              {TIER_OPTIONS.find(t => t.value === tier)?.description}
+            </p>
+            {tier === 4 && (
+              <p className="text-[10px] text-amber-400/80 mt-0.5 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Tier 4 creates debug pods on GPU nodes for hardware inspection
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-2 justify-end">
             <button
               onClick={() => setShowInstallDialog(false)}
@@ -232,6 +296,36 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
         </div>
       )}
 
+      {/* Tier selector + update (when installed) */}
+      {status?.installed && status.canInstall && (
+        <div className="border-t border-white/[0.06] px-3 py-1.5 flex items-center gap-2">
+          <span className="text-[10px] text-white/40">Tier:</span>
+          <select
+            value={tier}
+            onChange={e => setTier(Number(e.target.value))}
+            className="px-1.5 py-0.5 text-[10px] rounded border border-white/10 bg-white/[0.03] text-white/60 focus:outline-none focus:border-white/20"
+          >
+            {TIER_OPTIONS.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          {tierChanged && (
+            <button
+              onClick={handleUpdateTier}
+              disabled={!!actionInProgress}
+              className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors disabled:opacity-50"
+            >
+              {actionInProgress === 'install' ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3 h-3" />
+              )}
+              Update
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Job stats (when installed) */}
       {status?.installed && (status.activeJobs > 0 || status.failedJobs > 0 || status.successJobs > 0) && (
         <div className="border-t border-white/[0.06] px-3 py-1.5 flex items-center gap-3 text-[10px]">
@@ -242,6 +336,39 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
           {status.lastRun && (
             <span className="text-white/30 ml-auto">Last: {new Date(status.lastRun).toLocaleTimeString()}</span>
           )}
+        </div>
+      )}
+
+      {/* CronJob Results (expandable) */}
+      {showResults && status?.lastResults && status.lastResults.length > 0 && (
+        <div className="border-t border-white/[0.06] px-3 py-2 bg-white/[0.01] space-y-1.5">
+          <div className="text-[10px] text-white/50 uppercase tracking-wider">Latest CronJob Results</div>
+          {status.lastResults.map(result => (
+            <div key={result.nodeName} className="rounded border border-white/[0.06] bg-white/[0.02] p-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-mono text-white/80">{result.nodeName}</span>
+                <StatusBadge status={result.status} />
+                {result.gpuCount != null && (
+                  <span className="text-[10px] text-white/30">{result.gpuCount} GPUs</span>
+                )}
+              </div>
+              <div className="space-y-0.5">
+                {(result.checks || []).map(check => (
+                  <CheckRow key={check.name} check={check} />
+                ))}
+              </div>
+              {result.issues && result.issues.length > 0 && (
+                <div className="mt-1 pt-1 border-t border-white/[0.04]">
+                  {result.issues.map((issue, i) => (
+                    <div key={i} className="flex items-start gap-1 text-[10px] text-red-300/80">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-red-400/60" />
+                      {issue}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
