@@ -14,8 +14,10 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE } from '../../lib/constants'
+import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
+import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -136,11 +138,17 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
   const [actionLoading, setActionLoading] = useState<string | null>(null) // request ID being acted on
   const [actionError, setActionError] = useState<string | null>(null)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const [showSetupDialog, setShowSetupDialog] = useState(false)
 
   const handleLoginRedirect = () => {
+    if (isDemoModeForced) {
+      // On public demo (Netlify), there's no backend — show install instructions instead
+      setShowLoginPrompt(false)
+      setShowSetupDialog(true)
+      return
+    }
     // Clear demo token and redirect to GitHub login via backend
     localStorage.removeItem(STORAGE_KEY_TOKEN)
-    // Use full backend URL to ensure proper OAuth flow
     window.location.href = `${BACKEND_DEFAULT_URL}/auth/github`
   }
 
@@ -248,7 +256,9 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                 {t('feedback.loginRequired')}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Please login with GitHub to submit feedback, request updates, or close requests.
+                {isDemoModeForced
+                  ? t('feedback.loginDemoExplanation')
+                  : t('feedback.loginExplanation')}
               </p>
               <div className="flex justify-end gap-2">
                 <button
@@ -261,13 +271,19 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   onClick={handleLoginRedirect}
                   className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors"
                 >
-                  {t('feedback.loginWithGitHub')}
+                  {isDemoModeForced ? t('feedback.getYourOwn') : t('feedback.loginWithGitHub')}
                 </button>
               </div>
             </div>
           </div>
         </>
       )}
+
+      {/* Setup Instructions Dialog — shown when demo users click login */}
+      <SetupInstructionsDialog
+        isOpen={showSetupDialog}
+        onClose={() => setShowSetupDialog(false)}
+      />
 
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">

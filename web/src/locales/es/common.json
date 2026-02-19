@@ -1454,6 +1454,9 @@
     "demo": "Demo",
     "loginRequired": "Login Required",
     "loginWithGitHub": "Login with GitHub",
+    "loginExplanation": "Please login with GitHub to submit feedback, request updates, or close requests.",
+    "loginDemoExplanation": "This is a public demo — GitHub login requires your own KubeStellar Console instance. Install locally to submit feedback and unlock all features.",
+    "getYourOwn": "Get Your Own Console",
     "requestSubmitted": "Request Submitted!",
     "status": {
       "open": "Open",
