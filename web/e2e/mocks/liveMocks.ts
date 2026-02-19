@@ -482,13 +482,17 @@ export async function setLiveColdMode(page: Page, user?: typeof mockUser): Promi
       localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
       localStorage.setItem('kc-sqlite-migrated', '2')
 
-      // Clear all caches for cold start
+      // Clear all caches for cold start — use allowlist so card-specific backup
+      // keys (e.g. nightly-e2e-cache) are also cleared
+      const COLD_KEEP_KEYS = new Set([
+        'token', 'kc-demo-mode', 'demo-user-onboarded',
+        'kubestellar-console-tour-completed', 'kc-user-cache',
+        'kc-backend-status', 'kc-sqlite-migrated',
+      ])
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const key = localStorage.key(i)
-        if (!key) continue
-        if (key.includes('dashboard-cards') || key.startsWith('cache:') || key.includes('kubestellar-stack-cache')) {
-          localStorage.removeItem(key)
-        }
+        if (!key || COLD_KEEP_KEYS.has(key)) continue
+        localStorage.removeItem(key)
       }
     },
     { user: u },

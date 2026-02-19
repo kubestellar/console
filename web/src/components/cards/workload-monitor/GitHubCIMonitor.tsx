@@ -147,7 +147,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   const { data: ciData, isLoading, isFailed, refetch } = useCache<{ workflows: WorkflowRun[], isDemo: boolean }>({
     key: `github-ci:${reposKey}`,
     category: 'default',
-    initialData: { workflows: DEMO_WORKFLOWS, isDemo: true },
+    initialData: { workflows: [], isDemo: false },
     demoData: { workflows: DEMO_WORKFLOWS, isDemo: true },
     persist: true,
     fetcher: async () => {

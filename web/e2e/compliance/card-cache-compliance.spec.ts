@@ -399,14 +399,18 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
   console.log('[CacheTest] Phase 3: Cold load — loading all batches with network')
 
   for (let batch = 0; batch < totalBatches; batch++) {
-    // Clear caches before each batch for true cold start
+    // Clear caches before each batch — allowlist keeps only essential settings
+    // so card-specific localStorage backup keys (e.g. nightly-e2e-cache) are cleared too
     await page.evaluate(() => {
+      const KEEP_KEYS = new Set([
+        'token', 'kc-demo-mode', 'demo-user-onboarded',
+        'kubestellar-console-tour-completed', 'kc-user-cache',
+        'kc-backend-status', 'kc-sqlite-migrated',
+      ])
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const key = localStorage.key(i)
-        if (!key) continue
-        if (key.includes('dashboard-cards') || key.startsWith('cache:') || key.includes('kubestellar-stack-cache')) {
-          localStorage.removeItem(key)
-        }
+        if (!key || KEEP_KEYS.has(key)) continue
+        localStorage.removeItem(key)
       }
       localStorage.setItem('kc-demo-mode', 'false')
       localStorage.setItem('token', 'test-token')
@@ -433,7 +437,13 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
     }
 
     const contentCount = snapshots.filter((s) => s.hasContent).length
-    console.log(`[CacheTest] Batch ${batch + 1}/${totalBatches} cold: ${selected.length} cards, ${contentCount} with content`)
+    const demoBadgeCount = snapshots.filter((s) => s.hasDemoBadge).length
+    console.log(`[CacheTest] Batch ${batch + 1}/${totalBatches} cold: ${selected.length} cards, ${contentCount} with content, ${demoBadgeCount} with demo badge`)
+    if (demoBadgeCount > 0) {
+      for (const snap of snapshots.filter((s) => s.hasDemoBadge)) {
+        console.log(`[CacheTest]   COLD DEMO BADGE: ${snap.cardType} (${snap.cardId}) — initialData may contain demo data`)
+      }
+    }
   }
 
   // ── Phase 4: Cache snapshot ────────────────────────────────────────────
@@ -449,6 +459,38 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
   console.log('[CacheTest] Phase 5: Navigate away')
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(500)
+
+  // ── Phase 5.5: Page reload persistence test ─────────────────────────────
+  // A real page.reload() kills the SQLite WASM Worker and its in-memory DB.
+  // Only data persisted via OPFS or localStorage survives. This catches cards
+  // that rely solely on the in-memory Worker cache (which was the Nightly E2E bug).
+  console.log('[CacheTest] Phase 5.5: Page reload persistence test (first batch)')
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(3_000)
+
+  const reloadManifest = await navigateToBatch(page, 0)
+  const reloadSelected = reloadManifest.selected || []
+  if (reloadSelected.length > 0) {
+    const reloadCardIds = reloadSelected.map((s) => s.cardId)
+    const reloadSnapshots = await captureWarmSnapshots(page, reloadCardIds, WARM_POLL_INTERVAL_MS, WARM_RETURN_WAIT_MS)
+
+    let reloadDemoBadgeRegressions = 0
+    let reloadCacheMisses = 0
+    for (const snap of reloadSnapshots) {
+      const coldSnap = coldSnapshots.get(snap.cardId)
+      if (!coldSnap || !coldSnap.hasContent) continue
+
+      if (snap.hasDemoBadge && !coldSnap.hasDemoBadge) {
+        reloadDemoBadgeRegressions++
+        console.log(`[CacheTest]   RELOAD REGRESSION: ${snap.cardType} showed demo badge after page reload (cold load had no demo badge)`)
+      }
+      if (!snap.hasContent && coldSnap.hasContent) {
+        reloadCacheMisses++
+        console.log(`[CacheTest]   RELOAD CACHE MISS: ${snap.cardType} had no content after page reload (cold had ${coldSnap.textLength} chars)`)
+      }
+    }
+    console.log(`[CacheTest] Page reload: ${reloadSelected.length} cards tested, ${reloadDemoBadgeRegressions} demo regressions, ${reloadCacheMisses} cache misses`)
+  }
 
   // ── Phase 6: Delay APIs + warm return ──────────────────────────────────
   console.log('[CacheTest] Phase 6: Warm return with delayed APIs (30s delay)')
@@ -497,6 +539,7 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
       const warmHadContent = warmSnap.hasContent
       const warmDemoBadge = warmSnap.hasDemoBadge
       const warmSkeleton = warmSnap.hasLargeSkeleton
+      const coldHadDemoBadge = coldSnap.hasDemoBadge
 
       // Content match: warm text length should be similar to cold (within 50% or at least 10 chars)
       const textSimilar =
@@ -506,7 +549,12 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
       let status: CardCacheStatus = 'pass'
       let details = ''
 
-      if (!warmHadContent) {
+      // Cold load in non-demo mode should never show demo badge —
+      // this means initialData was set to demo data (bypassing skeleton)
+      if (coldHadDemoBadge) {
+        status = 'fail'
+        details = 'Cold load showed demo badge in non-demo mode — initialData likely set to demo data'
+      } else if (!warmHadContent) {
         status = 'fail'
         details = `No content on warm return (cold had ${coldSnap.textLength} chars). Cache miss.`
       } else if (warmDemoBadge && !coldSnap.hasDemoBadge) {

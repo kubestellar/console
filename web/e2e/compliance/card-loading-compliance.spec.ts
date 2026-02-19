@@ -461,6 +461,51 @@ function checkCriterionH(
   }
 }
 
+function checkCriterionI(
+  cardId: string,
+  cardType: string,
+  history: CardStateSnapshot[]
+): CriterionResult {
+  // On cold start with cleared caches, the first snapshot should be
+  // skeleton/loading — NOT demo data.  If the first snapshot has content +
+  // demo badge + data-loading="false", `initialData` was set to demo data
+  // (bypassing the loading→content transition entirely).
+  if (history.length === 0) {
+    return { criterion: 'i', status: 'skip', details: 'No snapshots captured' }
+  }
+
+  const first = history[0]
+  const hasContent = first.textContentLength > 10 || first.hasVisualContent
+
+  if (first.hasDemoBadge && hasContent && first.dataLoading === 'false') {
+    return {
+      criterion: 'i',
+      status: 'fail',
+      details: `First snapshot already has demo content (${first.textContentLength} chars) with demo badge — initialData likely set to demo data`,
+    }
+  }
+
+  // Also check early snapshots (within first 200ms / 4 polls) for same pattern
+  const earlySnapshots = history.slice(0, Math.min(4, history.length))
+  const earlyDemoFlash = earlySnapshots.find(
+    (s) => s.hasDemoBadge && (s.textContentLength > 10 || s.hasVisualContent) && s.dataLoading === 'false'
+  )
+  if (earlyDemoFlash) {
+    return {
+      criterion: 'i',
+      status: 'fail',
+      details: `Demo data appeared within first 200ms (${earlyDemoFlash.textContentLength} chars) — initialData likely set to demo data`,
+    }
+  }
+
+  if (hasContent && first.dataLoading === 'false' && !first.hasDemoBadge) {
+    // Content without demo badge on first snapshot — could be from localStorage cache, OK
+    return { criterion: 'i', status: 'pass', details: 'First snapshot has content without demo badge (likely cached)' }
+  }
+
+  return { criterion: 'i', status: 'pass', details: 'First snapshot shows loading/skeleton as expected' }
+}
+
 // ---------------------------------------------------------------------------
 // Gap analysis — self-evaluating section for continuous improvement
 // ---------------------------------------------------------------------------
@@ -471,7 +516,7 @@ function generateGapAnalysis(report: ComplianceReport): GapAnalysisEntry[] {
 
   // Check for criteria with high skip rates (not enough coverage)
   const allCards = report.batches.flatMap((b) => b.cards)
-  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
+  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']) {
     const results = allCards.map((c) => c.criteria[criterion]).filter(Boolean)
     const skipCount = results.filter((r) => r.status === 'skip').length
     const skipRate = results.length > 0 ? skipCount / results.length : 0
@@ -487,6 +532,20 @@ function generateGapAnalysis(report: ComplianceReport): GapAnalysisEntry[] {
         priority: skipRate > 0.8 ? 'high' : 'medium',
       })
     }
+  }
+
+  // Check for initial demo flash failures (criterion i)
+  const demoFlashFails = allCards.filter((c) => c.criteria.i?.status === 'fail')
+  if (demoFlashFails.length > 0) {
+    const failedTypes = demoFlashFails.map((c) => c.cardType)
+    const uniqueTypes = [...new Set(failedTypes)]
+    gaps.push({
+      area: 'Initial demo data as initialData',
+      observation: `${uniqueTypes.length} card types use demo data as useCache initialData: ${uniqueTypes.join(', ')}`,
+      suggestedImprovement:
+        'Change initialData from demo data to empty (e.g., [] or { items: [], isDemo: false }). Demo data should only be in the demoData prop. Cards with demo initialData skip the skeleton phase and flash demo badges on cold start.',
+      priority: 'high',
+    })
   }
 
   // Check if demo badge failures cluster around specific card types
@@ -579,9 +638,10 @@ function writeReport(report: ComplianceReport, outDir: string) {
     f: 'Data cached persistently as it loads',
     g: 'Cached data loads immediately on return',
     h: 'Cached data updated without skeleton regression',
+    i: 'No demo data flash on cold start',
   }
 
-  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
+  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']) {
     const results = allCards.map((c) => c.criteria[criterion]).filter(Boolean)
     const pass = results.filter((r) => r.status === 'pass').length
     const fail = results.filter((r) => r.status === 'fail').length
@@ -680,15 +740,18 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
   console.log('[Compliance] Phase 2: Live-Cold — testing card loading behavior')
 
   for (let batch = 0; batch < totalBatches; batch++) {
-    // Clear caches in-page before each batch (init scripts already set from phase 1)
+    // Clear caches in-page before each batch — allowlist keeps only essential settings
+    // so card-specific localStorage backup keys (e.g. nightly-e2e-cache) are cleared too
     await page.evaluate(() => {
-      // Clear cache-related localStorage entries
+      const KEEP_KEYS = new Set([
+        'token', 'kc-demo-mode', 'demo-user-onboarded',
+        'kubestellar-console-tour-completed', 'kc-user-cache',
+        'kc-backend-status', 'kc-sqlite-migrated',
+      ])
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const key = localStorage.key(i)
-        if (!key) continue
-        if (key.includes('dashboard-cards') || key.startsWith('cache:') || key.includes('kubestellar-stack-cache')) {
-          localStorage.removeItem(key)
-        }
+        if (!key || KEEP_KEYS.has(key)) continue
+        localStorage.removeItem(key)
       }
       // Ensure live mode
       localStorage.setItem('kc-demo-mode', 'false')
@@ -726,6 +789,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
         d: checkCriterionD(item.cardId, item.cardType, history),
         e: checkCriterionE(item.cardId, item.cardType, history),
         f: criterionFResult,
+        i: checkCriterionI(item.cardId, item.cardType, history),
       }
 
       batchCards.push({
@@ -792,7 +856,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
 
   const allCards = allBatchResults.flatMap((b) => b.cards)
   const criterionPassRates: Record<string, number> = {}
-  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
+  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']) {
     const results = allCards.map((c) => c.criteria[criterion]).filter(Boolean)
     const testable = results.filter((r) => r.status !== 'skip')
     criterionPassRates[criterion] = testable.length > 0
@@ -825,7 +889,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
   console.log(`[Compliance] Summary: ${path.join(outDir, 'compliance-summary.md')}`)
   console.log(`[Compliance] Pass: ${report.summary.passCount}, Fail: ${report.summary.failCount}, Warn: ${report.summary.warnCount}, Skip: ${report.summary.skipCount}`)
 
-  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
+  for (const criterion of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']) {
     const rate = criterionPassRates[criterion]
     console.log(`[Compliance] Criterion ${criterion}: ${Math.round(rate * 100)}% pass rate`)
   }
@@ -840,6 +904,8 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
   // ── Assertions ──────────────────────────────────────────────────────────
   // Criterion a (no demo badge during loading) must be 100% — was the main issue, now fixed
   expect(criterionPassRates['a'], `Criterion a pass rate ${Math.round(criterionPassRates['a'] * 100)}% should be 100%`).toBe(1)
+  // Criterion i (no initial demo flash) must be 100% — catches initialData set to demo data
+  expect(criterionPassRates['i'], `Criterion i pass rate ${Math.round(criterionPassRates['i'] * 100)}% should be 100%`).toBe(1)
   // Critical criteria (c: SSE streaming, d: skeleton→content transition, f: persistent cache)
   for (const criterion of ['c', 'd', 'f'] as const) {
     const rate = criterionPassRates[criterion]
