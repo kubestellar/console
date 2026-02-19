@@ -16,15 +16,37 @@ import {
   type NightlyGuideStatus,
 } from '../lib/llmd/nightlyE2EDemoData'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { isNetlifyDeployment } from '../lib/demoMode'
 
 const REFRESH_IDLE_MS = 5 * 60 * 1000    // 5 minutes when idle
 const REFRESH_ACTIVE_MS = 2 * 60 * 1000  // 2 minutes when jobs are running
 
 const DEMO_DATA = generateDemoNightlyData()
 
+const LS_CACHE_KEY = 'nightly-e2e-cache'
+
 export interface NightlyE2EData {
   guides: NightlyGuideStatus[]
   isDemo: boolean
+}
+
+/** Read last-known live data from localStorage (synchronous, survives refresh). */
+function loadCachedData(): NightlyE2EData {
+  try {
+    const raw = localStorage.getItem(LS_CACHE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as NightlyE2EData
+      if (parsed.guides?.length > 0 && !parsed.isDemo) return parsed
+    }
+  } catch { /* ignore */ }
+  return { guides: [], isDemo: false }
+}
+
+/** Persist live data to localStorage so it survives page refresh. */
+function saveCachedData(data: NightlyE2EData): void {
+  try {
+    localStorage.setItem(LS_CACHE_KEY, JSON.stringify(data))
+  } catch { /* quota exceeded — ignore */ }
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -33,6 +55,9 @@ function getAuthHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${jwt}` }
 }
 
+// Load synchronously at module level so initialData is ready before first render
+const CACHED_INITIAL = loadCachedData()
+
 export function useNightlyE2EData() {
   const [hasRunningJobs, setHasRunningJobs] = useState(false)
   const refreshInterval = hasRunningJobs ? REFRESH_ACTIVE_MS : REFRESH_IDLE_MS
@@ -40,11 +65,11 @@ export function useNightlyE2EData() {
   const cacheResult = useCache<NightlyE2EData>({
     key: 'nightly-e2e-status',
     category: 'default',
-    initialData: { guides: DEMO_DATA, isDemo: true },
+    initialData: CACHED_INITIAL,
     demoData: { guides: DEMO_DATA, isDemo: true },
     persist: true,
     refreshInterval,
-    liveInDemoMode: true, // Backed by Netlify Function — always fetch live data
+    liveInDemoMode: isNetlifyDeployment, // Only fetch live in demo mode on console.kubestellar.io
     fetcher: async () => {
       // Try authenticated endpoint first, then public fallback
       const endpoints = ['/api/nightly-e2e/runs', '/api/public/nightly-e2e/runs']
@@ -95,7 +120,9 @@ export function useNightlyE2EData() {
                   gpuType: g.gpuType ?? 'Unknown',
                   gpuCount: g.gpuCount ?? 0,
                 }))
-                return { guides, isDemo: false }
+                const result = { guides, isDemo: false }
+                saveCachedData(result)
+                return result
               }
             }
           }
@@ -115,14 +142,19 @@ export function useNightlyE2EData() {
     if (running !== hasRunningJobs) setHasRunningJobs(running)
   }, [guides, hasRunningJobs])
 
+  // When localStorage had cached data, the initial render has data but useCache
+  // still reports isLoading=true until the async cache layer confirms.  In that
+  // case we already have good data — suppress the loading state.
+  const hasCachedInitial = CACHED_INITIAL.guides.length > 0
+
   return {
     guides,
     // Don't report demo fallback while still loading — the initial demo data is a
     // loading placeholder, not confirmed demo mode. Showing the Demo badge during
     // cache hydration is misleading and fails cache compliance tests.
     isDemoFallback: cacheResult.isLoading ? false : isDemo,
-    isLoading: cacheResult.isLoading,
-    isRefreshing: cacheResult.isRefreshing,
+    isLoading: hasCachedInitial ? false : cacheResult.isLoading,
+    isRefreshing: cacheResult.isRefreshing || (hasCachedInitial && cacheResult.isLoading),
     isFailed: cacheResult.isFailed,
     consecutiveFailures: cacheResult.consecutiveFailures,
     refetch: cacheResult.refetch,
