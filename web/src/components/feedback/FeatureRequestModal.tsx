@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, Eye, RefreshCw, MessageSquare, AlertTriangle } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, Eye, RefreshCw, MessageSquare, AlertTriangle, Settings, Github, Coins } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
@@ -212,7 +212,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
         onClose()
       }, 3000)
     } catch (err) {
-      setError('Failed to submit request. Please try again.')
+      setError(t('feedback.submitFailed'))
     }
   }
 
@@ -248,33 +248,123 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
             onClick={() => setShowLoginPrompt(false)}
           />
           <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 pointer-events-none">
-            <div
-              className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full pointer-events-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                {t('feedback.loginRequired')}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {isDemoModeForced
-                  ? t('feedback.loginDemoExplanation')
-                  : t('feedback.loginExplanation')}
-              </p>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowLoginPrompt(false)}
-                  className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLoginRedirect}
-                  className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors"
-                >
-                  {isDemoModeForced ? t('feedback.getYourOwn') : t('feedback.loginWithGitHub')}
-                </button>
+            {isDemoModeForced ? (
+              /* Demo mode: simple prompt to get their own console */
+              <div
+                className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full pointer-events-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {t('feedback.loginRequired')}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t('feedback.loginDemoExplanation')}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShowLoginPrompt(false)}
+                    className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLoginRedirect}
+                    className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors"
+                  >
+                    {t('feedback.getYourOwn')}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Localhost/cluster: OAuth setup guidance + GitHub issues fallback */
+              <div
+                className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-md w-full pointer-events-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <Github className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {t('feedback.oauthRequired')}
+                  </h3>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t('feedback.oauthExplanation')}
+                </p>
+
+                {/* How it works */}
+                <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg mb-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Coins className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-xs font-semibold text-purple-400">{t('feedback.howItWorks')}</span>
+                  </div>
+                  <ul className="text-xs text-muted-foreground space-y-1.5">
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-400 mt-0.5">1.</span>
+                      <span>{t('feedback.oauthStep1')}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-400 mt-0.5">2.</span>
+                      <span>{t('feedback.oauthStep2')}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-400 mt-0.5">3.</span>
+                      <span>{t('feedback.oauthStep3')}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* In the meantime */}
+                <div className="p-3 bg-secondary/30 border border-border rounded-lg mb-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">{t('feedback.inTheMeantime')}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t('feedback.githubIssuesInfo')}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowLoginPrompt(false)}
+                      className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <a
+                      href="https://github.com/kubestellar/console/issues/new"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {t('feedback.openGitHubIssue')}
+                    </a>
+                    <button
+                      onClick={() => {
+                        setShowLoginPrompt(false)
+                        setShowSetupDialog(true)
+                      }}
+                      className="flex-1 px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      {t('feedback.setupOAuth')}
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleLoginRedirect}
+                    className="text-xs text-center text-muted-foreground hover:text-purple-400 transition-colors py-1"
+                  >
+                    {t('feedback.alreadySetUp')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -342,10 +432,12 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
           className="w-full px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between hover:bg-amber-500/20 transition-colors cursor-pointer flex-shrink-0"
         >
               <span className="text-xs text-amber-400">
-                Login with GitHub to submit feedback and manage requests
+                {isDemoModeForced
+                  ? t('feedback.loginBannerDemo')
+                  : t('feedback.loginBannerLocal')}
               </span>
           <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400">
-            Login
+            {isDemoModeForced ? t('feedback.loginWithGitHub') : t('feedback.setupOAuth')}
           </span>
         </button>
       )}
@@ -906,16 +998,41 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   />
                 </div>
 
-                {/* Error */}
+                {/* Error with actionable guidance */}
                 {error && (
-                  <p className="text-sm text-red-400">{error}</p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-red-400">{error}</p>
+                    <div className="p-3 bg-secondary/30 border border-border rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {t('feedback.submitFailedGuidance')}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href="https://github.com/kubestellar/console/issues/new"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          {t('feedback.openGitHubIssue')}
+                        </a>
+                        {!canPerformActions && (
+                          <button
+                            onClick={() => { setError(null); setShowSetupDialog(true) }}
+                            className="px-3 py-1.5 text-xs rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors flex items-center gap-1.5"
+                          >
+                            <Settings className="w-3 h-3" />
+                            {t('feedback.setupOAuth')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* Info */}
                 <p className="text-xs text-muted-foreground">
-                  Your request will be reviewed by a maintainer before being analyzed
-                  by our AI. Once approved, the AI will attempt to create a fix
-                  automatically and you'll receive a notification when ready.
+                  {t('feedback.submitInfo')}
                 </p>
               </div>
             </form>
