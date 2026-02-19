@@ -455,6 +455,7 @@ export function useNotifications() {
 
     pollingRef.current = window.setInterval(() => {
       loadUnreadCount()
+      loadNotifications()
     }, 30000)
 
     return () => {
@@ -462,7 +463,7 @@ export function useNotifications() {
         clearInterval(pollingRef.current)
       }
     }
-  }, [loadUnreadCount])
+  }, [loadUnreadCount, loadNotifications])
 
   const markAsRead = useCallback(async (id: string) => {
     // In demo mode, just update local state

@@ -228,6 +228,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
         setActiveTab('updates')
         setUpdatesSubTab('requests')
         refreshRequests()
+        refreshNotifications()
       }, 3000)
     } catch (err) {
       setError(t('feedback.submitFailed'))
