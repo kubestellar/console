@@ -316,7 +316,7 @@ export function Layout({ children }: LayoutProps) {
               Demo Mode
             </span>
             <span className="hidden md:inline text-xs text-yellow-400/70">
-              Showing sample data from all cloud providers
+              Showing sample data only — install locally to monitor your real clusters
             </span>
             <button
               onClick={() => setShowSetupDialog(true)}
