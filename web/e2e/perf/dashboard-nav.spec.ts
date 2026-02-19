@@ -8,6 +8,9 @@ import {
   setupAuth,
   setupLiveMocks,
   mockUser,
+  setMode as setSharedMode,
+  DASHBOARDS,
+  type Dashboard,
 } from '../mocks/liveMocks'
 
 // ---------------------------------------------------------------------------
@@ -35,38 +38,7 @@ interface NavReport {
   metrics: NavMetric[]
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard definitions — same set as dashboard-perf.spec.ts
-// ---------------------------------------------------------------------------
-
-const DASHBOARDS = [
-  { id: 'main', name: 'Dashboard', route: '/' },
-  { id: 'clusters', name: 'Clusters', route: '/clusters' },
-  { id: 'compute', name: 'Compute', route: '/compute' },
-  { id: 'security', name: 'Security', route: '/security' },
-  { id: 'gitops', name: 'GitOps', route: '/gitops' },
-  { id: 'pods', name: 'Pods', route: '/pods' },
-  { id: 'deployments', name: 'Deployments', route: '/deployments' },
-  { id: 'services', name: 'Services', route: '/services' },
-  { id: 'events', name: 'Events', route: '/events' },
-  { id: 'storage', name: 'Storage', route: '/storage' },
-  { id: 'network', name: 'Network', route: '/network' },
-  { id: 'nodes', name: 'Nodes', route: '/nodes' },
-  { id: 'workloads', name: 'Workloads', route: '/workloads' },
-  { id: 'gpu', name: 'GPU Reservations', route: '/gpu-reservations' },
-  { id: 'alerts', name: 'Alerts', route: '/alerts' },
-  { id: 'helm', name: 'Helm', route: '/helm' },
-  { id: 'operators', name: 'Operators', route: '/operators' },
-  { id: 'compliance', name: 'Compliance', route: '/compliance' },
-  { id: 'cost', name: 'Cost', route: '/cost' },
-  { id: 'ai-ml', name: 'AI/ML', route: '/ai-ml' },
-  { id: 'ci-cd', name: 'CI/CD', route: '/ci-cd' },
-  { id: 'logs', name: 'Logs', route: '/logs' },
-  { id: 'deploy', name: 'Deploy', route: '/deploy' },
-  { id: 'ai-agents', name: 'AI Agents', route: '/ai-agents' },
-  { id: 'data-compliance', name: 'Data Compliance', route: '/data-compliance' },
-  { id: 'arcade', name: 'Arcade', route: '/arcade' },
-]
+// DASHBOARDS imported from ../mocks/liveMocks (single source of truth)
 
 // When REAL_BACKEND=true, skip mocks and test against the live backend.
 // Requires a running console + backend and a valid OAuth token via REAL_TOKEN env var.
@@ -92,31 +64,32 @@ async function setupMocks(page: Page) {
 }
 
 async function setMode(page: Page) {
-  const lsValues: Record<string, string> = {
-    token: REAL_BACKEND ? REAL_TOKEN : 'test-token',
-    'kc-demo-mode': 'false',
-    'demo-user-onboarded': 'true',
-    'kubestellar-console-tour-completed': 'true',
-    'kc-user-cache': REAL_BACKEND && REAL_USER ? REAL_USER : JSON.stringify(mockUser),
-    'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
-    'kc-sqlite-migrated': '2',
+  if (REAL_BACKEND) {
+    // Real backend: set actual token/user, skip shared mock setup
+    const lsValues: Record<string, string> = {
+      token: REAL_TOKEN,
+      'kc-demo-mode': 'false',
+      'demo-user-onboarded': 'true',
+      'kubestellar-console-tour-completed': 'true',
+      'kc-user-cache': REAL_USER || JSON.stringify(mockUser),
+      'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
+      'kc-sqlite-migrated': '2',
+    }
+    await page.addInitScript(
+      (values: Record<string, string>) => {
+        for (const [k, v] of Object.entries(values)) localStorage.setItem(k, v)
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.endsWith('-dashboard-cards')) keysToRemove.push(key)
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k))
+      },
+      lsValues,
+    )
+    return
   }
-
-  await page.addInitScript(
-    (values: Record<string, string>) => {
-      for (const [k, v] of Object.entries(values)) {
-        localStorage.setItem(k, v)
-      }
-      // Clear stale dashboard card layouts
-      const keysToRemove: string[] = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.endsWith('-dashboard-cards')) keysToRemove.push(key)
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k))
-    },
-    lsValues,
-  )
+  await setSharedMode(page, 'live')
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +107,7 @@ async function setMode(page: Page) {
 async function measureNavigation(
   page: Page,
   fromRoute: string,
-  target: (typeof DASHBOARDS)[0],
+  target: Dashboard,
   scenario: Scenario,
 ): Promise<NavMetric | null> {
   // Find the sidebar link for this dashboard
