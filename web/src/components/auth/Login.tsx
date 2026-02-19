@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo } from 'react'
-import { Github, AlertTriangle } from 'lucide-react'
+import { Github, AlertTriangle, ExternalLink, Settings } from 'lucide-react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { checkOAuthConfigured } from '../../lib/api'
@@ -9,15 +9,67 @@ import { useTranslation } from 'react-i18next'
 // Lazy load the heavy Three.js globe animation
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
 
+// Map backend error codes to user-friendly messages with troubleshooting steps
+const OAUTH_ERROR_INFO: Record<string, { title: string; message: string; steps: string[] }> = {
+  exchange_failed: {
+    title: 'GitHub OAuth Token Exchange Failed',
+    message: 'The console was unable to complete the login with GitHub. This usually means your OAuth app is misconfigured.',
+    steps: [
+      'Check that GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are set in your .env file',
+      'Verify the Client Secret in your GitHub OAuth app matches what\'s in .env (regenerate if unsure)',
+      'Confirm the "Authorization callback URL" in your GitHub OAuth app is set to: http://localhost:8080/auth/github/callback',
+      'Restart the console after updating .env',
+    ],
+  },
+  csrf_validation_failed: {
+    title: 'Login Session Expired',
+    message: 'The login session timed out or was interrupted. This can happen with Safari or slow networks.',
+    steps: [
+      'Try logging in again — click "Continue with GitHub" below',
+      'If using Safari, try Chrome or Firefox instead',
+      'Clear your browser cookies for localhost and try again',
+    ],
+  },
+  missing_code: {
+    title: 'GitHub Login Incomplete',
+    message: 'GitHub did not return an authorization code. The OAuth flow may have been interrupted.',
+    steps: [
+      'Try logging in again — click "Continue with GitHub" below',
+      'Check that your GitHub OAuth app is not suspended or deleted',
+      'Verify the "Homepage URL" in your GitHub OAuth app settings',
+    ],
+  },
+  user_fetch_failed: {
+    title: 'Could Not Retrieve GitHub Profile',
+    message: 'Login succeeded but the console was unable to fetch your GitHub profile.',
+    steps: [
+      'Try logging in again — this may be a temporary GitHub API issue',
+      'Check that your GitHub OAuth app has the "read:user" scope',
+      'Verify your internet connection to api.github.com',
+    ],
+  },
+  db_error: {
+    title: 'Database Error',
+    message: 'The console backend encountered a database error while processing your login.',
+    steps: [
+      'Restart the console and try again',
+      'Check the backend logs for more details',
+    ],
+  },
+}
+
 export function Login() {
   const { t } = useTranslation('common')
   const { login, isAuthenticated, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
   const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
+  const oauthError = useMemo(() => searchParams.get('error'), [searchParams])
+  const errorInfo = oauthError ? OAUTH_ERROR_INFO[oauthError] : null
 
   // Auto-login for Netlify deploy previews or when backend has no OAuth configured
+  // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info
   useEffect(() => {
-    if (isLoading || isAuthenticated) return
+    if (isLoading || isAuthenticated || oauthError) return
 
     const isNetlifyPreview = window.location.hostname.includes('deploy-preview-') ||
       window.location.hostname.includes('netlify.app')
@@ -35,7 +87,7 @@ export function Login() {
         login()
       }
     })
-  }, [isLoading, isAuthenticated, login])
+  }, [isLoading, isAuthenticated, login, oauthError])
 
   // Show loading while checking auth status
   if (isLoading) {
@@ -104,13 +156,54 @@ export function Login() {
             </div>
           )}
 
+          {/* OAuth error banner */}
+          {errorInfo && (
+            <div className="mb-6 rounded-lg border border-red-500/50 bg-red-500/10 overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3 text-red-300 text-sm">
+                <AlertTriangle className="w-5 h-5 shrink-0 text-red-400" />
+                <div>
+                  <div className="font-medium text-red-300">{errorInfo.title}</div>
+                  <div className="text-xs text-red-400/80 mt-0.5">{errorInfo.message}</div>
+                </div>
+              </div>
+              <div className="px-4 pb-3">
+                <div className="text-xs font-medium text-red-300/80 mb-1.5">Troubleshooting:</div>
+                <ol className="text-xs text-red-400/70 space-y-1 list-decimal list-inside">
+                  {errorInfo.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+                <div className="flex items-center gap-2 mt-3">
+                  <a
+                    href="https://github.com/settings/developers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1.5 text-xs rounded border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
+                  >
+                    <Settings className="w-3 h-3" />
+                    GitHub OAuth Settings
+                  </a>
+                  <a
+                    href="https://github.com/kubestellar/console#quick-start"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1.5 text-xs rounded border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Setup Guide
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Welcome text */}
           <div className="text-center mb-8">
             <h2 data-testid="login-welcome-heading" className="text-xl font-semibold text-foreground mb-2">
-              {sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
+              {oauthError ? 'Login Failed' : sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
             </h2>
             <p className="text-muted-foreground">
-              {t('login.signInDescription')}
+              {oauthError ? 'Fix the issue above and try again' : t('login.signInDescription')}
             </p>
           </div>
 
