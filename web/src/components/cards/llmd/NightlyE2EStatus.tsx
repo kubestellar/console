@@ -5,7 +5,8 @@
  * and aggregate statistics. Grouped by platform (OCP, GKE).
  * Fetches from GitHub Actions API; falls back to demo data without a token.
  */
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
   TestTube2, ExternalLink, TrendingUp, TrendingDown, Minus,
@@ -74,6 +75,9 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
 }) {
   const [showPopup, setShowPopup] = useState(false)
   const [isDiagnosing, setIsDiagnosing] = useState(false)
+  const dotRef = useRef<HTMLDivElement>(null)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null)
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const isRunning = run.status !== 'completed'
@@ -99,6 +103,35 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
       : `${run.conclusion} — ${formatTimeAgo(run.createdAt)}`
 
   const logsUrl = `${run.htmlUrl}#logs`
+
+  const cancelHide = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
+    }
+  }, [])
+
+  const scheduleHide = useCallback(() => {
+    cancelHide()
+    hideTimerRef.current = setTimeout(() => setShowPopup(false), 150)
+  }, [cancelHide])
+
+  useEffect(() => () => cancelHide(), [cancelHide])
+
+  const handleDotEnter = useCallback(() => {
+    cancelHide()
+    if (dotRef.current) {
+      const rect = dotRef.current.getBoundingClientRect()
+      setPopupPos({ top: rect.top, left: rect.left + rect.width / 2 })
+    }
+    setShowPopup(true)
+    onMouseEnter?.()
+  }, [cancelHide, onMouseEnter])
+
+  const handleDotLeave = useCallback(() => {
+    scheduleHide()
+    onMouseLeave?.()
+  }, [scheduleHide, onMouseLeave])
 
   const handleDiagnose = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -162,9 +195,10 @@ Please provide:
 
   return (
     <div
+      ref={dotRef}
       className="group relative"
-      onMouseEnter={() => { setShowPopup(true); onMouseEnter?.() }}
-      onMouseLeave={() => { setShowPopup(false); onMouseLeave?.() }}
+      onMouseEnter={handleDotEnter}
+      onMouseLeave={handleDotLeave}
     >
       <a
         href={run.htmlUrl}
@@ -177,9 +211,14 @@ Please provide:
           isHighlighted ? 'ring-2 ring-white/50 scale-125' : 'group-hover:ring-2 group-hover:ring-white/30'
         } transition-all`} />
       </a>
-      {isFailed && showPopup && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 pointer-events-auto">
-          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-2.5 py-1.5 whitespace-nowrap text-[10px]">
+      {isFailed && showPopup && popupPos && createPortal(
+        <div
+          className="fixed z-[9999]"
+          style={{ top: popupPos.top, left: popupPos.left, transform: 'translate(-50%, -100%)' }}
+          onMouseEnter={cancelHide}
+          onMouseLeave={scheduleHide}
+        >
+          <div className="mb-1.5 bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-2.5 py-1.5 whitespace-nowrap text-[10px]">
             <div className="text-slate-300 mb-1">
               Run #{run.runNumber} &middot; {isGPUFailure ? <span className="text-amber-400">GPU unavailable</span> : <span className="text-red-400">failed</span>} &middot; {formatTimeAgo(run.createdAt)}
             </div>
@@ -202,7 +241,8 @@ Please provide:
             </div>
             <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-600" />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       <ApiKeyPromptModal isOpen={showKeyPrompt} onDismiss={dismissPrompt} onGoToSettings={goToSettings} />
     </div>
