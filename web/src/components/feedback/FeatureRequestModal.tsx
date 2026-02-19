@@ -934,7 +934,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                   </div>
                 ) : (
                   /* GitHub Contributions Sub-tab */
-                  <div className="flex flex-col h-full">
+                  <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
                     {/* GitHub points summary */}
                     {githubRewards && (
                       <div className="p-3 border-b border-border/50 flex-shrink-0">
@@ -1016,7 +1016,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                   {contrib.title}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {contrib.repo} #{contrib.number} · {GITHUB_REWARD_LABELS[contrib.type]}
+                                  @{currentGitHubLogin} · {contrib.repo} #{contrib.number} · {GITHUB_REWARD_LABELS[contrib.type]}
                                 </p>
                               </div>
                             </div>

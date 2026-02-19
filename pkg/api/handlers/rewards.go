@@ -145,11 +145,13 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 
 func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsResponse, error) {
 	var contributions []GitHubContribution
+	var fetchErr error
 
 	// 1. Fetch issues authored by user
 	issues, err := h.searchItems(login, "issue", token)
 	if err != nil {
 		log.Printf("[rewards] Warning: failed to search issues for %s: %v", login, err)
+		fetchErr = fmt.Errorf("issue search failed: %w", err)
 	} else {
 		for _, item := range issues {
 			c := classifyIssue(item)
@@ -161,11 +163,18 @@ func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsRe
 	prs, err := h.searchItems(login, "pr", token)
 	if err != nil {
 		log.Printf("[rewards] Warning: failed to search PRs for %s: %v", login, err)
+		fetchErr = fmt.Errorf("PR search failed: %w", err)
 	} else {
 		for _, item := range prs {
 			cs := classifyPR(item)
 			contributions = append(contributions, cs...)
 		}
+	}
+
+	// If either search failed, return error so caller falls back to stale cache
+	// instead of caching partial results
+	if fetchErr != nil {
+		return nil, fetchErr
 	}
 
 	// Compute totals
