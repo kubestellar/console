@@ -218,6 +218,17 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	// Fetch linked PRs for all issues
 	linkedPRs := h.fetchLinkedPRs(issues)
 
+	// Build a map of issue number -> DB record for preview URLs
+	// The DB record's NetlifyPreviewURL is set by the deployment webhook when the build succeeds
+	dbPreviewURLs := make(map[int]string)
+	for _, issue := range issues {
+		if dbReq, err := h.store.GetFeatureRequestByIssueNumber(issue.Number); err == nil && dbReq != nil {
+			if dbReq.NetlifyPreviewURL != "" {
+				dbPreviewURLs[issue.Number] = dbReq.NetlifyPreviewURL
+			}
+		}
+	}
+
 	// Convert to queue items
 	queueItems := make([]QueueItem, 0, len(issues))
 	for _, issue := range issues {
@@ -248,13 +259,12 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 		// Check for linked PR - if we have one, at minimum it's fix_ready
 		var prNumber int
 		var prURL string
-		var previewURL string
 		var copilotSessionURL string
+		// Only use preview URL from DB (set by deployment webhook when Netlify build succeeds)
+		previewURL := dbPreviewURLs[issue.Number]
 		if pr, ok := linkedPRs[issue.Number]; ok {
 			prNumber = pr.Number
 			prURL = pr.HTMLURL
-			// Build preview URL using KubeStellar domain
-			previewURL = fmt.Sprintf("https://deploy-preview-%d.console-deploy-preview.kubestellar.io", pr.Number)
 			copilotSessionURL = pr.HTMLURL
 			// If PR is merged (check MergedAt since Merged field isn't in list response), status is fix_complete
 			if pr.MergedAt != nil {
