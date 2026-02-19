@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -30,6 +30,10 @@ interface FeatureRequestModalProps {
   isOpen: boolean
   onClose: () => void
   initialTab?: TabType
+  initialContext?: {
+    cardType: string
+    cardTitle: string
+  }
 }
 
 type TabType = 'submit' | 'updates'
@@ -72,7 +76,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
   return { label, ...colors[status] }
 }
 
-export function FeatureRequestModal({ isOpen, onClose, initialTab }: FeatureRequestModalProps) {
+export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContext }: FeatureRequestModalProps) {
   const { t } = useTranslation()
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
@@ -101,6 +105,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab }: FeatureRequ
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [previewChecking, setPreviewChecking] = useState<number | null>(null) // PR number being checked
   const [previewResults, setPreviewResults] = useState<Record<number, { status: string; preview_url?: string; ready_at?: string; message?: string }>>({})
+
+  // Pre-fill description when opened from a card's bug button
+  useEffect(() => {
+    if (isOpen && initialContext) {
+      const bugExample = `Card: ${initialContext.cardTitle} (${initialContext.cardType})\n\nExample bug report: (replace this with a detailed bug report)\n`
+      setDescription(bugExample)
+      setRequestType('bug')
+    }
+  }, [isOpen, initialContext])
 
   const handleCheckPreview = async (prNumber: number) => {
     setPreviewChecking(prNumber)

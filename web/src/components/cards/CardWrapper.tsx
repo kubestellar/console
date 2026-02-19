@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope, MonitorCheck, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
 } from 'lucide-react'
@@ -21,6 +21,7 @@ import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 import { isCardExportable } from '../../lib/widgets/widgetRegistry'
 import { WidgetExportModal } from '../widgets/WidgetExportModal'
+import { FeatureRequestModal } from '../feedback/FeatureRequestModal'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
@@ -863,6 +864,7 @@ export function CardWrapper({
 }: CardWrapperProps) {
   const { t } = useTranslation(['cards', 'common'])
   const [isExpanded, setIsExpanded] = useState(false)
+  const [showBugReport, setShowBugReport] = useState(false)
 
   // Register expand trigger for keyboard navigation
   useEffect(() => {
@@ -1342,6 +1344,14 @@ export function CardWrapper({
             >
               <Maximize2 className="w-4 h-4" aria-hidden="true" />
             </button>
+            <button
+              onClick={() => setShowBugReport(true)}
+              className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t('cardWrapper.reportIssue')}
+              title={t('cardWrapper.reportIssue')}
+            >
+              <Bug className="w-4 h-4" aria-hidden="true" />
+            </button>
             <div className="relative" data-tour="card-menu">
               <button
                 ref={menuButtonRef}
@@ -1595,6 +1605,17 @@ export function CardWrapper({
         isOpen={showWidgetExport}
         onClose={() => setShowWidgetExport(false)}
         cardType={cardType}
+      />
+
+      {/* Per-card bug/feature report modal */}
+      <FeatureRequestModal
+        isOpen={showBugReport}
+        onClose={() => setShowBugReport(false)}
+        initialTab="submit"
+        initialContext={{
+          cardType,
+          cardTitle: title || CARD_TITLES[cardType] || cardType,
+        }}
       />
       </>
     </CardDataReportContext.Provider>
