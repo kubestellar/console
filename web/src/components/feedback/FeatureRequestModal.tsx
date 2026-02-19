@@ -686,34 +686,18 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                   </div>
                                 </>
                               )}
-                              {/* Show PR and Copilot session links during AI processing (feasibility_study) */}
-                              {request.status === 'feasibility_study' && (
-                                <div className="flex flex-wrap gap-2 mt-1.5">
-                                  {request.pr_url && (
-                                    <a
-                                      href={request.pr_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                                      onClick={e => e.stopPropagation()}
-                                    >
-                                      <GitPullRequest className="w-3 h-3" />
-                                      PR #{request.pr_number}
-                                    </a>
-                                  )}
-                                  {request.copilot_session_url && (
-                                    <a
-                                      href={request.copilot_session_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                                      onClick={e => e.stopPropagation()}
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                      Copilot Session
-                                    </a>
-                                  )}
-                                </div>
+                              {/* Show PR link during AI processing (feasibility_study) */}
+                              {request.status === 'feasibility_study' && request.pr_url && (
+                                <a
+                                  href={request.pr_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs flex items-center gap-1 mt-1.5 text-purple-400 hover:text-purple-300"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <GitPullRequest className="w-3 h-3" />
+                                  PR #{request.pr_number}
+                                </a>
                               )}
                               {/* Show PR link if fix is ready */}
                               {request.status === 'fix_ready' && request.pr_url && (
@@ -788,11 +772,10 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                   <p className="line-clamp-3">{request.latest_comment}</p>
                                 </div>
                               )}
-                              {/* Preview section: show preview URL from server or on-demand check result */}
-                              {(() => {
-                                const serverPreview = request.netlify_preview_url
+                              {/* Preview section: only for fix_ready/fix_complete — not during AI working */}
+                              {(request.status === 'fix_ready' || request.status === 'fix_complete') && (() => {
                                 const checkedPreview = request.pr_number ? previewResults[request.pr_number] : null
-                                const previewUrl = serverPreview || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
+                                const previewUrl = request.netlify_preview_url || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
                                 const isCheckingThis = previewChecking === request.pr_number
 
                                 if (previewUrl && request.status === 'fix_ready') {
@@ -818,8 +801,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                     </div>
                                   )
                                 }
-                                if (previewUrl && !request.closed_by_user) {
-                                  // Simple preview link for other statuses
+                                if (previewUrl) {
                                   return (
                                     <a
                                       href={previewUrl}
@@ -829,12 +811,12 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                       onClick={e => e.stopPropagation()}
                                     >
                                       <Eye className="w-3 h-3" />
-                                      Preview Fix
+                                      Preview
                                     </a>
                                   )
                                 }
-                                // No preview yet — show Check Preview button if there's a PR
-                                if (request.pr_number && !request.closed_by_user && request.status !== 'closed') {
+                                // No preview yet — show Check Preview button
+                                if (request.pr_number && request.status === 'fix_ready') {
                                   return (
                                     <div className="mt-1.5 flex items-center gap-2">
                                       <button

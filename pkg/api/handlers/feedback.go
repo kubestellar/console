@@ -249,11 +249,9 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 		// Check for linked PR - if we have one, at minimum it's fix_ready
 		var prNumber int
 		var prURL string
-		var copilotSessionURL string
 		if pr, ok := linkedPRs[issue.Number]; ok {
 			prNumber = pr.Number
 			prURL = pr.HTMLURL
-			copilotSessionURL = pr.HTMLURL
 			// If PR is merged (check MergedAt since Merged field isn't in list response), status is fix_complete
 			if pr.MergedAt != nil {
 				status = "fix_complete"
@@ -297,10 +295,9 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 			GitHubIssueNumber: issue.Number,
 			GitHubIssueURL:    issue.HTMLURL,
 			Status:            status,
-			PRNumber:          prNumber,
-			PRURL:             prURL,
-			CopilotSessionURL: copilotSessionURL,
-			ClosedByUser:      closedByUser,
+			PRNumber:     prNumber,
+			PRURL:        prURL,
+			ClosedByUser: closedByUser,
 			CreatedAt:         issue.CreatedAt,
 			UpdatedAt:         issue.UpdatedAt,
 		})
