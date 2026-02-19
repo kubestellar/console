@@ -117,7 +117,10 @@ export function useNightlyE2EData() {
 
   return {
     guides,
-    isDemoFallback: isDemo,
+    // Don't report demo fallback while still loading — the initial demo data is a
+    // loading placeholder, not confirmed demo mode. Showing the Demo badge during
+    // cache hydration is misleading and fails cache compliance tests.
+    isDemoFallback: cacheResult.isLoading ? false : isDemo,
     isLoading: cacheResult.isLoading,
     isRefreshing: cacheResult.isRefreshing,
     isFailed: cacheResult.isFailed,

@@ -197,10 +197,12 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   })
 
   const workflows = ciData.workflows
-  const isUsingDemoData = ciData.isDemo
+  // Don't report demo during cache hydration — initialData has isDemo: true as a
+  // placeholder. Only report demo once loading completes and we know the real state.
+  const isUsingDemoData = isLoading ? false : ciData.isDemo
   const error = isFailed ? 'Failed to fetch workflows' : null
 
-  useCardLoadingState({ isLoading, hasAnyData: workflows.length > 0 })
+  useCardLoadingState({ isLoading, hasAnyData: workflows.length > 0, isDemoData: isUsingDemoData })
 
   // Expose refresh method via ref for CardWrapper
   useImperativeHandle(ref, () => ({

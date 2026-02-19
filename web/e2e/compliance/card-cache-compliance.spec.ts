@@ -598,8 +598,9 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
 
   // ── Assertions ──────────────────────────────────────────────────────────
   expect(cacheHitRate, `Cache hit rate ${Math.round(cacheHitRate * 100)}% should be >= 80%`).toBeGreaterThanOrEqual(0.80)
-  // Allow up to 2 card failures (some cards like nightly_e2e_status may fall back to demo data)
-  expect(failCount, `${failCount} cache failures found (max 2 allowed)`).toBeLessThanOrEqual(2)
+  // Strict: zero cache failures allowed. Any card showing demo data on warm return
+  // (when it had live data on cold load) is a real bug that must be fixed.
+  expect(failCount, `${failCount} cache failures found — cards fell back to demo data instead of using cache`).toBe(0)
   if (avgTtc !== null) {
     expect(avgTtc, `Avg warm time-to-content ${Math.round(avgTtc)}ms should be < 500ms`).toBeLessThan(500)
   }
