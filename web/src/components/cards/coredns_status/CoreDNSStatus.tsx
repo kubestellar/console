@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Wifi, Clock, AlertTriangle, CheckCircle, XCircle, RotateCcw } from 'lucide-react'
+import { Wifi, AlertTriangle, CheckCircle, XCircle, RotateCcw } from 'lucide-react'
 import { useCachedCoreDNSStatus, type CoreDNSClusterStatus } from '../../../hooks/useCachedData'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
@@ -33,23 +33,20 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
     consecutiveFailures,
   })
 
-  // avg metrics across all clusters for the top stat tiles
+  // summary stats derived only from pod metadata
   const totals = useMemo(() => {
     if (clusters.length === 0) return null
     const totalPods = clusters.reduce((s, c) => s + c.pods.length, 0)
     const healthyClusters = clusters.filter(c => c.healthy).length
-    const avgQPS = Math.round(clusters.reduce((s, c) => s + c.queriesPerSecond, 0) / clusters.length)
-    const avgCacheHit = Math.round(clusters.reduce((s, c) => s + c.cacheHitRate, 0) / clusters.length)
-    const avgError = parseFloat((clusters.reduce((s, c) => s + c.errorRate, 0) / clusters.length).toFixed(1))
-    const avgLatency = parseFloat((clusters.reduce((s, c) => s + c.avgLatencyMs, 0) / clusters.length).toFixed(1))
-    return { totalPods, healthyClusters, avgQPS, avgCacheHit, avgError, avgLatency }
+    const totalRestarts = clusters.reduce((s, c) => s + c.totalRestarts, 0)
+    return { totalPods, healthyClusters, totalRestarts }
   }, [clusters])
 
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-3">
-        <div className="grid grid-cols-4 gap-2">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} variant="rounded" height={52} />)}
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={52} />)}
         </div>
         <Skeleton variant="rounded" height={64} />
         <Skeleton variant="rounded" height={64} />
@@ -69,28 +66,23 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden gap-3">
-      {/* top stats */}
+      {/* top stats — only pod-derivable metrics */}
       {totals && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <StatTile
-            value={totals.avgQPS.toLocaleString()}
-            sub="avg QPS"
+            value={totals.totalPods.toString()}
+            sub="pods"
             color="blue"
           />
           <StatTile
-            value={`${totals.avgCacheHit}%`}
-            sub="cache hit"
-            color={totals.avgCacheHit >= 70 ? 'green' : 'yellow'}
+            value={`${totals.healthyClusters}/${clusters.length}`}
+            sub="healthy"
+            color={totals.healthyClusters === clusters.length ? 'green' : 'yellow'}
           />
           <StatTile
-            value={`${totals.avgError}%`}
-            sub="errors"
-            color={totals.avgError < 1 ? 'green' : totals.avgError < 5 ? 'yellow' : 'red'}
-          />
-          <StatTile
-            value={`${totals.avgLatency}ms`}
-            sub="latency"
-            color={totals.avgLatency < 2 ? 'green' : totals.avgLatency < 5 ? 'yellow' : 'red'}
+            value={totals.totalRestarts.toString()}
+            sub="restarts"
+            color={totals.totalRestarts === 0 ? 'green' : totals.totalRestarts < 5 ? 'yellow' : 'red'}
           />
         </div>
       )}
@@ -164,12 +156,13 @@ function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnTy
         ))}
       </div>
 
-      {/* metrics (only if healthy) */}
+      {/* pod summary for healthy clusters */}
       {cluster.healthy && (
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <MiniStat icon={<Wifi className="w-3 h-3" />} label="QPS" value={cluster.queriesPerSecond.toLocaleString()} />
-          <MiniStat icon={<CheckCircle className="w-3 h-3" />} label="Cache" value={`${cluster.cacheHitRate}%`} />
-          <MiniStat icon={<Clock className="w-3 h-3" />} label="Latency" value={`${cluster.avgLatencyMs}ms`} />
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>{cluster.pods.length} pod{cluster.pods.length !== 1 ? 's' : ''} running</span>
+          {cluster.totalRestarts > 0 && (
+            <span className="text-orange-400">↺ {cluster.totalRestarts} restart{cluster.totalRestarts !== 1 ? 's' : ''}</span>
+          )}
         </div>
       )}
 
@@ -194,16 +187,6 @@ function StatTile({ value, sub, color }: { value: string; sub: string; color: st
     <div className={`p-2 rounded-lg text-center ${COLORS[color] ?? COLORS.blue}`}>
       <div className="text-base font-bold leading-tight">{value}</div>
       <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>
-    </div>
-  )
-}
-
-function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-1 text-muted-foreground">
-      {icon}
-      <span>{label}:</span>
-      <span className="font-medium text-foreground">{value}</span>
     </div>
   )
 }

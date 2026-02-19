@@ -551,19 +551,19 @@ export function useCachedDeploymentIssues(
       if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const deployments = cluster
           ? await (async () => {
-            const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
-            const params = new URLSearchParams()
-            params.append('cluster', clusterInfo?.context || cluster)
-            if (namespace) params.append('namespace', namespace)
-            const ctrl = new AbortController()
-            const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-            const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
-              signal: ctrl.signal, headers: { Accept: 'application/json' },
-            })
-            clearTimeout(tid)
-            if (!res.ok) return []
-            const data = await res.json()
-            return ((data.deployments || []) as Deployment[]).map(d => ({ ...d, cluster: cluster }))
+              const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
+              const params = new URLSearchParams()
+              params.append('cluster', clusterInfo?.context || cluster)
+              if (namespace) params.append('namespace', namespace)
+              const ctrl = new AbortController()
+              const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
+              const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+                signal: ctrl.signal, headers: { Accept: 'application/json' },
+              })
+              clearTimeout(tid)
+              if (!res.ok) return []
+              const data = await res.json()
+              return ((data.deployments || []) as Deployment[]).map(d => ({ ...d, cluster: cluster }))
           })()
           : await fetchDeploymentsViaAgent(namespace)
 
@@ -953,11 +953,11 @@ function detectComponentType(name: string, labels?: Record<string, string>): LLM
   if (nameLower.includes('gateway') || nameLower.includes('ingress')) return 'gateway'
   if (nameLower === 'prometheus' || nameLower.includes('prometheus-')) return 'prometheus'
   if (labels?.['llmd.org/inferenceServing'] === 'true' ||
-    labels?.['llmd.org/model'] ||
-    nameLower.includes('vllm') || nameLower.includes('tgi') || nameLower.includes('triton') ||
-    nameLower.includes('llama') || nameLower.includes('granite') || nameLower.includes('qwen') ||
-    nameLower.includes('mistral') || nameLower.includes('mixtral')) {
-    return 'model'
+      labels?.['llmd.org/model'] ||
+      nameLower.includes('vllm') || nameLower.includes('tgi') || nameLower.includes('triton') ||
+      nameLower.includes('llama') || nameLower.includes('granite') || nameLower.includes('qwen') ||
+      nameLower.includes('mistral') || nameLower.includes('mixtral')) {
+      return 'model'
   }
   return 'other'
 }
@@ -2277,10 +2277,6 @@ export interface CoreDNSPodInfo {
 export interface CoreDNSClusterStatus {
   cluster: string
   pods: CoreDNSPodInfo[]
-  queriesPerSecond: number
-  cacheHitRate: number
-  errorRate: number
-  avgLatencyMs: number
   healthy: boolean
   totalRestarts: number
 }
@@ -2292,10 +2288,6 @@ const getDemoCoreDNSStatus = (): CoreDNSClusterStatus[] => [
       { name: 'coredns-7db6d8ff4d-xk2p8', status: 'Running', ready: '1/1', restarts: 0, version: '1.11.1' },
       { name: 'coredns-7db6d8ff4d-n9wq3', status: 'Running', ready: '1/1', restarts: 0, version: '1.11.1' },
     ],
-    queriesPerSecond: 1842,
-    cacheHitRate: 78,
-    errorRate: 0.3,
-    avgLatencyMs: 1.2,
     healthy: true,
     totalRestarts: 0,
   },
@@ -2305,10 +2297,6 @@ const getDemoCoreDNSStatus = (): CoreDNSClusterStatus[] => [
       { name: 'coredns-6d4b75cb6d-abcde', status: 'Running', ready: '1/1', restarts: 2, version: '1.10.1' },
       { name: 'coredns-6d4b75cb6d-fghij', status: 'Running', ready: '1/1', restarts: 0, version: '1.10.1' },
     ],
-    queriesPerSecond: 634,
-    cacheHitRate: 65,
-    errorRate: 1.2,
-    avgLatencyMs: 2.8,
     healthy: true,
     totalRestarts: 2,
   },
@@ -2317,10 +2305,6 @@ const getDemoCoreDNSStatus = (): CoreDNSClusterStatus[] => [
     pods: [
       { name: 'coredns-abc123-xyz99', status: 'CrashLoopBackOff', ready: '0/1', restarts: 7, version: '1.9.3' },
     ],
-    queriesPerSecond: 0,
-    cacheHitRate: 0,
-    errorRate: 100,
-    avgLatencyMs: 0,
     healthy: false,
     totalRestarts: 7,
   },
@@ -2371,11 +2355,6 @@ export function useCachedCoreDNSStatus(
             restarts: p.restarts || 0,
             version: p.containers?.[0]?.image?.split(':')[1]?.replace(/^v/, '') || '',
           })),
-          // only pod metadata is available — no prometheus metrics
-          queriesPerSecond: 0,
-          cacheHitRate: 0,
-          errorRate: healthy ? 0 : 100,
-          avgLatencyMs: 0,
           healthy,
           totalRestarts,
         } satisfies CoreDNSClusterStatus

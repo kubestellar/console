@@ -734,7 +734,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
  */
 export function prefetchCardChunks(cardTypes: string[]): void {
   for (const type of cardTypes) {
-    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => { })
+    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => {})
   }
 }
 
@@ -773,7 +773,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./kagenti/KagentiTopology'),
     () => import('./crossplane-status/CrossplaneManagedResources'),
   ]
-  startupChunks.forEach(load => load().catch(() => { }))
+  startupChunks.forEach(load => load().catch(() => {}))
 }
 
 /**
