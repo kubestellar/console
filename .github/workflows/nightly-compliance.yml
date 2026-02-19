@@ -307,6 +307,10 @@ jobs:
           retention-days: 1
 
   # ── Report & Issue Creation ──────────────────────────────────────────
+  # Creates one focused issue PER failed suite (not one combined issue).
+  # Each issue is assigned to Copilot with auto-qa labels so it can
+  # independently create a PR to fix that specific suite.
+  # When a suite that previously failed now passes, its issue is auto-closed.
 
   report:
     name: Report & Create Issues
@@ -329,7 +333,6 @@ jobs:
           SUITES=(card-cache card-loading security i18n a11y interaction error-resilience ttfi dashboard-perf dashboard-nav)
           FAILED=""
           PASSED=""
-          MISSING=""
 
           for suite in "${SUITES[@]}"; do
             status_file="/tmp/all-results/${suite}.status"
@@ -341,54 +344,38 @@ jobs:
                 PASSED="${PASSED}${suite},"
               fi
             else
-              MISSING="${MISSING}${suite},"
+              FAILED="${FAILED}${suite},"
             fi
           done
 
-          # Remove trailing commas
           FAILED="${FAILED%,}"
           PASSED="${PASSED%,}"
-          MISSING="${MISSING%,}"
 
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "passed=$PASSED" >> $GITHUB_OUTPUT
-          echo "missing=$MISSING" >> $GITHUB_OUTPUT
 
           TOTAL=${#SUITES[@]}
-          FAIL_COUNT=$(echo "$FAILED" | tr ',' '\n' | grep -c . || true)
-          PASS_COUNT=$(echo "$PASSED" | tr ',' '\n' | grep -c . || true)
+          FAIL_COUNT=0
+          PASS_COUNT=0
+          if [ -n "$FAILED" ]; then FAIL_COUNT=$(echo "$FAILED" | tr ',' '\n' | wc -l | tr -d ' '); fi
+          if [ -n "$PASSED" ]; then PASS_COUNT=$(echo "$PASSED" | tr ',' '\n' | wc -l | tr -d ' '); fi
 
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "fail_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
           echo "pass_count=$PASS_COUNT" >> $GITHUB_OUTPUT
+          echo "has_failures=$( [ -n "$FAILED" ] && echo true || echo false )" >> $GITHUB_OUTPUT
 
-          if [ -n "$FAILED" ]; then
-            echo "has_failures=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_failures=false" >> $GITHUB_OUTPUT
-          fi
-
+          # Step summary
           echo "## Nightly Compliance & Perf Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Date**: $(date -u '+%Y-%m-%d')" >> $GITHUB_STEP_SUMMARY
-          echo "**Passed**: $PASS_COUNT / $TOTAL" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
+          echo "**Date**: $(date -u '+%Y-%m-%d')  |  **Passed**: $PASS_COUNT / $TOTAL" >> $GITHUB_STEP_SUMMARY
           if [ -n "$FAILED" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Failures" >> $GITHUB_STEP_SUMMARY
             for suite in $(echo "$FAILED" | tr ',' ' '); do
               echo "- **$suite**" >> $GITHUB_STEP_SUMMARY
-              summary="/tmp/all-results/${suite}-summary.md"
-              if [ -f "$summary" ]; then
-                echo '  <details><summary>Details</summary>' >> $GITHUB_STEP_SUMMARY
-                echo '' >> $GITHUB_STEP_SUMMARY
-                head -50 "$summary" >> $GITHUB_STEP_SUMMARY
-                echo '' >> $GITHUB_STEP_SUMMARY
-                echo '  </details>' >> $GITHUB_STEP_SUMMARY
-              fi
             done
           fi
-
           if [ -n "$PASSED" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Passed" >> $GITHUB_STEP_SUMMARY
@@ -397,162 +384,289 @@ jobs:
             done
           fi
 
-      - name: Create issue for failures
-        if: steps.aggregate.outputs.has_failures == 'true' && github.event.inputs.skip_issue_creation != 'true'
+      - name: Create per-suite issues for failures & auto-close passing
+        if: github.event.inputs.skip_issue_creation != 'true'
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const failed = '${{ steps.aggregate.outputs.failed }}'.split(',').filter(Boolean);
             const passed = '${{ steps.aggregate.outputs.passed }}'.split(',').filter(Boolean);
-            const total = parseInt('${{ steps.aggregate.outputs.total }}');
-            const failCount = parseInt('${{ steps.aggregate.outputs.fail_count }}');
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const date = new Date().toISOString().split('T')[0];
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
-            // Read summaries for failed suites
-            const fs = require('fs');
-            const summaryDetails = [];
-            for (const suite of failed) {
-              const summaryPath = `/tmp/all-results/${suite}-summary.md`;
-              let summaryContent = '_No summary available_';
+            // ── Suite metadata for structured issue bodies ──
+            const suiteMeta = {
+              'card-cache': {
+                type: 'compliance',
+                spec: 'e2e/compliance/card-cache-compliance.spec.ts',
+                config: 'e2e/compliance/compliance.config.ts',
+                title: 'Card Cache Compliance',
+                hint: [
+                  'Cards showing demo data on warm return means the cache hydration has a bug.',
+                  'Look for `initialData: { isDemo: true }` patterns in hooks — the `isDemoFallback`',
+                  'must be suppressed while `cacheResult.isLoading` is true.',
+                  'Check that `useCardLoadingState({ isDemoData })` is wired correctly.',
+                ].join('\n'),
+              },
+              'card-loading': {
+                type: 'compliance',
+                spec: 'e2e/compliance/card-loading-compliance.spec.ts',
+                config: 'e2e/compliance/compliance.config.ts',
+                title: 'Card Loading Compliance',
+                hint: [
+                  'Cards must transition from skeleton → content without getting stuck.',
+                  'Ensure `useCardLoadingState` receives correct `isLoading` and `isDemoData` props.',
+                  'Check that cards set `data-loading="false"` once content is available.',
+                ].join('\n'),
+              },
+              'security': {
+                type: 'compliance',
+                spec: 'e2e/compliance/security-compliance.spec.ts',
+                config: 'e2e/compliance/compliance.config.ts',
+                title: 'Security Compliance',
+                hint: [
+                  'Check for XSS vectors in user-facing inputs, missing CSP headers,',
+                  'exposed secrets in HTML/JS, and insecure cookie settings.',
+                  'Fix in source code — do NOT weaken the test assertions.',
+                ].join('\n'),
+              },
+              'i18n': {
+                type: 'compliance',
+                spec: 'e2e/compliance/i18n-compliance.spec.ts',
+                config: 'e2e/compliance/compliance.config.ts',
+                title: 'i18n Compliance',
+                hint: [
+                  'Hardcoded English strings found in the UI that should use `t()` translations.',
+                  'Extract strings to `web/public/locales/en/translation.json` and wrap with `useTranslation`.',
+                  'Buttons, headings, and labels are failures; tooltips and descriptions are warnings.',
+                ].join('\n'),
+              },
+              'a11y': {
+                type: 'compliance',
+                spec: 'e2e/compliance/a11y-compliance.spec.ts',
+                config: 'e2e/compliance/compliance.config.ts',
+                title: 'Accessibility (a11y) Compliance',
+                hint: [
+                  'WCAG 2.1 AA violations found by axe-core.',
+                  'Fix contrast ratios, add aria-labels to interactive elements,',
+                  'ensure focus management works for keyboard navigation.',
+                ].join('\n'),
+              },
+              'interaction': {
+                type: 'compliance',
+                spec: 'e2e/compliance/interaction-compliance.spec.ts',
+                config: 'e2e/compliance/compliance.config.ts',
+                title: 'Interaction Compliance',
+                hint: [
+                  'Core UI interactions broken: search (Cmd+K), theme toggle, card expand/collapse,',
+                  'sidebar collapse, or dashboard refresh.',
+                  'Check event handlers and component state management.',
+                ].join('\n'),
+              },
+              'error-resilience': {
+                type: 'compliance',
+                spec: 'e2e/compliance/error-resilience.spec.ts',
+                config: 'e2e/compliance/compliance.config.ts',
+                title: 'Error Resilience',
+                hint: [
+                  'UI does not gracefully handle API failures (500s, timeouts, partial outages).',
+                  'Cards should show error states — not blank screens or infinite skeletons.',
+                  'Check error boundaries and fallback UI in card components.',
+                ].join('\n'),
+              },
+              'ttfi': {
+                type: 'perf',
+                spec: 'e2e/perf/all-cards-ttfi.spec.ts',
+                config: 'e2e/perf/perf.config.ts',
+                title: 'Time-To-First-Interactive (TTFI)',
+                hint: [
+                  'Cards are taking too long to show first content.',
+                  'Profile with Chrome DevTools Performance tab.',
+                  'Check for unnecessary re-renders, large bundle imports, or slow data hooks.',
+                  'Compare against baseline in `e2e/perf/baseline/`.',
+                ].join('\n'),
+              },
+              'dashboard-perf': {
+                type: 'perf',
+                spec: 'e2e/perf/dashboard-perf.spec.ts',
+                config: 'e2e/perf/perf.config.ts',
+                title: 'Dashboard Card Performance',
+                hint: [
+                  'Dashboard card loading times exceed thresholds.',
+                  'Check for heavy components that should be lazy-loaded,',
+                  'unnecessary data fetching on mount, or chart rendering bottlenecks.',
+                ].join('\n'),
+              },
+              'dashboard-nav': {
+                type: 'perf',
+                spec: 'e2e/perf/dashboard-nav.spec.ts',
+                config: 'e2e/perf/perf.config.ts',
+                title: 'Dashboard Navigation Performance',
+                hint: [
+                  'Navigation between dashboards is too slow.',
+                  'Check KeepAliveOutlet cache behavior, route transitions,',
+                  'and card mount/render times. Back-navigation should hit cache.',
+                ].join('\n'),
+              },
+            };
+
+            // ── Ensure labels exist ──
+            const labelDefs = {
+              'auto-qa':             { color: 'b60205', description: 'Automated QA — assigned to Copilot for auto-fix' },
+              'nightly-compliance':  { color: '1d76db', description: 'From nightly compliance/perf test run' },
+              'copilot':             { color: 'd4c5f9', description: 'Copilot coding agent should fix this' },
+              'bug':                 { color: 'd73a4a', description: 'Something is broken' },
+            };
+            for (const [name, def] of Object.entries(labelDefs)) {
               try {
-                if (fs.existsSync(summaryPath)) {
-                  summaryContent = fs.readFileSync(summaryPath, 'utf8').slice(0, 3000);
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch {
+                try {
+                  await github.rest.issues.createLabel({ owner, repo, name, color: def.color, description: def.description });
+                  core.info(`Created label: ${name}`);
+                } catch (e) {
+                  core.warning(`Could not create label ${name}: ${e.message}`);
                 }
-              } catch (e) {
-                summaryContent = `_Error reading summary: ${e.message}_`;
               }
-              summaryDetails.push(`### ${suite}\n\n<details>\n<summary>Test output</summary>\n\n\`\`\`\n${summaryContent}\n\`\`\`\n\n</details>`);
             }
 
-            // Check for TTFI regression details
-            let regressionDetails = '';
-            try {
-              const regPath = '/tmp/all-results/ttfi-regression.md';
-              if (fs.existsSync(regPath)) {
-                regressionDetails = '\n\n### TTFI Regression Report\n\n' + fs.readFileSync(regPath, 'utf8').slice(0, 2000);
-              }
-            } catch {}
-
-            // Build issue body
-            const body = [
-              `## Nightly Compliance & Performance Report — ${date}`,
-              '',
-              `**${failCount}** of **${total}** suites failed. [Workflow run](${runUrl})`,
-              '',
-              '## Failed Suites',
-              '',
-              ...summaryDetails,
-              regressionDetails,
-              '',
-              '## Passed Suites',
-              '',
-              passed.map(s => `- ${s}`).join('\n'),
-              '',
-              '## Fix Instructions',
-              '',
-              'For each failed suite:',
-              '1. Run the suite locally: `cd web && PLAYWRIGHT_BASE_URL=http://localhost:5174 npx playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/<suite>.spec.ts --project=chromium`',
-              '2. Read the test output and summary report for specific failing assertions',
-              '3. Fix the root cause in the source code (not the test)',
-              '4. Re-run to verify 0 failures',
-              '',
-              'Common patterns:',
-              '- **card-cache**: Cards showing demo data on warm return → fix isDemoData wiring in the card hook',
-              '- **card-loading**: Demo badge or stale skeleton → ensure `useCardLoadingState` receives correct `isDemoData`',
-              '- **security**: New XSS vector or missing CSP → sanitize user input, add Content-Security-Policy headers',
-              '- **i18n**: Hardcoded English strings → extract to translation files',
-              '- **a11y**: WCAG violations → fix contrast, aria labels, focus management',
-              '- **ttfi/perf**: Performance regression → profile with Chrome DevTools, check for unnecessary re-renders',
-              '',
-              `*This issue was automatically created by the [Nightly Compliance workflow](${runUrl}).*`,
-              '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
-            ].join('\n');
-
-            const title = `[Nightly] ${failCount} compliance/perf suite${failCount > 1 ? 's' : ''} failed — ${date}`;
-
-            // Check for duplicate open issue
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'nightly-compliance',
-              per_page: 5,
+            // ── Fetch all open nightly issues (for dedup and auto-close) ──
+            const openIssues = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: 'nightly-compliance', per_page: 100,
             });
 
-            const duplicate = existing.data.find(i => i.title.includes('[Nightly]') && i.title.includes('compliance/perf'));
-            if (duplicate) {
-              // Update existing issue instead of creating a new one
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: duplicate.number,
-                body: `## Updated: ${date}\n\n${body}`,
-              });
-              core.info(`Updated existing issue #${duplicate.number} with new results`);
-              return;
+            // ── Auto-close issues for suites that now pass ──
+            for (const suite of passed) {
+              const tag = `[nightly:${suite}]`;
+              const existing = openIssues.data.find(i => i.title.includes(tag));
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: existing.number,
+                  body: `## Resolved — ${date}\n\nThis suite now passes. [Workflow run](${runUrl})\n\nAuto-closing.`,
+                });
+                await github.rest.issues.update({
+                  owner, repo, issue_number: existing.number, state: 'closed',
+                });
+                core.info(`Auto-closed #${existing.number} — ${suite} now passes`);
+              }
             }
 
-            // Create labels if needed
-            const labels = ['nightly-compliance', 'ai-fix-requested', 'help wanted', 'triage/accepted', 'bug'];
-            for (const label of labels) {
+            // ── Create or update issues for failed suites ──
+            for (const suite of failed) {
+              const meta = suiteMeta[suite] || {
+                type: 'unknown', spec: `e2e/**/${suite}*.spec.ts`,
+                config: 'e2e/compliance/compliance.config.ts',
+                title: suite, hint: 'Check the test output for details.',
+              };
+
+              // Read summary
+              let summary = '_No summary available_';
               try {
-                await github.rest.issues.getLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  name: label,
-                });
-              } catch {
-                const colors = {
-                  'nightly-compliance': '1d76db',
-                  'ai-fix-requested': 'd4c5f9',
-                  'help wanted': '008672',
-                  'triage/accepted': '0e8a16',
-                  'bug': 'd73a4a',
-                };
+                const p = `/tmp/all-results/${suite}-summary.md`;
+                if (fs.existsSync(p)) summary = fs.readFileSync(p, 'utf8').slice(0, 4000);
+              } catch {}
+
+              // TTFI regression report (if applicable)
+              let regression = '';
+              if (suite === 'ttfi') {
                 try {
-                  await github.rest.issues.createLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    name: label,
-                    color: colors[label] || 'ededed',
-                  });
+                  const p = '/tmp/all-results/ttfi-regression.md';
+                  if (fs.existsSync(p)) regression = '\n\n### Regression Report\n\n' + fs.readFileSync(p, 'utf8').slice(0, 2000);
                 } catch {}
               }
-            }
 
-            const { data: issue } = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title,
-              body,
-              labels,
-            });
+              const tag = `[nightly:${suite}]`;
+              const title = `${tag} ${meta.title} failed — ${date}`;
+              const runCmd = meta.type === 'compliance'
+                ? `cd web && PLAYWRIGHT_BASE_URL=http://localhost:5174 npx playwright test --config ${meta.config} ${meta.spec} --project=chromium`
+                : `cd web && PLAYWRIGHT_BASE_URL=http://localhost:5174 npx playwright test --config ${meta.config} ${meta.spec} --project=chromium`;
 
-            core.info(`Created issue #${issue.number}: ${title}`);
+              const body = [
+                `## ${meta.title} — Nightly Failure`,
+                '',
+                `**Date**: ${date}  |  **Suite**: \`${suite}\`  |  [Workflow run](${runUrl})`,
+                '',
+                '## What Failed',
+                '',
+                '<details>',
+                '<summary>Test summary (click to expand)</summary>',
+                '',
+                '```',
+                summary,
+                '```',
+                '',
+                '</details>',
+                regression,
+                '',
+                '## How to Fix',
+                '',
+                '### Run locally',
+                '',
+                '```bash',
+                runCmd,
+                '```',
+                '',
+                '### Fix guidance',
+                '',
+                meta.hint,
+                '',
+                '### Rules',
+                '',
+                '1. Fix the root cause in **source code** — do NOT weaken test assertions',
+                '2. Re-run the suite locally and verify **0 failures** before submitting',
+                `3. The spec file is \`web/${meta.spec}\` — read it to understand what's being checked`,
+                '4. Check recent commits that may have introduced the regression',
+                '',
+                '---',
+                `*Auto-created by [Nightly Compliance workflow](${runUrl}). Assigned to Copilot for auto-fix.*`,
+              ].join('\n');
 
-            // Assign Copilot coding agent
-            const repo = `${context.repo.owner}/${context.repo.repo}`;
-            try {
-              await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                assignees: ['copilot-swe-agent[bot]'],
-                agent_assignment: {
-                  target_repo: repo,
-                  base_branch: 'main',
-                },
+              const labels = ['auto-qa', 'nightly-compliance', 'copilot', 'bug'];
+
+              // Check for existing open issue for this suite
+              const existing = openIssues.data.find(i => i.title.includes(tag));
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: existing.number,
+                  body: `## Still failing — ${date}\n\n[Workflow run](${runUrl})\n\n<details>\n<summary>Latest summary</summary>\n\n\`\`\`\n${summary}\n\`\`\`\n\n</details>`,
+                });
+                core.info(`Updated existing issue #${existing.number} for ${suite}`);
+                continue;
+              }
+
+              // Create new issue
+              const { data: issue } = await github.rest.issues.create({
+                owner, repo, title, body, labels,
               });
-              core.info(`Assigned Copilot to #${issue.number}`);
-            } catch (e) {
-              core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
+              core.info(`Created issue #${issue.number}: ${title}`);
+
+              // Assign Copilot coding agent
+              try {
+                await github.rest.issues.addAssignees({
+                  owner, repo, issue_number: issue.number, assignees: ['copilot'],
+                });
+                core.info(`Assigned Copilot to #${issue.number}`);
+              } catch (e1) {
+                core.warning(`copilot assignee failed: ${e1.message} — trying copilot-swe-agent[bot]`);
+                try {
+                  await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
+                    owner, repo, issue_number: issue.number,
+                    assignees: ['copilot-swe-agent[bot]'],
+                  });
+                  core.info(`Assigned copilot-swe-agent[bot] to #${issue.number}`);
+                } catch (e2) {
+                  core.warning(`Could not assign Copilot to #${issue.number}: ${e2.message}`);
+                }
+              }
             }
 
-      - name: All green notification
+      - name: All green
         if: steps.aggregate.outputs.has_failures == 'false'
         run: |
           echo "## All Suites Passed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All ${{ steps.aggregate.outputs.total }} compliance and performance suites passed." >> $GITHUB_STEP_SUMMARY
-          echo "No issues created." >> $GITHUB_STEP_SUMMARY
+          echo "No issues created. Any previously open nightly issues have been auto-closed." >> $GITHUB_STEP_SUMMARY
