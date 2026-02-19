@@ -96,13 +96,12 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 
 	// Create GitHub issue
 	if h.githubToken != "" && h.repoOwner != "" && h.repoName != "" {
-		issueNumber, issueURL, err := h.createGitHubIssue(request, user)
+		issueNumber, _, err := h.createGitHubIssue(request, user)
 		if err != nil {
 			log.Printf("Failed to create GitHub issue: %v", err)
 			// Continue anyway - issue creation is best-effort
 		} else {
 			request.GitHubIssueNumber = &issueNumber
-			request.GitHubIssueURL = issueURL
 			request.Status = models.RequestStatusOpen
 			h.store.UpdateFeatureRequest(request)
 		}
@@ -110,8 +109,10 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 
 	// Create notification for the user
 	notifTitle := "Request Submitted"
+	actionURL := ""
 	if request.GitHubIssueNumber != nil {
 		notifTitle = fmt.Sprintf("Issue #%d Created", *request.GitHubIssueNumber)
+		actionURL = fmt.Sprintf("https://github.com/%s/%s/issues/%d", h.repoOwner, h.repoName, *request.GitHubIssueNumber)
 	}
 	notification := &models.Notification{
 		UserID:           userID,
@@ -119,7 +120,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		NotificationType: models.NotificationTypeIssueCreated,
 		Title:            notifTitle,
 		Message:          fmt.Sprintf("Your %s request '%s' has been submitted.", request.RequestType, request.Title),
-		ActionURL:        request.GitHubIssueURL,
+		ActionURL:        actionURL,
 	}
 	h.store.CreateNotification(notification)
 
@@ -837,7 +838,6 @@ func (h *FeedbackHandler) ensureFeatureRequestExists(issueNumber int, issue map[
 	}
 
 	// Extract issue data
-	issueURL, _ := issue["html_url"].(string)
 	title, _ := issue["title"].(string)
 	body, _ := issue["body"].(string)
 
@@ -872,7 +872,6 @@ func (h *FeedbackHandler) ensureFeatureRequestExists(issueNumber int, issue map[
 		Description:       body,
 		RequestType:       requestType,
 		GitHubIssueNumber: &issueNumber,
-		GitHubIssueURL:    issueURL,
 		Status:            models.RequestStatusOpen,
 	}
 

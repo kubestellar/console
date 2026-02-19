@@ -61,7 +61,6 @@ type FeatureRequest struct {
 	Description       string        `json:"description"`
 	RequestType       RequestType   `json:"request_type"`
 	GitHubIssueNumber *int          `json:"github_issue_number,omitempty"`
-	GitHubIssueURL    string        `json:"github_issue_url,omitempty"`
 	Status            RequestStatus `json:"status"`
 	PRNumber          *int          `json:"pr_number,omitempty"`
 	PRURL             string        `json:"pr_url,omitempty"`
