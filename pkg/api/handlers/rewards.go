@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/settings"
 )
 
 // Point values for GitHub contributions
@@ -105,8 +106,16 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 	}
 	h.mu.RUnlock()
 
+	// Resolve token: prefer user's personal token from settings, fall back to server PAT
+	token := h.githubToken
+	if sm := settings.GetSettingsManager(); sm != nil {
+		if all, err := sm.GetAll(); err == nil && all.GitHubToken != "" {
+			token = all.GitHubToken
+		}
+	}
+
 	// Cache miss — fetch from GitHub
-	resp, err := h.fetchUserRewards(githubLogin)
+	resp, err := h.fetchUserRewards(githubLogin, token)
 	if err != nil {
 		log.Printf("[rewards] Failed to fetch GitHub rewards for %s: %v", githubLogin, err)
 
@@ -134,11 +143,11 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-func (h *RewardsHandler) fetchUserRewards(login string) (*GitHubRewardsResponse, error) {
+func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsResponse, error) {
 	var contributions []GitHubContribution
 
 	// 1. Fetch issues authored by user
-	issues, err := h.searchItems(login, "issue")
+	issues, err := h.searchItems(login, "issue", token)
 	if err != nil {
 		log.Printf("[rewards] Warning: failed to search issues for %s: %v", login, err)
 	} else {
@@ -149,7 +158,7 @@ func (h *RewardsHandler) fetchUserRewards(login string) (*GitHubRewardsResponse,
 	}
 
 	// 2. Fetch PRs authored by user
-	prs, err := h.searchItems(login, "pr")
+	prs, err := h.searchItems(login, "pr", token)
 	if err != nil {
 		log.Printf("[rewards] Warning: failed to search PRs for %s: %v", login, err)
 	} else {
@@ -212,7 +221,7 @@ type searchResponse struct {
 
 // searchItems queries GitHub Search API with pagination.
 // itemType is "issue" or "pr".
-func (h *RewardsHandler) searchItems(login, itemType string) ([]searchItem, error) {
+func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchItem, error) {
 	query := fmt.Sprintf("author:%s %s type:%s", login, h.orgs, itemType)
 	var allItems []searchItem
 
@@ -225,8 +234,8 @@ func (h *RewardsHandler) searchItems(login, itemType string) ([]searchItem, erro
 			return allItems, fmt.Errorf("create request: %w", err)
 		}
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
-		if h.githubToken != "" {
-			req.Header.Set("Authorization", "Bearer "+h.githubToken)
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
 		}
 
 		resp, err := h.httpClient.Do(req)
