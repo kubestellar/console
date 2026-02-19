@@ -684,6 +684,7 @@ The AI missions feature requires the local agent to be running.
     setMissions(prev => [mission, ...prev])
     setActiveMissionId(missionId)
     setIsSidebarOpen(true)
+    setIsSidebarMinimized(false)
 
     // Send to agent
     ensureConnection().then(() => {
