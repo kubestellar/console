@@ -394,6 +394,7 @@ func (s *Server) setupRoutes() {
 	// Nightly E2E status is public GitHub Actions data, safe for desktop widgets
 	nightlyE2EPublic := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
 	s.app.Get("/api/public/nightly-e2e/runs", nightlyE2EPublic.GetRuns)
+	s.app.Get("/api/public/nightly-e2e/run-logs", nightlyE2EPublic.GetRunLogs)
 
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
@@ -628,6 +629,7 @@ func (s *Server) setupRoutes() {
 	// Nightly E2E status (GitHub Actions proxy with server-side token + cache)
 	nightlyE2E := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
+	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
 	// GPU reservation routes
 	gpuHandler := handlers.NewGPUHandler(s.store)

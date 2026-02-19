@@ -9,6 +9,7 @@ import type {
   AlertChannel,
 } from '../types/alerts'
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
+import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN } from '../lib/constants'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
@@ -112,6 +113,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   // CronJob health results cache — fetched async, read synchronously by evaluator
   const cronJobResultsRef = useRef<Record<string, GPUHealthCheckResult[]>>({})
 
+  // Nightly E2E data cache — fetched async, read synchronously by evaluator
+  const nightlyE2ERef = useRef<NightlyGuideStatus[]>([])
+  const nightlyAlertedRunsRef = useRef<Set<number>>(new Set())
+
   // Fetch CronJob results for all clusters periodically
   useEffect(() => {
     const fetchCronJobResults = async () => {
@@ -153,6 +158,55 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer)
       clearInterval(interval)
     }
+  }, [])
+
+  // Fetch nightly E2E run data periodically (public endpoint, no auth needed)
+  useEffect(() => {
+    const fetchNightlyE2E = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
+        const resp = await fetch(`${API_BASE}/api/public/nightly-e2e/runs`)
+        if (resp.ok) {
+          const data = await resp.json()
+          if (Array.isArray(data)) {
+            nightlyE2ERef.current = data
+          }
+        }
+      } catch {
+        // Silent — nightly E2E data is optional
+      }
+    }
+
+    const timer = setTimeout(fetchNightlyE2E, 8000)
+    const interval = setInterval(fetchNightlyE2E, 5 * 60 * 1000)
+    return () => {
+      clearTimeout(timer)
+      clearInterval(interval)
+    }
+  }, [])
+
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Migrate preset rules: inject any new presets missing from stored rules
+  useEffect(() => {
+    setRules(prev => {
+      const existingTypes = new Set(prev.map(r => r.condition.type))
+      const missing = PRESET_ALERT_RULES.filter(p => !existingTypes.has(p.condition.type))
+      if (missing.length === 0) return prev
+      const now = new Date().toISOString()
+      const newRules = missing.map(preset => ({
+        ...preset,
+        id: generateId(),
+        createdAt: now,
+        updatedAt: now,
+      }))
+      return [...prev, ...newRules]
+    })
   }, [])
 
   // Aggregate loading and error states from dependencies
@@ -719,6 +773,75 @@ Please provide:
     [createAlert]
   )
 
+  // Evaluate nightly E2E failures — reads cached run data from ref
+  const evaluateNightlyE2EFailure = useCallback(
+    (rule: AlertRule) => {
+      const guides = nightlyE2ERef.current
+      if (!guides.length) return
+
+      const currentRunIds = new Set<number>()
+
+      for (const guide of guides) {
+        for (const run of guide.runs) {
+          currentRunIds.add(run.id)
+
+          // Only alert on completed failures not already alerted
+          if (
+            run.status !== 'completed' ||
+            run.conclusion !== 'failure' ||
+            nightlyAlertedRunsRef.current.has(run.id)
+          ) {
+            continue
+          }
+
+          nightlyAlertedRunsRef.current.add(run.id)
+
+          const message = `Nightly E2E failed: ${guide.guide} (${guide.acronym}) on ${guide.platform} — Run #${run.runNumber}`
+
+          createAlert(
+            rule,
+            message,
+            {
+              guide: guide.guide,
+              acronym: guide.acronym,
+              platform: guide.platform,
+              repo: guide.repo,
+              workflowFile: guide.workflowFile,
+              runNumber: run.runNumber,
+              runId: run.id,
+              htmlUrl: run.htmlUrl,
+              failureReason: run.failureReason || 'unknown',
+              model: run.model,
+              gpuType: run.gpuType,
+              gpuCount: run.gpuCount,
+            },
+            guide.platform,
+            undefined,
+            `${guide.acronym}-run-${run.runNumber}`,
+            'WorkflowRun'
+          )
+
+          // Send browser notification with deep link to nightly card
+          if (rule.channels?.some(ch => ch.type === 'browser' && ch.enabled)) {
+            sendNotificationWithDeepLink(
+              `Nightly E2E Failed: ${guide.acronym} (${guide.platform})`,
+              `Run #${run.runNumber} failed — ${guide.guide}`,
+              { card: 'nightly_e2e_status' }
+            )
+          }
+        }
+      }
+
+      // Prune alerted runs that are no longer in the current data
+      for (const id of nightlyAlertedRunsRef.current) {
+        if (!currentRunIds.has(id)) {
+          nightlyAlertedRunsRef.current.delete(id)
+        }
+      }
+    },
+    [createAlert]
+  )
+
   // Evaluate alert conditions — uses refs so callback identity is stable
   const isEvaluatingRef = useRef(false)
   const evaluateConditions = useCallback(() => {
@@ -746,6 +869,9 @@ Please provide:
           case 'weather_alerts':
             evaluateWeatherAlerts(rule)
             break
+          case 'nightly_e2e_failure':
+            evaluateNightlyE2EFailure(rule)
+            break
           default:
             break
         }
@@ -754,7 +880,7 @@ Please provide:
       isEvaluatingRef.current = false
       setIsEvaluating(false)
     }
-  }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateWeatherAlerts])
+  }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateWeatherAlerts, evaluateNightlyE2EFailure])
 
   // Stable ref for evaluateConditions so the interval never resets
   const evaluateConditionsRef = useRef(evaluateConditions)

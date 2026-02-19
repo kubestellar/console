@@ -9,12 +9,15 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   TestTube2, ExternalLink, TrendingUp, TrendingDown, Minus,
-  CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles,
+  CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles, Stethoscope,
 } from 'lucide-react'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
 import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
 import { useAIMode } from '../../../hooks/useAIMode'
+import { useMissions } from '../../../hooks/useMissions'
+import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
+import { BACKEND_DEFAULT_URL } from '../../../lib/constants'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { useTranslation } from 'react-i18next'
 
@@ -62,13 +65,17 @@ function formatTimeAgo(iso: string): string {
   return `${days}d ago`
 }
 
-function RunDot({ run, isHighlighted, onMouseEnter, onMouseLeave }: {
+function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
   run: NightlyRun
+  guide?: NightlyGuideStatus
   isHighlighted?: boolean
   onMouseEnter?: () => void
   onMouseLeave?: () => void
 }) {
   const [showPopup, setShowPopup] = useState(false)
+  const [isDiagnosing, setIsDiagnosing] = useState(false)
+  const { startMission } = useMissions()
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const isRunning = run.status !== 'completed'
   const isFailed = run.conclusion === 'failure'
   const isGPUFailure = isFailed && run.failureReason === 'gpu_unavailable'
@@ -93,6 +100,66 @@ function RunDot({ run, isHighlighted, onMouseEnter, onMouseLeave }: {
 
   const logsUrl = `${run.htmlUrl}#logs`
 
+  const handleDiagnose = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (!guide) return
+
+    checkKeyAndRun(async () => {
+      setIsDiagnosing(true)
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
+        const resp = await fetch(
+          `${API_BASE}/api/public/nightly-e2e/run-logs?repo=${encodeURIComponent(guide.repo)}&runId=${run.id}`
+        )
+        let logsContent = 'Failed to fetch logs — analyze using the GitHub URL below.'
+        if (resp.ok) {
+          const data = await resp.json()
+          if (data.jobs?.length) {
+            logsContent = data.jobs.map((j: { name: string; conclusion: string; log: string }) =>
+              `### Job: ${j.name} (${j.conclusion})\n\`\`\`\n${j.log}\n\`\`\``
+            ).join('\n\n')
+          } else {
+            logsContent = 'No failed job logs returned.'
+          }
+        }
+
+        startMission({
+          title: `Diagnose ${guide.acronym} (${guide.platform}) Run #${run.runNumber}`,
+          description: `Analyze failed nightly E2E workflow run`,
+          type: 'troubleshoot',
+          initialPrompt: `Analyze this failed nightly E2E workflow run and diagnose the root cause.
+
+## Run Context
+- Guide: ${guide.guide} (${guide.acronym}) on ${guide.platform}
+- Repository: ${guide.repo}
+- Workflow: ${guide.workflowFile}
+- Run #: ${run.runNumber}
+- Failure Reason: ${run.failureReason || 'unknown'}
+- Model: ${run.model}, GPU: ${run.gpuCount}x ${run.gpuType}
+- GitHub URL: ${run.htmlUrl}
+
+## GitHub Actions Logs
+${logsContent}
+
+Please provide:
+1. Root cause analysis
+2. Classification (test flake, infra issue, GPU problem, code regression)
+3. Suggested fix
+4. Pattern detection (recurring issue?)`,
+          context: {
+            guide: guide.guide,
+            platform: guide.platform,
+            repo: guide.repo,
+            runNumber: run.runNumber,
+          },
+        })
+      } finally {
+        setIsDiagnosing(false)
+      }
+    })
+  }, [guide, run, checkKeyAndRun, startMission])
+
   return (
     <div
       className="group relative"
@@ -116,15 +183,28 @@ function RunDot({ run, isHighlighted, onMouseEnter, onMouseLeave }: {
             <div className="text-slate-300 mb-1">
               Run #{run.runNumber} &middot; {isGPUFailure ? <span className="text-amber-400">GPU unavailable</span> : <span className="text-red-400">failed</span>} &middot; {formatTimeAgo(run.createdAt)}
             </div>
-            <a href={logsUrl} target="_blank" rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
-              onClick={e => e.stopPropagation()}>
-              View Logs <ExternalLink size={8} />
-            </a>
+            <div className="flex items-center gap-2">
+              <a href={logsUrl} target="_blank" rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
+                onClick={e => e.stopPropagation()}>
+                View Logs <ExternalLink size={8} />
+              </a>
+              {guide && (
+                <button
+                  onClick={handleDiagnose}
+                  disabled={isDiagnosing}
+                  className="text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-0.5 disabled:opacity-50"
+                >
+                  <Stethoscope size={8} />
+                  {isDiagnosing ? 'Loading...' : 'AI Diagnose'}
+                </button>
+              )}
+            </div>
             <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-600" />
           </div>
         </div>
       )}
+      <ApiKeyPromptModal isOpen={showKeyPrompt} onDismiss={dismissPrompt} onGoToSettings={goToSettings} />
     </div>
   )
 }
@@ -186,7 +266,7 @@ function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }: {
       </span>
       <div className="flex items-center gap-1.5 shrink-0">
         {guide.runs.map((run) => (
-          <RunDot key={run.id} run={run}
+          <RunDot key={run.id} run={run} guide={guide}
             onMouseEnter={() => { onMouseEnter(); onRunHover(run) }}
             onMouseLeave={() => onRunHover(null)}
           />
@@ -645,6 +725,7 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
             <RunDot
               key={run.id}
               run={run}
+              guide={guide}
               isHighlighted={hoveredRun?.id === run.id}
               onMouseEnter={() => onRunHover(run)}
               onMouseLeave={() => onRunHover(null)}

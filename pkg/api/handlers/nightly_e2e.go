@@ -21,6 +21,10 @@ const (
 
 	failureReasonGPU  = "gpu_unavailable"
 	failureReasonTest = "test_failure"
+
+	maxLogBytes     = 200_000          // 200KB tail per job log
+	logCacheTTL     = 10 * time.Minute // immutable once run completes
+	maxLogFetchJobs = 5                // limit concurrent job log fetches
 )
 
 // NightlyWorkflow defines a GitHub Actions workflow to monitor.
@@ -76,6 +80,18 @@ type NightlyE2EResponse struct {
 	FromCache bool                 `json:"fromCache"`
 }
 
+// JobLog holds the name, conclusion, and truncated log output for one job.
+type JobLog struct {
+	Name       string `json:"name"`
+	Conclusion string `json:"conclusion"`
+	Log        string `json:"log"`
+}
+
+// RunLogsResponse is the JSON response from the /api/nightly-e2e/run-logs endpoint.
+type RunLogsResponse struct {
+	Jobs []JobLog `json:"jobs"`
+}
+
 // NightlyE2EHandler serves nightly E2E workflow data proxied from GitHub.
 type NightlyE2EHandler struct {
 	githubToken string
@@ -84,6 +100,10 @@ type NightlyE2EHandler struct {
 	mu       sync.RWMutex
 	cache    *NightlyE2EResponse
 	cacheExp time.Time
+
+	logMu       sync.RWMutex
+	logCache    map[string]*RunLogsResponse // key: "repo/runId"
+	logCacheExp map[string]time.Time
 }
 
 // nightlyWorkflows is the canonical list of nightly E2E workflows to monitor.
@@ -117,6 +137,8 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 	h := &NightlyE2EHandler{
 		githubToken: githubToken,
 		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		logCache:    make(map[string]*RunLogsResponse),
+		logCacheExp: make(map[string]time.Time),
 	}
 	go h.prewarm()
 	return h
@@ -375,6 +397,176 @@ func (h *NightlyE2EHandler) detectGPUFailure(repo string, runID int64) string {
 func isGPUStep(name string) bool {
 	lower := strings.ToLower(name)
 	return strings.Contains(lower, "gpu") && strings.Contains(lower, "availab")
+}
+
+// GetRunLogs fetches GitHub Actions logs for a specific workflow run.
+// Query params: repo (e.g. "llm-d/llm-d"), runId (numeric).
+// Returns JSON with job names and their truncated log output.
+func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
+	repo := c.Query("repo")
+	runID := c.QueryInt("runId", 0)
+	if repo == "" || runID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "repo and runId query params are required",
+		})
+	}
+
+	cacheKey := fmt.Sprintf("%s/%d", repo, runID)
+
+	// Check cache
+	h.logMu.RLock()
+	if cached, ok := h.logCache[cacheKey]; ok {
+		if time.Now().Before(h.logCacheExp[cacheKey]) {
+			h.logMu.RUnlock()
+			return c.JSON(cached)
+		}
+	}
+	h.logMu.RUnlock()
+
+	// Fetch jobs for this run
+	jobsURL := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
+		githubAPIBase, repo, runID)
+
+	req, err := http.NewRequest("GET", jobsURL, nil)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return c.Status(resp.StatusCode).JSON(fiber.Map{
+			"error": fmt.Sprintf("GitHub API returned %d: %s", resp.StatusCode, string(body)),
+		})
+	}
+
+	var jobData struct {
+		Jobs []struct {
+			ID         int64   `json:"id"`
+			Name       string  `json:"name"`
+			Conclusion *string `json:"conclusion"`
+		} `json:"jobs"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&jobData); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Fetch logs for failed jobs concurrently (limit concurrency)
+	type logResult struct {
+		idx int
+		log JobLog
+	}
+	ch := make(chan logResult, len(jobData.Jobs))
+	sem := make(chan struct{}, maxLogFetchJobs)
+
+	for i, job := range jobData.Jobs {
+		conclusion := ""
+		if job.Conclusion != nil {
+			conclusion = *job.Conclusion
+		}
+		// Only fetch logs for failed jobs to limit API calls and payload
+		if conclusion != "failure" {
+			ch <- logResult{idx: i, log: JobLog{Name: job.Name, Conclusion: conclusion}}
+			continue
+		}
+		sem <- struct{}{}
+		go func(idx int, jobID int64, name, conc string) {
+			defer func() { <-sem }()
+			logText := h.fetchJobLog(repo, jobID)
+			ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: logText}}
+		}(i, job.ID, job.Name, conclusion)
+	}
+
+	logs := make([]JobLog, len(jobData.Jobs))
+	for range jobData.Jobs {
+		r := <-ch
+		logs[r.idx] = r.log
+	}
+
+	result := &RunLogsResponse{Jobs: logs}
+
+	// Cache result
+	h.logMu.Lock()
+	h.logCache[cacheKey] = result
+	h.logCacheExp[cacheKey] = time.Now().Add(logCacheTTL)
+	h.logMu.Unlock()
+
+	return c.JSON(result)
+}
+
+// fetchJobLog fetches the plain-text log for a single GitHub Actions job,
+// truncated to the last maxLogBytes bytes (failure info is at the tail).
+func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
+	logURL := fmt.Sprintf("%s/repos/%s/actions/jobs/%d/logs", githubAPIBase, repo, jobID)
+
+	req, err := http.NewRequest("GET", logURL, nil)
+	if err != nil {
+		return fmt.Sprintf("[error creating request: %v]", err)
+	}
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	// Don't follow redirects automatically — GitHub returns 302 to a signed URL
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Sprintf("[error fetching log: %v]", err)
+	}
+	defer resp.Body.Close()
+
+	// Follow the redirect manually
+	if resp.StatusCode == http.StatusFound {
+		location := resp.Header.Get("Location")
+		if location == "" {
+			return "[redirect with no Location header]"
+		}
+		redirectReq, err := http.NewRequest("GET", location, nil)
+		if err != nil {
+			return fmt.Sprintf("[error following redirect: %v]", err)
+		}
+		redirectResp, err := h.httpClient.Do(redirectReq)
+		if err != nil {
+			return fmt.Sprintf("[error fetching redirected log: %v]", err)
+		}
+		defer redirectResp.Body.Close()
+		return readTruncatedLog(redirectResp.Body)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Sprintf("[GitHub returned %d for job logs]", resp.StatusCode)
+	}
+
+	return readTruncatedLog(resp.Body)
+}
+
+// readTruncatedLog reads a log body and returns the last maxLogBytes bytes.
+func readTruncatedLog(body io.Reader) string {
+	data, err := io.ReadAll(io.LimitReader(body, int64(maxLogBytes*2)))
+	if err != nil {
+		return fmt.Sprintf("[error reading log: %v]", err)
+	}
+	if len(data) > maxLogBytes {
+		// Take the tail — failure info is at the end
+		data = data[len(data)-maxLogBytes:]
+		return "...[truncated]\n" + string(data)
+	}
+	return string(data)
 }
 
 func computePassRate(runs []NightlyRun) int {

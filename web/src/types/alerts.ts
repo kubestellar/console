@@ -8,6 +8,7 @@ export type AlertConditionType =
   | 'cpu_pressure'
   | 'disk_pressure'
   | 'weather_alerts'
+  | 'nightly_e2e_failure'
   | 'custom'
 
 // Alert severity levels
@@ -200,6 +201,18 @@ export const PRESET_ALERT_RULES: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt
     channels: [{ type: 'browser', enabled: true, config: {} }],
     aiDiagnose: false,
   },
+  {
+    name: 'Nightly E2E Failure',
+    description: 'Alert when any nightly E2E workflow run fails',
+    enabled: true,
+    condition: {
+      type: 'nightly_e2e_failure',
+      duration: 0,
+    },
+    severity: 'warning',
+    channels: [{ type: 'browser', enabled: true, config: {} }],
+    aiDiagnose: true,
+  },
 ]
 
 // Helper to get severity color
@@ -255,6 +268,8 @@ export function formatCondition(condition: AlertCondition): string {
         return `Wind speed > ${condition.windSpeedThreshold || 40} mph`
       }
       return condition.weatherCondition?.replace(/_/g, ' ') || 'Weather alert'
+    case 'nightly_e2e_failure':
+      return 'Nightly E2E workflow run failed'
     case 'custom':
       return condition.customQuery || 'Custom condition'
     default:
