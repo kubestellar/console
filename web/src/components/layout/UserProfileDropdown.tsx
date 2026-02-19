@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check } from 'lucide-react'
+import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { languages } from '../../lib/i18n'
+import { isDemoModeForced } from '../../lib/demoMode'
+import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 
 interface UserProfileDropdownProps {
   user: {
@@ -20,6 +22,7 @@ interface UserProfileDropdownProps {
 export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback }: UserProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
+  const [showSetupDialog, setShowSetupDialog] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
   const { t, i18n } = useTranslation()
@@ -212,16 +215,39 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
             <button
               onClick={() => {
                 setIsOpen(false)
-                onLogout()
+                if (isDemoModeForced) {
+                  setShowSetupDialog(true)
+                } else {
+                  onLogout()
+                }
               }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+                isDemoModeForced
+                  ? 'text-purple-400 hover:bg-purple-500/10'
+                  : 'text-red-400 hover:bg-red-500/10'
+              }`}
             >
-              <LogOut className="w-4 h-4" />
-              {t('actions.signOut')}
+              {isDemoModeForced ? (
+                <>
+                  <Download className="w-4 h-4" />
+                  {t('actions.getYourOwn')}
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  {t('actions.signOut')}
+                </>
+              )}
             </button>
           </div>
         </div>
       )}
+
+      {/* Setup instructions dialog — shown when demo users click sign out */}
+      <SetupInstructionsDialog
+        isOpen={showSetupDialog}
+        onClose={() => setShowSetupDialog(false)}
+      />
     </div>
   )
 }
