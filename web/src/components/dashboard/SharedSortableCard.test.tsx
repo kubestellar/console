@@ -1,4 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// Mock the heavy cardRegistry to avoid loading all card bundles
+vi.mock('../cards/cardRegistry', () => ({
+  CARD_COMPONENTS: {},
+  DEMO_DATA_CARDS: [],
+  LIVE_DATA_CARDS: [],
+  MODULE_MAP: {},
+  CARD_SIZES: {},
+  registerDynamicCardType: vi.fn(),
+}))
+
 import * as SharedSortableCardModule from './SharedSortableCard'
 
 describe('SharedSortableCard (SortableCard) Component', () => {
