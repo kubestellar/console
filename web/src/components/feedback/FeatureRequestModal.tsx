@@ -603,8 +603,8 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                   </button>
                                 )}
                               </div>
-                              {/* For needs_triage items, show info based on ownership */}
-                              {request.status === 'needs_triage' ? (
+                              {/* For untriaged items (open, needs_triage), show info based on ownership */}
+                              {!isTriaged(request.status) ? (
                                 <>
                                   {isOwnedByUser ? (
                                     <>
@@ -914,6 +914,10 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                       ) : (
                         notifications.map(notification => {
                           const status = getNotificationStatus(notification.notification_type)
+                          const linkedRequest = requests.find(r => r.id === notification.feature_request_id)
+                          const githubUrl = notification.action_url || linkedRequest?.github_issue_url
+                          const issueNumber = linkedRequest?.github_issue_number
+                          const isAwaitingTriage = linkedRequest && !isTriaged(linkedRequest.status)
                           return (
                             <div
                               key={notification.id}
@@ -936,6 +940,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                     <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${status.bgColor} ${status.color}`}>
                                       {status.label}
                                     </span>
+                                    {issueNumber && (
+                                      <span className="text-xs text-muted-foreground">
+                                        #{issueNumber}
+                                      </span>
+                                    )}
                                     {!notification.read && (
                                       <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
                                     )}
@@ -943,16 +952,40 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                   <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                                     {notification.message}
                                   </p>
+                                  {isAwaitingTriage && (
+                                    <p className="text-xs text-amber-400/80 italic mt-1">
+                                      Waiting for triage — we&apos;ll notify you when accepted
+                                    </p>
+                                  )}
                                   <div className="flex items-center gap-2 mt-1.5">
                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
                                       {formatRelativeTime(notification.created_at)}
                                     </span>
-                                    {notification.action_url && (
-                                      <span className="text-xs text-purple-400 flex items-center gap-1">
+                                    {githubUrl && (
+                                      <a
+                                        href={githubUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                        onClick={e => e.stopPropagation()}
+                                      >
                                         <ExternalLink className="w-3 h-3" />
                                         View on GitHub
-                                      </span>
+                                      </a>
+                                    )}
+                                    {linkedRequest && canPerformActions && !isTriaged(linkedRequest.status) && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleRequestUpdate(linkedRequest.id)
+                                        }}
+                                        disabled={actionLoading === linkedRequest.id}
+                                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                      >
+                                        <RefreshCw className={`w-3 h-3 ${actionLoading === linkedRequest.id ? 'animate-spin' : ''}`} />
+                                        Request Update
+                                      </button>
                                     )}
                                   </div>
                                 </div>
