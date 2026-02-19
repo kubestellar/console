@@ -173,6 +173,8 @@ const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.Kagent
 const CrossplaneManagedResources = lazy(() => import('./crossplane-status/CrossplaneManagedResources').then(m => ({ default: m.CrossplaneManagedResources })))
 // Cloud Native Buildpacks card
 const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
+// CoreDNS card
+const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -410,6 +412,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   quota_heatmap: QuotaHeatmap,
   // Cloud Native Buildpacks
   buildpacks_status: BuildpacksStatus,
+  // CoreDNS
+  coredns_status: CoreDNSStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -475,6 +479,7 @@ export const DEMO_DATA_CARDS = new Set([
   // Service Topology - demo visualization
   'service_topology',
   'buildpacks_status',
+  'coredns_status',
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -717,6 +722,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   crossplane_managed_resources: () => import('./crossplane-status'),
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
+  // CoreDNS
+  coredns_status: () => import('./coredns_status'),
 }
 
 /**
@@ -727,7 +734,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
  */
 export function prefetchCardChunks(cardTypes: string[]): void {
   for (const type of cardTypes) {
-    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => {})
+    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => { })
   }
 }
 
@@ -766,7 +773,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./kagenti/KagentiTopology'),
     () => import('./crossplane-status/CrossplaneManagedResources'),
   ]
-  startupChunks.forEach(load => load().catch(() => {}))
+  startupChunks.forEach(load => load().catch(() => { }))
 }
 
 /**
@@ -914,6 +921,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   node_conditions: 6,
   admission_webhooks: 6,
   dns_health: 4,
+  coredns_status: 6,
   etcd_status: 4,
   network_policies: 6,
   rbac_explorer: 6,

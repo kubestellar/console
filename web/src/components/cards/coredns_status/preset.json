@@ -1,0 +1,8 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "coredns_status",
+  "title": "CoreDNS",
+  "description": "DNS query metrics, cache hit rates, and resolution performance.",
+  "category": "Cluster Admin",
+  "config": {}
+}

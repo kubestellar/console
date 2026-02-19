@@ -1978,6 +1978,20 @@
     "noImages": "No Buildpack images",
     "createHint": "Create kpack Image resources to track builds"
   },
+  "coreDNSStatus": {
+    "noPods": "No CoreDNS pods found",
+    "noPods_hint": "CoreDNS pods in kube-system will appear here",
+    "queriesPerSec": "Queries/s",
+    "cacheHit": "Cache Hit",
+    "errorRate": "Error Rate",
+    "avgLatency": "Avg Latency",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "summary": "{{pods}} pods across {{clusters}} clusters",
+    "summary_one": "{{pods}} pods in {{clusters}} cluster",
+    "summary_other": "{{pods}} pods across {{clusters}} clusters",
+    "podNotReady": "{{ready}}/{{total}} pods running"
+  },
   "crossplaneManagedResources": {
     "resourceCount": "{{count}} managed resources",
     "resourceCount_one": "{{count}} managed resource",

@@ -59,6 +59,7 @@ const CARD_CATALOG = {
     { type: 'node_conditions', title: 'Node Conditions', description: 'DiskPressure, MemoryPressure, PIDPressure with cordon/uncordon/drain actions', visualization: 'table' },
     { type: 'admission_webhooks', title: 'Admission Webhooks', description: 'Mutating and validating webhook inventory with failure policies', visualization: 'table' },
     { type: 'dns_health', title: 'DNS Health', description: 'CoreDNS pod status and health across clusters', visualization: 'status' },
+    { type: 'coredns_status', title: 'CoreDNS', description: 'DNS query metrics, cache hit rates, and resolution performance', visualization: 'status' },
     { type: 'etcd_status', title: 'etcd Status', description: 'etcd member health, version, and restart counts', visualization: 'status' },
     { type: 'network_policies', title: 'Network Policies', description: 'Network policy coverage analysis by namespace', visualization: 'donut' },
     { type: 'rbac_explorer', title: 'RBAC Explorer', description: 'Cross-cluster RBAC risk analysis — find over-privileged accounts', visualization: 'table' },
