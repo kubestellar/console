@@ -398,8 +398,8 @@ func (h *FeedbackHandler) fetchGitHubIssues() ([]GitHubIssue, error) {
 		return nil, fmt.Errorf("GitHub not configured")
 	}
 
-	// Fetch both open and closed issues so merged items stay in the queue
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues?state=all&per_page=50&sort=updated&direction=desc",
+	// Fetch only issues submitted through the feedback system (labeled ai-fix-requested)
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues?state=all&labels=ai-fix-requested&per_page=50&sort=updated&direction=desc",
 		h.repoOwner, h.repoName)
 
 	req, err := http.NewRequest("GET", url, nil)
