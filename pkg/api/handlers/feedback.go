@@ -206,8 +206,8 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 		currentGitHubLogin = user.GitHubLogin
 	}
 
-	// Fetch issues from GitHub
-	issues, err := h.fetchGitHubIssues()
+	// Fetch issues created by the logged-in user from GitHub
+	issues, err := h.fetchGitHubIssues(currentGitHubLogin)
 	if err != nil {
 		log.Printf("Failed to fetch GitHub issues: %v", err)
 		// Fall back to local database if GitHub fetch fails
@@ -392,15 +392,18 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 	return result
 }
 
-// fetchGitHubIssues fetches issues from the configured GitHub repo (both open and closed)
-func (h *FeedbackHandler) fetchGitHubIssues() ([]GitHubIssue, error) {
+// fetchGitHubIssues fetches issues created by the given user from the configured GitHub repo
+func (h *FeedbackHandler) fetchGitHubIssues(githubLogin string) ([]GitHubIssue, error) {
 	if h.githubToken == "" || h.repoOwner == "" || h.repoName == "" {
 		return nil, fmt.Errorf("GitHub not configured")
 	}
+	if githubLogin == "" {
+		return nil, fmt.Errorf("GitHub login not available")
+	}
 
-	// Fetch only issues submitted through the feedback system (labeled ai-fix-requested)
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues?state=all&labels=ai-fix-requested&per_page=50&sort=updated&direction=desc",
-		h.repoOwner, h.repoName)
+	// Fetch all issues created by the logged-in user
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues?state=all&creator=%s&per_page=50&sort=updated&direction=desc",
+		h.repoOwner, h.repoName, githubLogin)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
