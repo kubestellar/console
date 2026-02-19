@@ -282,418 +282,57 @@ function App() {
         <Route path="/auth/callback" element={<AuthCallback />} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path="/widget" element={<MiniDashboard />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Dashboard />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/custom-dashboard/:id"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <CustomDashboard />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/__perf/all-cards"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <AllCardsPerfTest />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/__compliance/all-cards"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <CompliancePerfTest />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/clusters"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Clusters />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/workloads"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Workloads />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/nodes"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Nodes />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/deployments"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Deployments />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pods"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Pods />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/services"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Services />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/operators"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Operators />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/helm"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <HelmReleases />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/logs"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Logs />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/compute"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Compute />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/compute/compare"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <ClusterComparisonPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/storage"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Storage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/network"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Network />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/events"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Events />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/security"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Security />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/gitops"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <GitOps />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/alerts"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Alerts />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cost"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Cost />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/security-posture"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Compliance />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        {/* Legacy route for backwards compatibility */}
-        <Route
-          path="/compliance"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Compliance />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/data-compliance"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <DataCompliance />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/gpu-reservations"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <GPUReservations />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/history"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <CardHistoryWithRestore />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Settings />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/users"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <UserManagementPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/namespaces"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <NamespaceManager />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/arcade"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Arcade />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/deploy"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Deploy />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ai-ml"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <AIML />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ai-agents"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <AIAgents />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/llm-d-benchmarks"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <LLMdBenchmarks />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cluster-admin"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <ClusterAdmin />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ci-cd"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <CICD />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/marketplace"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <Marketplace />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        {/* Dev test routes for unified framework validation */}
-        <Route
-          path="/test/unified-card"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <UnifiedCardTest />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/test/unified-stats"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <UnifiedStatsTest />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/test/unified-dashboard"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                  <UnifiedDashboardTest />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+
+        {/* Layout route — all dashboard routes share a single Layout instance.
+            KeepAliveOutlet preserves component state across navigations so that
+            warm-nav is near-instant (no unmount/remount). */}
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route index element={<Dashboard />} />
+          <Route path="/custom-dashboard/:id" element={<CustomDashboard />} />
+          {/* Test routes — rendered with Layout but not cached by KeepAlive */}
+          <Route path="/__perf/all-cards" element={<AllCardsPerfTest />} />
+          <Route path="/__compliance/all-cards" element={<CompliancePerfTest />} />
+          <Route path="/clusters" element={<Clusters />} />
+          <Route path="/workloads" element={<Workloads />} />
+          <Route path="/nodes" element={<Nodes />} />
+          <Route path="/deployments" element={<Deployments />} />
+          <Route path="/pods" element={<Pods />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/operators" element={<Operators />} />
+          <Route path="/helm" element={<HelmReleases />} />
+          <Route path="/logs" element={<Logs />} />
+          <Route path="/compute" element={<Compute />} />
+          <Route path="/compute/compare" element={<ClusterComparisonPage />} />
+          <Route path="/storage" element={<Storage />} />
+          <Route path="/network" element={<Network />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/security" element={<Security />} />
+          <Route path="/gitops" element={<GitOps />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/cost" element={<Cost />} />
+          <Route path="/security-posture" element={<Compliance />} />
+          {/* Legacy route for backwards compatibility */}
+          <Route path="/compliance" element={<Compliance />} />
+          <Route path="/data-compliance" element={<DataCompliance />} />
+          <Route path="/gpu-reservations" element={<GPUReservations />} />
+          <Route path="/history" element={<CardHistoryWithRestore />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/users" element={<UserManagementPage />} />
+          <Route path="/namespaces" element={<NamespaceManager />} />
+          <Route path="/arcade" element={<Arcade />} />
+          <Route path="/deploy" element={<Deploy />} />
+          <Route path="/ai-ml" element={<AIML />} />
+          <Route path="/ai-agents" element={<AIAgents />} />
+          <Route path="/llm-d-benchmarks" element={<LLMdBenchmarks />} />
+          <Route path="/cluster-admin" element={<ClusterAdmin />} />
+          <Route path="/ci-cd" element={<CICD />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+          {/* Dev test routes for unified framework validation */}
+          <Route path="/test/unified-card" element={<UnifiedCardTest />} />
+          <Route path="/test/unified-stats" element={<UnifiedStatsTest />} />
+          <Route path="/test/unified-dashboard" element={<UnifiedDashboardTest />} />
+        </Route>
+
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
       </Suspense>

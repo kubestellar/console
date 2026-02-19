@@ -21,6 +21,7 @@ import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { KeepAliveOutlet } from './KeepAliveOutlet'
 
 
 // Module-level constant — computed once, never changes on re-render.
@@ -68,7 +69,7 @@ const LOADING_STAGES = [
   'Finalizing layout…',
 ]
 
-function ContentLoadingSkeleton() {
+export function ContentLoadingSkeleton() {
   const [elapsed, setElapsed] = useState(0)
   const [stageIndex, setStageIndex] = useState(0)
 
@@ -98,7 +99,7 @@ function ContentLoadingSkeleton() {
 }
 
 interface LayoutProps {
-  children: ReactNode
+  children?: ReactNode
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -394,9 +395,13 @@ export function Layout({ children }: LayoutProps) {
           !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
         )}>
           <NavigationProgress />
-          <Suspense fallback={<ContentLoadingSkeleton />}>
-            {children}
-          </Suspense>
+          {children ? (
+            <Suspense fallback={<ContentLoadingSkeleton />}>
+              {children}
+            </Suspense>
+          ) : (
+            <KeepAliveOutlet />
+          )}
         </main>
       </div>
 
