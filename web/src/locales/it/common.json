@@ -513,6 +513,16 @@
     "notConnected": "Not connected",
     "defaultRole": "User"
   },
+  "developer": {
+    "title": "Developer",
+    "oauthConfigured": "OAuth configured",
+    "oauthNotConfigured": "OAuth not configured",
+    "checkingOauth": "Checking OAuth...",
+    "setupInstructions": "Setup Instructions",
+    "configureOauth": "Configure GitHub OAuth",
+    "githubRepo": "GitHub Repository",
+    "docs": "Documentation"
+  },
   "language": {
     "select": "Select Language"
   },

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download } from 'lucide-react'
+import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
+import { checkOAuthConfigured } from '../../lib/api'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { FeatureRequestModal } from '../feedback/FeatureRequestModal'
 
@@ -25,6 +26,8 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showRewards, setShowRewards] = useState(false)
+  const [showDevPanel, setShowDevPanel] = useState(false)
+  const [oauthStatus, setOauthStatus] = useState<{ checked: boolean; configured: boolean; backendUp: boolean }>({ checked: false, configured: false, backendUp: false })
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
   const { t, i18n } = useTranslation()
@@ -42,6 +45,15 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
     awardCoins('linkedin_share')
     setIsOpen(false)
   }
+
+  // Check OAuth status when dev panel is expanded
+  useEffect(() => {
+    if (showDevPanel && !oauthStatus.checked) {
+      checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
+        setOauthStatus({ checked: true, configured: oauthConfigured, backendUp })
+      })
+    }
+  }, [showDevPanel, oauthStatus.checked])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -189,6 +201,96 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
               )}
             </div>
           </div>
+
+          {/* Developer panel — only on local/cluster installs */}
+          {!isDemoModeForced && (
+            <div className="border-b border-border">
+              <button
+                onClick={() => setShowDevPanel(!showDevPanel)}
+                className="w-full flex items-center gap-3 px-5 py-2 text-sm hover:bg-secondary/50 transition-colors"
+              >
+                <Code2 className="w-4 h-4 text-blue-400" />
+                <span className="text-foreground">{t('developer.title')}</span>
+                <ChevronDown className={`w-3 h-3 ml-auto text-muted-foreground transition-transform ${showDevPanel ? 'rotate-180' : ''}`} />
+              </button>
+              {showDevPanel && (
+                <div className="px-5 pb-3 space-y-2">
+                  {/* Version info */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${__DEV_MODE__ ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>
+                      {__DEV_MODE__ ? 'dev' : 'prod'}
+                    </span>
+                    <span className="text-muted-foreground font-mono">
+                      v{__APP_VERSION__} · {__COMMIT_HASH__.substring(0, 7)}
+                    </span>
+                  </div>
+
+                  {/* OAuth status */}
+                  <div className="flex items-center gap-2 text-xs">
+                    {oauthStatus.checked ? (
+                      oauthStatus.configured ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-green-400">{t('developer.oauthConfigured')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-3.5 h-3.5 text-yellow-400" />
+                          <span className="text-yellow-400">{t('developer.oauthNotConfigured')}</span>
+                        </>
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">{t('developer.checkingOauth')}</span>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex flex-col gap-1 pt-1">
+                    <button
+                      onClick={() => {
+                        setIsOpen(false)
+                        setShowSetupDialog(true)
+                      }}
+                      className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      <Rocket className="w-3.5 h-3.5" />
+                      {t('developer.setupInstructions')}
+                    </button>
+                    {!oauthStatus.configured && oauthStatus.checked && (
+                      <a
+                        href="https://github.com/settings/developers"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        {t('developer.configureOauth')}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    <a
+                      href="https://github.com/kubestellar/console"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {t('developer.githubRepo')}
+                    </a>
+                    <a
+                      href="https://console-docs.kubestellar.io"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {t('developer.docs')}
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="p-2">
