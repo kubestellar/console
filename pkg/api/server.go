@@ -618,6 +618,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/feedback/requests/:id/feedback", feedback.SubmitFeedback)
 	api.Post("/feedback/requests/:id/close", feedback.CloseRequest)
 	api.Post("/feedback/requests/:id/request-update", feedback.RequestUpdate)
+	api.Get("/feedback/preview/:pr_number", feedback.CheckPreviewStatus)
 	api.Get("/notifications", feedback.GetNotifications)
 	api.Get("/notifications/unread-count", feedback.GetUnreadCount)
 	api.Post("/notifications/:id/read", feedback.MarkNotificationRead)

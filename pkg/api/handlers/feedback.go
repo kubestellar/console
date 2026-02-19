@@ -218,18 +218,8 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	// Fetch linked PRs for all issues
 	linkedPRs := h.fetchLinkedPRs(issues)
 
-	// Build a map of issue number -> DB record for preview URLs
-	// The DB record's NetlifyPreviewURL is set by the deployment webhook when the build succeeds
-	dbPreviewURLs := make(map[int]string)
-	for _, issue := range issues {
-		if dbReq, err := h.store.GetFeatureRequestByIssueNumber(issue.Number); err == nil && dbReq != nil {
-			if dbReq.NetlifyPreviewURL != "" {
-				dbPreviewURLs[issue.Number] = dbReq.NetlifyPreviewURL
-			}
-		}
-	}
-
 	// Convert to queue items
+	// Note: preview URLs are fetched on-demand via CheckPreviewStatus endpoint
 	queueItems := make([]QueueItem, 0, len(issues))
 	for _, issue := range issues {
 		// Determine status based on labels
@@ -260,8 +250,6 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 		var prNumber int
 		var prURL string
 		var copilotSessionURL string
-		// Only use preview URL from DB (set by deployment webhook when Netlify build succeeds)
-		previewURL := dbPreviewURLs[issue.Number]
 		if pr, ok := linkedPRs[issue.Number]; ok {
 			prNumber = pr.Number
 			prURL = pr.HTMLURL
@@ -311,7 +299,6 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 			Status:            status,
 			PRNumber:          prNumber,
 			PRURL:             prURL,
-			PreviewURL:        previewURL,
 			CopilotSessionURL: copilotSessionURL,
 			ClosedByUser:      closedByUser,
 			CreatedAt:         issue.CreatedAt,
@@ -320,6 +307,101 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(queueItems)
+}
+
+// CheckPreviewStatus checks the Netlify deploy preview status for a PR on-demand.
+// Uses GitHub Deployments API to find the actual preview URL — only returns "ready"
+// when the deploy has succeeded. This avoids showing "Preview Available" prematurely.
+func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
+	prNumber, err := strconv.Atoi(c.Params("pr_number"))
+	if err != nil || prNumber <= 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid PR number")
+	}
+
+	if h.githubToken == "" {
+		return c.JSON(fiber.Map{"status": "unavailable", "message": "GitHub not configured"})
+	}
+
+	client := &http.Client{Timeout: githubAPITimeout}
+
+	// Query GitHub Deployments API for the Netlify deploy preview environment
+	envName := fmt.Sprintf("deploy-preview-%d", prNumber)
+	deploymentsURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/deployments?environment=%s&per_page=1",
+		h.repoOwner, h.repoName, envName)
+
+	req, err := http.NewRequest("GET", deploymentsURL, nil)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
+	}
+	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return c.JSON(fiber.Map{"status": "error", "message": "Failed to reach GitHub API"})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return c.JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub API returned %d", resp.StatusCode)})
+	}
+
+	var deployments []struct {
+		ID int `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&deployments); err != nil {
+		return c.JSON(fiber.Map{"status": "error", "message": "Failed to parse deployments"})
+	}
+
+	if len(deployments) == 0 {
+		return c.JSON(fiber.Map{"status": "pending", "message": "No deployment found yet"})
+	}
+
+	// Fetch the latest status for this deployment
+	statusesURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/deployments/%d/statuses?per_page=1",
+		h.repoOwner, h.repoName, deployments[0].ID)
+
+	req2, err := http.NewRequest("GET", statusesURL, nil)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create status request")
+	}
+	req2.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req2.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp2, err := client.Do(req2)
+	if err != nil {
+		return c.JSON(fiber.Map{"status": "error", "message": "Failed to fetch deployment status"})
+	}
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode != http.StatusOK {
+		return c.JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub status API returned %d", resp2.StatusCode)})
+	}
+
+	var statuses []struct {
+		State     string `json:"state"`
+		TargetURL string `json:"target_url"`
+	}
+	if err := json.NewDecoder(resp2.Body).Decode(&statuses); err != nil {
+		return c.JSON(fiber.Map{"status": "error", "message": "Failed to parse deployment statuses"})
+	}
+
+	if len(statuses) == 0 {
+		return c.JSON(fiber.Map{"status": "pending", "message": "Deployment in progress"})
+	}
+
+	latestStatus := statuses[0]
+	if latestStatus.State == "success" && latestStatus.TargetURL != "" {
+		return c.JSON(fiber.Map{
+			"status":      "ready",
+			"preview_url": latestStatus.TargetURL,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status":  latestStatus.State,
+		"message": fmt.Sprintf("Deploy status: %s", latestStatus.State),
+	})
 }
 
 // GitHubPR represents a pull request from GitHub API
@@ -837,61 +919,15 @@ func (h *FeedbackHandler) HandleGitHubWebhook(c *fiber.Ctx) error {
 	}
 }
 
-// ensureFeatureRequestExists looks up or creates a DB record for a GitHub issue.
-// This bridges issues created externally (via GitHub UI/API) with the Console's
-// notification system. Returns the request and whether it was newly created.
-func (h *FeedbackHandler) ensureFeatureRequestExists(issueNumber int, issue map[string]interface{}) (*models.FeatureRequest, bool, error) {
-	// Check if record already exists
+// findFeatureRequest looks up an existing DB record for a GitHub issue.
+// Returns nil if no record exists — we do NOT auto-create records for issues
+// that weren't submitted through the Console UI. GitHub is the source of truth.
+func (h *FeedbackHandler) findFeatureRequest(issueNumber int) *models.FeatureRequest {
 	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
-	if err == nil && request != nil {
-		return request, false, nil
+	if err != nil || request == nil {
+		return nil
 	}
-
-	// Extract issue data
-	title, _ := issue["title"].(string)
-	body, _ := issue["body"].(string)
-
-	// Determine request type from labels
-	requestType := models.RequestTypeFeature
-	labels, _ := issue["labels"].([]interface{})
-	for _, l := range labels {
-		if lm, ok := l.(map[string]interface{}); ok {
-			if name, _ := lm["name"].(string); name == "bug" {
-				requestType = models.RequestTypeBug
-			}
-		}
-	}
-
-	// Try to find the Console user by GitHub ID
-	var userID uuid.UUID
-	if user, _ := issue["user"].(map[string]interface{}); user != nil {
-		if ghID, ok := user["id"].(float64); ok {
-			if dbUser, _ := h.store.GetUserByGitHubID(fmt.Sprintf("%d", int(ghID))); dbUser != nil {
-				userID = dbUser.ID
-			}
-		}
-	}
-	// If no matching Console user, use a nil UUID (system-created)
-	if userID == uuid.Nil {
-		userID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
-	}
-
-	request = &models.FeatureRequest{
-		UserID:            userID,
-		Title:             title,
-		Description:       body,
-		RequestType:       requestType,
-		GitHubIssueNumber: &issueNumber,
-		Status:            models.RequestStatusOpen,
-	}
-
-	if err := h.store.CreateFeatureRequest(request); err != nil {
-		log.Printf("[Webhook] Failed to create feature request for issue #%d: %v", issueNumber, err)
-		return nil, false, err
-	}
-
-	log.Printf("[Webhook] Created DB record for external issue #%d (user=%s)", issueNumber, userID)
-	return request, true, nil
+	return request
 }
 
 // pipelineLabels maps GitHub labels to status updates and notification types
@@ -934,60 +970,40 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 			return h.handleAIProcessingComplete(issueNumber, issueURL, issue)
 		}
 
-		// Handle pipeline label transitions
+		// Handle pipeline label transitions — only update existing DB records
+		// (records created through the Console UI via CreateFeatureRequest)
 		if info, ok := pipelineLabels[labelName]; ok {
-			request, created, err := h.ensureFeatureRequestExists(issueNumber, issue)
-			if err != nil || request == nil {
+			request := h.findFeatureRequest(issueNumber)
+			if request == nil {
+				log.Printf("[Webhook] No DB record for issue #%d, skipping label update", issueNumber)
 				return nil
 			}
 
 			h.store.UpdateFeatureRequestStatus(request.ID, info.status)
-
-			// Create notification (skip if we just auto-created the record — avoid duplicate "created" noise)
-			if !created || info.notifType != models.NotificationTypeIssueCreated {
-				h.createNotification(
-					request.UserID,
-					&request.ID,
-					info.notifType,
-					fmt.Sprintf("Issue #%d: %s", issueNumber, info.message),
-					info.message,
-					issueURL,
-				)
-			}
+			h.createNotification(
+				request.UserID,
+				&request.ID,
+				info.notifType,
+				fmt.Sprintf("Issue #%d: %s", issueNumber, info.message),
+				info.message,
+				issueURL,
+			)
 			return nil
 		}
 
-		// Handle ai-fix-requested label — ensure DB record exists
+		// Handle ai-fix-requested label — only update existing DB records
 		if labelName == "ai-fix-requested" {
-			request, created, err := h.ensureFeatureRequestExists(issueNumber, issue)
-			if err != nil || request == nil {
-				return nil
-			}
-			if created {
-				h.createNotification(
-					request.UserID,
-					&request.ID,
-					models.NotificationTypeIssueCreated,
-					fmt.Sprintf("Issue #%d Tracked", issueNumber),
-					"This issue is now being tracked for AI processing.",
-					issueURL,
-				)
+			request := h.findFeatureRequest(issueNumber)
+			if request == nil {
+				log.Printf("[Webhook] No DB record for issue #%d, skipping ai-fix-requested", issueNumber)
 			}
 			return nil
 		}
 	}
 
-	// Handle issue opened with ai-fix-requested label — auto-create record
+	// Handle issue opened — only log, don't auto-create DB records
 	if action == "opened" {
-		labels, _ := issue["labels"].([]interface{})
-		for _, l := range labels {
-			if lm, ok := l.(map[string]interface{}); ok {
-				if name, _ := lm["name"].(string); name == "ai-fix-requested" {
-					_, _, _ = h.ensureFeatureRequestExists(issueNumber, issue)
-					break
-				}
-			}
-		}
+		log.Printf("[Webhook] Issue #%d opened, no DB record auto-created (GitHub is source of truth)", issueNumber)
 	}
 
 	// Handle issue closed

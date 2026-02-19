@@ -146,6 +146,25 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
   const [actionError, setActionError] = useState<string | null>(null)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [previewChecking, setPreviewChecking] = useState<number | null>(null) // PR number being checked
+  const [previewResults, setPreviewResults] = useState<Record<number, { status: string; preview_url?: string; message?: string }>>({})
+
+  const handleCheckPreview = async (prNumber: number) => {
+    setPreviewChecking(prNumber)
+    try {
+      const res = await fetch(`${BACKEND_DEFAULT_URL}/api/feedback/preview/${prNumber}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPreviewResults(prev => ({ ...prev, [prNumber]: data }))
+      }
+    } catch {
+      setPreviewResults(prev => ({ ...prev, [prNumber]: { status: 'error', message: 'Failed to check' } }))
+    } finally {
+      setPreviewChecking(null)
+    }
+  }
 
   const handleRefreshGitHub = async () => {
     setIsGitHubRefreshing(true)
@@ -769,40 +788,77 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                   <p className="line-clamp-3">{request.latest_comment}</p>
                                 </div>
                               )}
-                              {/* Show preview link if available - prominent for fix_ready */}
-                              {request.netlify_preview_url && request.status === 'fix_ready' && (
-                                <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <Eye className="w-4 h-4 text-green-400" />
-                                      <span className="text-xs text-green-400 font-medium">Preview Available</span>
+                              {/* Preview section: show preview URL from server or on-demand check result */}
+                              {(() => {
+                                const serverPreview = request.netlify_preview_url
+                                const checkedPreview = request.pr_number ? previewResults[request.pr_number] : null
+                                const previewUrl = serverPreview || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
+                                const isCheckingThis = previewChecking === request.pr_number
+
+                                if (previewUrl && request.status === 'fix_ready') {
+                                  // Prominent preview for fix_ready status
+                                  return (
+                                    <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <Eye className="w-4 h-4 text-green-400" />
+                                          <span className="text-xs text-green-400 font-medium">Preview Available</span>
+                                        </div>
+                                        <a
+                                          href={previewUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          <ExternalLink className="w-3 h-3" />
+                                          Try It
+                                        </a>
+                                      </div>
                                     </div>
+                                  )
+                                }
+                                if (previewUrl && !request.closed_by_user) {
+                                  // Simple preview link for other statuses
+                                  return (
                                     <a
-                                      href={request.netlify_preview_url}
+                                      href={previewUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1"
+                                      className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1"
                                       onClick={e => e.stopPropagation()}
                                     >
-                                      <ExternalLink className="w-3 h-3" />
-                                      Try It
+                                      <Eye className="w-3 h-3" />
+                                      Preview Fix
                                     </a>
-                                  </div>
-                                </div>
-                              )}
-                              {/* Simple preview link for other statuses (hide for user-closed requests) */}
-                              {request.netlify_preview_url && request.status !== 'fix_ready' && !request.closed_by_user && (
-                                <a
-                                  href={request.netlify_preview_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  Preview Fix
-                                </a>
-                              )}
+                                  )
+                                }
+                                // No preview yet — show Check Preview button if there's a PR
+                                if (request.pr_number && !request.closed_by_user && request.status !== 'closed') {
+                                  return (
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <button
+                                        onClick={e => { e.stopPropagation(); handleCheckPreview(request.pr_number!) }}
+                                        disabled={isCheckingThis}
+                                        className="text-xs text-muted-foreground hover:text-green-400 flex items-center gap-1 transition-colors disabled:opacity-50"
+                                      >
+                                        {isCheckingThis ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Eye className="w-3 h-3" />
+                                        )}
+                                        Check Preview
+                                      </button>
+                                      {checkedPreview && checkedPreview.status !== 'ready' && (
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {checkedPreview.status === 'pending' ? 'Building...' : checkedPreview.message || checkedPreview.status}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )
+                                }
+                                return null
+                              })()}
                               <div className="flex items-center gap-2 mt-2">
                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
