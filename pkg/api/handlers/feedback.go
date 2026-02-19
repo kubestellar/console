@@ -109,17 +109,17 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	// Create notification for the user
+	notifTitle := "Request Submitted"
+	if request.GitHubIssueNumber != nil {
+		notifTitle = fmt.Sprintf("Issue #%d Created", *request.GitHubIssueNumber)
+	}
 	notification := &models.Notification{
 		UserID:           userID,
 		FeatureRequestID: &request.ID,
 		NotificationType: models.NotificationTypeIssueCreated,
-		Title:            fmt.Sprintf("Issue #%d Created", *request.GitHubIssueNumber),
+		Title:            notifTitle,
 		Message:          fmt.Sprintf("Your %s request '%s' has been submitted.", request.RequestType, request.Title),
 		ActionURL:        request.GitHubIssueURL,
-	}
-	// Use generic title if no issue number
-	if request.GitHubIssueNumber == nil {
-		notification.Title = "Request Submitted"
 	}
 	h.store.CreateNotification(notification)
 
