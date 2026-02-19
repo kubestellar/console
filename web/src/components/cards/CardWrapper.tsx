@@ -165,6 +165,8 @@ interface CardWrapperProps {
   skeletonType?: CardSkeletonProps['type']
   /** Number of skeleton rows to show */
   skeletonRows?: number
+  /** Register a callback to expand the card programmatically (keyboard nav) */
+  registerExpandTrigger?: (expand: () => void) => void
   children: ReactNode
 }
 
@@ -856,10 +858,29 @@ export function CardWrapper({
   onChatMessagesChange,
   skeletonType,
   skeletonRows,
+  registerExpandTrigger,
   children,
 }: CardWrapperProps) {
   const { t } = useTranslation(['cards', 'common'])
   const [isExpanded, setIsExpanded] = useState(false)
+
+  // Register expand trigger for keyboard navigation
+  useEffect(() => {
+    registerExpandTrigger?.(() => setIsExpanded(true))
+  }, [registerExpandTrigger])
+
+  // Restore focus to card when expanded modal closes
+  const prevExpandedRef = useRef(false)
+  useEffect(() => {
+    if (prevExpandedRef.current && !isExpanded && cardId) {
+      const cardEl = document.querySelector(
+        `[data-card-id="${cardId}"]`
+      )?.closest('[tabindex="0"]') as HTMLElement | null
+      cardEl?.focus()
+    }
+    prevExpandedRef.current = isExpanded
+  }, [isExpanded, cardId])
+
   // Lazy mounting - only render children when card is visible in viewport
   const { ref: lazyRef, isVisible } = useLazyMount('200px')
   // Track animation key to re-trigger flash animation

@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, type KeyboardEvent } from 'react'
 import { GripVertical } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -17,9 +17,12 @@ interface SortableCardProps {
   isRefreshing?: boolean
   onRefresh?: () => void
   lastUpdated?: Date | null
+  onKeyDown?: (e: KeyboardEvent) => void
+  registerRef?: (el: HTMLElement | null) => void
+  registerExpandTrigger?: (expand: () => void) => void
 }
 
-export const SortableCard = memo(function SortableCard({ card, onConfigure, onReplace, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated }: SortableCardProps) {
+export const SortableCard = memo(function SortableCard({ card, onConfigure, onReplace, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger }: SortableCardProps) {
   const {
     attributes,
     listeners,
@@ -39,7 +42,15 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
   const CardComponent = CARD_COMPONENTS[card.card_type]
 
   return (
-    <div ref={setNodeRef} style={style} className="h-full">
+    <div
+      ref={(el) => { setNodeRef(el); registerRef?.(el) }}
+      style={style}
+      className="h-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-xl"
+      tabIndex={0}
+      role="gridcell"
+      aria-label={formatCardTitle(card.card_type)}
+      onKeyDown={onKeyDown}
+    >
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
@@ -55,6 +66,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         onReplace={onReplace}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        registerExpandTrigger={registerExpandTrigger}
         dragHandle={
           <button
             {...attributes}
@@ -87,7 +99,8 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     JSON.stringify(prevProps.card.config) === JSON.stringify(nextProps.card.config) &&
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.isRefreshing === nextProps.isRefreshing &&
-    prevProps.lastUpdated === nextProps.lastUpdated
+    prevProps.lastUpdated === nextProps.lastUpdated &&
+    prevProps.onKeyDown === nextProps.onKeyDown
   )
 })
 

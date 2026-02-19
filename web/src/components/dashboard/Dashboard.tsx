@@ -54,6 +54,7 @@ import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { DeployConfirmDialog } from '../deploy/DeployConfirmDialog'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
+import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 
 // Module-level cache for dashboard data (survives navigation)
 interface CachedDashboard {
@@ -206,6 +207,16 @@ export function Dashboard() {
       }
     }
   }, [autoRefresh, isLoading, refetch])
+
+  // Keyboard navigation for accessibility (Phase 2, issue #1151)
+  const expandTriggersRef = useRef<Map<string, () => void>>(new Map())
+  const handleExpandCard = useCallback((cardId: string) => {
+    expandTriggersRef.current.get(cardId)?.()
+  }, [])
+  const { registerCardRef, handleGridKeyDown } = useCardGridNavigation({
+    cards: localCards,
+    onExpandCard: handleExpandCard,
+  })
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -888,7 +899,7 @@ export function Dashboard() {
         onDragCancel={handleDragCancel}
       >
         <SortableContext items={localCards.map(c => c.id)} strategy={rectSortingStrategy}>
-          <div data-testid="dashboard-cards-grid" data-tour="dashboard" className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+          <div data-testid="dashboard-cards-grid" data-tour="dashboard" role="grid" aria-label="Dashboard cards" className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
             {localCards.map((card) => (
               <SortableCard
                 key={card.id}
@@ -901,6 +912,9 @@ export function Dashboard() {
                 isRefreshing={isRefreshing}
                 onRefresh={triggerRefresh}
                 lastUpdated={lastUpdated}
+                onKeyDown={handleGridKeyDown}
+                registerRef={(el) => registerCardRef(card.id, el)}
+                registerExpandTrigger={(expand) => { expandTriggersRef.current.set(card.id, expand) }}
               />
             ))}
           </div>
