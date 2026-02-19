@@ -26,6 +26,7 @@ import type { GitHubContribution } from '../../types/rewards'
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
 const HOURS_PER_DAY = 24 // Hours in a day
 const DAYS_PER_WEEK = 7 // Days in a week
+const PREVIEW_WARMUP_SECONDS = 30 // Delay before showing preview link (Netlify route warmup)
 
 interface FeatureRequestModalProps {
   isOpen: boolean
@@ -128,10 +129,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
   const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: _isDemoMode } = useFeatureRequests(currentGitHubLogin)
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
+  const { notifications, unreadCount: _rawUnreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
   const [isGitHubRefreshing, setIsGitHubRefreshing] = useState(false)
   const isRefreshing = requestsRefreshing || notificationsRefreshing
+
+  // Exclude notifications for closed requests from the unread count
+  const closedRequestIds = new Set(requests.filter(r => r.status === 'closed').map(r => r.id))
+  const activeNotifications = notifications.filter(n => !closedRequestIds.has(n.feature_request_id || ''))
+  const unreadCount = activeNotifications.filter(n => !n.read).length
   // User can't perform actions if not authenticated or if using demo token
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
   const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'submit')
@@ -147,7 +153,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [previewChecking, setPreviewChecking] = useState<number | null>(null) // PR number being checked
-  const [previewResults, setPreviewResults] = useState<Record<number, { status: string; preview_url?: string; message?: string }>>({})
+  const [previewResults, setPreviewResults] = useState<Record<number, { status: string; preview_url?: string; ready_at?: string; message?: string }>>({})
 
   const handleCheckPreview = async (prNumber: number) => {
     setPreviewChecking(prNumber)
@@ -778,7 +784,24 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                 const previewUrl = request.netlify_preview_url || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
                                 const isCheckingThis = previewChecking === request.pr_number
 
+                                // Check warmup: if preview just became ready, wait before showing link
+                                const readyAt = checkedPreview?.ready_at ? new Date(checkedPreview.ready_at) : null
+                                const secondsSinceReady = readyAt ? (Date.now() - readyAt.getTime()) / 1000 : Infinity
+                                const isWarmingUp = secondsSinceReady < PREVIEW_WARMUP_SECONDS
+
                                 if (previewUrl && request.status === 'fix_ready') {
+                                  if (isWarmingUp) {
+                                    // Netlify route is warming up — show countdown
+                                    const secondsLeft = Math.ceil(PREVIEW_WARMUP_SECONDS - secondsSinceReady)
+                                    return (
+                                      <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded">
+                                        <div className="flex items-center gap-2">
+                                          <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
+                                          <span className="text-xs text-yellow-400 font-medium">Preview warming up... ({secondsLeft}s)</span>
+                                        </div>
+                                      </div>
+                                    )
+                                  }
                                   // Prominent preview for fix_ready status
                                   return (
                                     <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded">
@@ -941,13 +964,13 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                           </button>
                         </div>
                       )}
-                      {notificationsLoading && notifications.length === 0 ? (
+                      {notificationsLoading && activeNotifications.length === 0 ? (
                         <div className="p-6 text-center text-muted-foreground">
                           <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin" />
                           <p className="text-xs">{t('common.loading')}</p>
                         </div>
-                      ) : notifications.length > 0 ? (
-                        notifications.map(notification => {
+                      ) : activeNotifications.length > 0 ? (
+                        activeNotifications.map(notification => {
                           const status = getNotificationStatus(notification.notification_type)
                           const linkedRequest = requests.find(r => r.id === notification.feature_request_id)
                           const githubUrl = notification.action_url || linkedRequest?.github_issue_url
@@ -1136,7 +1159,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                       )}
 
                       {/* No activity at all — show empty state */}
-                      {notifications.length === 0 && !notificationsLoading && !githubRewards && (
+                      {activeNotifications.length === 0 && !notificationsLoading && !githubRewards && (
                         <div className="p-8 text-center text-muted-foreground">
                           <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
                           <p className="text-sm">No activity yet</p>
