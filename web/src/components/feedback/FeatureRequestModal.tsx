@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, Eye, RefreshCw, MessageSquare, AlertTriangle, Settings, Github, Coins } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, AlertTriangle, Settings, Github, Coins, Lightbulb, AlertCircle } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
@@ -13,11 +13,14 @@ import {
   type NotificationType,
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
+import { useRewards } from '../../hooks/useRewards'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE } from '../../lib/constants'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { GITHUB_REWARD_LABELS } from '../../types/rewards'
+import type { GitHubContribution } from '../../types/rewards'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -27,6 +30,8 @@ const DAYS_PER_WEEK = 7 // Days in a week
 interface FeatureRequestModalProps {
   isOpen: boolean
   onClose: () => void
+  initialTab?: TabType
+  initialSubTab?: 'requests' | 'activity' | 'github'
 }
 
 type TabType = 'submit' | 'updates'
@@ -117,18 +122,20 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
   return { label, ...colors[status] }
 }
 
-export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProps) {
+export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab }: FeatureRequestModalProps) {
   const { t } = useTranslation()
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
   const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: _isDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
+  const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
+  const [isGitHubRefreshing, setIsGitHubRefreshing] = useState(false)
   const isRefreshing = requestsRefreshing || notificationsRefreshing
   // User can't perform actions if not authenticated or if using demo token
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
-  const [activeTab, setActiveTab] = useState<TabType>('submit')
-  const [updatesSubTab, setUpdatesSubTab] = useState<'requests' | 'activity'>('requests')
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'submit')
+  const [updatesSubTab, setUpdatesSubTab] = useState<'requests' | 'activity' | 'github'>(initialSubTab || 'requests')
   const [requestType, setRequestType] = useState<RequestType>('bug')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -139,6 +146,15 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
   const [actionError, setActionError] = useState<string | null>(null)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+
+  const handleRefreshGitHub = async () => {
+    setIsGitHubRefreshing(true)
+    try {
+      await refreshGitHubRewards()
+    } finally {
+      setIsGitHubRefreshing(false)
+    }
+  }
 
   const handleLoginRedirect = () => {
     if (isDemoModeForced) {
@@ -223,7 +239,8 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
       setRequestType('bug')
       setError(null)
       setSuccess(null)
-      setActiveTab('submit')
+      setActiveTab(initialTab || 'submit')
+      setUpdatesSubTab(initialSubTab || 'requests')
       onClose()
     }
   }
@@ -471,6 +488,22 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   {unreadCount > 0 && (
                     <span className="min-w-4 h-4 px-1 text-[10px] rounded-full bg-purple-500 text-white flex items-center justify-center">
                       {unreadCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setUpdatesSubTab('github')}
+                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+                    updatesSubTab === 'github'
+                      ? 'text-foreground border-b-2 border-purple-500 -mb-px'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Github className="w-3 h-3" />
+                  GitHub
+                  {githubRewards && (
+                    <span className="min-w-4 h-4 px-1 text-[10px] rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                      {githubRewards.contributions.length}
                     </span>
                   )}
                 </button>
@@ -821,7 +854,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                       )
                     }))}
                   </div>
-                ) : (
+                ) : updatesSubTab === 'activity' ? (
                   /* Activity Sub-tab */
                   <div className="flex flex-col h-full">
                     {unreadCount > 0 && (
@@ -898,6 +931,111 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                         })
                       )}
                     </div>
+                  </div>
+                ) : (
+                  /* GitHub Contributions Sub-tab */
+                  <div className="flex flex-col h-full">
+                    {/* GitHub points summary */}
+                    {githubRewards && (
+                      <div className="p-3 border-b border-border/50 flex-shrink-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">GitHub Points</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-blue-400">{githubPoints.toLocaleString()}</span>
+                            <button
+                              onClick={handleRefreshGitHub}
+                              disabled={isGitHubRefreshing}
+                              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${isGitHubRefreshing ? 'animate-spin' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {githubRewards.breakdown.prs_merged > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-[10px]">
+                              <GitMerge className="w-2.5 h-2.5" />
+                              {githubRewards.breakdown.prs_merged} Merged
+                            </span>
+                          )}
+                          {githubRewards.breakdown.prs_opened > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px]">
+                              <GitPullRequest className="w-2.5 h-2.5" />
+                              {githubRewards.breakdown.prs_opened} PRs
+                            </span>
+                          )}
+                          {githubRewards.breakdown.bug_issues > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+                              <Bug className="w-2.5 h-2.5" />
+                              {githubRewards.breakdown.bug_issues} Bugs
+                            </span>
+                          )}
+                          {githubRewards.breakdown.feature_issues > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px]">
+                              <Lightbulb className="w-2.5 h-2.5" />
+                              {githubRewards.breakdown.feature_issues} Features
+                            </span>
+                          )}
+                          {githubRewards.breakdown.other_issues > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-[10px]">
+                              <AlertCircle className="w-2.5 h-2.5" />
+                              {githubRewards.breakdown.other_issues} Issues
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contributions list */}
+                    <div className="flex-1 overflow-y-auto">
+                      {!githubRewards ? (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <Github className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No GitHub data available</p>
+                          <p className="text-xs mt-1">Log in with GitHub to see your contributions</p>
+                        </div>
+                      ) : githubRewards.contributions.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <Github className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No contributions found</p>
+                          <p className="text-xs mt-1">Open issues or PRs on KubeStellar repos to earn points</p>
+                        </div>
+                      ) : (
+                        githubRewards.contributions.map((contrib: GitHubContribution, idx: number) => (
+                          <a
+                            key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
+                            href={contrib.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 border-b border-border/50 hover:bg-secondary/30 transition-colors group"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <GitHubContributionIcon type={contrib.type} />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm text-foreground truncate group-hover:text-blue-400 transition-colors">
+                                  {contrib.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {contrib.repo} #{contrib.number} · {GITHUB_REWARD_LABELS[contrib.type]}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
+                              <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </a>
+                        ))
+                      )}
+                    </div>
+
+                    {githubRewards?.from_cache && (
+                      <div className="p-2 border-t border-border/50 flex-shrink-0">
+                        <p className="text-[10px] text-muted-foreground text-center">
+                          Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1096,4 +1234,19 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
       </div>
     </BaseModal>
   )
+}
+
+function GitHubContributionIcon({ type }: { type: string }) {
+  switch (type) {
+    case 'pr_merged':
+      return <GitMerge className="w-4 h-4 text-purple-400 flex-shrink-0" />
+    case 'pr_opened':
+      return <GitPullRequest className="w-4 h-4 text-green-400 flex-shrink-0" />
+    case 'issue_bug':
+      return <Bug className="w-4 h-4 text-red-400 flex-shrink-0" />
+    case 'issue_feature':
+      return <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0" />
+    default:
+      return <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+  }
 }

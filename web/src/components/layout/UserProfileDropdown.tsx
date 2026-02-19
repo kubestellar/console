@@ -5,6 +5,7 @@ import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { FeatureRequestModal } from '../feedback/FeatureRequestModal'
 
 interface UserProfileDropdownProps {
   user: {
@@ -23,6 +24,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
   const [isOpen, setIsOpen] = useState(false)
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [showRewards, setShowRewards] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
   const { t, i18n } = useTranslation()
@@ -138,11 +140,18 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
                 {user.role || t('profile.defaultRole')}
               </span>
             </div>
-            <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
+            <button
+              onClick={() => {
+                setIsOpen(false)
+                setShowRewards(true)
+              }}
+              className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary/50 rounded-lg transition-colors"
+            >
               <Coins className="w-4 h-4 text-yellow-500" />
               <span className="text-muted-foreground">{t('profile.coins')}</span>
               <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
-            </div>
+              <ChevronDown className="w-3 h-3 ml-auto text-muted-foreground -rotate-90" />
+            </button>
             {/* Language selector */}
             <div className="relative">
               <button
@@ -247,6 +256,14 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
         onClose={() => setShowSetupDialog(false)}
+      />
+
+      {/* Rewards panel — opens feedback dialog to GitHub contributions tab */}
+      <FeatureRequestModal
+        isOpen={showRewards}
+        onClose={() => setShowRewards(false)}
+        initialTab="updates"
+        initialSubTab="github"
       />
     </div>
   )
