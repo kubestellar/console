@@ -97,8 +97,8 @@ type Notification struct {
 
 // CreateFeatureRequestInput is the input for creating a feature request
 type CreateFeatureRequestInput struct {
-	Title       string      `json:"title" validate:"required,min=5,max=200"`
-	Description string      `json:"description" validate:"required,min=10,max=5000"`
+	Title       string      `json:"title" validate:"required,min=10,max=200"`
+	Description string      `json:"description" validate:"required,min=20,max=5000"`
 	RequestType RequestType `json:"request_type" validate:"required,oneof=bug feature"`
 }
 

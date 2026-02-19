@@ -65,11 +65,14 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	// Validate input
-	if input.Title == "" || len(input.Title) < 5 {
-		return fiber.NewError(fiber.StatusBadRequest, "Title must be at least 5 characters")
+	if input.Title == "" || len(input.Title) < 10 {
+		return fiber.NewError(fiber.StatusBadRequest, "Title must be at least 10 characters")
 	}
-	if input.Description == "" || len(input.Description) < 10 {
-		return fiber.NewError(fiber.StatusBadRequest, "Description must be at least 10 characters")
+	if input.Description == "" || len(input.Description) < 20 {
+		return fiber.NewError(fiber.StatusBadRequest, "Description must be at least 20 characters")
+	}
+	if len(strings.Fields(input.Description)) < 3 {
+		return fiber.NewError(fiber.StatusBadRequest, "Description must contain at least 3 words")
 	}
 	if input.RequestType != models.RequestTypeBug && input.RequestType != models.RequestTypeFeature {
 		return fiber.NewError(fiber.StatusBadRequest, "Request type must be 'bug' or 'feature'")

@@ -203,12 +203,16 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
     e.preventDefault()
     setError(null)
 
-    if (title.length < 5) {
-      setError('Title must be at least 5 characters')
+    if (title.length < 10) {
+      setError('Title must be at least 10 characters')
       return
     }
-    if (description.length < 10) {
-      setError('Description must be at least 10 characters')
+    if (description.length < 20) {
+      setError('Description must be at least 20 characters')
+      return
+    }
+    if (description.trim().split(/\s+/).filter(w => w.length > 0).length < 3) {
+      setError('Description must contain at least 3 words')
       return
     }
 
