@@ -219,13 +219,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
         request_type: requestType,
       })
       setSuccess({ issueUrl: result.github_issue_url })
-      // Reset form after short delay
+      // Show thank-you briefly, then switch to Queue tab
       setTimeout(() => {
         setTitle('')
         setDescription('')
         setRequestType('bug')
         setSuccess(null)
-        onClose()
+        setActiveTab('updates')
+        setUpdatesSubTab('requests')
+        refreshRequests()
       }, 3000)
     } catch (err) {
       setError(t('feedback.submitFailed'))
@@ -600,17 +602,45 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                   </button>
                                 )}
                               </div>
-                              {/* For needs_triage items, show minimal info - awaiting maintainer attention */}
+                              {/* For needs_triage items, show info based on ownership */}
                               {request.status === 'needs_triage' ? (
                                 <>
-                                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
-                                      {statusInfo.label}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground italic">
-                                      Awaiting maintainer attention
-                                    </span>
-                                  </div>
+                                  {isOwnedByUser ? (
+                                    <>
+                                      <p className="text-sm font-medium text-foreground mt-1 truncate">
+                                        {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                        <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
+                                          {statusInfo.label}
+                                        </span>
+                                        {request.github_issue_url && (
+                                          <a
+                                            href={request.github_issue_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                            onClick={e => e.stopPropagation()}
+                                          >
+                                            <ExternalLink className="w-3 h-3" />
+                                            View on GitHub
+                                          </a>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground italic mt-1.5">
+                                        Details will be visible to you once we accept triage
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                      <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
+                                        {statusInfo.label}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground italic">
+                                        Awaiting maintainer attention
+                                      </span>
+                                    </div>
+                                  )}
                                 </>
                               ) : (
                                 <>
@@ -1052,20 +1082,33 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                 Your request has been submitted for review.
               </p>
               <p className="text-xs text-muted-foreground mb-4">
-                Once a maintainer approves your request, it will appear in "My Requests"
-                and our AI will start working on a fix.
+                Once a maintainer accepts triage, check the Activity tab for updates — our AI will start working on a fix.
               </p>
-              {success.issueUrl && (
-                <a
-                  href={success.issueUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <div className="flex items-center justify-center gap-3">
+                {success.issueUrl && (
+                  <a
+                    href={success.issueUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300"
+                  >
+                    View on GitHub
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                <button
+                  onClick={() => {
+                    setSuccess(null)
+                    setActiveTab('updates')
+                    setUpdatesSubTab('activity')
+                    refreshNotifications()
+                  }}
                   className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300"
                 >
-                  View on GitHub
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
+                  <Bell className="w-3 h-3" />
+                  Go to Activity
+                </button>
+              </div>
             </div>
           ) : (
             <form id="feedback-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
