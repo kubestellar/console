@@ -173,6 +173,8 @@ const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.Kagent
 const CrossplaneManagedResources = lazy(() => import('./crossplane-status/CrossplaneManagedResources').then(m => ({ default: m.CrossplaneManagedResources })))
 // Cloud Native Buildpacks card
 const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
+// Flatcar Container Linux card
+const FlatcarStatus = lazy(() => import('./flatcar_status').then(m => ({ default: m.FlatcarStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -410,6 +412,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   quota_heatmap: QuotaHeatmap,
   // Cloud Native Buildpacks
   buildpacks_status: BuildpacksStatus,
+  // Flatcar Container Linux
+  flatcar_status: FlatcarStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -475,6 +479,7 @@ export const DEMO_DATA_CARDS = new Set([
   // Service Topology - demo visualization
   'service_topology',
   'buildpacks_status',
+  'flatcar_status',
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -717,6 +722,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   crossplane_managed_resources: () => import('./crossplane-status'),
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
+  // Flatcar Container Linux
+  flatcar_status: () => import('./flatcar_status'),
 }
 
 /**
@@ -727,7 +734,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
  */
 export function prefetchCardChunks(cardTypes: string[]): void {
   for (const type of cardTypes) {
-    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => {})
+    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => { })
   }
 }
 
@@ -766,7 +773,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./kagenti/KagentiTopology'),
     () => import('./crossplane-status/CrossplaneManagedResources'),
   ]
-  startupChunks.forEach(load => load().catch(() => {}))
+  startupChunks.forEach(load => load().catch(() => { }))
 }
 
 /**
@@ -850,6 +857,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   upgrade_status: 4,
   crossplane_managed_resources: 4,
   buildpacks_status: 6,
+  flatcar_status: 6,
 
   // MCS cards
   service_exports: 6,
