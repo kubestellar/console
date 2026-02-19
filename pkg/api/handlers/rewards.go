@@ -144,7 +144,7 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 }
 
 func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsResponse, error) {
-	var contributions []GitHubContribution
+	contributions := make([]GitHubContribution, 0)
 	var fetchErr error
 
 	// 1. Fetch issues authored by user
