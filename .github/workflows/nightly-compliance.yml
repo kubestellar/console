@@ -1,0 +1,558 @@
+name: Nightly Compliance & Perf
+# Runs all compliance and performance test suites nightly.
+# On failure or performance regression, opens a GitHub issue assigned to Copilot
+# with structured diagnostics for automated fixing.
+#
+# Suites:
+#   Compliance (6): card-cache, card-loading, security, i18n, a11y, interaction, error-resilience
+#   Performance (3): dashboard-perf (TTFI), dashboard-nav, all-cards-ttfi
+#
+# Uses production build (vite preview) for consistent results.
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # 5:00 UTC daily (midnight EST)
+  workflow_dispatch:
+    inputs:
+      skip_issue_creation:
+        description: 'Skip creating issues for failures'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CI: true
+  NODE_VERSION: '20'
+  PREVIEW_PORT: 4174
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-dist
+          path: web/dist
+          retention-days: 1
+
+  # ── Compliance Suites ────────────────────────────────────────────────
+
+  compliance:
+    name: Compliance (${{ matrix.suite }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - card-cache
+          - card-loading
+          - security
+          - i18n
+          - a11y
+          - interaction
+          - error-resilience
+        include:
+          - suite: card-cache
+            spec: e2e/compliance/card-cache-compliance.spec.ts
+            report: cache-compliance-report.json
+            summary: cache-compliance-summary.md
+          - suite: card-loading
+            spec: e2e/compliance/card-loading-compliance.spec.ts
+            report: compliance-report.json
+            summary: compliance-summary.md
+          - suite: security
+            spec: e2e/compliance/security-compliance.spec.ts
+            report: security-compliance-report.json
+            summary: security-compliance-summary.md
+          - suite: i18n
+            spec: e2e/compliance/i18n-compliance.spec.ts
+            report: i18n-compliance-report.json
+            summary: i18n-compliance-summary.md
+          - suite: a11y
+            spec: e2e/compliance/a11y-compliance.spec.ts
+            report: a11y-compliance-report.json
+            summary: a11y-compliance-summary.md
+          - suite: interaction
+            spec: e2e/compliance/interaction-compliance.spec.ts
+            report: interaction-compliance-report.json
+            summary: interaction-compliance-summary.md
+          - suite: error-resilience
+            spec: e2e/compliance/error-resilience.spec.ts
+            report: error-resilience-report.json
+            summary: error-resilience-summary.md
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-dist
+          path: web/dist
+
+      - name: Start preview server
+        run: |
+          npx vite preview --port ${{ env.PREVIEW_PORT }} --host &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:${{ env.PREVIEW_PORT }} > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Preview server failed to start"
+          exit 1
+
+      - name: Run ${{ matrix.suite }} compliance
+        id: test
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:${{ env.PREVIEW_PORT }}
+        run: |
+          npx playwright test \
+            --config e2e/compliance/compliance.config.ts \
+            ${{ matrix.spec }} \
+            --project=chromium 2>&1 | tee /tmp/test-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-${{ matrix.suite }}
+          path: |
+            web/e2e/test-results/${{ matrix.report }}
+            web/e2e/test-results/${{ matrix.summary }}
+            web/e2e/test-results/compliance/
+          retention-days: 14
+
+      - name: Save result
+        if: always()
+        run: |
+          mkdir -p /tmp/results
+          if [ "${{ steps.test.outcome }}" = "failure" ]; then
+            echo "FAIL" > /tmp/results/${{ matrix.suite }}.status
+          else
+            echo "PASS" > /tmp/results/${{ matrix.suite }}.status
+          fi
+          if [ -f "e2e/test-results/${{ matrix.summary }}" ]; then
+            cp "e2e/test-results/${{ matrix.summary }}" /tmp/results/${{ matrix.suite }}-summary.md
+          fi
+
+      - name: Upload result status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ matrix.suite }}
+          path: /tmp/results/
+          retention-days: 1
+
+  # ── Performance Suites ───────────────────────────────────────────────
+
+  perf:
+    name: Perf (${{ matrix.suite }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - ttfi
+          - dashboard-perf
+          - dashboard-nav
+        include:
+          - suite: ttfi
+            spec: e2e/perf/all-cards-ttfi.spec.ts
+            config: e2e/perf/perf.config.ts
+            report: ttfi-report.json
+            summary: ttfi-summary.md
+          - suite: dashboard-perf
+            spec: e2e/perf/dashboard-perf.spec.ts
+            config: e2e/perf/perf.config.ts
+            report: perf-report.json
+            summary: perf-summary.txt
+          - suite: dashboard-nav
+            spec: e2e/perf/dashboard-nav.spec.ts
+            config: e2e/perf/perf.config.ts
+            report: nav-report.json
+            summary: nav-summary.md
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-dist
+          path: web/dist
+
+      - name: Start preview server
+        run: |
+          npx vite preview --port ${{ env.PREVIEW_PORT }} --host &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:${{ env.PREVIEW_PORT }} > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Preview server failed to start"
+          exit 1
+
+      - name: Run ${{ matrix.suite }} perf test
+        id: test
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:${{ env.PREVIEW_PORT }}
+        run: |
+          npx playwright test \
+            --config ${{ matrix.config }} \
+            ${{ matrix.spec }} \
+            --project=chromium 2>&1 | tee /tmp/test-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Run TTFI baseline comparison
+        if: matrix.suite == 'ttfi' && always()
+        run: node e2e/perf/compare-ttfi.mjs || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-${{ matrix.suite }}
+          path: |
+            web/e2e/test-results/${{ matrix.report }}
+            web/e2e/test-results/${{ matrix.summary }}
+            web/e2e/test-results/ttfi-regression.md
+          retention-days: 14
+
+      - name: Save result
+        if: always()
+        run: |
+          mkdir -p /tmp/results
+          if [ "${{ steps.test.outcome }}" = "failure" ]; then
+            echo "FAIL" > /tmp/results/${{ matrix.suite }}.status
+          else
+            echo "PASS" > /tmp/results/${{ matrix.suite }}.status
+          fi
+          if [ -f "e2e/test-results/${{ matrix.summary }}" ]; then
+            cp "e2e/test-results/${{ matrix.summary }}" /tmp/results/${{ matrix.suite }}-summary.md
+          fi
+          # Include TTFI regression report if present
+          if [ -f "e2e/test-results/ttfi-regression.md" ]; then
+            cp "e2e/test-results/ttfi-regression.md" /tmp/results/ttfi-regression.md
+          fi
+
+      - name: Upload result status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ matrix.suite }}
+          path: /tmp/results/
+          retention-days: 1
+
+  # ── Report & Issue Creation ──────────────────────────────────────────
+
+  report:
+    name: Report & Create Issues
+    needs: [compliance, perf]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: result-*
+          path: /tmp/all-results
+          merge-multiple: true
+
+      - name: Aggregate results
+        id: aggregate
+        run: |
+          SUITES=(card-cache card-loading security i18n a11y interaction error-resilience ttfi dashboard-perf dashboard-nav)
+          FAILED=""
+          PASSED=""
+          MISSING=""
+
+          for suite in "${SUITES[@]}"; do
+            status_file="/tmp/all-results/${suite}.status"
+            if [ -f "$status_file" ]; then
+              status=$(cat "$status_file")
+              if [ "$status" = "FAIL" ]; then
+                FAILED="${FAILED}${suite},"
+              else
+                PASSED="${PASSED}${suite},"
+              fi
+            else
+              MISSING="${MISSING}${suite},"
+            fi
+          done
+
+          # Remove trailing commas
+          FAILED="${FAILED%,}"
+          PASSED="${PASSED%,}"
+          MISSING="${MISSING%,}"
+
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "missing=$MISSING" >> $GITHUB_OUTPUT
+
+          TOTAL=${#SUITES[@]}
+          FAIL_COUNT=$(echo "$FAILED" | tr ',' '\n' | grep -c . || true)
+          PASS_COUNT=$(echo "$PASSED" | tr ',' '\n' | grep -c . || true)
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "fail_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
+          echo "pass_count=$PASS_COUNT" >> $GITHUB_OUTPUT
+
+          if [ -n "$FAILED" ]; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "## Nightly Compliance & Perf Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date**: $(date -u '+%Y-%m-%d')" >> $GITHUB_STEP_SUMMARY
+          echo "**Passed**: $PASS_COUNT / $TOTAL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "$FAILED" ]; then
+            echo "### Failures" >> $GITHUB_STEP_SUMMARY
+            for suite in $(echo "$FAILED" | tr ',' ' '); do
+              echo "- **$suite**" >> $GITHUB_STEP_SUMMARY
+              summary="/tmp/all-results/${suite}-summary.md"
+              if [ -f "$summary" ]; then
+                echo '  <details><summary>Details</summary>' >> $GITHUB_STEP_SUMMARY
+                echo '' >> $GITHUB_STEP_SUMMARY
+                head -50 "$summary" >> $GITHUB_STEP_SUMMARY
+                echo '' >> $GITHUB_STEP_SUMMARY
+                echo '  </details>' >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          fi
+
+          if [ -n "$PASSED" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Passed" >> $GITHUB_STEP_SUMMARY
+            for suite in $(echo "$PASSED" | tr ',' ' '); do
+              echo "- $suite" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+
+      - name: Create issue for failures
+        if: steps.aggregate.outputs.has_failures == 'true' && github.event.inputs.skip_issue_creation != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const failed = '${{ steps.aggregate.outputs.failed }}'.split(',').filter(Boolean);
+            const passed = '${{ steps.aggregate.outputs.passed }}'.split(',').filter(Boolean);
+            const total = parseInt('${{ steps.aggregate.outputs.total }}');
+            const failCount = parseInt('${{ steps.aggregate.outputs.fail_count }}');
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const date = new Date().toISOString().split('T')[0];
+
+            // Read summaries for failed suites
+            const fs = require('fs');
+            const summaryDetails = [];
+            for (const suite of failed) {
+              const summaryPath = `/tmp/all-results/${suite}-summary.md`;
+              let summaryContent = '_No summary available_';
+              try {
+                if (fs.existsSync(summaryPath)) {
+                  summaryContent = fs.readFileSync(summaryPath, 'utf8').slice(0, 3000);
+                }
+              } catch (e) {
+                summaryContent = `_Error reading summary: ${e.message}_`;
+              }
+              summaryDetails.push(`### ${suite}\n\n<details>\n<summary>Test output</summary>\n\n\`\`\`\n${summaryContent}\n\`\`\`\n\n</details>`);
+            }
+
+            // Check for TTFI regression details
+            let regressionDetails = '';
+            try {
+              const regPath = '/tmp/all-results/ttfi-regression.md';
+              if (fs.existsSync(regPath)) {
+                regressionDetails = '\n\n### TTFI Regression Report\n\n' + fs.readFileSync(regPath, 'utf8').slice(0, 2000);
+              }
+            } catch {}
+
+            // Build issue body
+            const body = [
+              `## Nightly Compliance & Performance Report — ${date}`,
+              '',
+              `**${failCount}** of **${total}** suites failed. [Workflow run](${runUrl})`,
+              '',
+              '## Failed Suites',
+              '',
+              ...summaryDetails,
+              regressionDetails,
+              '',
+              '## Passed Suites',
+              '',
+              passed.map(s => `- ${s}`).join('\n'),
+              '',
+              '## Fix Instructions',
+              '',
+              'For each failed suite:',
+              '1. Run the suite locally: `cd web && PLAYWRIGHT_BASE_URL=http://localhost:5174 npx playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/<suite>.spec.ts --project=chromium`',
+              '2. Read the test output and summary report for specific failing assertions',
+              '3. Fix the root cause in the source code (not the test)',
+              '4. Re-run to verify 0 failures',
+              '',
+              'Common patterns:',
+              '- **card-cache**: Cards showing demo data on warm return → fix isDemoData wiring in the card hook',
+              '- **card-loading**: Demo badge or stale skeleton → ensure `useCardLoadingState` receives correct `isDemoData`',
+              '- **security**: New XSS vector or missing CSP → sanitize user input, add Content-Security-Policy headers',
+              '- **i18n**: Hardcoded English strings → extract to translation files',
+              '- **a11y**: WCAG violations → fix contrast, aria labels, focus management',
+              '- **ttfi/perf**: Performance regression → profile with Chrome DevTools, check for unnecessary re-renders',
+              '',
+              `*This issue was automatically created by the [Nightly Compliance workflow](${runUrl}).*`,
+              '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
+            ].join('\n');
+
+            const title = `[Nightly] ${failCount} compliance/perf suite${failCount > 1 ? 's' : ''} failed — ${date}`;
+
+            // Check for duplicate open issue
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-compliance',
+              per_page: 5,
+            });
+
+            const duplicate = existing.data.find(i => i.title.includes('[Nightly]') && i.title.includes('compliance/perf'));
+            if (duplicate) {
+              // Update existing issue instead of creating a new one
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: duplicate.number,
+                body: `## Updated: ${date}\n\n${body}`,
+              });
+              core.info(`Updated existing issue #${duplicate.number} with new results`);
+              return;
+            }
+
+            // Create labels if needed
+            const labels = ['nightly-compliance', 'ai-fix-requested', 'help wanted', 'triage/accepted', 'bug'];
+            for (const label of labels) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label,
+                });
+              } catch {
+                const colors = {
+                  'nightly-compliance': '1d76db',
+                  'ai-fix-requested': 'd4c5f9',
+                  'help wanted': '008672',
+                  'triage/accepted': '0e8a16',
+                  'bug': 'd73a4a',
+                };
+                try {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label,
+                    color: colors[label] || 'ededed',
+                  });
+                } catch {}
+              }
+            }
+
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels,
+            });
+
+            core.info(`Created issue #${issue.number}: ${title}`);
+
+            // Assign Copilot coding agent
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            try {
+              await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: ['copilot-swe-agent[bot]'],
+                agent_assignment: {
+                  target_repo: repo,
+                  base_branch: 'main',
+                },
+              });
+              core.info(`Assigned Copilot to #${issue.number}`);
+            } catch (e) {
+              core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
+            }
+
+      - name: All green notification
+        if: steps.aggregate.outputs.has_failures == 'false'
+        run: |
+          echo "## All Suites Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All ${{ steps.aggregate.outputs.total }} compliance and performance suites passed." >> $GITHUB_STEP_SUMMARY
+          echo "No issues created." >> $GITHUB_STEP_SUMMARY
