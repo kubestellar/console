@@ -2,6 +2,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ChunkErrorBoundary } from './ChunkErrorBoundary'
 
+// Mock i18next so translations resolve to English strings
+vi.mock('i18next', () => ({
+  default: {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'common:chunkError.appUpdated': 'App Updated',
+        'common:chunkError.newVersionDeployed': 'A new version was deployed. Please reload to continue.',
+        'common:chunkError.reloadPage': 'Reload Page',
+      }
+      return translations[key] ?? key
+    },
+  },
+}))
+
 describe('ChunkErrorBoundary Component', () => {
   let reloadSpy: ReturnType<typeof vi.fn>
 
