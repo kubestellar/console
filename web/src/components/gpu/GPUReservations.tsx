@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, Suspense } from 'react'
+import { useState, useMemo, useCallback, Suspense, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Zap,
@@ -20,6 +20,7 @@ import {
   Filter,
   User,
   LayoutDashboard,
+  GripVertical,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -48,6 +49,23 @@ import { CardWrapper, CARD_TITLES } from '../cards/CardWrapper'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 // GPU utilization thresholds for visual indicators
 const UTILIZATION_HIGH_THRESHOLD = 80
@@ -69,6 +87,77 @@ interface GPUClusterInfo {
   availableGPUs: number
   gpuTypes: string[]
 }
+
+// Dashboard card type persisted to localStorage
+interface GpuDashCard { type: string; width: number }
+
+// Sortable wrapper for GPU dashboard cards
+const SortableGpuCard = memo(function SortableGpuCard({
+  id,
+  card,
+  index,
+  onRemove,
+  onWidthChange,
+  onRefresh,
+  isRefreshing,
+}: {
+  id: string
+  card: GpuDashCard
+  index: number
+  onRemove: () => void
+  onWidthChange: (w: number) => void
+  onRefresh?: () => void
+  isRefreshing?: boolean
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const Component = CARD_COMPONENTS[card.type]
+  if (!Component) return null
+
+  const colSpan = Math.min(12, Math.max(3, card.width))
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    gridColumn: `span ${colSpan} / span ${colSpan}`,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Suspense fallback={<div className="h-64 animate-pulse bg-secondary/30 rounded-xl" />}>
+        <CardWrapper
+          cardId={`gpu-dash-${card.type}-${index}`}
+          title={CARD_TITLES[card.type] ?? card.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+          cardType={card.type}
+          cardWidth={card.width}
+          onRemove={onRemove}
+          onWidthChange={onWidthChange}
+          onRefresh={onRefresh}
+          isRefreshing={isRefreshing}
+          dragHandle={
+            <button
+              {...attributes}
+              {...listeners}
+              className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
+              title="Drag to reorder"
+            >
+              <GripVertical className="w-4 h-4 text-muted-foreground" />
+            </button>
+          }
+        >
+          <Component />
+        </CardWrapper>
+      </Suspense>
+    </div>
+  )
+})
 
 // Status badge colors
 const STATUS_COLORS: Record<string, string> = {
@@ -107,7 +196,6 @@ export function GPUReservations() {
 
   // Dashboard tab: customizable GPU cards persisted to localStorage
   const GPU_DASHBOARD_STORAGE_KEY = 'gpu-dashboard-tab-cards'
-  interface GpuDashCard { type: string; width: number }
   const DEFAULT_GPU_CARDS: GpuDashCard[] = [
     'gpu_namespace_allocations', 'gpu_overview', 'gpu_status', 'gpu_inventory',
     'gpu_utilization', 'gpu_usage_trend', 'gpu_workloads', 'hardware_health',
@@ -145,6 +233,27 @@ export function GPUReservations() {
       return updated
     })
   }, [])
+
+  // Drag-and-drop for dashboard tab card reordering
+  const gpuDashSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+  const dashCardIds = useMemo(() => dashboardCards.map((c, i) => `gpu-dash-${c.type}-${i}`), [dashboardCards])
+  const handleDashDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      const oldIndex = dashCardIds.indexOf(active.id as string)
+      const newIndex = dashCardIds.indexOf(over.id as string)
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setDashboardCards(prev => {
+          const updated = arrayMove(prev, oldIndex, newIndex)
+          safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
+          return updated
+        })
+      }
+    }
+  }, [dashCardIds])
 
   const showDemoIndicator = demoMode
 
@@ -1069,7 +1178,7 @@ export function GPUReservations() {
         </div>
       )}
 
-      {/* Dashboard Tab — unified card grid with add/remove */}
+      {/* Dashboard Tab — unified card grid with add/remove and drag reorder */}
       {activeTab === 'dashboard' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -1084,31 +1193,28 @@ export function GPUReservations() {
               {t('gpuReservations.dashboard.addCard')}
             </button>
           </div>
-          <div className="grid grid-cols-12 gap-4">
-            {dashboardCards.map((card, index) => {
-              const Component = CARD_COMPONENTS[card.type]
-              if (!Component) return null
-              const colSpan = Math.min(12, Math.max(3, card.width))
-              return (
-                <div key={`${card.type}-${index}`} style={{ gridColumn: `span ${colSpan} / span ${colSpan}` }}>
-                  <Suspense fallback={<div className="h-64 animate-pulse bg-secondary/30 rounded-xl" />}>
-                    <CardWrapper
-                      cardId={`gpu-dash-${card.type}-${index}`}
-                      title={CARD_TITLES[card.type] ?? card.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                      cardType={card.type}
-                      cardWidth={card.width}
-                      onRemove={() => handleRemoveDashboardCard(index)}
-                      onWidthChange={(newWidth) => handleDashCardWidthChange(index, newWidth)}
-                      onRefresh={triggerRefresh}
-                      isRefreshing={isRefreshingDashboard}
-                    >
-                      <Component />
-                    </CardWrapper>
-                  </Suspense>
-                </div>
-              )
-            })}
-          </div>
+          <DndContext
+            sensors={gpuDashSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDashDragEnd}
+          >
+            <SortableContext items={dashCardIds} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-12 gap-4">
+                {dashboardCards.map((card, index) => (
+                  <SortableGpuCard
+                    key={dashCardIds[index]}
+                    id={dashCardIds[index]}
+                    card={card}
+                    index={index}
+                    onRemove={() => handleRemoveDashboardCard(index)}
+                    onWidthChange={(newWidth) => handleDashCardWidthChange(index, newWidth)}
+                    onRefresh={triggerRefresh}
+                    isRefreshing={isRefreshingDashboard}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
           {dashboardCards.length === 0 && (
             <div className="p-12 rounded-lg bg-card/50 border border-border text-center">
               <LayoutDashboard className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
