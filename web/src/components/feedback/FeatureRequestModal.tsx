@@ -640,6 +640,23 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                       <span className="text-xs text-muted-foreground italic">
                                         Awaiting maintainer attention
                                       </span>
+                                      {request.github_issue_number && (
+                                        <span className="text-xs text-muted-foreground">
+                                          #{request.github_issue_number}
+                                        </span>
+                                      )}
+                                      {request.github_issue_url && (
+                                        <a
+                                          href={request.github_issue_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          <ExternalLink className="w-3 h-3" />
+                                          View on GitHub
+                                        </a>
+                                      )}
                                     </div>
                                   )}
                                 </>
@@ -944,6 +961,18 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                                       <span className="text-xs text-muted-foreground">
                                         #{issueNumber}
                                       </span>
+                                    )}
+                                    {githubUrl && (
+                                      <a
+                                        href={githubUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        GitHub
+                                      </a>
                                     )}
                                     {!notification.read && (
                                       <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
