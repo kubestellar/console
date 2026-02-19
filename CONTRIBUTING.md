@@ -91,7 +91,7 @@ Use descriptive branch names with a prefix:
 
 1. Create your card component in `web/src/components/cards/YourCard.tsx`
 2. Create a data hook in `web/src/hooks/useYourData.ts`
-3. Register the card in `web/src/lib/cardRegistry.ts`
+3. Register the card in `web/src/components/cards/cardRegistry.ts`
 4. Add demo data in `web/src/lib/unified/demo/`
 
 See the [console-marketplace](https://github.com/kubestellar/console-marketplace) repo for examples and card templates.
