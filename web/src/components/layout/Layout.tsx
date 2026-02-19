@@ -253,14 +253,6 @@ export function Layout({ children }: LayoutProps) {
   return (
     <TourProvider>
     <div className="h-screen bg-background overflow-hidden flex flex-col">
-      {/* Skip to content link for keyboard users and screen readers */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-purple-500 focus:text-white focus:rounded-lg"
-      >
-        {t('actions.skipToContent')}
-      </a>
-      
       {/* Tour overlay and prompt */}
       <TourOverlay />
       <TourPrompt />
@@ -289,14 +281,14 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex items-center justify-center gap-3 py-1.5 px-4">
             {isOnline ? (
               <>
-                <Wifi className="w-4 h-4 text-green-400" aria-hidden="true" />
+                <Wifi className="w-4 h-4 text-green-400" />
                 <span className="text-sm text-green-400 font-medium">
                   Network Reconnected
                 </span>
               </>
             ) : (
               <>
-                <WifiOff className="w-4 h-4 text-red-400" aria-hidden="true" />
+                <WifiOff className="w-4 h-4 text-red-400" />
                 <span className="text-sm text-red-400 font-medium">
                   Network Disconnected
                 </span>
@@ -319,28 +311,27 @@ export function Layout({ children }: LayoutProps) {
             isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
           )}>
           <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
-            <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />
+            <Box className="w-4 h-4 text-yellow-400" />
             <span className="text-sm text-yellow-400 font-medium">
               Demo Mode
             </span>
             <span className="hidden md:inline text-xs text-yellow-400/70">
-              Showing sample data only — install locally to monitor your real clusters
+              Showing sample data from all cloud providers
             </span>
             <button
               onClick={() => setShowSetupDialog(true)}
               className="hidden sm:flex ml-2 items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-full text-xs font-medium transition-colors"
             >
-              <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
+              <Rocket className="w-3.5 h-3.5" />
               <span className="hidden lg:inline">Want your own local KubeStellar Console?</span>
               <span className="lg:hidden">Get Console</span>
             </button>
             <button
               onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
               className="ml-1 md:ml-2 p-1 hover:bg-yellow-500/20 rounded transition-colors"
-              aria-label={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
-              title={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
+              title={isDemoModeForced ? "Install your own console" : "Exit demo mode"}
             >
-              <X className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
+              <X className="w-3.5 h-3.5 text-yellow-400" />
             </button>
           </div>
         </div>
@@ -394,17 +385,15 @@ export function Layout({ children }: LayoutProps) {
 
       <div className="flex flex-1 overflow-hidden transition-[padding-top] duration-300" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
         <Sidebar />
-        <main 
-          id="main-content"
-          className={cn(
-            'relative flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto scroll-enhanced',
-            // Mobile: no left margin (sidebar overlays)
-            // Desktop: respect collapsed state
-            isMobile ? 'ml-0' : (config.collapsed ? 'ml-20' : 'ml-64'),
-            // Don't apply right margin when fullscreen is active or on mobile
-            !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
-            !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
-          )}>
+        <main className={cn(
+          'relative flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto scroll-enhanced',
+          // Mobile: no left margin (sidebar overlays)
+          // Desktop: respect collapsed state
+          isMobile ? 'ml-0' : (config.collapsed ? 'ml-20' : 'ml-64'),
+          // Don't apply right margin when fullscreen is active or on mobile
+          !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
+          !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
+        )}>
           <NavigationProgress />
           {children ? (
             <Suspense fallback={<ContentLoadingSkeleton />}>

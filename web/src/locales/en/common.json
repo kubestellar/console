@@ -29,7 +29,6 @@
     "collapse": "Collapse",
     "restore": "Restore",
     "skip": "Skip",
-    "skipToContent": "Skip to content",
     "signOut": "Sign Out",
     "getYourOwn": "Get Your Own Console",
     "viewDetails": "View Details",
@@ -43,9 +42,7 @@
     "swapNow": "Swap Now",
     "keepThis": "Keep This",
     "replaceCard": "Replace Card",
-    "askAI": "Ask AI about this card",
-    "installConsole": "Install your own console",
-    "exitDemoMode": "Exit demo mode"
+    "askAI": "Ask AI about this card"
   },
   "labels": {
     "loading": "Loading...",
@@ -515,16 +512,6 @@
     "notSet": "Not set",
     "notConnected": "Not connected",
     "defaultRole": "User"
-  },
-  "developer": {
-    "title": "Developer",
-    "oauthConfigured": "OAuth configured",
-    "oauthNotConfigured": "OAuth not configured",
-    "checkingOauth": "Checking OAuth...",
-    "setupInstructions": "Setup Instructions",
-    "configureOauth": "Configure GitHub OAuth",
-    "githubRepo": "GitHub Repository",
-    "docs": "Documentation"
   },
   "language": {
     "select": "Select Language"

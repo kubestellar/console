@@ -618,7 +618,6 @@ func (s *Server) setupRoutes() {
 	api.Post("/feedback/requests/:id/feedback", feedback.SubmitFeedback)
 	api.Post("/feedback/requests/:id/close", feedback.CloseRequest)
 	api.Post("/feedback/requests/:id/request-update", feedback.RequestUpdate)
-	api.Get("/feedback/preview/:pr_number", feedback.CheckPreviewStatus)
 	api.Get("/notifications", feedback.GetNotifications)
 	api.Get("/notifications/unread-count", feedback.GetUnreadCount)
 	api.Post("/notifications/:id/read", feedback.MarkNotificationRead)
@@ -808,7 +807,7 @@ func LoadConfigFromEnv() Config {
 		FeedbackRepoOwner:   getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
 		FeedbackRepoName:    getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
 		// GitHub activity rewards
-		RewardsGitHubOrgs: getEnvOrDefault("REWARDS_GITHUB_ORGS", "repo:kubestellar/console repo:kubestellar/console-marketplace"),
+		RewardsGitHubOrgs: getEnvOrDefault("REWARDS_GITHUB_ORGS", "org:kubestellar org:llm-d"),
 		// Skip onboarding questionnaire for new users
 		SkipOnboarding: os.Getenv("SKIP_ONBOARDING") == "true",
 		// Benchmark data from Google Drive
