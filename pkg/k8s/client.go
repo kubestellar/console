@@ -53,9 +53,9 @@ type MultiClusterClient struct {
 	cacheTime       map[string]time.Time
 	watcher         *fsnotify.Watcher
 	stopWatch       chan struct{}
-	onReload        func()                // Callback when config is reloaded
-	inClusterConfig *rest.Config          // In-cluster config when running inside k8s
-	slowClusters    map[string]time.Time  // clusters that recently timed out (reduced timeout)
+	onReload        func()               // Callback when config is reloaded
+	inClusterConfig *rest.Config         // In-cluster config when running inside k8s
+	slowClusters    map[string]time.Time // clusters that recently timed out (reduced timeout)
 }
 
 // IsInCluster returns true if the server is running inside a Kubernetes cluster

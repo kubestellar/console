@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, AlertTriangle, Settings, Github, Coins, Lightbulb, AlertCircle } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
@@ -9,8 +9,6 @@ import {
   isTriaged,
   type RequestType,
   type RequestStatus,
-  type Notification,
-  type NotificationType,
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
@@ -32,7 +30,6 @@ interface FeatureRequestModalProps {
   isOpen: boolean
   onClose: () => void
   initialTab?: TabType
-  initialSubTab?: 'requests' | 'activity'
 }
 
 type TabType = 'submit' | 'updates'
@@ -55,54 +52,6 @@ function formatRelativeTime(dateString: string | undefined): string {
   return date.toLocaleDateString()
 }
 
-// Get icon for notification type
-function getNotificationIcon(type: NotificationType) {
-  switch (type) {
-    case 'issue_created':
-      return <Bug className="w-4 h-4 text-blue-400" />
-    case 'triage_accepted':
-      return <Check className="w-4 h-4 text-cyan-400" />
-    case 'feasibility_study':
-      return <Clock className="w-4 h-4 text-purple-400" />
-    case 'fix_ready':
-      return <GitPullRequest className="w-4 h-4 text-green-400" />
-    case 'fix_complete':
-      return <Check className="w-4 h-4 text-emerald-400" />
-    case 'unable_to_fix':
-      return <AlertTriangle className="w-4 h-4 text-orange-400" />
-    case 'closed':
-      return <X className="w-4 h-4 text-gray-400" />
-    case 'feedback_received':
-      return <Sparkles className="w-4 h-4 text-yellow-400" />
-    default:
-      return <Bell className="w-4 h-4 text-muted-foreground" />
-  }
-}
-
-// Get status label and color for notification type
-function getNotificationStatus(type: NotificationType): { label: string; color: string; bgColor: string } {
-  switch (type) {
-    case 'issue_created':
-      return { label: 'Issue Created', color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-    case 'triage_accepted':
-      return { label: 'Triage Accepted', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' }
-    case 'feasibility_study':
-      return { label: 'AI Working', color: 'text-purple-400', bgColor: 'bg-purple-500/20' }
-    case 'fix_ready':
-      return { label: 'PR Ready', color: 'text-green-400', bgColor: 'bg-green-500/20' }
-    case 'fix_complete':
-      return { label: 'Merged', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' }
-    case 'unable_to_fix':
-      return { label: 'Needs Human', color: 'text-orange-400', bgColor: 'bg-orange-500/20' }
-    case 'closed':
-      return { label: 'Closed', color: 'text-gray-400', bgColor: 'bg-gray-500/20' }
-    case 'feedback_received':
-      return { label: 'Feedback', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' }
-    default:
-      return { label: 'Update', color: 'text-muted-foreground', bgColor: 'bg-secondary' }
-  }
-}
-
 // Get status display info
 function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: string; color: string; bgColor: string } {
   const colors: Record<RequestStatus, { color: string; bgColor: string }> = {
@@ -123,13 +72,13 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
   return { label, ...colors[status] }
 }
 
-export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab }: FeatureRequestModalProps) {
+export function FeatureRequestModal({ isOpen, onClose, initialTab }: FeatureRequestModalProps) {
   const { t } = useTranslation()
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
   const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: _isDemoMode } = useFeatureRequests(currentGitHubLogin)
-  const { notifications, unreadCount: _rawUnreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
+  const { notifications, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
   const [isGitHubRefreshing, setIsGitHubRefreshing] = useState(false)
   const isRefreshing = requestsRefreshing || notificationsRefreshing
@@ -141,9 +90,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
   // User can't perform actions if not authenticated or if using demo token
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
   const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'submit')
-  const [updatesSubTab, setUpdatesSubTab] = useState<'requests' | 'activity'>(initialSubTab || 'requests')
   const [requestType, setRequestType] = useState<RequestType>('bug')
-  const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
@@ -228,34 +175,30 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
     e.preventDefault()
     setError(null)
 
-    if (title.length < 10) {
-      setError('Title must be at least 10 characters')
-      return
-    }
-    if (description.length < 20) {
-      setError('Description must be at least 20 characters')
-      return
-    }
-    if (description.trim().split(/\s+/).filter(w => w.length > 0).length < 3) {
-      setError('Description must contain at least 3 words')
+    const trimmed = description.trim()
+    if (trimmed.length < 10) {
+      setError('Please write at least 10 characters')
       return
     }
 
+    // Extract title from first line, rest becomes description body
+    const lines = trimmed.split('\n')
+    const extractedTitle = lines[0].trim().substring(0, 200)
+    const extractedDesc = lines.length > 1 ? lines.slice(1).join('\n').trim() || extractedTitle : extractedTitle
+
     try {
       const result = await createRequest({
-        title,
-        description,
+        title: extractedTitle,
+        description: extractedDesc,
         request_type: requestType,
       })
       setSuccess({ issueUrl: result.github_issue_url })
-      // Show thank-you briefly, then switch to Queue tab
+      // Show thank-you briefly, then switch to Updates tab
       setTimeout(() => {
-        setTitle('')
         setDescription('')
         setRequestType('bug')
         setSuccess(null)
         setActiveTab('updates')
-        setUpdatesSubTab('requests')
         refreshRequests()
         refreshNotifications()
       }, 3000)
@@ -266,29 +209,17 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
 
   const handleClose = () => {
     if (!isSubmitting) {
-      setTitle('')
       setDescription('')
       setRequestType('bug')
       setError(null)
       setSuccess(null)
       setActiveTab(initialTab || 'submit')
-      setUpdatesSubTab(initialSubTab || 'requests')
       onClose()
     }
   }
 
-  const handleNotificationClick = async (notification: Notification) => {
-    if (!notification.read) {
-      await markAsRead(notification.id)
-    }
-    // Open the action URL in a new tab if available
-    if (notification.action_url) {
-      window.open(notification.action_url, '_blank', 'noopener,noreferrer')
-    }
-  }
-
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false}>
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={true}>
       {/* Login Prompt Dialog */}
       {showLoginPrompt && (
         <>
@@ -428,7 +359,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
       <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-foreground">
-            {t('feedback.feedback')}
+            Contribute
           </h2>
           {!canPerformActions && (
             <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/20 text-amber-400 uppercase tracking-wider">
@@ -494,37 +425,8 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
       {/* Content - scrollable area with fixed flex layout */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {activeTab === 'updates' ? (
-          /* Updates Tab */
+          /* Updates Tab — unified scrollable view */
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Sub-tabs for Queue vs Activity */}
-              <div className="flex border-b border-border/50 flex-shrink-0">
-                <button
-                  onClick={() => setUpdatesSubTab('requests')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-                    updatesSubTab === 'requests'
-                      ? 'text-foreground border-b-2 border-purple-500 -mb-px'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t('feedback.queue')} ({requests.length})
-                </button>
-                <button
-                  onClick={() => setUpdatesSubTab('activity')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
-                    updatesSubTab === 'activity'
-                      ? 'text-foreground border-b-2 border-purple-500 -mb-px'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t('feedback.activity')}
-                  {unreadCount > 0 && (
-                    <span className="min-w-4 h-4 px-1 text-[10px] rounded-full bg-purple-500 text-white flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-
               {/* Actions header */}
               <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
                 {actionError ? (
@@ -547,10 +449,13 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                 </button>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                {updatesSubTab === 'requests' ? (
-                  /* Request Queue Sub-tab */
-                  <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                  {/* ── Your Requests section ── */}
+                  <div className="p-2 border-b border-border/50 flex-shrink-0">
+                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                      Your Requests ({requests.length})
+                    </span>
+                  </div>
                     {requestsLoading && requests.length === 0 ? (
                       <div className="p-8 text-center text-muted-foreground">
                         <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
@@ -950,132 +855,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                         </div>
                       )
                     }))}
-                  </div>
-                ) : (
-                  /* Activity Sub-tab — Notifications + GitHub Contributions */
-                  <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                    <div className="flex-1 overflow-y-auto">
-                      {/* Notifications section */}
-                      {unreadCount > 0 && (
-                        <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
-                          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Notifications</span>
-                          <button
-                            onClick={() => markAllAsRead()}
-                            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                          >
-                            <Check className="w-3 h-3" />
-                            Mark all read
-                          </button>
-                        </div>
-                      )}
-                      {notificationsLoading && activeNotifications.length === 0 ? (
-                        <div className="p-6 text-center text-muted-foreground">
-                          <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin" />
-                          <p className="text-xs">{t('common.loading')}</p>
-                        </div>
-                      ) : activeNotifications.length > 0 ? (
-                        activeNotifications.map(notification => {
-                          const status = getNotificationStatus(notification.notification_type)
-                          const linkedRequest = requests.find(r => r.id === notification.feature_request_id)
-                          const githubUrl = notification.action_url || linkedRequest?.github_issue_url
-                          const issueNumber = linkedRequest?.github_issue_number
-                          const isAwaitingTriage = linkedRequest && !isTriaged(linkedRequest.status)
-                          return (
-                            <div
-                              key={notification.id}
-                              onClick={() => handleNotificationClick(notification)}
-                              className={`p-3 border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors ${
-                                !notification.read ? 'bg-purple-500/5' : ''
-                              }`}
-                            >
-                              <div className="flex items-start gap-3">
-                                <span className="mt-0.5">
-                                  {getNotificationIcon(notification.notification_type)}
-                                </span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className={`text-sm font-medium truncate ${
-                                      notification.read ? 'text-muted-foreground' : 'text-foreground'
-                                    }`}>
-                                      {notification.title}
-                                    </span>
-                                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${status.bgColor} ${status.color}`}>
-                                      {status.label}
-                                    </span>
-                                    {issueNumber && (
-                                      <span className="text-xs text-muted-foreground">
-                                        #{issueNumber}
-                                      </span>
-                                    )}
-                                    {githubUrl && (
-                                      <a
-                                        href={githubUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                                        onClick={e => e.stopPropagation()}
-                                      >
-                                        <ExternalLink className="w-3 h-3" />
-                                        GitHub
-                                      </a>
-                                    )}
-                                    {!notification.read && (
-                                      <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                                    {notification.message}
-                                  </p>
-                                  {isAwaitingTriage && (
-                                    <p className="text-xs text-amber-400/80 italic mt-1">
-                                      Waiting for triage — we&apos;ll notify you when accepted
-                                    </p>
-                                  )}
-                                  <div className="flex items-center gap-2 mt-1.5">
-                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <Clock className="w-3 h-3" />
-                                      {formatRelativeTime(notification.created_at)}
-                                    </span>
-                                    {githubUrl && (
-                                      <a
-                                        href={githubUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                                        onClick={e => e.stopPropagation()}
-                                      >
-                                        <ExternalLink className="w-3 h-3" />
-                                        View on GitHub
-                                      </a>
-                                    )}
-                                    {linkedRequest && canPerformActions && !isTriaged(linkedRequest.status) && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleRequestUpdate(linkedRequest.id)
-                                        }}
-                                        disabled={actionLoading === linkedRequest.id}
-                                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                                      >
-                                        <RefreshCw className={`w-3 h-3 ${actionLoading === linkedRequest.id ? 'animate-spin' : ''}`} />
-                                        Request Update
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })
-                      ) : null}
 
-                      {/* GitHub Contributions section */}
+
+                  {/* ── GitHub Contributions section ── */}
                       <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
                         <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                           <Github className="w-3 h-3" />
-                          GitHub Contributions
+                          {currentGitHubLogin ? `${currentGitHubLogin}'s` : ''} GitHub Contributions
                           {githubRewards && (
-                            <span className="ml-1 text-blue-400 font-bold">{githubPoints.toLocaleString()} pts</span>
+                            <span className="ml-1 text-yellow-400 font-bold">{githubPoints.toLocaleString()} coins</span>
                           )}
                         </span>
                         <button
@@ -1162,25 +950,13 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                         ))
                       )}
 
-                      {/* No activity at all — show empty state */}
-                      {activeNotifications.length === 0 && !notificationsLoading && !githubRewards && (
-                        <div className="p-8 text-center text-muted-foreground">
-                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No activity yet</p>
-                          <p className="text-xs mt-1">Notifications and GitHub contributions will appear here</p>
-                        </div>
-                      )}
-                    </div>
-
                     {githubRewards?.from_cache && (
-                      <div className="p-2 border-t border-border/50 flex-shrink-0">
+                      <div className="p-2 border-t border-border/50">
                         <p className="text-[10px] text-muted-foreground text-center">
                           Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
                         </p>
                       </div>
                     )}
-                  </div>
-                )}
               </div>
             </div>
           ) : success ? (
@@ -1213,19 +989,18 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                   onClick={() => {
                     setSuccess(null)
                     setActiveTab('updates')
-                    setUpdatesSubTab('activity')
                     refreshNotifications()
                   }}
                   className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300"
                 >
                   <Bell className="w-3 h-3" />
-                  Go to Activity
+                  View Updates
                 </button>
               </div>
             </div>
           ) : (
             <form id="feedback-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+              <div className="p-4 space-y-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
                 {/* Type Selection */}
                 <div className="flex gap-2">
                   <button
@@ -1254,42 +1029,22 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialSubTab
                   </button>
                 </div>
 
-                {/* Title */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    placeholder={
-                      requestType === 'bug'
-                        ? 'e.g., Dashboard not loading cluster data'
-                        : 'e.g., Add dark mode toggle to settings'
-                    }
-                    className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Description
-                  </label>
+                {/* Description — first line becomes title */}
+                <div className="flex-1 flex flex-col min-h-0">
                   <textarea
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     placeholder={
                       requestType === 'bug'
-                        ? 'Describe what happened, what you expected, and steps to reproduce...'
-                        : 'Describe the feature you would like to see and why it would be useful...'
+                        ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
+                        : 'Example feature request: (replace this with your feature request)\n\nWhat I want:\nAdd a button to export dashboard data as CSV.\n\nWhy it would be useful:\nI need to share cluster metrics with my team in spreadsheets.\n\nAdditional context:\nShould include all visible card data with timestamps.'
                     }
-                    rows={5}
-                    className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                    className="w-full flex-1 min-h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm"
                     disabled={isSubmitting}
                   />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    First line becomes the title. Add details below.
+                  </p>
                 </div>
 
                 {/* Error with actionable guidance */}

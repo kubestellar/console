@@ -365,7 +365,6 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
         isOpen={showRewards}
         onClose={() => setShowRewards(false)}
         initialTab="updates"
-        initialSubTab="activity"
       />
     </div>
   )

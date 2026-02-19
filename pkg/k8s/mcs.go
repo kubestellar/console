@@ -67,65 +67,34 @@ func (m *MultiClusterClient) ListServiceExportsForCluster(ctx context.Context, c
 		return []v1alpha1.ServiceExport{}, nil
 	}
 
-	// Use type assertion with the concrete unstructured list type
-	unstructuredList, ok := list.(interface {
-		GetItems() []interface{ GetName() string }
-	})
-	if !ok {
-		// Fall back to accessing Items directly via interface
-		return m.parseServiceExportsFromList(list, contextName)
-	}
-
-	_ = unstructuredList // Avoid unused variable
 	return m.parseServiceExportsFromList(list, contextName)
 }
 
 // parseServiceExportsFromList parses ServiceExports from an unstructured list
 func (m *MultiClusterClient) parseServiceExportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceExport, error) {
-	// The dynamic client returns *unstructured.UnstructuredList
-	// We access it via reflection/type assertion on the Items field
-	type unstructuredList interface {
-		GetItems() []map[string]interface{}
-	}
-
-	// Try direct access via the UnstructuredList type pattern
-	type itemsHolder struct {
-		Items []struct {
-			Object map[string]interface{}
-		}
-	}
-
 	exports := make([]v1alpha1.ServiceExport, 0)
-
-	// Use reflection-free approach by checking for Items field
-	if listMap, ok := list.(interface{ EachListItem(func(interface{}) error) error }); ok {
-		_ = listMap.EachListItem(func(obj interface{}) error {
-			if item, ok := obj.(interface {
-				GetName() string
-				GetNamespace() string
-				GetCreationTimestamp() metav1.Time
-				UnstructuredContent() map[string]interface{}
-			}); ok {
-				export := v1alpha1.ServiceExport{
-					Name:        item.GetName(),
-					Namespace:   item.GetNamespace(),
-					Cluster:     contextName,
-					ServiceName: item.GetName(),
-					Status:      v1alpha1.ServiceExportStatusUnknown,
-					CreatedAt:   item.GetCreationTimestamp().Time,
-				}
-
-				// Parse conditions from the unstructured content
-				content := item.UnstructuredContent()
-				if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
-					export.Conditions = parseConditions(conditions)
-					export.Status = determineServiceExportStatus(export.Conditions)
-				}
-
-				exports = append(exports, export)
+	// The dynamic client returns *unstructured.UnstructuredList
+	if uList, ok := list.(*unstructured.UnstructuredList); ok {
+		for i := range uList.Items {
+			item := &uList.Items[i]
+			export := v1alpha1.ServiceExport{
+				Name:        item.GetName(),
+				Namespace:   item.GetNamespace(),
+				Cluster:     contextName,
+				ServiceName: item.GetName(),
+				Status:      v1alpha1.ServiceExportStatusUnknown,
+				CreatedAt:   item.GetCreationTimestamp().Time,
 			}
-			return nil
-		})
+
+			// Parse conditions from the unstructured content
+			content := item.UnstructuredContent()
+			if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
+				export.Conditions = parseConditions(conditions)
+				export.Status = determineServiceExportStatus(export.Conditions)
+			}
+
+			exports = append(exports, export)
+		}
 	}
 
 	return exports, nil
@@ -194,57 +163,50 @@ func (m *MultiClusterClient) ListServiceImportsForCluster(ctx context.Context, c
 func (m *MultiClusterClient) parseServiceImportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceImport, error) {
 	imports := make([]v1alpha1.ServiceImport, 0)
 
-	if listMap, ok := list.(interface{ EachListItem(func(interface{}) error) error }); ok {
-		_ = listMap.EachListItem(func(obj interface{}) error {
-			if item, ok := obj.(interface {
-				GetName() string
-				GetNamespace() string
-				GetCreationTimestamp() metav1.Time
-				UnstructuredContent() map[string]interface{}
-			}); ok {
-				imp := v1alpha1.ServiceImport{
-					Name:      item.GetName(),
-					Namespace: item.GetNamespace(),
-					Cluster:   contextName,
-					Type:      v1alpha1.ServiceImportTypeClusterSetIP,
-					CreatedAt: item.GetCreationTimestamp().Time,
+	if uList, ok := list.(*unstructured.UnstructuredList); ok {
+		for i := range uList.Items {
+			item := &uList.Items[i]
+			imp := v1alpha1.ServiceImport{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+				Cluster:   contextName,
+				Type:      v1alpha1.ServiceImportTypeClusterSetIP,
+				CreatedAt: item.GetCreationTimestamp().Time,
+			}
+
+			content := item.UnstructuredContent()
+
+			// Parse spec
+			if spec, found, _ := unstructuredNestedMap(content, "spec"); found {
+				if t, ok := spec["type"].(string); ok {
+					imp.Type = v1alpha1.ServiceImportType(t)
 				}
-
-				content := item.UnstructuredContent()
-
-				// Parse spec
-				if spec, found, _ := unstructuredNestedMap(content, "spec"); found {
-					if t, ok := spec["type"].(string); ok {
-						imp.Type = v1alpha1.ServiceImportType(t)
-					}
-					if ports, found, _ := unstructuredNestedSlice(content, "spec", "ports"); found {
-						imp.Ports = parsePorts(ports)
-					}
+				if ports, found, _ := unstructuredNestedSlice(content, "spec", "ports"); found {
+					imp.Ports = parsePorts(ports)
 				}
+			}
 
-				// Parse status for source cluster
-				if clusters, found, _ := unstructuredNestedSlice(content, "status", "clusters"); found {
-					if len(clusters) > 0 {
-						if cluster, ok := clusters[0].(map[string]interface{}); ok {
-							if name, ok := cluster["cluster"].(string); ok {
-								imp.SourceCluster = name
-							}
+			// Parse status for source cluster
+			if clusters, found, _ := unstructuredNestedSlice(content, "status", "clusters"); found {
+				if len(clusters) > 0 {
+					if cluster, ok := clusters[0].(map[string]interface{}); ok {
+						if name, ok := cluster["cluster"].(string); ok {
+							imp.SourceCluster = name
 						}
 					}
 				}
-
-				// Generate DNS name
-				imp.DNSName = imp.Name + "." + imp.Namespace + ".svc.clusterset.local"
-
-				// Parse conditions
-				if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
-					imp.Conditions = parseConditions(conditions)
-				}
-
-				imports = append(imports, imp)
 			}
-			return nil
-		})
+
+			// Generate DNS name
+			imp.DNSName = imp.Name + "." + imp.Namespace + ".svc.clusterset.local"
+
+			// Parse conditions
+			if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
+				imp.Conditions = parseConditions(conditions)
+			}
+
+			imports = append(imports, imp)
+		}
 	}
 
 	return imports, nil

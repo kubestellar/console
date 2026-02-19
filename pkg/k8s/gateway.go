@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
@@ -80,62 +81,54 @@ func (m *MultiClusterClient) ListGatewaysForCluster(ctx context.Context, context
 // parseGatewaysFromList parses Gateways from an unstructured list
 func (m *MultiClusterClient) parseGatewaysFromList(list interface{}, contextName string) ([]v1alpha1.Gateway, error) {
 	gateways := make([]v1alpha1.Gateway, 0)
+	if uList, ok := list.(*unstructured.UnstructuredList); ok {
+		for i := range uList.Items {
+			item := &uList.Items[i]
+			gw := v1alpha1.Gateway{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+				Cluster:   contextName,
+				Status:    v1alpha1.GatewayStatusUnknown,
+				CreatedAt: item.GetCreationTimestamp().Time,
+			}
 
-	if listMap, ok := list.(interface{ EachListItem(func(interface{}) error) error }); ok {
-		_ = listMap.EachListItem(func(obj interface{}) error {
-			if item, ok := obj.(interface {
-				GetName() string
-				GetNamespace() string
-				GetCreationTimestamp() metav1.Time
-				UnstructuredContent() map[string]interface{}
-			}); ok {
-				gw := v1alpha1.Gateway{
-					Name:      item.GetName(),
-					Namespace: item.GetNamespace(),
-					Cluster:   contextName,
-					Status:    v1alpha1.GatewayStatusUnknown,
-					CreatedAt: item.GetCreationTimestamp().Time,
+			content := item.UnstructuredContent()
+
+			// Parse spec
+			if spec, found, _ := unstructuredNestedMap(content, "spec"); found {
+				if gatewayClassName, ok := spec["gatewayClassName"].(string); ok {
+					gw.GatewayClass = gatewayClassName
 				}
-
-				content := item.UnstructuredContent()
-
-				// Parse spec
-				if spec, found, _ := unstructuredNestedMap(content, "spec"); found {
-					if gatewayClassName, ok := spec["gatewayClassName"].(string); ok {
-						gw.GatewayClass = gatewayClassName
-					}
-					if listeners, found, _ := unstructuredNestedSlice(content, "spec", "listeners"); found {
-						gw.Listeners = parseListeners(listeners)
-					}
+				if listeners, found, _ := unstructuredNestedSlice(content, "spec", "listeners"); found {
+					gw.Listeners = parseListeners(listeners)
 				}
+			}
 
-				// Parse status
-				if addresses, found, _ := unstructuredNestedSlice(content, "status", "addresses"); found {
-					gw.Addresses = parseAddresses(addresses)
-				}
+			// Parse status
+			if addresses, found, _ := unstructuredNestedSlice(content, "status", "addresses"); found {
+				gw.Addresses = parseAddresses(addresses)
+			}
 
-				if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
-					gw.Conditions = parseConditions(conditions)
-					gw.Status = determineGatewayStatus(gw.Conditions)
-				}
+			if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
+				gw.Conditions = parseConditions(conditions)
+				gw.Status = determineGatewayStatus(gw.Conditions)
+			}
 
-				// Count attached routes from listeners status
-				if listenerStatuses, found, _ := unstructuredNestedSlice(content, "status", "listeners"); found {
-					for _, ls := range listenerStatuses {
-						if lsMap, ok := ls.(map[string]interface{}); ok {
-							if attachedRoutes, ok := lsMap["attachedRoutes"].(int64); ok {
-								gw.AttachedRoutes += int(attachedRoutes)
-							} else if attachedRoutes, ok := lsMap["attachedRoutes"].(float64); ok {
-								gw.AttachedRoutes += int(attachedRoutes)
-							}
+			// Count attached routes from listeners status
+			if listenerStatuses, found, _ := unstructuredNestedSlice(content, "status", "listeners"); found {
+				for _, ls := range listenerStatuses {
+					if lsMap, ok := ls.(map[string]interface{}); ok {
+						if attachedRoutes, ok := lsMap["attachedRoutes"].(int64); ok {
+							gw.AttachedRoutes += int(attachedRoutes)
+						} else if attachedRoutes, ok := lsMap["attachedRoutes"].(float64); ok {
+							gw.AttachedRoutes += int(attachedRoutes)
 						}
 					}
 				}
-
-				gateways = append(gateways, gw)
 			}
-			return nil
-		})
+
+			gateways = append(gateways, gw)
+		}
 	}
 
 	return gateways, nil
@@ -213,54 +206,47 @@ func (m *MultiClusterClient) ListHTTPRoutesForCluster(ctx context.Context, conte
 func (m *MultiClusterClient) parseHTTPRoutesFromList(list interface{}, contextName string) ([]v1alpha1.HTTPRoute, error) {
 	routes := make([]v1alpha1.HTTPRoute, 0)
 
-	if listMap, ok := list.(interface{ EachListItem(func(interface{}) error) error }); ok {
-		_ = listMap.EachListItem(func(obj interface{}) error {
-			if item, ok := obj.(interface {
-				GetName() string
-				GetNamespace() string
-				GetCreationTimestamp() metav1.Time
-				UnstructuredContent() map[string]interface{}
-			}); ok {
-				route := v1alpha1.HTTPRoute{
-					Name:      item.GetName(),
-					Namespace: item.GetNamespace(),
-					Cluster:   contextName,
-					Status:    v1alpha1.HTTPRouteStatusUnknown,
-					CreatedAt: item.GetCreationTimestamp().Time,
-				}
-
-				content := item.UnstructuredContent()
-
-				// Parse spec
-				if hostnames, found, _ := unstructuredNestedSlice(content, "spec", "hostnames"); found {
-					for _, h := range hostnames {
-						if hostname, ok := h.(string); ok {
-							route.Hostnames = append(route.Hostnames, hostname)
-						}
-					}
-				}
-
-				if parentRefs, found, _ := unstructuredNestedSlice(content, "spec", "parentRefs"); found {
-					route.ParentRefs = parseParentRefs(parentRefs)
-				}
-
-				// Parse conditions from status
-				if conditions, found, _ := unstructuredNestedSlice(content, "status", "parents"); found {
-					// HTTPRoute has parent-specific conditions
-					for _, parent := range conditions {
-						if parentMap, ok := parent.(map[string]interface{}); ok {
-							if parentConditions, ok := parentMap["conditions"].([]interface{}); ok {
-								route.Conditions = append(route.Conditions, parseConditions(parentConditions)...)
-							}
-						}
-					}
-					route.Status = determineHTTPRouteStatus(route.Conditions)
-				}
-
-				routes = append(routes, route)
+	if uList, ok := list.(*unstructured.UnstructuredList); ok {
+		for i := range uList.Items {
+			item := &uList.Items[i]
+			route := v1alpha1.HTTPRoute{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+				Cluster:   contextName,
+				Status:    v1alpha1.HTTPRouteStatusUnknown,
+				CreatedAt: item.GetCreationTimestamp().Time,
 			}
-			return nil
-		})
+
+			content := item.UnstructuredContent()
+
+			// Parse spec
+			if hostnames, found, _ := unstructuredNestedSlice(content, "spec", "hostnames"); found {
+				for _, h := range hostnames {
+					if hostname, ok := h.(string); ok {
+						route.Hostnames = append(route.Hostnames, hostname)
+					}
+				}
+			}
+
+			if parentRefs, found, _ := unstructuredNestedSlice(content, "spec", "parentRefs"); found {
+				route.ParentRefs = parseParentRefs(parentRefs)
+			}
+
+			// Parse conditions from status
+			if conditions, found, _ := unstructuredNestedSlice(content, "status", "parents"); found {
+				// HTTPRoute has parent-specific conditions
+				for _, parent := range conditions {
+					if parentMap, ok := parent.(map[string]interface{}); ok {
+						if parentConditions, ok := parentMap["conditions"].([]interface{}); ok {
+							route.Conditions = append(route.Conditions, parseConditions(parentConditions)...)
+						}
+					}
+				}
+				route.Status = determineHTTPRouteStatus(route.Conditions)
+			}
+
+			routes = append(routes, route)
+		}
 	}
 
 	return routes, nil
