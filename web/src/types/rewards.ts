@@ -165,3 +165,53 @@ export const ACHIEVEMENTS: Achievement[] = [
     requiredAction: 'linkedin_share',
   },
 ]
+
+// GitHub-sourced reward types
+export type GitHubRewardType =
+  | 'issue_bug'
+  | 'issue_feature'
+  | 'issue_other'
+  | 'pr_opened'
+  | 'pr_merged'
+
+export interface GitHubContribution {
+  type: GitHubRewardType
+  title: string
+  url: string
+  repo: string
+  number: number
+  points: number
+  created_at: string
+}
+
+export interface GitHubRewardsBreakdown {
+  bug_issues: number
+  feature_issues: number
+  other_issues: number
+  prs_opened: number
+  prs_merged: number
+}
+
+export interface GitHubRewardsResponse {
+  total_points: number
+  contributions: GitHubContribution[]
+  breakdown: GitHubRewardsBreakdown
+  cached_at: string
+  from_cache: boolean
+}
+
+export const GITHUB_REWARD_POINTS: Record<GitHubRewardType, number> = {
+  issue_bug: 300,
+  issue_feature: 100,
+  issue_other: 50,
+  pr_opened: 200,
+  pr_merged: 500,
+}
+
+export const GITHUB_REWARD_LABELS: Record<GitHubRewardType, string> = {
+  issue_bug: 'Bug Report',
+  issue_feature: 'Feature Request',
+  issue_other: 'Issue',
+  pr_opened: 'PR Opened',
+  pr_merged: 'PR Merged',
+}

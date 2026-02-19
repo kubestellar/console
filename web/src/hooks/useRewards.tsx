@@ -13,6 +13,8 @@ import {
   ACHIEVEMENTS,
   Achievement,
 } from '../types/rewards'
+import type { GitHubRewardsResponse } from '../types/rewards'
+import { useGitHubRewards } from './useGitHubRewards'
 
 const REWARDS_STORAGE_KEY = 'kubestellar-rewards'
 
@@ -25,6 +27,9 @@ interface RewardsContextType {
   hasEarnedAction: (action: RewardActionType) => boolean
   getActionCount: (action: RewardActionType) => number
   recentEvents: RewardEvent[]
+  githubRewards: GitHubRewardsResponse | null
+  githubPoints: number
+  refreshGitHubRewards: () => Promise<void>
 }
 
 const RewardsContext = createContext<RewardsContextType | null>(null)
@@ -72,6 +77,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [rewards, setRewards] = useState<UserRewards | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { githubRewards, githubPoints, refresh: refreshGitHubRewards } = useGitHubRewards()
 
   // Load rewards when user changes
   useEffect(() => {
@@ -196,15 +202,33 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return rewards.events.slice(0, 10)
   }, [rewards])
 
+  // Dedup: subtract console-submitted bug/feature coins that are already in GitHub data
+  const consoleSubmittedOffset = useMemo(() => {
+    if (!rewards || !githubRewards) return 0
+    const bugEvents = rewards.events.filter(e => e.action === 'bug_report').length
+    const featureEvents = rewards.events.filter(e => e.action === 'feature_suggestion').length
+    return (bugEvents * REWARD_ACTIONS.bug_report.coins) + (featureEvents * REWARD_ACTIONS.feature_suggestion.coins)
+  }, [rewards, githubRewards])
+
+  // Merged total: localStorage coins - dedup offset + GitHub coins
+  const mergedTotalCoins = useMemo(() => {
+    const localCoins = rewards?.totalCoins || 0
+    if (!githubRewards) return localCoins
+    return Math.max(0, localCoins - consoleSubmittedOffset) + githubPoints
+  }, [rewards?.totalCoins, consoleSubmittedOffset, githubPoints, githubRewards])
+
   const value: RewardsContextType = {
     rewards,
-    totalCoins: rewards?.totalCoins || 0,
+    totalCoins: mergedTotalCoins,
     earnedAchievements,
     isLoading,
     awardCoins,
     hasEarnedAction,
     getActionCount,
     recentEvents,
+    githubRewards,
+    githubPoints,
+    refreshGitHubRewards,
   }
 
   return (

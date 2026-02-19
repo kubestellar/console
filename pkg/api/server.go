@@ -64,6 +64,8 @@ type Config struct {
 	GitHubWebhookSecret  string // Secret for validating GitHub webhooks
 	FeedbackRepoOwner    string // GitHub org/owner (e.g., "kubestellar")
 	FeedbackRepoName     string // GitHub repo name (e.g., "console")
+	// GitHub activity rewards
+	RewardsGitHubOrgs string // Org filter for GitHub search (e.g., "org:kubestellar org:llm-d")
 	// Benchmark data configuration (Google Drive)
 	BenchmarkGoogleDriveAPIKey string // API key for fetching benchmark data from Google Drive
 	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
@@ -626,6 +628,13 @@ func (s *Server) setupRoutes() {
 	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)
 	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
 
+	// GitHub activity rewards (points for issues/PRs across configured orgs)
+	rewardsHandler := handlers.NewRewardsHandler(handlers.RewardsConfig{
+		GitHubToken: s.config.FeedbackGitHubToken,
+		Orgs:        s.config.RewardsGitHubOrgs,
+	})
+	api.Get("/rewards/github", rewardsHandler.GetGitHubRewards)
+
 	// Nightly E2E status (GitHub Actions proxy with server-side token + cache)
 	nightlyE2E := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
@@ -797,6 +806,8 @@ func LoadConfigFromEnv() Config {
 		GitHubWebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
 		FeedbackRepoOwner:   getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
 		FeedbackRepoName:    getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
+		// GitHub activity rewards
+		RewardsGitHubOrgs: getEnvOrDefault("REWARDS_GITHUB_ORGS", "org:kubestellar org:llm-d"),
 		// Skip onboarding questionnaire for new users
 		SkipOnboarding: os.Getenv("SKIP_ONBOARDING") == "true",
 		// Benchmark data from Google Drive

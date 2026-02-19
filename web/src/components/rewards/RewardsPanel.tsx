@@ -3,16 +3,28 @@
  */
 
 import { useState } from 'react'
-import { Coins, Trophy, Gift, Github, Bug, Lightbulb, Star, ChevronRight } from 'lucide-react'
+import { Coins, Trophy, Gift, Github, Bug, Lightbulb, Star, ChevronRight, GitPullRequest, GitMerge, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS, ACHIEVEMENTS } from '../../hooks/useRewards'
 import { GitHubInviteModal, GitHubInviteButton } from './GitHubInvite'
 import { LinkedInShareCard } from './LinkedInShare'
 import { useTranslation } from 'react-i18next'
+import { GITHUB_REWARD_LABELS } from '../../types/rewards'
+import type { GitHubContribution } from '../../types/rewards'
 
 export function RewardsPanel() {
   const { t: _t } = useTranslation()
   const [showGitHubInvite, setShowGitHubInvite] = useState(false)
-  const { totalCoins, earnedAchievements, recentEvents, hasEarnedAction, getActionCount } = useRewards()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const { totalCoins, earnedAchievements, recentEvents, hasEarnedAction, getActionCount, githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
+
+  const handleRefreshGitHub = async () => {
+    setIsRefreshing(true)
+    try {
+      await refreshGitHubRewards()
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -113,6 +125,103 @@ export function RewardsPanel() {
         </div>
       </div>
 
+      {/* GitHub Contributions */}
+      {githubRewards && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <Github className="w-5 h-5 text-foreground" />
+              GitHub Contributions
+            </h3>
+            <button
+              onClick={handleRefreshGitHub}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+
+          {/* Points breakdown */}
+          <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">GitHub Points</span>
+              <span className="text-lg font-bold text-blue-400">{githubPoints.toLocaleString()}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {githubRewards.breakdown.prs_merged > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-xs">
+                  <GitMerge className="w-3 h-3" />
+                  {githubRewards.breakdown.prs_merged} Merged
+                </span>
+              )}
+              {githubRewards.breakdown.prs_opened > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
+                  <GitPullRequest className="w-3 h-3" />
+                  {githubRewards.breakdown.prs_opened} PRs
+                </span>
+              )}
+              {githubRewards.breakdown.bug_issues > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs">
+                  <Bug className="w-3 h-3" />
+                  {githubRewards.breakdown.bug_issues} Bugs
+                </span>
+              )}
+              {githubRewards.breakdown.feature_issues > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs">
+                  <Lightbulb className="w-3 h-3" />
+                  {githubRewards.breakdown.feature_issues} Features
+                </span>
+              )}
+              {githubRewards.breakdown.other_issues > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-xs">
+                  <AlertCircle className="w-3 h-3" />
+                  {githubRewards.breakdown.other_issues} Issues
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Recent contributions list */}
+          {githubRewards.contributions.length > 0 && (
+            <div className="max-h-64 overflow-y-auto space-y-1.5 rounded-lg">
+              {githubRewards.contributions.slice(0, 20).map((contrib: GitHubContribution, idx: number) => (
+                <a
+                  key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
+                  href={contrib.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <ContributionIcon type={contrib.type} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-foreground truncate group-hover:text-blue-400 transition-colors">
+                        {contrib.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {contrib.repo} #{contrib.number} · {GITHUB_REWARD_LABELS[contrib.type]}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {githubRewards.from_cache && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Achievements */}
       <div>
         <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4">
@@ -185,4 +294,19 @@ export function RewardsPanel() {
       />
     </div>
   )
+}
+
+function ContributionIcon({ type }: { type: string }) {
+  switch (type) {
+    case 'pr_merged':
+      return <GitMerge className="w-4 h-4 text-purple-400 flex-shrink-0" />
+    case 'pr_opened':
+      return <GitPullRequest className="w-4 h-4 text-green-400 flex-shrink-0" />
+    case 'issue_bug':
+      return <Bug className="w-4 h-4 text-red-400 flex-shrink-0" />
+    case 'issue_feature':
+      return <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0" />
+    default:
+      return <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+  }
 }
