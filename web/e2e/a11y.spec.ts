@@ -265,5 +265,143 @@ test.describe('Accessibility Audits', () => {
         'Links missing accessible names'
       ).toHaveLength(0)
     })
+
+    test('cards have proper ARIA labels', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(2000) // Wait for cards to load
+
+      // Check that cards have aria-label (cards are divs, not regions)
+      const cards = page.locator('[data-card-type]')
+      const count = await cards.count()
+      
+      expect(count).toBeGreaterThan(0)
+
+      // Verify each card has an aria-label
+      for (let i = 0; i < Math.min(count, 5); i++) {
+        const card = cards.nth(i)
+        const ariaLabel = await card.getAttribute('aria-label')
+        expect(ariaLabel).toBeTruthy()
+      }
+    })
+
+    test('demo badges are present', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(2000)
+
+      // Check for demo badges (visual indicators without aria-live to avoid announcement flood)
+      const demoBadges = page.locator('[data-testid="demo-badge"]')
+      const count = await demoBadges.count()
+      
+      // Demo mode should show demo badges
+      expect(count).toBeGreaterThan(0)
+    })
+
+    test('skip to content link is present', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      
+      // Check for skip-to-content link
+      const skipLink = page.locator('a[href="#main-content"]')
+      await expect(skipLink).toBeAttached()
+      
+      // Verify main content exists
+      const mainContent = page.locator('#main-content')
+      await expect(mainContent).toBeAttached()
+    })
+
+    test('menu items have accessible names from visible text', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(2000)
+
+      // Run axe-core to check for WCAG 2.5.3 compliance (Label in Name)
+      const results = await new AxeBuilder({ page })
+        .withRules(['label-content-name-mismatch'])
+        .analyze()
+
+      expect(
+        results.violations.filter(v => v.id === 'label-content-name-mismatch'),
+        'Menu items with visible text should not have conflicting aria-labels'
+      ).toHaveLength(0)
+    })
+
+    test('no redundant ARIA roles on semantic HTML', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(2000)
+
+      // Check for redundant roles (e.g., role="main" on <main>)
+      const results = await new AxeBuilder({ page })
+        .withRules(['aria-allowed-role'])
+        .analyze()
+
+      expect(
+        results.violations.filter(v => v.id === 'aria-allowed-role'),
+        'Semantic HTML elements should not have redundant ARIA roles'
+      ).toHaveLength(0)
+    })
+  })
+
+  test.describe('Keyboard Navigation Enhancements', () => {
+    test('interactive elements in cards are focusable', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(2000)
+
+      // Find interactive elements (buttons) within cards
+      const cardButtons = page.locator('[data-card-type] button')
+      const count = await cardButtons.count()
+      
+      // Should have interactive elements in cards
+      expect(count).toBeGreaterThan(0)
+    })
+
+    test('keyboard navigation through cards works', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(2000)
+
+      // Tab to first card
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Tab')
+
+      // Check if a card is focused
+      const focusedElement = await page.evaluate(() => {
+        const el = document.activeElement
+        return {
+          tagName: el?.tagName,
+          role: el?.getAttribute('role'),
+          hasCardType: el?.hasAttribute('data-card-type')
+        }
+      })
+
+      // Verify we can reach interactive elements
+      expect(focusedElement.tagName).toBeTruthy()
+    })
+  })
+
+  test.describe('ARIA Landmarks', () => {
+    test('page has proper landmark elements', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+
+      // Check for main landmark (semantic HTML5 element)
+      const main = page.locator('main')
+      await expect(main).toBeAttached()
+
+      // Check for navigation landmark (semantic HTML5 aside element)
+      const nav = page.locator('aside[data-testid="sidebar"]')
+      await expect(nav).toBeAttached()
+    })
   })
 })

@@ -1213,6 +1213,8 @@ export function CardWrapper({
           data-card-id={cardId}
           data-loading={shouldShowSkeleton ? 'true' : 'false'}
           data-effective-loading={effectiveIsLoading ? 'true' : 'false'}
+          aria-label={title}
+          aria-busy={effectiveIsLoading}
           className={cn(
             'glass rounded-xl overflow-hidden card-hover',
             'flex flex-col transition-all duration-200',
@@ -1262,7 +1264,7 @@ export function CardWrapper({
             )}
             {/* Refresh indicator - only shows when no refresh button is present (button handles its own spin) */}
             {!onRefresh && (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && !effectiveIsFailed && (
-              <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
+              <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" aria-hidden="true" />
             )}
             {/* Last updated indicator */}
             {!isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && lastUpdated && (
@@ -1276,9 +1278,11 @@ export function CardWrapper({
             <button
               onClick={() => setCollapsed(!isCollapsed)}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
+              aria-expanded={!isCollapsed}
               title={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
             >
-              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {isCollapsed ? <ChevronRight className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
             </button>
             {/* Manual refresh button */}
             {onRefresh && (
@@ -1293,9 +1297,10 @@ export function CardWrapper({
                     ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
                     : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                 )}
+                aria-label={forceSkeletonForOffline ? t('cardWrapper.waitingForAgent') : effectiveIsFailed ? t('cardWrapper.refreshFailedRetry', { count: effectiveConsecutiveFailures }) : t('cardWrapper.refreshData')}
                 title={forceSkeletonForOffline ? t('cardWrapper.waitingForAgent') : effectiveIsFailed ? t('cardWrapper.refreshFailedRetry', { count: effectiveConsecutiveFailures }) : t('cardWrapper.refreshData')}
               >
-                <RefreshCw className={cn('w-4 h-4', (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-spin')} />
+                <RefreshCw className={cn('w-4 h-4', (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-spin')} aria-hidden="true" />
               </button>
             )}
             {/* Chat button - feature not yet implemented
@@ -1311,9 +1316,10 @@ export function CardWrapper({
             <button
               onClick={() => setIsExpanded(true)}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t('cardWrapper.expandFullScreen')}
               title={t('cardWrapper.expandFullScreen')}
             >
-              <Maximize2 className="w-4 h-4" />
+              <Maximize2 className="w-4 h-4" aria-hidden="true" />
             </button>
             <div className="relative" data-tour="card-menu">
               <button
@@ -1329,13 +1335,18 @@ export function CardWrapper({
                   setShowMenu(!showMenu)
                 }}
                 className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={t('cardWrapper.cardMenuTooltip')}
+                aria-expanded={showMenu}
+                aria-haspopup="menu"
                 title={t('cardWrapper.cardMenuTooltip')}
               >
-                <MoreVertical className="w-4 h-4" />
+                <MoreVertical className="w-4 h-4" aria-hidden="true" />
               </button>
               {showMenu && menuPosition && createPortal(
                 <div
                   className="fixed w-48 glass rounded-lg py-1 z-50 shadow-xl !bg-[rgba(10,15,25,0.98)]"
+                  role="menu"
+                  aria-label={t('cardWrapper.cardMenuTooltip')}
                   style={{ top: menuPosition.top, right: menuPosition.right }}
                 >
                   <button
@@ -1344,9 +1355,10 @@ export function CardWrapper({
                       onConfigure?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                    role="menuitem"
                     title={t('cardWrapper.configureTooltip')}
                   >
-                    <Settings className="w-4 h-4" />
+                    <Settings className="w-4 h-4" aria-hidden="true" />
                     {t('common:actions.configure')}
                   </button>
                   <button
@@ -1356,9 +1368,10 @@ export function CardWrapper({
                       navigator.clipboard.writeText(url)
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                    role="menuitem"
                     title={t('cardWrapper.copyLinkTooltip')}
                   >
-                    <Link2 className="w-4 h-4" />
+                    <Link2 className="w-4 h-4" aria-hidden="true" />
                     {t('cardWrapper.copyLink')}
                   </button>
                   {/* Resize submenu */}
@@ -1367,19 +1380,25 @@ export function CardWrapper({
                       <button
                         onClick={() => setShowResizeMenu(!showResizeMenu)}
                         className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center justify-between"
+                        role="menuitem"
+                        aria-haspopup="menu"
+                        aria-expanded={showResizeMenu}
                         title={t('cardWrapper.resizeTooltip')}
                       >
                         <span className="flex items-center gap-2">
-                          <MoveHorizontal className="w-4 h-4" />
+                          <MoveHorizontal className="w-4 h-4" aria-hidden="true" />
                           {t('cardWrapper.resize')}
                         </span>
-                        <ChevronRight className={cn('w-4 h-4 transition-transform', showResizeMenu && 'rotate-90')} />
+                        <ChevronRight className={cn('w-4 h-4 transition-transform', showResizeMenu && 'rotate-90')} aria-hidden="true" />
                       </button>
                       {showResizeMenu && (
-                        <div className={cn(
-                          'absolute top-0 w-36 glass rounded-lg py-1 z-20',
-                          resizeMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1'
-                        )}>
+                        <div 
+                          className={cn(
+                            'absolute top-0 w-36 glass rounded-lg py-1 z-20',
+                            resizeMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1'
+                          )}
+                          role="menu"
+                        >
                           {WIDTH_OPTIONS.map((option) => (
                             <button
                               key={option.value}
@@ -1394,6 +1413,7 @@ export function CardWrapper({
                                   ? 'text-purple-400 bg-purple-500/10'
                                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                               )}
+                              role="menuitem"
                             >
                               <span>{t(option.labelKey)}</span>
                               <span className="text-xs opacity-60">{t(option.descKey)}</span>
@@ -1410,9 +1430,10 @@ export function CardWrapper({
                         setShowWidgetExport(true)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                      role="menuitem"
                       title={t('cardWrapper.exportWidgetTooltip')}
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="w-4 h-4" aria-hidden="true" />
                       {t('cardWrapper.exportWidget')}
                     </button>
                   )}
@@ -1422,9 +1443,10 @@ export function CardWrapper({
                       onReplace?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                    role="menuitem"
                     title={t('cardWrapper.replaceTooltip')}
                   >
-                    <Replace className="w-4 h-4" />
+                    <Replace className="w-4 h-4" aria-hidden="true" />
                     {t('common:buttons.replaceCard')}
                   </button>
                   <button
@@ -1433,9 +1455,10 @@ export function CardWrapper({
                       onRemove?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+                    role="menuitem"
                     title={t('cardWrapper.removeTooltip')}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
                     {t('common:actions.remove')}
                   </button>
                 </div>,

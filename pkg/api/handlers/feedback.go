@@ -378,6 +378,7 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 	var statuses []struct {
 		State     string `json:"state"`
 		TargetURL string `json:"target_url"`
+		CreatedAt string `json:"created_at"`
 	}
 	if err := json.NewDecoder(resp2.Body).Decode(&statuses); err != nil {
 		return c.JSON(fiber.Map{"status": "error", "message": "Failed to parse deployment statuses"})
@@ -392,6 +393,7 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":      "ready",
 			"preview_url": latestStatus.TargetURL,
+			"ready_at":    latestStatus.CreatedAt,
 		})
 	}
 

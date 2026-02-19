@@ -261,11 +261,12 @@ export function Sidebar() {
                     className="p-0.5 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
                     title={t('sidebar.removeFromSidebar')}
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" aria-hidden="true" />
                   </span>
                 )}
                 <GripVertical
                   className="w-4 h-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing"
+                  aria-hidden="true"
                   onMouseDown={(e) => e.stopPropagation()}
                 />
               </span>
@@ -286,22 +287,26 @@ export function Sidebar() {
         />
       )}
 
-      <aside data-testid="sidebar" data-tour="sidebar" className={cn(
-        'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced transition-all duration-300 z-40',
-        // Desktop: respect collapsed state
-        !isMobile && (config.collapsed ? 'w-20 p-3' : 'w-64 p-4'),
-        // Mobile: always w-64 when open, slide off-screen when closed
-        isMobile && 'w-64 p-4',
-        isMobile && !config.isMobileOpen && '-translate-x-full',
-        isMobile && config.isMobileOpen && 'translate-x-0'
-      )}>
+      <aside 
+        data-testid="sidebar" 
+        data-tour="sidebar" 
+        className={cn(
+          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced transition-all duration-300 z-40',
+          // Desktop: respect collapsed state
+          !isMobile && (config.collapsed ? 'w-20 p-3' : 'w-64 p-4'),
+          // Mobile: always w-64 when open, slide off-screen when closed
+          isMobile && 'w-64 p-4',
+          isMobile && !config.isMobileOpen && '-translate-x-full',
+          isMobile && config.isMobileOpen && 'translate-x-0'
+        )}>
         {/* Collapse toggle - hidden on mobile */}
         <button
           data-testid="sidebar-collapse-toggle"
           onClick={toggleCollapsed}
+          aria-expanded={!config.collapsed}
           className="absolute -right-3 top-6 p-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground z-10 hidden md:block"
         >
-          {config.collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {config.collapsed ? <ChevronRight className="w-4 h-4" aria-hidden="true" /> : <ChevronLeft className="w-4 h-4" aria-hidden="true" />}
         </button>
 
         {/* Primary navigation */}
@@ -336,7 +341,7 @@ export function Sidebar() {
               onClick={handleAddCardClick}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-purple-500/50 hover:bg-purple-500/10 transition-all duration-200"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
               <span className="text-sm">{t('buttons.addCard')}</span>
             </button>
           </div>
@@ -354,7 +359,7 @@ export function Sidebar() {
                 className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
               >
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" aria-hidden="true" />
                   {t('labels.healthy')}
                 </span>
                 <span className="text-sm font-medium text-green-400">{healthyClusters}</span>
@@ -364,7 +369,7 @@ export function Sidebar() {
                 className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
               >
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400" aria-hidden="true" />
                   {t('labels.unhealthy')}
                 </span>
                 <span className="text-sm font-medium text-red-400">{unhealthyClusters}</span>
@@ -374,7 +379,7 @@ export function Sidebar() {
                 className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
               >
                 <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <WifiOff className="w-3.5 h-3.5 text-yellow-400" />
+                  <WifiOff className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
                   {t('labels.offline')}
                 </span>
                 <span className="text-sm font-medium text-yellow-400">{unreachableClusters}</span>
