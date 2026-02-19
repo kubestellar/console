@@ -147,8 +147,9 @@ const SortableGpuCard = memo(function SortableGpuCard({
               {...listeners}
               className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
               title="Drag to reorder"
+              aria-label="Drag to reorder"
             >
-              <GripVertical className="w-4 h-4 text-muted-foreground" />
+              <GripVertical className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
             </button>
           }
         >
@@ -598,7 +599,7 @@ export function GPUReservations() {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               )}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-4 h-4" aria-hidden="true" />
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
                 <span className="px-1.5 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-400">
@@ -868,8 +869,9 @@ export function GPUReservations() {
                               left: `calc(${((col + 1) / 7) * 100}% - 24px)`,
                               bottom: '4px',
                             }}
+                            aria-label={`Add reservation on ${dateStr}`}
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3 h-3" aria-hidden="true" />
                           </button>
                         )
                       })}
@@ -901,6 +903,7 @@ export function GPUReservations() {
                               top: `${bar.row * 24 + 4}px`,
                             }}
                             title={`${bar.reservation.title} (${bar.reservation.gpu_count} GPUs, ${bar.reservation.status})`}
+                            aria-label={`${bar.reservation.title}: ${bar.reservation.gpu_count} GPUs, ${bar.reservation.status}`}
                           >
                             {bar.isStart && (
                               <>
@@ -1559,6 +1562,7 @@ function ReservationFormModal({
                   onClick={() => { setIsNewNamespace(false); setNamespace('') }}
                   className="px-3 py-2 rounded-lg bg-secondary border border-border text-muted-foreground hover:text-foreground"
                   title={t('gpuReservations.form.fields.backToList')}
+                  aria-label={t('gpuReservations.form.fields.backToList')}
                 >
                   &times;
                 </button>
@@ -1656,8 +1660,9 @@ function ReservationFormModal({
                     setExtraResources(updated)
                   }} placeholder={t('gpuReservations.form.fields.resourcePlaceholder')} className="w-24 px-2 py-1.5 rounded bg-secondary border border-border text-sm text-foreground" />
                   <button onClick={() => setExtraResources(extraResources.filter((_, j) => j !== i))}
-                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-400">
-                    <Trash2 className="w-4 h-4" />
+                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-400"
+                    aria-label="Remove resource limit">
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               ))}
