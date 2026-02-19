@@ -391,6 +391,8 @@ function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }
       className="w-20 h-8"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
+      role="img"
+      aria-label={`Price trend: ${isPositive ? 'rising' : 'falling'}`}
     >
       <polyline
         points={points}
@@ -477,7 +479,7 @@ function StockRow({
         <div className="text-right flex-shrink-0">
           <div className="font-semibold text-sm">${stock.price.toFixed(2)}</div>
           <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-            {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            {isPositive ? <TrendingUp className="w-3 h-3" aria-hidden="true" /> : <TrendingDown className="w-3 h-3" aria-hidden="true" />}
             <span>{isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%</span>
           </div>
         </div>

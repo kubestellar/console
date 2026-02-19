@@ -77,8 +77,11 @@ export function RefreshIndicator({
           className
         )}
         title="Updating..."
+        role="status"
+        aria-live="polite"
+        aria-label="Updating data"
       >
-        <RefreshCw className={cn(iconSize, 'animate-spin-min')} />
+        <RefreshCw className={cn(iconSize, 'animate-spin-min')} aria-hidden="true" />
         {showLabel && <span>Updating</span>}
       </span>
     )
@@ -93,8 +96,10 @@ export function RefreshIndicator({
         className
       )}
       title={tooltip}
+      role="status"
+      aria-label={lastUpdated ? `Last updated: ${formatLastSeen(lastUpdated)}` : 'Not yet updated'}
     >
-      <Clock className={iconSize} />
+      <Clock className={iconSize} aria-hidden="true" />
       {showLabel && (
         <span>
           {lastUpdated ? formatLastSeen(lastUpdated) : 'pending'}
@@ -186,10 +191,12 @@ export function RefreshButton({
     <div className={`flex items-center gap-1 ${className}`}>
       {isFailed && (
         <div
+          role="alert"
+          aria-live="assertive"
           className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-xs"
           title={`${consecutiveFailures} consecutive refresh failures`}
         >
-          <AlertTriangle className="w-3 h-3" />
+          <AlertTriangle className="w-3 h-3" aria-hidden="true" />
           <span>{t('refresh.failed')}</span>
         </div>
       )}
@@ -198,6 +205,7 @@ export function RefreshButton({
         disabled={disabled || isRefreshing || isVisuallySpinning}
         className={`${buttonPadding} hover:bg-secondary rounded transition-colors disabled:opacity-50`}
         title={tooltipText}
+        aria-label={tooltipText}
       >
         <RefreshCw
           className={`${sizeClasses} ${

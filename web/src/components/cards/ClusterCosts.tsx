@@ -809,7 +809,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             )}
           </div>
           <span className="flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
+            <TrendingUp className="w-3 h-3" aria-hidden="true" />
             {t('cards:clusterCosts.clusterCount', { count: totalItems })}
           </span>
         </div>

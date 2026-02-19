@@ -1262,7 +1262,7 @@ function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
             {contributor.contributions} {t('cards:github.contributions')}
           </div>
         </div>
-        <TrendingUp className="w-4 h-4 text-green-400" />
+        <TrendingUp className="w-4 h-4 text-green-400" aria-hidden="true" />
       </div>
     </a>
   )

@@ -205,11 +205,12 @@ Please provide:
         target="_blank"
         rel="noopener noreferrer"
         title={!isFailed ? title : undefined}
+        aria-label={`Run #${run.runNumber}: ${title}`}
         onClick={e => e.stopPropagation()}
       >
         <div className={`w-3 h-3 rounded-full ${color} ${isRunning ? 'animate-pulse' : ''} ${
           isHighlighted ? 'ring-2 ring-white/50 scale-125' : 'group-hover:ring-2 group-hover:ring-white/30'
-        } transition-all`} />
+        } transition-all`} aria-hidden="true" />
       </a>
       {isFailed && showPopup && popupPos && createPortal(
         <div

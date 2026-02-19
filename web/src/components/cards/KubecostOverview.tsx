@@ -112,7 +112,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs text-muted-foreground font-medium">Savings Recommendations</p>
           <span className="flex items-center gap-1 text-xs text-green-400">
-            <TrendingDown className="w-3 h-3" />
+            <TrendingDown className="w-3 h-3" aria-hidden="true" />
             ${DEMO_COST_SUMMARY.savings}/mo potential
           </span>
         </div>

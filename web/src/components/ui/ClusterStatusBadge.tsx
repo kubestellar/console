@@ -190,8 +190,10 @@ export function ClusterStatusBadge({
         className
       )}
       title={tooltip}
+      role="status"
+      aria-label={`Cluster status: ${tooltip.replace(/\n/g, ', ')}`}
     >
-      <Icon className={iconSize} />
+      <Icon className={iconSize} aria-hidden="true" />
       {showLabel && <span>{displayLabel}</span>}
     </span>
   )
@@ -228,6 +230,8 @@ export function ClusterStatusDot({
     <span
       className={cn('rounded-full', dotColors[state], dotSize, className)}
       title={config.label}
+      role="status"
+      aria-label={`Cluster status: ${config.label}`}
     />
   )
 }

@@ -261,21 +261,21 @@ function EventsTimelineInternal() {
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-1.5 mb-1">
-            <AlertTriangle className="w-3 h-3 text-orange-400" />
+            <AlertTriangle className="w-3 h-3 text-orange-400" aria-hidden="true" />
             <span className="text-xs text-orange-400">{t('common:common.warnings')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{totalWarnings}</span>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
           <div className="flex items-center gap-1.5 mb-1">
-            <CheckCircle className="w-3 h-3 text-green-400" />
+            <CheckCircle className="w-3 h-3 text-green-400" aria-hidden="true" />
             <span className="text-xs text-green-400">{t('common:common.normal')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{totalNormal}</span>
         </div>
         <div className="p-2 rounded-lg bg-secondary/50">
           <div className="flex items-center gap-1.5 mb-1">
-            <Activity className="w-3 h-3 text-muted-foreground" />
+            <Activity className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
             <span className="text-xs text-muted-foreground">{t('eventsTimeline.peak')}</span>
           </div>
           <span className="text-lg font-bold text-foreground">{peakEvents}</span>
@@ -289,7 +289,7 @@ function EventsTimelineInternal() {
             {t('eventsTimeline.noEventsInRange')}
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }}>
+          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`Events timeline chart showing ${totalWarnings} warnings and ${totalNormal} normal events, peak ${peakEvents} events`}>
           <ResponsiveContainer width="100%" height={CHART_HEIGHT_STANDARD}>
             <AreaChart data={timeSeriesData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <defs>

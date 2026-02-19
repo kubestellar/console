@@ -338,7 +338,7 @@ export function GPUUsageTrend() {
         </div>
         <div className={`p-2 rounded-lg bg-secondary/50 border border-border`} title={`${usagePercent}% GPU utilization`}>
           <div className="flex items-center gap-1 mb-1">
-            <TrendingUp className={`w-3 h-3 ${getUsageColor()}`} />
+            <TrendingUp className={`w-3 h-3 ${getUsageColor()}`} aria-hidden="true" />
             <span className={`text-xs ${getUsageColor()}`}>Usage</span>
           </div>
           <span className={`text-sm font-bold ${getUsageColor()}`}>{usagePercent}%</span>
@@ -352,7 +352,7 @@ export function GPUUsageTrend() {
             No GPU data available
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }}>
+          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`GPU usage trend chart: ${currentTotals.allocated} of ${currentTotals.available} GPUs in use (${usagePercent}% utilization)`}>
             <ResponsiveContainer width="100%" height={CHART_HEIGHT_STANDARD}>
               <AreaChart data={history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                 <defs>

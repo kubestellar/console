@@ -1261,6 +1261,8 @@ export function CardWrapper({
             {showDemoIndicator && (
               <span
                 data-testid="demo-badge"
+                role="status"
+                aria-live="polite"
                 className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
                 title={effectiveIsDemoData ? t('cardWrapper.demoBadgeTitle') : t('cardWrapper.demoModeTitle')}
               >
@@ -1270,6 +1272,8 @@ export function CardWrapper({
             {/* Live data indicator - for time-series/trend cards with real data */}
             {isLive && !showDemoIndicator && (
               <span
+                role="status"
+                aria-live="polite"
                 className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
                 title={t('cardWrapper.liveBadgeTitle')}
               >
@@ -1279,6 +1283,8 @@ export function CardWrapper({
             {/* Failure indicator */}
             {effectiveIsFailed && (
               <span
+                role="alert"
+                aria-live="assertive"
                 className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"
                 title={t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
               >

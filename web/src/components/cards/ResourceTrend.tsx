@@ -323,14 +323,14 @@ export function ResourceTrend() {
       <div className="flex-1 min-h-[160px]">
         {history.length < 2 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
-            <TrendingUp className="w-6 h-6 mb-2 opacity-50" />
+            <TrendingUp className="w-6 h-6 mb-2 opacity-50" aria-hidden="true" />
             <span>{history.length === 0 ? 'No resource data available' : 'Collecting data...'}</span>
             {history.length === 1 && (
               <span className="text-xs mt-1">Chart will appear after next interval</span>
             )}
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }}>
+          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`Resource trend chart showing ${lines.map(l => l.name).join(', ')} over time`}>
           <ResponsiveContainer width="100%" height={CHART_HEIGHT_STANDARD}>
             <LineChart data={history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
