@@ -232,10 +232,55 @@ function SettingsSyncInit() {
   return null
 }
 
-// Track page views in Google Analytics on route change
+// Route-to-title map for GA4 page view granularity and browser tab labeling
+const ROUTE_TITLES: Record<string, string> = {
+  '/': 'Dashboard',
+  '/clusters': 'My Clusters',
+  '/cluster-admin': 'Cluster Admin',
+  '/nodes': 'Nodes',
+  '/namespaces': 'Namespaces',
+  '/deployments': 'Deployments',
+  '/pods': 'Pods',
+  '/services': 'Services',
+  '/workloads': 'Workloads',
+  '/operators': 'Operators',
+  '/helm': 'Helm',
+  '/logs': 'Logs',
+  '/events': 'Events',
+  '/compute': 'Compute',
+  '/compute/compare': 'Cluster Comparison',
+  '/storage': 'Storage',
+  '/network': 'Network',
+  '/alerts': 'Alerts',
+  '/security': 'Security',
+  '/security-posture': 'Security Posture',
+  '/compliance': 'Compliance',
+  '/data-compliance': 'Data Compliance',
+  '/gitops': 'GitOps',
+  '/cost': 'Cost',
+  '/gpu-reservations': 'GPU Reservations',
+  '/deploy': 'Deploy',
+  '/ai-ml': 'AI/ML',
+  '/ai-agents': 'AI Agents',
+  '/ci-cd': 'CI/CD',
+  '/llm-d-benchmarks': 'llm-d Benchmarks',
+  '/arcade': 'Arcade',
+  '/marketplace': 'Marketplace',
+  '/history': 'Card History',
+  '/settings': 'Settings',
+  '/users': 'User Management',
+  '/login': 'Login',
+}
+
+const APP_NAME = 'KubeStellar Console'
+
+// Track page views in Google Analytics on route change and set document title
 function PageViewTracker() {
   const location = useLocation()
   useEffect(() => {
+    const section = ROUTE_TITLES[location.pathname]
+    const title = section ? `${section} - ${APP_NAME}` : APP_NAME
+    document.title = title
     trackPageView(location.pathname)
   }, [location.pathname])
   return null
