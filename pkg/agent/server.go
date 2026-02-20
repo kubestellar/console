@@ -92,6 +92,9 @@ type Server struct {
 	backendCmd *exec.Cmd
 	backendMux sync.Mutex
 
+	// Auto-update system
+	updateChecker *UpdateChecker
+
 	SkipKeyValidation bool // For testing purposes
 }
 
@@ -160,6 +163,13 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Initialize local cluster manager
 	server.localClusters = NewLocalClusterManager()
+
+	// Initialize auto-update checker
+	server.updateChecker = NewUpdateChecker(UpdateCheckerConfig{
+		Broadcast:      server.BroadcastToClients,
+		RestartBackend: server.startBackendProcess,
+		KillBackend:    server.killBackendProcess,
+	})
 
 	// Initialize device tracker with notification callback
 	server.deviceTracker = NewDeviceTracker(k8sClient, func(msgType string, payload interface{}) {
@@ -293,6 +303,11 @@ func (s *Server) Start() error {
 	// Backend process management
 	mux.HandleFunc("/restart-backend", s.handleRestartBackend)
 
+	// Auto-update endpoints
+	mux.HandleFunc("/auto-update/config", s.handleAutoUpdateConfig)
+	mux.HandleFunc("/auto-update/status", s.handleAutoUpdateStatus)
+	mux.HandleFunc("/auto-update/trigger", s.handleAutoUpdateTrigger)
+
 	// Prometheus query proxy - queries Prometheus in user clusters via K8s API server proxy
 	mux.HandleFunc("/prometheus/query", s.handlePrometheusQuery)
 
@@ -356,6 +371,19 @@ func (s *Server) Start() error {
 		log.Println("Device tracker started")
 	}
 
+	// Load auto-update config from settings and start if enabled
+	if s.updateChecker != nil {
+		mgr := settings.GetSettingsManager()
+		if all, err := mgr.GetAll(); err == nil && all.AutoUpdateEnabled {
+			channel := all.AutoUpdateChannel
+			if channel == "" {
+				channel = "stable"
+			}
+			s.updateChecker.Configure(true, channel)
+			log.Printf("Auto-update started (channel=%s)", channel)
+		}
+	}
+
 	return http.ListenAndServe(addr, mux)
 }
 
@@ -384,11 +412,12 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	hasClaude := s.checkClaudeAvailable()
 
 	payload := protocol.HealthPayload{
-		Status:    "ok",
-		Version:   Version,
-		Clusters:  len(clusters),
-		HasClaude: hasClaude,
-		Claude:    s.getClaudeInfo(),
+		Status:        "ok",
+		Version:       Version,
+		Clusters:      len(clusters),
+		HasClaude:     hasClaude,
+		Claude:        s.getClaudeInfo(),
+		InstallMethod: detectAgentInstallMethod(),
 	}
 
 	json.NewEncoder(w).Encode(payload)
@@ -1282,6 +1311,129 @@ func (s *Server) checkBackendHealth() bool {
 	}
 	defer resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
+}
+
+// handleAutoUpdateConfig handles GET/POST for auto-update configuration.
+func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		mgr := settings.GetSettingsManager()
+		all, _ := mgr.GetAll()
+		enabled := false
+		channel := "stable"
+		if all != nil {
+			enabled = all.AutoUpdateEnabled
+			if all.AutoUpdateChannel != "" {
+				channel = all.AutoUpdateChannel
+			}
+		}
+		json.NewEncoder(w).Encode(AutoUpdateConfigRequest{
+			Enabled: enabled,
+			Channel: channel,
+		})
+
+	case "POST":
+		var req AutoUpdateConfigRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+			return
+		}
+
+		// Validate channel
+		switch req.Channel {
+		case "stable", "unstable", "developer":
+			// ok
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "invalid channel"})
+			return
+		}
+
+		// Persist to settings
+		mgr := settings.GetSettingsManager()
+		if all, err := mgr.GetAll(); err == nil {
+			all.AutoUpdateEnabled = req.Enabled
+			all.AutoUpdateChannel = req.Channel
+			mgr.SaveAll(all)
+		}
+
+		// Apply to running checker
+		if s.updateChecker != nil {
+			s.updateChecker.Configure(req.Enabled, req.Channel)
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+// handleAutoUpdateStatus returns the current auto-update status.
+func (s *Server) handleAutoUpdateStatus(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if s.updateChecker == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "update checker not initialized"})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.updateChecker.Status())
+}
+
+// handleAutoUpdateTrigger triggers an immediate update check.
+func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	if s.updateChecker == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "update checker not initialized"})
+		return
+	}
+
+	s.updateChecker.TriggerNow()
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "update check triggered"})
 }
 
 // handleRenameContextHTTP renames a kubeconfig context

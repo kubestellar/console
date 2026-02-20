@@ -88,6 +88,10 @@ type AllSettings struct {
 	Profile       ProfileSettings       `json:"profile"`
 	Widget        WidgetSettings        `json:"widget"`
 
+	// Auto-update configuration
+	AutoUpdateEnabled bool   `json:"autoUpdateEnabled"`
+	AutoUpdateChannel string `json:"autoUpdateChannel"`
+
 	// Sensitive (decrypted for transit, encrypted at rest)
 	APIKeys       map[string]APIKeyEntry `json:"apiKeys"`
 	GitHubToken   string                 `json:"githubToken"`

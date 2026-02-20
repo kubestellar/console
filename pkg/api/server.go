@@ -320,6 +320,7 @@ func (s *Server) setupRoutes() {
 			"version":          Version,
 			"oauth_configured": s.config.GitHubClientID != "",
 			"in_cluster":       inCluster,
+			"install_method":   detectInstallMethod(inCluster),
 		}
 		if s.config.EnabledDashboards != "" {
 			dashboards := strings.Split(s.config.EnabledDashboards, ",")
@@ -829,4 +830,15 @@ func getEnvOrDefault(key, defaultVal string) string {
 func generateDevSecret() string {
 	// Dev-only secret - clearly marked as insecure for production
 	return "INSECURE-DEV-ONLY-" + "kubestellar-console-dev-secret"
+}
+
+// detectInstallMethod returns how the console was installed: dev, binary, or helm.
+func detectInstallMethod(inCluster bool) string {
+	if inCluster {
+		return "helm"
+	}
+	if _, err := os.Stat("go.mod"); err == nil {
+		return "dev"
+	}
+	return "binary"
 }

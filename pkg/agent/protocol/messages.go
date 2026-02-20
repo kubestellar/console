@@ -32,11 +32,12 @@ type Message struct {
 
 // HealthPayload is the response for health checks
 type HealthPayload struct {
-	Status    string      `json:"status"`
-	Version   string      `json:"version"`
-	Clusters  int         `json:"clusters"`
-	HasClaude bool        `json:"hasClaude"`
-	Claude    *ClaudeInfo `json:"claude,omitempty"`
+	Status        string      `json:"status"`
+	Version       string      `json:"version"`
+	Clusters      int         `json:"clusters"`
+	HasClaude     bool        `json:"hasClaude"`
+	Claude        *ClaudeInfo `json:"claude,omitempty"`
+	InstallMethod string      `json:"install_method,omitempty"`
 }
 
 // ClaudeInfo contains information about the local Claude Code installation

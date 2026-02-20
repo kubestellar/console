@@ -5,9 +5,13 @@ import type {
   GitHubRelease,
   ParsedRelease,
   ReleasesCache,
+  InstallMethod,
+  AutoUpdateStatus,
+  UpdateProgress,
 } from '../types/updates'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../lib/constants'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 
 declare const __APP_VERSION__: string
 declare const __COMMIT_HASH__: string
@@ -66,11 +70,14 @@ function parseRelease(release: GitHubRelease): ParsedRelease {
  *
  * - stable channel: weekly releases
  * - unstable channel: nightly releases
+ * - developer channel: returns null (uses SHA-based tracking instead)
  */
 function getLatestForChannel(
   releases: ParsedRelease[],
   channel: UpdateChannel
 ): ParsedRelease | null {
+  if (channel === 'developer') return null
+
   const targetType: ReleaseType = channel === 'stable' ? 'weekly' : 'nightly'
 
   const filtered = releases
@@ -98,13 +105,16 @@ function isDevVersion(version: string): boolean {
  * Compare two version tags to determine if an update is available.
  * Returns true if latestTag is newer than currentTag.
  *
- * Note: If currentTag is a development version (no nightly/weekly suffix),
- * we always return false to avoid false positives during local development.
+ * For developer channel, comparison is done via SHA (not here — see autoUpdateStatus).
+ * For release channels, compares tag dates or semver parts.
  */
-function isNewerVersion(currentTag: string, latestTag: string): boolean {
+function isNewerVersion(currentTag: string, latestTag: string, channel: UpdateChannel): boolean {
   if (currentTag === latestTag) return false
 
-  // Don't show updates for development versions
+  // Developer channel uses SHA comparison, not tag comparison
+  if (channel === 'developer') return false
+
+  // Don't show updates for development versions (unless on developer channel)
   if (isDevVersion(currentTag)) return false
 
   // Extract dates from tags for nightly/weekly comparison
@@ -120,7 +130,6 @@ function isNewerVersion(currentTag: string, latestTag: string): boolean {
   }
 
   // For semantic versions, do a simple comparison
-  // This is a basic comparison that handles most cases
   const currentParts = currentTag.replace(/^v/, '').split(/[.-]/)
   const latestParts = latestTag.replace(/^v/, '').split(/[.-]/)
 
@@ -184,10 +193,17 @@ function isCacheValid(cache: ReleasesCache): boolean {
  */
 function loadChannel(): UpdateChannel {
   const stored = localStorage.getItem(UPDATE_STORAGE_KEYS.CHANNEL)
-  if (stored === 'stable' || stored === 'unstable') {
+  if (stored === 'stable' || stored === 'unstable' || stored === 'developer') {
     return stored
   }
   return 'stable' // Default to stable
+}
+
+/**
+ * Load auto-update enabled preference from localStorage.
+ */
+function loadAutoUpdateEnabled(): boolean {
+  return localStorage.getItem(UPDATE_STORAGE_KEYS.AUTO_UPDATE_ENABLED) === 'true'
 }
 
 /**
@@ -210,9 +226,10 @@ function loadSkippedVersions(): string[] {
  * - Uses 30-minute cache to minimize API calls
  * - Only auto-fetches when cache is stale (>30 minutes)
  * - User can manually refresh via forceCheck for immediate updates
- * - Supports stable (weekly) and unstable (nightly) channels
+ * - Supports stable (weekly), unstable (nightly), and developer (main SHA) channels
  * - Handles rate limiting with ETag conditional requests
  * - Allows skipping specific versions
+ * - Auto-update configuration via kc-agent
  */
 export function useVersionCheck() {
   const [channel, setChannelState] = useState<UpdateChannel>(loadChannel)
@@ -224,6 +241,13 @@ export function useVersionCheck() {
     return stored ? parseInt(stored, 10) : null
   })
   const [skippedVersions, setSkippedVersions] = useState<string[]>(loadSkippedVersions)
+
+  // Auto-update state
+  const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(loadAutoUpdateEnabled)
+  const [installMethod, setInstallMethod] = useState<InstallMethod>('unknown')
+  const [autoUpdateStatus, setAutoUpdateStatus] = useState<AutoUpdateStatus | null>(null)
+  const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null)
+  const [agentConnected, setAgentConnected] = useState(false)
 
   const currentVersion = useMemo(() => {
     try {
@@ -242,11 +266,92 @@ export function useVersionCheck() {
   }, [])
 
   /**
-   * Set update channel and persist to localStorage.
+   * Fetch install method and agent connectivity from kc-agent /health.
    */
-  const setChannel = useCallback((newChannel: UpdateChannel) => {
+  const fetchAgentInfo = useCallback(async () => {
+    try {
+      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, { signal: AbortSignal.timeout(3000) })
+      if (resp.ok) {
+        const data = await resp.json()
+        setAgentConnected(true)
+        if (data.install_method) {
+          setInstallMethod(data.install_method as InstallMethod)
+        }
+      }
+    } catch {
+      setAgentConnected(false)
+    }
+  }, [])
+
+  /**
+   * Fetch auto-update status from kc-agent.
+   */
+  const fetchAutoUpdateStatus = useCallback(async () => {
+    try {
+      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/status`, {
+        signal: AbortSignal.timeout(5000),
+      })
+      if (resp.ok) {
+        const data = (await resp.json()) as AutoUpdateStatus
+        setAutoUpdateStatus(data)
+      }
+    } catch {
+      // Agent not available
+    }
+  }, [])
+
+  /**
+   * Set update channel and persist to localStorage + kc-agent.
+   */
+  const setChannel = useCallback(async (newChannel: UpdateChannel) => {
     setChannelState(newChannel)
     localStorage.setItem(UPDATE_STORAGE_KEYS.CHANNEL, newChannel)
+
+    // Sync to kc-agent
+    try {
+      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: autoUpdateEnabled, channel: newChannel }),
+        signal: AbortSignal.timeout(3000),
+      })
+    } catch {
+      // Agent not available, local state is still saved
+    }
+  }, [autoUpdateEnabled])
+
+  /**
+   * Toggle auto-update and persist to localStorage + kc-agent.
+   */
+  const setAutoUpdateEnabled = useCallback(async (enabled: boolean) => {
+    setAutoUpdateEnabledState(enabled)
+    localStorage.setItem(UPDATE_STORAGE_KEYS.AUTO_UPDATE_ENABLED, String(enabled))
+
+    // Sync to kc-agent
+    try {
+      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, channel }),
+        signal: AbortSignal.timeout(3000),
+      })
+    } catch {
+      // Agent not available
+    }
+  }, [channel])
+
+  /**
+   * Trigger an immediate update check via kc-agent.
+   */
+  const triggerUpdate = useCallback(async () => {
+    try {
+      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/trigger`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(5000),
+      })
+    } catch {
+      // Agent not available
+    }
   }, [])
 
   /**
@@ -345,6 +450,12 @@ export function useVersionCheck() {
    * User must manually refresh for more frequent updates.
    */
   const checkForUpdates = useCallback(async (): Promise<void> => {
+    // For developer channel, just refresh status from agent
+    if (channel === 'developer') {
+      await fetchAutoUpdateStatus()
+      return
+    }
+
     // Always try to use cached data first
     const cache = loadCache()
     if (cache) {
@@ -362,14 +473,18 @@ export function useVersionCheck() {
     }
 
     await fetchReleases()
-  }, [lastChecked, fetchReleases])
+  }, [lastChecked, fetchReleases, channel, fetchAutoUpdateStatus])
 
   /**
    * Force a fresh check, bypassing cache.
    */
   const forceCheck = useCallback(async (): Promise<void> => {
+    if (channel === 'developer') {
+      await fetchAutoUpdateStatus()
+      return
+    }
     await fetchReleases(true)
-  }, [fetchReleases])
+  }, [fetchReleases, channel, fetchAutoUpdateStatus])
 
   /**
    * Skip a specific version (won't show update notification for it).
@@ -396,10 +511,15 @@ export function useVersionCheck() {
   }, [releases, channel])
 
   const hasUpdate = useMemo(() => {
+    // Developer channel: check SHA from agent status
+    if (channel === 'developer' && autoUpdateStatus) {
+      return autoUpdateStatus.hasUpdate
+    }
+
     if (!latestRelease || currentVersion === 'unknown') return false
     if (skippedVersions.includes(latestRelease.tag)) return false
-    return isNewerVersion(currentVersion, latestRelease.tag)
-  }, [latestRelease, currentVersion, skippedVersions])
+    return isNewerVersion(currentVersion, latestRelease.tag, channel)
+  }, [latestRelease, currentVersion, skippedVersions, channel, autoUpdateStatus])
 
   // Load cached data on mount
   useEffect(() => {
@@ -408,6 +528,18 @@ export function useVersionCheck() {
       setReleases(cache.data.map(parseRelease))
     }
   }, [])
+
+  // Fetch agent info on mount
+  useEffect(() => {
+    fetchAgentInfo()
+  }, [fetchAgentInfo])
+
+  // Fetch auto-update status when channel changes or on mount
+  useEffect(() => {
+    if (agentConnected) {
+      fetchAutoUpdateStatus()
+    }
+  }, [agentConnected, channel, fetchAutoUpdateStatus])
 
   return {
     // State
@@ -422,11 +554,21 @@ export function useVersionCheck() {
     skippedVersions,
     releases,
 
+    // Auto-update state
+    autoUpdateEnabled,
+    installMethod,
+    autoUpdateStatus,
+    updateProgress,
+    agentConnected,
+
     // Actions
     setChannel,
     checkForUpdates,
     forceCheck,
     skipVersion,
     clearSkippedVersions,
+    setAutoUpdateEnabled,
+    triggerUpdate,
+    setUpdateProgress,
   }
 }

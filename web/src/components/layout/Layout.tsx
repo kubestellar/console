@@ -22,6 +22,8 @@ import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { KeepAliveOutlet } from './KeepAliveOutlet'
+import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
+import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 
 
 // Module-level constant — computed once, never changes on re-render.
@@ -109,6 +111,7 @@ export function Layout({ children }: LayoutProps) {
   const { isSidebarOpen: isMissionSidebarOpen, isSidebarMinimized: isMissionSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
+  const { progress: updateProgress, dismiss: dismissUpdateProgress } = useUpdateProgress()
   const { isOnline, wasOffline } = useNetworkStatus()
   const { status: backendStatus, versionChanged, isInClusterMode } = useBackendHealth()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
@@ -273,6 +276,9 @@ export function Layout({ children }: LayoutProps) {
       </div>
 
       <Navbar />
+
+      {/* Auto-Update Progress Banner */}
+      <UpdateProgressBanner progress={updateProgress} onDismiss={dismissUpdateProgress} />
 
       {/* Network Disconnected Banner */}
       {showNetworkBanner && (

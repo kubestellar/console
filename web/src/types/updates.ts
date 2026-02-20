@@ -3,8 +3,9 @@
  *
  * - stable: Weekly releases (recommended for production)
  * - unstable: Nightly releases (latest features, potentially unstable)
+ * - developer: Track main branch by commit SHA (dev mode only)
  */
-export type UpdateChannel = 'stable' | 'unstable'
+export type UpdateChannel = 'stable' | 'unstable' | 'developer'
 
 /**
  * Release type derived from the version tag pattern.
@@ -14,6 +15,15 @@ export type UpdateChannel = 'stable' | 'unstable'
  * - stable: vX.Y.Z (semantic versioning without suffix)
  */
 export type ReleaseType = 'nightly' | 'weekly' | 'stable'
+
+/**
+ * How the console was installed — determines update strategy.
+ *
+ * - dev: Running from source (go.mod present) — git pull + rebuild
+ * - binary: Downloaded via start.sh — download new binary + restart
+ * - helm: Deployed in-cluster — auto-update disabled
+ */
+export type InstallMethod = 'dev' | 'binary' | 'helm' | 'unknown'
 
 /**
  * Raw GitHub release data from the API.
@@ -51,6 +61,40 @@ export interface ReleasesCache {
 }
 
 /**
+ * Auto-update configuration persisted to kc-agent settings.
+ */
+export interface AutoUpdateConfig {
+  enabled: boolean
+  channel: UpdateChannel
+}
+
+/**
+ * Progress of an in-flight auto-update, broadcast via WebSocket.
+ */
+export interface UpdateProgress {
+  status: 'idle' | 'checking' | 'pulling' | 'building' | 'restarting' | 'done' | 'failed'
+  message: string
+  progress: number // 0-100
+  error?: string
+}
+
+/**
+ * Status returned by the kc-agent /auto-update/status endpoint.
+ */
+export interface AutoUpdateStatus {
+  installMethod: InstallMethod
+  repoPath: string
+  currentSHA: string
+  latestSHA: string
+  hasUpdate: boolean
+  hasUncommittedChanges: boolean
+  autoUpdateEnabled: boolean
+  channel: UpdateChannel
+  lastUpdateTime: string | null
+  lastUpdateResult: string | null
+}
+
+/**
  * Complete update state managed by useVersionCheck hook.
  */
 export interface UpdateState {
@@ -72,4 +116,5 @@ export const UPDATE_STORAGE_KEYS = {
   RELEASES_CACHE: 'kc-releases-cache',
   SKIPPED_VERSIONS: 'kc-skipped-versions',
   LAST_CHECK: 'kc-version-last-check',
+  AUTO_UPDATE_ENABLED: 'kc-auto-update-enabled',
 } as const
