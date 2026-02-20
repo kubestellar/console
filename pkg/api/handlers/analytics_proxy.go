@@ -54,7 +54,7 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 	// This is a public identifier (not a secret), same as any website's GA ID.
 	realMeasurementID := os.Getenv("GA4_REAL_MEASUREMENT_ID")
 	if realMeasurementID == "" {
-		realMeasurementID = "G-QPGNKGNNY2"
+		realMeasurementID = "G-PXWNVQ8D1T"
 	}
 
 	// Decode base64-encoded payload from `d` parameter.
