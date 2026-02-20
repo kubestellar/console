@@ -74,8 +74,8 @@ export function LocalClustersSection() {
 
   return (
     <div id="local-clusters-settings" className="glass rounded-xl p-6">
-      {/* Demo Mode Banner */}
-      {isDemoMode && (
+      {/* Demo Mode Banner - only show when agent is disconnected */}
+      {isDemoMode && !isConnected && (
         <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
           <div className="flex items-center gap-2 text-yellow-400 text-sm">
             <AlertCircle className="w-4 h-4" />

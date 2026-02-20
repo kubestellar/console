@@ -47,8 +47,8 @@ export function useLocalClusterTools() {
 
   // Fetch detected tools
   const fetchTools = useCallback(async () => {
-    // In demo mode, always show demo tools
-    if (isDemoMode) {
+    // In demo mode (without agent connected), show demo tools
+    if (isDemoMode && !isConnected) {
       setTools(DEMO_TOOLS)
       setError(null)
       return
@@ -74,8 +74,8 @@ export function useLocalClusterTools() {
 
   // Fetch existing clusters
   const fetchClusters = useCallback(async () => {
-    // In demo mode, always show demo clusters
-    if (isDemoMode) {
+    // In demo mode (without agent connected), show demo clusters
+    if (isDemoMode && !isConnected) {
       setClusters(DEMO_CLUSTERS)
       setError(null)
       return
@@ -104,8 +104,8 @@ export function useLocalClusterTools() {
 
   // Create a new cluster
   const createCluster = useCallback(async (tool: string, name: string): Promise<CreateClusterResult> => {
-    // In demo mode, simulate cluster creation
-    if (isDemoMode) {
+    // In demo mode (without agent connected), simulate cluster creation
+    if (isDemoMode && !isConnected) {
       setIsCreating(true)
       setError(null)
       
@@ -151,8 +151,8 @@ export function useLocalClusterTools() {
 
   // Delete a cluster
   const deleteCluster = useCallback(async (tool: string, name: string): Promise<boolean> => {
-    // In demo mode, simulate cluster deletion
-    if (isDemoMode) {
+    // In demo mode (without agent connected), simulate cluster deletion
+    if (isDemoMode && !isConnected) {
       setIsDeleting(name)
       setError(null)
       
