@@ -159,7 +159,11 @@ manualChunks: (id) => {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      '/t/g': {
+      '/api/a': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/api/m': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },

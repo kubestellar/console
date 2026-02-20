@@ -92,5 +92,5 @@ export default async (req: Request) => {
 };
 
 export const config: Config = {
-  path: "/t/g/collect",
+  path: "/api/m",
 };

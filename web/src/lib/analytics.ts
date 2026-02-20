@@ -67,14 +67,35 @@ export function initAnalytics() {
   if (!measurementId || initialized) return
   initialized = true
 
-  // First-party proxy base — bypasses ad blockers and enables tid rewriting.
-  // The proxy at /t/g/js serves gtag.js from our own domain.
-  // The proxy at /t/g/collect rewrites the decoy tid to the real one.
-  const proxyBase = `${window.location.origin}/t`
+  // Ad-blocker evasion: patch sendBeacon/fetch BEFORE loading gtag.js.
+  // gtag.js sends to {transport_url}/g/collect — ad blockers match "/g/collect"
+  // on any domain. We intercept and rewrite to an opaque path ("/api/m").
+  const collectPath = '/g/collect'
+  const proxyPath = '/api/m'
+  const origin = window.location.origin
 
-  // Inject gtag.js script via first-party proxy
+  const _sb = navigator.sendBeacon?.bind(navigator)
+  if (_sb) {
+    navigator.sendBeacon = (url: string | URL, data?: BodyInit | null) => {
+      const s = String(url)
+      if (s.startsWith(origin) && s.includes(collectPath)) {
+        url = s.replace(collectPath, proxyPath)
+      }
+      return _sb(url, data)
+    }
+  }
+
+  const _fetch = window.fetch.bind(window)
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    if (typeof input === 'string' && input.startsWith(origin) && input.includes(collectPath)) {
+      input = input.replace(collectPath, proxyPath)
+    }
+    return _fetch(input, init)
+  }
+
+  // Load gtag.js from first-party proxy (opaque path avoids filter-list matching)
   const script = document.createElement('script')
-  script.src = `${proxyBase}/g/js?id=${measurementId}`
+  script.src = `${origin}/api/a?id=${measurementId}`
   script.async = true
   document.head.appendChild(script)
 
@@ -87,7 +108,7 @@ export function initAnalytics() {
   gtag('config', measurementId, {
     send_page_view: false,
     cookie_flags: 'SameSite=None;Secure',
-    transport_url: proxyBase,
+    transport_url: origin,
   })
 
   // Set persistent user properties
