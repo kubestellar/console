@@ -54,7 +54,8 @@ jobs:
         continue-on-error: true
         run: |
           CGO_ENABLED=1 nilaway -include-pkgs="github.com/kubestellar/console" ./... 2>&1 | \
-            sed 's/\x1b\[[0-9;]*m//g' | tee /tmp/nilaway-output.txt
+            sed 's/\x1b\[[0-9;]*m//g' | \
+            sed "s|${PWD}/||g" | tee /tmp/nilaway-output.txt
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Filter against baseline
@@ -92,7 +93,7 @@ jobs:
               f.write('\n'.join(new_findings) + '\n' if new_findings else '')
           PYEOF
 
-          NEW_COUNT=$(grep -c ': error: ' "$NEW" 2>/dev/null || echo "0")
+          NEW_COUNT=$(grep -c ': error: ' "$NEW" 2>/dev/null) || NEW_COUNT=0
           echo "new_count=$NEW_COUNT" >> "$GITHUB_OUTPUT"
 
           if [ "$NEW_COUNT" -gt 0 ]; then
@@ -142,7 +143,8 @@ jobs:
         continue-on-error: true
         run: |
           CGO_ENABLED=1 nilaway -include-pkgs="github.com/kubestellar/console" ./... 2>&1 | \
-            sed 's/\x1b\[[0-9;]*m//g' | tee /tmp/nilaway-full.txt
+            sed 's/\x1b\[[0-9;]*m//g' | \
+            sed "s|${PWD}/||g" | tee /tmp/nilaway-full.txt
 
           TOTAL=$(grep -c ': error: ' /tmp/nilaway-full.txt 2>/dev/null || echo "0")
           echo "total=$TOTAL" >> "$GITHUB_OUTPUT"

@@ -1,2 +1,31 @@
-# Total unique findings: 0
-[]
+[
+  "pkg/agent/config.go:128:25",
+  "pkg/agent/registry.go:169:27",
+  "pkg/agent/server.go:1824:15",
+  "pkg/api/handlers/benchmarks.go:839:55",
+  "pkg/api/handlers/mcs_test.go:181:2",
+  "pkg/api/handlers/mcs_test.go:205:2",
+  "pkg/api/handlers/mcs_test.go:217:2",
+  "pkg/api/handlers/workloads_test.go:163:2",
+  "pkg/api/handlers/workloads_test.go:233:2",
+  "pkg/api/handlers/workloads_test.go:275:2",
+  "pkg/api/handlers/workloads_test.go:302:2",
+  "pkg/api/handlers/workloads_test.go:373:2",
+  "pkg/api/handlers/workloads_test.go:428:2",
+  "pkg/k8s/client.go:101:2",
+  "pkg/k8s/client.go:111:2",
+  "pkg/k8s/client.go:74:2",
+  "pkg/k8s/client.go:84:2",
+  "pkg/k8s/client.go:91:2",
+  "pkg/k8s/rbac_extra_test.go:311:5",
+  "pkg/k8s/rbac_extra_test.go:367:5",
+  "pkg/k8s/rbac_extra_test.go:384:5",
+  "pkg/k8s/rbac_extra_test.go:521:5",
+  "pkg/settings/manager.go:114:2",
+  "pkg/settings/manager.go:143:25",
+  "pkg/settings/manager.go:198:29",
+  "pkg/settings/manager.go:334:28",
+  "pkg/settings/manager.go:368:9",
+  "pkg/settings/manager.go:375:2",
+  "pkg/settings/manager.go:382:2"
+]

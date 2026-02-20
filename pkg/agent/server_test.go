@@ -2962,7 +2962,7 @@ func TestCheckPingHealth_AllScenarios(t *testing.T) {
 
 func TestServer_HandleLocalClusterTools_GET(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(),
+		localClusters:  NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -2978,7 +2978,7 @@ func TestServer_HandleLocalClusterTools_GET(t *testing.T) {
 
 func TestServer_HandleLocalClusters_GET(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(),
+		localClusters:  NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -2994,7 +2994,7 @@ func TestServer_HandleLocalClusters_GET(t *testing.T) {
 
 func TestServer_HandleLocalClusters_WrongMethod(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(),
+		localClusters:  NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -3009,7 +3009,7 @@ func TestServer_HandleLocalClusters_WrongMethod(t *testing.T) {
 
 func TestServer_HandleLocalClusterTools_WrongMethod(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(),
+		localClusters:  NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 

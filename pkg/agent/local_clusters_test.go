@@ -40,7 +40,7 @@ func TestLocalClusterManager(t *testing.T) {
 		return exec.Command("echo", "ok")
 	}
 
-	m := NewLocalClusterManager()
+	m := NewLocalClusterManager(nil)
 
 	// 2. Test DetectTools
 	tools := m.DetectTools()
