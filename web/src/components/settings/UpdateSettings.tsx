@@ -21,13 +21,28 @@ import {
   Shield,
   HardDrive,
   GitCommitHorizontal,
+  Github,
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { checkOAuthConfigured } from '../../lib/api'
+import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import type { UpdateChannel } from '../../types/updates'
 
 /** Minimum spin duration to guarantee one full rotation (matches cards) */
 const MIN_SPIN_DURATION = 1000
+
+/** Scroll to a settings section by ID (mirrors Settings.tsx logic) */
+function scrollToSettingsSection(sectionId: string) {
+  const element = document.getElementById(sectionId)
+  const container = document.getElementById('main-content')
+  if (!element || !container) return
+  const containerRect = container.getBoundingClientRect()
+  const elementRect = element.getBoundingClientRect()
+  const y = elementRect.top - containerRect.top + container.scrollTop - 16
+  container.scrollTo({ top: y, behavior: 'smooth' })
+  element.classList.add('ring-2', 'ring-purple-500/50')
+  setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+}
 
 export function UpdateSettings() {
   const { t } = useTranslation()
@@ -84,6 +99,7 @@ export function UpdateSettings() {
   const [oauthConfigured, setOauthConfigured] = useState<boolean | null>(null)
   const [triggerState, setTriggerState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [triggerError, setTriggerError] = useState<string | null>(null)
+  const hasGithubToken = Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN))
 
   // Track visual spinning for Check Now button (ensures 1 full rotation like cards)
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
@@ -251,6 +267,8 @@ export function UpdateSettings() {
               label={t('settings.updates.prereqKCAgent')}
               okText={t('settings.updates.prereqKCAgentOk')}
               failText={t('settings.updates.prereqKCAgentFail')}
+              fixText={t('settings.updates.prereqKCAgentFix')}
+              onFix={() => scrollToSettingsSection('agent-settings')}
               icon={<Terminal className="w-3.5 h-3.5" />}
             />
             <PrereqRow
@@ -258,6 +276,8 @@ export function UpdateSettings() {
               label={t('settings.updates.prereqCodingAgent')}
               okText={t('settings.updates.prereqCodingAgentOk')}
               failText={t('settings.updates.prereqCodingAgentFail')}
+              fixText={t('settings.updates.prereqCodingAgentFix')}
+              onFix={() => scrollToSettingsSection('agent-settings')}
               icon={<Bot className="w-3.5 h-3.5" />}
             />
             <PrereqRow
@@ -267,6 +287,15 @@ export function UpdateSettings() {
               okText={t('settings.updates.prereqOAuthOk')}
               failText={t('settings.updates.prereqOAuthFail')}
               icon={<Shield className="w-3.5 h-3.5" />}
+            />
+            <PrereqRow
+              ok={hasGithubToken}
+              label={t('settings.updates.prereqGithubToken')}
+              okText={t('settings.updates.prereqGithubTokenOk')}
+              failText={t('settings.updates.prereqGithubTokenFail')}
+              fixText={t('settings.updates.prereqGithubTokenFix')}
+              onFix={() => scrollToSettingsSection('github-token-settings')}
+              icon={<Github className="w-3.5 h-3.5" />}
             />
             <PrereqRow
               ok={installMethod === 'dev'}
@@ -291,6 +320,7 @@ export function UpdateSettings() {
               agentConnected,
               hasCodingAgent,
               oauthConfigured === true,
+              hasGithubToken,
               installMethod === 'dev',
             ]
             if (autoUpdateStatus?.hasUncommittedChanges !== undefined) {
@@ -692,6 +722,8 @@ function PrereqRow({
   label,
   okText,
   failText,
+  fixText,
+  onFix,
   icon,
 }: {
   ok: boolean
@@ -699,6 +731,8 @@ function PrereqRow({
   label: string
   okText: string
   failText: string
+  fixText?: string
+  onFix?: () => void
   icon: React.ReactNode
 }) {
   return (
@@ -719,6 +753,14 @@ function PrereqRow({
           <>
             <X className="w-3.5 h-3.5 text-red-400" />
             <span className="text-xs text-red-400">{failText}</span>
+            {fixText && onFix && (
+              <button
+                onClick={onFix}
+                className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 ml-1"
+              >
+                {fixText}
+              </button>
+            )}
           </>
         )}
       </div>
