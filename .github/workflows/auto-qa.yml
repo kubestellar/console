@@ -3117,6 +3117,7 @@ jobs:
             "auto-qa:aria-gaps:A855F7:ARIA label and role gaps"
             "auto-qa:modal-safety:F44336:Modal patterns that risk data loss"
             "auto-qa:event-parity:607D8B:onClick without keyboard equivalent"
+            "auto-qa:nil-safety:E53935:Nil pointer safety issues detected by nilaway"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"

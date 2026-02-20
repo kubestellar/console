@@ -1,0 +1,289 @@
+name: Nil Safety
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.nilaway-baseline.json'
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_issue_creation:
+        description: 'Skip creating issues (dry run)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  GO_VERSION: "1.24"
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  # ── PR Check: Block new nil-safety violations ──────────────────────
+  pr-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install nilaway
+        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+
+      - name: Install build dependencies
+        run: sudo apt-get install -y -qq gcc musl-tools > /dev/null 2>&1
+
+      - name: Run nilaway
+        id: nilaway
+        continue-on-error: true
+        run: |
+          CGO_ENABLED=1 nilaway -include-pkgs="github.com/kubestellar/console" ./... 2>&1 | \
+            sed 's/\x1b\[[0-9;]*m//g' | tee /tmp/nilaway-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Filter against baseline
+        id: filter
+        run: |
+          BASELINE=".nilaway-baseline.json"
+          RAW="/tmp/nilaway-output.txt"
+          NEW="/tmp/nilaway-new.txt"
+
+          python3 - "$RAW" "$BASELINE" "$NEW" << 'PYEOF'
+          import json, sys, re, os
+
+          raw_file, baseline_file, output_file = sys.argv[1], sys.argv[2], sys.argv[3]
+
+          # Load baseline (file:line:col entries)
+          baseline = set()
+          if os.path.exists(baseline_file):
+              with open(baseline_file) as f:
+                  baseline = set(json.load(f))
+
+          new_findings = []
+          with open(raw_file) as f:
+              for line in f:
+                  line = line.strip()
+                  if not line or ': error: ' not in line:
+                      continue
+                  # Extract file:line:col from "path/file.go:LINE:COL: error: ..."
+                  m = re.match(r'^(.+?:\d+:\d+): error: (.+)', line)
+                  if m:
+                      loc = m.group(1)
+                      if loc not in baseline:
+                          new_findings.append(line)
+
+          with open(output_file, 'w') as f:
+              f.write('\n'.join(new_findings) + '\n' if new_findings else '')
+          PYEOF
+
+          NEW_COUNT=$(grep -c ': error: ' "$NEW" 2>/dev/null || echo "0")
+          echo "new_count=$NEW_COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$NEW_COUNT" -gt 0 ]; then
+            echo "### Nil Safety: $NEW_COUNT new finding(s)" >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            head -50 "$NEW" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Nil Safety: No new findings" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail on new findings
+        if: steps.filter.outputs.new_count != '0'
+        run: |
+          echo "::error::nilaway found ${{ steps.filter.outputs.new_count }} new nil-safety violation(s). See job summary for details."
+          echo ""
+          cat /tmp/nilaway-new.txt
+          echo ""
+          echo "To fix: add nil checks before dereferencing pointers. Run locally with:"
+          echo "  go install go.uber.org/nilaway/cmd/nilaway@latest"
+          echo "  CGO_ENABLED=1 nilaway ./..."
+          exit 1
+
+  # ── Nightly: Full scan with issue creation ─────────────────────────
+  nightly-scan:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install nilaway
+        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+
+      - name: Install build dependencies
+        run: sudo apt-get install -y -qq gcc musl-tools > /dev/null 2>&1
+
+      - name: Run full nilaway scan
+        id: scan
+        continue-on-error: true
+        run: |
+          CGO_ENABLED=1 nilaway -include-pkgs="github.com/kubestellar/console" ./... 2>&1 | \
+            sed 's/\x1b\[[0-9;]*m//g' | tee /tmp/nilaway-full.txt
+
+          TOTAL=$(grep -c ': error: ' /tmp/nilaway-full.txt 2>/dev/null || echo "0")
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+
+          # Group findings by file for issue body
+          python3 - /tmp/nilaway-full.txt /tmp/nilaway-grouped.md << 'PYEOF'
+          import sys, re
+          from collections import defaultdict
+
+          findings = defaultdict(list)
+          with open(sys.argv[1]) as f:
+              for line in f:
+                  line = line.strip()
+                  if not line or ': error: ' not in line:
+                      continue
+                  m = re.match(r'^(.+?):(\d+):\d+: error: (.+)', line)
+                  if m:
+                      file_path = m.group(1)
+                      line_no = m.group(2)
+                      message = m.group(3).split('. Observed')[0]
+                      findings[file_path].append(f"  - Line {line_no}: {message}")
+                  else:
+                      findings["(unknown)"].append(f"  - {line}")
+
+          with open(sys.argv[2], 'w') as f:
+              for fp in sorted(findings.keys()):
+                  f.write(f"**`{fp}`**\n")
+                  for item in findings[fp]:
+                      f.write(f"{item}\n")
+                  f.write("\n")
+          PYEOF
+
+          echo "### Nil Safety Nightly: $TOTAL finding(s)" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/nilaway-grouped.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ensure labels exist
+        if: steps.scan.outputs.total != '0'
+        env:
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
+        run: |
+          gh label create "auto-qa:nil-safety" \
+            --repo "${{ github.repository }}" \
+            --color "E53935" \
+            --description "Nil pointer safety issues detected by nilaway" \
+            2>/dev/null || true
+
+      - name: Create issues for findings
+        if: steps.scan.outputs.total != '0' && inputs.skip_issue_creation != true
+        uses: actions/github-script@v7
+        env:
+          TOTAL_FINDINGS: ${{ steps.scan.outputs.total }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO }}
+          script: |
+            const fs = require('fs');
+            const sha = process.env.COMMIT_SHA.substring(0, 7);
+            const runUrl = process.env.RUN_URL;
+            const total = process.env.TOTAL_FINDINGS;
+            const now = new Date().toISOString().split('T')[0];
+
+            const grouped = fs.readFileSync('/tmp/nilaway-grouped.md', 'utf8');
+
+            // Check for existing nil-safety issues (open + recently closed)
+            const [{ data: openIssues }, { data: closedIssues }] = await Promise.all([
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'auto-qa:nil-safety',
+                per_page: 100,
+              }),
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'closed',
+                labels: 'auto-qa:nil-safety',
+                per_page: 50,
+                sort: 'updated',
+                direction: 'desc',
+              }),
+            ]);
+
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const recentlyClosed = closedIssues.filter(i => new Date(i.closed_at) > sevenDaysAgo);
+
+            // Normalize title for dedup: strip numbers
+            const normalize = (t) => t.replace(/\[Auto-QA\]\s*/, '').replace(/\d+/g, 'N').toLowerCase().trim();
+
+            const title = `[Auto-QA] Go nil-safety: ${total} potential nil pointer issues`;
+            const pattern = normalize(title);
+            const existing = [...openIssues, ...recentlyClosed];
+            const duplicate = existing.find(i => normalize(i.title) === pattern);
+
+            if (duplicate) {
+              const status = duplicate.state === 'open' ? 'still open' : `closed ${new Date(duplicate.closed_at).toLocaleDateString()}`;
+              core.info(`Skipping duplicate: "${title}" matches #${duplicate.number} (${status})`);
+              return;
+            }
+
+            const body = [
+              `## Auto-QA [Nil Safety]: Go nil pointer analysis`,
+              '',
+              `**Detected:** ${now} | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
+              `**Tool:** [nilaway](https://github.com/uber-go/nilaway) | **Total findings:** ${total}`,
+              '',
+              '### Findings by File',
+              '',
+              grouped,
+              '',
+              '### How to Fix',
+              '- Add nil checks before dereferencing pointers returned from functions',
+              '- Guard map lookups with comma-ok pattern: `val, ok := m[key]`',
+              '- Check interface values for nil before calling methods',
+              '- Use early returns after error checks instead of continuing with potentially nil values',
+              '- Run `go install go.uber.org/nilaway/cmd/nilaway@latest && nilaway ./...` locally to verify fixes',
+              '',
+              '---',
+              `*This issue was automatically created by the [nil-safety workflow](${runUrl}).*`,
+              '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
+            ].join('\n');
+
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nil-safety'],
+            });
+
+            core.info(`Created issue #${issue.number}: ${title}`);
+
+            // Auto-assign Copilot
+            try {
+              await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: ['copilot-swe-agent[bot]'],
+              });
+              core.info(`Assigned Copilot to #${issue.number}`);
+            } catch (e) {
+              core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
+            }
