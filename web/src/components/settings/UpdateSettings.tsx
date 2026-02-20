@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Download,
@@ -17,9 +17,17 @@ import {
   Loader2,
   GitPullRequestArrow,
   Bot,
+  X,
+  Shield,
+  HardDrive,
+  GitCommitHorizontal,
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
+import { checkOAuthConfigured } from '../../lib/api'
 import type { UpdateChannel } from '../../types/updates'
+
+/** Minimum spin duration to guarantee one full rotation (matches cards) */
+const MIN_SPIN_DURATION = 1000
 
 export function UpdateSettings() {
   const { t } = useTranslation()
@@ -72,11 +80,43 @@ export function UpdateSettings() {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
+  const [oauthConfigured, setOauthConfigured] = useState<boolean | null>(null)
+
+  // Track visual spinning for Check Now button (ensures 1 full rotation like cards)
+  const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
+  const spinStartRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (isChecking) {
+      setIsVisuallySpinning(true)
+      spinStartRef.current = Date.now()
+    } else if (spinStartRef.current !== null) {
+      const elapsed = Date.now() - spinStartRef.current
+      const remaining = Math.max(0, MIN_SPIN_DURATION - elapsed)
+      if (remaining > 0) {
+        const timeout = setTimeout(() => {
+          setIsVisuallySpinning(false)
+          spinStartRef.current = null
+        }, remaining)
+        return () => clearTimeout(timeout)
+      } else {
+        setIsVisuallySpinning(false)
+        spinStartRef.current = null
+      }
+    }
+  }, [isChecking])
 
   // Check for updates on mount
   useEffect(() => {
     forceCheck()
   }, [forceCheck])
+
+  // Fetch OAuth status on mount
+  useEffect(() => {
+    checkOAuthConfigured().then(({ oauthConfigured: configured }) => {
+      setOauthConfigured(configured)
+    })
+  }, [])
 
   const copyCommand = async (command: string, id: string) => {
     await navigator.clipboard.writeText(command)
@@ -135,10 +175,10 @@ export function UpdateSettings() {
           )}
           <button
             onClick={forceCheck}
-            disabled={isChecking}
+            disabled={isChecking || isVisuallySpinning}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isVisuallySpinning ? 'animate-spin-min text-blue-400' : ''}`} />
             {t('settings.updates.checkNow')}
           </button>
         </div>
@@ -195,6 +235,75 @@ export function UpdateSettings() {
           )}
         </div>
       </div>
+
+      {/* Environment Prerequisites — always visible on developer channel */}
+      {isDeveloperChannel && (
+        <div className="mb-4 p-4 rounded-lg bg-secondary/30 border border-border">
+          <h3 className="text-sm font-medium text-foreground mb-3">
+            {t('settings.updates.environment')}
+          </h3>
+          <div className="space-y-2">
+            <PrereqRow
+              ok={agentConnected}
+              label={t('settings.updates.prereqKCAgent')}
+              okText={t('settings.updates.prereqKCAgentOk')}
+              failText={t('settings.updates.prereqKCAgentFail')}
+              icon={<Terminal className="w-3.5 h-3.5" />}
+            />
+            <PrereqRow
+              ok={hasCodingAgent}
+              label={t('settings.updates.prereqCodingAgent')}
+              okText={t('settings.updates.prereqCodingAgentOk')}
+              failText={t('settings.updates.prereqCodingAgentFail')}
+              icon={<Bot className="w-3.5 h-3.5" />}
+            />
+            <PrereqRow
+              ok={oauthConfigured === true}
+              loading={oauthConfigured === null}
+              label={t('settings.updates.prereqOAuth')}
+              okText={t('settings.updates.prereqOAuthOk')}
+              failText={t('settings.updates.prereqOAuthFail')}
+              icon={<Shield className="w-3.5 h-3.5" />}
+            />
+            <PrereqRow
+              ok={installMethod === 'dev'}
+              label={t('settings.updates.prereqInstall')}
+              okText={t('settings.updates.prereqInstallOk')}
+              failText={t('settings.updates.prereqInstallFail')}
+              icon={<HardDrive className="w-3.5 h-3.5" />}
+            />
+            {autoUpdateStatus?.hasUncommittedChanges !== undefined && (
+              <PrereqRow
+                ok={!autoUpdateStatus.hasUncommittedChanges}
+                label={t('settings.updates.prereqGitClean')}
+                okText={t('settings.updates.prereqGitCleanOk')}
+                failText={t('settings.updates.prereqGitCleanFail')}
+                icon={<GitCommitHorizontal className="w-3.5 h-3.5" />}
+              />
+            )}
+          </div>
+          {/* Summary line */}
+          {(() => {
+            const checks = [
+              agentConnected,
+              hasCodingAgent,
+              oauthConfigured === true,
+              installMethod === 'dev',
+            ]
+            if (autoUpdateStatus?.hasUncommittedChanges !== undefined) {
+              checks.push(!autoUpdateStatus.hasUncommittedChanges)
+            }
+            const failCount = checks.filter((c) => !c).length
+            return (
+              <div className={`mt-3 pt-3 border-t border-border text-xs ${failCount === 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                {failCount === 0
+                  ? t('settings.updates.allPrereqsMet')
+                  : t('settings.updates.prereqsMissing', { count: failCount })}
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       {/* Auto-Update Toggle — requires kc-agent + coding agent (Claude Code, etc.) */}
       {!isHelmInstall && agentConnected && hasCodingAgent && (
@@ -543,6 +652,47 @@ export function UpdateSettings() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Single row in the environment prerequisites checklist */
+function PrereqRow({
+  ok,
+  loading,
+  label,
+  okText,
+  failText,
+  icon,
+}: {
+  ok: boolean
+  loading?: boolean
+  label: string
+  okText: string
+  failText: string
+  icon: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {loading ? (
+          <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin-min" />
+        ) : ok ? (
+          <>
+            <Check className="w-3.5 h-3.5 text-green-400" />
+            <span className="text-xs text-green-400">{okText}</span>
+          </>
+        ) : (
+          <>
+            <X className="w-3.5 h-3.5 text-red-400" />
+            <span className="text-xs text-red-400">{failText}</span>
+          </>
+        )}
+      </div>
     </div>
   )
 }
