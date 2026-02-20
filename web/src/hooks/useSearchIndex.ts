@@ -324,7 +324,7 @@ export function useSearchIndex(query: string) {
     const items: SearchItem[] = []
 
     // Clusters
-    for (const c of clusters) {
+    for (const c of (clusters || [])) {
       items.push({
         id: `cluster-${c.name}`,
         name: c.name,
@@ -337,7 +337,7 @@ export function useSearchIndex(query: string) {
     }
 
     // Deployments
-    for (const d of deployments) {
+    for (const d of (deployments || [])) {
       items.push({
         id: `deployment-${d.cluster}-${d.namespace}-${d.name}`,
         name: d.name,
@@ -350,7 +350,7 @@ export function useSearchIndex(query: string) {
     }
 
     // Pods
-    for (const p of pods) {
+    for (const p of (pods || [])) {
       items.push({
         id: `pod-${p.cluster}-${p.namespace}-${p.name}`,
         name: p.name,
@@ -362,7 +362,7 @@ export function useSearchIndex(query: string) {
     }
 
     // Services
-    for (const s of services) {
+    for (const s of (services || [])) {
       items.push({
         id: `service-${s.cluster}-${s.namespace}-${s.name}`,
         name: s.name,
@@ -375,9 +375,9 @@ export function useSearchIndex(query: string) {
 
     // Namespaces — derived from pods, deployments, and services
     const nsSet = new Set<string>()
-    for (const d of deployments) if (d.namespace) nsSet.add(d.namespace)
-    for (const p of pods) if (p.namespace) nsSet.add(p.namespace)
-    for (const s of services) if (s.namespace) nsSet.add(s.namespace)
+    for (const d of (deployments || [])) if (d.namespace) nsSet.add(d.namespace)
+    for (const p of (pods || [])) if (p.namespace) nsSet.add(p.namespace)
+    for (const s of (services || [])) if (s.namespace) nsSet.add(s.namespace)
     for (const ns of Array.from(nsSet).sort()) {
       items.push({
         id: `namespace-${ns}`,
@@ -389,19 +389,19 @@ export function useSearchIndex(query: string) {
     }
 
     // Nodes
-    for (const n of nodes) {
+    for (const n of (nodes || [])) {
       items.push({
         id: `node-${n.cluster}-${n.name}`,
         name: n.name,
-        description: `Compute · ${n.roles.join(', ') || 'worker'} · ${n.cluster}`,
+        description: `Compute · ${(n.roles || []).join(', ') || 'worker'} · ${n.cluster}`,
         category: 'node',
         href: `/compute?node=${encodeURIComponent(n.name)}`,
-        meta: [n.cluster, n.status, ...n.roles].filter(Boolean).join(' '),
+        meta: [n.cluster, n.status, ...(n.roles || [])].filter(Boolean).join(' '),
       })
     }
 
     // Helm releases
-    for (const h of releases) {
+    for (const h of (releases || [])) {
       items.push({
         id: `helm-${h.cluster}-${h.namespace}-${h.name}`,
         name: h.name,
@@ -414,7 +414,7 @@ export function useSearchIndex(query: string) {
     }
 
     // Missions
-    for (const m of missions) {
+    for (const m of (missions || [])) {
       items.push({
         id: `mission-${m.id}`,
         name: m.title,
@@ -427,7 +427,7 @@ export function useSearchIndex(query: string) {
     }
 
     // Custom dashboards
-    for (const d of dashboards) {
+    for (const d of (dashboards || [])) {
       if (d.is_default) continue
       items.push({
         id: `dashboard-${d.id}`,
