@@ -125,4 +125,33 @@ export const STATUS_TOOLTIPS: Record<string, string> = {
   unreachable: 'Resource or cluster is not responding',
 }
 
+// Helper to wrap technical abbreviations in a string with tooltip components
+export function wrapAbbreviations(text: string): ReactNode {
+  // Order matters - longer terms first to avoid partial matches
+  const abbreviations = [
+    'ConfigMaps', 'ConfigMap', 'CrashLoopBackOff', 'OOMKilled',
+    'RBAC', 'CRD', 'PVC', 'GPU', 'CPU', 'OLM', 'MCS', 'Secrets', 'Secret',
+  ]
+  const pattern = new RegExp(`\\b(${abbreviations.join('|')})\\b`, 'g')
+  const parts: ReactNode[] = []
+  let lastIndex = 0
+  for (const match of text.matchAll(pattern)) {
+    if (match.index !== undefined && match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index))
+    }
+    if (match.index !== undefined) {
+      parts.push(
+        <TechnicalAcronym key={`${match.index}-${match[0]}`} term={match[0]}>
+          {match[0]}
+        </TechnicalAcronym>
+      )
+      lastIndex = match.index + match[0].length
+    }
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+  return parts.length > 0 ? parts : text
+}
+
 export default TechnicalAcronym

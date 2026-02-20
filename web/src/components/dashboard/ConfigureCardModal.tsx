@@ -5,6 +5,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
+import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 
 interface Card {
   id: string
@@ -868,7 +869,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-foreground">{t(`cardConfig.behaviorLabels.${behavior.key}`, behavior.label)}</p>
-                      <p className="text-xs text-muted-foreground">{behavior.description}</p>
+                      <p className="text-xs text-muted-foreground">{wrapAbbreviations(behavior.description)}</p>
                     </div>
                   </div>
                 ))
