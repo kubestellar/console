@@ -8,6 +8,8 @@
  * GA4_REAL_MEASUREMENT_ID must be set as a Netlify environment variable.
  */
 
+import type { Config } from "@netlify/functions"
+
 const ALLOWED_HOSTS = new Set([
   "console.kubestellar.io",
   "localhost",
@@ -34,21 +36,22 @@ function isAllowedOrigin(req: Request): boolean {
 }
 
 export default async (req: Request) => {
-  const headers = {
+  const corsHeaders: Record<string, string> = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (!isAllowedOrigin(req)) {
-    return new Response("Forbidden", { status: 403, headers });
+    return new Response("Forbidden", { status: 403, headers: corsHeaders });
   }
 
-  const realMeasurementId = process.env.GA4_REAL_MEASUREMENT_ID;
+  // Netlify.env.get() is the V2 way; fall back to process.env for compatibility
+  const realMeasurementId = Netlify.env.get("GA4_REAL_MEASUREMENT_ID") || process.env.GA4_REAL_MEASUREMENT_ID;
   const url = new URL(req.url);
 
   // Rewrite tid from decoy → real Measurement ID
@@ -69,15 +72,22 @@ export default async (req: Request) => {
       body,
     });
 
-    const responseBody = await resp.text();
-    return new Response(responseBody, {
+    return new Response(await resp.text(), {
       status: resp.status,
       headers: {
-        ...headers,
+        ...corsHeaders,
         "Content-Type": resp.headers.get("content-type") || "text/plain",
       },
     });
-  } catch {
-    return new Response("Bad Gateway", { status: 502, headers });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: "proxy_error", message, targetUrl }), {
+      status: 502,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
+};
+
+export const config: Config = {
+  path: "/t/g/collect",
 };
