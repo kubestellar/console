@@ -23,8 +23,8 @@ interface LivePreviewPanelProps {
   width?: number
 }
 
-const DEBOUNCE_T1 = 300
-const DEBOUNCE_T2 = 800
+const DEBOUNCE_TIER1_MS = 300  // Debounce for Tier 1 (declarative) config changes
+const DEBOUNCE_TIER2_MS = 800  // Longer debounce for Tier 2 (code) changes to avoid excessive recompilation
 
 export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }: LivePreviewPanelProps) {
   const { t } = useTranslation()
@@ -112,7 +112,7 @@ function T1Preview({ config }: { config?: LivePreviewPanelProps['t1Config'] }) {
 
   useEffect(() => {
     clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setDebouncedConfig(config), DEBOUNCE_T1)
+    timerRef.current = setTimeout(() => setDebouncedConfig(config), DEBOUNCE_TIER1_MS)
     return () => clearTimeout(timerRef.current)
   }, [config])
 
@@ -166,7 +166,7 @@ function T2Preview({ source }: { source?: string }) {
   // Debounce source changes
   useEffect(() => {
     clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setDebouncedSource(source), DEBOUNCE_T2)
+    timerRef.current = setTimeout(() => setDebouncedSource(source), DEBOUNCE_TIER2_MS)
     return () => clearTimeout(timerRef.current)
   }, [source])
 
