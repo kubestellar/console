@@ -544,14 +544,14 @@ export function UpdateSettings() {
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-foreground">{t('settings.updates.howToUpdate')}</h3>
 
-          {/* Git Pull + Rebuild */}
+          {/* Step 1: Git Pull + Rebuild */}
           <div className="p-4 rounded-lg bg-secondary/30 border border-border">
             <div className="flex items-center gap-2 mb-2">
               <GitPullRequestArrow className="w-4 h-4 text-orange-400" />
-              <span className="text-sm font-medium text-foreground">{t('settings.updates.devSourceUpdate')}</span>
+              <span className="text-sm font-medium text-foreground">{t('settings.updates.devStep1')}</span>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              {t('settings.updates.devSourceDesc')}
+              {t('settings.updates.devStep1Desc')}
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">git pull origin main && cd web && npm run build && cd .. && go build -o $(which kc-agent) ./cmd/kc-agent && go build -o $(which console) ./cmd/console</code>
@@ -561,6 +561,27 @@ export function UpdateSettings() {
               >
                 <Copy className="w-4 h-4" />
                 {copiedCommand === 'gitpull' ? t('settings.updates.copied') : t('settings.updates.copy')}
+              </button>
+            </div>
+          </div>
+
+          {/* Step 2: Restart */}
+          <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <RefreshCw className="w-4 h-4 text-green-400" />
+              <span className="text-sm font-medium text-foreground">{t('settings.updates.devStep2')}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              {t('settings.updates.devStep2Desc')}
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">bash startup-oauth.sh</code>
+              <button
+                onClick={() => copyCommand('bash startup-oauth.sh', 'restart')}
+                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600"
+              >
+                <Copy className="w-4 h-4" />
+                {copiedCommand === 'restart' ? t('settings.updates.copied') : t('settings.updates.copy')}
               </button>
             </div>
           </div>

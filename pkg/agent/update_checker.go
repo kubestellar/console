@@ -264,7 +264,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "pulling",
 		Message:  fmt.Sprintf("Pulling %s from main...", short(newSHA)),
-		Progress: 20,
+		Progress: 10,
 	})
 
 	if err := runGitPull(repoPath); err != nil {
@@ -280,7 +280,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "building",
 		Message:  "Installing dependencies and building frontend...",
-		Progress: 50,
+		Progress: 30,
 	})
 
 	if err := rebuildFrontend(repoPath); err != nil {
@@ -297,32 +297,29 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	}
 
 	uc.broadcast("update_progress", UpdateProgressPayload{
-		Status:   "restarting",
-		Message:  "Restarting backend...",
-		Progress: 80,
+		Status:   "building",
+		Message:  "Building Go binaries...",
+		Progress: 60,
 	})
 
-	uc.killBackend()
-	if err := uc.restartBackend(); err != nil {
-		uc.recordError(fmt.Sprintf("restart failed: %v", err))
+	if err := rebuildGoBinaries(repoPath); err != nil {
+		uc.recordError(fmt.Sprintf("go build failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
-			Message: "Backend restart failed",
+			Message: "Go build failed, rolling back...",
 			Error:   err.Error(),
 		})
+		rollbackGit(repoPath, previousSHA)
+		rebuildFrontend(repoPath)   //nolint:errcheck
+		rebuildGoBinaries(repoPath) //nolint:errcheck
 		return
 	}
 
-	// Wait for backend health
-	if !waitForBackendHealth() {
-		uc.recordError("backend not healthy after restart")
-		uc.broadcast("update_progress", UpdateProgressPayload{
-			Status:  "failed",
-			Message: "Backend not healthy after update",
-			Error:   "Health check timed out",
-		})
-		return
-	}
+	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:   "restarting",
+		Message:  "Restarting via startup-oauth.sh...",
+		Progress: 80,
+	})
 
 	uc.mu.Lock()
 	uc.currentSHA = newSHA
@@ -330,47 +327,64 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	log.Printf("[AutoUpdate] Successfully updated to %s", short(newSHA))
-	uc.broadcast("update_progress", UpdateProgressPayload{
-		Status:   "done",
-		Message:  fmt.Sprintf("Updated to %s", short(newSHA)),
-		Progress: 100,
-	})
+	log.Printf("[AutoUpdate] Build complete for %s, restarting via startup-oauth.sh...", short(newSHA))
 
-	// Self-update: rebuild kc-agent and exec into the new binary
-	uc.selfUpdate(repoPath)
+	// Spawn startup-oauth.sh as a detached process and exit.
+	// The script handles port cleanup, env loading, and starting all processes
+	// (kc-agent, backend, frontend). This process will be replaced.
+	uc.restartViaStartupScript(repoPath)
 }
 
-// selfUpdate rebuilds the kc-agent binary and replaces the running process via exec.
-// This is called after a successful developer update — the new code is already on disk.
-// If anything fails, the old process keeps running (no harm done).
-func (uc *UpdateChecker) selfUpdate(repoPath string) {
+// restartViaStartupScript spawns startup-oauth.sh as a detached process.
+// startup-oauth.sh handles killing existing processes (including this one),
+// port cleanup, .env loading, and starting kc-agent, backend, and frontend.
+// After spawning, this process exits so the script can replace it.
+func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
+	scriptPath := repoPath + "/startup-oauth.sh"
+	if _, err := os.Stat(scriptPath); err != nil {
+		log.Printf("[AutoUpdate] startup-oauth.sh not found at %s, falling back to exec", scriptPath)
+		uc.selfUpdateFallback(repoPath)
+		return
+	}
+
+	// Spawn the script in a new process group so it survives our exit
+	cmd := exec.Command("bash", scriptPath)
+	cmd.Dir = repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	if err := cmd.Start(); err != nil {
+		log.Printf("[AutoUpdate] Failed to spawn startup-oauth.sh: %v", err)
+		uc.selfUpdateFallback(repoPath)
+		return
+	}
+
+	log.Printf("[AutoUpdate] startup-oauth.sh spawned (pid %d), exiting for restart...", cmd.Process.Pid)
+
+	// Give the script a moment to start before we exit
+	time.Sleep(1 * time.Second)
+
+	// Exit this process — startup-oauth.sh will start fresh instances
+	os.Exit(0)
+}
+
+// selfUpdateFallback rebuilds the kc-agent binary and replaces the running
+// process via exec. Used as fallback when startup-oauth.sh is not available.
+func (uc *UpdateChecker) selfUpdateFallback(repoPath string) {
 	currentBinary, err := os.Executable()
 	if err != nil {
 		log.Printf("[AutoUpdate] Cannot determine kc-agent binary path: %v", err)
 		return
 	}
 
-	log.Printf("[AutoUpdate] Rebuilding kc-agent...")
-	tmpBinary := currentBinary + ".new"
+	log.Printf("[AutoUpdate] Falling back to self-update via exec...")
 
-	build := exec.Command("go", "build", "-o", tmpBinary, "./cmd/kc-agent")
-	build.Dir = repoPath
-	build.Env = append(os.Environ(), "GOWORK=off")
-	if out, err := build.CombinedOutput(); err != nil {
-		log.Printf("[AutoUpdate] kc-agent rebuild failed: %v\n%s", err, out)
-		os.Remove(tmpBinary)
-		return
+	// Kill and restart backend using the pre-built binary
+	uc.killBackend()
+	if err := uc.restartBackend(); err != nil {
+		log.Printf("[AutoUpdate] Backend restart failed: %v", err)
 	}
-
-	// Atomic replace: rename new over old
-	if err := os.Rename(tmpBinary, currentBinary); err != nil {
-		log.Printf("[AutoUpdate] Failed to replace kc-agent binary: %v", err)
-		os.Remove(tmpBinary)
-		return
-	}
-
-	log.Printf("[AutoUpdate] kc-agent rebuilt, exec-ing into new binary...")
 
 	// Re-exec with the same args — replaces this process atomically
 	if err := syscall.Exec(currentBinary, os.Args, os.Environ()); err != nil {
@@ -556,7 +570,7 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "pulling",
 		Message:  fmt.Sprintf("Checking out %s...", release.TagName),
-		Progress: 20,
+		Progress: 10,
 	})
 
 	// Fetch and checkout the release tag
@@ -577,7 +591,7 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "building",
 		Message:  "Building frontend...",
-		Progress: 50,
+		Progress: 30,
 	})
 
 	if err := rebuildFrontend(repoPath); err != nil {
@@ -586,27 +600,30 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	}
 
 	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:   "building",
+		Message:  "Building Go binaries...",
+		Progress: 60,
+	})
+
+	if err := rebuildGoBinaries(repoPath); err != nil {
+		uc.recordError(fmt.Sprintf("go build failed: %v", err))
+		return
+	}
+
+	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "restarting",
-		Message:  "Restarting backend...",
+		Message:  "Restarting via startup-oauth.sh...",
 		Progress: 80,
 	})
 
-	uc.killBackend()
-	uc.restartBackend() //nolint:errcheck
+	uc.mu.Lock()
+	uc.currentVersion = release.TagName
+	uc.lastUpdateTime = time.Now()
+	uc.lastUpdateError = ""
+	uc.mu.Unlock()
 
-	if waitForBackendHealth() {
-		uc.mu.Lock()
-		uc.currentVersion = release.TagName
-		uc.lastUpdateTime = time.Now()
-		uc.lastUpdateError = ""
-		uc.mu.Unlock()
-
-		uc.broadcast("update_progress", UpdateProgressPayload{
-			Status:   "done",
-			Message:  fmt.Sprintf("Updated to %s", release.TagName),
-			Progress: 100,
-		})
-	}
+	log.Printf("[AutoUpdate] Build complete for %s, restarting via startup-oauth.sh...", release.TagName)
+	uc.restartViaStartupScript(repoPath)
 }
 
 func (uc *UpdateChecker) recordError(msg string) {
@@ -741,6 +758,38 @@ func rebuildFrontend(repoPath string) error {
 	npmBuild.Stderr = os.Stderr
 	if err := npmBuild.Run(); err != nil {
 		return fmt.Errorf("npm run build: %w", err)
+	}
+
+	return nil
+}
+
+func rebuildGoBinaries(repoPath string) error {
+	// Build console binary
+	consolePath, err := exec.LookPath("console")
+	if err != nil {
+		consolePath = "./console"
+	}
+	consoleBuild := exec.Command("go", "build", "-o", consolePath, "./cmd/console")
+	consoleBuild.Dir = repoPath
+	consoleBuild.Env = append(os.Environ(), "GOWORK=off")
+	consoleBuild.Stdout = os.Stdout
+	consoleBuild.Stderr = os.Stderr
+	if err := consoleBuild.Run(); err != nil {
+		return fmt.Errorf("go build console: %w", err)
+	}
+
+	// Build kc-agent binary
+	agentPath, err := exec.LookPath("kc-agent")
+	if err != nil {
+		agentPath = "./kc-agent"
+	}
+	agentBuild := exec.Command("go", "build", "-o", agentPath, "./cmd/kc-agent")
+	agentBuild.Dir = repoPath
+	agentBuild.Env = append(os.Environ(), "GOWORK=off")
+	agentBuild.Stdout = os.Stdout
+	agentBuild.Stderr = os.Stderr
+	if err := agentBuild.Run(); err != nil {
+		return fmt.Errorf("go build kc-agent: %w", err)
 	}
 
 	return nil
