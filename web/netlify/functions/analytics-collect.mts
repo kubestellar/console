@@ -72,11 +72,14 @@ export default async (req: Request) => {
       body,
     });
 
-    return new Response(await resp.text(), {
+    // 204/304 are null-body statuses — Response constructor throws if body is non-null
+    const isNullBody = resp.status === 204 || resp.status === 304;
+    const responseBody = isNullBody ? null : await resp.text();
+    return new Response(responseBody, {
       status: resp.status,
       headers: {
         ...corsHeaders,
-        "Content-Type": resp.headers.get("content-type") || "text/plain",
+        ...(!isNullBody && { "Content-Type": resp.headers.get("content-type") || "text/plain" }),
       },
     });
   } catch (err) {
