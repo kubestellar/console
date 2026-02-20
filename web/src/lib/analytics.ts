@@ -84,6 +84,31 @@ export function initAnalytics() {
   })
 }
 
+// ── Anonymous User ID ──────────────────────────────────────────────
+// Creates a SHA-256 hash of the user's numeric ID with a fixed salt.
+// The result is deterministic (same user → same hash across deployments)
+// but irreversible — no PII is stored or sent to GA4.
+
+async function hashUserId(userId: string): Promise<string> {
+  const data = new TextEncoder().encode(`ksc-analytics:${userId}`)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+export async function setAnalyticsUserId(userId: string) {
+  if (!userId || userId === 'demo-user') return
+  const anonId = await hashUserId(userId)
+  gtag('config', (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID, {
+    user_id: anonId,
+  })
+}
+
+export function setAnalyticsUserProperties(props: Record<string, string>) {
+  gtag('set', 'user_properties', props)
+}
+
 // ── Opt-out management ─────────────────────────────────────────────
 
 export function setAnalyticsOptOut(optOut: boolean) {
