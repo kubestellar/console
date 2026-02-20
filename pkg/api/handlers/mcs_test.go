@@ -182,6 +182,7 @@ func TestCreateServiceExport(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 201, resp.StatusCode)
 
 	// Verify creation via actions
@@ -205,6 +206,7 @@ func TestCreateServiceExport(t *testing.T) {
 
 	respInvalid, err := env.App.Test(reqInvalid, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, respInvalid)
 	assert.Equal(t, 400, respInvalid.StatusCode)
 
 	// Case 3: Client Error → 500
@@ -216,6 +218,7 @@ func TestCreateServiceExport(t *testing.T) {
 
 	respFail, err := env.App.Test(reqFail)
 	require.NoError(t, err)
+	require.NotNil(t, respFail)
 	assert.Equal(t, 500, respFail.StatusCode)
 }
 

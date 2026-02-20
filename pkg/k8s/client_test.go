@@ -69,7 +69,7 @@ func TestMultiClusterClient_ListClusters(t *testing.T) {
 	}
 
 	if len(clusters) != 2 {
-		t.Errorf("Got %d clusters, want 2", len(clusters))
+		t.Fatalf("Got %d clusters, want 2", len(clusters))
 	}
 
 	// Validate sorting and content
@@ -109,7 +109,7 @@ func TestMultiClusterClient_DeduplicatedClusters(t *testing.T) {
 	}
 
 	if len(clusters) != 2 {
-		t.Errorf("Expected 2 unique clusters, got %d", len(clusters))
+		t.Fatalf("Expected 2 unique clusters, got %d", len(clusters))
 	}
 
 	// Verify that the short name was picked for the duplicate server

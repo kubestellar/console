@@ -60,13 +60,16 @@ func TestConsoleResources(t *testing.T) {
 	}
 
 	getMW, err := cp.GetManagedWorkload(ctx, ns, "mw1")
-	if err != nil || getMW.Name != "mw1" {
-		t.Errorf("GetManagedWorkload failed: %v", err)
+	if err != nil {
+		t.Fatalf("GetManagedWorkload failed: %v", err)
+	}
+	if getMW == nil || getMW.Name != "mw1" {
+		t.Errorf("GetManagedWorkload returned unexpected result: %v", getMW)
 	}
 
 	getMW.Labels = map[string]string{"foo": "bar"}
 	updatedMW, err := cp.UpdateManagedWorkload(ctx, getMW)
-	if err != nil || updatedMW.Labels["foo"] != "bar" {
+	if err != nil || updatedMW == nil || updatedMW.Labels["foo"] != "bar" {
 		t.Errorf("UpdateManagedWorkload failed: %v", err)
 	}
 
@@ -83,7 +86,10 @@ func TestConsoleResources(t *testing.T) {
 	}
 
 	// Update Status
-	respWD, _ := cp.GetWorkloadDeployment(ctx, ns, "wd1")
+	respWD, err := cp.GetWorkloadDeployment(ctx, ns, "wd1")
+	if err != nil || respWD == nil {
+		t.Fatalf("GetWorkloadDeployment failed: %v", err)
+	}
 	respWD.Status.Phase = "Deployed"
 	_, err = cp.UpdateWorkloadDeploymentStatus(ctx, respWD)
 	if err != nil {

@@ -832,8 +832,11 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
+		var bodyStr string
+		if body, err := io.ReadAll(resp.Body); err == nil {
+			bodyStr = string(body)
+		}
+		return nil, fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, bodyStr)
 	}
 
 	var result driveFileList

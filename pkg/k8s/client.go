@@ -68,6 +68,9 @@ func (m *MultiClusterClient) IsInCluster() bool {
 func (m *MultiClusterClient) SetDynamicClient(cluster string, client dynamic.Interface) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.dynamicClients == nil {
+		m.dynamicClients = make(map[string]dynamic.Interface)
+	}
 	m.dynamicClients[cluster] = client
 }
 
@@ -75,6 +78,9 @@ func (m *MultiClusterClient) SetDynamicClient(cluster string, client dynamic.Int
 func (m *MultiClusterClient) SetClient(cluster string, client kubernetes.Interface) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.clients == nil {
+		m.clients = make(map[string]kubernetes.Interface)
+	}
 	m.clients[cluster] = client
 }
 
@@ -89,6 +95,9 @@ func (m *MultiClusterClient) SetRawConfig(config *api.Config) {
 func (m *MultiClusterClient) InjectClient(contextName string, client kubernetes.Interface) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.clients == nil {
+		m.clients = make(map[string]kubernetes.Interface)
+	}
 	m.clients[contextName] = client
 }
 
@@ -96,6 +105,9 @@ func (m *MultiClusterClient) InjectClient(contextName string, client kubernetes.
 func (m *MultiClusterClient) InjectDynamicClient(contextName string, client dynamic.Interface) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.dynamicClients == nil {
+		m.dynamicClients = make(map[string]dynamic.Interface)
+	}
 	m.dynamicClients[contextName] = client
 }
 
@@ -1267,7 +1279,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		health.ErrorType = classifyError(errMsg)
 		health.ErrorMessage = errMsg
 		health.Issues = append(health.Issues, fmt.Sprintf("Failed to list nodes: %v", nodesErr))
-	} else {
+	} else if nodes != nil {
 		health.NodeCount = len(nodes.Items)
 		var totalCPU int64
 		var totalMemory int64
@@ -1301,7 +1313,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	}
 
 	// Process pods - non-fatal, fall back to cached values on timeout
-	if podsErr == nil {
+	if podsErr == nil && pods != nil {
 		health.PodCount = len(pods.Items)
 		var totalCPURequests int64
 		var totalMemoryRequests int64
@@ -1334,7 +1346,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	}
 
 	// Process PVCs - non-fatal, fall back to cached values on timeout
-	if pvcsErr == nil {
+	if pvcsErr == nil && pvcs != nil {
 		health.PVCCount = len(pvcs.Items)
 		for _, pvc := range pvcs.Items {
 			if pvc.Status.Phase == corev1.ClaimBound {

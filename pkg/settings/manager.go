@@ -124,6 +124,9 @@ func (sm *SettingsManager) Save() error {
 }
 
 func (sm *SettingsManager) saveLocked() error {
+	if sm.settings == nil {
+		sm.settings = DefaultSettings()
+	}
 	sm.settings.LastModified = time.Now().UTC().Format(time.RFC3339)
 	sm.settings.KeyFingerprint = keyFingerprint(sm.key)
 
@@ -148,6 +151,10 @@ func (sm *SettingsManager) saveLocked() error {
 func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
+
+	if sm.settings == nil {
+		return DefaultAllSettings(), nil
+	}
 
 	all := &AllSettings{
 		AIMode:        sm.settings.Settings.AIMode,
@@ -209,6 +216,10 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
+	if sm.settings == nil {
+		sm.settings = DefaultSettings()
+	}
+
 	// Update plaintext settings
 	sm.settings.Settings.AIMode = all.AIMode
 	sm.settings.Settings.Predictions = all.Predictions
@@ -269,6 +280,10 @@ func (sm *SettingsManager) MigrateFromConfigYaml(cp ConfigProvider) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
+	if sm.settings == nil {
+		sm.settings = DefaultSettings()
+	}
+
 	// Skip if already have encrypted API keys
 	if sm.settings.Encrypted.APIKeys != nil {
 		return nil
@@ -313,6 +328,9 @@ func (sm *SettingsManager) ExportEncrypted() ([]byte, error) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
+	if sm.settings == nil {
+		return json.MarshalIndent(DefaultSettings(), "", "  ")
+	}
 	return json.MarshalIndent(sm.settings, "", "  ")
 }
 
@@ -326,6 +344,10 @@ func (sm *SettingsManager) ImportEncrypted(data []byte) error {
 
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
+
+	if sm.settings == nil {
+		sm.settings = DefaultSettings()
+	}
 
 	// Import plaintext settings
 	sm.settings.Settings = imported.Settings

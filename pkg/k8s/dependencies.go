@@ -370,6 +370,11 @@ func (m *MultiClusterClient) ResolveDependencies(
 				fmt.Sprintf("%s %s not found on source cluster %s", dep.Kind, dep.Name, sourceCluster))
 			continue
 		}
+		if obj == nil {
+			bundle.Warnings = append(bundle.Warnings,
+				fmt.Sprintf("%s %s returned nil object from source cluster %s", dep.Kind, dep.Name, sourceCluster))
+			continue
+		}
 
 		// Clean the manifest for cross-cluster deploy
 		dep.Object = cleanManifestForDeploy(obj, opts)

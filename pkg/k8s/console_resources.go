@@ -99,6 +99,9 @@ func (c *consolePersistenceImpl) UpdateManagedWorkload(ctx context.Context, mw *
 	if err != nil {
 		return nil, fmt.Errorf("failed to update ManagedWorkload: %w", err)
 	}
+	if updated == nil {
+		return nil, fmt.Errorf("update ManagedWorkload returned nil object")
+	}
 	return v1alpha1.ManagedWorkloadFromUnstructured(updated)
 }
 
@@ -238,6 +241,9 @@ func (c *consolePersistenceImpl) UpdateWorkloadDeploymentStatus(ctx context.Cont
 	updated, err := c.client.Resource(v1alpha1.WorkloadDeploymentGVR).Namespace(wd.Namespace).UpdateStatus(ctx, u, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update WorkloadDeployment status: %w", err)
+	}
+	if updated == nil {
+		return nil, fmt.Errorf("update WorkloadDeployment status returned nil object")
 	}
 	return v1alpha1.WorkloadDeploymentFromUnstructured(updated)
 }

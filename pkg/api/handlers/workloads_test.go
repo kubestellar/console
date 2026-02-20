@@ -106,6 +106,7 @@ func TestGetWorkload(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/workloads/test-cluster/default/my-app", nil)
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	var workload map[string]interface{}
@@ -115,7 +116,10 @@ func TestGetWorkload(t *testing.T) {
 
 	// 2. Not Found
 	reqNotFound, _ := http.NewRequest("GET", "/api/workloads/test-cluster/default/missing", nil)
-	respNotFound, _ := env.App.Test(reqNotFound, 5000)
+	respNotFound, errNotFound := env.App.Test(reqNotFound, 5000)
+	if errNotFound != nil || respNotFound == nil {
+		t.Fatalf("app.Test failed: %v", errNotFound)
+	}
 	assert.Equal(t, 404, respNotFound.StatusCode)
 }
 
@@ -160,6 +164,7 @@ func TestDeployWorkload(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Deploy returned %d: %s", resp.StatusCode, string(body))
@@ -229,6 +234,7 @@ func TestScaleWorkload(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	var result map[string]interface{}
@@ -245,6 +251,7 @@ func TestDeleteWorkload(t *testing.T) {
 	resp, err := env.App.Test(req, 5000)
 
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 }
 
@@ -269,11 +276,13 @@ func TestClusterGroupsCRUD(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 201, resp.StatusCode)
 
 	req, _ = http.NewRequest("GET", "/api/cluster-groups", nil)
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	var listResp map[string][]map[string]interface{}
@@ -294,15 +303,19 @@ func TestClusterGroupsCRUD(t *testing.T) {
 
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	req, _ = http.NewRequest("DELETE", "/api/cluster-groups/group1", nil)
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	req, _ = http.NewRequest("GET", "/api/cluster-groups", nil)
-	resp, _ = env.App.Test(req)
+	resp, err = env.App.Test(req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
 	var listRespEmpty map[string][]interface{}
 	bodyEmpty, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(bodyEmpty, &listRespEmpty)
@@ -361,6 +374,7 @@ func TestEvaluateClusterQuery(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	var result map[string]interface{}
@@ -415,6 +429,7 @@ func TestGenerateClusterQuery(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	var result map[string]interface{}

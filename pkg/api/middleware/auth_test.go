@@ -96,7 +96,10 @@ func TestGetContextHelpers(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/me", nil)
-	resp, _ := app.Test(req, 5000)
+	resp, err := app.Test(req, 5000)
+	if err != nil || resp == nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
 	assert.Equal(t, 200, resp.StatusCode)
 
 	// Validate body content

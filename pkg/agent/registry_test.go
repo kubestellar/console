@@ -122,7 +122,7 @@ func TestInitializeProviders(t *testing.T) {
 	// Verify claude is registered and available
 	p, err := r.Get("claude")
 	if err != nil {
-		t.Errorf("Claude provider not registered: %v", err)
+		t.Fatalf("Claude provider not registered: %v", err)
 	}
 	if !p.IsAvailable() {
 		t.Error("Claude provider should be available via env")

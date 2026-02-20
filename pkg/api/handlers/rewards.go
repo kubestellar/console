@@ -255,12 +255,12 @@ func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchIte
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			return allItems, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body[:min(len(body), 200)]))
-		}
-
 		if err != nil {
 			return allItems, fmt.Errorf("read body: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return allItems, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body[:min(len(body), 200)]))
 		}
 
 		var sr searchResponse

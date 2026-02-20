@@ -196,7 +196,10 @@ func TestGitHubCallback_MissingCode(t *testing.T) {
 	app.Get("/auth/callback", handler.GitHubCallback)
 
 	req, _ := http.NewRequest("GET", "/auth/callback", nil)
-	resp, _ := app.Test(req, 5000)
+	resp, err := app.Test(req, 5000)
+	if err != nil || resp == nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
 
 	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
 	loc, _ := resp.Location()
@@ -209,7 +212,10 @@ func TestGitHubCallback_InvalidState(t *testing.T) {
 
 	// Provide code but no state
 	req, _ := http.NewRequest("GET", "/auth/callback?code=123", nil)
-	resp, _ := app.Test(req, 5000)
+	resp, err := app.Test(req, 5000)
+	if err != nil || resp == nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
 
 	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
 	loc, _ := resp.Location()

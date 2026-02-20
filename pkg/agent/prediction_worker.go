@@ -546,6 +546,9 @@ func (w *PredictionWorker) analyzeWithProvider(ctx context.Context, provider AIP
 	if err != nil {
 		return nil, err
 	}
+	if resp == nil {
+		return nil, fmt.Errorf("provider %s returned nil response", provider.Name())
+	}
 
 	// Track token usage for navbar counter
 	if w.trackTokens != nil && resp.TokenUsage != nil {

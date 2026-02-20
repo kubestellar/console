@@ -124,8 +124,10 @@ func (cm *ConfigManager) GetAPIKey(provider string) string {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
-	if agentConfig, ok := cm.config.Agents[provider]; ok {
-		return agentConfig.APIKey
+	if cm.config != nil {
+		if agentConfig, ok := cm.config.Agents[provider]; ok {
+			return agentConfig.APIKey
+		}
 	}
 	return ""
 }
@@ -142,8 +144,10 @@ func (cm *ConfigManager) GetModel(provider, defaultModel string) string {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
-	if agentConfig, ok := cm.config.Agents[provider]; ok && agentConfig.Model != "" {
-		return agentConfig.Model
+	if cm.config != nil {
+		if agentConfig, ok := cm.config.Agents[provider]; ok && agentConfig.Model != "" {
+			return agentConfig.Model
+		}
 	}
 	return defaultModel
 }
