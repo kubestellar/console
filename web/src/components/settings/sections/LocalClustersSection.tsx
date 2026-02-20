@@ -1,8 +1,88 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Container, RefreshCw, Plus, Trash2, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { Container, RefreshCw, Plus, Trash2, Check, AlertCircle, AlertTriangle, Loader2, X } from 'lucide-react'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
+import { CLUSTER_PROGRESS_AUTO_DISMISS_MS } from '../../../hooks/useClusterProgress'
+import type { ClusterProgress } from '../../../hooks/useClusterProgress'
 
+// ------------------------------------------------------------------
+// ClusterProgressBanner — inline progress feedback for create/delete
+// Modeled on UpdateProgressBanner (same visual language).
+// ------------------------------------------------------------------
+function ClusterProgressBanner({
+  progress,
+  onDismiss,
+}: {
+  progress: ClusterProgress | null
+  onDismiss: () => void
+}) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (progress) {
+      setVisible(true)
+    }
+  }, [progress])
+
+  // Auto-dismiss after success
+  useEffect(() => {
+    if (progress?.status === 'done') {
+      const timer = setTimeout(() => {
+        setVisible(false)
+        onDismiss()
+      }, CLUSTER_PROGRESS_AUTO_DISMISS_MS)
+      return () => clearTimeout(timer)
+    }
+  }, [progress?.status, onDismiss])
+
+  if (!visible || !progress) return null
+
+  const isActive = !['done', 'failed'].includes(progress.status)
+  const isDone = progress.status === 'done'
+  const isFailed = progress.status === 'failed'
+
+  return (
+    <div
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm mb-4 ${
+        isDone
+          ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+          : isFailed
+            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+      }`}
+    >
+      {isActive && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+      {isDone && <Check className="w-4 h-4 shrink-0" />}
+      {isFailed && <AlertTriangle className="w-4 h-4 shrink-0" />}
+
+      <span className="flex-1">{progress.message}</span>
+
+      {isActive && (
+        <div className="w-24 bg-secondary rounded-full h-1.5 shrink-0">
+          <div
+            className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+            style={{ width: `${progress.progress}%` }}
+          />
+        </div>
+      )}
+
+      <button
+        onClick={() => {
+          setVisible(false)
+          onDismiss()
+        }}
+        className="p-1 hover:bg-secondary/50 rounded shrink-0"
+        aria-label="Dismiss"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------
+// LocalClustersSection
+// ------------------------------------------------------------------
 export function LocalClustersSection() {
   const { t } = useTranslation()
   const {
@@ -14,6 +94,8 @@ export function LocalClustersSection() {
     error,
     isConnected,
     isDemoMode,
+    clusterProgress,
+    dismissProgress,
     createCluster,
     deleteCluster,
     refresh,
@@ -21,21 +103,15 @@ export function LocalClustersSection() {
 
   const [selectedTool, setSelectedTool] = useState<string>('')
   const [clusterName, setClusterName] = useState('')
-  const [createMessage, setCreateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const handleCreate = async () => {
     if (!selectedTool || !clusterName.trim()) return
 
-    setCreateMessage(null)
     const result = await createCluster(selectedTool, clusterName.trim())
 
     if (result.status === 'creating') {
-      setCreateMessage({ type: 'success', text: result.message })
       setClusterName('')
-      // Refresh after a delay to pick up the new cluster
-      setTimeout(() => refresh(), 5000)
-    } else {
-      setCreateMessage({ type: 'error', text: result.message })
+      // Real-time progress is now handled by ClusterProgressBanner via WebSocket
     }
   }
 
@@ -208,20 +284,13 @@ export function LocalClustersSection() {
                 )}
               </button>
             </div>
-            {createMessage && (
-              <div className={`mt-3 p-2 rounded text-sm ${
-                createMessage.type === 'success'
-                  ? 'bg-green-500/10 text-green-400'
-                  : 'bg-red-500/10 text-red-400'
-              }`}>
-                {createMessage.type === 'success' ? (
-                  <Check className="w-4 h-4 inline mr-1" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 inline mr-1" />
-                )}
-                {createMessage.text}
-              </div>
-            )}
+            {/* Real-time progress banner (replaces static createMessage) */}
+            <div className="mt-3">
+              <ClusterProgressBanner
+                progress={clusterProgress}
+                onDismiss={dismissProgress}
+              />
+            </div>
           </div>
 
           {/* Existing Clusters */}

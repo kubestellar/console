@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { useDemoMode } from './useDemoMode'
+import { useClusterProgress } from './useClusterProgress'
 
 export interface LocalClusterTool {
   name: 'kind' | 'k3d' | 'minikube'
@@ -44,6 +45,9 @@ export function useLocalClusterTools() {
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null) // cluster name being deleted
+
+  // Real-time progress from kc-agent WebSocket
+  const { progress: clusterProgress, dismiss: dismissProgress } = useClusterProgress()
 
   // Fetch detected tools
   const fetchTools = useCallback(async () => {
@@ -212,6 +216,13 @@ export function useLocalClusterTools() {
     }
   }, [isConnected, isDemoMode, fetchTools, fetchClusters])
 
+  // Auto-refresh cluster list when a create/delete operation completes
+  useEffect(() => {
+    if (clusterProgress?.status === 'done') {
+      fetchClusters()
+    }
+  }, [clusterProgress?.status, fetchClusters])
+
   // Get only installed tools
   const installedTools = tools.filter(t => t.installed)
 
@@ -225,6 +236,8 @@ export function useLocalClusterTools() {
     error,
     isConnected,
     isDemoMode,
+    clusterProgress,
+    dismissProgress,
     createCluster,
     deleteCluster,
     refresh,

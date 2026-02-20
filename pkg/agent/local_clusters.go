@@ -8,6 +8,15 @@ import (
 	"strings"
 )
 
+// Progress percentage constants for cluster creation/deletion phases
+const (
+	progressValidating = 10  // Pre-flight checks (Docker daemon, tool availability)
+	progressCreating   = 30  // Cluster creation command dispatched
+	progressDeleting   = 30  // Cluster deletion command dispatched
+	progressDone       = 100 // Operation completed successfully
+	progressFailed     = 0   // Operation failed
+)
+
 var (
 	// execCommand is already declared in kubectl.go
 	lookPath = exec.LookPath
@@ -29,11 +38,38 @@ type LocalCluster struct {
 }
 
 // LocalClusterManager handles local cluster operations
-type LocalClusterManager struct{}
+type LocalClusterManager struct {
+	broadcast func(msgType string, payload interface{})
+}
 
-// NewLocalClusterManager creates a new manager
-func NewLocalClusterManager() *LocalClusterManager {
-	return &LocalClusterManager{}
+// NewLocalClusterManager creates a new manager with an optional broadcast callback
+// for sending real-time progress updates to connected WebSocket clients.
+func NewLocalClusterManager(broadcast func(string, interface{})) *LocalClusterManager {
+	return &LocalClusterManager{broadcast: broadcast}
+}
+
+// broadcastProgress sends a progress update to all connected clients
+func (m *LocalClusterManager) broadcastProgress(tool, name, status, message string, progress int) {
+	if m.broadcast != nil {
+		m.broadcast("local_cluster_progress", map[string]interface{}{
+			"tool":     tool,
+			"name":     name,
+			"status":   status,
+			"message":  message,
+			"progress": progress,
+		})
+	}
+}
+
+// checkDockerRunning verifies the Docker daemon is reachable (required by kind/k3d)
+func (m *LocalClusterManager) checkDockerRunning() error {
+	cmd := execCommand("docker", "info")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("Docker is not running. Start Docker Desktop or Rancher Desktop first. (%s)", strings.TrimSpace(stderr.String()))
+	}
+	return nil
 }
 
 // DetectTools returns all detected local cluster tools
@@ -236,8 +272,21 @@ func (m *LocalClusterManager) listMinikubeClusters() []LocalCluster {
 	return clusters
 }
 
-// CreateCluster creates a new local cluster
+// CreateCluster creates a new local cluster with phased progress broadcasting
 func (m *LocalClusterManager) CreateCluster(tool, name string) error {
+	// Phase 1: Validating prerequisites
+	m.broadcastProgress(tool, name, "validating", "Checking prerequisites...", progressValidating)
+
+	// Docker pre-flight check for tools that require it
+	if tool == "kind" || tool == "k3d" {
+		if err := m.checkDockerRunning(); err != nil {
+			return err
+		}
+	}
+
+	// Phase 2: Creating the cluster
+	m.broadcastProgress(tool, name, "creating", fmt.Sprintf("Creating %s cluster '%s'...", tool, name), progressCreating)
+
 	switch tool {
 	case "kind":
 		return m.createKindCluster(name)
@@ -280,8 +329,14 @@ func (m *LocalClusterManager) createMinikubeCluster(name string) error {
 	return nil
 }
 
-// DeleteCluster deletes a local cluster
+// DeleteCluster deletes a local cluster with phased progress broadcasting
 func (m *LocalClusterManager) DeleteCluster(tool, name string) error {
+	// Phase 1: Validating
+	m.broadcastProgress(tool, name, "validating", fmt.Sprintf("Preparing to delete cluster '%s'...", name), progressValidating)
+
+	// Phase 2: Deleting
+	m.broadcastProgress(tool, name, "deleting", fmt.Sprintf("Deleting %s cluster '%s'...", tool, name), progressDeleting)
+
 	switch tool {
 	case "kind":
 		return m.deleteKindCluster(name)

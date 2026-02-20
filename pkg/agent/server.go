@@ -161,8 +161,8 @@ func NewServer(cfg Config) (*Server, error) {
 	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
 	server.metricsHistory = NewMetricsHistory(k8sClient, "")
 
-	// Initialize local cluster manager
-	server.localClusters = NewLocalClusterManager()
+	// Initialize local cluster manager with broadcast callback for progress updates
+	server.localClusters = NewLocalClusterManager(server.BroadcastToClients)
 
 	// Initialize auto-update checker
 	server.updateChecker = NewUpdateChecker(UpdateCheckerConfig{
@@ -3225,6 +3225,14 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
 				log.Printf("[LocalClusters] Failed to create cluster %s with %s: %v", req.Name, req.Tool, err)
+				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+					"tool":     req.Tool,
+					"name":     req.Name,
+					"status":   "failed",
+					"message":  err.Error(),
+					"progress": 0,
+				})
+				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_error", map[string]string{
 					"tool":  req.Tool,
 					"name":  req.Name,
@@ -3232,6 +3240,14 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 				})
 			} else {
 				log.Printf("[LocalClusters] Created cluster %s with %s", req.Name, req.Tool)
+				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+					"tool":     req.Tool,
+					"name":     req.Name,
+					"status":   "done",
+					"message":  fmt.Sprintf("Cluster '%s' created successfully", req.Name),
+					"progress": 100,
+				})
+				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_created", map[string]string{
 					"tool": req.Tool,
 					"name": req.Name,
@@ -3260,6 +3276,14 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
 				log.Printf("[LocalClusters] Failed to delete cluster %s: %v", name, err)
+				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+					"tool":     tool,
+					"name":     name,
+					"status":   "failed",
+					"message":  err.Error(),
+					"progress": 0,
+				})
+				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_error", map[string]string{
 					"tool":  tool,
 					"name":  name,
@@ -3267,6 +3291,14 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 				})
 			} else {
 				log.Printf("[LocalClusters] Deleted cluster %s", name)
+				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+					"tool":     tool,
+					"name":     name,
+					"status":   "done",
+					"message":  fmt.Sprintf("Cluster '%s' deleted successfully", name),
+					"progress": 100,
+				})
+				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_deleted", map[string]string{
 					"tool": tool,
 					"name": name,
