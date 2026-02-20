@@ -314,7 +314,7 @@ export function Layout({ children }: LayoutProps) {
         <div
           style={{ top: demoBannerTop }}
           className={cn(
-            "fixed right-0 z-30 bg-yellow-500/10 border-b border-yellow-500/20 transition-[left] duration-300",
+            "fixed right-0 z-30 bg-background border-b border-yellow-500/20 transition-[left] duration-300",
             // Mobile: full width
             isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
           )}>
@@ -351,7 +351,7 @@ export function Layout({ children }: LayoutProps) {
         <div
           style={{ top: offlineBannerTop }}
           className={cn(
-            "fixed z-20 bg-orange-500/10 border-b border-orange-500/20 transition-[right] duration-300",
+            "fixed z-20 bg-background border-b border-orange-500/20 transition-[right] duration-300",
             // Mobile: full width
             isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
           // Adjust right edge when mission sidebar is open (desktop only)
