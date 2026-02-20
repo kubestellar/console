@@ -8,7 +8,7 @@ import { ROUTES } from '../../../config/routes'
 export function UpdateIndicator() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { hasUpdate, latestRelease, channel, autoUpdateStatus, skipVersion, checkForUpdates } = useVersionCheck()
+  const { hasUpdate, latestRelease, channel, autoUpdateStatus, latestMainSHA, skipVersion, checkForUpdates } = useVersionCheck()
   const [showUpdateDropdown, setShowUpdateDropdown] = useState(false)
   const updateRef = useRef<HTMLDivElement>(null)
 
@@ -32,10 +32,11 @@ export function UpdateIndicator() {
     return null
   }
 
-  // Developer channel: latestRelease is null, use SHA from autoUpdateStatus
-  const isDeveloperUpdate = channel === 'developer' && autoUpdateStatus?.hasUpdate
+  // Developer channel: latestRelease is null, use SHA from autoUpdateStatus or client-side check
+  const isDeveloperUpdate = channel === 'developer' && hasUpdate
+  const devSHA = autoUpdateStatus?.latestSHA ?? latestMainSHA
   const updateLabel = isDeveloperUpdate
-    ? `New commit: ${autoUpdateStatus?.latestSHA?.slice(0, 7) ?? 'unknown'}`
+    ? `New commit: ${devSHA?.slice(0, 7) ?? 'unknown'}`
     : latestRelease?.tag ?? ''
 
   // Need either a release update or a developer channel update

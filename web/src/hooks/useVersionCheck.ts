@@ -18,8 +18,11 @@ declare const __COMMIT_HASH__: string
 
 const GITHUB_API_URL =
   'https://api.github.com/repos/kubestellar/console/releases'
+const GITHUB_MAIN_SHA_URL =
+  'https://api.github.com/repos/kubestellar/console/git/ref/heads/main'
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes cache
 const MIN_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes minimum between checks
+const DEV_SHA_CACHE_KEY = 'kc-dev-latest-sha'
 
 /**
  * Parse a release tag to determine its type and extract date.
@@ -259,6 +262,8 @@ export function useVersionCheck() {
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null)
   const [agentConnected, setAgentConnected] = useState(false)
   const [agentSupportsAutoUpdate, setAgentSupportsAutoUpdate] = useState(false)
+  // Client-side SHA tracking for developer channel (fallback when kc-agent doesn't support auto-update)
+  const [latestMainSHA, setLatestMainSHA] = useState<string | null>(null)
 
   const currentVersion = useMemo(() => {
     try {
@@ -327,6 +332,42 @@ export function useVersionCheck() {
       // Agent not available
     }
   }, [agentSupportsAutoUpdate])
+
+  /**
+   * Fetch latest main branch SHA directly from GitHub API.
+   * Used as fallback when kc-agent doesn't support /auto-update/status.
+   */
+  const fetchLatestMainSHA = useCallback(async () => {
+    try {
+      const headers: HeadersInit = {
+        Accept: 'application/vnd.github.v3+json',
+      }
+      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
+      if (storedToken) {
+        try {
+          headers['Authorization'] = `Bearer ${atob(storedToken)}`
+        } catch {
+          headers['Authorization'] = `Bearer ${storedToken}`
+        }
+      }
+      const resp = await fetch(GITHUB_MAIN_SHA_URL, {
+        headers,
+        signal: AbortSignal.timeout(5000),
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        const sha = data?.object?.sha as string | undefined
+        if (sha) {
+          setLatestMainSHA(sha)
+          localStorage.setItem(DEV_SHA_CACHE_KEY, sha)
+        }
+      }
+    } catch {
+      // Load from cache as fallback
+      const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
+      if (cached) setLatestMainSHA(cached)
+    }
+  }, [])
 
   /**
    * Set update channel and persist to localStorage + kc-agent.
@@ -478,9 +519,13 @@ export function useVersionCheck() {
    * User must manually refresh for more frequent updates.
    */
   const checkForUpdates = useCallback(async (): Promise<void> => {
-    // For developer channel, just refresh status from agent
+    // For developer channel, try kc-agent first, fall back to direct GitHub API
     if (channel === 'developer') {
-      await fetchAutoUpdateStatus()
+      if (agentSupportsAutoUpdate) {
+        await fetchAutoUpdateStatus()
+      } else {
+        await fetchLatestMainSHA()
+      }
       return
     }
 
@@ -501,18 +546,22 @@ export function useVersionCheck() {
     }
 
     await fetchReleases()
-  }, [lastChecked, fetchReleases, channel, fetchAutoUpdateStatus])
+  }, [lastChecked, fetchReleases, channel, fetchAutoUpdateStatus, agentSupportsAutoUpdate, fetchLatestMainSHA])
 
   /**
    * Force a fresh check, bypassing cache.
    */
   const forceCheck = useCallback(async (): Promise<void> => {
     if (channel === 'developer') {
-      await fetchAutoUpdateStatus()
+      if (agentSupportsAutoUpdate) {
+        await fetchAutoUpdateStatus()
+      } else {
+        await fetchLatestMainSHA()
+      }
       return
     }
     await fetchReleases(true)
-  }, [fetchReleases, channel, fetchAutoUpdateStatus])
+  }, [fetchReleases, channel, fetchAutoUpdateStatus, agentSupportsAutoUpdate, fetchLatestMainSHA])
 
   /**
    * Skip a specific version (won't show update notification for it).
@@ -539,15 +588,22 @@ export function useVersionCheck() {
   }, [releases, channel])
 
   const hasUpdate = useMemo(() => {
-    // Developer channel: check SHA from agent status
-    if (channel === 'developer' && autoUpdateStatus) {
-      return autoUpdateStatus.hasUpdate
+    // Developer channel: check SHA from agent status or client-side comparison
+    if (channel === 'developer') {
+      if (autoUpdateStatus) {
+        return autoUpdateStatus.hasUpdate
+      }
+      // Client-side SHA comparison: compare build commit with latest main HEAD
+      if (latestMainSHA && commitHash && commitHash !== 'unknown') {
+        return !latestMainSHA.startsWith(commitHash) && !commitHash.startsWith(latestMainSHA)
+      }
+      return false
     }
 
     if (!latestRelease || currentVersion === 'unknown') return false
     if (skippedVersions.includes(latestRelease.tag)) return false
     return isNewerVersion(currentVersion, latestRelease.tag, channel)
-  }, [latestRelease, currentVersion, skippedVersions, channel, autoUpdateStatus])
+  }, [latestRelease, currentVersion, skippedVersions, channel, autoUpdateStatus, latestMainSHA, commitHash])
 
   // Load cached data on mount
   useEffect(() => {
@@ -569,6 +625,17 @@ export function useVersionCheck() {
     }
   }, [agentConnected, agentSupportsAutoUpdate, channel, fetchAutoUpdateStatus])
 
+  // For developer channel: fetch latest main SHA client-side (fallback when kc-agent doesn't support auto-update)
+  useEffect(() => {
+    if (channel === 'developer' && !agentSupportsAutoUpdate) {
+      // Load cached SHA immediately
+      const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
+      if (cached) setLatestMainSHA(cached)
+      // Then fetch fresh from GitHub
+      fetchLatestMainSHA()
+    }
+  }, [channel, agentSupportsAutoUpdate, fetchLatestMainSHA])
+
   return {
     // State
     currentVersion,
@@ -588,6 +655,7 @@ export function useVersionCheck() {
     autoUpdateStatus,
     updateProgress,
     agentConnected,
+    latestMainSHA,
 
     // Actions
     setChannel,
