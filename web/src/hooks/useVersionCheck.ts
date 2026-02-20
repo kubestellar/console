@@ -280,6 +280,7 @@ export function useVersionCheck() {
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null)
   const [agentConnected, setAgentConnected] = useState(false)
   const [agentSupportsAutoUpdate, setAgentSupportsAutoUpdate] = useState(false)
+  const [hasCodingAgent, setHasCodingAgent] = useState(false)
   // Client-side SHA tracking for developer channel (fallback when kc-agent doesn't support auto-update)
   const [latestMainSHA, setLatestMainSHA] = useState<string | null>(null)
 
@@ -313,6 +314,9 @@ export function useVersionCheck() {
         if (data.install_method) {
           setInstallMethod(data.install_method as InstallMethod)
           setAgentSupportsAutoUpdate(true)
+        }
+        if (data.hasClaude) {
+          setHasCodingAgent(true)
         }
       }
     } catch {
@@ -673,6 +677,7 @@ export function useVersionCheck() {
     autoUpdateStatus,
     updateProgress,
     agentConnected,
+    hasCodingAgent,
     latestMainSHA,
 
     // Actions

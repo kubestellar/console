@@ -39,6 +39,7 @@ export function UpdateSettings() {
     autoUpdateStatus,
     updateProgress,
     agentConnected,
+    hasCodingAgent,
     latestMainSHA,
     setAutoUpdateEnabled,
     triggerUpdate,
@@ -195,8 +196,8 @@ export function UpdateSettings() {
         </div>
       </div>
 
-      {/* Auto-Update Toggle */}
-      {!isHelmInstall && agentConnected && (
+      {/* Auto-Update Toggle — requires kc-agent + coding agent (Claude Code, etc.) */}
+      {!isHelmInstall && agentConnected && hasCodingAgent && (
         <div className="mb-4 p-4 rounded-lg bg-secondary/30 border border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -232,7 +232,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                       {__DEV_MODE__ ? 'dev' : 'prod'}
                     </span>
                     <span className="text-muted-foreground font-mono">
-                      v{__APP_VERSION__} · {__COMMIT_HASH__.substring(0, 7)}
+                      {__APP_VERSION__.startsWith('v') ? __APP_VERSION__ : `v${__APP_VERSION__}`} · {__COMMIT_HASH__.substring(0, 7)}
                     </span>
                   </div>
 
