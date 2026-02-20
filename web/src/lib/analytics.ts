@@ -5,10 +5,14 @@
  * Opt-out is checked before every gtag() call.
  * No PII is collected — only anonymous usage data.
  *
- * Requires VITE_GA_MEASUREMENT_ID env var to be set.
+ * Env var VITE_GA_MEASUREMENT_ID can override the default ID.
  */
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
+
+// GA4 Measurement ID — this is a public tracking identifier (not a secret).
+// It only allows sending data to the GA4 property, not reading it.
+const GA_MEASUREMENT_ID = 'G-K2STV9Q7S5'
 import { isDemoMode } from './demoMode'
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -52,9 +56,7 @@ function gtag(...args: any[]) {
 let initialized = false
 
 export function initAnalytics() {
-  const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID as
-    | string
-    | undefined
+  const measurementId = (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID
   if (!measurementId || initialized) return
   initialized = true
 
