@@ -42,11 +42,11 @@
   status = 200
   force = true
 
+# GA4 analytics proxy — event collection via Netlify Function (rewrites decoy tid → real)
 [[redirects]]
   from = "/t/g/collect"
-  to = "https://www.google-analytics.com/g/collect"
+  to = "/.netlify/functions/analytics-collect"
   status = 200
-  force = true
 
 # SPA routing - redirect all routes to index.html (only if file doesn't exist)
 [[redirects]]

@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { api, checkBackendAvailability, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
-import { trackLogin, trackLogout, setAnalyticsUserId, setAnalyticsUserProperties } from './analytics'
+import { trackLogin, trackLogout, setAnalyticsUserId, setAnalyticsUserProperties, trackConversionStep } from './analytics'
 
 interface User {
   id: string
@@ -163,10 +163,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (isDemoMode) {
       trackLogin('demo')
+      trackConversionStep(2, 'login', { method: 'demo' })
       setDemoMode()
       return
     }
     trackLogin('github-oauth')
+    trackConversionStep(2, 'login', { method: 'github-oauth' })
     window.location.href = '/auth/github'
   }, [])
 

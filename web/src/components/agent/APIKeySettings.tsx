@@ -5,6 +5,7 @@ import { AgentIcon } from './AgentIcon'
 import { BaseModal } from '../../lib/modals'
 import { KC_AGENT, AI_PROVIDER_DOCS } from '../../config/externalApis'
 import { useTranslation } from 'react-i18next'
+import { trackApiKeyConfigured, trackApiKeyRemoved, trackConversionStep } from '../../lib/analytics'
 
 const INSTALL_COMMAND = KC_AGENT.installCommand
 
@@ -117,6 +118,8 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       setNewKeyValue('')
       setShowKey(false)
       await fetchKeysStatus()
+      trackApiKeyConfigured(provider)
+      trackConversionStep(5, 'api_key', { provider })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('agent.failedToSaveKey'))
     } finally {
@@ -137,6 +140,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       }
 
       await fetchKeysStatus()
+      trackApiKeyRemoved(provider)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('agent.failedToDeleteKey'))
     } finally {

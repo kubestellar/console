@@ -5,14 +5,21 @@
  * Opt-out is checked before every gtag() call.
  * No PII is collected — only anonymous usage data.
  *
- * Env var VITE_GA_MEASUREMENT_ID can override the default ID.
+ * Anti-spam: The frontend uses a DECOY Measurement ID (visible in source).
+ * The first-party proxy at /t/g/collect rewrites it to the real ID server-side.
+ * Spammers who scrape the source send hits to a non-existent property.
+ *
+ * Ad-blocker bypass: All requests go through /t/g/* on the console's own domain
+ * instead of googletagmanager.com / google-analytics.com.
  */
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
 
-// GA4 Measurement ID — this is a public tracking identifier (not a secret).
-// It only allows sending data to the GA4 property, not reading it.
-const GA_MEASUREMENT_ID = 'G-QPGNKGNNY2'
+// DECOY Measurement ID — publicly visible in source code.
+// The first-party proxy rewrites this to the real GA4 Measurement ID server-side
+// (via GA4_REAL_MEASUREMENT_ID env var). Spammers who scrape this ID from the
+// source code will send traffic to a non-existent GA4 property.
+const GA_MEASUREMENT_ID = 'G-0000000000'
 import { isDemoMode } from './demoMode'
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -60,9 +67,14 @@ export function initAnalytics() {
   if (!measurementId || initialized) return
   initialized = true
 
-  // Inject gtag.js script
+  // First-party proxy base — bypasses ad blockers and enables tid rewriting.
+  // The proxy at /t/g/js serves gtag.js from our own domain.
+  // The proxy at /t/g/collect rewrites the decoy tid to the real one.
+  const proxyBase = `${window.location.origin}/t`
+
+  // Inject gtag.js script via first-party proxy
   const script = document.createElement('script')
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`
+  script.src = `${proxyBase}/g/js?id=${measurementId}`
   script.async = true
   document.head.appendChild(script)
 
@@ -75,14 +87,18 @@ export function initAnalytics() {
   gtag('config', measurementId, {
     send_page_view: false,
     cookie_flags: 'SameSite=None;Secure',
-    // transport_url: `${window.location.origin}/t`, // first-party proxy (disabled — needs validation)
+    transport_url: proxyBase,
   })
 
   // Set persistent user properties
+  const deploymentType = getDeploymentType()
   gtag('set', 'user_properties', {
-    deployment_type: getDeploymentType(),
+    deployment_type: deploymentType,
     demo_mode: String(isDemoMode()),
   })
+
+  // Fire discovery conversion step
+  trackConversionStep(1, 'discovery', { deployment_type: deploymentType })
 }
 
 // ── Anonymous User ID ──────────────────────────────────────────────
@@ -278,4 +294,48 @@ export function trackApiProviderConnected(provider: string) {
 export function trackDemoModeToggled(enabled: boolean) {
   gtag('event', 'ksc_demo_mode_toggled', { enabled: String(enabled) })
   gtag('set', 'user_properties', { demo_mode: String(enabled) })
+}
+
+// ── kc-agent Connection ─────────────────────────────────────────
+
+export function trackAgentConnected(version: string, clusterCount: number) {
+  gtag('event', 'ksc_agent_connected', {
+    agent_version: version,
+    cluster_count: clusterCount,
+  })
+}
+
+export function trackAgentDisconnected() {
+  gtag('event', 'ksc_agent_disconnected')
+}
+
+// ── API Key Configuration ───────────────────────────────────────
+
+export function trackApiKeyConfigured(provider: string) {
+  gtag('event', 'ksc_api_key_configured', { provider })
+}
+
+export function trackApiKeyRemoved(provider: string) {
+  gtag('event', 'ksc_api_key_removed', { provider })
+}
+
+// ── Conversion Funnel ───────────────────────────────────────────
+// Unified step-based funnel event for tracking user journey:
+//   1 = discovery     (visited site)
+//   2 = login         (authenticated via OAuth or demo)
+//   3 = agent         (kc-agent connected)
+//   4 = clusters      (real clusters detected)
+//   5 = api_key       (AI API key configured)
+//   6 = github_token  (GitHub token configured)
+
+export function trackConversionStep(
+  step: number,
+  stepName: string,
+  details?: Record<string, string>,
+) {
+  gtag('event', 'ksc_conversion_step', {
+    step_number: step,
+    step_name: stepName,
+    ...details,
+  })
 }

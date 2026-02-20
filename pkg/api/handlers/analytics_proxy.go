@@ -4,12 +4,22 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 var ga4Client = &http.Client{Timeout: 10 * time.Second}
+
+// allowedOrigins lists hostnames that may send analytics through the proxy.
+var allowedOrigins = map[string]bool{
+	"localhost":               true,
+	"127.0.0.1":              true,
+	"console.kubestellar.io": true,
+}
 
 // GA4ScriptProxy proxies the gtag.js script through the console's own domain
 // so that ad blockers do not block it.
@@ -30,15 +40,35 @@ func GA4ScriptProxy(c *fiber.Ctx) error {
 }
 
 // GA4CollectProxy proxies GA4 event collection requests through the console's
-// own domain so that ad blockers do not block them.
+// own domain. It performs two critical functions:
+//  1. Rewrites the `tid` (tracking ID) from the decoy Measurement ID to the
+//     real one (set via GA4_REAL_MEASUREMENT_ID env var)
+//  2. Validates the Origin/Referer header to reject requests from unknown hosts
 func GA4CollectProxy(c *fiber.Ctx) error {
-	target := "https://www.google-analytics.com/g/collect?" + string(c.Context().QueryArgs().QueryString())
+	if !isAllowedOrigin(c) {
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	// Rewrite the tid (Measurement ID) from decoy → real
+	realMeasurementID := os.Getenv("GA4_REAL_MEASUREMENT_ID")
+	qs := string(c.Context().QueryArgs().QueryString())
+
+	if realMeasurementID != "" {
+		params, err := url.ParseQuery(qs)
+		if err == nil && params.Get("tid") != "" {
+			params.Set("tid", realMeasurementID)
+			qs = params.Encode()
+		}
+	}
+
+	target := "https://www.google-analytics.com/g/collect?" + qs
 	req, err := http.NewRequest(c.Method(), target, bytes.NewReader(c.Body()))
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	req.Header.Set("Content-Type", c.Get("Content-Type", "text/plain"))
 	req.Header.Set("User-Agent", c.Get("User-Agent"))
+
 	resp, err := ga4Client.Do(req)
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
@@ -49,4 +79,39 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	return c.Status(resp.StatusCode).Send(body)
+}
+
+// isAllowedOrigin checks if the request comes from an allowed hostname.
+func isAllowedOrigin(c *fiber.Ctx) bool {
+	origin := c.Get("Origin")
+	if origin != "" {
+		if u, err := url.Parse(origin); err == nil {
+			host := stripPort(u.Hostname())
+			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") {
+				return true
+			}
+		}
+	}
+
+	referer := c.Get("Referer")
+	if referer != "" {
+		if u, err := url.Parse(referer); err == nil {
+			host := stripPort(u.Hostname())
+			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") {
+				return true
+			}
+		}
+	}
+
+	// Browsers always send Origin or Referer for XHR/fetch requests.
+	// Allow requests with neither header (e.g., server-to-server, curl).
+	return origin == "" && referer == ""
+}
+
+// stripPort removes the port from a hostname (e.g., "localhost:5174" → "localhost").
+func stripPort(host string) string {
+	if i := strings.LastIndex(host, ":"); i != -1 {
+		return host[:i]
+	}
+	return host
 }
