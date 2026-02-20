@@ -15,6 +15,8 @@ import {
   Zap,
   GitBranch,
   Loader2,
+  GitPullRequestArrow,
+  Bot,
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import type { UpdateChannel } from '../../types/updates'
@@ -37,6 +39,7 @@ export function UpdateSettings() {
     autoUpdateStatus,
     updateProgress,
     agentConnected,
+    latestMainSHA,
     setAutoUpdateEnabled,
     triggerUpdate,
   } = useVersionCheck()
@@ -321,18 +324,18 @@ export function UpdateSettings() {
           </div>
 
           {/* Developer channel: show SHA info */}
-          {isDeveloperChannel && autoUpdateStatus && (
+          {isDeveloperChannel && (autoUpdateStatus || latestMainSHA) && (
             <>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{t('settings.updates.currentSHA')}</span>
                 <span className="text-sm font-mono text-foreground">
-                  {shortSHA(autoUpdateStatus.currentSHA)}
+                  {shortSHA(autoUpdateStatus?.currentSHA ?? commitHash)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{t('settings.updates.latestSHA')}</span>
                 <span className="text-sm font-mono text-foreground">
-                  {autoUpdateStatus.latestSHA ? shortSHA(autoUpdateStatus.latestSHA) : '—'}
+                  {shortSHA(autoUpdateStatus?.latestSHA ?? latestMainSHA ?? '')}
                 </span>
               </div>
             </>
@@ -431,71 +434,115 @@ export function UpdateSettings() {
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-foreground">{t('settings.updates.howToUpdate')}</h3>
 
-          {/* Web Console */}
-          <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Globe className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium text-foreground">{t('settings.updates.webConsole')}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              {t('settings.updates.webConsoleDesc')}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600"
-            >
-              <RefreshCw className="w-4 h-4" />
-              {t('settings.updates.refreshBrowser')}
-            </button>
-          </div>
+          {/* Developer channel: source update instructions */}
+          {isDeveloperChannel && (
+            <>
+              {/* Git Pull + Rebuild */}
+              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <GitPullRequestArrow className="w-4 h-4 text-orange-400" />
+                  <span className="text-sm font-medium text-foreground">{t('settings.updates.devSourceUpdate')}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('settings.updates.devSourceDesc')}
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
+                    git pull origin main && cd web && npm run build
+                  </code>
+                  <button
+                    onClick={() => copyCommand('git pull origin main && cd web && npm run build', 'gitpull')}
+                    className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {copiedCommand === 'gitpull' ? t('settings.updates.copied') : t('settings.updates.copy')}
+                  </button>
+                </div>
+              </div>
 
-          {/* Local Agent */}
-          <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Terminal className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium text-foreground">{t('settings.updates.localAgentUpdate')}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              {t('settings.updates.localAgentDesc')}
-            </p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
-                {brewCommand}
-              </code>
-              <button
-                onClick={() => copyCommand(brewCommand, 'brew')}
-                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600"
-              >
-                <Copy className="w-4 h-4" />
-                {copiedCommand === 'brew' ? t('settings.updates.copied') : t('settings.updates.copy')}
-              </button>
-            </div>
-          </div>
+              {/* Coding Agent tip */}
+              <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bot className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-foreground">{t('settings.updates.devCodingAgent')}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.updates.devCodingAgentDesc')}
+                </p>
+              </div>
+            </>
+          )}
 
-          {/* Cluster Deployment */}
-          <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Ship className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">
-                {t('settings.updates.clusterDeployment')}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              {t('settings.updates.clusterDeploymentDesc')}
-            </p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
-                {helmCommand}
-              </code>
-              <button
-                onClick={() => copyCommand(helmCommand, 'helm')}
-                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
-              >
-                <Copy className="w-4 h-4" />
-                {copiedCommand === 'helm' ? t('settings.updates.copied') : t('settings.updates.copy')}
-              </button>
-            </div>
-          </div>
+          {/* Non-developer channels: standard update instructions */}
+          {!isDeveloperChannel && (
+            <>
+              {/* Web Console */}
+              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-medium text-foreground">{t('settings.updates.webConsole')}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('settings.updates.webConsoleDesc')}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  {t('settings.updates.refreshBrowser')}
+                </button>
+              </div>
+
+              {/* Local Agent */}
+              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Terminal className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-medium text-foreground">{t('settings.updates.localAgentUpdate')}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('settings.updates.localAgentDesc')}
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
+                    {brewCommand}
+                  </code>
+                  <button
+                    onClick={() => copyCommand(brewCommand, 'brew')}
+                    className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {copiedCommand === 'brew' ? t('settings.updates.copied') : t('settings.updates.copy')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Cluster Deployment */}
+              <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Ship className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-foreground">
+                    {t('settings.updates.clusterDeployment')}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('settings.updates.clusterDeploymentDesc')}
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
+                    {helmCommand}
+                  </code>
+                  <button
+                    onClick={() => copyCommand(helmCommand, 'helm')}
+                    className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {copiedCommand === 'helm' ? t('settings.updates.copied') : t('settings.updates.copy')}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
