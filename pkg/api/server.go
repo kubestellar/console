@@ -377,7 +377,7 @@ func (s *Server) setupRoutes() {
 		})
 	})
 
-	// Active users heartbeat endpoint (for demo mode session tracking)
+	// Active users heartbeat endpoint (for demo mode session counting)
 	s.app.Post("/api/active-users", func(c *fiber.Ctx) error {
 		var body struct {
 			SessionID string `json:"sessionId"`
@@ -460,7 +460,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/swaps/:id/execute", swaps.ExecuteSwap)
 	api.Post("/swaps/:id/cancel", swaps.CancelSwap)
 
-	// Events (for behavior tracking)
+	// Events (anonymous product feedback)
 	events := handlers.NewEventHandler(s.store)
 	api.Post("/events", events.RecordEvent)
 

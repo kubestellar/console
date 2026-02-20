@@ -20,7 +20,7 @@ import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 import { isCardExportable } from '../../lib/widgets/widgetRegistry'
-import { trackCardExpanded } from '../../lib/analytics'
+import { emitCardExpanded } from '../../lib/analytics'
 import { WidgetExportModal } from '../widgets/WidgetExportModal'
 import { FeatureRequestModal } from '../feedback/FeatureRequestModal'
 
@@ -1344,7 +1344,7 @@ export function CardWrapper({
             </button>
             */}
             <button
-              onClick={() => { trackCardExpanded(cardType); setIsExpanded(true) }}
+              onClick={() => { emitCardExpanded(cardType); setIsExpanded(true) }}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
               aria-label={t('cardWrapper.expandFullScreen')}
               title={t('cardWrapper.expandFullScreen')}

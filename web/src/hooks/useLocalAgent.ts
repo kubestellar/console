@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { trackAgentConnected, trackAgentDisconnected, trackConversionStep } from '../lib/analytics'
+import { emitAgentConnected, emitAgentDisconnected, emitConversionStep } from '../lib/analytics'
 
 export interface AgentHealth {
   status: string
@@ -222,7 +222,7 @@ class AgentManager {
             status: 'connected',
             error: null,
           })
-          trackAgentConnected(data.version || 'unknown', data.clusters || 0)
+          emitAgentConnected(data.version || 'unknown', data.clusters || 0)
         } else if (wasConnecting) {
           // Initial connection - connect immediately on first success
           this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
@@ -232,10 +232,10 @@ class AgentManager {
             status: 'connected',
             error: null,
           })
-          trackAgentConnected(data.version || 'unknown', data.clusters || 0)
-          trackConversionStep(3, 'agent', { agent_version: data.version || 'unknown' })
+          emitAgentConnected(data.version || 'unknown', data.clusters || 0)
+          emitConversionStep(3, 'agent', { agent_version: data.version || 'unknown' })
           if ((data.clusters || 0) > 0) {
-            trackConversionStep(4, 'clusters', { cluster_count: String(data.clusters) })
+            emitConversionStep(4, 'clusters', { cluster_count: String(data.clusters) })
           }
         } else if (wasConnected) {
           // Already connected - just update health data
@@ -258,7 +258,7 @@ class AgentManager {
         const wasConnecting = this.state.status === 'connecting'
         if (wasConnected) {
           this.addEvent('disconnected', 'Lost connection to local agent')
-          trackAgentDisconnected()
+          emitAgentDisconnected()
         } else if (wasConnecting) {
           this.addEvent('error', 'Failed to connect - local agent not available')
         }

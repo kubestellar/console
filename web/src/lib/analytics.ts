@@ -1,5 +1,5 @@
 /**
- * Google Analytics 4 — Product Telemetry (Custom Lightweight Tracker)
+ * Anonymous Product Feedback — Lightweight Event Emitter
  *
  * Stealth event delivery that bypasses ALL blocking:
  *   - No external scripts (immune to content-based ad blockers)
@@ -171,7 +171,7 @@ export function initAnalytics() {
   }
 
   // Fire discovery conversion step
-  trackConversionStep(1, 'discovery', { deployment_type: deploymentType })
+  emitConversionStep(1, 'discovery', { deployment_type: deploymentType })
 }
 
 // ── Anonymous User ID ──────────────────────────────────────────────
@@ -218,149 +218,149 @@ export function isAnalyticsOptedOut(): boolean {
 
 // ── Page views ─────────────────────────────────────────────────────
 
-export function trackPageView(path: string) {
+export function emitPageView(path: string) {
   send('page_view', { page_path: path, ksc_demo_mode: isDemoMode() ? 'true' : 'false' })
 }
 
 // ── Dashboard & Cards ──────────────────────────────────────────────
 
-export function trackCardAdded(cardType: string, source: string) {
+export function emitCardAdded(cardType: string, source: string) {
   send('ksc_card_added', { card_type: cardType, source })
 }
 
-export function trackCardRemoved(cardType: string) {
+export function emitCardRemoved(cardType: string) {
   send('ksc_card_removed', { card_type: cardType })
 }
 
-export function trackCardExpanded(cardType: string) {
+export function emitCardExpanded(cardType: string) {
   send('ksc_card_expanded', { card_type: cardType })
 }
 
-export function trackCardDragged(cardType: string) {
+export function emitCardDragged(cardType: string) {
   send('ksc_card_dragged', { card_type: cardType })
 }
 
-export function trackCardConfigured(cardType: string) {
+export function emitCardConfigured(cardType: string) {
   send('ksc_card_configured', { card_type: cardType })
 }
 
-export function trackCardReplaced(oldType: string, newType: string) {
+export function emitCardReplaced(oldType: string, newType: string) {
   send('ksc_card_replaced', { old_type: oldType, new_type: newType })
 }
 
 // ── AI Missions ────────────────────────────────────────────────────
 
-export function trackMissionStarted(missionType: string, agentProvider: string) {
+export function emitMissionStarted(missionType: string, agentProvider: string) {
   send('ksc_mission_started', { mission_type: missionType, agent_provider: agentProvider })
 }
 
-export function trackMissionCompleted(missionType: string, durationSec: number) {
+export function emitMissionCompleted(missionType: string, durationSec: number) {
   send('ksc_mission_completed', { mission_type: missionType, duration_sec: durationSec })
 }
 
-export function trackMissionError(missionType: string, errorCode: string) {
+export function emitMissionError(missionType: string, errorCode: string) {
   send('ksc_mission_error', { mission_type: missionType, error_code: errorCode })
 }
 
-export function trackMissionRated(missionType: string, rating: string) {
+export function emitMissionRated(missionType: string, rating: string) {
   send('ksc_mission_rated', { mission_type: missionType, rating })
 }
 
 // ── Auth ───────────────────────────────────────────────────────────
 
-export function trackLogin(method: string) {
+export function emitLogin(method: string) {
   send('login', { method })
 }
 
-export function trackLogout() {
+export function emitLogout() {
   send('ksc_logout')
 }
 
 // ── Feedback ───────────────────────────────────────────────────────
 
-export function trackFeedbackSubmitted(type: string) {
+export function emitFeedbackSubmitted(type: string) {
   send('ksc_feedback_submitted', { feedback_type: type })
 }
 
 // ── Errors ─────────────────────────────────────────────────────────
 
-export function trackError(category: string, detail: string) {
+export function emitError(category: string, detail: string) {
   send('ksc_error', { error_category: category, error_detail: detail.slice(0, 100) })
 }
 
-export function trackSessionExpired() {
+export function emitSessionExpired() {
   send('ksc_session_expired')
 }
 
 // ── Tour ───────────────────────────────────────────────────────────
 
-export function trackTourStarted() {
+export function emitTourStarted() {
   send('ksc_tour_started')
 }
 
-export function trackTourCompleted(stepCount: number) {
+export function emitTourCompleted(stepCount: number) {
   send('ksc_tour_completed', { step_count: stepCount })
 }
 
-export function trackTourSkipped(atStep: number) {
+export function emitTourSkipped(atStep: number) {
   send('ksc_tour_skipped', { at_step: atStep })
 }
 
 // ── Marketplace ────────────────────────────────────────────────────
 
-export function trackMarketplaceInstall(itemType: string, itemName: string) {
+export function emitMarketplaceInstall(itemType: string, itemName: string) {
   send('ksc_marketplace_install', { item_type: itemType, item_name: itemName })
 }
 
-export function trackMarketplaceRemove(itemType: string) {
+export function emitMarketplaceRemove(itemType: string) {
   send('ksc_marketplace_remove', { item_type: itemType })
 }
 
 // ── GitHub Token ───────────────────────────────────────────────────
 
-export function trackGitHubTokenConfigured() {
+export function emitGitHubTokenConfigured() {
   send('ksc_github_token_configured')
 }
 
-export function trackGitHubTokenRemoved() {
+export function emitGitHubTokenRemoved() {
   send('ksc_github_token_removed')
 }
 
 // ── API Provider ───────────────────────────────────────────────────
 
-export function trackApiProviderConnected(provider: string) {
+export function emitApiProviderConnected(provider: string) {
   send('ksc_api_provider_connected', { provider })
 }
 
 // ── Demo Mode ──────────────────────────────────────────────────────
 
-export function trackDemoModeToggled(enabled: boolean) {
+export function emitDemoModeToggled(enabled: boolean) {
   send('ksc_demo_mode_toggled', { enabled: String(enabled) })
   userProperties.demo_mode = String(enabled)
 }
 
 // ── kc-agent Connection ─────────────────────────────────────────
 
-export function trackAgentConnected(version: string, clusterCount: number) {
+export function emitAgentConnected(version: string, clusterCount: number) {
   send('ksc_agent_connected', { agent_version: version, cluster_count: clusterCount })
 }
 
-export function trackAgentDisconnected() {
+export function emitAgentDisconnected() {
   send('ksc_agent_disconnected')
 }
 
 // ── API Key Configuration ───────────────────────────────────────
 
-export function trackApiKeyConfigured(provider: string) {
+export function emitApiKeyConfigured(provider: string) {
   send('ksc_api_key_configured', { provider })
 }
 
-export function trackApiKeyRemoved(provider: string) {
+export function emitApiKeyRemoved(provider: string) {
   send('ksc_api_key_removed', { provider })
 }
 
 // ── Conversion Funnel ───────────────────────────────────────────
-// Unified step-based funnel event for tracking user journey:
+// Unified step-based funnel event for user journey:
 //   1 = discovery     (visited site)
 //   2 = login         (authenticated via OAuth or demo)
 //   3 = agent         (kc-agent connected)
@@ -368,7 +368,7 @@ export function trackApiKeyRemoved(provider: string) {
 //   5 = api_key       (AI API key configured)
 //   6 = github_token  (GitHub token configured)
 
-export function trackConversionStep(
+export function emitConversionStep(
   step: number,
   stepName: string,
   details?: Record<string, string>,

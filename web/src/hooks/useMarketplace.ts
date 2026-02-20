@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
-import { trackMarketplaceInstall, trackMarketplaceRemove } from '../lib/analytics'
+import { emitMarketplaceInstall, emitMarketplaceRemove } from '../lib/analytics'
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const CACHE_KEY = 'kc-marketplace-registry'
@@ -178,7 +178,7 @@ export function useMarketplace() {
       // Dispatch event for the active dashboard to pick up
       window.dispatchEvent(new CustomEvent('kc-add-card-from-marketplace', { detail: json }))
       markInstalled(item.id, { installedAt: new Date().toISOString(), type: 'card-preset' })
-      trackMarketplaceInstall(item.type, item.name)
+      emitMarketplaceInstall(item.type, item.name)
       return { type: 'card-preset', data: json }
     }
 
@@ -186,7 +186,7 @@ export function useMarketplace() {
       addCustomTheme(json)
       window.dispatchEvent(new Event('kc-custom-themes-changed'))
       markInstalled(item.id, { installedAt: new Date().toISOString(), type: 'theme' })
-      trackMarketplaceInstall(item.type, item.name)
+      emitMarketplaceInstall(item.type, item.name)
       return { type: 'theme', data: json }
     }
 
@@ -197,7 +197,7 @@ export function useMarketplace() {
       installedAt: new Date().toISOString(),
       type: 'dashboard',
     })
-    trackMarketplaceInstall(item.type, item.name)
+    emitMarketplaceInstall(item.type, item.name)
     return { type: 'dashboard', data }
   }, [markInstalled])
 
@@ -215,7 +215,7 @@ export function useMarketplace() {
     }
 
     markUninstalled(item.id)
-    trackMarketplaceRemove(item.type)
+    emitMarketplaceRemove(item.type)
   }, [installedItems, markUninstalled])
 
   // Collect all unique tags (exclude internal tags when not in help-wanted mode)

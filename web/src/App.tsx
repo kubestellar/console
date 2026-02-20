@@ -21,7 +21,7 @@ import { prefetchCardData } from './lib/prefetchCardData'
 import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
-import { trackPageView } from './lib/analytics'
+import { emitPageView } from './lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
 
 // Lazy load all page components for better code splitting
@@ -281,7 +281,7 @@ function PageViewTracker() {
     const section = ROUTE_TITLES[location.pathname]
     const title = section ? `${section} - ${APP_NAME}` : APP_NAME
     document.title = title
-    trackPageView(location.pathname)
+    emitPageView(location.pathname)
   }, [location.pathname])
   return null
 }

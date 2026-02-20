@@ -21,7 +21,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
-import { trackCardAdded, trackCardRemoved, trackCardDragged, trackCardReplaced, trackCardConfigured } from '../../lib/analytics'
+import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardReplaced, emitCardConfigured } from '../../lib/analytics'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardHistory } from '../../hooks/useCardHistory'
@@ -304,7 +304,7 @@ export function Dashboard() {
     // Normal reorder within same dashboard
     if (active.id !== over.id) {
       const draggedCard = localCards.find(c => c.id === active.id)
-      if (draggedCard) trackCardDragged(draggedCard.card_type)
+      if (draggedCard) emitCardDragged(draggedCard.card_type)
       setLocalCards((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id)
         const newIndex = items.findIndex((item) => item.id === over.id)
@@ -572,7 +572,7 @@ export function Dashboard() {
     // Record each card addition in history
     newCards.forEach((card) => {
       recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
-      trackCardAdded(card.card_type, 'add_modal')
+      emitCardAdded(card.card_type, 'add_modal')
     })
     // Add new cards at the TOP of the dashboard (prepend)
     setLocalCards((prev) => [...newCards, ...prev])
@@ -594,7 +594,7 @@ export function Dashboard() {
     // Find the card to get its details before removing
     const cardToRemove = localCards.find((c) => c.id === cardId)
     if (cardToRemove) {
-      trackCardRemoved(cardToRemove.card_type)
+      emitCardRemoved(cardToRemove.card_type)
       recordCardRemoved(
         cardToRemove.id,
         cardToRemove.card_type,
@@ -656,7 +656,7 @@ export function Dashboard() {
     // Find the old card to get its previous type
     const oldCard = localCards.find((c) => c.id === oldCardId)
     if (oldCard) {
-      trackCardReplaced(oldCard.card_type, newCardType)
+      emitCardReplaced(oldCard.card_type, newCardType)
       recordCardReplaced(
         oldCardId,
         newCardType,
@@ -681,7 +681,7 @@ export function Dashboard() {
   const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     const card = localCards.find((c) => c.id === cardId)
     if (card) {
-      trackCardConfigured(card.card_type)
+      emitCardConfigured(card.card_type)
       recordCardConfigured(
         cardId,
         card.card_type,

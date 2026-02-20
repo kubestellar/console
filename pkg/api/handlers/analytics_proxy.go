@@ -42,7 +42,7 @@ func GA4ScriptProxy(c *fiber.Ctx) error {
 
 // GA4CollectProxy proxies GA4 event collection requests through the console's
 // own domain. It performs two critical functions:
-//  1. Rewrites the `tid` (tracking ID) from the decoy Measurement ID to the
+//  1. Rewrites the `tid` (measurement ID) from the decoy to the
 //     real one (set via GA4_REAL_MEASUREMENT_ID env var)
 //  2. Validates the Origin/Referer header to reject requests from unknown hosts
 func GA4CollectProxy(c *fiber.Ctx) error {
@@ -51,7 +51,7 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 	}
 
 	// GA4 Measurement ID — env var overrides the built-in default.
-	// This is a public tracking identifier (not a secret), same as any website's GA ID.
+	// This is a public identifier (not a secret), same as any website's GA ID.
 	realMeasurementID := os.Getenv("GA4_REAL_MEASUREMENT_ID")
 	if realMeasurementID == "" {
 		realMeasurementID = "G-QPGNKGNNY2"

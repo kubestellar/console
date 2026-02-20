@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
-import { trackFeedbackSubmitted } from '../../lib/analytics'
+import { emitFeedbackSubmitted } from '../../lib/analytics'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -44,7 +44,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
       // Open GitHub in new tab
       window.open(githubUrl, '_blank')
-      trackFeedbackSubmitted(type)
+      emitFeedbackSubmitted(type)
 
       // Award coins based on type
       const action = type === 'bug' ? 'bug_report' : 'feature_suggestion'
