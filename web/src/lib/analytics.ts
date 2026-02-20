@@ -75,7 +75,7 @@ export function initAnalytics() {
   gtag('config', measurementId, {
     send_page_view: false,
     cookie_flags: 'SameSite=None;Secure',
-    transport_url: '/t/g',
+    transport_url: `${window.location.origin}/t`,
   })
 
   // Set persistent user properties
