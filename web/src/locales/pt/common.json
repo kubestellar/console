@@ -521,7 +521,7 @@
       "startingUpdate": "Starting update — please wait...",
       "doNotNavigate": "Please do not navigate away while the update is in progress.",
       "estimatedRemaining": "~{{seconds}}s remaining",
-      "almostDone": "Almost done...",
+      "almostDone": "Almost done — hang tight...",
       "updateComplete": "Update complete — restart successful",
       "updateFailed": "Update failed",
       "devMode": "Dev Mode",
