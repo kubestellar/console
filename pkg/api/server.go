@@ -399,6 +399,10 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/api/public/nightly-e2e/runs", nightlyE2EPublic.GetRuns)
 	s.app.Get("/api/public/nightly-e2e/run-logs", nightlyE2EPublic.GetRunLogs)
 
+	// GA4 analytics proxy (public — no auth required, has its own origin validation)
+	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept it
+	s.app.All("/api/m", handlers.GA4CollectProxy)
+
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
 	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
@@ -691,9 +695,6 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/ws", websocket.New(func(c *websocket.Conn) {
 		s.hub.HandleConnection(c)
 	}))
-
-	// GA4 analytics — custom tracker sends events to /api/m, proxy rewrites tid and forwards
-	s.app.All("/api/m", handlers.GA4CollectProxy)
 
 	// Serve static files in production
 	if !s.config.DevMode {
