@@ -44,7 +44,7 @@ export function NodeDrillDown({ data }: Props) {
 - Cluster: ${clusterShort}
 - Status: ${status || 'Unknown'}
 - Cordoned/Unschedulable: ${unschedulable ? 'Yes' : 'No'}
-- Roles: ${roles?.join(', ') || 'worker'}
+- Roles: ${(roles ?? []).join(', ') || 'worker'}
 - Issue: ${issue || 'Node is not healthy'}
 
 Please help me:
@@ -89,7 +89,7 @@ Start by checking node events and conditions.`,
           </div>
           <div>
             <dt className="text-muted-foreground">{t('common.roles')}</dt>
-            <dd className="font-mono text-foreground">{roles?.join(', ') || 'worker'}</dd>
+            <dd className="font-mono text-foreground">{(roles ?? []).join(', ') || 'worker'}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">{t('drilldown.node.schedulable')}</dt>
