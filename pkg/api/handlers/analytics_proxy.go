@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/base64"
 	"io"
 	"net/http"
 	"net/url"
@@ -49,12 +50,23 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	// Rewrite the tid (Measurement ID) from decoy → real
 	realMeasurementID := os.Getenv("GA4_REAL_MEASUREMENT_ID")
-	qs := string(c.Context().QueryArgs().QueryString())
 
-	// Forward user's real IP so GA4 geolocates correctly.
-	// Without this, all events appear from the server's IP.
+	// Decode base64-encoded payload from `d` parameter.
+	// Browser sends: /api/m?d=<base64(v=2&tid=G-0000000000&cid=...)>
+	var qs string
+	if d := c.Query("d"); d != "" {
+		decoded, err := base64.StdEncoding.DecodeString(d)
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		qs = string(decoded)
+	} else {
+		// Fallback: plain query params (backwards compat)
+		qs = string(c.Context().QueryArgs().QueryString())
+	}
+
+	// Forward user's real IP so GA4 geolocates correctly
 	clientIP := c.Get("X-Forwarded-For")
 	if clientIP != "" {
 		if i := strings.Index(clientIP, ","); i != -1 {

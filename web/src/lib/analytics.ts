@@ -1,24 +1,22 @@
 /**
  * Google Analytics 4 — Product Telemetry (Custom Lightweight Tracker)
  *
- * Sends GA4 Measurement Protocol events directly to our first-party proxy.
- * NO external scripts loaded (gtag.js is detectable by content-based ad blockers).
- * All event collection goes through /api/m → Netlify Function → google-analytics.com.
+ * Stealth event delivery that bypasses ALL blocking:
+ *   - No external scripts (immune to content-based ad blockers)
+ *   - First-party proxy path /api/m (immune to domain-based blockers)
+ *   - Base64-encoded payload (immune to parameter-pattern network filters)
  *
- * Anti-spam: Uses a DECOY Measurement ID (visible in source).
- * The proxy rewrites it to the real ID server-side.
- *
- * Ad-blocker bypass: No Google domains, no recognizable GA paths, no external scripts.
+ * The proxy decodes the payload, rewrites the measurement ID, and forwards
+ * to GA4's collection endpoint.
  */
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
 import { isDemoMode } from './demoMode'
 
-// DECOY Measurement ID — publicly visible in source code.
-// The first-party proxy rewrites this to the real GA4 Measurement ID server-side.
+// DECOY Measurement ID — the proxy rewrites this to the real ID server-side.
 const GA_MEASUREMENT_ID = 'G-0000000000'
 
-const COLLECT_PATH = '/api/m'
+const PROXY_PATH = '/api/m'
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 min
 const CID_KEY = '_ksc_cid'
 const SID_KEY = '_ksc_sid'
@@ -142,7 +140,10 @@ function send(
     p.set('uid', userId)
   }
 
-  const url = `${COLLECT_PATH}?${p.toString()}`
+  // Encode the entire payload as base64 so network-level filters
+  // can't match on GA4 parameter patterns (tid=G-*, en=, cid=, etc.)
+  const encoded = btoa(p.toString())
+  const url = `${PROXY_PATH}?d=${encodeURIComponent(encoded)}`
 
   if (navigator.sendBeacon) {
     navigator.sendBeacon(url)
@@ -159,11 +160,14 @@ export function initAnalytics() {
   initialized = true
   pageId = rand()
 
-  // Set persistent user properties
+  // Set persistent user properties including timezone for geo identification
   const deploymentType = getDeploymentType()
+  let tz = ''
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone } catch { /* ignore */ }
   userProperties = {
     deployment_type: deploymentType,
     demo_mode: String(isDemoMode()),
+    ...(tz && { timezone: tz }),
   }
 
   // Fire discovery conversion step
