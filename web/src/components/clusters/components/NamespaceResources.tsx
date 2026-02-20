@@ -127,7 +127,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       namespace: svc.namespace,
       status: svc.type,
       statusColor: 'cyan',
-      detail: svc.ports?.slice(0, 2).join(', '),
+      detail: (svc.ports ?? []).slice(0, 2).join(', '),
       data: { type: svc.type, clusterIP: svc.clusterIP, externalIP: svc.externalIP, ports: svc.ports, age: svc.age }
     }))
 

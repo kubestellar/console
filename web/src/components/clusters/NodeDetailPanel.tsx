@@ -40,7 +40,7 @@ export function NodeDetailPanel({ node, clusterName, onClose }: NodeDetailPanelP
       initialPrompt: `I need help diagnosing and repairing issues with node "${node.name}" in cluster "${clusterName}".
 
 Current node conditions:
-${node.conditions?.map(c => `- ${c.type}: ${c.status}${c.message ? ` (${c.message})` : ''}${c.reason ? ` [${c.reason}]` : ''}`).join('\n') || 'No conditions available'}
+${(node.conditions ?? []).map(c => `- ${c.type}: ${c.status}${c.message ? ` (${c.message})` : ''}${c.reason ? ` [${c.reason}]` : ''}`).join('\n') || 'No conditions available'}
 
 Node details:
 - Internal IP: ${node.internalIP || 'N/A'}

@@ -514,7 +514,7 @@ ${generateWidgetStyles()}
 // Sub-components for each card/stat
 ${template.cards.map((cardType) => generateMiniCardComponent(cardType)).join('\n\n')}
 
-${template.stats?.map((statId) => generateMiniStatComponent(statId)).join('\n\n') || ''}
+${(template.stats ?? []).map((statId) => generateMiniStatComponent(statId)).join('\n\n')}
 
 export const render = ({ output }) => {
   let data = null;
@@ -644,7 +644,7 @@ export function getWidgetFilename(config: WidgetConfig): string {
     case 'card':
       return `${config.cardType?.replace(/_/g, '-')}.widget.jsx`
     case 'stat':
-      return `stats-${config.statIds?.join('-')}.widget.jsx`
+      return `stats-${(config.statIds ?? []).join('-')}.widget.jsx`
     case 'template':
       return `${config.templateId?.replace(/_/g, '-')}.widget.jsx`
     default:

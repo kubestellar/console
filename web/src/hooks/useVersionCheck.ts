@@ -244,7 +244,12 @@ export function useVersionCheck() {
 
   // Auto-update state
   const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(loadAutoUpdateEnabled)
-  const [installMethod, setInstallMethod] = useState<InstallMethod>('unknown')
+  // Initialize install method: localhost always means dev mode (running from source)
+  const [installMethod, setInstallMethod] = useState<InstallMethod>(() =>
+    typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'dev'
+      : 'unknown'
+  )
   const [autoUpdateStatus, setAutoUpdateStatus] = useState<AutoUpdateStatus | null>(null)
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null)
   const [agentConnected, setAgentConnected] = useState(false)
@@ -301,9 +306,10 @@ export function useVersionCheck() {
   }, [])
 
   /**
-   * Fetch auto-update status from kc-agent.
+   * Fetch auto-update status from kc-agent (only if agent supports it).
    */
   const fetchAutoUpdateStatus = useCallback(async () => {
+    if (!agentSupportsAutoUpdate) return
     try {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/status`, {
         signal: AbortSignal.timeout(5000),
@@ -315,7 +321,7 @@ export function useVersionCheck() {
     } catch {
       // Agent not available
     }
-  }, [])
+  }, [agentSupportsAutoUpdate])
 
   /**
    * Set update channel and persist to localStorage + kc-agent.

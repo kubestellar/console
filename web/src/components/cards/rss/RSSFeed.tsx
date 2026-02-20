@@ -64,7 +64,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     const firstFeed = savedFeeds[0]
     if (firstFeed) {
       const cacheKey = firstFeed.isAggregate
-        ? `aggregate:${firstFeed.sourceUrls?.join(',')}:${firstFeed.name}`
+        ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
         : firstFeed.url
       const cached = getCachedFeed(cacheKey, true)
       if (cached && cached.items.length > 0) {
@@ -80,7 +80,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     const firstFeed = savedFeeds[0]
     if (firstFeed) {
       return firstFeed.isAggregate
-        ? `aggregate:${firstFeed.sourceUrls?.join(',')}:${firstFeed.name}`
+        ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
         : firstFeed.url
     }
     return null
@@ -93,7 +93,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     const firstFeed = savedFeeds[0]
     if (firstFeed) {
       const cacheKey = firstFeed.isAggregate
-        ? `aggregate:${firstFeed.sourceUrls?.join(',')}:${firstFeed.name}`
+        ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
         : firstFeed.url
       const cached = getCachedFeed(cacheKey, true)
       return !cached || cached.items.length === 0
@@ -129,7 +129,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
   // Get cache key for current feed
   const currentCacheKey = activeFeed?.isAggregate
-    ? `aggregate:${activeFeed.sourceUrls?.join(',')}:${activeFeed.name}`
+    ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
     : activeFeed?.url
 
   // Check if displayed items match the active feed
@@ -325,7 +325,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       setError(null)
       // Cache demo data so warm return finds it immediately
       const cacheKey = activeFeed?.isAggregate
-        ? `aggregate:${activeFeed.sourceUrls?.join(',')}:${activeFeed.name}`
+        ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
         : activeFeed?.url
       if (cacheKey) cacheFeed(cacheKey, demoItems)
       return
@@ -334,7 +334,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     if (!activeFeed?.url && !activeFeed?.isAggregate) return
 
     const cacheKey = activeFeed.isAggregate
-      ? `aggregate:${activeFeed.sourceUrls?.join(',')}:${activeFeed.name}`
+      ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
       : activeFeed.url
 
     // Always show cached content first (even if stale) for better UX
@@ -503,8 +503,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setEditingAggregateIndex(index)
     setAggregateName(feed.name)
     setSelectedSourceUrls(feed.sourceUrls || [])
-    setAggregateIncludeTerms(feed.filter?.includeTerms.join(', ') || '')
-    setAggregateExcludeTerms(feed.filter?.excludeTerms.join(', ') || '')
+    setAggregateIncludeTerms((feed.filter?.includeTerms ?? []).join(', '))
+    setAggregateExcludeTerms((feed.filter?.excludeTerms ?? []).join(', '))
     setShowAggregateCreator(true)
   }, [feeds])
 
@@ -571,8 +571,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   // Initialize filter editor with current feed's filter
   const openFilterEditor = useCallback(() => {
     const filter = activeFeed?.filter
-    setTempIncludeTerms(filter?.includeTerms.join(', ') || '')
-    setTempExcludeTerms(filter?.excludeTerms.join(', ') || '')
+    setTempIncludeTerms((filter?.includeTerms ?? []).join(', '))
+    setTempExcludeTerms((filter?.excludeTerms ?? []).join(', '))
     setShowFilterEditor(true)
   }, [activeFeed?.filter])
 

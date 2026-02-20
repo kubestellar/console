@@ -119,14 +119,19 @@ export function Settings() {
   }, [restoredFromFile])
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // Offset for sticky navbar (px from top of viewport)
-  const SCROLL_OFFSET = 80
+  // Offset for section headers inside the scroll container (px)
+  const SCROLL_OFFSET = 16
+
+  const getScrollContainer = () => document.getElementById('main-content')
 
   const scrollToSection = (sectionId: string, smooth = true) => {
     const element = document.getElementById(sectionId)
-    if (!element) return
-    const y = element.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET - 16
-    window.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' })
+    const container = getScrollContainer()
+    if (!element || !container) return
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+    const y = elementRect.top - containerRect.top + container.scrollTop - SCROLL_OFFSET
+    container.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' })
   }
 
   // Handle deep linking - scroll to section based on URL hash
@@ -148,6 +153,9 @@ export function Settings() {
 
   // Track active section on scroll using IntersectionObserver
   useEffect(() => {
+    const container = getScrollContainer()
+    if (!container) return
+
     const allSectionIds = SETTINGS_NAV.flatMap(g => g.items.map(i => i.id))
     const visibleSections = new Map<string, number>()
 
@@ -169,7 +177,8 @@ export function Settings() {
         }
       },
       {
-        rootMargin: `-${SCROLL_OFFSET}px 0px -40% 0px`,
+        root: container,
+        rootMargin: '0px 0px -40% 0px',
         threshold: [0, 0.1, 0.5],
       }
     )
