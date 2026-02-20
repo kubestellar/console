@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
+import { getContributorLevel } from '../../types/rewards'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
@@ -169,6 +170,9 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               <Coins className="w-4 h-4 text-yellow-500" />
               <span className="text-muted-foreground">{t('profile.coins')}</span>
               <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${getContributorLevel(totalCoins).current.bgClass} ${getContributorLevel(totalCoins).current.textClass}`}>
+                {getContributorLevel(totalCoins).current.name}
+              </span>
               <ChevronDown className="w-3 h-3 ml-auto text-muted-foreground -rotate-90" />
             </button>
             {/* Language selector */}

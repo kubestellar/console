@@ -17,6 +17,7 @@ import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { ContributorBanner } from '../rewards/ContributorLadder'
 import { GITHUB_REWARD_LABELS, REWARD_ACTIONS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
 
@@ -465,6 +466,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
         {activeTab === 'updates' ? (
           /* Updates Tab — unified scrollable view */
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Contributor banner — coins + level + progress */}
+              <ContributorBanner />
+
               {/* Actions header */}
               <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
                 {actionError ? (

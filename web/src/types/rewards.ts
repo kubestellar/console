@@ -215,3 +215,131 @@ export const GITHUB_REWARD_LABELS: Record<GitHubRewardType, string> = {
   pr_opened: 'PR Opened',
   pr_merged: 'PR Merged',
 }
+
+// ── Contributor Ladder ──────────────────────────────────────────────
+
+export interface ContributorLevel {
+  rank: number
+  name: string
+  icon: string         // Lucide icon name
+  minCoins: number
+  color: string        // Tailwind color prefix (e.g., 'gray', 'blue')
+  bgClass: string      // Background classes for the badge
+  textClass: string    // Text color class
+  borderClass: string  // Border color class
+}
+
+export const CONTRIBUTOR_LEVELS: ContributorLevel[] = [
+  {
+    rank: 1,
+    name: 'Observer',
+    icon: 'Telescope',
+    minCoins: 0,
+    color: 'gray',
+    bgClass: 'bg-gray-500/20',
+    textClass: 'text-gray-400',
+    borderClass: 'border-gray-500/30',
+  },
+  {
+    rank: 2,
+    name: 'Explorer',
+    icon: 'Compass',
+    minCoins: 100,
+    color: 'blue',
+    bgClass: 'bg-blue-500/20',
+    textClass: 'text-blue-400',
+    borderClass: 'border-blue-500/30',
+  },
+  {
+    rank: 3,
+    name: 'Navigator',
+    icon: 'Map',
+    minCoins: 500,
+    color: 'cyan',
+    bgClass: 'bg-cyan-500/20',
+    textClass: 'text-cyan-400',
+    borderClass: 'border-cyan-500/30',
+  },
+  {
+    rank: 4,
+    name: 'Pilot',
+    icon: 'Rocket',
+    minCoins: 1500,
+    color: 'green',
+    bgClass: 'bg-green-500/20',
+    textClass: 'text-green-400',
+    borderClass: 'border-green-500/30',
+  },
+  {
+    rank: 5,
+    name: 'Commander',
+    icon: 'Shield',
+    minCoins: 3000,
+    color: 'purple',
+    bgClass: 'bg-purple-500/20',
+    textClass: 'text-purple-400',
+    borderClass: 'border-purple-500/30',
+  },
+  {
+    rank: 6,
+    name: 'Captain',
+    icon: 'Star',
+    minCoins: 5000,
+    color: 'amber',
+    bgClass: 'bg-amber-500/20',
+    textClass: 'text-amber-400',
+    borderClass: 'border-amber-500/30',
+  },
+  {
+    rank: 7,
+    name: 'Admiral',
+    icon: 'Crown',
+    minCoins: 10000,
+    color: 'orange',
+    bgClass: 'bg-orange-500/20',
+    textClass: 'text-orange-400',
+    borderClass: 'border-orange-500/30',
+  },
+  {
+    rank: 8,
+    name: 'Legend',
+    icon: 'Sparkles',
+    minCoins: 25000,
+    color: 'yellow',
+    bgClass: 'bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-orange-500/20',
+    textClass: 'text-yellow-400',
+    borderClass: 'border-yellow-500/40',
+  },
+]
+
+/** Returns the current level and the next level (null if max) */
+export function getContributorLevel(totalCoins: number): {
+  current: ContributorLevel
+  next: ContributorLevel | null
+  progress: number // 0-100 percent to next level
+  coinsToNext: number
+} {
+  let current = CONTRIBUTOR_LEVELS[0]
+  let next: ContributorLevel | null = null
+
+  for (let i = CONTRIBUTOR_LEVELS.length - 1; i >= 0; i--) {
+    if (totalCoins >= CONTRIBUTOR_LEVELS[i].minCoins) {
+      current = CONTRIBUTOR_LEVELS[i]
+      next = i < CONTRIBUTOR_LEVELS.length - 1 ? CONTRIBUTOR_LEVELS[i + 1] : null
+      break
+    }
+  }
+
+  if (!next) {
+    return { current, next: null, progress: 100, coinsToNext: 0 }
+  }
+
+  const rangeStart = current.minCoins
+  const rangeEnd = next.minCoins
+  const coinsInRange = totalCoins - rangeStart
+  const rangeSize = rangeEnd - rangeStart
+  const progress = Math.min(100, Math.round((coinsInRange / rangeSize) * 100))
+  const coinsToNext = rangeEnd - totalCoins
+
+  return { current, next, progress, coinsToNext }
+}
