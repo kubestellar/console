@@ -288,7 +288,7 @@ CRD Details:
 - Established: ${isEstablished ? 'Yes' : 'No'}
 
 Versions:
-${versions?.map(v => `- ${v.name}: served=${v.served}, storage=${v.storage}${v.deprecated ? ' (DEPRECATED)' : ''}`).join('\n') || 'Unknown'}
+${(versions ?? []).map(v => `- ${v.name}: served=${v.served}, storage=${v.storage}${v.deprecated ? ' (DEPRECATED)' : ''}`).join('\n') || 'Unknown'}
 
 ${deprecatedVersions.length > 0 ? `
 ⚠️ Deprecated Versions Found:

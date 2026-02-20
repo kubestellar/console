@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle } from 'lucide-react'
+import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
+import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { checkOAuthConfigured } from '../../lib/api'
@@ -35,6 +36,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   })
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
+  const { channel, setChannel, installMethod } = useVersionCheck()
   const { t, i18n } = useTranslation()
 
   const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0]
@@ -248,6 +250,32 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                       <span className="text-muted-foreground">{t('developer.checkingOauth')}</span>
                     )}
                   </div>
+
+                  {/* Developer update channel toggle */}
+                  {installMethod === 'dev' && (
+                    <button
+                      onClick={() => {
+                        setChannel(channel === 'developer' ? 'stable' : 'developer')
+                      }}
+                      className="flex items-center gap-2 text-xs"
+                    >
+                      <GitBranch className={`w-3.5 h-3.5 ${channel === 'developer' ? 'text-orange-400' : 'text-muted-foreground'}`} />
+                      <span className={channel === 'developer' ? 'text-orange-400' : 'text-muted-foreground'}>
+                        {t('settings.updates.developer')}
+                      </span>
+                      <div
+                        className={`ml-auto relative w-8 h-4 rounded-full transition-colors ${
+                          channel === 'developer' ? 'bg-orange-500' : 'bg-secondary'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
+                            channel === 'developer' ? 'translate-x-4' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </div>
+                    </button>
+                  )}
 
                   {/* Action buttons */}
                   <div className="flex flex-col gap-1 pt-1">

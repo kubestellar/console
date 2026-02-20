@@ -248,6 +248,7 @@ export function useVersionCheck() {
   const [autoUpdateStatus, setAutoUpdateStatus] = useState<AutoUpdateStatus | null>(null)
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null)
   const [agentConnected, setAgentConnected] = useState(false)
+  const [agentSupportsAutoUpdate, setAgentSupportsAutoUpdate] = useState(false)
 
   const currentVersion = useMemo(() => {
     try {
@@ -267,8 +268,10 @@ export function useVersionCheck() {
 
   /**
    * Fetch install method and agent connectivity from kc-agent /health.
+   * Also fetches install_method from the backend /health (same origin) as fallback.
    */
   const fetchAgentInfo = useCallback(async () => {
+    // Check kc-agent connectivity
     try {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, { signal: AbortSignal.timeout(3000) })
       if (resp.ok) {
@@ -276,10 +279,24 @@ export function useVersionCheck() {
         setAgentConnected(true)
         if (data.install_method) {
           setInstallMethod(data.install_method as InstallMethod)
+          setAgentSupportsAutoUpdate(true)
         }
       }
     } catch {
       setAgentConnected(false)
+    }
+
+    // Fetch install_method from backend /health (same origin) as fallback
+    try {
+      const resp = await fetch('/health', { signal: AbortSignal.timeout(3000) })
+      if (resp.ok) {
+        const data = await resp.json()
+        if (data.install_method) {
+          setInstallMethod(data.install_method as InstallMethod)
+        }
+      }
+    } catch {
+      // Backend not available
     }
   }, [])
 
@@ -536,10 +553,10 @@ export function useVersionCheck() {
 
   // Fetch auto-update status when channel changes or on mount
   useEffect(() => {
-    if (agentConnected) {
+    if (agentConnected && agentSupportsAutoUpdate) {
       fetchAutoUpdateStatus()
     }
-  }, [agentConnected, channel, fetchAutoUpdateStatus])
+  }, [agentConnected, agentSupportsAutoUpdate, channel, fetchAutoUpdateStatus])
 
   return {
     // State

@@ -119,54 +119,73 @@ export function Settings() {
   }, [restoredFromFile])
   const contentRef = useRef<HTMLDivElement>(null)
 
+  // Offset for sticky navbar (px from top of viewport)
+  const SCROLL_OFFSET = 80
+
+  const scrollToSection = (sectionId: string, smooth = true) => {
+    const element = document.getElementById(sectionId)
+    if (!element) return
+    const y = element.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET - 16
+    window.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' })
+  }
+
   // Handle deep linking - scroll to section based on URL hash
   useEffect(() => {
     const hash = location.hash.replace('#', '')
     if (hash) {
-      // Small delay to ensure sections are rendered
-      const scrollToElement = () => {
+      const timer = setTimeout(() => {
+        scrollToSection(hash, false)
+        setActiveSection(hash)
         const element = document.getElementById(hash)
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          setActiveSection(hash)
-          // Add a brief highlight effect
           element.classList.add('ring-2', 'ring-purple-500/50')
-          setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-purple-500/50')
-          }, 2000)
+          setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
         }
-      }
-      // Wait for render
-      setTimeout(scrollToElement, 100)
+      }, 100)
+      return () => clearTimeout(timer)
     }
   }, [location.hash])
 
-  // Track active section on scroll
+  // Track active section on scroll using IntersectionObserver
   useEffect(() => {
-    const handleScroll = () => {
-      const allSections = SETTINGS_NAV.flatMap(g => g.items.map(i => i.id))
-      for (const sectionId of allSections) {
-        const el = document.getElementById(sectionId)
-        if (el) {
-          const rect = el.getBoundingClientRect()
-          if (rect.top <= 200 && rect.bottom > 100) {
-            setActiveSection(sectionId)
+    const allSectionIds = SETTINGS_NAV.flatMap(g => g.items.map(i => i.id))
+    const visibleSections = new Map<string, number>()
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            visibleSections.set(entry.target.id, entry.intersectionRatio)
+          } else {
+            visibleSections.delete(entry.target.id)
+          }
+        }
+        // Pick the first visible section in document order
+        for (const id of allSectionIds) {
+          if (visibleSections.has(id)) {
+            setActiveSection(id)
             break
           }
         }
+      },
+      {
+        rootMargin: `-${SCROLL_OFFSET}px 0px -40% 0px`,
+        threshold: [0, 0.1, 0.5],
       }
+    )
+
+    for (const id of allSectionIds) {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
     }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+
+    return () => observer.disconnect()
   }, [])
 
   const handleNavClick = (sectionId: string) => {
-    const element = document.getElementById(sectionId)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setActiveSection(sectionId)
-      navigate(`#${sectionId}`, { replace: true })
-    }
+    scrollToSection(sectionId)
+    setActiveSection(sectionId)
+    navigate(`#${sectionId}`, { replace: true })
   }
 
   const SYNC_LABELS: Record<SyncStatus, string> = {
