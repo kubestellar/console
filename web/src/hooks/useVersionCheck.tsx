@@ -360,8 +360,18 @@ function useVersionCheckCore() {
   /**
    * Fetch latest main branch SHA directly from GitHub API.
    * Used as fallback when kc-agent doesn't support /auto-update/status.
+   * Handles 403 rate-limiting by backing off and using cache.
    */
   const fetchLatestMainSHA = useCallback(async () => {
+    // Check if we're in a rate-limit backoff period
+    const rateLimitUntil = localStorage.getItem('kc-github-rate-limit-until')
+    if (rateLimitUntil && Date.now() < parseInt(rateLimitUntil, 10)) {
+      console.debug('[version-check] GitHub API rate-limited, using cache until', new Date(parseInt(rateLimitUntil, 10)).toLocaleTimeString())
+      const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
+      if (cached) setLatestMainSHA(cached)
+      return
+    }
+
     try {
       const headers: HeadersInit = {
         Accept: 'application/vnd.github.v3+json',
@@ -374,6 +384,7 @@ function useVersionCheckCore() {
           headers['Authorization'] = `Bearer ${storedToken}`
         }
       }
+      console.debug('[version-check] Fetching latest main SHA from GitHub...')
       const resp = await fetch(GITHUB_MAIN_SHA_URL, {
         headers,
         signal: AbortSignal.timeout(5000),
@@ -382,11 +393,28 @@ function useVersionCheckCore() {
         const data = await resp.json()
         const sha = data?.object?.sha as string | undefined
         if (sha) {
+          console.debug('[version-check] Latest main SHA:', sha.slice(0, 7))
           setLatestMainSHA(sha)
           localStorage.setItem(DEV_SHA_CACHE_KEY, sha)
+          localStorage.removeItem('kc-github-rate-limit-until')
         }
+      } else if (resp.status === 403 || resp.status === 429) {
+        // Rate limited — back off for 15 minutes
+        const resetHeader = resp.headers.get('X-RateLimit-Reset')
+        const backoffUntil = resetHeader
+          ? parseInt(resetHeader, 10) * 1000
+          : Date.now() + 15 * 60 * 1000
+        localStorage.setItem('kc-github-rate-limit-until', String(backoffUntil))
+        console.debug('[version-check] GitHub API rate-limited, backing off until', new Date(backoffUntil).toLocaleTimeString())
+        setError('GitHub API rate limit — add a GitHub token in Settings for higher limits')
+        // Still use cache
+        const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
+        if (cached) setLatestMainSHA(cached)
+      } else {
+        console.debug('[version-check] GitHub API error:', resp.status)
       }
-    } catch {
+    } catch (err) {
+      console.debug('[version-check] Failed to fetch main SHA:', err)
       // Load from cache as fallback
       const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
       if (cached) setLatestMainSHA(cached)
@@ -400,9 +428,18 @@ function useVersionCheckCore() {
   const fetchRecentCommits = useCallback(async () => {
     const currentSHA = commitHash
     const latestSHA = latestMainSHA
-    if (!currentSHA || currentSHA === 'unknown' || !latestSHA) return
+    if (!currentSHA || currentSHA === 'unknown' || !latestSHA) {
+      console.debug('[version-check] Skipping commit fetch — currentSHA:', currentSHA, 'latestSHA:', latestSHA)
+      return
+    }
     if (currentSHA === latestSHA || latestSHA.startsWith(currentSHA) || currentSHA.startsWith(latestSHA)) {
       setRecentCommits([])
+      return
+    }
+    // Respect rate-limit backoff for commit comparison too
+    const rateLimitUntil = localStorage.getItem('kc-github-rate-limit-until')
+    if (rateLimitUntil && Date.now() < parseInt(rateLimitUntil, 10)) {
+      console.debug('[version-check] Skipping commit fetch — rate-limited')
       return
     }
     try {
@@ -412,6 +449,7 @@ function useVersionCheckCore() {
         try { headers['Authorization'] = `Bearer ${atob(storedToken)}` }
         catch { headers['Authorization'] = `Bearer ${storedToken}` }
       }
+      console.debug('[version-check] Fetching commits:', currentSHA.slice(0, 7), '→', latestSHA.slice(0, 7))
       const resp = await fetch(
         `https://api.github.com/repos/kubestellar/console/compare/${currentSHA}...${latestSHA}`,
         { headers, signal: AbortSignal.timeout(10000) }
@@ -424,10 +462,17 @@ function useVersionCheckCore() {
           author: c.commit.author.name,
           date: c.commit.author.date,
         }))
+        console.debug('[version-check] Fetched', commits.length, 'commits')
         setRecentCommits(commits)
+      } else if (resp.status === 403 || resp.status === 429) {
+        const backoffUntil = Date.now() + 15 * 60 * 1000
+        localStorage.setItem('kc-github-rate-limit-until', String(backoffUntil))
+        console.debug('[version-check] Compare API rate-limited, backing off')
+      } else {
+        console.debug('[version-check] Compare API error:', resp.status)
       }
-    } catch {
-      // Non-critical — commit list is informational
+    } catch (err) {
+      console.debug('[version-check] Failed to fetch commits:', err)
     }
   }, [commitHash, latestMainSHA])
 
@@ -472,16 +517,29 @@ function useVersionCheckCore() {
   }, [channel])
 
   /**
-   * Trigger an immediate update check via kc-agent.
+   * Trigger an immediate update via kc-agent.
+   * Returns { success, error } so the UI can show feedback.
    */
-  const triggerUpdate = useCallback(async () => {
+  const triggerUpdate = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    console.debug('[version-check] Triggering update via kc-agent...')
     try {
-      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/trigger`, {
+      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/trigger`, {
         method: 'POST',
         signal: AbortSignal.timeout(5000),
       })
-    } catch {
-      // Agent not available
+      if (resp.ok) {
+        console.debug('[version-check] Update triggered successfully')
+        return { success: true }
+      }
+      const errText = resp.status === 404
+        ? 'kc-agent does not support auto-update yet — restart with latest code'
+        : `kc-agent returned ${resp.status}`
+      console.debug('[version-check] Update trigger failed:', errText)
+      return { success: false, error: errText }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'kc-agent not reachable'
+      console.debug('[version-check] Update trigger error:', msg)
+      return { success: false, error: msg }
     }
   }, [])
 
@@ -614,12 +672,18 @@ function useVersionCheckCore() {
    * Force a fresh check, bypassing cache.
    */
   const forceCheck = useCallback(async (): Promise<void> => {
+    console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
     setIsChecking(true)
+    setError(null)
     try {
       if (channel === 'developer') {
         if (agentSupportsAutoUpdate) {
+          console.debug('[version-check] Checking via kc-agent /auto-update/status')
           await fetchAutoUpdateStatus()
         } else {
+          console.debug('[version-check] Checking via GitHub API (no agent auto-update support)')
+          // Clear rate-limit backoff on manual check so users can retry
+          localStorage.removeItem('kc-github-rate-limit-until')
           await fetchLatestMainSHA()
         }
         return

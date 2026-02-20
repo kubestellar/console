@@ -134,22 +134,35 @@ export function Settings() {
     container.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' })
   }
 
-  // Handle deep linking - scroll to section based on URL hash
+  // Handle deep linking - scroll to section based on URL hash.
+  // Depends on both pathname and hash so it fires when navigating TO settings
+  // from another page (KeepAlive keeps Settings mounted, so location updates
+  // for all routes — we only act when actually on /settings).
   useEffect(() => {
+    if (location.pathname !== '/settings') return
     const hash = location.hash.replace('#', '')
-    if (hash) {
-      const timer = setTimeout(() => {
+    if (!hash) return
+
+    // Retry scroll a few times — KeepAlive transitions display:none→contents
+    // and the element may not have a layout rect on the first frame.
+    let attempts = 0
+    const maxAttempts = 5
+    const tryScroll = () => {
+      const element = document.getElementById(hash)
+      const container = getScrollContainer()
+      if (element && container && element.getBoundingClientRect().height > 0) {
         scrollToSection(hash, false)
         setActiveSection(hash)
-        const element = document.getElementById(hash)
-        if (element) {
-          element.classList.add('ring-2', 'ring-purple-500/50')
-          setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
-        }
-      }, 100)
-      return () => clearTimeout(timer)
+        element.classList.add('ring-2', 'ring-purple-500/50')
+        setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+      } else if (++attempts < maxAttempts) {
+        requestAnimationFrame(tryScroll)
+      }
     }
-  }, [location.hash])
+    // Initial delay for route transition, then retry with rAF
+    const timer = setTimeout(tryScroll, 50)
+    return () => clearTimeout(timer)
+  }, [location.pathname, location.hash])
 
   // Track active section on scroll using IntersectionObserver
   useEffect(() => {

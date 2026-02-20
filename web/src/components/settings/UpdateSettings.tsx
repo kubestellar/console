@@ -82,6 +82,8 @@ export function UpdateSettings() {
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
   const [oauthConfigured, setOauthConfigured] = useState<boolean | null>(null)
+  const [triggerState, setTriggerState] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [triggerError, setTriggerError] = useState<string | null>(null)
 
   // Track visual spinning for Check Now button (ensures 1 full rotation like cards)
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
@@ -503,12 +505,35 @@ export function UpdateSettings() {
       {hasUpdate && agentConnected && !isHelmInstall && !isUpdating && (
         <div className="mb-4">
           <button
-            onClick={triggerUpdate}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
+            onClick={async () => {
+              setTriggerState('loading')
+              setTriggerError(null)
+              const result = await triggerUpdate()
+              if (result.success) {
+                setTriggerState('idle')
+              } else {
+                setTriggerState('error')
+                setTriggerError(result.error ?? 'Unknown error')
+              }
+            }}
+            disabled={triggerState === 'loading'}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 disabled:opacity-50 transition-colors"
           >
-            <Download className="w-4 h-4" />
-            {t('settings.updates.updateNow')}
+            {triggerState === 'loading' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {triggerState === 'loading' ? t('settings.updates.updating') : t('settings.updates.updateNow')}
           </button>
+          {triggerState === 'error' && triggerError && (
+            <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <p className="text-sm text-red-400">{triggerError}</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
