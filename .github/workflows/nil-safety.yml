@@ -8,6 +8,8 @@ on:
       - 'go.mod'
       - 'go.sum'
       - '.nilaway-baseline.json'
+      - 'web/src/**.ts'
+      - 'web/src/**.tsx'
   schedule:
     - cron: '30 4 * * *'
   workflow_dispatch:
@@ -287,3 +289,68 @@ jobs:
             } catch (e) {
               core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
             }
+
+  # ── TypeScript: Catch unsafe optional chaining patterns ────────────
+  ts-null-safety:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for unsafe optional chaining with .join()
+        id: scan
+        run: |
+          # Catches patterns where optional chaining produces `undefined` before .join():
+          #
+          #   x?.map(...).join(...)        — returns "undefined" in template literals
+          #   x?.slice(0,2).join(...)      — same issue
+          #   x?.property.join(...)        — crashes if property is undefined
+          #   x?.join(...)                 — returns undefined instead of ""
+          #
+          # Fix: Use (x ?? []).method().join() or (x ?? []).join()
+          #
+          # Safe (not matched):
+          #   (x ?? []).map(...).join(...)
+          #   x?.toLowerCase().includes(q) — optional chaining protects entire chain
+
+          FINDINGS="/tmp/ts-null-findings.txt"
+          : > "$FINDINGS"
+
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '(\?\.(map|filter|slice|flatMap|sort|reduce)\(.*\)\.join\(|\?\.[a-zA-Z]+\.join\(|\?\.join\()' \
+            web/src/ 2>/dev/null | \
+            grep -v 'node_modules' | \
+            grep -v '// null-safety-ignore' | \
+            tee "$FINDINGS" || true
+
+          COUNT=$(wc -l < "$FINDINGS" | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "### TypeScript Null Safety: $COUNT unsafe .join() pattern(s)" >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo 'These lines use optional chaining before `.join()`, producing `undefined` instead of `""`:' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            head -50 "$FINDINGS" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '**Fix:** Replace `x?.join()` with `(x ?? []).join()` and `x?.map().join()` with `(x ?? []).map().join()`' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### TypeScript Null Safety: No unsafe patterns found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail on unsafe patterns
+        if: steps.scan.outputs.count != '0'
+        run: |
+          echo "::error::Found ${{ steps.scan.outputs.count }} unsafe optional chaining + .join() pattern(s)."
+          echo ""
+          cat /tmp/ts-null-findings.txt
+          echo ""
+          echo "Optional chaining before .join() produces undefined instead of an empty string."
+          echo "Fix: Use (x ?? []).join() or (x ?? []).map().join()"
+          echo ""
+          echo "To suppress a false positive, add '// null-safety-ignore' on the same line."
+          exit 1
