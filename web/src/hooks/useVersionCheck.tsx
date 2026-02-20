@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, createContext, useContext, type ReactNode } from 'react'
 import type {
   UpdateChannel,
   ReleaseType,
@@ -257,7 +257,7 @@ function loadSkippedVersions(): string[] {
  * - Allows skipping specific versions
  * - Auto-update configuration via kc-agent
  */
-export function useVersionCheck() {
+function useVersionCheckCore() {
   const [channel, setChannelState] = useState<UpdateChannel>(loadChannel)
   const [releases, setReleases] = useState<ParsedRelease[]>([])
   const [isChecking, setIsChecking] = useState(false)
@@ -283,6 +283,8 @@ export function useVersionCheck() {
   const [hasCodingAgent, setHasCodingAgent] = useState(false)
   // Client-side SHA tracking for developer channel (fallback when kc-agent doesn't support auto-update)
   const [latestMainSHA, setLatestMainSHA] = useState<string | null>(null)
+  // Recent commits between current and latest SHA (developer channel)
+  const [recentCommits, setRecentCommits] = useState<Array<{ sha: string; message: string; author: string; date: string }>>([])
 
   const currentVersion = useMemo(() => {
     try {
@@ -390,6 +392,44 @@ export function useVersionCheck() {
       if (cached) setLatestMainSHA(cached)
     }
   }, [])
+
+  /**
+   * Fetch recent commits between current build SHA and latest main HEAD.
+   * Uses GitHub Compare API: GET /repos/{owner}/{repo}/compare/{base}...{head}
+   */
+  const fetchRecentCommits = useCallback(async () => {
+    const currentSHA = commitHash
+    const latestSHA = latestMainSHA
+    if (!currentSHA || currentSHA === 'unknown' || !latestSHA) return
+    if (currentSHA === latestSHA || latestSHA.startsWith(currentSHA) || currentSHA.startsWith(latestSHA)) {
+      setRecentCommits([])
+      return
+    }
+    try {
+      const headers: HeadersInit = { Accept: 'application/vnd.github.v3+json' }
+      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
+      if (storedToken) {
+        try { headers['Authorization'] = `Bearer ${atob(storedToken)}` }
+        catch { headers['Authorization'] = `Bearer ${storedToken}` }
+      }
+      const resp = await fetch(
+        `https://api.github.com/repos/kubestellar/console/compare/${currentSHA}...${latestSHA}`,
+        { headers, signal: AbortSignal.timeout(10000) }
+      )
+      if (resp.ok) {
+        const data = await resp.json()
+        const commits = (data.commits || []).slice(-20).reverse().map((c: { sha: string; commit: { message: string; author: { name: string; date: string } } }) => ({
+          sha: c.sha,
+          message: c.commit.message.split('\n')[0], // First line only
+          author: c.commit.author.name,
+          date: c.commit.author.date,
+        }))
+        setRecentCommits(commits)
+      }
+    } catch {
+      // Non-critical — commit list is informational
+    }
+  }, [commitHash, latestMainSHA])
 
   /**
    * Set update channel and persist to localStorage + kc-agent.
@@ -663,6 +703,13 @@ export function useVersionCheck() {
     }
   }, [channel, agentSupportsAutoUpdate, fetchLatestMainSHA])
 
+  // Fetch commit list when we have both SHAs and they differ
+  useEffect(() => {
+    if (channel === 'developer' && hasUpdate) {
+      fetchRecentCommits()
+    }
+  }, [channel, hasUpdate, fetchRecentCommits])
+
   return {
     // State
     currentVersion,
@@ -684,6 +731,7 @@ export function useVersionCheck() {
     agentConnected,
     hasCodingAgent,
     latestMainSHA,
+    recentCommits,
 
     // Actions
     setChannel,
@@ -695,4 +743,32 @@ export function useVersionCheck() {
     triggerUpdate,
     setUpdateProgress,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Shared Context — all consumers see the same version-check state
+// ---------------------------------------------------------------------------
+
+type VersionCheckValue = ReturnType<typeof useVersionCheckCore>
+
+const VersionCheckContext = createContext<VersionCheckValue | null>(null)
+
+/**
+ * Provider that creates a single version-check instance shared by all consumers.
+ * Mount once near the app root (e.g. in Layout).
+ */
+export function VersionCheckProvider({ children }: { children: ReactNode }) {
+  const value = useVersionCheckCore()
+  return <VersionCheckContext.Provider value={value}>{children}</VersionCheckContext.Provider>
+}
+
+/**
+ * Public hook — reads from the shared VersionCheckProvider context.
+ */
+export function useVersionCheck(): VersionCheckValue {
+  const ctx = useContext(VersionCheckContext)
+  if (!ctx) {
+    throw new Error('useVersionCheck must be used within a <VersionCheckProvider>')
+  }
+  return ctx
 }

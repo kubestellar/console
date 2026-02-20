@@ -24,6 +24,7 @@ import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { KeepAliveOutlet } from './KeepAliveOutlet'
 import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
+import { VersionCheckProvider } from '../../hooks/useVersionCheck'
 
 
 // Module-level constant — computed once, never changes on re-render.
@@ -254,6 +255,7 @@ export function Layout({ children }: LayoutProps) {
   useDeepLink()
 
   return (
+    <VersionCheckProvider>
     <TourProvider>
     <div className="h-screen bg-background overflow-hidden flex flex-col">
       {/* Skip to content link for keyboard users and screen readers */}
@@ -507,5 +509,6 @@ export function Layout({ children }: LayoutProps) {
       )}
     </div>
     </TourProvider>
+    </VersionCheckProvider>
   )
 }

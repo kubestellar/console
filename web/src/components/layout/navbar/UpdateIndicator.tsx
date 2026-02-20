@@ -3,19 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { useVersionCheck } from '../../../hooks/useVersionCheck'
-import { ROUTES } from '../../../config/routes'
+import { getSettingsWithHash } from '../../../config/routes'
 
 export function UpdateIndicator() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { hasUpdate, latestRelease, channel, autoUpdateStatus, latestMainSHA, skipVersion, checkForUpdates } = useVersionCheck()
+  const { hasUpdate, latestRelease, channel, autoUpdateStatus, latestMainSHA, skipVersion } = useVersionCheck()
   const [showUpdateDropdown, setShowUpdateDropdown] = useState(false)
   const updateRef = useRef<HTMLDivElement>(null)
-
-  // Check for updates on mount (respects rate limiting)
-  useEffect(() => {
-    checkForUpdates()
-  }, [checkForUpdates])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -68,7 +63,7 @@ export function UpdateIndicator() {
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  navigate(ROUTES.SETTINGS)
+                  navigate(getSettingsWithHash('system-updates-settings'))
                   setShowUpdateDropdown(false)
                 }}
                 className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors"

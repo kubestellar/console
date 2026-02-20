@@ -49,6 +49,7 @@ export function UpdateSettings() {
     agentConnected,
     hasCodingAgent,
     latestMainSHA,
+    recentCommits,
     setAutoUpdateEnabled,
     triggerUpdate,
   } = useVersionCheck()
@@ -493,6 +494,11 @@ export function UpdateSettings() {
         {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
       </div>
 
+      {/* Recent Commits (developer channel) */}
+      {isDeveloperChannel && recentCommits.length > 0 && (
+        <CommitList commits={recentCommits} />
+      )}
+
       {/* Update Now Button (when agent connected and update available) */}
       {hasUpdate && agentConnected && !isHelmInstall && !isUpdating && (
         <div className="mb-4">
@@ -693,4 +699,51 @@ function PrereqRow({
       </div>
     </div>
   )
+}
+
+/** Collapsible list of recent commits between current and latest SHA */
+function CommitList({ commits }: { commits: Array<{ sha: string; message: string; author: string; date: string }> }) {
+  const { t } = useTranslation()
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="mb-4 rounded-lg bg-secondary/30 border border-border overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-secondary/50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <GitCommitHorizontal className="w-4 h-4 text-orange-400" />
+          <span className="font-medium text-foreground">
+            {t('settings.updates.recentCommits', { count: commits.length })}
+          </span>
+        </div>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      {expanded && (
+        <div className="border-t border-border max-h-64 overflow-y-auto">
+          {commits.map((commit) => (
+            <div key={commit.sha} className="flex items-start gap-3 px-4 py-2 border-b border-border/50 last:border-b-0 hover:bg-secondary/30">
+              <code className="text-xs font-mono text-orange-400 shrink-0 pt-0.5">{commit.sha.slice(0, 7)}</code>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-foreground truncate">{commit.message}</p>
+                <p className="text-xs text-muted-foreground">{commit.author} &middot; {formatCommitDate(commit.date)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Format ISO date to relative time for commit display */
+function formatCommitDate(iso: string): string {
+  const date = new Date(iso)
+  const now = Date.now()
+  const diff = now - date.getTime()
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`
+  return date.toLocaleDateString()
 }
