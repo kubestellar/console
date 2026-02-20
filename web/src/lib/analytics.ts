@@ -12,7 +12,7 @@ import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
 
 // GA4 Measurement ID — this is a public tracking identifier (not a secret).
 // It only allows sending data to the GA4 property, not reading it.
-const GA_MEASUREMENT_ID = 'G-K2STV9Q7S5'
+const GA_MEASUREMENT_ID = 'G-QPGNKGNNY2'
 import { isDemoMode } from './demoMode'
 
 // ── Types ──────────────────────────────────────────────────────────
