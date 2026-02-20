@@ -62,7 +62,7 @@ export function initAnalytics() {
 
   // Inject gtag.js script
   const script = document.createElement('script')
-  script.src = `/t/g/js?id=${measurementId}`
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`
   script.async = true
   document.head.appendChild(script)
 
@@ -75,7 +75,7 @@ export function initAnalytics() {
   gtag('config', measurementId, {
     send_page_view: false,
     cookie_flags: 'SameSite=None;Secure',
-    transport_url: `${window.location.origin}/t`,
+    // transport_url: `${window.location.origin}/t`, // first-party proxy (disabled — needs validation)
   })
 
   // Set persistent user properties
