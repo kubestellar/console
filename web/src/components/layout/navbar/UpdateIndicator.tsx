@@ -8,7 +8,7 @@ import { ROUTES } from '../../../config/routes'
 export function UpdateIndicator() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { hasUpdate, latestRelease, skipVersion, checkForUpdates } = useVersionCheck()
+  const { hasUpdate, latestRelease, channel, autoUpdateStatus, skipVersion, checkForUpdates } = useVersionCheck()
   const [showUpdateDropdown, setShowUpdateDropdown] = useState(false)
   const updateRef = useRef<HTMLDivElement>(null)
 
@@ -28,7 +28,18 @@ export function UpdateIndicator() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  if (!hasUpdate || !latestRelease) {
+  if (!hasUpdate) {
+    return null
+  }
+
+  // Developer channel: latestRelease is null, use SHA from autoUpdateStatus
+  const isDeveloperUpdate = channel === 'developer' && autoUpdateStatus?.hasUpdate
+  const updateLabel = isDeveloperUpdate
+    ? `New commit: ${autoUpdateStatus?.latestSHA?.slice(0, 7) ?? 'unknown'}`
+    : latestRelease?.tag ?? ''
+
+  // Need either a release update or a developer channel update
+  if (!isDeveloperUpdate && !latestRelease) {
     return null
   }
 
@@ -37,7 +48,7 @@ export function UpdateIndicator() {
       <button
         onClick={() => setShowUpdateDropdown(!showUpdateDropdown)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
-        title={t('update.availableTag', { tag: latestRelease.tag })}
+        title={isDeveloperUpdate ? updateLabel : t('update.availableTag', { tag: latestRelease?.tag ?? '' })}
       >
         <Download className="w-4 h-4" />
         <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
@@ -51,7 +62,7 @@ export function UpdateIndicator() {
               <span className="text-sm font-medium text-foreground">{t('update.available')}</span>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
-              {latestRelease.tag}
+              {updateLabel}
             </p>
             <div className="flex gap-2">
               <button
@@ -63,15 +74,17 @@ export function UpdateIndicator() {
               >
                 {t('actions.viewDetails')}
               </button>
-              <button
-                onClick={() => {
-                  skipVersion(latestRelease.tag)
-                  setShowUpdateDropdown(false)
-                }}
-                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {t('actions.skip')}
-              </button>
+              {latestRelease && (
+                <button
+                  onClick={() => {
+                    skipVersion(latestRelease.tag)
+                    setShowUpdateDropdown(false)
+                  }}
+                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {t('actions.skip')}
+                </button>
+              )}
             </div>
           </div>
         </div>

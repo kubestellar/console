@@ -190,13 +190,18 @@ function isCacheValid(cache: ReleasesCache): boolean {
 
 /**
  * Load channel preference from localStorage.
+ * Defaults to 'developer' for localhost (dev installs), 'stable' otherwise.
  */
 function loadChannel(): UpdateChannel {
   const stored = localStorage.getItem(UPDATE_STORAGE_KEYS.CHANNEL)
   if (stored === 'stable' || stored === 'unstable' || stored === 'developer') {
     return stored
   }
-  return 'stable' // Default to stable
+  // Dev installs (localhost) default to developer channel so they get notified of new main commits
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'developer'
+  }
+  return 'stable'
 }
 
 /**
