@@ -574,15 +574,20 @@ export function useVersionCheck() {
    * Force a fresh check, bypassing cache.
    */
   const forceCheck = useCallback(async (): Promise<void> => {
-    if (channel === 'developer') {
-      if (agentSupportsAutoUpdate) {
-        await fetchAutoUpdateStatus()
-      } else {
-        await fetchLatestMainSHA()
+    setIsChecking(true)
+    try {
+      if (channel === 'developer') {
+        if (agentSupportsAutoUpdate) {
+          await fetchAutoUpdateStatus()
+        } else {
+          await fetchLatestMainSHA()
+        }
+        return
       }
-      return
+      await fetchReleases(true)
+    } finally {
+      setIsChecking(false)
     }
-    await fetchReleases(true)
   }, [fetchReleases, channel, fetchAutoUpdateStatus, agentSupportsAutoUpdate, fetchLatestMainSHA])
 
   /**
