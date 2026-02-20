@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, Linkedin, Share2 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
@@ -17,7 +17,7 @@ import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
-import { GITHUB_REWARD_LABELS } from '../../types/rewards'
+import { GITHUB_REWARD_LABELS, REWARD_ACTIONS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
 
 // Time thresholds for relative time formatting
@@ -391,9 +391,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-foreground">
-            Contribute
-          </h2>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Contribute
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Earn {REWARD_ACTIONS.bug_report.coins} coins for bugs, {REWARD_ACTIONS.feature_suggestion.coins} for features
+            </p>
+          </div>
           {!canPerformActions && (
             <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/20 text-amber-400 uppercase tracking-wider">
               {t('feedback.demo')}
@@ -990,6 +995,27 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                         </p>
                       </div>
                     )}
+
+                    {/* Share on LinkedIn */}
+                    {githubRewards && githubPoints > 0 && (
+                      <div className="p-3 border-t border-border/50">
+                        <button
+                          onClick={() => {
+                            const totalPoints = githubPoints
+                            const prCount = githubRewards.breakdown.prs_merged + githubRewards.breakdown.prs_opened
+                            const issueCount = githubRewards.breakdown.bug_issues + githubRewards.breakdown.feature_issues + githubRewards.breakdown.other_issues
+                            const text = `I've earned ${totalPoints.toLocaleString()} contributor coins on the KubeStellar Console! ${prCount > 0 ? `${prCount} PRs` : ''}${prCount > 0 && issueCount > 0 ? ' and ' : ''}${issueCount > 0 ? `${issueCount} issues` : ''} contributed to the open-source KubeStellar project.`
+                            const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}&summary=${encodeURIComponent(text)}`
+                            window.open(linkedInUrl, '_blank', 'width=600,height=600')
+                          }}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+                          Share {githubPoints.toLocaleString()} coins on LinkedIn
+                          <Share2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
               </div>
             </div>
           ) : success ? (
@@ -1047,6 +1073,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                   >
                     <Bug className="w-4 h-4" />
                     {t('feedback.bugReport')}
+                    <span className="text-[10px] text-muted-foreground">
+                      +{REWARD_ACTIONS.bug_report.coins}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -1059,6 +1088,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                   >
                     <Sparkles className="w-4 h-4" />
                     {t('feedback.featureRequest')}
+                    <span className="text-[10px] text-muted-foreground">
+                      +{REWARD_ACTIONS.feature_suggestion.coins}
+                    </span>
                   </button>
                 </div>
 
@@ -1151,7 +1183,12 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                     {t('feedback.submitting')}
                   </>
                 ) : (
-                  'Submit'
+                  <>
+                    Submit
+                    <span className="text-white/60 text-xs font-normal">
+                      +{requestType === 'bug' ? REWARD_ACTIONS.bug_report.coins : REWARD_ACTIONS.feature_suggestion.coins}
+                    </span>
+                  </>
                 )}
               </button>
             ) : (

@@ -18,14 +18,14 @@ interface UserProfileDropdownProps {
   } | null
   onLogout: () => void
   onPreferences?: () => void
-  onFeedback?: () => void
 }
 
-export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showRewards, setShowRewards] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showDevPanel, setShowDevPanel] = useState(false)
   const [oauthStatus, setOauthStatus] = useState<{ checked: boolean; configured: boolean; backendUp: boolean }>({ checked: false, configured: false, backendUp: false })
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -297,7 +297,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
             <button
               onClick={() => {
                 setIsOpen(false)
-                onFeedback?.()
+                setShowFeedbackModal(true)
               }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
@@ -365,6 +365,13 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
         isOpen={showRewards}
         onClose={() => setShowRewards(false)}
         initialTab="updates"
+      />
+
+      {/* Feedback modal — same as top navbar/card bug button */}
+      <FeatureRequestModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        initialTab="submit"
       />
     </div>
   )

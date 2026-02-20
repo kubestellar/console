@@ -9,7 +9,7 @@ import { useMobile } from '../../../hooks/useMobile'
 import { TourTrigger } from '../../onboarding/Tour'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
-import { FeatureRequestButton, FeedbackModal } from '../../feedback'
+import { FeatureRequestButton } from '../../feedback'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { SearchDropdown } from './SearchDropdown'
 import { TokenUsageWidget } from './TokenUsageWidget'
@@ -23,7 +23,6 @@ export function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
-  const [showFeedback, setShowFeedback] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const { config, toggleMobileSidebar } = useSidebarConfig()
   const { isMobile } = useMobile()
@@ -156,12 +155,9 @@ export function Navbar() {
           user={user}
           onLogout={logout}
           onPreferences={() => navigate(ROUTES.SETTINGS)}
-          onFeedback={() => setShowFeedback(true)}
         />
       </div>
 
-      {/* Feedback Modal */}
-      <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
     </nav>
   )
 }
