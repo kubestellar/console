@@ -29,6 +29,7 @@
     "collapse": "Collapse",
     "restore": "Restore",
     "skip": "Skip",
+    "skipToContent": "Skip to content",
     "signOut": "Sign Out",
     "getYourOwn": "Get Your Own Console",
     "viewDetails": "View Details",
@@ -42,7 +43,9 @@
     "swapNow": "Swap Now",
     "keepThis": "Keep This",
     "replaceCard": "Replace Card",
-    "askAI": "Ask AI about this card"
+    "askAI": "Ask AI about this card",
+    "installConsole": "Install your own console",
+    "exitDemoMode": "Exit demo mode"
   },
   "labels": {
     "loading": "Loading...",
@@ -159,6 +162,12 @@
       "highContrast": "High Contrast",
       "highContrastDesc": "Increase contrast for better visibility"
     },
+    "analytics": {
+      "title": "Analytics",
+      "subtitle": "Usage data collection",
+      "collectData": "Share anonymous usage data",
+      "privacyNote": "We collect anonymous data solely for the purpose of improving the product's user experience, using Google Analytics. No personal information is ever collected or shared."
+    },
     "restoredFromBackup": "Settings restored from backup file",
     "groups": {
       "aiIntelligence": "AI & Intelligence",
@@ -183,7 +192,8 @@
       "backupSync": "Backup & Sync",
       "localClusters": "Local Clusters",
       "permissions": "Permissions",
-      "updates": "Updates"
+      "updates": "Updates",
+      "analytics": "Analytics"
     },
     "syncStatus": {
       "synced": "Synced",
@@ -485,7 +495,27 @@
       "clusterDeployment": "Cluster Deployment",
       "clusterDeploymentDesc": "Update your Helm release to the latest chart version.",
       "copied": "Copied!",
-      "copy": "Copy"
+      "copy": "Copy",
+      "developer": "Developer (Track main branch)",
+      "developerDesc": "Auto-pull, build, and restart when main changes",
+      "autoUpdate": "Automatic Updates",
+      "autoUpdateDesc": "Automatically apply updates when detected",
+      "autoUpdateOn": "Auto-update is enabled",
+      "autoUpdateOff": "Auto-update is disabled",
+      "updateNow": "Update Now",
+      "currentSHA": "Current Commit",
+      "latestSHA": "Latest on main",
+      "uncommittedWarning": "Uncommitted changes — auto-update paused",
+      "agentRequired": "kc-agent required for auto-updates",
+      "agentRequiredDesc": "Start kc-agent to enable automatic updates",
+      "helmDisabled": "Auto-update not available for Helm installs",
+      "helmDisabledDesc": "Use 'helm upgrade' to update your cluster deployment",
+      "updating": "Updating...",
+      "updateComplete": "Updated successfully",
+      "updateFailed": "Update failed",
+      "devMode": "Dev Mode",
+      "binaryMode": "Binary",
+      "helmMode": "Helm"
     },
     "theme": {
       "title": "Appearance",
