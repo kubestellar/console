@@ -495,7 +495,7 @@
       "clusterDeployment": "Cluster Deployment",
       "clusterDeploymentDesc": "Update your Helm release to the latest chart version.",
       "devSourceUpdate": "Source Update",
-      "devSourceDesc": "Pull the latest changes and rebuild.",
+      "devSourceDesc": "Pull the latest changes, rebuild the frontend, and update the local agent.",
       "devCodingAgent": "Use a Coding Agent",
       "devCodingAgentDesc": "AI coding agents like Claude Code, Cursor, or Windsurf can pull, build, and restart the console for you automatically.",
       "copied": "Copied!",

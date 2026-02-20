@@ -554,11 +554,9 @@ export function UpdateSettings() {
               {t('settings.updates.devSourceDesc')}
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">
-                git pull origin main && cd web && npm run build
-              </code>
+              <code className="flex-1 px-3 py-2 rounded-lg bg-secondary font-mono text-xs select-all overflow-x-auto">git pull origin main && cd web && npm run build && cd .. && go build -o $(which kc-agent) ./cmd/kc-agent</code>
               <button
-                onClick={() => copyCommand('git pull origin main && cd web && npm run build', 'gitpull')}
+                onClick={() => copyCommand('git pull origin main && cd web && npm run build && cd .. && go build -o $(which kc-agent) ./cmd/kc-agent', 'gitpull')}
                 className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600"
               >
                 <Copy className="w-4 h-4" />

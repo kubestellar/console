@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -335,6 +336,47 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		Message:  fmt.Sprintf("Updated to %s", short(newSHA)),
 		Progress: 100,
 	})
+
+	// Self-update: rebuild kc-agent and exec into the new binary
+	uc.selfUpdate(repoPath)
+}
+
+// selfUpdate rebuilds the kc-agent binary and replaces the running process via exec.
+// This is called after a successful developer update — the new code is already on disk.
+// If anything fails, the old process keeps running (no harm done).
+func (uc *UpdateChecker) selfUpdate(repoPath string) {
+	currentBinary, err := os.Executable()
+	if err != nil {
+		log.Printf("[AutoUpdate] Cannot determine kc-agent binary path: %v", err)
+		return
+	}
+
+	log.Printf("[AutoUpdate] Rebuilding kc-agent...")
+	tmpBinary := currentBinary + ".new"
+
+	build := exec.Command("go", "build", "-o", tmpBinary, "./cmd/kc-agent")
+	build.Dir = repoPath
+	build.Env = append(os.Environ(), "GOWORK=off")
+	if out, err := build.CombinedOutput(); err != nil {
+		log.Printf("[AutoUpdate] kc-agent rebuild failed: %v\n%s", err, out)
+		os.Remove(tmpBinary)
+		return
+	}
+
+	// Atomic replace: rename new over old
+	if err := os.Rename(tmpBinary, currentBinary); err != nil {
+		log.Printf("[AutoUpdate] Failed to replace kc-agent binary: %v", err)
+		os.Remove(tmpBinary)
+		return
+	}
+
+	log.Printf("[AutoUpdate] kc-agent rebuilt, exec-ing into new binary...")
+
+	// Re-exec with the same args — replaces this process atomically
+	if err := syscall.Exec(currentBinary, os.Args, os.Environ()); err != nil {
+		log.Printf("[AutoUpdate] exec into new kc-agent failed: %v", err)
+	}
+	// If exec succeeds, this line is never reached
 }
 
 func (uc *UpdateChecker) checkReleaseChannel(channel string) {
