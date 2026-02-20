@@ -71,17 +71,17 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
         <div className="grid grid-cols-3 gap-2">
           <StatTile
             value={totals.totalPods.toString()}
-            sub="pods"
+            sub={t('coreDNSStatus.pods')}
             color="blue"
           />
           <StatTile
             value={`${totals.healthyClusters}/${clusters.length}`}
-            sub="healthy"
+            sub={t('coreDNSStatus.healthy')}
             color={totals.healthyClusters === clusters.length ? 'green' : 'yellow'}
           />
           <StatTile
             value={totals.totalRestarts.toString()}
-            sub="restarts"
+            sub={t('coreDNSStatus.restarts')}
             color={totals.totalRestarts === 0 ? 'green' : totals.totalRestarts < 5 ? 'yellow' : 'red'}
           />
         </div>
@@ -159,9 +159,9 @@ function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnTy
       {/* pod summary for healthy clusters */}
       {cluster.healthy && (
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>{cluster.pods.length} pod{cluster.pods.length !== 1 ? 's' : ''} running</span>
+          <span>{t('coreDNSStatus.summaryRunning', { count: cluster.pods.length })}</span>
           {cluster.totalRestarts > 0 && (
-            <span className="text-orange-400">↺ {cluster.totalRestarts} restart{cluster.totalRestarts !== 1 ? 's' : ''}</span>
+            <span className="text-orange-400">↺ {t('coreDNSStatus.summaryRestarts', { count: cluster.totalRestarts })}</span>
           )}
         </div>
       )}
