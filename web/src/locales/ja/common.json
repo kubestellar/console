@@ -29,6 +29,7 @@
     "collapse": "Collapse",
     "restore": "Restore",
     "skip": "Skip",
+    "skipToContent": "Skip to content",
     "signOut": "Sign Out",
     "getYourOwn": "Get Your Own Console",
     "viewDetails": "View Details",
@@ -42,7 +43,9 @@
     "swapNow": "Swap Now",
     "keepThis": "Keep This",
     "replaceCard": "Replace Card",
-    "askAI": "Ask AI about this card"
+    "askAI": "Ask AI about this card",
+    "installConsole": "Install your own console",
+    "exitDemoMode": "Exit demo mode"
   },
   "labels": {
     "loading": "Loading...",

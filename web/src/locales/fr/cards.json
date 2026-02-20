@@ -514,6 +514,7 @@
     "refreshFailedRetry_other": "Refresh failed {{count}} times - click to retry",
     "refreshData": "Refresh data",
     "expandFullScreen": "Expand card to full screen",
+    "reportIssue": "Report issue for this card",
     "cardMenuTooltip": "Card menu - configure, replace, or remove",
     "configureTooltip": "Configure card settings like cluster and namespace filters",
     "copyLink": "Copy Link",
