@@ -335,8 +335,9 @@ class ApiClient {
           handle401()
           throw new UnauthorizedError()
         }
+        const errorText = await response.text().catch(() => '')
         // Note: Don't mark backend as failed on 500s - health check is source of truth
-        throw new Error(`API error: ${response.status}`)
+        throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
       const data = await response.json()
@@ -378,8 +379,9 @@ class ApiClient {
           handle401()
           throw new UnauthorizedError()
         }
+        const errorText = await response.text().catch(() => '')
         // Note: Don't mark backend as failed on 500s - health check is source of truth
-        throw new Error(`API error: ${response.status}`)
+        throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
       const data = await response.json()
@@ -420,8 +422,9 @@ class ApiClient {
           handle401()
           throw new UnauthorizedError()
         }
+        const errorText = await response.text().catch(() => '')
         // Note: Don't mark backend as failed on 500s - health check is source of truth
-        throw new Error(`API error: ${response.status}`)
+        throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
     } catch (err) {

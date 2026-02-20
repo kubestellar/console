@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -106,14 +106,16 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
   const [previewChecking, setPreviewChecking] = useState<number | null>(null) // PR number being checked
   const [previewResults, setPreviewResults] = useState<Record<number, { status: string; preview_url?: string; ready_at?: string; message?: string }>>({})
 
-  // Pre-fill description when opened from a card's bug button
+  // Pre-fill description when opened from a card's bug button (only once on open)
+  const prevOpenRef = useRef(false)
   useEffect(() => {
-    if (isOpen && initialContext) {
-      const bugExample = `Card: ${initialContext.cardTitle} (${initialContext.cardType})\n\nExample bug report: (replace this with a detailed bug report)\n`
+    if (isOpen && !prevOpenRef.current && initialContext) {
+      const bugExample = `Card: ${initialContext.cardTitle} (${initialContext.cardType})\n\nDescribe the bug:\n`
       setDescription(bugExample)
       setRequestType('bug')
     }
-  }, [isOpen, initialContext])
+    prevOpenRef.current = isOpen
+  }, [isOpen])
 
   const handleCheckPreview = async (prNumber: number) => {
     setPreviewChecking(prNumber)
@@ -189,15 +191,25 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
     setError(null)
 
     const trimmed = description.trim()
-    if (trimmed.length < 10) {
-      setError('Please write at least 10 characters')
-      return
-    }
 
     // Extract title from first line, rest becomes description body
     const lines = trimmed.split('\n')
     const extractedTitle = lines[0].trim().substring(0, 200)
     const extractedDesc = lines.length > 1 ? lines.slice(1).join('\n').trim() || extractedTitle : extractedTitle
+
+    // Frontend validation aligned with backend rules
+    if (extractedTitle.length < 10) {
+      setError('Title (first line) must be at least 10 characters')
+      return
+    }
+    if (extractedDesc.length < 20) {
+      setError('Description must be at least 20 characters')
+      return
+    }
+    if (extractedDesc.split(/\s+/).filter(Boolean).length < 3) {
+      setError('Description must contain at least 3 words')
+      return
+    }
 
     try {
       const result = await createRequest({
@@ -216,7 +228,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
         refreshNotifications()
       }, 3000)
     } catch (err) {
-      setError(t('feedback.submitFailed'))
+      // Show the actual backend error message if available
+      const message = err instanceof Error ? err.message : ''
+      // Try to parse JSON error from backend (Fiber returns {message: "..."})
+      try {
+        const parsed = JSON.parse(message)
+        setError(parsed.message || t('feedback.submitFailed'))
+      } catch {
+        setError(message || t('feedback.submitFailed'))
+      }
     }
   }
 
