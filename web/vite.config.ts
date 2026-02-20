@@ -159,6 +159,10 @@ manualChunks: (id) => {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/t/g': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       '/ws': {
         target: 'ws://localhost:8080',
         ws: true,
