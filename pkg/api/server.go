@@ -692,6 +692,10 @@ func (s *Server) setupRoutes() {
 		s.hub.HandleConnection(c)
 	}))
 
+	// GA4 analytics proxy — bypass ad blockers via first-party domain
+	s.app.Get("/t/g/js", handlers.GA4ScriptProxy)
+	s.app.All("/t/g/collect", handlers.GA4CollectProxy)
+
 	// Serve static files in production
 	if !s.config.DevMode {
 		s.app.Static("/", "./web/dist")

@@ -35,6 +35,19 @@
   to = "/.netlify/functions/presence"
   status = 200
 
+# GA4 analytics proxy — bypass ad blockers via first-party domain
+[[redirects]]
+  from = "/t/g/js"
+  to = "https://www.googletagmanager.com/gtag/js"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/t/g/collect"
+  to = "https://www.google-analytics.com/g/collect"
+  status = 200
+  force = true
+
 # SPA routing - redirect all routes to index.html (only if file doesn't exist)
 [[redirects]]
   from = "/*"
