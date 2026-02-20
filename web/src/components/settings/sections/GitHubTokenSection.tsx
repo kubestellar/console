@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2 } from 'lucide-react'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../../../lib/constants'
+import { trackGitHubTokenConfigured, trackGitHubTokenRemoved } from '../../../lib/analytics'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -133,6 +134,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       setGithubTokenSaved(true)
       setTimeout(() => setGithubTokenSaved(false), 2000)
 
+      trackGitHubTokenConfigured()
+
       // Trigger system updates check with the new token
       forceVersionCheck()
     }
@@ -144,6 +147,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     setHasGithubToken(false)
     setGithubRateLimit(null)
     setGithubTokenError(null)
+    trackGitHubTokenRemoved()
   }
 
   return (

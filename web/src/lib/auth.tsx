@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { api, checkBackendAvailability, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
+import { trackLogin, trackLogout } from './analytics'
 
 interface User {
   id: string
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
 
   const logout = useCallback(() => {
+    trackLogout()
     localStorage.removeItem(STORAGE_KEY_TOKEN)
     cacheUser(null)
     setTokenState(null)
@@ -154,9 +156,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isDemoMode = explicitDemoMode || !backendAvailable
 
     if (isDemoMode) {
+      trackLogin('demo')
       setDemoMode()
       return
     }
+    trackLogin('github-oauth')
     window.location.href = '/auth/github'
   }, [])
 

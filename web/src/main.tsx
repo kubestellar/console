@@ -22,6 +22,7 @@ import {
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { registerDynamicCardType } from './components/cards/cardRegistry'
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
+import { initAnalytics } from './lib/analytics'
 
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn
@@ -114,4 +115,7 @@ enableMocking()
         </BrowserRouter>
       </React.StrictMode>,
     )
+
+    // Initialize GA4 analytics after first render (deferred)
+    setTimeout(() => initAnalytics(), 0)
   })

@@ -162,6 +162,12 @@
       "highContrast": "High Contrast",
       "highContrastDesc": "Increase contrast for better visibility"
     },
+    "analytics": {
+      "title": "Analytics",
+      "subtitle": "Usage data collection",
+      "collectData": "Share anonymous usage data",
+      "privacyNote": "We collect anonymous data solely for the purpose of improving the product's user experience, using Google Analytics. No personal information is ever collected or shared."
+    },
     "restoredFromBackup": "Settings restored from backup file",
     "groups": {
       "aiIntelligence": "AI & Intelligence",
@@ -186,7 +192,8 @@
       "backupSync": "Backup & Sync",
       "localClusters": "Local Clusters",
       "permissions": "Permissions",
-      "updates": "Updates"
+      "updates": "Updates",
+      "analytics": "Analytics"
     },
     "syncStatus": {
       "synced": "Synced",

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
 import { DrillDownModal } from './components/drilldown/DrillDownModal'
@@ -21,6 +21,7 @@ import { prefetchCardData } from './lib/prefetchCardData'
 import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
+import { trackPageView } from './lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
 
 // Lazy load all page components for better code splitting
@@ -231,6 +232,15 @@ function SettingsSyncInit() {
   return null
 }
 
+// Track page views in Google Analytics on route change
+function PageViewTracker() {
+  const location = useLocation()
+  useEffect(() => {
+    trackPageView(location.pathname)
+  }, [location.pathname])
+  return null
+}
+
 // Default main dashboard card types — prefetched immediately so the first
 // page renders without waiting for Dashboard.tsx to mount and trigger prefetch.
 const DEFAULT_MAIN_CARD_TYPES = [
@@ -264,6 +274,7 @@ function App() {
     <ThemeProvider>
     <AuthProvider>
     <SettingsSyncInit />
+    <PageViewTracker />
     <DataPrefetchInit />
     <UnifiedDemoProvider>
       <RewardsProvider>

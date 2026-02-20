@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
   Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container, HardDrive,
-  CheckCircle, Loader2, AlertCircle, WifiOff,
+  CheckCircle, Loader2, AlertCircle, WifiOff, BarChart3,
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
@@ -32,6 +32,7 @@ import {
   PersistenceSection,
   LocalClustersSection,
   SettingsBackupSection,
+  AnalyticsSection,
 } from './sections'
 import { cn } from '../../lib/cn'
 
@@ -85,6 +86,7 @@ const SETTINGS_NAV = [
       { id: 'settings-backup', labelKey: 'settings.nav.backupSync', icon: HardDrive },
       { id: 'local-clusters-settings', labelKey: 'settings.nav.localClusters', icon: Container },
       { id: 'permissions-settings', labelKey: 'settings.nav.permissions', icon: Shield },
+      { id: 'analytics-settings', labelKey: 'settings.nav.analytics', icon: BarChart3 },
       { id: 'system-updates-settings', labelKey: 'settings.nav.updates', icon: Download },
     ],
   },
@@ -326,6 +328,7 @@ export function Settings() {
             />
             <LocalClustersSection />
             <PermissionsSection />
+            <AnalyticsSection />
             <UpdateSettings />
           </div>
         </div>

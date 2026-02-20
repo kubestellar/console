@@ -5,6 +5,7 @@ import {
   STORAGE_KEY_USER_CACHE,
   DEMO_TOKEN_VALUE,
 } from './constants'
+import { trackSessionExpired } from './analytics'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
@@ -41,6 +42,8 @@ function handle401(): void {
 
   // Show an in-page notification before redirecting (DOM-injected, no React dependency)
   showSessionExpiredBanner()
+
+  trackSessionExpired()
 
   // Clear auth state
   localStorage.removeItem(STORAGE_KEY_TOKEN)

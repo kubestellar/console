@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
+import { trackTourStarted, trackTourCompleted, trackTourSkipped } from '../lib/analytics'
 
 export interface TourStep {
   id: string
@@ -175,6 +176,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (isMobile) return
     setCurrentStepIndex(0)
     setIsActive(true)
+    trackTourStarted()
   }, [isMobile])
 
   const nextStep = useCallback(() => {
@@ -186,6 +188,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       setHasCompletedTour(true)
       localStorage.setItem(TOUR_STORAGE_KEY, 'true')
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
+      trackTourCompleted(TOUR_STEPS.length)
     }
   }, [currentStepIndex])
 
@@ -196,11 +199,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, [currentStepIndex])
 
   const skipTour = useCallback(() => {
+    trackTourSkipped(currentStepIndex)
     setIsActive(false)
     setHasCompletedTour(true)
     localStorage.setItem(TOUR_STORAGE_KEY, 'true')
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
-  }, [])
+  }, [currentStepIndex])
 
   const resetTour = useCallback(() => {
     localStorage.removeItem(TOUR_STORAGE_KEY)

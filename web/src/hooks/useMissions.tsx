@@ -4,6 +4,7 @@ import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
+import { trackMissionStarted, trackMissionCompleted, trackMissionError, trackMissionRated } from '../lib/analytics'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed'
 
@@ -526,6 +527,7 @@ The AI missions feature requires the local agent to be running.
 
           // Clear active token tracking
           setActiveTokenCategory(null)
+          trackMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
@@ -577,6 +579,7 @@ The AI missions feature requires the local agent to be running.
       } else if (message.type === 'error') {
         const payload = message.payload as { code?: string; message?: string }
         pendingRequests.current.delete(message.id)
+        trackMissionError(m.type, payload.code || 'unknown')
 
         // Create helpful error message based on error code
         let errorContent = payload.message || 'Unknown error'
@@ -685,6 +688,7 @@ The AI missions feature requires the local agent to be running.
     setActiveMissionId(missionId)
     setIsSidebarOpen(true)
     setIsSidebarMinimized(false)
+    trackMissionStarted(params.type, selectedAgent || defaultAgent || 'unknown')
 
     // Send to agent
     ensureConnection().then(() => {
@@ -858,11 +862,13 @@ The AI missions feature requires the local agent to be running.
 
   // Rate a mission (thumbs up/down feedback)
   const rateMission = useCallback((missionId: string, feedback: MissionFeedback) => {
-    setMissions(prev => prev.map(m =>
-      m.id === missionId ? { ...m, feedback, updatedAt: new Date() } : m
-    ))
-    // Analytics integration: Would POST feedback to /api/analytics/missions endpoint when available
-    // For now, feedback is stored locally in component state only
+    setMissions(prev => prev.map(m => {
+      if (m.id === missionId) {
+        trackMissionRated(m.type, feedback || 'neutral')
+        return { ...m, feedback, updatedAt: new Date() }
+      }
+      return m
+    }))
     console.log(`[Missions] Feedback for ${missionId}: ${feedback}`)
   }, [])
 

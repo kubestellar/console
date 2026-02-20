@@ -29,6 +29,7 @@ export const STORAGE_KEY_THEME = 'kubestellar-theme-id'
 export const STORAGE_KEY_ACCESSIBILITY = 'accessibility-settings'
 export const STORAGE_KEY_NOTIFICATION_CONFIG = 'kc_notification_config'
 export const STORAGE_KEY_TOUR_COMPLETED = 'kubestellar-console-tour-completed'
+export const STORAGE_KEY_ANALYTICS_OPT_OUT = 'kc-analytics-opt-out'
 
 // ── UI state persistence ───────────────────────────────────────────────
 export const STORAGE_KEY_CLUSTER_LAYOUT = 'kubestellar-cluster-layout-mode'
