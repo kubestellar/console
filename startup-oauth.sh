@@ -191,26 +191,34 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-# Install/upgrade kc-agent via brew
-if command -v brew &>/dev/null; then
-    if brew list kc-agent &>/dev/null; then
-        echo -e "${GREEN}Upgrading kc-agent...${NC}"
-        brew update --quiet && brew upgrade kc-agent 2>/dev/null || true
-    else
-        echo -e "${GREEN}Installing kc-agent...${NC}"
-        brew update --quiet && brew install kubestellar/tap/kc-agent
-    fi
-fi
-
-# Start kc-agent
-if command -v kc-agent &>/dev/null; then
-    echo -e "${GREEN}Starting kc-agent...${NC}"
-    kc-agent &
+# Start kc-agent — prefer locally-built binary (from make build), fall back to Homebrew
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
+    echo -e "${GREEN}Starting kc-agent (local build)...${NC}"
+    "$SCRIPT_DIR/bin/kc-agent" &
     AGENT_PID=$!
     sleep 2
 else
-    echo -e "${YELLOW}Warning: kc-agent not found and brew not available.${NC}"
-    AGENT_PID=""
+    # Install/upgrade kc-agent via brew
+    if command -v brew &>/dev/null; then
+        if brew list kc-agent &>/dev/null; then
+            echo -e "${GREEN}Upgrading kc-agent...${NC}"
+            brew update --quiet && brew upgrade kc-agent 2>/dev/null || true
+        else
+            echo -e "${GREEN}Installing kc-agent...${NC}"
+            brew update --quiet && brew install kubestellar/tap/kc-agent
+        fi
+    fi
+
+    if command -v kc-agent &>/dev/null; then
+        echo -e "${GREEN}Starting kc-agent (Homebrew)...${NC}"
+        kc-agent &
+        AGENT_PID=$!
+        sleep 2
+    else
+        echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"
+        AGENT_PID=""
+    fi
 fi
 
 if [ "$USE_DEV_SERVER" = true ]; then

@@ -7,6 +7,7 @@ web/dist/
 web/tsconfig.tsbuildinfo
 /console
 /console-server
+bin/
 *.exe
 *.out
 *.test

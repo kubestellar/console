@@ -23,8 +23,11 @@ pull:
 ## build: Build frontend and Go binaries
 build:
 	cd web && npm install --prefer-offline && npm run build
-	go build -o $$(which kc-agent) ./cmd/kc-agent
-	go build -o $$(which console) ./cmd/console
+	mkdir -p bin
+	go build -o bin/kc-agent ./cmd/kc-agent
+	go build -o bin/console ./cmd/console
+	@# Update Homebrew kc-agent if installed
+	@if command -v kc-agent >/dev/null 2>&1; then cp bin/kc-agent $$(which kc-agent) 2>/dev/null || true; fi
 
 ## restart: Restart all processes (kc-agent, backend, frontend)
 restart:
