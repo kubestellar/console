@@ -265,6 +265,7 @@ type NodeInfo struct {
 	KubeletVersion   string            `json:"kubeletVersion"`
 	ContainerRuntime string            `json:"containerRuntime,omitempty"`
 	OS               string            `json:"os,omitempty"`
+	OSImage          string            `json:"osImage,omitempty"`
 	Architecture     string            `json:"architecture,omitempty"`
 	CPUCapacity      string            `json:"cpuCapacity"`
 	MemoryCapacity   string            `json:"memoryCapacity"`
@@ -2897,16 +2898,15 @@ func (m *MultiClusterClient) GetNodes(ctx context.Context, contextName string) (
 
 	var nodeInfos []NodeInfo
 	for _, node := range nodes.Items {
-		info := NodeInfo{
-			Name:           node.Name,
-			Cluster:        contextName,
-			KubeletVersion: node.Status.NodeInfo.KubeletVersion,
-			OS:             node.Status.NodeInfo.OperatingSystem,
-			Architecture:   node.Status.NodeInfo.Architecture,
-			Unschedulable:  node.Spec.Unschedulable,
-		}
-
-		// Get container runtime
+			info := NodeInfo{
+				Name:           node.Name,
+				Cluster:        contextName,
+				KubeletVersion: node.Status.NodeInfo.KubeletVersion,
+				OS:             node.Status.NodeInfo.OperatingSystem,
+				OSImage:        node.Status.NodeInfo.OSImage,
+				Architecture:   node.Status.NodeInfo.Architecture,
+				Unschedulable:  node.Spec.Unschedulable,
+			}		// Get container runtime
 		info.ContainerRuntime = node.Status.NodeInfo.ContainerRuntimeVersion
 
 		// Get roles from labels

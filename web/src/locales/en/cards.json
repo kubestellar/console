@@ -2559,6 +2559,11 @@
     "versionDistribution": "Version Distribution",
     "openFlatcar": "Open Flatcar Linux",
     "noFlatcarNodes": "No Flatcar nodes found",
-    "noFlatcarNodesHint": "No nodes running Flatcar Container Linux detected."
+    "noFlatcarNodesHint": "No nodes running Flatcar Container Linux detected.",
+    "fetchError": "Failed to fetch Flatcar node status",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }

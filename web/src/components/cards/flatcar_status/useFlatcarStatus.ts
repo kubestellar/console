@@ -3,163 +3,163 @@ import { useCardLoadingState } from '../CardDataContext'
 import { FLATCAR_DEMO_DATA, type FlatcarDemoData } from './demoData'
 
 export interface FlatcarStatus {
-    totalNodes: number
-    versions: Record<string, number>
-    updatingNodes: number
-    outdatedNodes: number
-    health: 'healthy' | 'degraded'
-    lastCheckTime: string
+  totalNodes: number
+  versions: Record<string, number>
+  updatingNodes: number
+  outdatedNodes: number
+  health: 'healthy' | 'degraded'
+  lastCheckTime: string
 }
 
 const INITIAL_DATA: FlatcarStatus = {
-    totalNodes: 0,
-    versions: {},
-    updatingNodes: 0,
-    outdatedNodes: 0,
-    health: 'healthy',
-    lastCheckTime: new Date().toISOString(),
+  totalNodes: 0,
+  versions: {},
+  updatingNodes: 0,
+  outdatedNodes: 0,
+  health: 'healthy',
+  lastCheckTime: new Date().toISOString(),
 }
 
 const CACHE_KEY = 'flatcar-status'
 
 /**
- * Fetch Flatcar Container Linux node status from the Kubernetes API.
+ * NodeInfo shape returned by the console backend at GET /api/mcp/nodes.
+ * Only the fields we need for Flatcar detection are typed here.
+ */
+interface BackendNodeInfo {
+  osImage?: string
+  conditions?: Array<{ type?: string; status?: string }>
+}
+
+/**
+ * Fetch Flatcar Container Linux node status via the console backend proxy.
  *
- * In a live cluster the backend proxies `GET /api/v1/nodes` and returns
- * standard v1.NodeList JSON.  We filter for nodes whose `status.nodeInfo.osImage`
- * contains "Flatcar", then aggregate version distribution and update status.
+ * Uses GET /api/mcp/nodes which proxies through the backend to all connected
+ * clusters. The backend returns { nodes: NodeInfo[], source: string } where
+ * NodeInfo includes osImage from node.Status.NodeInfo.OSImage.
  *
- * When no backend is available (demo mode) the cache layer will return
- * FLATCAR_DEMO_DATA instead — this function is never called in that case.
+ * Flatcar nodes are identified by osImage containing "Flatcar".
  */
 async function fetchFlatcarStatus(): Promise<FlatcarStatus> {
-    const resp = await fetch('/api/v1/nodes', {
-        headers: { Accept: 'application/json' },
+  const resp = await fetch('/api/mcp/nodes', {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}`)
+  }
+
+  const body: { nodes?: BackendNodeInfo[] } = await resp.json()
+  const items = Array.isArray(body?.nodes) ? body.nodes : []
+
+  // Filter for Flatcar nodes only
+  const flatcarNodes = items.filter((n) =>
+    n.osImage?.toLowerCase().includes('flatcar'),
+  )
+
+  // Aggregate version distribution
+  // Gracefully handles "unknown" if the version cannot be parsed
+  const versions: Record<string, number> = {}
+  for (const node of flatcarNodes) {
+    const osImage = node.osImage ?? ''
+    // Extract semver from osImage e.g. "Flatcar Container Linux by Kinvolk 3815.2.5 (…)"
+    const versionMatch = osImage.match(/(\d+\.\d+\.\d+)/)
+    const version = versionMatch?.[1] ?? 'unknown'
+    versions[version] = (versions[version] ?? 0) + 1
+  }
+
+  // Sort versions descending, placing "unknown" last
+  const sortedVersions = Object.keys(versions)
+    .filter((v) => v !== 'unknown')
+    .sort((a, b) => {
+      const [aMaj = 0, aMin = 0, aPatch = 0] = a.split('.').map(Number)
+      const [bMaj = 0, bMin = 0, bPatch = 0] = b.split('.').map(Number)
+      if (aMaj !== bMaj) return bMaj - aMaj
+      if (aMin !== bMin) return bMin - aMin
+      return bPatch - aPatch
     })
+  const latestVersion = sortedVersions[0]
 
-    if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status}`)
-    }
+  let updatingNodes = 0
+  let outdatedNodes = 0
 
-    interface K8sNode {
-        status?: {
-            nodeInfo?: {
-                osImage?: string
-                kernelVersion?: string
-                kubeletVersion?: string
-            }
-            conditions?: Array<{
-                type?: string
-                status?: string
-            }>
-        }
-    }
+  for (const node of flatcarNodes) {
+    const osImage = node.osImage ?? ''
+    const versionMatch = osImage.match(/(\d+\.\d+\.\d+)/)
+    const nodeVersion = versionMatch?.[1]
 
-    const nodeList: { items?: K8sNode[] } = await resp.json()
-    const items = Array.isArray(nodeList?.items) ? nodeList.items : []
-
-    // Filter for Flatcar nodes only
-    const flatcarNodes = items.filter((n) =>
-        n.status?.nodeInfo?.osImage?.toLowerCase().includes('flatcar'),
+    const isUpdating = node.conditions?.some(
+      (c) => c.type === 'NodeUpdateInProgress' && c.status === 'True',
     )
 
-    // Aggregate version distribution
-    const versions: Record<string, number> = {}
-    for (const node of flatcarNodes) {
-        const osImage = node.status?.nodeInfo?.osImage ?? 'unknown'
-        // Extract version from osImage, e.g. "Flatcar Container Linux by Kinvolk 3815.2.5 (…)"
-        const versionMatch = osImage.match(/(\d+\.\d+\.\d+)/)
-        const version = versionMatch?.[1] ?? 'unknown'
-        versions[version] = (versions[version] || 0) + 1
+    if (isUpdating) {
+      updatingNodes++
+    } else if (nodeVersion && latestVersion && nodeVersion !== latestVersion) {
+      outdatedNodes++
     }
+    // nodes with version "unknown" are neither counted as updating nor outdated
+  }
 
-    // Determine update status from node conditions
-    let updatingNodes = 0
-    let outdatedNodes = 0
+  const health: 'healthy' | 'degraded' =
+    outdatedNodes === 0 && updatingNodes === 0 ? 'healthy' : 'degraded'
 
-    // Find the latest version available
-    const sortedVersions = Object.keys(versions).sort((a, b) => {
-        const [aMaj, aMin, aPatch] = a.split('.').map(Number)
-        const [bMaj, bMin, bPatch] = b.split('.').map(Number)
-        if (aMaj !== bMaj) return bMaj - aMaj
-        if (aMin !== bMin) return bMin - aMin
-        return bPatch - aPatch
-    })
-    const latestVersion = sortedVersions[0]
-
-    for (const node of flatcarNodes) {
-        const osImage = node.status?.nodeInfo?.osImage ?? ''
-        const versionMatch = osImage.match(/(\d+\.\d+\.\d+)/)
-        const nodeVersion = versionMatch?.[1]
-
-        // Check if the node is actively updating (has a "NodeUpdateInProgress" type condition)
-        const isUpdating = node.status?.conditions?.some(
-            (c) => c.type === 'NodeUpdateInProgress' && c.status === 'True',
-        )
-
-        if (isUpdating) {
-            updatingNodes++
-        } else if (nodeVersion && latestVersion && nodeVersion !== latestVersion) {
-            outdatedNodes++
-        }
-    }
-
-    // Health: "healthy" when all nodes are on the latest version and none are updating
-    const health: 'healthy' | 'degraded' =
-        outdatedNodes === 0 && updatingNodes === 0 ? 'healthy' : 'degraded'
-
-    return {
-        totalNodes: flatcarNodes.length,
-        versions,
-        updatingNodes,
-        outdatedNodes,
-        health,
-        lastCheckTime: new Date().toISOString(),
-    }
+  return {
+    totalNodes: flatcarNodes.length,
+    versions,
+    updatingNodes,
+    outdatedNodes,
+    health,
+    lastCheckTime: new Date().toISOString(),
+  }
 }
 
 function toDemoStatus(demo: FlatcarDemoData): FlatcarStatus {
-    return {
-        totalNodes: demo.totalNodes,
-        versions: demo.versions,
-        updatingNodes: demo.updatingNodes,
-        outdatedNodes: demo.outdatedNodes,
-        health: demo.health,
-        lastCheckTime: demo.lastCheckTime,
-    }
+  return {
+    totalNodes: demo.totalNodes,
+    versions: demo.versions,
+    updatingNodes: demo.updatingNodes,
+    outdatedNodes: demo.outdatedNodes,
+    health: demo.health,
+    lastCheckTime: demo.lastCheckTime,
+  }
 }
 
 export interface UseFlatcarStatusResult {
-    data: FlatcarStatus
-    loading: boolean
-    error: string | null
-    showSkeleton: boolean
-    showEmptyState: boolean
+  data: FlatcarStatus
+  loading: boolean
+  error: boolean
+  consecutiveFailures: number
+  showSkeleton: boolean
+  showEmptyState: boolean
 }
 
 export function useFlatcarStatus(): UseFlatcarStatusResult {
-    const { data, isLoading, isFailed } = useCache<FlatcarStatus>({
-        key: CACHE_KEY,
-        category: 'default',
-        initialData: INITIAL_DATA,
-        demoData: toDemoStatus(FLATCAR_DEMO_DATA),
-        persist: true,
-        fetcher: fetchFlatcarStatus,
+  const { data, isLoading, isFailed, consecutiveFailures, isDemoFallback } =
+    useCache<FlatcarStatus>({
+      key: CACHE_KEY,
+      category: 'default',
+      initialData: INITIAL_DATA,
+      demoData: toDemoStatus(FLATCAR_DEMO_DATA),
+      persist: true,
+      fetcher: fetchFlatcarStatus,
     })
 
-    const hasAnyData = data.totalNodes > 0
+  const hasAnyData = data.totalNodes > 0
 
-    const { showSkeleton, showEmptyState } = useCardLoadingState({
-        isLoading,
-        hasAnyData,
-        isFailed,
-    })
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading,
+    hasAnyData,
+    isFailed,
+    consecutiveFailures,
+    isDemoData: isDemoFallback,
+  })
 
-    return {
-        data,
-        loading: isLoading,
-        error: isFailed && !hasAnyData ? 'Failed to fetch Flatcar node status' : null,
-        showSkeleton,
-        showEmptyState,
-    }
+  return {
+    data,
+    loading: isLoading,
+    error: isFailed && !hasAnyData,
+    consecutiveFailures,
+    showSkeleton,
+    showEmptyState,
+  }
 }
