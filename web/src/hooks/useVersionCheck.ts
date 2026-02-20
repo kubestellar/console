@@ -71,7 +71,7 @@ function parseRelease(release: GitHubRelease): ParsedRelease {
 /**
  * Get the latest release for a given channel.
  *
- * - stable channel: weekly releases
+ * - stable channel: stable (full semver) releases like v0.3.11
  * - unstable channel: nightly releases
  * - developer channel: returns null (uses SHA-based tracking instead)
  */
@@ -81,7 +81,7 @@ function getLatestForChannel(
 ): ParsedRelease | null {
   if (channel === 'developer') return null
 
-  const targetType: ReleaseType = channel === 'stable' ? 'weekly' : 'nightly'
+  const targetType: ReleaseType = channel === 'stable' ? 'stable' : 'nightly'
 
   const filtered = releases
     .filter((r) => r.type === targetType)
@@ -123,6 +123,24 @@ function isNewerVersion(currentTag: string, latestTag: string, channel: UpdateCh
   // Extract dates from tags for nightly/weekly comparison
   const currentParsed = parseReleaseTag(currentTag)
   const latestParsed = parseReleaseTag(latestTag)
+
+  // Stable channel: if user is on a nightly/weekly pre-release and a newer stable exists, show update
+  // e.g., current = v0.3.11-nightly.20260218, latest = v0.3.12 → update available
+  if (channel === 'stable' && latestParsed.type === 'stable' && currentParsed.type !== 'stable') {
+    // Extract base version from current (e.g., "0.3.11" from "v0.3.11-nightly.20260218")
+    const currentBase = currentTag.replace(/^v/, '').split('-')[0]
+    const latestBase = latestTag.replace(/^v/, '')
+    const currentParts = currentBase.split('.').map(Number)
+    const latestParts = latestBase.split('.').map(Number)
+    for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
+      const c = currentParts[i] || 0
+      const l = latestParts[i] || 0
+      if (l > c) return true
+      if (l < c) return false
+    }
+    // Same base version — stable release is the final version of the pre-release
+    return false
+  }
 
   // Only compare same types (nightly vs nightly, weekly vs weekly)
   if (currentParsed.type !== latestParsed.type) return false
