@@ -692,8 +692,7 @@ func (s *Server) setupRoutes() {
 		s.hub.HandleConnection(c)
 	}))
 
-	// GA4 analytics proxy — opaque paths bypass ad blocker filter lists
-	s.app.Get("/api/a", handlers.GA4ScriptProxy)
+	// GA4 analytics — custom tracker sends events to /api/m, proxy rewrites tid and forwards
 	s.app.All("/api/m", handlers.GA4CollectProxy)
 
 	// Serve static files in production

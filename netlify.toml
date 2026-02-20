@@ -35,15 +35,8 @@
   to = "/.netlify/functions/presence"
   status = 200
 
-# GA4 analytics proxy — opaque paths bypass ad blocker filter lists
-[[redirects]]
-  from = "/api/a"
-  to = "https://www.googletagmanager.com/gtag/js"
-  status = 200
-  force = true
-
-# GA4 event collection handled by analytics-collect function at /api/m
-# (uses Config.path in the function, no redirect needed)
+# GA4 event collection — custom lightweight tracker sends directly to /api/m
+# (Netlify Function via Config.path, no gtag.js loaded)
 
 # SPA routing - redirect all routes to index.html (only if file doesn't exist)
 [[redirects]]

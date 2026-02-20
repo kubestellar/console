@@ -1,35 +1,31 @@
 /**
- * Google Analytics 4 — Product Telemetry
+ * Google Analytics 4 — Product Telemetry (Custom Lightweight Tracker)
  *
- * Centralized GA4 module. All events are prefixed with `ksc_`.
- * Opt-out is checked before every gtag() call.
- * No PII is collected — only anonymous usage data.
+ * Sends GA4 Measurement Protocol events directly to our first-party proxy.
+ * NO external scripts loaded (gtag.js is detectable by content-based ad blockers).
+ * All event collection goes through /api/m → Netlify Function → google-analytics.com.
  *
- * Anti-spam: The frontend uses a DECOY Measurement ID (visible in source).
- * The first-party proxy at /t/g/collect rewrites it to the real ID server-side.
- * Spammers who scrape the source send hits to a non-existent property.
+ * Anti-spam: Uses a DECOY Measurement ID (visible in source).
+ * The proxy rewrites it to the real ID server-side.
  *
- * Ad-blocker bypass: All requests go through /t/g/* on the console's own domain
- * instead of googletagmanager.com / google-analytics.com.
+ * Ad-blocker bypass: No Google domains, no recognizable GA paths, no external scripts.
  */
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
-
-// DECOY Measurement ID — publicly visible in source code.
-// The first-party proxy rewrites this to the real GA4 Measurement ID server-side
-// (via GA4_REAL_MEASUREMENT_ID env var). Spammers who scrape this ID from the
-// source code will send traffic to a non-existent GA4 property.
-const GA_MEASUREMENT_ID = 'G-0000000000'
 import { isDemoMode } from './demoMode'
 
-// ── Types ──────────────────────────────────────────────────────────
+// DECOY Measurement ID — publicly visible in source code.
+// The first-party proxy rewrites this to the real GA4 Measurement ID server-side.
+const GA_MEASUREMENT_ID = 'G-0000000000'
 
-declare global {
-  interface Window {
-    dataLayer: unknown[]
-    gtag: (...args: unknown[]) => void
-  }
-}
+const COLLECT_PATH = '/api/m'
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 min
+const CID_KEY = '_ksc_cid'
+const SID_KEY = '_ksc_sid'
+const SC_KEY = '_ksc_sc'
+const LAST_KEY = '_ksc_last'
+
+// ── Types ──────────────────────────────────────────────────────────
 
 type DeploymentType =
   | 'localhost'
@@ -52,99 +48,145 @@ function getDeploymentType(): DeploymentType {
   return 'containerized'
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function gtag(...args: any[]) {
-  if (isOptedOut()) return
-  window.gtag?.(...args)
+function rand(): string {
+  return Math.floor(Math.random() * 2147483647).toString()
+}
+
+// ── Client & Session Management ────────────────────────────────────
+
+function getClientId(): string {
+  let cid = localStorage.getItem(CID_KEY)
+  if (!cid) {
+    cid = `${rand()}.${Math.floor(Date.now() / 1000)}`
+    localStorage.setItem(CID_KEY, cid)
+  }
+  return cid
+}
+
+function getSession(): { sid: string; sc: number; isNew: boolean } {
+  const now = Date.now()
+  const lastActivity = Number(localStorage.getItem(LAST_KEY) || '0')
+  let sid = localStorage.getItem(SID_KEY) || ''
+  let sc = Number(localStorage.getItem(SC_KEY) || '0')
+  const expired = !sid || (now - lastActivity > SESSION_TIMEOUT_MS)
+
+  if (expired) {
+    sid = Math.floor(now / 1000).toString()
+    sc += 1
+    localStorage.setItem(SID_KEY, sid)
+    localStorage.setItem(SC_KEY, String(sc))
+  }
+  localStorage.setItem(LAST_KEY, String(now))
+  return { sid, sc, isNew: expired }
+}
+
+// ── Core Send ──────────────────────────────────────────────────────
+
+let measurementId = ''
+let pageId = ''
+let userProperties: Record<string, string> = {}
+let userId = ''
+let initialized = false
+let eventCount = 0
+
+function send(
+  eventName: string,
+  params?: Record<string, string | number | boolean>,
+) {
+  if (!initialized || isOptedOut()) return
+
+  const { sid, sc, isNew } = getSession()
+  eventCount++
+
+  const p = new URLSearchParams()
+  p.set('v', '2')
+  p.set('tid', measurementId)
+  p.set('cid', getClientId())
+  p.set('sid', sid)
+  p.set('_p', pageId)
+  p.set('en', eventName)
+  p.set('_s', String(sc))
+  p.set('dl', window.location.href)
+  p.set('dt', document.title)
+  p.set('ul', navigator.language)
+  p.set('sr', `${screen.width}x${screen.height}`)
+
+  if (isNew) {
+    p.set('_ss', '1')
+    p.set('_nsi', '1')
+  }
+  if (sc === 1 && isNew) {
+    p.set('_fv', '1')
+  }
+  if (eventCount > 1) {
+    p.set('seg', '1')
+  }
+
+  // Event parameters (ep.key=val)
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (typeof v === 'number') {
+        p.set(`epn.${k}`, String(v))
+      } else {
+        p.set(`ep.${k}`, String(v))
+      }
+    }
+  }
+
+  // User properties (up.key=val)
+  for (const [k, v] of Object.entries(userProperties)) {
+    p.set(`up.${k}`, v)
+  }
+
+  if (userId) {
+    p.set('uid', userId)
+  }
+
+  const url = `${COLLECT_PATH}?${p.toString()}`
+
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(url)
+  } else {
+    fetch(url, { method: 'POST', keepalive: true }).catch(() => {})
+  }
 }
 
 // ── Initialization ─────────────────────────────────────────────────
 
-let initialized = false
-
 export function initAnalytics() {
-  const measurementId = (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID
+  measurementId = (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID
   if (!measurementId || initialized) return
   initialized = true
-
-  // Ad-blocker evasion: patch sendBeacon/fetch BEFORE loading gtag.js.
-  // gtag.js sends to {transport_url}/g/collect — ad blockers match "/g/collect"
-  // on any domain. We intercept and rewrite to an opaque path ("/api/m").
-  const collectPath = '/g/collect'
-  const proxyPath = '/api/m'
-  const origin = window.location.origin
-
-  const _sb = navigator.sendBeacon?.bind(navigator)
-  if (_sb) {
-    navigator.sendBeacon = (url: string | URL, data?: BodyInit | null) => {
-      const s = String(url)
-      if (s.startsWith(origin) && s.includes(collectPath)) {
-        url = s.replace(collectPath, proxyPath)
-      }
-      return _sb(url, data)
-    }
-  }
-
-  const _fetch = window.fetch.bind(window)
-  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-    if (typeof input === 'string' && input.startsWith(origin) && input.includes(collectPath)) {
-      input = input.replace(collectPath, proxyPath)
-    }
-    return _fetch(input, init)
-  }
-
-  // Load gtag.js from first-party proxy (opaque path avoids filter-list matching)
-  const script = document.createElement('script')
-  script.src = `${origin}/api/a?id=${measurementId}`
-  script.async = true
-  document.head.appendChild(script)
-
-  window.dataLayer = window.dataLayer || []
-  // The gtag function signature requires the `arguments` object
-  // eslint-disable-next-line prefer-rest-params
-  window.gtag = function () { window.dataLayer.push(arguments) }
-
-  gtag('js', new Date())
-  gtag('config', measurementId, {
-    send_page_view: false,
-    cookie_flags: 'SameSite=None;Secure',
-    transport_url: origin,
-  })
+  pageId = rand()
 
   // Set persistent user properties
   const deploymentType = getDeploymentType()
-  gtag('set', 'user_properties', {
+  userProperties = {
     deployment_type: deploymentType,
     demo_mode: String(isDemoMode()),
-  })
+  }
 
   // Fire discovery conversion step
   trackConversionStep(1, 'discovery', { deployment_type: deploymentType })
 }
 
 // ── Anonymous User ID ──────────────────────────────────────────────
-// Creates a SHA-256 hash of the user's numeric ID with a fixed salt.
-// The result is deterministic (same user → same hash across deployments)
-// but irreversible — no PII is stored or sent to GA4.
 
-async function hashUserId(userId: string): Promise<string> {
-  const data = new TextEncoder().encode(`ksc-analytics:${userId}`)
+async function hashUserId(uid: string): Promise<string> {
+  const data = new TextEncoder().encode(`ksc-analytics:${uid}`)
   const hash = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(hash))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
 }
 
-export async function setAnalyticsUserId(userId: string) {
-  if (!userId || userId === 'demo-user') return
-  const anonId = await hashUserId(userId)
-  gtag('config', (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID, {
-    user_id: anonId,
-  })
+export async function setAnalyticsUserId(uid: string) {
+  if (!uid || uid === 'demo-user') return
+  userId = await hashUserId(uid)
 }
 
 export function setAnalyticsUserProperties(props: Record<string, string>) {
-  gtag('set', 'user_properties', props)
+  userProperties = { ...userProperties, ...props }
 }
 
 // ── Opt-out management ─────────────────────────────────────────────
@@ -153,13 +195,16 @@ export function setAnalyticsOptOut(optOut: boolean) {
   localStorage.setItem(STORAGE_KEY_ANALYTICS_OPT_OUT, String(optOut))
   window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   if (optOut) {
-    // Clear GA cookies
     document.cookie.split(';').forEach(c => {
       const name = c.split('=')[0].trim()
-      if (name.startsWith('_ga')) {
+      if (name.startsWith('_ga') || name.startsWith('_ksc')) {
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
       }
     })
+    localStorage.removeItem(CID_KEY)
+    localStorage.removeItem(SID_KEY)
+    localStorage.removeItem(SC_KEY)
+    localStorage.removeItem(LAST_KEY)
   }
 }
 
@@ -170,174 +215,144 @@ export function isAnalyticsOptedOut(): boolean {
 // ── Page views ─────────────────────────────────────────────────────
 
 export function trackPageView(path: string) {
-  gtag('event', 'page_view', {
-    page_path: path,
-    ksc_demo_mode: isDemoMode(),
-  })
+  send('page_view', { page_path: path, ksc_demo_mode: isDemoMode() ? 'true' : 'false' })
 }
 
 // ── Dashboard & Cards ──────────────────────────────────────────────
 
 export function trackCardAdded(cardType: string, source: string) {
-  gtag('event', 'ksc_card_added', { card_type: cardType, source })
+  send('ksc_card_added', { card_type: cardType, source })
 }
 
 export function trackCardRemoved(cardType: string) {
-  gtag('event', 'ksc_card_removed', { card_type: cardType })
+  send('ksc_card_removed', { card_type: cardType })
 }
 
 export function trackCardExpanded(cardType: string) {
-  gtag('event', 'ksc_card_expanded', { card_type: cardType })
+  send('ksc_card_expanded', { card_type: cardType })
 }
 
 export function trackCardDragged(cardType: string) {
-  gtag('event', 'ksc_card_dragged', { card_type: cardType })
+  send('ksc_card_dragged', { card_type: cardType })
 }
 
 export function trackCardConfigured(cardType: string) {
-  gtag('event', 'ksc_card_configured', { card_type: cardType })
+  send('ksc_card_configured', { card_type: cardType })
 }
 
 export function trackCardReplaced(oldType: string, newType: string) {
-  gtag('event', 'ksc_card_replaced', { old_type: oldType, new_type: newType })
+  send('ksc_card_replaced', { old_type: oldType, new_type: newType })
 }
 
 // ── AI Missions ────────────────────────────────────────────────────
 
-export function trackMissionStarted(
-  missionType: string,
-  agentProvider: string,
-) {
-  gtag('event', 'ksc_mission_started', {
-    mission_type: missionType,
-    agent_provider: agentProvider,
-  })
+export function trackMissionStarted(missionType: string, agentProvider: string) {
+  send('ksc_mission_started', { mission_type: missionType, agent_provider: agentProvider })
 }
 
-export function trackMissionCompleted(
-  missionType: string,
-  durationSec: number,
-) {
-  gtag('event', 'ksc_mission_completed', {
-    mission_type: missionType,
-    duration_sec: durationSec,
-  })
+export function trackMissionCompleted(missionType: string, durationSec: number) {
+  send('ksc_mission_completed', { mission_type: missionType, duration_sec: durationSec })
 }
 
 export function trackMissionError(missionType: string, errorCode: string) {
-  gtag('event', 'ksc_mission_error', {
-    mission_type: missionType,
-    error_code: errorCode,
-  })
+  send('ksc_mission_error', { mission_type: missionType, error_code: errorCode })
 }
 
 export function trackMissionRated(missionType: string, rating: string) {
-  gtag('event', 'ksc_mission_rated', {
-    mission_type: missionType,
-    rating,
-  })
+  send('ksc_mission_rated', { mission_type: missionType, rating })
 }
 
 // ── Auth ───────────────────────────────────────────────────────────
 
 export function trackLogin(method: string) {
-  gtag('event', 'login', { method })
+  send('login', { method })
 }
 
 export function trackLogout() {
-  gtag('event', 'ksc_logout')
+  send('ksc_logout')
 }
 
 // ── Feedback ───────────────────────────────────────────────────────
 
 export function trackFeedbackSubmitted(type: string) {
-  gtag('event', 'ksc_feedback_submitted', { feedback_type: type })
+  send('ksc_feedback_submitted', { feedback_type: type })
 }
 
 // ── Errors ─────────────────────────────────────────────────────────
 
 export function trackError(category: string, detail: string) {
-  gtag('event', 'ksc_error', {
-    error_category: category,
-    error_detail: detail.slice(0, 100),
-  })
+  send('ksc_error', { error_category: category, error_detail: detail.slice(0, 100) })
 }
 
 export function trackSessionExpired() {
-  gtag('event', 'ksc_session_expired')
+  send('ksc_session_expired')
 }
 
 // ── Tour ───────────────────────────────────────────────────────────
 
 export function trackTourStarted() {
-  gtag('event', 'ksc_tour_started')
+  send('ksc_tour_started')
 }
 
 export function trackTourCompleted(stepCount: number) {
-  gtag('event', 'ksc_tour_completed', { step_count: stepCount })
+  send('ksc_tour_completed', { step_count: stepCount })
 }
 
 export function trackTourSkipped(atStep: number) {
-  gtag('event', 'ksc_tour_skipped', { at_step: atStep })
+  send('ksc_tour_skipped', { at_step: atStep })
 }
 
 // ── Marketplace ────────────────────────────────────────────────────
 
 export function trackMarketplaceInstall(itemType: string, itemName: string) {
-  gtag('event', 'ksc_marketplace_install', {
-    item_type: itemType,
-    item_name: itemName,
-  })
+  send('ksc_marketplace_install', { item_type: itemType, item_name: itemName })
 }
 
 export function trackMarketplaceRemove(itemType: string) {
-  gtag('event', 'ksc_marketplace_remove', { item_type: itemType })
+  send('ksc_marketplace_remove', { item_type: itemType })
 }
 
 // ── GitHub Token ───────────────────────────────────────────────────
 
 export function trackGitHubTokenConfigured() {
-  gtag('event', 'ksc_github_token_configured')
+  send('ksc_github_token_configured')
 }
 
 export function trackGitHubTokenRemoved() {
-  gtag('event', 'ksc_github_token_removed')
+  send('ksc_github_token_removed')
 }
 
 // ── API Provider ───────────────────────────────────────────────────
 
 export function trackApiProviderConnected(provider: string) {
-  gtag('event', 'ksc_api_provider_connected', { provider })
+  send('ksc_api_provider_connected', { provider })
 }
 
 // ── Demo Mode ──────────────────────────────────────────────────────
 
 export function trackDemoModeToggled(enabled: boolean) {
-  gtag('event', 'ksc_demo_mode_toggled', { enabled: String(enabled) })
-  gtag('set', 'user_properties', { demo_mode: String(enabled) })
+  send('ksc_demo_mode_toggled', { enabled: String(enabled) })
+  userProperties.demo_mode = String(enabled)
 }
 
 // ── kc-agent Connection ─────────────────────────────────────────
 
 export function trackAgentConnected(version: string, clusterCount: number) {
-  gtag('event', 'ksc_agent_connected', {
-    agent_version: version,
-    cluster_count: clusterCount,
-  })
+  send('ksc_agent_connected', { agent_version: version, cluster_count: clusterCount })
 }
 
 export function trackAgentDisconnected() {
-  gtag('event', 'ksc_agent_disconnected')
+  send('ksc_agent_disconnected')
 }
 
 // ── API Key Configuration ───────────────────────────────────────
 
 export function trackApiKeyConfigured(provider: string) {
-  gtag('event', 'ksc_api_key_configured', { provider })
+  send('ksc_api_key_configured', { provider })
 }
 
 export function trackApiKeyRemoved(provider: string) {
-  gtag('event', 'ksc_api_key_removed', { provider })
+  send('ksc_api_key_removed', { provider })
 }
 
 // ── Conversion Funnel ───────────────────────────────────────────
@@ -354,7 +369,7 @@ export function trackConversionStep(
   stepName: string,
   details?: Record<string, string>,
 ) {
-  gtag('event', 'ksc_conversion_step', {
+  send('ksc_conversion_step', {
     step_number: step,
     step_name: stepName,
     ...details,
