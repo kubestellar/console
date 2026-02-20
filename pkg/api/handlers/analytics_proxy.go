@@ -53,12 +53,30 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 	realMeasurementID := os.Getenv("GA4_REAL_MEASUREMENT_ID")
 	qs := string(c.Context().QueryArgs().QueryString())
 
-	if realMeasurementID != "" {
-		params, err := url.ParseQuery(qs)
-		if err == nil && params.Get("tid") != "" {
-			params.Set("tid", realMeasurementID)
-			qs = params.Encode()
+	// Forward user's real IP so GA4 geolocates correctly.
+	// Without this, all events appear from the server's IP.
+	clientIP := c.Get("X-Forwarded-For")
+	if clientIP != "" {
+		if i := strings.Index(clientIP, ","); i != -1 {
+			clientIP = strings.TrimSpace(clientIP[:i])
 		}
+	}
+	if clientIP == "" {
+		clientIP = c.Get("X-Real-Ip")
+	}
+	if clientIP == "" {
+		clientIP = c.IP()
+	}
+
+	params, err := url.ParseQuery(qs)
+	if err == nil {
+		if realMeasurementID != "" && params.Get("tid") != "" {
+			params.Set("tid", realMeasurementID)
+		}
+		if clientIP != "" {
+			params.Set("_uip", clientIP)
+		}
+		qs = params.Encode()
 	}
 
 	target := "https://www.google-analytics.com/g/collect?" + qs
@@ -68,6 +86,9 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 	}
 	req.Header.Set("Content-Type", c.Get("Content-Type", "text/plain"))
 	req.Header.Set("User-Agent", c.Get("User-Agent"))
+	if clientIP != "" {
+		req.Header.Set("X-Forwarded-For", clientIP)
+	}
 
 	resp, err := ga4Client.Do(req)
 	if err != nil {

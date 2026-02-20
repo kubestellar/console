@@ -59,6 +59,16 @@ export default async (req: Request) => {
     url.searchParams.set("tid", realMeasurementId);
   }
 
+  // Forward user's real IP so GA4 geolocates correctly.
+  // Without this, all events appear from the Netlify function's US datacenter IP.
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "";
+  if (clientIp) {
+    url.searchParams.set("_uip", clientIp);
+  }
+
   const targetUrl = `https://www.google-analytics.com/g/collect?${url.searchParams.toString()}`;
 
   try {
@@ -68,6 +78,7 @@ export default async (req: Request) => {
       headers: {
         "Content-Type": req.headers.get("content-type") || "text/plain",
         "User-Agent": req.headers.get("user-agent") || "",
+        ...(clientIp && { "X-Forwarded-For": clientIp }),
       },
       body,
     });
