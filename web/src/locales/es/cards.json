@@ -251,7 +251,8 @@
     "kube_doom": "Kube Doom",
     "kube_craft": "Kube Craft",
     "kube_chess": "Kube Chess",
-    "provider_health": "Provider Health"
+    "provider_health": "Provider Health",
+    "flatcar_status": "Flatcar Container Linux"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -411,7 +412,8 @@
     "kube_doom": "First-person debugging adventure.",
     "kube_craft": "Build and manage your cluster world.",
     "kube_chess": "Chess game with Kubernetes-themed pieces.",
-    "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures."
+    "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
+    "flatcar_status": "Flatcar node OS versions, update status, and version distribution."
   },
   "categories": {
     "core": "Core",
@@ -2548,5 +2550,21 @@
     "acrossClusters": "across {{count}} clusters",
     "acrossClusters_one": "across {{count}} cluster",
     "acrossClusters_other": "across {{count}} clusters"
+  },
+  "flatcar": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "totalNodes": "Flatcar Nodes",
+    "updating": "Updating",
+    "outdated": "Outdated",
+    "versionDistribution": "Version Distribution",
+    "openFlatcar": "Open Flatcar Linux",
+    "noFlatcarNodes": "No Flatcar nodes found",
+    "noFlatcarNodesHint": "No nodes running Flatcar Container Linux detected.",
+    "fetchError": "Failed to fetch Flatcar node status",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }
