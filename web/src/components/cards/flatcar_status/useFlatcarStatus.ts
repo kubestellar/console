@@ -1,6 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { FLATCAR_DEMO_DATA, type FlatcarDemoData } from './demoData'
+import { compareFlatcarVersions } from './versionUtils'
 
 export interface FlatcarStatus {
   totalNodes: number
@@ -71,13 +72,7 @@ async function fetchFlatcarStatus(): Promise<FlatcarStatus> {
   // Sort versions descending, placing "unknown" last
   const sortedVersions = Object.keys(versions)
     .filter((v) => v !== 'unknown')
-    .sort((a, b) => {
-      const [aMaj = 0, aMin = 0, aPatch = 0] = a.split('.').map(Number)
-      const [bMaj = 0, bMin = 0, bPatch = 0] = b.split('.').map(Number)
-      if (aMaj !== bMaj) return bMaj - aMaj
-      if (aMin !== bMin) return bMin - aMin
-      return bPatch - aPatch
-    })
+    .sort(compareFlatcarVersions)
   const latestVersion = sortedVersions[0]
 
   let updatingNodes = 0

@@ -2,6 +2,7 @@ import { CheckCircle, AlertTriangle, RefreshCw, ArrowUpCircle, Server } from 'lu
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { useFlatcarStatus } from './useFlatcarStatus'
+import { compareFlatcarVersions } from './versionUtils'
 
 function useFormatRelativeTime() {
   const { t } = useTranslation('cards')
@@ -72,15 +73,9 @@ export function FlatcarStatus() {
   const isHealthy = data.health === 'healthy'
 
   // Sort versions descending (latest first), "unknown" last
-  const sortedVersions = Object.entries(data.versions).sort(([a], [b]) => {
-    if (a === 'unknown') return 1
-    if (b === 'unknown') return -1
-    const [aMaj = 0, aMin = 0, aPatch = 0] = a.split('.').map(Number)
-    const [bMaj = 0, bMin = 0, bPatch = 0] = b.split('.').map(Number)
-    if (aMaj !== bMaj) return bMaj - aMaj
-    if (aMin !== bMin) return bMin - aMin
-    return bPatch - aPatch
-  })
+  const sortedVersions = Object.entries(data.versions).sort(([a], [b]) =>
+    compareFlatcarVersions(a, b),
+  )
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">

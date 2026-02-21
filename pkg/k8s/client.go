@@ -53,9 +53,9 @@ type MultiClusterClient struct {
 	cacheTime       map[string]time.Time
 	watcher         *fsnotify.Watcher
 	stopWatch       chan struct{}
-	onReload        func()                // Callback when config is reloaded
-	inClusterConfig *rest.Config          // In-cluster config when running inside k8s
-	slowClusters    map[string]time.Time  // clusters that recently timed out (reduced timeout)
+	onReload        func()               // Callback when config is reloaded
+	inClusterConfig *rest.Config         // In-cluster config when running inside k8s
+	slowClusters    map[string]time.Time // clusters that recently timed out (reduced timeout)
 }
 
 // IsInCluster returns true if the server is running inside a Kubernetes cluster
@@ -285,7 +285,7 @@ type NodeInfo struct {
 
 // GPUNodeHealthCheck represents a single health check result for a GPU node
 type GPUNodeHealthCheck struct {
-	Name    string `json:"name"`              // e.g., "node_ready", "gpu_feature_discovery"
+	Name    string `json:"name"` // e.g., "node_ready", "gpu_feature_discovery"
 	Passed  bool   `json:"passed"`
 	Message string `json:"message,omitempty"` // e.g., "CrashLoopBackOff (128 restarts)"
 }
@@ -294,7 +294,7 @@ type GPUNodeHealthCheck struct {
 type GPUNodeHealthStatus struct {
 	NodeName  string               `json:"nodeName"`
 	Cluster   string               `json:"cluster"`
-	Status    string               `json:"status"`    // healthy, degraded, unhealthy
+	Status    string               `json:"status"` // healthy, degraded, unhealthy
 	GPUCount  int                  `json:"gpuCount"`
 	GPUType   string               `json:"gpuType"`
 	Checks    []GPUNodeHealthCheck `json:"checks"`
@@ -305,29 +305,29 @@ type GPUNodeHealthStatus struct {
 
 // GPUHealthCronJobStatus represents the status of the GPU health check CronJob on a cluster
 type GPUHealthCronJobStatus struct {
-	Installed      bool                    `json:"installed"`
-	Cluster        string                  `json:"cluster"`
-	Namespace      string                  `json:"namespace,omitempty"`
-	Schedule       string                  `json:"schedule,omitempty"`
-	Tier           int                     `json:"tier"`                     // 1-4: check depth level
-	Version        int                     `json:"version"`                  // installed script version
-	UpdateAvailable bool                   `json:"updateAvailable"`          // newer script version exists
-	LastRun        string                  `json:"lastRun,omitempty"`        // RFC3339 timestamp of last job completion
-	LastResult     string                  `json:"lastResult,omitempty"`     // "success" or "failed"
-	NextRun        string                  `json:"nextRun,omitempty"`        // RFC3339 timestamp of next scheduled run
-	CanInstall     bool                    `json:"canInstall"`               // user has RBAC permissions to manage CronJobs
-	ActiveJobs     int                     `json:"activeJobs"`               // currently running jobs
-	FailedJobs     int                     `json:"failedJobs"`               // recent failed jobs
-	SuccessJobs    int                     `json:"successJobs"`              // recent successful jobs
-	LastResults    []GPUHealthCheckResult   `json:"lastResults,omitempty"`    // structured results from ConfigMap
+	Installed       bool                   `json:"installed"`
+	Cluster         string                 `json:"cluster"`
+	Namespace       string                 `json:"namespace,omitempty"`
+	Schedule        string                 `json:"schedule,omitempty"`
+	Tier            int                    `json:"tier"`                  // 1-4: check depth level
+	Version         int                    `json:"version"`               // installed script version
+	UpdateAvailable bool                   `json:"updateAvailable"`       // newer script version exists
+	LastRun         string                 `json:"lastRun,omitempty"`     // RFC3339 timestamp of last job completion
+	LastResult      string                 `json:"lastResult,omitempty"`  // "success" or "failed"
+	NextRun         string                 `json:"nextRun,omitempty"`     // RFC3339 timestamp of next scheduled run
+	CanInstall      bool                   `json:"canInstall"`            // user has RBAC permissions to manage CronJobs
+	ActiveJobs      int                    `json:"activeJobs"`            // currently running jobs
+	FailedJobs      int                    `json:"failedJobs"`            // recent failed jobs
+	SuccessJobs     int                    `json:"successJobs"`           // recent successful jobs
+	LastResults     []GPUHealthCheckResult `json:"lastResults,omitempty"` // structured results from ConfigMap
 }
 
 // GPUHealthCheckResult represents health check results for a single GPU node from the CronJob ConfigMap
 type GPUHealthCheckResult struct {
-	NodeName string              `json:"nodeName"`
-	Status   string              `json:"status"` // healthy, degraded, unhealthy
+	NodeName string               `json:"nodeName"`
+	Status   string               `json:"status"` // healthy, degraded, unhealthy
 	Checks   []GPUNodeHealthCheck `json:"checks"`
-	Issues   []string            `json:"issues"`
+	Issues   []string             `json:"issues"`
 }
 
 // GPU health CronJob constants
@@ -2898,15 +2898,17 @@ func (m *MultiClusterClient) GetNodes(ctx context.Context, contextName string) (
 
 	var nodeInfos []NodeInfo
 	for _, node := range nodes.Items {
-			info := NodeInfo{
-				Name:           node.Name,
-				Cluster:        contextName,
-				KubeletVersion: node.Status.NodeInfo.KubeletVersion,
-				OS:             node.Status.NodeInfo.OperatingSystem,
-				OSImage:        node.Status.NodeInfo.OSImage,
-				Architecture:   node.Status.NodeInfo.Architecture,
-				Unschedulable:  node.Spec.Unschedulable,
-			}		// Get container runtime
+		info := NodeInfo{
+			Name:           node.Name,
+			Cluster:        contextName,
+			KubeletVersion: node.Status.NodeInfo.KubeletVersion,
+			OS:             node.Status.NodeInfo.OperatingSystem,
+			OSImage:        node.Status.NodeInfo.OSImage,
+			Architecture:   node.Status.NodeInfo.Architecture,
+			Unschedulable:  node.Spec.Unschedulable,
+		}
+
+		// Get container runtime
 		info.ContainerRuntime = node.Status.NodeInfo.ContainerRuntimeVersion
 
 		// Get roles from labels
