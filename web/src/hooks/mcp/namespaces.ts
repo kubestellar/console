@@ -56,7 +56,6 @@ export function useNamespaces(cluster?: string) {
     // Try local agent HTTP endpoint first (works without backend)
     if (cluster && !isAgentUnavailable()) {
       try {
-        console.log(`[useNamespaces] Fetching from local agent for ${cluster}`)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_FETCH_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`, {
@@ -71,7 +70,6 @@ export function useNamespaces(cluster?: string) {
           if (nsData.length > 0) {
             // Extract just the namespace names
             const nsNames = nsData.map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
-            console.log(`[useNamespaces] Got ${nsNames.length} namespaces for ${cluster} from local agent`)
             setNamespaces(nsNames)
             setError(null)
             setIsLoading(false)
@@ -79,7 +77,6 @@ export function useNamespaces(cluster?: string) {
             return
           }
         }
-        console.log(`[useNamespaces] Local agent returned ${response.status}, trying kubectl proxy`)
       } catch (err) {
         console.error(`[useNamespaces] Local agent failed for ${cluster}:`, err)
       }
@@ -90,7 +87,6 @@ export function useNamespaces(cluster?: string) {
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
-        console.log(`[useNamespaces] Fetching via kubectl proxy for ${cluster}`)
 
         const nsPromise = kubectlProxy.getNamespaces(kubectlContext)
         const timeoutPromise = new Promise<null>((resolve) =>
@@ -99,13 +95,11 @@ export function useNamespaces(cluster?: string) {
         const nsData = await Promise.race([nsPromise, timeoutPromise])
 
         if (nsData && nsData.length > 0) {
-          console.log(`[useNamespaces] Got ${nsData.length} namespaces for ${cluster} from kubectl proxy`)
           setNamespaces(nsData)
           setError(null)
           setIsLoading(false)
           return
         }
-        console.log(`[useNamespaces] No namespaces returned for ${cluster}, trying API`)
       } catch (err) {
         console.error(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
       }
@@ -124,11 +118,9 @@ export function useNamespaces(cluster?: string) {
       // Try cluster cache namespaces as last resort
       const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
       if (cachedCluster?.namespaces && cachedCluster.namespaces.length > 0) {
-        console.log(`[useNamespaces] Using cluster cache for ${cluster}: ${cachedCluster.namespaces.length} namespaces`)
         setNamespaces(cachedCluster.namespaces)
         setError(null)
       } else {
-        console.log(`[useNamespaces] Using default namespaces for ${cluster}`)
         setNamespaces(['default', 'kube-system'])
         setError(null)
       }

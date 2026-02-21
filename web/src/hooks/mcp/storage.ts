@@ -675,7 +675,5 @@ if (typeof window !== 'undefined') {
       storageSharedState = { ...storageSharedState, isResetting: false }
       notifyStorageSubscribers()
     }, 0)
-
-    console.log('[Storage] Cache cleared for mode transition')
   })
 }

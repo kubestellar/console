@@ -446,7 +446,6 @@ export function useNodes(cluster?: string) {
     // Try local agent HTTP endpoint first (works without backend)
     if (cluster && !isAgentUnavailable()) {
       try {
-        console.log(`[useNodes] Fetching from local agent for ${cluster}`)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 15000)
         const response = await fetch(`${LOCAL_AGENT_URL}/nodes?cluster=${encodeURIComponent(cluster)}`, {
@@ -472,7 +471,6 @@ export function useNodes(cluster?: string) {
               conditions: n.conditions as Array<{type: string; status: string; reason: string; message: string}> || [],
               unschedulable: n.unschedulable as boolean || false,
             }))
-            console.log(`[useNodes] Got ${mappedNodes.length} nodes for ${cluster} from local agent`)
             setNodes(mappedNodes)
             setError(null)
             setIsLoading(false)
@@ -480,7 +478,6 @@ export function useNodes(cluster?: string) {
             return
           }
         }
-        console.log(`[useNodes] Local agent returned ${response.status}, trying REST API`)
       } catch (err) {
         console.error(`[useNodes] Local agent failed for ${cluster}:`, err)
       }

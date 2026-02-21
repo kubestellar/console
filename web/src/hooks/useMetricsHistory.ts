@@ -53,7 +53,6 @@ function persistSnapshots() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
         window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
-        console.log(`[MetricsHistory] Reduced snapshots to ${reducedCount} to fit quota`)
         return
       } catch {
         // Strategy 2: Clear other large keys that might be stale
@@ -73,7 +72,6 @@ function persistSnapshots() {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
           window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
-          console.log('[MetricsHistory] Cleaned up stale cache, persisted snapshots')
           return
         } catch {
           // Strategy 3: Just keep in memory, don't persist

@@ -748,7 +748,5 @@ if (typeof window !== 'undefined') {
         lastRefresh: null
       })
     })
-
-    console.log('[Helm] Cache cleared for mode transition')
   })
 }

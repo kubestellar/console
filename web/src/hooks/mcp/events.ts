@@ -112,7 +112,6 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         params.append('limit', limit.toString())
-        console.log(`[useEvents] Fetching from local agent for ${cluster}`)
 
         const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 15000)
         const response = await fetch(`${LOCAL_AGENT_URL}/events?${params}`, {
@@ -124,7 +123,6 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         if (response.ok) {
           const data = await response.json()
           const eventData = data.events || []
-          console.log(`[useEvents] Got ${eventData.length} events for ${cluster} from local agent`)
           const now = new Date()
           eventsCache = { data: eventData, timestamp: now, key: cacheKey }
           setEvents(eventData)
@@ -141,7 +139,6 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
           reportAgentDataSuccess()
           return
         }
-        console.log(`[useEvents] Local agent returned ${response.status}, trying REST API`)
       } catch (err) {
         console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
       }
@@ -502,7 +499,5 @@ if (typeof window !== 'undefined') {
       eventsSharedState = { ...eventsSharedState, isResetting: false }
       notifyEventsSubscribers()
     }, 0)
-
-    console.log('[Events] Caches cleared for mode transition')
   })
 }
