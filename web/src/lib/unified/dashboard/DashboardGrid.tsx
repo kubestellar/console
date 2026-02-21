@@ -4,7 +4,7 @@
  * Renders a responsive grid of cards with optional drag-and-drop support.
  */
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -106,7 +106,7 @@ export function DashboardGrid({
 
   // Render grid content
   const gridContent = (
-    <div className={`grid grid-cols-12 gap-4 ${className}`}>
+    <div className={`grid grid-cols-1 md:grid-cols-12 gap-4 ${className}`}>
       {cards.map((placement) => (
         <DashboardCardWrapper
           key={placement.id}
@@ -188,8 +188,21 @@ function DashboardCardWrapper({
     disabled: !isDraggable,
   })
 
-  // Calculate grid column span
-  const colSpan = `col-span-${Math.min(12, Math.max(3, placement.position.w))}`
+  // At narrow viewports (< 1024px), clamp small cards to min 6 cols
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 1024
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches)
+    setIsNarrow(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  const rawW = Math.min(12, Math.max(3, placement.position.w))
+  const effectiveW = isNarrow && rawW < 6 ? 6 : rawW
+  const colSpan = `col-span-${effectiveW}`
 
   // Calculate height (each row unit = 100px) — use inline style because
   // Tailwind JIT can't detect dynamically constructed arbitrary classes.

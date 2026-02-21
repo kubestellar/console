@@ -56,7 +56,7 @@ export function Navbar() {
           alt="KubeStellar"
           className="w-8 h-8 md:w-9 md:h-9"
         />
-        <span className="text-base md:text-lg font-semibold text-foreground hidden sm:inline">KubeStellar Console</span>
+        <span className="text-base md:text-lg font-semibold text-foreground hidden lg:inline">KubeStellar Console</span>
       </div>
 
       {/* Search - hidden on small mobile */}
@@ -66,26 +66,32 @@ export function Navbar() {
 
       {/* Right side */}
       <div className="flex items-center gap-1 md:gap-3">
-        {/* Desktop-only items */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Core desktop items: md+ (768px) */}
+        <div className="hidden md:flex items-center gap-2">
           {/* Global Filters (includes Clear Filters button) */}
           <ClusterFilterPanel />
-
-          {/* Update Indicator */}
-          <UpdateIndicator />
 
           {/* Agent Status + Selector — status (Demo/AI pill) on left, selector on right */}
           <AgentStatusIndicator />
           <AgentSelector compact />
+        </div>
+
+        {/* Extended desktop items: lg+ (1024px) */}
+        <div className="hidden lg:flex items-center gap-2">
+          {/* Update Indicator */}
+          <UpdateIndicator />
 
           {/* Token Usage */}
           <TokenUsageWidget />
 
-          {/* Tour trigger */}
-          <TourTrigger />
-
           {/* Feature Request (includes notifications) */}
           <FeatureRequestButton />
+        </div>
+
+        {/* Optional desktop items: xl+ (1280px) */}
+        <div className="hidden xl:flex items-center gap-2">
+          {/* Tour trigger */}
+          <TourTrigger />
         </div>
 
         {/* Theme toggle - always visible */}
@@ -106,8 +112,8 @@ export function Navbar() {
         {/* Alerts - always visible */}
         <AlertBadge />
 
-        {/* Mobile overflow menu - simplified for mobile */}
-        <div className="relative md:hidden">
+        {/* Overflow menu — visible below lg for items hidden at narrow widths */}
+        <div className="relative lg:hidden">
           <button
             onClick={() => setShowMobileMore(!showMobileMore)}
             className="p-2 hover:bg-secondary rounded-lg transition-colors"
@@ -137,12 +143,32 @@ export function Navbar() {
                   </div>
                   <div className="border-t border-border my-2 sm:hidden" />
 
-                  {/* Simplified mobile menu - only essential items */}
+                  {/* Items only hidden at <md (768px): filter, agent status, agent selector */}
+                  <div className="md:hidden">
+                    <div className="px-3 py-2">
+                      <ClusterFilterPanel />
+                    </div>
+                    <div className="px-3 py-2">
+                      <AgentStatusIndicator />
+                    </div>
+                    <div className="px-3 py-2">
+                      <AgentSelector compact />
+                    </div>
+                    <div className="border-t border-border mx-3 my-1" />
+                  </div>
+
+                  {/* Items hidden at <lg (1024px): update, token usage, feature request, tour */}
                   <div className="px-3 py-2">
-                    <AgentStatusIndicator />
+                    <UpdateIndicator />
+                  </div>
+                  <div className="px-3 py-2">
+                    <TokenUsageWidget />
                   </div>
                   <div className="px-3 py-2">
                     <FeatureRequestButton />
+                  </div>
+                  <div className="px-3 py-2">
+                    <TourTrigger />
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { memo, type KeyboardEvent } from 'react'
+import { memo, useState, useEffect, type KeyboardEvent } from 'react'
 import { GripVertical } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -22,6 +22,12 @@ interface SortableCardProps {
   registerExpandTrigger?: (expand: () => void) => void
 }
 
+/** Below this width, clamp small cards to half-width (6 cols) for readability */
+const NARROW_BREAKPOINT = 1024
+
+/** Minimum card column span at narrow viewports */
+const MIN_NARROW_COLS = 6
+
 export const SortableCard = memo(function SortableCard({ card, onConfigure, onReplace, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger }: SortableCardProps) {
   const {
     attributes,
@@ -31,10 +37,25 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     transition,
   } = useSortable({ id: card.id })
 
+  // At narrow viewports (< 1024px), clamp small cards to min 6 cols
+  // so we get max 2 cards per row instead of cramped 3-up layout
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < NARROW_BREAKPOINT
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${NARROW_BREAKPOINT - 1}px)`)
+    const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches)
+    setIsNarrow(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  const effectiveW = isNarrow && card.position.w < MIN_NARROW_COLS ? MIN_NARROW_COLS : card.position.w
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${card.position.w}`,
+    gridColumn: `span ${effectiveW}`,
     gridRow: `span ${card.position.h}`,
     opacity: isDragging ? 0.5 : 1,
   }
