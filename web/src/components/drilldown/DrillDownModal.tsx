@@ -237,18 +237,17 @@ export function DrillDownModal() {
         {/* Header with breadcrumbs */}
         <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {/* Back button */}
-            {state.stack.length > 1 && (
-              <button
-                onClick={pop}
-                className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
-                title="Go back"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
+            {/* Back button - always visible; closes modal at root level */}
+            <button
+              onClick={state.stack.length > 1 ? pop : close}
+              className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
+              title={state.stack.length > 1 ? t('drilldown.goBack') : t('drilldown.close')}
+              aria-label={state.stack.length > 1 ? t('drilldown.goBack') : t('drilldown.close')}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
 
             {/* Breadcrumbs */}
             <nav className="flex items-center gap-1 min-w-0 overflow-x-auto">
