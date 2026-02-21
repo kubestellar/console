@@ -2613,15 +2613,33 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 	cm := GetConfigManager()
 
-	// Define known providers
-	providers := []struct {
+	// Build provider list dynamically from registry
+	// Include all providers that accept API keys (exclude pure CLI providers like bob, claude-code)
+	type providerDef struct {
 		name        string
 		displayName string
-	}{
-		{"claude", "Claude (Anthropic)"},
-		{"openai", "GPT-4 (OpenAI)"},
+	}
+
+	// Base API providers always shown
+	providers := []providerDef{
+		{"claude", "Claude.ai (Anthropic)"},
+		{"openai", "ChatGPT (OpenAI)"},
 		{"gemini", "Gemini (Google)"},
 	}
+
+	// Add all registered providers that have API key support
+	apiProviders := []providerDef{
+		{"cursor", "Cursor (Anysphere)"},
+		{"vscode", "VS Code (Microsoft)"},
+		{"windsurf", "Windsurf (Codeium)"},
+		{"cline", "Cline"},
+		{"jetbrains", "JetBrains IDEs"},
+		{"zed", "Zed"},
+		{"continue", "Continue.dev"},
+		{"raycast", "Raycast"},
+		{"open-webui", "Open WebUI"},
+	}
+	providers = append(providers, apiProviders...)
 
 	keys := make([]KeyStatus, 0, len(providers))
 	for _, p := range providers {
@@ -2746,7 +2764,13 @@ func (s *Server) validateAPIKeyValue(provider, apiKey string) (bool, error) {
 	case "gemini", "google":
 		return validateGeminiKey(ctx, apiKey)
 	default:
-		return false, fmt.Errorf("unknown provider: %s", provider)
+		// For IDE/app providers (cursor, windsurf, cline, etc.)
+		// we accept the key without validation since we don't have
+		// validation endpoints for all providers
+		if apiKey != "" {
+			return true, nil
+		}
+		return false, fmt.Errorf("empty API key for provider: %s", provider)
 	}
 }
 
@@ -2762,7 +2786,7 @@ func (s *Server) refreshProviderAvailability() {
 // This should be called on server startup to detect invalid keys early
 func (s *Server) ValidateAllKeys() {
 	cm := GetConfigManager()
-	providers := []string{"claude", "openai", "gemini"}
+	providers := []string{"claude", "openai", "gemini", "cursor", "vscode", "windsurf", "cline", "jetbrains", "zed", "continue", "raycast", "open-webui"}
 
 	for _, provider := range providers {
 		if cm.HasAPIKey(provider) {

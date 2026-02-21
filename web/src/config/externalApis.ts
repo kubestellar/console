@@ -37,6 +37,15 @@ export const AI_PROVIDER_DOCS = {
   claude: 'https://console.anthropic.com/settings/keys',
   openai: 'https://platform.openai.com/api-keys',
   gemini: 'https://makersuite.google.com/app/apikey',
+  cursor: 'https://cursor.sh',
+  vscode: 'https://code.visualstudio.com',
+  windsurf: 'https://codeium.com',
+  cline: 'https://github.com/cline/cline',
+  jetbrains: 'https://www.jetbrains.com',
+  zed: 'https://zed.dev',
+  continue: 'https://continue.dev',
+  raycast: 'https://raycast.com',
+  'open-webui': 'https://github.com/open-webui/open-webui',
 } as const
 
 /**

@@ -43,6 +43,61 @@ const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = 
     docsUrl: AI_PROVIDER_DOCS.gemini,
     placeholder: 'AIza...',
   },
+  cursor: {
+    docsUrl: AI_PROVIDER_DOCS.cursor,
+    placeholder: 'cursor-...',
+  },
+  vscode: {
+    docsUrl: AI_PROVIDER_DOCS.vscode,
+    placeholder: 'vscode-...',
+  },
+  windsurf: {
+    docsUrl: AI_PROVIDER_DOCS.windsurf,
+    placeholder: 'codeium-...',
+  },
+  cline: {
+    docsUrl: AI_PROVIDER_DOCS.cline,
+    placeholder: 'cline-...',
+  },
+  jetbrains: {
+    docsUrl: AI_PROVIDER_DOCS.jetbrains,
+    placeholder: 'jb-...',
+  },
+  zed: {
+    docsUrl: AI_PROVIDER_DOCS.zed,
+    placeholder: 'zed-...',
+  },
+  continue: {
+    docsUrl: AI_PROVIDER_DOCS.continue,
+    placeholder: 'continue-...',
+  },
+  raycast: {
+    docsUrl: AI_PROVIDER_DOCS.raycast,
+    placeholder: 'raycast-...',
+  },
+  'open-webui': {
+    docsUrl: AI_PROVIDER_DOCS['open-webui'],
+    placeholder: 'owui-...',
+  },
+}
+
+// Map backend provider key names to AgentIcon provider values
+function providerToIconMap(provider: string): string {
+  const map: Record<string, string> = {
+    claude: 'anthropic',
+    openai: 'openai',
+    gemini: 'google',
+    cursor: 'anysphere',
+    vscode: 'microsoft',
+    windsurf: 'codeium',
+    cline: 'cline',
+    jetbrains: 'jetbrains',
+    zed: 'zed',
+    continue: 'continue',
+    raycast: 'raycast',
+    'open-webui': 'open-webui',
+  }
+  return map[provider] || provider
 }
 
 export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
@@ -233,7 +288,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <AgentIcon
-                        provider={key.provider === 'claude' ? 'anthropic' : key.provider === 'openai' ? 'openai' : 'google'}
+                        provider={providerToIconMap(key.provider)}
                         className="w-8 h-8"
                       />
                       <div>

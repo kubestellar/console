@@ -67,3 +67,4 @@ vendor/
 .bob/
 /bin/*
 *.bak
+web/.netlify/
