@@ -1,4 +1,4 @@
-name: PR Claude Notice
+name: PR AI Coding Notice
 
 on:
   pull_request_target:
@@ -12,7 +12,7 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     steps:
-      - name: Post Claude coding notice
+      - name: Post AI coding notice
         uses: actions/github-script@v7
         with:
           script: |
@@ -24,17 +24,18 @@ jobs:
             const body = [
               `👋 Hey @${author} — thanks for opening this PR!`,
               '',
-              '> **🤖 This project is developed exclusively using Claude Code (Opus 4.5 / 4.6).**',
+              '> **🤖 This project is developed exclusively using AI coding assistants.**',
               '>',
-              '> Please do not submit hand-written code changes. All contributions to this repo',
-              '> should be authored using [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)',
-              '> with **Claude Opus 4.5 or 4.6** as the model.',
+              '> Please do not attempt to code anything for this project manually.',
+              '> All contributions should be authored using an AI coding tool such as:',
+              '>',
+              '> - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) (Opus 4.5 / 4.6) — **recommended**',
+              '> - [GitHub Copilot](https://github.com/features/copilot)',
+              '> - [Cursor](https://cursor.com)',
+              '> - Other AI coding assistants',
               '>',
               '> This ensures consistency in code style, architecture patterns, test coverage,',
               '> and commit quality across the entire codebase.',
-              '',
-              'If you need help getting set up with Claude Code, check out the',
-              '[installation guide](https://docs.anthropic.com/en/docs/claude-code/overview).',
               '',
               '---',
               '*This is an automated message.*',
