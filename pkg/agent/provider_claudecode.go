@@ -140,6 +140,10 @@ func (c *ClaudeCodeProvider) IsAvailable() bool {
 	return c.cliPath != ""
 }
 
+func (c *ClaudeCodeProvider) Capabilities() ProviderCapability {
+	return CapabilityChat | CapabilityToolExec
+}
+
 // ClaudeCodeSystemPrompt instructs Claude Code CLI to actually execute commands using tools
 const ClaudeCodeSystemPrompt = `You are an AI assistant helping manage Kubernetes clusters through the KubeStellar Console.
 

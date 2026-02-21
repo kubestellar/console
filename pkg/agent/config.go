@@ -268,6 +268,26 @@ func getEnvKeyForProvider(provider string) string {
 		return "OPENAI_API_KEY"
 	case "gemini", "google":
 		return "GOOGLE_API_KEY"
+	case "claude-desktop":
+		return "CLAUDE_DESKTOP_API_KEY"
+	case "cursor":
+		return "CURSOR_API_KEY"
+	case "vscode":
+		return "VSCODE_API_KEY"
+	case "windsurf":
+		return "CODEIUM_API_KEY"
+	case "cline":
+		return "CLINE_API_KEY"
+	case "jetbrains":
+		return "JETBRAINS_API_KEY"
+	case "zed":
+		return "ZED_API_KEY"
+	case "continue":
+		return "CONTINUE_API_KEY"
+	case "raycast":
+		return "RAYCAST_API_KEY"
+	case "open-webui":
+		return "OPEN_WEBUI_API_KEY"
 	default:
 		return ""
 	}
@@ -281,6 +301,12 @@ func getModelEnvKeyForProvider(provider string) string {
 		return "OPENAI_MODEL"
 	case "gemini", "google":
 		return "GEMINI_MODEL"
+	case "cursor":
+		return "CURSOR_MODEL"
+	case "windsurf":
+		return "CODEIUM_MODEL"
+	case "open-webui":
+		return "OPEN_WEBUI_MODEL"
 	default:
 		return ""
 	}

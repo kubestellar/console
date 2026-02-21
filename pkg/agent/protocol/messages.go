@@ -125,11 +125,12 @@ type RenameContextResponse struct {
 
 // AgentInfo contains information about an AI agent
 type AgentInfo struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"displayName"`
-	Description string `json:"description"`
-	Provider    string `json:"provider"`
-	Available   bool   `json:"available"`
+	Name         string `json:"name"`
+	DisplayName  string `json:"displayName"`
+	Description  string `json:"description"`
+	Provider     string `json:"provider"`
+	Available    bool   `json:"available"`
+	Capabilities int    `json:"capabilities"` // bitmask: 1=chat, 2=toolExec
 }
 
 // AgentsListPayload is the response for listing available agents

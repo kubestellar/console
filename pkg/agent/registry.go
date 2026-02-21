@@ -139,11 +139,12 @@ func (r *Registry) List() []ProviderInfo {
 	result := make([]ProviderInfo, 0, len(r.providers))
 	for _, provider := range r.providers {
 		result = append(result, ProviderInfo{
-			Name:        provider.Name(),
-			DisplayName: provider.DisplayName(),
-			Description: provider.Description(),
-			Provider:    provider.Provider(),
-			Available:   provider.IsAvailable(),
+			Name:         provider.Name(),
+			DisplayName:  provider.DisplayName(),
+			Description:  provider.Description(),
+			Provider:     provider.Provider(),
+			Available:    provider.IsAvailable(),
+			Capabilities: int(provider.Capabilities()),
 		})
 	}
 	return result
@@ -176,11 +177,12 @@ func (r *Registry) HasAvailableProviders() bool {
 
 // ProviderInfo contains metadata about a provider
 type ProviderInfo struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"displayName"`
-	Description string `json:"description"`
-	Provider    string `json:"provider"`
-	Available   bool   `json:"available"`
+	Name         string `json:"name"`
+	DisplayName  string `json:"displayName"`
+	Description  string `json:"description"`
+	Provider     string `json:"provider"`
+	Available    bool   `json:"available"`
+	Capabilities int    `json:"capabilities"` // bitmask of ProviderCapability
 }
 
 // InitializeProviders registers all available providers
@@ -190,21 +192,33 @@ func InitializeProviders() error {
 
 	// Register tool-capable agents FIRST so they become the default
 	// Tool-capable agents can execute kubectl, helm, and other commands
-	// Register Claude Code (local CLI with tool execution)
 	registry.Register(NewClaudeCodeProvider())
-
-	// Register Bob (Claude OEM - local CLI with tool execution)
 	registry.Register(NewBobProvider())
 
-	// Register API-only agents (can only generate text, not execute commands)
-	// Register Claude (Anthropic API)
+	// Register CLI-based tool-capable agents
+	registry.Register(NewCodexProvider())
+	registry.Register(NewGeminiCLIProvider())
+	registry.Register(NewAntigravityProvider())
+	registry.Register(NewGHCopilotProvider())
+
+	// Register API-only agents (can generate text / used for missions, not execute commands)
 	registry.Register(NewClaudeProvider())
-
-	// Register OpenAI
 	registry.Register(NewOpenAIProvider())
-
-	// Register Gemini (Google)
 	registry.Register(NewGeminiProvider())
+
+	// Register IDE/app-based agents (API chat, each with own key)
+	registry.Register(NewClaudeDesktopProvider())
+	registry.Register(NewCursorProvider())
+	registry.Register(NewVSCodeProvider())
+	registry.Register(NewWindsurfProvider())
+	registry.Register(NewClineProvider())
+	registry.Register(NewJetBrainsProvider())
+	registry.Register(NewZedProvider())
+	registry.Register(NewContinueProvider())
+	registry.Register(NewRaycastProvider())
+
+	// Register HTTP API-based agents
+	registry.Register(NewOpenWebUIProvider())
 
 	// Set default agent based on environment or availability
 	if defaultAgent := os.Getenv("DEFAULT_AGENT"); defaultAgent != "" {
@@ -216,7 +230,7 @@ func InitializeProviders() error {
 
 	// Ensure at least one provider is available
 	if !registry.HasAvailableProviders() {
-		return fmt.Errorf("no AI providers available - please configure at least one API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY)")
+		return fmt.Errorf("no AI providers available - please configure at least one API key or install a CLI agent (claude, codex, gemini, etc.)")
 	}
 
 	return nil

@@ -25,7 +25,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
 
   // CLI-based agents (bob, claude-code) should be hidden when not available
   // API-based agents (claude, openai, gemini) should still show so users can configure them
-  const CLI_BASED_PROVIDERS = ['bob', 'anthropic-local']
+  const CLI_BASED_PROVIDERS = ['bob']
   const visibleAgents = agents.filter(a =>
     a.available || !CLI_BASED_PROVIDERS.includes(a.provider)
   )

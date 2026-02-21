@@ -1,6 +1,28 @@
 // Agent-related TypeScript types for multi-agent support
 
-export type AgentProvider = 'anthropic' | 'openai' | 'google' | 'bob' | 'anthropic-local'
+export type AgentProvider =
+  | 'anthropic'       // Claude.ai, Claude Desktop
+  | 'anthropic-local' // Claude Code
+  | 'openai'          // ChatGPT
+  | 'openai-cli'      // Codex
+  | 'google'          // Gemini API
+  | 'google-cli'      // Gemini CLI
+  | 'google-ag'       // Antigravity
+  | 'github'          // GitHub Copilot
+  | 'anysphere'       // Cursor
+  | 'microsoft'       // VS Code
+  | 'codeium'         // Windsurf
+  | 'cline'           // Cline
+  | 'jetbrains'       // JetBrains IDEs
+  | 'zed'             // Zed
+  | 'continue'        // Continue.dev
+  | 'raycast'         // Raycast
+  | 'open-webui'      // Open WebUI
+  | 'bob'             // Bob (discovery-only)
+
+// Capability flags matching backend ProviderCapability
+export const AgentCapabilityChat = 1
+export const AgentCapabilityToolExec = 2
 
 export interface AgentInfo {
   name: string
@@ -8,6 +30,7 @@ export interface AgentInfo {
   description: string
   provider: AgentProvider
   available: boolean
+  capabilities?: number // bitmask of capabilities
 }
 
 export interface AgentState {
@@ -61,3 +84,13 @@ export type AgentMessageType =
   | 'agents_list'
   | 'agent_selected'
   | 'chat'
+  | 'mixed_mode_thinking'
+  | 'mixed_mode_executing'
+
+// Mixed-mode configuration for dual-agent missions
+export interface MixedModeState {
+  enabled: boolean
+  thinkingAgent: string    // Primary agent for analysis
+  executionAgent: string   // CLI agent for CRUD
+  autoExecutionAgent: boolean // Auto-select best available CLI agent
+}

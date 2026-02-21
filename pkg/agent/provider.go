@@ -21,6 +21,9 @@ type AIProvider interface {
 	// IsAvailable returns true if the provider is configured with valid credentials
 	IsAvailable() bool
 
+	// Capabilities returns what this provider can do (chat, tool execution, or both)
+	Capabilities() ProviderCapability
+
 	// Chat sends a message and returns the complete response (blocking)
 	Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error)
 
@@ -90,6 +93,31 @@ type StreamingProvider interface {
 	AIProvider
 	// StreamChatWithProgress streams chat with progress events for tool activity
 	StreamChatWithProgress(ctx context.Context, req *ChatRequest, onChunk func(chunk string), onProgress func(event StreamEvent)) (*ChatResponse, error)
+}
+
+// ProviderCapability flags what a provider can do
+type ProviderCapability int
+
+const (
+	// CapabilityChat indicates the provider can do text chat/analysis
+	CapabilityChat ProviderCapability = 1 << iota
+	// CapabilityToolExec indicates the provider can execute CLI tools/commands
+	CapabilityToolExec
+)
+
+// HasCapability checks if a capability set includes a specific capability
+func (c ProviderCapability) HasCapability(cap ProviderCapability) bool {
+	return c&cap != 0
+}
+
+// MixedModeConfig configures dual-agent missions (thinking + execution)
+type MixedModeConfig struct {
+	// ThinkingAgent is the API agent for analysis (user-selected primary)
+	ThinkingAgent string `json:"thinkingAgent"`
+	// ExecutionAgent is the CLI agent for CRUD (auto-selected or user-configured)
+	ExecutionAgent string `json:"executionAgent"`
+	// Enabled indicates whether mixed mode is active for this session
+	Enabled bool `json:"enabled"`
 }
 
 // DefaultSystemPrompt is the default system prompt for KubeStellar console

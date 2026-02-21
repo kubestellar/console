@@ -34,7 +34,7 @@ func NewOpenAIProvider() *OpenAIProvider {
 }
 
 func (o *OpenAIProvider) Name() string        { return "openai" }
-func (o *OpenAIProvider) DisplayName() string { return "GPT-4 (OpenAI)" }
+func (o *OpenAIProvider) DisplayName() string { return "ChatGPT" }
 func (o *OpenAIProvider) Provider() string    { return "openai" }
 func (o *OpenAIProvider) Description() string {
 	return "OpenAI GPT-4 - versatile assistant with strong coding and analysis capabilities"
@@ -44,6 +44,10 @@ func (o *OpenAIProvider) IsAvailable() bool {
 	// Check dynamically in case key was added via settings
 	// Also checks cached validity - returns false if key is known to be invalid
 	return GetConfigManager().IsKeyAvailable("openai")
+}
+
+func (o *OpenAIProvider) Capabilities() ProviderCapability {
+	return CapabilityChat
 }
 
 // Chat sends a message and returns the complete response

@@ -1689,13 +1689,13 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	}
 
 	if needsTools && !s.isToolCapableAgent(agentName) {
-		// Try to find a tool-capable agent
+		// Try mixed-mode: use thinking agent + CLI execution agent
 		if toolAgent := s.findToolCapableAgent(); toolAgent != "" {
-			log.Printf("[Chat] Smart routing: switching to tool-capable agent %s (was: %s)", toolAgent, agentName)
-			agentName = toolAgent
-		} else {
-			log.Printf("[Chat] Smart routing: no tool-capable agent available, keeping %s", agentName)
+			log.Printf("[Chat] Mixed-mode: thinking=%s, execution=%s", agentName, toolAgent)
+			s.handleMixedModeChat(conn, msg, req, agentName, toolAgent, req.SessionID)
+			return
 		}
+		log.Printf("[Chat] No tool-capable agent available, keeping %s (best-effort)", agentName)
 	}
 
 	log.Printf("[Chat] Final agent selection: requested=%q, forceAgent=%q, selected=%q, sessionID=%q",
@@ -1931,11 +1931,12 @@ func (s *Server) handleListAgentsMessage(msg protocol.Message) protocol.Message 
 
 	for i, p := range providers {
 		agents[i] = protocol.AgentInfo{
-			Name:        p.Name,
-			DisplayName: p.DisplayName,
-			Description: p.Description,
-			Provider:    p.Provider,
-			Available:   p.Available,
+			Name:         p.Name,
+			DisplayName:  p.DisplayName,
+			Description:  p.Description,
+			Provider:     p.Provider,
+			Available:    p.Available,
+			Capabilities: int(p.Capabilities),
 		}
 	}
 
@@ -1996,6 +1997,193 @@ func (s *Server) errorResponse(id, code, message string) protocol.Message {
 	}
 }
 
+// handleMixedModeChat orchestrates a dual-agent chat:
+// 1. Thinking agent (API) analyzes the prompt and generates a plan
+// 2. Execution agent (CLI) runs any commands
+// 3. Thinking agent analyzes the results
+func (s *Server) handleMixedModeChat(conn *websocket.Conn, msg protocol.Message, req protocol.ChatRequest, thinkingAgent, executionAgent string, sessionID string) {
+	thinkingProvider, err := s.registry.Get(thinkingAgent)
+	if err != nil {
+		conn.WriteJSON(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Thinking agent %s not found", thinkingAgent)))
+		return
+	}
+	execProvider, err := s.registry.Get(executionAgent)
+	if err != nil {
+		conn.WriteJSON(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Execution agent %s not found", executionAgent)))
+		return
+	}
+
+	// Convert protocol history to provider history
+	var history []ChatMessage
+	for _, m := range req.History {
+		history = append(history, ChatMessage{Role: m.Role, Content: m.Content})
+	}
+
+	ctx := context.Background()
+
+	// Phase 1: Send thinking phase indicator
+	conn.WriteJSON(protocol.Message{
+		ID:   msg.ID,
+		Type: "mixed_mode_thinking",
+		Payload: map[string]interface{}{
+			"agent":   thinkingProvider.DisplayName(),
+			"phase":   "thinking",
+			"message": fmt.Sprintf("🧠 %s is analyzing your request...", thinkingProvider.DisplayName()),
+		},
+	})
+
+	// Ask thinking agent to analyze and generate commands
+	thinkingPrompt := fmt.Sprintf(`You are helping with a Kubernetes/infrastructure task. Analyze the following request and respond with:
+1. A brief analysis of what needs to be done
+2. The exact commands that need to be executed (one per line, prefixed with "CMD: ")
+3. What to look for in the output
+
+User request: %s`, req.Prompt)
+
+	thinkingReq := ChatRequest{
+		Prompt:    thinkingPrompt,
+		SessionID: sessionID,
+		History:   history,
+	}
+
+	thinkingResp, err := thinkingProvider.Chat(ctx, &thinkingReq)
+	if err != nil {
+		log.Printf("[MixedMode] Thinking agent error: %v", err)
+		conn.WriteJSON(s.errorResponse(msg.ID, "mixed_mode_error", fmt.Sprintf("Thinking agent error: %v", err)))
+		return
+	}
+
+	// Stream the thinking response
+	conn.WriteJSON(protocol.Message{
+		ID:   msg.ID,
+		Type: "stream_chunk",
+		Payload: map[string]interface{}{
+			"content": fmt.Sprintf("**🧠 %s Analysis:**\n%s\n\n", thinkingProvider.DisplayName(), thinkingResp.Content),
+			"agent":   thinkingAgent,
+			"phase":   "thinking",
+		},
+	})
+
+	// Extract commands from thinking response (lines starting with CMD:)
+	var commands []string
+	for _, line := range strings.Split(thinkingResp.Content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "CMD: ") {
+			commands = append(commands, strings.TrimPrefix(trimmed, "CMD: "))
+		} else if strings.HasPrefix(trimmed, "CMD:") {
+			commands = append(commands, strings.TrimPrefix(trimmed, "CMD:"))
+		}
+	}
+
+	if len(commands) == 0 {
+		// No commands to execute - just return thinking response
+		conn.WriteJSON(protocol.Message{
+			ID:   msg.ID,
+			Type: "stream_end",
+			Payload: map[string]interface{}{
+				"agent": thinkingAgent,
+				"phase": "complete",
+			},
+		})
+		return
+	}
+
+	// Phase 2: Execute commands via CLI agent
+	conn.WriteJSON(protocol.Message{
+		ID:   msg.ID,
+		Type: "mixed_mode_executing",
+		Payload: map[string]interface{}{
+			"agent":    execProvider.DisplayName(),
+			"phase":    "executing",
+			"message":  fmt.Sprintf("🔧 %s is executing %d command(s)...", execProvider.DisplayName(), len(commands)),
+			"commands": commands,
+		},
+	})
+
+	// Build execution prompt for CLI agent
+	execPrompt := fmt.Sprintf("Execute the following commands and return the output:\n%s",
+		strings.Join(commands, "\n"))
+
+	execReq := ChatRequest{
+		Prompt:    execPrompt,
+		SessionID: sessionID,
+	}
+
+	execResp, err := execProvider.Chat(ctx, &execReq)
+	if err != nil {
+		log.Printf("[MixedMode] Execution agent error: %v", err)
+		conn.WriteJSON(protocol.Message{
+			ID:   msg.ID,
+			Type: "stream_chunk",
+			Payload: map[string]interface{}{
+				"content": fmt.Sprintf("\n**🔧 %s Execution Error:** %v\n", execProvider.DisplayName(), err),
+				"agent":   executionAgent,
+				"phase":   "executing",
+			},
+		})
+	} else {
+		conn.WriteJSON(protocol.Message{
+			ID:   msg.ID,
+			Type: "stream_chunk",
+			Payload: map[string]interface{}{
+				"content": fmt.Sprintf("**🔧 %s Output:**\n```\n%s\n```\n\n", execProvider.DisplayName(), execResp.Content),
+				"agent":   executionAgent,
+				"phase":   "executing",
+			},
+		})
+	}
+
+	// Phase 3: Feed results back to thinking agent for analysis
+	conn.WriteJSON(protocol.Message{
+		ID:   msg.ID,
+		Type: "mixed_mode_thinking",
+		Payload: map[string]interface{}{
+			"agent":   thinkingProvider.DisplayName(),
+			"phase":   "analyzing",
+			"message": fmt.Sprintf("🧠 %s is analyzing the results...", thinkingProvider.DisplayName()),
+		},
+	})
+
+	analysisPrompt := fmt.Sprintf(`Based on the original request and the command output below, provide a clear summary and any recommended next steps.
+
+Original request: %s
+
+Command output:
+%s`, req.Prompt, execResp.Content)
+
+	analysisReq := ChatRequest{
+		Prompt:    analysisPrompt,
+		SessionID: sessionID,
+		History:   append(history, ChatMessage{Role: "assistant", Content: thinkingResp.Content}),
+	}
+
+	analysisResp, err := thinkingProvider.Chat(ctx, &analysisReq)
+	if err != nil {
+		log.Printf("[MixedMode] Analysis error: %v", err)
+	} else {
+		conn.WriteJSON(protocol.Message{
+			ID:   msg.ID,
+			Type: "stream_chunk",
+			Payload: map[string]interface{}{
+				"content": fmt.Sprintf("**🧠 %s Summary:**\n%s", thinkingProvider.DisplayName(), analysisResp.Content),
+				"agent":   thinkingAgent,
+				"phase":   "analyzing",
+			},
+		})
+	}
+
+	// End stream
+	conn.WriteJSON(protocol.Message{
+		ID:   msg.ID,
+		Type: "stream_end",
+		Payload: map[string]interface{}{
+			"agent": thinkingAgent,
+			"phase": "complete",
+			"mode":  "mixed",
+		},
+	})
+}
+
 // promptNeedsToolExecution checks if the prompt or history suggests command execution
 func (s *Server) promptNeedsToolExecution(prompt string) bool {
 	prompt = strings.ToLower(prompt)
@@ -2024,23 +2212,19 @@ func (s *Server) promptNeedsToolExecution(prompt string) bool {
 
 // isToolCapableAgent checks if an agent has tool execution capabilities
 func (s *Server) isToolCapableAgent(agentName string) bool {
-	// Agents that can execute tools/commands
-	toolCapableAgents := []string{"claude-code", "bob"}
-	for _, name := range toolCapableAgents {
-		if agentName == name {
-			return true
-		}
+	provider, err := s.registry.Get(agentName)
+	if err != nil {
+		return false
 	}
-	return false
+	return provider.Capabilities().HasCapability(CapabilityToolExec)
 }
 
 // findToolCapableAgent finds an available agent with tool execution capabilities
 func (s *Server) findToolCapableAgent() string {
-	// Priority order for tool-capable agents
-	preferredAgents := []string{"claude-code", "bob"}
-	for _, name := range preferredAgents {
-		if provider, err := s.registry.Get(name); err == nil && provider.IsAvailable() {
-			return name
+	// Check all registered providers for tool execution capability
+	for _, info := range s.registry.List() {
+		if ProviderCapability(info.Capabilities).HasCapability(CapabilityToolExec) && info.Available {
+			return info.Name
 		}
 	}
 	return ""

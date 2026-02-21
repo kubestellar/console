@@ -46,6 +46,10 @@ func (g *GeminiProvider) IsAvailable() bool {
 	return GetConfigManager().IsKeyAvailable("gemini")
 }
 
+func (g *GeminiProvider) Capabilities() ProviderCapability {
+	return CapabilityChat
+}
+
 // Chat sends a message and returns the complete response
 func (g *GeminiProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !g.IsAvailable() {

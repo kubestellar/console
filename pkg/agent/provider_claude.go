@@ -35,7 +35,7 @@ func NewClaudeProvider() *ClaudeProvider {
 }
 
 func (c *ClaudeProvider) Name() string        { return "claude" }
-func (c *ClaudeProvider) DisplayName() string { return "Claude (Anthropic)" }
+func (c *ClaudeProvider) DisplayName() string { return "Claude.ai" }
 func (c *ClaudeProvider) Provider() string    { return "anthropic" }
 func (c *ClaudeProvider) Description() string {
 	return "Anthropic Claude - excellent for complex reasoning and Kubernetes expertise"
@@ -45,6 +45,10 @@ func (c *ClaudeProvider) IsAvailable() bool {
 	// Check dynamically in case key was added via settings
 	// Also checks cached validity - returns false if key is known to be invalid
 	return GetConfigManager().IsKeyAvailable("claude")
+}
+
+func (c *ClaudeProvider) Capabilities() ProviderCapability {
+	return CapabilityChat
 }
 
 // Chat sends a message and returns the complete response

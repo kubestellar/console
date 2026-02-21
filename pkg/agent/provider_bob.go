@@ -139,6 +139,10 @@ func (b *BobProvider) IsAvailable() bool {
 	return b.cliPath != ""
 }
 
+func (b *BobProvider) Capabilities() ProviderCapability {
+	return CapabilityChat | CapabilityToolExec
+}
+
 // buildPromptWithHistory creates a prompt that includes system instructions and conversation history
 func (b *BobProvider) buildPromptWithHistory(req *ChatRequest) string {
 	var sb strings.Builder
