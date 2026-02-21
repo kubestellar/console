@@ -1971,6 +1971,8 @@
     "searchGPUClusters": "Search GPU clusters...",
     "searchStacks": "Search stacks...",
     "searchHardware": "Search hardware, model...",
+    "searchPVCs": "Search by name, namespace, cluster, or storage class...",
+    "searchMarketplace": "Search by name or description...",
     "clearSearch": "Clear search",
     "filter": "Filter",
     "filterBy": "Filter by...",

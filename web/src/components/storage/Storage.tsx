@@ -63,7 +63,7 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
       <div className="px-6 py-4 border-b border-border">
         <input
           type="text"
-          placeholder={t('common.search')} // TODO by name, namespace, cluster, or storage class..."
+          placeholder={t('common.searchPVCs')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"

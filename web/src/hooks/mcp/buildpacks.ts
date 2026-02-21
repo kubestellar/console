@@ -162,8 +162,7 @@ export function useBuildpackImages(cluster?: string) {
       try {
         const params = new URLSearchParams()
         if (cluster) params.append('cluster', cluster)
-        
-          // TODO: backend endpoint not yet implemented — returns 404 in live mode
+
         const url = `/api/gitops/buildpack-images?${params}`
 
         if (isDemoMode()) {
@@ -196,6 +195,24 @@ export function useBuildpackImages(cluster?: string) {
         }
 
         const response = await fetch(url, { method: 'GET', headers })
+        if (response.status === 404) {
+          // Endpoint not yet available; treat as empty list
+          const newImages: BuildpackImage[] = []
+          if (!cluster) {
+            buildpackCache.data = newImages
+            buildpackCache.timestamp = Date.now()
+            buildpackCache.consecutiveFailures = 0
+            buildpackCache.lastError = null
+            saveToStorage(newImages, buildpackCache.timestamp)
+            notifyListeners(false)
+          }
+          setImages(newImages)
+          setError(null)
+          setConsecutiveFailures(0)
+          setLastRefresh(Date.now())
+          setIsDemoData(false)
+          return
+        }
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`)
         }
