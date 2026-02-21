@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { Trans } from 'react-i18next'
 import { UnifiedDashboard } from '../lib/unified/dashboard/UnifiedDashboard'
 import { arcadeDashboardConfig } from '../config/dashboards/arcade'
 import { UnifiedCard } from '../lib/unified/card/UnifiedCard'
@@ -147,13 +148,13 @@ export function UnifiedDashboardTest() {
       <div className="p-4 bg-secondary/50 rounded-lg">
         <h3 className="font-semibold mb-3">Framework Status</h3>
         <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-          <li>✅ <strong>UnifiedCard</strong> - Renders from config (list, table, chart, status-grid)</li>
-          <li>✅ <strong>UnifiedCardAdapter</strong> - Bridge for gradual migration</li>
-          <li>✅ <strong>UnifiedDashboard</strong> - Config-driven dashboard layout</li>
-          <li>✅ <strong>Modals</strong> - AddCardModal, ConfigureCardModal integrated</li>
-          <li>✅ <strong>Migration utilities</strong> - Analyzer, validator, reporter</li>
-          <li>⏳ <strong>Data hooks</strong> - Some hooks need registration</li>
-          <li>⏳ <strong>Card validation</strong> - Verify each card works correctly</li>
+          <li>✅ <Trans i18nKey="testPages.unifiedDashboardTest.featureUnifiedCard" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedDashboardTest.featureUnifiedCardAdapter" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedDashboardTest.featureUnifiedDashboard" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedDashboardTest.featureModals" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedDashboardTest.featureMigrationUtilities" components={{ strong: <strong /> }} /></li>
+          <li>⏳ <Trans i18nKey="testPages.unifiedDashboardTest.pendingDataHooks" components={{ strong: <strong /> }} /></li>
+          <li>⏳ <Trans i18nKey="testPages.unifiedDashboardTest.pendingCardValidation" components={{ strong: <strong /> }} /></li>
         </ul>
       </div>
     </div>

@@ -6,6 +6,7 @@
  */
 
 import { useCallback } from 'react'
+import { Trans } from 'react-i18next'
 import { UnifiedStatsSection } from '../lib/unified/stats/UnifiedStatsSection'
 import { COMPUTE_STATS_CONFIG } from '../lib/unified/stats/configs'
 import { StatsOverview, StatBlockValue } from '../components/ui/StatsOverview'
@@ -69,12 +70,12 @@ export function UnifiedStatsTest() {
       <div className="mt-8 p-4 bg-secondary/50 rounded-lg">
         <h3 className="font-semibold mb-3">Framework Comparison</h3>
         <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-          <li>✅ <strong>Same getStatValue interface</strong> - Both use (blockId: string) =&gt; StatBlockValue</li>
-          <li>✅ <strong>Same stat blocks</strong> - Both render from COMPUTE_STAT_BLOCKS definitions</li>
-          <li>✅ <strong>Collapsible sections</strong> - Both support expand/collapse</li>
-          <li>✅ <strong>Configuration modal</strong> - Both have settings to show/hide stats</li>
-          <li>✅ <strong>Demo indicator</strong> - Both show demo badge when data.isDemo=true</li>
-          <li>⚠️ <strong>Config source</strong> - Unified uses converted configs, legacy uses raw definitions</li>
+          <li>✅ <Trans i18nKey="testPages.unifiedStatsTest.featureSameGetStatValueInterface" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedStatsTest.featureSameStatBlocks" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedStatsTest.featureCollapsibleSections" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedStatsTest.featureConfigurationModal" components={{ strong: <strong /> }} /></li>
+          <li>✅ <Trans i18nKey="testPages.unifiedStatsTest.featureDemoIndicator" components={{ strong: <strong /> }} /></li>
+          <li>⚠️ <Trans i18nKey="testPages.unifiedStatsTest.gapConfigSource" components={{ strong: <strong /> }} /></li>
         </ul>
       </div>
     </div>
