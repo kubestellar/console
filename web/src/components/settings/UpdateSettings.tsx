@@ -120,6 +120,7 @@ export function UpdateSettings() {
   // Track visual spinning for Check Now button (ensures 1 full rotation like cards)
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
   const spinStartRef = useRef<number | null>(null)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (isChecking) {
@@ -170,10 +171,17 @@ export function UpdateSettings() {
     return () => clearTimeout(retryTimer)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
+
   const copyCommand = async (command: string, id: string) => {
     await navigator.clipboard.writeText(command)
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     setCopiedCommand(id)
-    setTimeout(() => setCopiedCommand(null), 2000)
+    copyTimeoutRef.current = setTimeout(() => setCopiedCommand(null), 2000)
   }
 
   const formatLastChecked = () => {
