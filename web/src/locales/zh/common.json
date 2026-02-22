@@ -1571,6 +1571,8 @@
     "availableTag": "Update available: {{tag}}"
   },
   "drilldown": {
+    "goBack": "Go back",
+    "close": "Close",
     "customView": "Custom view",
     "unknownViewType": "Unknown view type",
     "tabs": {
