@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove } from '../lib/analytics'
@@ -23,6 +23,7 @@ export interface MarketplaceItem {
   name: string
   description: string
   author: string
+  authorGithub?: string
   version: string
   screenshot?: string
   downloadUrl: string
@@ -278,4 +279,105 @@ export function useMarketplace() {
     getInstalledDashboardId,
     refresh: () => fetchRegistry(true),
   }
+}
+
+// --- Author Profile Hook ---
+
+const AUTHOR_CACHE_PREFIX = 'kc-author-'
+const AUTHOR_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+interface AuthorProfile {
+  consolePRs: number
+  marketplacePRs: number
+  coins: number
+  loading: boolean
+}
+
+interface CachedAuthorProfile {
+  consolePRs: number
+  marketplacePRs: number
+  fetchedAt: number
+}
+
+const COINS_PER_PR = 100
+
+export function useAuthorProfile(handle?: string, enabled = false): AuthorProfile {
+  const [profile, setProfile] = useState<AuthorProfile>({
+    consolePRs: 0,
+    marketplacePRs: 0,
+    coins: 0,
+    loading: false,
+  })
+  const fetchedRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!handle || !enabled || fetchedRef.current === handle) return
+
+    // Check cache first
+    try {
+      const cached = localStorage.getItem(`${AUTHOR_CACHE_PREFIX}${handle}`)
+      if (cached) {
+        const parsed: CachedAuthorProfile = JSON.parse(cached)
+        if (Date.now() - parsed.fetchedAt < AUTHOR_CACHE_TTL_MS) {
+          const total = parsed.consolePRs + parsed.marketplacePRs
+          setProfile({
+            consolePRs: parsed.consolePRs,
+            marketplacePRs: parsed.marketplacePRs,
+            coins: total * COINS_PER_PR,
+            loading: false,
+          })
+          fetchedRef.current = handle
+          return
+        }
+      }
+    } catch {
+      // Cache read failed
+    }
+
+    let cancelled = false
+    fetchedRef.current = handle
+    setProfile(prev => ({ ...prev, loading: true }))
+
+    const fetchPRCount = async (repo: string): Promise<number> => {
+      try {
+        const res = await fetch(
+          `https://api.github.com/search/issues?q=author:${encodeURIComponent(handle)}+repo:${repo}+type:pr+is:merged&per_page=1`
+        )
+        if (!res.ok) return 0
+        const data = await res.json()
+        return data.total_count ?? 0
+      } catch {
+        return 0
+      }
+    }
+
+    Promise.all([
+      fetchPRCount('kubestellar/console'),
+      fetchPRCount('kubestellar/console-marketplace'),
+    ]).then(([consolePRs, marketplacePRs]) => {
+      if (cancelled) return
+      const total = consolePRs + marketplacePRs
+      const result = {
+        consolePRs,
+        marketplacePRs,
+        coins: total * COINS_PER_PR,
+        loading: false,
+      }
+      setProfile(result)
+
+      // Cache the result
+      try {
+        localStorage.setItem(
+          `${AUTHOR_CACHE_PREFIX}${handle}`,
+          JSON.stringify({ consolePRs, marketplacePRs, fetchedAt: Date.now() })
+        )
+      } catch {
+        // Non-critical
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [handle, enabled])
+
+  return profile
 }

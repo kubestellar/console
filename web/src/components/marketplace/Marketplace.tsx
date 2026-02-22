@@ -1,12 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useState, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   Store, Search, Download, Tag, RefreshCw, Loader2, AlertCircle, Package,
   Check, Trash2, LayoutGrid, Puzzle, Palette, ExternalLink, Heart,
   HandHelping, ChevronDown, ChevronUp, Star, GraduationCap, Sparkles,
-  List, Grid3X3, SortAsc, SortDesc,
+  List, Grid3X3, SortAsc, SortDesc, Coins,
 } from 'lucide-react'
-import { useMarketplace, MarketplaceItem, MarketplaceItemType, CNCFStats } from '../../hooks/useMarketplace'
+import { useMarketplace, useAuthorProfile, MarketplaceItem, MarketplaceItemType, CNCFStats } from '../../hooks/useMarketplace'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
 import { DashboardHeader } from '../shared/DashboardHeader'
@@ -255,7 +257,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               <DifficultyBadge difficulty={item.difficulty} />
             ) : (
               <>
-                <span>{item.author}</span>
+                <AuthorBadge author={item.author} github={item.authorGithub} />
                 <span>&middot;</span>
                 {item.type === 'theme' && item.themeColors ? (
                   <div className="flex gap-0.5">
@@ -321,6 +323,97 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
   )
 }
 
+// --- Author Badge with Hover Profile Card ---
+function AuthorBadge({ author, github, compact }: { author: string; github?: string; compact?: boolean }) {
+  const [hovered, setHovered] = useState(false)
+  const triggerRef = useRef<HTMLAnchorElement | HTMLSpanElement>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const profile = useAuthorProfile(github, hovered)
+
+  const updatePos = () => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 })
+  }
+
+  const handleEnter = () => {
+    updatePos()
+    setHovered(true)
+  }
+
+  if (!github) {
+    return <span>{author}</span>
+  }
+
+  const link = (
+    <a
+      ref={triggerRef as React.RefObject<HTMLAnchorElement>}
+      href={`https://github.com/${github}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary/80 hover:text-primary transition-colors hover:underline"
+      onMouseEnter={handleEnter}
+      onMouseLeave={() => setHovered(false)}
+      onClick={(e) => e.stopPropagation()}
+    >
+      @{github}
+    </a>
+  )
+
+  if (compact) return link
+
+  return (
+    <>
+      {link}
+      {createPortal(
+        <AnimatePresence>
+          {hovered && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              transition={{ duration: 0.15 }}
+              className="fixed z-[9999] pointer-events-none"
+              style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
+            >
+              <div className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">
+                <div className="flex items-center gap-3 mb-2">
+                  <img
+                    src={`https://github.com/${github}.png?size=80`}
+                    alt={github}
+                    className="w-10 h-10 rounded-full border border-slate-600"
+                  />
+                  <div>
+                    <div className="text-sm font-semibold text-white">@{github}</div>
+                    <div className="text-[10px] text-slate-400">Contributor</div>
+                  </div>
+                </div>
+                {profile.loading ? (
+                  <div className="text-[11px] text-slate-400">Loading stats...</div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <Coins className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-amber-300 font-medium">{profile.coins.toLocaleString()} coins</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {profile.consolePRs} PR{profile.consolePRs !== 1 ? 's' : ''} to console
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {profile.marketplacePRs} PR{profile.marketplacePRs !== 1 ? 's' : ''} to marketplace
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </>
+  )
+}
+
 function DifficultyBadge({ difficulty }: { difficulty: 'beginner' | 'intermediate' | 'advanced' }) {
   const config = DIFFICULTY_CONFIG[difficulty]
   return (
@@ -380,7 +473,9 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
       </div>
 
       {/* Author */}
-      <span className="text-xs text-muted-foreground shrink-0 w-20 truncate hidden sm:block">{item.author}</span>
+      <span className="text-xs text-muted-foreground shrink-0 w-24 truncate hidden sm:block">
+        <AuthorBadge author={item.author} github={item.authorGithub} compact />
+      </span>
 
       {/* Type label */}
       <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 hidden md:block">
