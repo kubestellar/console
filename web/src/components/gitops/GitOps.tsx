@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
@@ -61,8 +62,7 @@ function getGitOpsAppConfigs(): GitOpsAppConfig[] {
   ]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getTimeAgo(timestamp: string | undefined, t: (...args: any[]) => string): string {
+function getTimeAgo(timestamp: string | undefined, t: TFunction): string {
   if (!timestamp) return t('gitops.unknown')
   const now = new Date()
   const then = new Date(timestamp)
