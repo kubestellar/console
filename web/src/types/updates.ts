@@ -92,6 +92,7 @@ export interface AutoUpdateStatus {
   channel: UpdateChannel
   lastUpdateTime: string | null
   lastUpdateResult: string | null
+  updateInProgress: boolean
 }
 
 /**

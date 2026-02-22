@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -40,6 +41,7 @@ type UpdateChecker struct {
 	lastUpdateTime  time.Time
 	lastUpdateError string
 	cancel          context.CancelFunc
+	updating        int32 // atomic: 1 = update in progress, 0 = idle
 }
 
 // UpdateCheckerConfig holds initialization parameters.
@@ -69,6 +71,7 @@ type AutoUpdateStatusResponse struct {
 	Channel               string `json:"channel"`
 	LastUpdateTime        string `json:"lastUpdateTime,omitempty"`
 	LastUpdateResult      string `json:"lastUpdateResult,omitempty"`
+	UpdateInProgress      bool   `json:"updateInProgress"`
 }
 
 // AutoUpdateConfigRequest is the body for POST /auto-update/config.
@@ -145,6 +148,7 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 		AutoUpdateEnabled:     uc.enabled,
 		Channel:               uc.channel,
 		HasUncommittedChanges: hasUncommittedChanges(uc.repoPath),
+		UpdateInProgress:      uc.IsUpdating(),
 	}
 
 	if !uc.lastUpdateTime.IsZero() {
@@ -167,9 +171,17 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 
 // TriggerNow runs an immediate update check (non-blocking).
 // If channelOverride is non-empty, it temporarily uses that channel for this check.
-func (uc *UpdateChecker) TriggerNow(channelOverride string) {
+// Returns false if an update is already in progress.
+func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
+	if !atomic.CompareAndSwapInt32(&uc.updating, 0, 1) {
+		log.Println("[AutoUpdate] Update already in progress, ignoring duplicate trigger")
+		return false
+	}
+
 	if channelOverride != "" {
 		go func() {
+			defer atomic.StoreInt32(&uc.updating, 0)
+
 			uc.mu.Lock()
 			origChannel := uc.channel
 			uc.channel = channelOverride
@@ -182,8 +194,17 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) {
 			uc.mu.Unlock()
 		}()
 	} else {
-		go uc.checkAndUpdate()
+		go func() {
+			defer atomic.StoreInt32(&uc.updating, 0)
+			uc.checkAndUpdate()
+		}()
 	}
+	return true
+}
+
+// IsUpdating returns true if an update is currently in progress.
+func (uc *UpdateChecker) IsUpdating() bool {
+	return atomic.LoadInt32(&uc.updating) == 1
 }
 
 func (uc *UpdateChecker) run(ctx context.Context) {

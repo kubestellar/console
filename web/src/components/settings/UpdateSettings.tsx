@@ -116,6 +116,7 @@ export function UpdateSettings() {
   const [triggerError, setTriggerError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState(ESTIMATED_UPDATE_SECS)
   const hasGithubToken = Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN))
+  const triggerGuardRef = useRef(false) // prevents rapid double-clicks from firing multiple triggers
 
   // Track visual spinning for Check Now button (ensures 1 full rotation like cards)
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
@@ -610,22 +611,25 @@ export function UpdateSettings() {
         {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
       </div>
 
-      {/* Recent Commits (developer channel) */}
-      {isDeveloperChannel && recentCommits.length > 0 && (
+      {/* Recent Commits (developer channel) — hidden during update */}
+      {isDeveloperChannel && recentCommits.length > 0 && !isUpdating && (
         <CommitList commits={recentCommits} />
       )}
 
       {/* Update Now Button (when agent connected and update available) */}
-      {hasUpdate && agentConnected && !isHelmInstall && !isWsUpdating && triggerState !== 'triggered' && (
+      {hasUpdate && agentConnected && !isHelmInstall && !isUpdating && (
         <div className="mb-4">
           <button
             onClick={async () => {
+              if (triggerGuardRef.current) return
+              triggerGuardRef.current = true
               setTriggerState('triggered')
               setTriggerError(null)
               const result = await triggerUpdate()
               if (!result.success) {
                 setTriggerState('error')
                 setTriggerError(result.error ?? 'Unknown error')
+                triggerGuardRef.current = false
               }
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"

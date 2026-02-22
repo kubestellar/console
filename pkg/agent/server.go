@@ -66,6 +66,7 @@ type Server struct {
 	registry       *Registry
 	clients        map[*websocket.Conn]bool
 	clientsMux     sync.RWMutex
+	wsMux          sync.Mutex // protects concurrent WebSocket writes
 	allowedOrigins []string
 	agentToken     string // Optional shared secret for authentication
 
@@ -1437,7 +1438,11 @@ func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request)
 		Channel string `json:"channel"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&body)
-	s.updateChecker.TriggerNow(body.Channel)
+	if !s.updateChecker.TriggerNow(body.Channel) {
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "update already in progress"})
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "update check triggered"})
 }
 

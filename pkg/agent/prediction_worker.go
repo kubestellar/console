@@ -662,7 +662,8 @@ func (w *PredictionWorker) mergePredictions(byProvider map[string][]AIPrediction
 	return result
 }
 
-// BroadcastToClients sends a message to all connected WebSocket clients
+// BroadcastToClients sends a message to all connected WebSocket clients.
+// Uses wsMux to prevent concurrent writes which cause gorilla/websocket to panic.
 func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 	message := map[string]interface{}{
 		"type":    msgType,
@@ -674,6 +675,9 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 		log.Printf("[Server] Error marshaling broadcast message: %v", err)
 		return
 	}
+
+	s.wsMux.Lock()
+	defer s.wsMux.Unlock()
 
 	s.clientsMux.RLock()
 	defer s.clientsMux.RUnlock()
