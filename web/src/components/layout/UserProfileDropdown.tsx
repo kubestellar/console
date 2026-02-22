@@ -37,7 +37,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   })
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
-  const { channel, setChannel, installMethod } = useVersionCheck()
+  const { channel, installMethod } = useVersionCheck()
   const { t, i18n } = useTranslation()
 
   const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0]
@@ -255,30 +255,14 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                     )}
                   </div>
 
-                  {/* Developer update channel toggle */}
-                  {installMethod === 'dev' && (
-                    <button
-                      onClick={() => {
-                        setChannel(channel === 'developer' ? 'stable' : 'developer')
-                      }}
-                      className="flex items-center gap-2 text-xs"
-                    >
-                      <GitBranch className={`w-3.5 h-3.5 ${channel === 'developer' ? 'text-orange-400' : 'text-muted-foreground'}`} />
-                      <span className={channel === 'developer' ? 'text-orange-400' : 'text-muted-foreground'}>
+                  {/* Developer update channel indicator */}
+                  {installMethod === 'dev' && channel === 'developer' && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <GitBranch className="w-3.5 h-3.5 text-orange-400" />
+                      <span className="text-orange-400">
                         {t('settings.updates.developer')}
                       </span>
-                      <div
-                        className={`ml-auto relative w-8 h-4 rounded-full transition-colors ${
-                          channel === 'developer' ? 'bg-orange-500' : 'bg-secondary'
-                        }`}
-                      >
-                        <div
-                          className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
-                            channel === 'developer' ? 'translate-x-4' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </div>
-                    </button>
+                    </div>
                   )}
 
                   {/* Action buttons */}
