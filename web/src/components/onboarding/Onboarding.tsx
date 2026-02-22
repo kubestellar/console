@@ -136,8 +136,7 @@ export function Onboarding() {
       await refreshUser()
 
       navigate(ROUTES.HOME)
-    } catch (error) {
-      console.error('Failed to complete onboarding:', error)
+    } catch {
       // For demo mode, still allow navigation even if there's an error
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       if (token === DEMO_TOKEN_VALUE) {

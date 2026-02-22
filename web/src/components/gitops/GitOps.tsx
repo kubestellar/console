@@ -128,8 +128,7 @@ export function GitOps() {
             drifted: response.data.drifted,
             resources: response.data.resources || [],
           })
-        } catch (error) {
-          console.error(`Failed to detect drift for ${appConfig.name}:`, error)
+        } catch {
           results.set(appConfig.name, { drifted: false, resources: [], error: 'Failed to detect drift' })
           showToast(`Failed to detect drift for ${appConfig.name}`, 'error')
         }

@@ -75,7 +75,6 @@ export function Security() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to refresh security data'
       setRefreshError(message)
-      console.error('Security data refresh failed:', error)
     } finally {
       setIsRefreshing(false)
     }
