@@ -138,7 +138,7 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
         {paginatedItems.map(build => (
           <div
             key={`${build.cluster}-${build.namespace}-${build.name}`}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary transition-colors"
           >
             <BuildStatusIcon status={build.status} />
             <div className="min-w-0 flex-1">

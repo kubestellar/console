@@ -96,7 +96,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       {/* Trigger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 pl-3 border-l border-border hover:bg-secondary/50 rounded-lg p-2 transition-colors"
+        className="flex items-center gap-3 pl-3 border-l border-border hover:bg-secondary rounded-lg p-2 transition-colors"
       >
         {user.avatar_url ? (
           <img
@@ -105,7 +105,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             className="w-8 h-8 rounded-full"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-purple-900 flex items-center justify-center">
             <User className="w-4 h-4 text-purple-400" />
           </div>
         )}
@@ -119,7 +119,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-72 bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-50">
           {/* Header with avatar and name */}
-          <div className="p-4 bg-secondary/30 border-b border-border">
+          <div className="p-4 bg-secondary border-b border-border">
             <div className="flex items-center gap-3">
               {user.avatar_url ? (
                 <img
@@ -128,7 +128,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   className="w-12 h-12 rounded-full"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-purple-900 flex items-center justify-center">
                   <User className="w-6 h-6 text-purple-400" />
                 </div>
               )}
@@ -155,7 +155,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               <Shield className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">{t('profile.role')}</span>
               <span className={`text-xs px-2 py-0.5 rounded ${
-                user.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-secondary text-foreground'
+                user.role === 'admin' ? 'bg-purple-900 text-purple-400' : 'bg-secondary text-foreground'
               }`}>
                 {user.role || t('profile.defaultRole')}
               </span>
@@ -165,7 +165,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 setIsOpen(false)
                 setShowRewards(true)
               }}
-              className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary/50 rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary rounded-lg transition-colors"
             >
               <Coins className="w-4 h-4 text-yellow-500" />
               <span className="text-muted-foreground">{t('profile.coins')}</span>
@@ -179,7 +179,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             <div className="relative">
               <button
                 onClick={() => setShowLanguageSubmenu(!showLanguageSubmenu)}
-                className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary/50 rounded-lg transition-colors"
+                className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary rounded-lg transition-colors"
               >
                 <Globe className="w-4 h-4 text-muted-foreground" />
                 <span className="text-muted-foreground">{t('profile.language')}</span>
@@ -197,8 +197,8 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                       onClick={() => handleLanguageChange(lang.code)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors ${
                         i18n.language === lang.code
-                          ? 'bg-purple-500/20 text-foreground'
-                          : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                          ? 'bg-purple-900 text-foreground'
+                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                       }`}
                     >
                       <span>{lang.flag}</span>
@@ -218,7 +218,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             <div className="border-b border-border">
               <button
                 onClick={() => setShowDevPanel(!showDevPanel)}
-                className="w-full flex items-center gap-3 px-5 py-2 text-sm hover:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-3 px-5 py-2 text-sm hover:bg-secondary transition-colors"
               >
                 <Code2 className="w-4 h-4 text-blue-400" />
                 <span className="text-foreground">{t('developer.title')}</span>
@@ -228,7 +228,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 <div className="px-5 pb-3 space-y-2">
                   {/* Version info */}
                   <div className="flex items-center gap-2 text-xs">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${__DEV_MODE__ ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${__DEV_MODE__ ? 'bg-yellow-900 text-yellow-400' : 'bg-green-900 text-green-400'}`}>
                       {__DEV_MODE__ ? 'dev' : 'prod'}
                     </span>
                     <span className="text-muted-foreground font-mono">
@@ -340,7 +340,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             >
               <Lightbulb className="w-4 h-4 text-yellow-500" />
               <span>{t('feedback.feedback')}</span>
-              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{t('feedback.plusCoins')}</span>
+              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">{t('feedback.plusCoins')}</span>
             </button>
             <button
               onClick={handleLinkedInShare}
@@ -348,7 +348,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             >
               <Linkedin className="w-4 h-4 text-[#0A66C2]" />
               <span>{t('feedback.shareOnLinkedIn')}</span>
-              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
+              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
             </button>
             <button
               onClick={() => {
@@ -371,8 +371,8 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               }}
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
                 isDemoModeForced
-                  ? 'text-purple-400 hover:bg-purple-500/10'
-                  : 'text-red-400 hover:bg-red-500/10'
+                  ? 'text-purple-400 hover:bg-purple-950'
+                  : 'text-red-400 hover:bg-red-950'
               }`}
             >
               {isDemoModeForced ? (

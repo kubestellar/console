@@ -108,7 +108,7 @@ export function InlineAIAssist<T>({
     return (
       <button
         onClick={() => setPhase('idle')}
-        className="w-full flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-purple-500/5 border border-purple-500/10 text-purple-400/70 hover:bg-purple-500/10 hover:text-purple-400 transition-colors"
+        className="w-full flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-secondary border border-purple-900 text-purple-400/70 hover:bg-purple-950 hover:text-purple-400 transition-colors"
       >
         <Sparkles className="w-3 h-3" />
         <span>{t('dashboard.aiAssist.describeWhatYouWant')}</span>
@@ -118,7 +118,7 @@ export function InlineAIAssist<T>({
   }
 
   return (
-    <div className="rounded-md border border-purple-500/20 bg-purple-500/5 p-2 space-y-2">
+    <div className="rounded-md border border-purple-900 bg-card p-2 space-y-2">
       <ApiKeyPromptModal isOpen={showKeyPrompt} onDismiss={dismissPrompt} onGoToSettings={goToSettings} />
 
       {/* Header */}
@@ -146,7 +146,7 @@ export function InlineAIAssist<T>({
               if (e.key === 'Enter') handleGenerate()
             }}
             placeholder={placeholder}
-            className="flex-1 text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            className="flex-1 text-xs px-2.5 py-1.5 rounded-md bg-secondary border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
           />
           <button
             onClick={handleGenerate}
@@ -154,7 +154,7 @@ export function InlineAIAssist<T>({
             className={cn(
               'px-3 py-1.5 rounded-md text-xs font-medium transition-colors shrink-0',
               input.trim()
-                ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                ? 'bg-purple-900 text-purple-400 hover:bg-purple-800'
                 : 'bg-secondary text-muted-foreground cursor-not-allowed',
             )}
           >

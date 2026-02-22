@@ -78,7 +78,7 @@ export function ClusterFilterDropdown({
     <>
       {/* Cluster count indicator */}
       {localClusterFilter.length > 0 && (
-        <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+        <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
           <Server className="w-3 h-3" />
           {localClusterFilter.length}/{availableClusters.length}
         </span>
@@ -91,7 +91,7 @@ export function ClusterFilterDropdown({
           onClick={() => setShowClusterFilter(!showClusterFilter)}
           className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
             localClusterFilter.length > 0
-              ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+              ? 'bg-purple-900 border-purple-800 text-purple-400'
               : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
           }`}
           title={t('clusterFilter.filterByCluster')}
@@ -114,7 +114,7 @@ export function ClusterFilterDropdown({
               <button
                 onClick={clearClusterFilter}
                 className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                  localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                  localClusterFilter.length === 0 ? 'bg-purple-900 text-purple-400' : 'hover:bg-secondary text-foreground'
                 }`}
               >
                 {t('clusterFilter.allClusters')}
@@ -146,7 +146,7 @@ export function ClusterFilterDropdown({
                       isUnreachable
                         ? 'opacity-40 cursor-not-allowed'
                         : localClusterFilter.includes(cluster.name)
-                          ? 'bg-purple-500/20 text-purple-400'
+                        ? 'bg-purple-900 text-purple-400'
                           : 'hover:bg-secondary text-foreground'
                     }`}
                     title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}

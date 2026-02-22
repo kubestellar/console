@@ -97,7 +97,7 @@ export function ClusterSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          'flex items-center gap-2 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-left',
+          'flex items-center gap-2 text-sm rounded-md bg-secondary border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-left',
           disabled && 'opacity-50 cursor-not-allowed',
           className,
         )}
@@ -120,7 +120,7 @@ export function ClusterSelect({
               onClick={() => { onChange(''); setIsOpen(false) }}
               className={cn(
                 'w-full px-2 py-1.5 text-xs text-left rounded transition-colors',
-                !value ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-muted-foreground',
+                !value ? 'bg-purple-900 text-purple-400' : 'hover:bg-secondary text-muted-foreground',
               )}
             >
               {placeholder}
@@ -152,7 +152,7 @@ export function ClusterSelect({
                     isUnreachable
                       ? 'opacity-40 cursor-not-allowed'
                       : value === cluster.name
-                        ? 'bg-purple-500/20 text-purple-400'
+                        ? 'bg-purple-900 text-purple-400'
                         : 'hover:bg-secondary text-foreground',
                   )}
                   title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}

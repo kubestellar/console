@@ -31,8 +31,8 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
   if (isLoading) {
     return (
       <div className="h-full flex flex-col min-h-card p-4 animate-pulse space-y-4">
-        <div className="h-24 bg-white/5 rounded-lg" />
-        <div className="h-16 bg-white/5 rounded-lg" />
+        <div className="h-24 bg-secondary rounded-lg" />
+        <div className="h-16 bg-secondary rounded-lg" />
       </div>
     )
   }
@@ -40,13 +40,13 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
   return (
     <div className="h-full flex flex-col min-h-card p-3 space-y-3">
       {/* SPIFFE Coverage */}
-      <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+      <div className="rounded-lg border border-border bg-secondary p-3">
         <div className="flex items-center gap-2 mb-2">
           <Shield className="w-4 h-4 text-violet-400" />
           <span className="text-sm text-foreground font-medium">SPIFFE Identity Coverage</span>
         </div>
         <div className="flex items-center gap-3 mb-2">
-          <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
+          <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${stats.pct >= 80 ? 'bg-emerald-500' : stats.pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
               style={{ width: `${stats.pct}%` }}

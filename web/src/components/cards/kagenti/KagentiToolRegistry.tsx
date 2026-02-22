@@ -81,7 +81,7 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
         {paginatedItems.map(tool => (
           <div
             key={`${tool.cluster}-${tool.namespace}-${tool.name}`}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary transition-colors"
           >
             <Wrench className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             <div className="min-w-0 flex-1">

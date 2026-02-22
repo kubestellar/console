@@ -234,7 +234,7 @@ export function PerformanceTimeline() {
 
             {/* Hover detail */}
             {hoveredCell && (
-              <div className="absolute -right-4 top-0 translate-x-full bg-slate-900/95 border border-slate-700 rounded-lg p-3 shadow-xl text-xs min-w-[160px] z-20">
+              <div className="absolute -right-4 top-0 translate-x-full bg-slate-900 border border-slate-700 rounded-lg p-3 shadow-xl text-xs min-w-[160px] z-20">
                 <div className="text-white font-medium mb-1">ISL {hoveredCell.isl} × OSL {hoveredCell.osl}</div>
                 <div className="text-slate-300">{modeInfo.label}: <span className="font-mono text-white">{hoveredCell.value.toFixed(1)} {modeInfo.unit}</span></div>
                 <div className="text-slate-400 mt-1">{hoveredCell.count} reports averaged</div>

@@ -46,7 +46,7 @@ function CustomTooltip({ active, payload }: {
   if (!active || !payload?.[0]) return null
   const p = payload[0].payload
   return (
-    <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-xl text-xs">
+    <div className="bg-slate-900 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-xl text-xs">
       <div className="text-white font-medium mb-1">{p.fullVariant}</div>
       <div className="flex items-center gap-2">
         <span className="text-slate-300">Value:</span>

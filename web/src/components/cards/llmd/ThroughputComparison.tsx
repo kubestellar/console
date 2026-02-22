@@ -36,7 +36,7 @@ function CustomTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null
   const sorted = [...payload].filter(p => p.value !== undefined).sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
   return (
-    <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-xl text-xs max-w-xs">
+    <div className="bg-slate-900 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-xl text-xs max-w-xs">
       <div className="text-white font-medium mb-2">QPS: {label}</div>
       {sorted.map(p => (
         <div key={p.name} className="flex items-center justify-between gap-4 py-0.5">

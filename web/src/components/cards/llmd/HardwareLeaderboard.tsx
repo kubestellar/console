@@ -141,7 +141,7 @@ export function HardwareLeaderboard() {
       {/* Table */}
       <div className="flex-1 min-h-0 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-slate-900/95 backdrop-blur-sm z-10">
+          <thead className="sticky top-0 bg-slate-900 backdrop-blur-sm z-10">
             <tr className="border-b border-slate-700/50">
               <th className="text-left py-2 px-2 text-slate-500 font-medium w-[36px]">#</th>
               <th className="text-left py-2 px-2 text-slate-500 font-medium w-[70px]">Hardware</th>

@@ -138,7 +138,7 @@ export function AiGenerationPanel<T>({
               }}
               placeholder={placeholder}
               rows={4}
-              className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+              className="w-full text-sm px-3 py-2 rounded-md bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             />
             <p className="text-[10px] text-muted-foreground/50 mt-1">
               Press Cmd+Enter to generate
@@ -147,7 +147,7 @@ export function AiGenerationPanel<T>({
 
           {/* Error display */}
           {phase === 'error' && parseError && (
-            <div className="flex items-start gap-2 p-3 rounded-md bg-red-500/10 border border-red-500/20">
+            <div className="flex items-start gap-2 p-3 rounded-md bg-red-950 border border-red-900">
               <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-xs text-red-400 break-words">{parseError}</span>
@@ -156,7 +156,7 @@ export function AiGenerationPanel<T>({
                     <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
                       View raw AI output
                     </summary>
-                    <pre className="mt-1 p-2 bg-secondary/50 rounded text-[10px] text-muted-foreground overflow-x-auto max-h-40 whitespace-pre-wrap">
+                    <pre className="mt-1 p-2 bg-secondary rounded text-[10px] text-muted-foreground overflow-x-auto max-h-40 whitespace-pre-wrap">
                       {streamingText}
                     </pre>
                   </details>
@@ -172,7 +172,7 @@ export function AiGenerationPanel<T>({
             className={cn(
               'w-full flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-colors',
               userPrompt.trim()
-                ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                ? 'bg-purple-900 text-purple-400 hover:bg-purple-800'
                 : 'bg-secondary text-muted-foreground cursor-not-allowed',
             )}
           >
@@ -195,7 +195,7 @@ export function AiGenerationPanel<T>({
             readOnly
             value={streamingText || 'Waiting for AI response...'}
             rows={12}
-            className="w-full text-xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono focus:outline-none leading-relaxed"
+            className="w-full text-xs px-3 py-2 rounded-md bg-secondary border border-border text-foreground font-mono focus:outline-none leading-relaxed"
           />
           <p className="text-[10px] text-muted-foreground/50 text-center">
             The AI is generating your definition. This may take a moment.
@@ -212,7 +212,7 @@ export function AiGenerationPanel<T>({
           </div>
 
           {/* Preview */}
-          <div className="rounded-lg border border-border/50 bg-secondary/20 p-4">
+          <div className="rounded-lg border border-border bg-secondary p-4">
             {renderPreview(parsedResult)}
           </div>
 
@@ -225,7 +225,7 @@ export function AiGenerationPanel<T>({
               readOnly
               value={streamingText}
               rows={8}
-              className="w-full mt-2 text-xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono"
+              className="w-full mt-2 text-xs px-3 py-2 rounded-md bg-secondary border border-border text-foreground font-mono"
             />
           </details>
 
@@ -233,7 +233,7 @@ export function AiGenerationPanel<T>({
           <div className="flex gap-2">
             <button
               onClick={handleSave}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium bg-purple-900 text-purple-400 hover:bg-purple-800 transition-colors"
             >
               <Save className="w-4 h-4" />
               {saveLabel}

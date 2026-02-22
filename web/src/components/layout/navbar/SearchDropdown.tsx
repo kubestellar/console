@@ -184,7 +184,7 @@ export function SearchDropdown() {
           }}
           onFocus={() => setIsSearchOpen(true)}
           placeholder="Search or ask AI anything..."
-          className="w-full pl-10 pr-16 py-2 bg-secondary/50 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+          className="w-full pl-10 pr-16 py-2 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
         />
         <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
           <Command className="w-3 h-3" />K
@@ -221,8 +221,8 @@ export function SearchDropdown() {
                             onClick={() => handleSelect(item)}
                             className={`w-full flex items-center gap-3 px-4 py-1.5 text-left transition-colors ${
                               isSelected
-                                ? 'bg-purple-500/20 text-foreground'
-                                : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                                ? 'bg-purple-900 text-foreground'
+                                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                             }`}
                           >
                             <div className="flex-1 min-w-0">
@@ -254,8 +254,8 @@ export function SearchDropdown() {
                     onClick={handleAskAI}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                       selectedIndex === askAIIndex
-                        ? 'bg-purple-500/20 text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                        ? 'bg-purple-900 text-foreground'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                   >
                     <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
@@ -281,8 +281,8 @@ export function SearchDropdown() {
                     onClick={handleAskAI}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                       selectedIndex === askAIIndex
-                        ? 'bg-purple-500/20 text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                        ? 'bg-purple-900 text-foreground'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                   >
                     <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />

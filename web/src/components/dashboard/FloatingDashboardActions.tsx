@@ -106,7 +106,7 @@ export function FloatingDashboardActions({
 
   const showResetOption = isCustomized && (onReset || onResetToDefaults)
 
-  const menuBtnClass = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
+  const menuBtnClass = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card hover:bg-secondary border border-border rounded-md shadow-md transition-all hover:shadow-lg whitespace-nowrap"
 
   return (
     <>

@@ -30,14 +30,14 @@ const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof Lay
 }
 
 const DIFFICULTY_CONFIG = {
-  beginner: { label: 'Beginner', color: 'text-green-400 bg-green-500/10', stars: 1 },
-  intermediate: { label: 'Intermediate', color: 'text-yellow-400 bg-yellow-500/10', stars: 2 },
-  advanced: { label: 'Advanced', color: 'text-red-400 bg-red-500/10', stars: 3 },
+  beginner: { label: 'Beginner', color: 'text-green-400 bg-green-950', stars: 1 },
+  intermediate: { label: 'Intermediate', color: 'text-yellow-400 bg-yellow-950', stars: 2 },
+  advanced: { label: 'Advanced', color: 'text-red-400 bg-red-950', stars: 3 },
 } as const
 
 const MATURITY_CONFIG = {
-  graduated: { label: 'Graduated', color: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/20' },
-  incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-500/15 border-blue-500/20' },
+  graduated: { label: 'Graduated', color: 'text-emerald-400 bg-emerald-950 border-emerald-800' },
+  incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-950 border-blue-800' },
 } as const
 
 // --- CNCF Progress Banner ---
@@ -63,7 +63,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
         className="w-full flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-900 to-cyan-900 flex items-center justify-center">
             <GraduationCap className="w-4 h-4 text-blue-400" />
           </div>
           <div className="text-left">
@@ -111,7 +111,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
               href={ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded-md transition-colors"
             >
               <HandHelping className="w-3 h-3" />
               Browse Issues
@@ -191,14 +191,14 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         )}
         {/* Help Wanted badge */}
         {isHelpWanted && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/30 rounded-md backdrop-blur-sm">
+          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 text-[10px] font-semibold bg-amber-950 text-amber-300 border border-amber-800 rounded-md">
             <HandHelping className="w-3 h-3" />
             Help Wanted
           </div>
         )}
         {/* CNCF badge */}
         {item.cncfProject && (
-          <div className="absolute top-2 right-2 px-1.5 py-0.5 text-[9px] font-bold bg-card/80 backdrop-blur-sm text-muted-foreground rounded border border-border/50">
+          <div className="absolute top-2 right-2 px-1.5 py-0.5 text-[9px] font-bold bg-card text-muted-foreground rounded border border-border">
             CNCF
           </div>
         )}
@@ -241,7 +241,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
             ))
           ) : (
             item.tags.slice(0, 3).map(tag => (
-              <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded">
+              <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-primary/80 text-primary-foreground rounded">
                 {tag}
               </span>
             ))
@@ -281,21 +281,21 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               href={item.issueUrl || ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded-md transition-colors"
             >
               <Sparkles className="w-3 h-3" />
               Contribute
             </a>
           ) : isInstalled ? (
             <div className="flex items-center gap-1.5">
-              <span className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-green-400 bg-green-500/10 rounded">
+              <span className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-green-400 bg-green-950 rounded">
                 <Check className="w-3 h-3" />
                 Installed
               </span>
               <button
                 onClick={handleRemove}
                 disabled={removing}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1 text-[10px] text-red-400 hover:bg-red-950 rounded transition-colors disabled:opacity-50"
                 title={t('common.remove')}
               >
                 {removing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
@@ -305,7 +305,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
             <button
               onClick={handleInstall}
               disabled={installing}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/80 hover:bg-primary text-primary-foreground rounded-md transition-colors disabled:opacity-50"
             >
               {installing ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -371,7 +371,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             </span>
           )}
           {isHelpWanted && (
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-amber-950/80 text-amber-300 border border-amber-500/30 rounded">
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-amber-950 text-amber-300 border border-amber-800 rounded">
               Help Wanted
             </span>
           )}
@@ -403,7 +403,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             href={item.issueUrl || ISSUES_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded transition-colors"
           >
             <Sparkles className="w-3 h-3" />
             Contribute
@@ -848,7 +848,7 @@ export function Marketplace() {
               href={ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded-md transition-colors"
             >
               <HandHelping className="w-3 h-3" />
               Browse Issues

@@ -334,7 +334,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="mb-3 p-3 rounded-xl bg-secondary/30 backdrop-blur-sm border border-border/30 space-y-3">
+        <div className="mb-3 p-3 rounded-xl bg-secondary backdrop-blur-sm border border-border/30 space-y-3">
           {/* City Search */}
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Search for a city</label>
@@ -359,7 +359,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                     <button
                       key={city.id}
                       onClick={() => selectCity(city)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-secondary transition-colors border-b border-border/20 last:border-0"
+                      className="w-full text-left px-3 py-2.5 hover:bg-secondary transition-colors border-b border-border last:border-0"
                     >
                       <div className="text-sm font-medium">{city.name}</div>
                       <div className="text-xs text-muted-foreground">
@@ -414,7 +414,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                       className={`flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer ${
                         isCurrentLoc
                           ? 'bg-primary/10 border border-primary/30'
-                          : 'bg-secondary/30 hover:bg-secondary/50'
+                          : 'bg-secondary hover:bg-secondary/50'
                       }`}
                       onClick={() => !isCurrentLoc && loadSavedLocation(location)}
                     >
@@ -533,7 +533,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
         {/* Hourly Forecast */}
         {hourlyForecast.length > 0 && (
-          <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
+          <div className="rounded-2xl bg-secondary border border-border p-4">
             <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
               <Calendar className="w-3 h-3" />
               <span>{t('weather.hourlyForecast')}</span>
@@ -568,7 +568,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
         {/* Daily Forecast */}
         {forecast.length > 0 && (
-          <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
+          <div className="rounded-2xl bg-secondary border border-border p-4">
             <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
               <Calendar className="w-3 h-3" />
               <span>{forecastLength}-Day Forecast</span>
@@ -649,7 +649,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
         {currentWeather && (
           <div className="grid grid-cols-2 gap-3">
             {/* Feels Like */}
-            <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
+            <div className="rounded-2xl bg-secondary border border-border p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Gauge className="w-3 h-3" />
                 <span>{t('weather.feelsLike')}</span>
@@ -663,7 +663,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             </div>
 
             {/* Humidity */}
-            <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
+            <div className="rounded-2xl bg-secondary border border-border p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Droplets className="w-3 h-3" />
                 <span>{t('weather.humidity')}</span>
@@ -677,7 +677,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             </div>
 
             {/* Wind */}
-            <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
+            <div className="rounded-2xl bg-secondary border border-border p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Wind className="w-3 h-3" />
                 <span>{t('weather.wind')}</span>
@@ -691,7 +691,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             </div>
 
             {/* Condition */}
-            <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
+            <div className="rounded-2xl bg-secondary border border-border p-4">
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wide">
                 <Eye className="w-3 h-3" />
                 <span>{t('weather.condition')}</span>

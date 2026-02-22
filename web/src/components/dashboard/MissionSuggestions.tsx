@@ -22,28 +22,28 @@ const MISSION_ICONS: Record<MissionType, typeof Zap> = {
 
 const PRIORITY_STYLES = {
   critical: {
-    bg: 'bg-red-500/20',
-    border: 'border-red-500/30',
+    bg: 'bg-red-950',
+    border: 'border-red-800',
     text: 'text-red-400',
-    badge: 'bg-red-500/30',
+    badge: 'bg-red-900',
   },
   high: {
-    bg: 'bg-orange-500/20',
-    border: 'border-orange-500/30',
+    bg: 'bg-orange-950',
+    border: 'border-orange-800',
     text: 'text-orange-400',
-    badge: 'bg-orange-500/30',
+    badge: 'bg-orange-900',
   },
   medium: {
-    bg: 'bg-yellow-500/20',
-    border: 'border-yellow-500/30',
+    bg: 'bg-yellow-950',
+    border: 'border-yellow-800',
     text: 'text-yellow-400',
-    badge: 'bg-yellow-500/30',
+    badge: 'bg-yellow-900',
   },
   low: {
-    bg: 'bg-blue-500/20',
-    border: 'border-blue-500/30',
+    bg: 'bg-blue-950',
+    border: 'border-blue-800',
     text: 'text-blue-400',
-    badge: 'bg-blue-500/30',
+    badge: 'bg-blue-900',
   },
 }
 
@@ -213,7 +213,7 @@ export function MissionSuggestions() {
               {isExpanded && (
                 <div
                   ref={dropdownRef}
-                  className={`absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border ${style.border} ${style.bg} backdrop-blur-sm shadow-xl`}
+                  className={`absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border ${style.border} bg-card shadow-xl`}
                 >
                   <div className="p-3">
                     {/* Description */}
@@ -260,7 +260,7 @@ export function MissionSuggestions() {
                       <button
                         onClick={(e) => handleRepair(e, suggestion)}
                         disabled={isProcessing}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors flex items-center gap-1"
+                        className="px-2 py-1.5 rounded text-xs font-medium bg-green-900 hover:bg-green-800 text-green-400 transition-colors flex items-center gap-1"
                         title={t('dashboard.missions.repairTitle')}
                       >
                         <Wrench className="w-3 h-3" />
@@ -268,14 +268,14 @@ export function MissionSuggestions() {
                       </button>
                       <button
                         onClick={(e) => handleSnooze(e, suggestion)}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
+                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors"
                         title={t('dashboard.missions.snoozeTitle')}
                       >
                         <Clock className="w-3 h-3" />
                       </button>
                       <button
                         onClick={(e) => handleDismiss(e, suggestion)}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
+                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors"
                         title={t('dashboard.missions.dismiss')}
                       >
                         <X className="w-3 h-3" />
@@ -290,12 +290,12 @@ export function MissionSuggestions() {
 
         {/* Stats badges */}
         {stats.critical > 0 && (
-          <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+          <span className="px-1.5 py-0.5 rounded-full bg-red-950 text-red-400 text-[10px]">
             {t('dashboard.missions.critical', { count: stats.critical })}
           </span>
         )}
         {stats.high > 0 && stats.critical === 0 && (
-          <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[10px]">
+          <span className="px-1.5 py-0.5 rounded-full bg-orange-950 text-orange-400 text-[10px]">
             {t('dashboard.missions.high', { count: stats.high })}
           </span>
         )}

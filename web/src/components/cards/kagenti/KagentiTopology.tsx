@@ -94,7 +94,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
   if (agentsLoading || toolsLoading) {
     return (
       <div className="h-full flex flex-col min-h-card p-4 animate-pulse">
-        <div className="flex-1 bg-white/5 rounded-lg" />
+        <div className="flex-1 bg-secondary rounded-lg" />
       </div>
     )
   }

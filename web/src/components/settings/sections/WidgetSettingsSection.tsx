@@ -355,7 +355,7 @@ const WIDGET_OPTIONS: WidgetOption[] = [
     description: 'Open in any browser. Use Safari PiP or Chrome Always-on-Top.',
     platform: ['macos', 'windows', 'linux'],
     icon: Globe,
-    color: 'text-blue-400 bg-blue-500/20',
+    color: 'text-blue-400 bg-blue-900',
     recommended: true,
   },
   {
@@ -364,7 +364,7 @@ const WIDGET_OPTIONS: WidgetOption[] = [
     description: 'Native macOS desktop widget. Draggable and always visible.',
     platform: ['macos'],
     icon: Apple,
-    color: 'text-purple-400 bg-purple-500/20',
+    color: 'text-purple-400 bg-purple-900',
   },
 ]
 
@@ -420,8 +420,8 @@ export function WidgetSettingsSection() {
               className={cn(
                 'w-full p-4 rounded-lg border text-left transition-all',
                 isSelected
-                  ? 'bg-purple-500/10 border-purple-500/30'
-                  : 'bg-secondary/30 border-border hover:border-purple-500/30 hover:bg-secondary/50'
+                  ? 'bg-purple-950 border-purple-800'
+                  : 'bg-secondary border-border hover:border-purple-800 hover:bg-secondary/80'
               )}
             >
               <div className="flex items-start gap-3">
@@ -432,7 +432,7 @@ export function WidgetSettingsSection() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground">{widget.name}</span>
                     {widget.recommended && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900 text-green-400">
                         Recommended
                       </span>
                     )}
@@ -470,7 +470,7 @@ export function WidgetSettingsSection() {
 
       {/* Installation Panel - Browser Widget */}
       {selectedWidget === 'browser' && (
-        <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 space-y-4">
+        <div className="p-4 rounded-lg bg-blue-950 border border-blue-900 space-y-4">
           <div className="flex items-center gap-2 text-blue-400">
             <Globe className="w-4 h-4" />
             <span className="font-medium text-sm">{t('settings.widget.browserSetup')}</span>
@@ -505,7 +505,7 @@ export function WidgetSettingsSection() {
 
       {/* Installation Panel - Übersicht Widget */}
       {selectedWidget === 'uebersicht' && (
-        <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20 space-y-4">
+        <div className="p-4 rounded-lg bg-purple-950 border border-purple-900 space-y-4">
           <div className="flex items-center gap-2 text-purple-400">
             <Smartphone className="w-4 h-4" />
             <span className="font-medium text-sm">{t('settings.widget.ubersichtSetup')}</span>
@@ -551,7 +551,7 @@ export function WidgetSettingsSection() {
 
       {/* Widget Preview */}
       {selectedWidget && (
-        <div className="mt-4 p-4 rounded-lg bg-gray-900/50 border border-border">
+        <div className="mt-4 p-4 rounded-lg bg-gray-900 border border-border">
           <div className="text-xs text-muted-foreground mb-3">{t('settings.widget.widgetPreview')}</div>
           <div className="flex justify-center">
             <div
