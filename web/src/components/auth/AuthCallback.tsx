@@ -23,10 +23,7 @@ export function AuthCallback() {
     const token = searchParams.get('token')
     const error = searchParams.get('error')
 
-    console.log('[AuthCallback] Starting auth flow', { hasToken: !!token, error })
-
     if (error) {
-      console.error('Auth error:', error)
       navigate(getLoginWithError(error))
       return
     }
@@ -41,16 +38,14 @@ export function AuthCallback() {
 
       // Add timeout to prevent hanging forever
       const timeoutId = setTimeout(() => {
-        console.warn('[AuthCallback] Auth timeout - proceeding anyway')
         navigate(destination)
       }, 5000)
 
       refreshUser(token).then(() => {
         clearTimeout(timeoutId)
         navigate(destination)
-      }).catch((err) => {
+      }).catch((_err) => {
         clearTimeout(timeoutId)
-        console.error('Failed to refresh user:', err)
         showToast(t('authCallback.failedToFetchUser'), 'warning')
         // Still try to proceed if we have a token
         setStatus(t('authCallback.completingSignIn'))
@@ -59,7 +54,6 @@ export function AuthCallback() {
         }, 500)
       })
     } else {
-      console.warn('[AuthCallback] No token in URL')
       navigate(ROUTES.LOGIN)
     }
   }, [searchParams, setToken, refreshUser, navigate, showToast])
