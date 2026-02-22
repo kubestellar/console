@@ -181,6 +181,11 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	if channelOverride != "" {
 		go func() {
 			defer atomic.StoreInt32(&uc.updating, 0)
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[AutoUpdate] PANIC recovered in update goroutine: %v", r)
+				}
+			}()
 
 			uc.mu.Lock()
 			origChannel := uc.channel
@@ -196,6 +201,11 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	} else {
 		go func() {
 			defer atomic.StoreInt32(&uc.updating, 0)
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[AutoUpdate] PANIC recovered in update goroutine: %v", r)
+				}
+			}()
 			uc.checkAndUpdate()
 		}()
 	}
@@ -298,6 +308,11 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	previousSHA := uc.currentSHA
 	uc.mu.Unlock()
 
+	start := time.Now()
+	log.Printf("[AutoUpdate] === Starting update: %s -> %s ===", short(previousSHA), short(newSHA))
+
+	// Step 1: Git pull
+	log.Printf("[AutoUpdate] Step 1/4: git pull --rebase origin main")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "pulling",
 		Message:  fmt.Sprintf("Pulling %s from main...", short(newSHA)),
@@ -305,6 +320,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	})
 
 	if err := runGitPull(repoPath); err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 1 (git pull) after %s: %v", time.Since(start), err)
 		uc.recordError(fmt.Sprintf("git pull failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -313,14 +329,19 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		})
 		return
 	}
+	log.Printf("[AutoUpdate] Step 1/4 complete (git pull) in %s", time.Since(start))
 
+	// Step 2: Frontend build
+	log.Printf("[AutoUpdate] Step 2/4: npm install && npm run build")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "building",
 		Message:  "Installing dependencies and building frontend...",
 		Progress: 30,
 	})
 
+	stepStart := time.Now()
 	if err := rebuildFrontend(repoPath); err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 2 (frontend build) after %s: %v", time.Since(start), err)
 		uc.recordError(fmt.Sprintf("build failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -328,30 +349,40 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 			Error:   err.Error(),
 		})
 		// Rollback
+		log.Printf("[AutoUpdate] Rolling back to %s", short(previousSHA))
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath) //nolint:errcheck
 		return
 	}
+	log.Printf("[AutoUpdate] Step 2/4 complete (frontend build) in %s", time.Since(stepStart))
 
+	// Step 3: Go build
+	log.Printf("[AutoUpdate] Step 3/4: go build ./cmd/console && go build ./cmd/kc-agent")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "building",
 		Message:  "Building Go binaries...",
 		Progress: 60,
 	})
 
+	stepStart = time.Now()
 	if err := rebuildGoBinaries(repoPath); err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 3 (go build) after %s: %v", time.Since(start), err)
 		uc.recordError(fmt.Sprintf("go build failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Go build failed, rolling back...",
 			Error:   err.Error(),
 		})
+		log.Printf("[AutoUpdate] Rolling back to %s", short(previousSHA))
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath)   //nolint:errcheck
 		rebuildGoBinaries(repoPath) //nolint:errcheck
 		return
 	}
+	log.Printf("[AutoUpdate] Step 3/4 complete (go build) in %s", time.Since(stepStart))
 
+	// Step 4: Restart
+	log.Printf("[AutoUpdate] Step 4/4: restart via startup-oauth.sh")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "restarting",
 		Message:  "Restarting via startup-oauth.sh...",
@@ -364,7 +395,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	log.Printf("[AutoUpdate] Build complete for %s, restarting via startup-oauth.sh...", short(newSHA))
+	log.Printf("[AutoUpdate] === Update complete: %s -> %s (total: %s), restarting... ===", short(previousSHA), short(newSHA), time.Since(start))
 
 	// Spawn startup-oauth.sh as a detached process and exit.
 	// The script handles port cleanup, env loading, and starting all processes
