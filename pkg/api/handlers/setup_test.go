@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 type testEnv struct {
@@ -44,6 +45,18 @@ func setupTestEnv(t *testing.T) *testEnv {
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("test-cluster", fakeClient)
 
+	// Set a minimal rawConfig so ListClusters / HealthyClusters can discover
+	// injected clusters (without this, LoadConfig fails → 500 in handlers).
+	k8sClient.SetRawConfig(&api.Config{
+		Clusters: map[string]*api.Cluster{
+			"test-cluster": {Server: "https://test-cluster:6443"},
+		},
+		Contexts: map[string]*api.Context{
+			"test-cluster": {Cluster: "test-cluster", AuthInfo: "test-user"},
+		},
+		CurrentContext: "test-cluster",
+	})
+
 	// Initialize Hub
 	hub := NewHub()
 	go hub.Run() // Start hub loop (in background)
@@ -74,6 +87,8 @@ func injectDynamicCluster(env *testEnv, cluster string, gvrKinds map[schema.Grou
 	dynClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrKinds)
 	env.K8sClient.InjectDynamicClient(cluster, dynClient)
 	env.K8sClient.InjectClient(cluster, k8sfake.NewSimpleClientset())
+	// Ensure the cluster is discoverable via ListClusters / HealthyClusters.
+	addClusterToRawConfig(env.K8sClient, cluster)
 	return dynClient
 }
 
@@ -94,5 +109,28 @@ func injectDynamicClusterWithObjects(
 	dynClient := fake.NewSimpleDynamicClient(scheme, dynamicObjects...)
 	env.K8sClient.InjectDynamicClient(cluster, dynClient)
 	env.K8sClient.InjectClient(cluster, k8sfake.NewSimpleClientset(typedObjects...))
+	// Ensure the cluster is discoverable via ListClusters / HealthyClusters.
+	addClusterToRawConfig(env.K8sClient, cluster)
 	return dynClient
+}
+
+// addClusterToRawConfig ensures a cluster appears in the rawConfig so
+// ListClusters / HealthyClusters can discover it during tests.
+func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
+	cfg := client.GetRawConfig()
+	if cfg == nil {
+		cfg = &api.Config{
+			Clusters: map[string]*api.Cluster{},
+			Contexts: map[string]*api.Context{},
+		}
+	}
+	if cfg.Clusters == nil {
+		cfg.Clusters = map[string]*api.Cluster{}
+	}
+	if cfg.Contexts == nil {
+		cfg.Contexts = map[string]*api.Context{}
+	}
+	cfg.Clusters[cluster] = &api.Cluster{Server: "https://" + cluster + ":6443"}
+	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
+	client.SetRawConfig(cfg)
 }

@@ -91,6 +91,13 @@ func (m *MultiClusterClient) SetRawConfig(config *api.Config) {
 	m.rawConfig = config
 }
 
+// GetRawConfig returns the raw kubeconfig (for testing)
+func (m *MultiClusterClient) GetRawConfig() *api.Config {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.rawConfig
+}
+
 // InjectClient injects a typed client for a cluster (for testing)
 func (m *MultiClusterClient) InjectClient(contextName string, client kubernetes.Interface) {
 	m.mu.Lock()
