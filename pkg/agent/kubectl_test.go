@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -325,5 +326,223 @@ func TestNewKubectlProxy(t *testing.T) {
 	proxy2, _ := NewKubectlProxy("")
 	if proxy2.GetKubeconfigPath() != "/tmp/env-config" {
 		t.Errorf("Path mismatch from env: %s", proxy2.GetKubeconfigPath())
+	}
+}
+
+// sampleKubeconfig returns a minimal valid kubeconfig YAML for testing.
+func sampleKubeconfig(contextName, clusterName, userName, server string) string {
+	return fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: %s
+  name: %s
+contexts:
+- context:
+    cluster: %s
+    user: %s
+  name: %s
+users:
+- name: %s
+  user:
+    token: fake-token
+current-context: %s
+`, server, clusterName, clusterName, userName, contextName, userName, contextName)
+}
+
+func TestKubectlProxy_PreviewKubeconfig(t *testing.T) {
+	config := &api.Config{
+		CurrentContext: "existing-ctx",
+		Contexts: map[string]*api.Context{
+			"existing-ctx": {Cluster: "existing-cluster", AuthInfo: "existing-user"},
+		},
+		Clusters: map[string]*api.Cluster{
+			"existing-cluster": {Server: "https://existing.example.com"},
+		},
+		AuthInfos: map[string]*api.AuthInfo{
+			"existing-user": {},
+		},
+	}
+	proxy := &KubectlProxy{kubeconfig: "/tmp/fake", config: config}
+
+	yamlContent := sampleKubeconfig("existing-ctx", "c1", "u1", "https://c1.example.com") +
+		"---\n" // concat won't work for multi-context; build manually
+	// Build a kubeconfig with two contexts: one existing, one new
+	twoCtxYAML := `apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://new.example.com
+  name: new-cluster
+- cluster:
+    server: https://existing-dup.example.com
+  name: existing-cluster-dup
+contexts:
+- context:
+    cluster: new-cluster
+    user: new-user
+  name: new-ctx
+- context:
+    cluster: existing-cluster-dup
+    user: existing-user-dup
+  name: existing-ctx
+users:
+- name: new-user
+  user:
+    token: fake
+- name: existing-user-dup
+  user:
+    token: fake
+current-context: new-ctx
+`
+	entries, err := proxy.PreviewKubeconfig(twoCtxYAML)
+	if err != nil {
+		t.Fatalf("PreviewKubeconfig failed: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("Expected 2 entries, got %d", len(entries))
+	}
+
+	for _, e := range entries {
+		switch e.ContextName {
+		case "new-ctx":
+			if !e.IsNew {
+				t.Error("new-ctx should be marked as new")
+			}
+			if e.ServerURL != "https://new.example.com" {
+				t.Errorf("ServerURL = %q, want https://new.example.com", e.ServerURL)
+			}
+		case "existing-ctx":
+			if e.IsNew {
+				t.Error("existing-ctx should not be marked as new")
+			}
+		default:
+			t.Errorf("Unexpected context: %s", e.ContextName)
+		}
+	}
+
+	// Also test the unused single-context helper
+	_ = yamlContent
+}
+
+func TestKubectlProxy_ImportKubeconfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	// Write an initial kubeconfig
+	initial := sampleKubeconfig("initial-ctx", "initial-cluster", "initial-user", "https://initial.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	importYAML := sampleKubeconfig("imported-ctx", "imported-cluster", "imported-user", "https://imported.example.com")
+	added, skipped, err := proxy.ImportKubeconfig(importYAML)
+	if err != nil {
+		t.Fatalf("ImportKubeconfig failed: %v", err)
+	}
+	if len(added) != 1 || added[0] != "imported-ctx" {
+		t.Errorf("Expected added=[imported-ctx], got %v", added)
+	}
+	if len(skipped) != 0 {
+		t.Errorf("Expected no skipped, got %v", skipped)
+	}
+
+	// Verify the context exists in config after import
+	contexts, _ := proxy.ListContexts()
+	found := false
+	for _, c := range contexts {
+		if c.Name == "imported-ctx" && c.Server == "https://imported.example.com" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("imported-ctx not found in contexts after import")
+	}
+}
+
+func TestKubectlProxy_ImportKubeconfig_SkipExisting(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	initial := sampleKubeconfig("my-ctx", "my-cluster", "my-user", "https://my.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	// Import same context name - should be skipped
+	importYAML := sampleKubeconfig("my-ctx", "other-cluster", "other-user", "https://other.example.com")
+	added, skipped, err := proxy.ImportKubeconfig(importYAML)
+	if err != nil {
+		t.Fatalf("ImportKubeconfig failed: %v", err)
+	}
+	if len(added) != 0 {
+		t.Errorf("Expected no added, got %v", added)
+	}
+	if len(skipped) != 1 || skipped[0] != "my-ctx" {
+		t.Errorf("Expected skipped=[my-ctx], got %v", skipped)
+	}
+}
+
+func TestKubectlProxy_ImportKubeconfig_InvalidYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+	if err := os.WriteFile(kubeconfigPath, []byte(""), 0600); err != nil {
+		t.Fatalf("Failed to write kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	_, _, err = proxy.ImportKubeconfig("this is not yaml: [}{")
+	if err == nil {
+		t.Error("Expected error for invalid YAML, got nil")
+	}
+}
+
+func TestKubectlProxy_ImportKubeconfig_Backup(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	initial := sampleKubeconfig("ctx1", "c1", "u1", "https://c1.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	importYAML := sampleKubeconfig("ctx2", "c2", "u2", "https://c2.example.com")
+	_, _, err = proxy.ImportKubeconfig(importYAML)
+	if err != nil {
+		t.Fatalf("ImportKubeconfig failed: %v", err)
+	}
+
+	// Check that a backup file was created
+	entries, err := os.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to read tmpDir: %v", err)
+	}
+	backupFound := false
+	for _, e := range entries {
+		if len(e.Name()) > len("config.bak-") && e.Name()[:11] == "config.bak-" {
+			backupFound = true
+		}
+	}
+	if !backupFound {
+		t.Error("No backup file found after import")
 	}
 }

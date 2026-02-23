@@ -266,6 +266,10 @@ func (s *Server) Start() error {
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
 
+	// Kubeconfig import endpoints
+	mux.HandleFunc("/kubeconfig/preview", s.handleKubeconfigPreviewHTTP)
+	mux.HandleFunc("/kubeconfig/import", s.handleKubeconfigImportHTTP)
+
 	// Settings endpoints for API key management
 	mux.HandleFunc("/settings/keys", s.handleSettingsKeys)
 	mux.HandleFunc("/settings/keys/", s.handleSettingsKeyByProvider)
@@ -1495,6 +1499,125 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 
 	log.Printf("Renamed context: %s -> %s", req.OldName, req.NewName)
 	json.NewEncoder(w).Encode(protocol.RenameContextResponse{Success: true, OldName: req.OldName, NewName: req.NewName})
+}
+
+// kubeconfigImportRequest is the JSON body for kubeconfig import/preview
+type kubeconfigImportRequest struct {
+	Kubeconfig string `json:"kubeconfig"`
+}
+
+// kubeconfigImportResponse is the response from kubeconfig import
+type kubeconfigImportResponse struct {
+	Success bool     `json:"success"`
+	Added   []string `json:"added"`
+	Skipped []string `json:"skipped"`
+	Error   string   `json:"error,omitempty"`
+}
+
+// kubeconfigPreviewResponse is the response from kubeconfig preview
+type kubeconfigPreviewResponse struct {
+	Contexts []KubeconfigPreviewEntry `json:"contexts"`
+}
+
+// handleKubeconfigPreviewHTTP returns a dry-run preview of which contexts would be imported
+func (s *Server) handleKubeconfigPreviewHTTP(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		return
+	}
+
+	var req kubeconfigImportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		return
+	}
+
+	if req.Kubeconfig == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "kubeconfig field is required"})
+		return
+	}
+
+	entries, err := s.kubectl.PreviewKubeconfig(req.Kubeconfig)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "preview_failed", Message: err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(kubeconfigPreviewResponse{Contexts: entries})
+}
+
+// handleKubeconfigImportHTTP merges new contexts from a kubeconfig YAML into the local kubeconfig
+func (s *Server) handleKubeconfigImportHTTP(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		return
+	}
+
+	var req kubeconfigImportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		return
+	}
+
+	if req.Kubeconfig == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "kubeconfig field is required"})
+		return
+	}
+
+	added, skipped, err := s.kubectl.ImportKubeconfig(req.Kubeconfig)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	log.Printf("Kubeconfig import: added %d contexts, skipped %d", len(added), len(skipped))
+	json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: true, Added: added, Skipped: skipped})
 }
 
 // handleWebSocket handles WebSocket connections

@@ -2,10 +2,12 @@ package agent
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"k8s.io/client-go/tools/clientcmd"
@@ -279,4 +281,109 @@ func (k *KubectlProxy) RenameContext(oldName, newName string) error {
 	}
 
 	return nil
+}
+
+// KubeconfigPreviewEntry describes a context found in an imported kubeconfig.
+type KubeconfigPreviewEntry struct {
+	ContextName string `json:"contextName"`
+	ClusterName string `json:"clusterName"`
+	ServerURL   string `json:"serverUrl"`
+	UserName    string `json:"userName"`
+	IsNew       bool   `json:"isNew"`
+}
+
+// PreviewKubeconfig parses a kubeconfig YAML and returns the contexts it contains
+// along with whether each would be new or already exists.
+func (k *KubectlProxy) PreviewKubeconfig(yamlContent string) ([]KubeconfigPreviewEntry, error) {
+	incoming, err := clientcmd.Load([]byte(yamlContent))
+	if err != nil {
+		return nil, fmt.Errorf("invalid kubeconfig YAML: %w", err)
+	}
+	if len(incoming.Contexts) == 0 {
+		return nil, fmt.Errorf("kubeconfig contains no contexts")
+	}
+
+	var entries []KubeconfigPreviewEntry
+	for name, ctx := range incoming.Contexts {
+		entry := KubeconfigPreviewEntry{
+			ContextName: name,
+			ClusterName: ctx.Cluster,
+			UserName:    ctx.AuthInfo,
+		}
+		if cluster, ok := incoming.Clusters[ctx.Cluster]; ok {
+			entry.ServerURL = cluster.Server
+		}
+		_, exists := k.config.Contexts[name]
+		entry.IsNew = !exists
+		entries = append(entries, entry)
+	}
+	return entries, nil
+}
+
+// ImportKubeconfig merges a kubeconfig YAML string into the existing kubeconfig file.
+// It backs up the existing file first, then merges new contexts/clusters/users.
+// Returns lists of added and skipped context names.
+func (k *KubectlProxy) ImportKubeconfig(yamlContent string) (added []string, skipped []string, err error) {
+	incoming, err := clientcmd.Load([]byte(yamlContent))
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid kubeconfig YAML: %w", err)
+	}
+	if len(incoming.Contexts) == 0 {
+		return nil, nil, fmt.Errorf("kubeconfig contains no contexts")
+	}
+
+	// Backup existing kubeconfig if the file exists
+	if _, statErr := os.Stat(k.kubeconfig); statErr == nil {
+		backupPath := fmt.Sprintf("%s.bak-%d", k.kubeconfig, time.Now().Unix())
+		data, readErr := os.ReadFile(k.kubeconfig)
+		if readErr != nil {
+			return nil, nil, fmt.Errorf("failed to read kubeconfig for backup: %w", readErr)
+		}
+		if writeErr := os.WriteFile(backupPath, data, 0600); writeErr != nil {
+			return nil, nil, fmt.Errorf("failed to write backup: %w", writeErr)
+		}
+	}
+
+	// Initialise maps if they are nil (empty starting config)
+	if k.config.Contexts == nil {
+		k.config.Contexts = make(map[string]*api.Context)
+	}
+	if k.config.Clusters == nil {
+		k.config.Clusters = make(map[string]*api.Cluster)
+	}
+	if k.config.AuthInfos == nil {
+		k.config.AuthInfos = make(map[string]*api.AuthInfo)
+	}
+
+	for name, ctx := range incoming.Contexts {
+		if _, exists := k.config.Contexts[name]; exists {
+			skipped = append(skipped, name)
+			continue
+		}
+		// Add context
+		k.config.Contexts[name] = ctx
+		// Add referenced cluster if present
+		if cluster, ok := incoming.Clusters[ctx.Cluster]; ok {
+			if _, exists := k.config.Clusters[ctx.Cluster]; !exists {
+				k.config.Clusters[ctx.Cluster] = cluster
+			}
+		}
+		// Add referenced user if present
+		if user, ok := incoming.AuthInfos[ctx.AuthInfo]; ok {
+			if _, exists := k.config.AuthInfos[ctx.AuthInfo]; !exists {
+				k.config.AuthInfos[ctx.AuthInfo] = user
+			}
+		}
+		added = append(added, name)
+	}
+
+	// Write merged config
+	if writeErr := clientcmd.WriteToFile(*k.config, k.kubeconfig); writeErr != nil {
+		return nil, nil, fmt.Errorf("failed to write merged kubeconfig: %w", writeErr)
+	}
+
+	// Reload from file to stay in sync
+	k.Reload()
+
+	return added, skipped, nil
 }
