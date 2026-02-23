@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { X, Terminal, Upload, FormInput, Copy, Check, Loader2 } from 'lucide-react'
+import { X, Terminal, Upload, FormInput, Copy, Check, Loader2, ChevronDown, ChevronUp, Shield, KeyRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 
@@ -11,6 +11,8 @@ interface AddClusterDialogProps {
 type TabId = 'command-line' | 'import' | 'connect'
 
 type ImportState = 'idle' | 'previewing' | 'previewed' | 'importing' | 'done' | 'error'
+type ConnectStep = 1 | 2 | 3
+type ConnectState = 'idle' | 'testing' | 'tested' | 'adding' | 'done' | 'error'
 
 interface PreviewContext {
   context: string
@@ -67,6 +69,31 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [importedCount, setImportedCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Connect tab state
+  const [connectStep, setConnectStep] = useState<ConnectStep>(1)
+  const [connectState, setConnectState] = useState<ConnectState>('idle')
+  const [serverUrl, setServerUrl] = useState('')
+  const [authType, setAuthType] = useState<'token' | 'certificate'>('token')
+  const [token, setToken] = useState('')
+  const [certData, setCertData] = useState('')
+  const [keyData, setKeyData] = useState('')
+  const [caData, setCaData] = useState('')
+  const [skipTls, setSkipTls] = useState(false)
+  const [contextName, setContextName] = useState('')
+  const [clusterName, setClusterName] = useState('')
+  const [namespace, setNamespace] = useState('')
+  const [testResult, setTestResult] = useState<{ reachable: boolean; serverVersion?: string; error?: string } | null>(null)
+  const [connectError, setConnectError] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
+  const resetConnectState = useCallback(() => {
+    setConnectStep(1)
+    setConnectState('idle')
+    setServerUrl(''); setAuthType('token'); setToken(''); setCertData(''); setKeyData('')
+    setCaData(''); setSkipTls(false); setContextName(''); setClusterName('')
+    setNamespace(''); setTestResult(null); setConnectError(''); setShowAdvanced(false)
+  }, [])
 
   const resetImportState = useCallback(() => {
     setKubeconfigYaml('')
@@ -139,6 +166,80 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     }
   }, [kubeconfigYaml, previewContexts, resetImportState, onClose])
 
+  const handleTestConnection = useCallback(async () => {
+    setConnectState('testing')
+    setTestResult(null)
+    setConnectError('')
+    try {
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serverUrl,
+          authType,
+          token: authType === 'token' ? token : undefined,
+          certData: authType === 'certificate' ? btoa(certData) : undefined,
+          keyData: authType === 'certificate' ? btoa(keyData) : undefined,
+          caData: caData ? btoa(caData) : undefined,
+          skipTlsVerify: skipTls,
+        }),
+      })
+      const data = await res.json()
+      setTestResult(data)
+      setConnectState('tested')
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : String(err))
+      setConnectState('error')
+    }
+  }, [serverUrl, authType, token, certData, keyData, caData, skipTls])
+
+  const handleAddCluster = useCallback(async () => {
+    setConnectState('adding')
+    setConnectError('')
+    try {
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contextName,
+          clusterName,
+          serverUrl,
+          authType,
+          token: authType === 'token' ? token : undefined,
+          certData: authType === 'certificate' ? btoa(certData) : undefined,
+          keyData: authType === 'certificate' ? btoa(keyData) : undefined,
+          caData: caData ? btoa(caData) : undefined,
+          skipTlsVerify: skipTls,
+          namespace: namespace || undefined,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(body.error || res.statusText)
+      }
+      setConnectState('done')
+      setTimeout(() => {
+        resetConnectState()
+        onClose()
+      }, 1500)
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : String(err))
+      setConnectState('error')
+    }
+  }, [contextName, clusterName, serverUrl, authType, token, certData, keyData, caData, skipTls, namespace, resetConnectState, onClose])
+
+  const goToConnectStep = useCallback((step: ConnectStep) => {
+    if (step === 3) {
+      try {
+        const url = new URL(serverUrl)
+        const host = url.hostname.replace(/\./g, '-')
+        if (!contextName) setContextName(host)
+        if (!clusterName) setClusterName(host)
+      } catch { /* ignore parse errors */ }
+    }
+    setConnectStep(step)
+  }, [serverUrl, contextName, clusterName])
+
   if (!open) return null
 
   const newCount = previewContexts.filter((c) => c.isNew).length
@@ -146,7 +247,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   const tabs: { id: TabId; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
     { id: 'command-line', label: t('cluster.addClusterCommandLine'), icon: <Terminal className="w-4 h-4" /> },
     { id: 'import', label: t('cluster.addClusterImport'), icon: <Upload className="w-4 h-4" /> },
-    { id: 'connect', label: t('cluster.addClusterConnect'), icon: <FormInput className="w-4 h-4" />, disabled: true },
+    { id: 'connect', label: t('cluster.addClusterConnect'), icon: <FormInput className="w-4 h-4" /> },
   ]
 
   return (
@@ -172,7 +273,13 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => !tab.disabled && setActiveTab(tab.id)}
+              onClick={() => {
+                if (!tab.disabled) {
+                  setActiveTab(tab.id)
+                  if (tab.id !== 'connect') resetConnectState()
+                  if (tab.id !== 'import') resetImportState()
+                }
+              }}
               disabled={tab.disabled}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 activeTab === tab.id
@@ -335,11 +442,279 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           )}
 
           {activeTab === 'connect' && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FormInput className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
-              <p className="text-sm text-muted-foreground">
-                {t('cluster.addClusterComingSoon')} — {t('cluster.addClusterConnectDesc')}
-              </p>
+            <div className="space-y-4">
+              {connectState === 'done' ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Check className="w-10 h-10 text-green-400 mb-3" />
+                  <p className="text-sm text-green-400">{t('cluster.connectSuccess')}</p>
+                </div>
+              ) : (
+                <>
+                  {/* Step indicator */}
+                  <div className="flex items-center justify-center gap-3">
+                    {([1, 2, 3] as ConnectStep[]).map((step) => (
+                      <div key={step} className="flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                          connectStep === step
+                            ? 'bg-purple-600 text-white'
+                            : connectStep > step
+                              ? 'bg-green-600 text-white'
+                              : 'bg-white/10 text-muted-foreground'
+                        }`}>
+                          {connectStep > step ? <Check className="w-3.5 h-3.5" /> : step}
+                        </div>
+                        <span className={`text-xs ${connectStep === step ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {t(`cluster.connectStep${step}`)}
+                        </span>
+                        {step < 3 && <div className={`w-8 h-px ${connectStep > step ? 'bg-green-600' : 'bg-white/10'}`} />}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Step 1: Server URL */}
+                  {connectStep === 1 && (
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">{t('cluster.connectServerUrl')}</label>
+                      <input
+                        type="text"
+                        value={serverUrl}
+                        onChange={(e) => setServerUrl(e.target.value)}
+                        placeholder={t('cluster.connectServerPlaceholder')}
+                        className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                      />
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => goToConnectStep(2)}
+                          disabled={!serverUrl.trim()}
+                          className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                        >
+                          {t('cluster.connectNext')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Authentication */}
+                  {connectStep === 2 && (
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">{t('cluster.connectAuthType')}</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setAuthType('token')}
+                          className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
+                            authType === 'token'
+                              ? 'border-purple-500 bg-purple-500/10 text-foreground'
+                              : 'border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <KeyRound className="w-4 h-4 shrink-0" />
+                          {t('cluster.connectAuthToken')}
+                        </button>
+                        <button
+                          onClick={() => setAuthType('certificate')}
+                          className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
+                            authType === 'certificate'
+                              ? 'border-purple-500 bg-purple-500/10 text-foreground'
+                              : 'border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <Shield className="w-4 h-4 shrink-0" />
+                          {t('cluster.connectAuthCert')}
+                        </button>
+                      </div>
+
+                      {authType === 'token' && (
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">{t('cluster.connectTokenLabel')}</label>
+                          <input
+                            type="password"
+                            value={token}
+                            onChange={(e) => setToken(e.target.value)}
+                            placeholder={t('cluster.connectTokenPlaceholder')}
+                            className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono"
+                          />
+                        </div>
+                      )}
+
+                      {authType === 'certificate' && (
+                        <div className="space-y-2">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">{t('cluster.connectCertLabel')}</label>
+                            <textarea
+                              value={certData}
+                              onChange={(e) => setCertData(e.target.value)}
+                              rows={3}
+                              placeholder="-----BEGIN CERTIFICATE-----"
+                              className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">{t('cluster.connectKeyLabel')}</label>
+                            <textarea
+                              value={keyData}
+                              onChange={(e) => setKeyData(e.target.value)}
+                              rows={3}
+                              placeholder="-----BEGIN RSA PRIVATE KEY-----"
+                              className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Advanced options */}
+                      <button
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        {t('cluster.connectAdvanced')}
+                      </button>
+
+                      {showAdvanced && (
+                        <div className="space-y-2 pl-1">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-muted-foreground">{t('cluster.connectCaLabel')}</label>
+                            <textarea
+                              value={caData}
+                              onChange={(e) => setCaData(e.target.value)}
+                              rows={3}
+                              placeholder="-----BEGIN CERTIFICATE-----"
+                              className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                            />
+                          </div>
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={skipTls}
+                              onChange={(e) => setSkipTls(e.target.checked)}
+                              className="rounded border-white/20 bg-secondary"
+                            />
+                            {t('cluster.connectSkipTls')}
+                          </label>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between">
+                        <button
+                          onClick={() => setConnectStep(1)}
+                          className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors border border-white/10"
+                        >
+                          {t('cluster.connectBack')}
+                        </button>
+                        <button
+                          onClick={() => goToConnectStep(3)}
+                          disabled={authType === 'token' ? !token.trim() : (!certData.trim() || !keyData.trim())}
+                          className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                        >
+                          {t('cluster.connectNext')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Context Settings */}
+                  {connectStep === 3 && (
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">{t('cluster.connectContextName')}</label>
+                        <input
+                          type="text"
+                          value={contextName}
+                          onChange={(e) => setContextName(e.target.value)}
+                          placeholder="my-cluster"
+                          className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">{t('cluster.connectClusterName')}</label>
+                        <input
+                          type="text"
+                          value={clusterName}
+                          onChange={(e) => setClusterName(e.target.value)}
+                          placeholder="my-cluster"
+                          className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground">{t('cluster.connectNamespace')}</label>
+                        <input
+                          type="text"
+                          value={namespace}
+                          onChange={(e) => setNamespace(e.target.value)}
+                          placeholder="default"
+                          className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Test connection result */}
+                      {testResult && (
+                        <div className={`rounded-lg p-3 text-sm flex items-center gap-2 ${
+                          testResult.reachable
+                            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                            : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                        }`}>
+                          {testResult.reachable ? (
+                            <>
+                              <Check className="w-4 h-4 shrink-0" />
+                              {t('cluster.connectTestSuccess')} — Kubernetes {testResult.serverVersion}
+                            </>
+                          ) : (
+                            <>
+                              <X className="w-4 h-4 shrink-0" />
+                              {t('cluster.connectTestFailed')}: {testResult.error}
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {connectError && (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+                          {connectError}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <button
+                          onClick={() => setConnectStep(2)}
+                          className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors border border-white/10"
+                        >
+                          {t('cluster.connectBack')}
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleTestConnection}
+                            disabled={connectState === 'testing' || !contextName.trim() || !clusterName.trim()}
+                            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                          >
+                            {connectState === 'testing' ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                {t('cluster.connectTesting')}
+                              </>
+                            ) : (
+                              t('cluster.connectTestButton')
+                            )}
+                          </button>
+                          <button
+                            onClick={handleAddCluster}
+                            disabled={connectState === 'adding' || !contextName.trim() || !clusterName.trim()}
+                            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectState === 'adding' ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                {t('cluster.connectAdding')}
+                              </>
+                            ) : (
+                              t('cluster.connectAddButton')
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>
