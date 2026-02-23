@@ -1242,26 +1242,24 @@ export function GPUReservations() {
       />
 
       {/* Create/Edit Reservation Modal */}
-      {showReservationForm && (
-        <ReservationFormModal
-          isOpen={showReservationForm}
-          onClose={() => { setShowReservationForm(false); setEditingReservation(null); setPrefillDate(null) }}
-          editingReservation={editingReservation}
-          gpuClusters={gpuClusters}
-          allNodes={rawNodes}
-          user={user}
-          prefillDate={prefillDate}
-          onSave={async (input) => {
-            if (editingReservation) {
-              await apiUpdateReservation(editingReservation.id, input as UpdateGPUReservationInput)
-            } else {
-              await apiCreateReservation(input as CreateGPUReservationInput)
-            }
-          }}
-          onSaved={() => showToast(t('gpuReservations.form.success.saved'), 'success')}
-          onError={(msg) => showToast(msg, 'error')}
-        />
-      )}
+      <ReservationFormModal
+        isOpen={showReservationForm}
+        onClose={() => { setShowReservationForm(false); setEditingReservation(null); setPrefillDate(null) }}
+        editingReservation={editingReservation}
+        gpuClusters={gpuClusters}
+        allNodes={rawNodes}
+        user={user}
+        prefillDate={prefillDate}
+        onSave={async (input) => {
+          if (editingReservation) {
+            await apiUpdateReservation(editingReservation.id, input as UpdateGPUReservationInput)
+          } else {
+            await apiCreateReservation(input as CreateGPUReservationInput)
+          }
+        }}
+        onSaved={() => showToast(t('gpuReservations.form.success.saved'), 'success')}
+        onError={(msg) => showToast(msg, 'error')}
+      />
 
       {/* Delete Confirmation */}
       <BaseModal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} size="sm">
