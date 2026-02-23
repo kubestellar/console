@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react'
-import { X, Terminal, Upload, FormInput, Copy, Check } from 'lucide-react'
+import { useState, useCallback, useRef } from 'react'
+import { X, Terminal, Upload, FormInput, Copy, Check, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 
 interface AddClusterDialogProps {
   open: boolean
@@ -8,6 +9,15 @@ interface AddClusterDialogProps {
 }
 
 type TabId = 'command-line' | 'import' | 'connect'
+
+type ImportState = 'idle' | 'previewing' | 'previewed' | 'importing' | 'done' | 'error'
+
+interface PreviewContext {
+  context: string
+  cluster: string
+  server: string
+  isNew: boolean
+}
 
 const COMMANDS = [
   {
@@ -51,12 +61,91 @@ function CopyButton({ text }: { text: string }) {
 export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabId>('command-line')
+  const [kubeconfigYaml, setKubeconfigYaml] = useState('')
+  const [importState, setImportState] = useState<ImportState>('idle')
+  const [previewContexts, setPreviewContexts] = useState<PreviewContext[]>([])
+  const [errorMessage, setErrorMessage] = useState('')
+  const [importedCount, setImportedCount] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const resetImportState = useCallback(() => {
+    setKubeconfigYaml('')
+    setImportState('idle')
+    setPreviewContexts([])
+    setErrorMessage('')
+    setImportedCount(0)
+  }, [])
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setKubeconfigYaml(ev.target?.result as string)
+      setImportState('idle')
+      setPreviewContexts([])
+      setErrorMessage('')
+    }
+    reader.readAsText(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }, [])
+
+  const handlePreview = useCallback(async () => {
+    setImportState('previewing')
+    setErrorMessage('')
+    try {
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(body.error || res.statusText)
+      }
+      const data = await res.json()
+      setPreviewContexts(data.contexts || [])
+      setImportState('previewed')
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : String(err))
+      setImportState('error')
+    }
+  }, [kubeconfigYaml])
+
+  const handleImport = useCallback(async () => {
+    setImportState('importing')
+    setErrorMessage('')
+    try {
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(body.error || res.statusText)
+      }
+      const data = await res.json()
+      const count = data.importedCount ?? previewContexts.filter((c) => c.isNew).length
+      setImportedCount(count)
+      setImportState('done')
+      setTimeout(() => {
+        resetImportState()
+        onClose()
+      }, 1500)
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : String(err))
+      setImportState('error')
+    }
+  }, [kubeconfigYaml, previewContexts, resetImportState, onClose])
 
   if (!open) return null
 
+  const newCount = previewContexts.filter((c) => c.isNew).length
+
   const tabs: { id: TabId; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
     { id: 'command-line', label: t('cluster.addClusterCommandLine'), icon: <Terminal className="w-4 h-4" /> },
-    { id: 'import', label: t('cluster.addClusterImport'), icon: <Upload className="w-4 h-4" />, disabled: true },
+    { id: 'import', label: t('cluster.addClusterImport'), icon: <Upload className="w-4 h-4" /> },
     { id: 'connect', label: t('cluster.addClusterConnect'), icon: <FormInput className="w-4 h-4" />, disabled: true },
   ]
 
@@ -126,11 +215,122 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           )}
 
           {activeTab === 'import' && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Upload className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
-              <p className="text-sm text-muted-foreground">
-                {t('cluster.addClusterComingSoon')} — {t('cluster.addClusterImportDesc')}
-              </p>
+            <div className="space-y-4">
+              {importState === 'done' ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Check className="w-10 h-10 text-green-400 mb-3" />
+                  <p className="text-sm text-green-400">{t('cluster.importSuccess', { count: importedCount })}</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">{t('cluster.importPaste')}</p>
+
+                  <div className="flex items-center gap-2">
+                    <textarea
+                      value={kubeconfigYaml}
+                      onChange={(e) => {
+                        setKubeconfigYaml(e.target.value)
+                        if (importState !== 'idle') {
+                          setImportState('idle')
+                          setPreviewContexts([])
+                          setErrorMessage('')
+                        }
+                      }}
+                      rows={6}
+                      placeholder="apiVersion: v1&#10;kind: Config&#10;..."
+                      className="bg-secondary rounded-lg p-4 font-mono text-sm w-full resize-y border border-white/10 focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".yaml,.yml,.conf,.config"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors border border-white/10"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      {t('cluster.importUpload')}
+                    </button>
+                    <button
+                      onClick={handlePreview}
+                      disabled={!kubeconfigYaml.trim() || importState === 'previewing'}
+                      className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md bg-purple-600 text-white hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {importState === 'previewing' ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          {t('cluster.importPreviewing')}
+                        </>
+                      ) : (
+                        t('cluster.importPreview')
+                      )}
+                    </button>
+                  </div>
+
+                  {errorMessage && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+                      {t('cluster.importError')}: {errorMessage}
+                    </div>
+                  )}
+
+                  {(importState === 'previewed' || importState === 'importing') && previewContexts.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">{t('cluster.importPreviewDesc')}</p>
+                      <div className="space-y-1">
+                        {previewContexts.map((ctx) => (
+                          <div
+                            key={ctx.context}
+                            className="flex items-center justify-between bg-secondary/50 rounded-lg px-4 py-2.5"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-foreground truncate">{ctx.context}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {ctx.cluster} — {ctx.server}
+                              </div>
+                            </div>
+                            {ctx.isNew ? (
+                              <span className="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded ml-3 shrink-0">
+                                {t('cluster.importNew')}
+                              </span>
+                            ) : (
+                              <span className="bg-white/10 text-muted-foreground text-xs px-2 py-0.5 rounded ml-3 shrink-0">
+                                {t('cluster.importExists')}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {newCount === 0 ? (
+                        <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3 border border-white/5">
+                          {t('cluster.importNoNew')}
+                        </p>
+                      ) : (
+                        <button
+                          onClick={handleImport}
+                          disabled={importState === 'importing'}
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {importState === 'importing' ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              {t('cluster.importImporting')}
+                            </>
+                          ) : (
+                            t('cluster.importButton', { count: newCount })
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 

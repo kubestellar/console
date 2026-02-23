@@ -269,6 +269,8 @@ func (s *Server) Start() error {
 	// Kubeconfig import endpoints
 	mux.HandleFunc("/kubeconfig/preview", s.handleKubeconfigPreviewHTTP)
 	mux.HandleFunc("/kubeconfig/import", s.handleKubeconfigImportHTTP)
+	mux.HandleFunc("/kubeconfig/add", s.handleKubeconfigAddHTTP)
+	mux.HandleFunc("/kubeconfig/test", s.handleKubeconfigTestHTTP)
 
 	// Settings endpoints for API key management
 	mux.HandleFunc("/settings/keys", s.handleSettingsKeys)
@@ -1618,6 +1620,100 @@ func (s *Server) handleKubeconfigImportHTTP(w http.ResponseWriter, r *http.Reque
 
 	log.Printf("Kubeconfig import: added %d contexts, skipped %d", len(added), len(skipped))
 	json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: true, Added: added, Skipped: skipped})
+}
+
+// kubeconfigAddResponse is the response from the add cluster endpoint
+type kubeconfigAddResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
+// handleKubeconfigAddHTTP adds a cluster from structured form fields
+func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		return
+	}
+
+	var req AddClusterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		return
+	}
+
+	if err := s.kubectl.AddCluster(req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	log.Printf("Added cluster via form: context=%s cluster=%s", req.ContextName, req.ClusterName)
+	json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: true})
+}
+
+// handleKubeconfigTestHTTP tests a connection to a Kubernetes API server
+func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		return
+	}
+
+	var req TestConnectionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		return
+	}
+
+	result, err := s.kubectl.TestClusterConnection(req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(TestConnectionResult{Reachable: false, Error: err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(result)
 }
 
 // handleWebSocket handles WebSocket connections

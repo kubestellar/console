@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -544,5 +545,197 @@ func TestKubectlProxy_ImportKubeconfig_Backup(t *testing.T) {
 	}
 	if !backupFound {
 		t.Error("No backup file found after import")
+	}
+}
+
+func TestKubectlProxy_AddCluster_Token(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	initial := sampleKubeconfig("existing-ctx", "existing-cluster", "existing-user", "https://existing.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	req := AddClusterRequest{
+		ContextName:   "new-ctx",
+		ClusterName:   "new-cluster",
+		ServerURL:     "https://new.example.com:6443",
+		AuthType:      "token",
+		Token:         "my-secret-token",
+		SkipTLSVerify: true,
+		Namespace:     "default",
+	}
+
+	if err := proxy.AddCluster(req); err != nil {
+		t.Fatalf("AddCluster failed: %v", err)
+	}
+
+	// Verify context exists
+	if _, ok := proxy.config.Contexts["new-ctx"]; !ok {
+		t.Fatal("Context 'new-ctx' not found after AddCluster")
+	}
+	// Verify cluster exists
+	if cluster, ok := proxy.config.Clusters["new-cluster"]; !ok {
+		t.Fatal("Cluster 'new-cluster' not found")
+	} else {
+		if cluster.Server != "https://new.example.com:6443" {
+			t.Errorf("Server = %q, want https://new.example.com:6443", cluster.Server)
+		}
+		if !cluster.InsecureSkipTLSVerify {
+			t.Error("InsecureSkipTLSVerify should be true")
+		}
+	}
+	// Verify user exists with token
+	userName := "new-ctx-user"
+	if user, ok := proxy.config.AuthInfos[userName]; !ok {
+		t.Fatalf("User %q not found", userName)
+	} else {
+		if user.Token != "my-secret-token" {
+			t.Error("Token mismatch")
+		}
+	}
+	// Verify context references
+	ctx := proxy.config.Contexts["new-ctx"]
+	if ctx.Cluster != "new-cluster" {
+		t.Errorf("Context cluster = %q, want new-cluster", ctx.Cluster)
+	}
+	if ctx.Namespace != "default" {
+		t.Errorf("Context namespace = %q, want default", ctx.Namespace)
+	}
+}
+
+func TestKubectlProxy_AddCluster_Certificate(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	initial := sampleKubeconfig("ctx1", "c1", "u1", "https://c1.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	// Use base64-encoded fake PEM data
+	fakeCert := "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCmZha2UKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+	fakeKey := "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpmYWtlCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg=="
+
+	req := AddClusterRequest{
+		ContextName: "cert-ctx",
+		ClusterName: "cert-cluster",
+		ServerURL:   "https://cert.example.com:6443",
+		AuthType:    "certificate",
+		CertData:    fakeCert,
+		KeyData:     fakeKey,
+	}
+
+	if err := proxy.AddCluster(req); err != nil {
+		t.Fatalf("AddCluster failed: %v", err)
+	}
+
+	// Verify user has cert data
+	userName := "cert-ctx-user"
+	user, ok := proxy.config.AuthInfos[userName]
+	if !ok {
+		t.Fatalf("User %q not found", userName)
+	}
+	if len(user.ClientCertificateData) == 0 {
+		t.Error("ClientCertificateData should not be empty")
+	}
+	if len(user.ClientKeyData) == 0 {
+		t.Error("ClientKeyData should not be empty")
+	}
+}
+
+func TestKubectlProxy_AddCluster_DuplicateContext(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	initial := sampleKubeconfig("my-ctx", "my-cluster", "my-user", "https://my.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	req := AddClusterRequest{
+		ContextName: "my-ctx", // already exists
+		ClusterName: "dup-cluster",
+		ServerURL:   "https://dup.example.com",
+		AuthType:    "token",
+		Token:       "tok",
+	}
+
+	err = proxy.AddCluster(req)
+	if err == nil {
+		t.Fatal("Expected error for duplicate context, got nil")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("Error should mention 'already exists', got: %v", err)
+	}
+}
+
+func TestKubectlProxy_AddCluster_MissingFields(t *testing.T) {
+	proxy := &KubectlProxy{
+		kubeconfig: "/tmp/fake-config",
+		config:     &api.Config{},
+	}
+
+	tests := []struct {
+		name string
+		req  AddClusterRequest
+	}{
+		{"missing contextName", AddClusterRequest{ClusterName: "c", ServerURL: "https://s", AuthType: "token", Token: "t"}},
+		{"missing clusterName", AddClusterRequest{ContextName: "c", ServerURL: "https://s", AuthType: "token", Token: "t"}},
+		{"missing serverUrl", AddClusterRequest{ContextName: "c", ClusterName: "c", AuthType: "token", Token: "t"}},
+		{"missing authType", AddClusterRequest{ContextName: "c", ClusterName: "c", ServerURL: "https://s"}},
+		{"missing token for token auth", AddClusterRequest{ContextName: "c", ClusterName: "c", ServerURL: "https://s", AuthType: "token"}},
+		{"missing certData for cert auth", AddClusterRequest{ContextName: "c", ClusterName: "c", ServerURL: "https://s", AuthType: "certificate", KeyData: "a"}},
+		{"unsupported authType", AddClusterRequest{ContextName: "c", ClusterName: "c", ServerURL: "https://s", AuthType: "exec"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := proxy.AddCluster(tt.req)
+			if err == nil {
+				t.Errorf("Expected error for %s, got nil", tt.name)
+			}
+		})
+	}
+}
+
+func TestKubectlProxy_TestClusterConnection_Unreachable(t *testing.T) {
+	proxy := &KubectlProxy{
+		kubeconfig: "/tmp/fake-config",
+		config:     &api.Config{},
+	}
+
+	req := TestConnectionRequest{
+		ServerURL:     "https://127.0.0.1:1", // unreachable port
+		AuthType:      "token",
+		Token:         "fake-token",
+		SkipTLSVerify: true,
+	}
+
+	result, err := proxy.TestClusterConnection(req)
+	if err != nil {
+		t.Fatalf("TestClusterConnection returned unexpected error: %v", err)
+	}
+	if result.Reachable {
+		t.Error("Expected reachable=false for unreachable server")
+	}
+	if result.Error == "" {
+		t.Error("Expected error message for unreachable server")
 	}
 }
