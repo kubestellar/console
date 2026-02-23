@@ -63,7 +63,14 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        role="button"
+        tabIndex={0}
+        aria-label="Close dialog"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClose() } }}
+      />
 
       {/* Dialog */}
       <div className="relative w-full max-w-2xl mx-4 bg-card border border-white/10 rounded-xl shadow-2xl">
