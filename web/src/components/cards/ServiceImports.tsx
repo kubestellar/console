@@ -128,6 +128,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: DEMO_IMPORTS.length > 0,
+    isDemoData: true,
   })
 
   const {

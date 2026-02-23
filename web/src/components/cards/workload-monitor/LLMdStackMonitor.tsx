@@ -114,7 +114,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
   const discoveredClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
-  const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, refetch: refetchServers } = useCachedLLMdServers(discoveredClusters)
+  const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, isDemoFallback: serversDemoFallback, isFailed: serversFailed, consecutiveFailures: serversFailures, refetch: refetchServers } = useCachedLLMdServers(discoveredClusters)
   const [activeTab, setActiveTab] = useState<'components' | 'issues'>('components')
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Model Serving', 'EPP', 'Gateway', 'Autoscaler']))
   const [search, setSearch] = useState('')
@@ -211,6 +211,9 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: servers.length > 0,
+    isDemoData: serversDemoFallback,
+    isFailed: serversFailed,
+    consecutiveFailures: serversFailures,
   })
 
   // Map server status to component status

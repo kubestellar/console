@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
+import { useCardLoadingState } from './CardDataContext'
 
 const CP_LABELS: Record<string, string[]> = {
   'API Server': ['component=kube-apiserver', 'app=openshift-kube-apiserver'],
@@ -13,9 +14,17 @@ const CP_LABELS: Record<string, string[]> = {
 
 export function ControlPlaneHealth() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading } = useCachedPods(undefined, 'kube-system')
+  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
   const { clusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
+
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: pods.length > 0,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
 
   const clusterNames = useMemo(() => {
     const names = new Set(pods.map(p => p.cluster).filter(Boolean))

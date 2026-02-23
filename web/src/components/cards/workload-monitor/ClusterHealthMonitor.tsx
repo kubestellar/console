@@ -45,8 +45,8 @@ const STATUS_DOT: Record<string, string> = {
 export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorProps) {
   const { t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
-  const { issues: allPodIssues, isLoading: podsLoading, refetch: refetchPods } = useCachedPodIssues()
-  const { issues: allDeployIssues, isLoading: deploysLoading, refetch: refetchDeploys } = useCachedDeploymentIssues()
+  const { issues: allPodIssues, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, refetch: refetchPods } = useCachedPodIssues()
+  const { issues: allDeployIssues, isLoading: deploysLoading, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures, refetch: refetchDeploys } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set())
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -57,6 +57,9 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
   useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: podsDemoFallback || deploysDemoFallback,
+    isFailed: podsFailed || deploysFailed,
+    consecutiveFailures: Math.max(podsFailures, deploysFailures),
   })
 
   // Filter clusters by global filter

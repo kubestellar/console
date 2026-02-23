@@ -14,8 +14,8 @@ import { useTranslation } from 'react-i18next'
 export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   const { t: _t } = useTranslation()
   const { startMission, missions } = useMissions()
-  const { issues: allPodIssues, isLoading: podIssuesLoading } = useCachedPodIssues()
-  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading } = useCachedDeploymentIssues()
+  const { issues: allPodIssues, isLoading: podIssuesLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
+  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
@@ -27,6 +27,9 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
+    isDemoData: podsDemoFallback || deploysDemoFallback,
+    isFailed: podsFailed || deploysFailed,
+    consecutiveFailures: Math.max(podsFailures, deploysFailures),
   })
 
   // Filter issues by global cluster filter
