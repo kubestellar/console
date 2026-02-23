@@ -2459,7 +2459,19 @@
     "unhealthy": "Unhealthy",
     "clickToViewNodeDetails": "Click to view node details",
     "clickToViewWorkloads": "Click to view workloads by namespace",
-    "deleteGroup": "Delete group"
+    "deleteGroup": "Delete group",
+    "addCluster": "Add Cluster",
+    "addClusterTitle": "Add a Cluster",
+    "addClusterCommandLine": "Command Line",
+    "addClusterImport": "Import Kubeconfig",
+    "addClusterConnect": "Connect Manually",
+    "addClusterComingSoon": "Coming soon",
+    "addClusterCommandLineDesc": "Run these commands in your terminal to add a cluster to your kubeconfig:",
+    "addClusterAutoDetect": "The console automatically detects changes to your kubeconfig file. New clusters will appear within seconds.",
+    "addClusterImportDesc": "Paste or upload a kubeconfig file to import clusters.",
+    "addClusterConnectDesc": "Add a cluster by entering connection details manually.",
+    "noClusterTitle": "No clusters found",
+    "noClusterDesc": "Add a cluster to your kubeconfig to get started."
   },
   "remediation": {
     "title": "AI Remediation Console",

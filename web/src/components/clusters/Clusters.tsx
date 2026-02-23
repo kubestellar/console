@@ -17,6 +17,8 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { useDashboard } from '../../lib/dashboards'
 import { ClusterDetailModal } from './ClusterDetailModal'
+import { AddClusterDialog } from './AddClusterDialog'
+import { EmptyClusterState } from './EmptyClusterState'
 import {
   RenameModal,
   StatsOverview,
@@ -1458,6 +1460,7 @@ export function Clusters() {
   const [showStats, setShowStats] = useState(true) // Stats overview visible by default
   const [showClusterGrid, setShowClusterGrid] = useState(true) // Cluster cards visible by default
   const [showGPUModal, setShowGPUModal] = useState(false)
+  const [showAddCluster, setShowAddCluster] = useState(false)
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -1717,6 +1720,15 @@ export function Clusters() {
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="clusters-auto-refresh"
         lastUpdated={lastUpdated}
+        rightExtra={
+          <button
+            onClick={() => setShowAddCluster(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            {t('cluster.addCluster')}
+          </button>
+        }
       />
 
       {/* Stats Overview - collapsible */}
@@ -1795,17 +1807,21 @@ export function Clusters() {
                   localStorage.setItem(STORAGE_KEY_CLUSTER_LAYOUT, mode)
                 }}
               />
-              <ClusterGrid
-                clusters={filteredClusters}
-                layoutMode={layoutMode}
-                gpuByCluster={gpuByCluster}
-                isConnected={isConnected}
-                permissionsLoading={permissionsLoading}
-                isClusterAdmin={isClusterAdmin}
-                onSelectCluster={setSelectedCluster}
-                onRenameCluster={setRenamingCluster}
-                onRefreshCluster={refreshSingleCluster}
-              />
+              {filteredClusters.length === 0 && !isLoading && !showSkeletonContent ? (
+                <EmptyClusterState onAddCluster={() => setShowAddCluster(true)} />
+              ) : (
+                <ClusterGrid
+                  clusters={filteredClusters}
+                  layoutMode={layoutMode}
+                  gpuByCluster={gpuByCluster}
+                  isConnected={isConnected}
+                  permissionsLoading={permissionsLoading}
+                  isClusterAdmin={isClusterAdmin}
+                  onSelectCluster={setSelectedCluster}
+                  onRenameCluster={setRenamingCluster}
+                  onRefreshCluster={refreshSingleCluster}
+                />
+              )}
             </>
           )
         )}
@@ -2082,6 +2098,7 @@ export function Clusters() {
           operatorStatus={nvidiaOperators}
         />
       )}
+      <AddClusterDialog open={showAddCluster} onClose={() => setShowAddCluster(false)} />
     </div>
   )
 }
