@@ -131,7 +131,10 @@ export function useNightlyE2EData() {
         }
       }
 
-      return { guides: DEMO_DATA, isDemo: true }
+      // All endpoints failed or returned empty — throw so the cache treats
+      // this as a failure (increments consecutiveFailures, retries with backoff)
+      // instead of caching demo data as a "successful" result that sticks forever.
+      throw new Error('No nightly E2E data available')
     },
   })
 
