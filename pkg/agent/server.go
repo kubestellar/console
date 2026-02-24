@@ -39,8 +39,9 @@ var Version = "dev"
 
 // Config holds agent configuration
 type Config struct {
-	Port       int
-	Kubeconfig string
+	Port           int
+	Kubeconfig     string
+	AllowedOrigins []string // Additional allowed origins (from --allowed-origins flag)
 }
 
 // AllowedOrigins for WebSocket connections (can be extended via env var)
@@ -130,6 +131,19 @@ func NewServer(cfg Config) (*Server, error) {
 				allowedOrigins = append(allowedOrigins, origin)
 			}
 		}
+	}
+
+	// Add custom origins from CLI flag
+	for _, origin := range cfg.AllowedOrigins {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			allowedOrigins = append(allowedOrigins, origin)
+		}
+	}
+
+	// Log non-default origins so users can verify their configuration
+	if len(allowedOrigins) > len(defaultAllowedOrigins) {
+		log.Printf("Custom allowed origins: %v", allowedOrigins[len(defaultAllowedOrigins):])
 	}
 
 	// Optional shared secret for authentication

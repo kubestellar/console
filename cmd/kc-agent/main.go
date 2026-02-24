@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/kubestellar/console/pkg/agent"
@@ -14,6 +15,7 @@ import (
 func main() {
 	port := flag.Int("port", 8585, "Port to listen on")
 	kubeconfig := flag.String("kubeconfig", "", "Path to kubeconfig file")
+	allowedOrigins := flag.String("allowed-origins", "", "Comma-separated list of additional allowed WebSocket origins")
 	version := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 
@@ -32,7 +34,21 @@ func main() {
 KubeStellar Console - Local Agent v%s
 `, agent.Version)
 
-	server, err := agent.NewServer(agent.Config{Port: *port, Kubeconfig: *kubeconfig})
+	// Parse comma-separated allowed origins from flag
+	var origins []string
+	if *allowedOrigins != "" {
+		for _, o := range strings.Split(*allowedOrigins, ",") {
+			if trimmed := strings.TrimSpace(o); trimmed != "" {
+				origins = append(origins, trimmed)
+			}
+		}
+	}
+
+	server, err := agent.NewServer(agent.Config{
+		Port:           *port,
+		Kubeconfig:     *kubeconfig,
+		AllowedOrigins: origins,
+	})
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
