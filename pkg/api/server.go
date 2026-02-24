@@ -48,6 +48,7 @@ type Config struct {
 	DatabasePath     string
 	GitHubClientID   string
 	GitHubSecret     string
+	GitHubURL        string // GitHub base URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
 	JWTSecret        string
 	FrontendURL      string
 	ClaudeAPIKey     string
@@ -347,6 +348,7 @@ func (s *Server) setupRoutes() {
 	auth := handlers.NewAuthHandler(s.store, handlers.AuthConfig{
 		GitHubClientID:   s.config.GitHubClientID,
 		GitHubSecret:     s.config.GitHubSecret,
+		GitHubURL:        s.config.GitHubURL,
 		JWTSecret:        s.config.JWTSecret,
 		FrontendURL:      s.config.FrontendURL,
 		BackendURL:       s.backendURL(),
@@ -801,6 +803,7 @@ func LoadConfigFromEnv() Config {
 		DatabasePath:     dbPath,
 		GitHubClientID:   os.Getenv("GITHUB_CLIENT_ID"),
 		GitHubSecret:     os.Getenv("GITHUB_CLIENT_SECRET"),
+		GitHubURL:        getEnvOrDefault("GITHUB_URL", "https://github.com"),
 		JWTSecret:        jwtSecret,
 		FrontendURL:      frontendURL,
 		ClaudeAPIKey:     os.Getenv("CLAUDE_API_KEY"),

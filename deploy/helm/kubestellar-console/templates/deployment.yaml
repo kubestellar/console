@@ -68,6 +68,10 @@ spec:
             - name: FRONTEND_URL
               value: "https://{{ (index .Values.ingress.hosts 0).host }}"
             {{- end }}
+            {{- if .Values.github.url }}
+            - name: GITHUB_URL
+              value: {{ .Values.github.url | quote }}
+            {{- end }}
             {{- if .Values.github.existingSecret }}
             - name: GITHUB_CLIENT_ID
               valueFrom:

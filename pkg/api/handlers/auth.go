@@ -12,8 +12,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"strings"
+
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
@@ -65,6 +66,7 @@ func validateAndConsumeOAuthState(state string) bool {
 type AuthConfig struct {
 	GitHubClientID   string
 	GitHubSecret     string
+	GitHubURL        string // Base GitHub URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
 	JWTSecret        string
 	FrontendURL      string
 	BackendURL       string // Backend URL for OAuth callback (defaults to http://localhost:8080)
@@ -80,6 +82,7 @@ type AuthConfig struct {
 type AuthHandler struct {
 	store         store.Store
 	oauthConfig   *oauth2.Config
+	githubAPIBase string // API base URL: "https://api.github.com" or "https://github.ibm.com/api/v3"
 	jwtSecret     string
 	frontendURL   string
 	devUserLogin  string
@@ -103,6 +106,28 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		redirectURL = defaultOAuthCallbackURL
 	}
 
+	// Build GitHub OAuth endpoint and API base URL.
+	// For github.com: OAuth at github.com, API at api.github.com
+	// For GHE (e.g., github.ibm.com): OAuth at github.ibm.com, API at github.ibm.com/api/v3
+	ghURL := strings.TrimRight(cfg.GitHubURL, "/")
+	if ghURL == "" {
+		ghURL = "https://github.com"
+	}
+
+	oauthEndpoint := oauth2.Endpoint{
+		AuthURL:  ghURL + "/login/oauth/authorize",
+		TokenURL: ghURL + "/login/oauth/access_token",
+	}
+
+	apiBase := "https://api.github.com"
+	if ghURL != "https://github.com" {
+		apiBase = ghURL + "/api/v3"
+	}
+
+	if ghURL != "https://github.com" {
+		log.Printf("GitHub Enterprise: OAuth via %s, API via %s", ghURL, apiBase)
+	}
+
 	return &AuthHandler{
 		store: s,
 		oauthConfig: &oauth2.Config{
@@ -110,8 +135,9 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 			ClientSecret: cfg.GitHubSecret,
 			RedirectURL:  redirectURL,
 			Scopes:       []string{"user:email", "read:user", "public_repo"},
-			Endpoint:     github.Endpoint,
+			Endpoint:     oauthEndpoint,
 		},
+		githubAPIBase: apiBase,
 		jwtSecret:     cfg.JWTSecret,
 		frontendURL:   cfg.FrontendURL,
 		devUserLogin:  cfg.DevUserLogin,
@@ -350,7 +376,7 @@ type GitHubUser struct {
 }
 
 func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
+	req, err := http.NewRequest("GET", h.githubAPIBase+"/user", nil)
 	if err != nil {
 		return nil, err
 	}

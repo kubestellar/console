@@ -61,6 +61,7 @@ resources:
 
 # GitHub OAuth configuration
 github:
+  url: ""  # GitHub Enterprise URL (e.g., "https://github.ibm.com"). Leave empty for github.com
   clientId: ""
   clientSecret: ""
   # Alternatively, use existing secret
