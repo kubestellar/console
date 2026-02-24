@@ -77,7 +77,16 @@ brew services start kubestellar/tap/kc-agent
 
 ### Configuration
 
-The agent supports the following environment variables:
+#### CLI Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--port` | Port to listen on | `8585` |
+| `--kubeconfig` | Path to kubeconfig file | `~/.kube/config` |
+| `--allowed-origins` | Comma-separated list of additional allowed WebSocket origins | (none) |
+| `--version` | Print version and exit | |
+
+#### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -86,15 +95,23 @@ The agent supports the following environment variables:
 
 #### Adding Custom Origins
 
-If you're running the console on a custom domain, add it to the allowed origins:
+If you're running the console on a custom domain, add it to the allowed origins via CLI flag or environment variable. Both are additive — they merge on top of the built-in defaults (localhost, `console.kubestellar.io`, `*.ibm.com`).
 
 ```bash
-# Single origin
+# Via CLI flag
+kc-agent --allowed-origins "https://my-console.example.com"
+
+# Via environment variable
 KC_ALLOWED_ORIGINS="https://my-console.example.com" kc-agent
 
-# Multiple origins
-KC_ALLOWED_ORIGINS="https://console1.example.com,https://console2.example.com" kc-agent
+# Multiple origins (comma-separated)
+kc-agent --allowed-origins "https://console1.example.com,https://console2.example.com"
+
+# Both together (all origins are merged)
+KC_ALLOWED_ORIGINS="https://env-origin.example.com" kc-agent --allowed-origins "https://flag-origin.example.com"
 ```
+
+Wildcard subdomains are supported: `https://*.example.com`
 
 #### Running as a Service with Custom Origins
 
