@@ -76,6 +76,12 @@ githubToken:
   existingSecret: ""
   existingSecretKey: github-token
 
+# GitHub token for issue creation from the Contribute dialog (requires repo scope)
+feedbackGithubToken:
+  token: ""
+  existingSecret: ""
+  existingSecretKey: feedback-github-token
+
 # Google Drive API key for benchmark data
 googleDrive:
   apiKey: ""

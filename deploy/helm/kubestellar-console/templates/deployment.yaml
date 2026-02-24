@@ -109,6 +109,13 @@ spec:
                   name: {{ .Values.githubToken.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.githubToken.existingSecretKey | default "github-token" }}
             {{- end }}
+            {{- if or .Values.feedbackGithubToken.existingSecret .Values.feedbackGithubToken.token }}
+            - name: FEEDBACK_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.feedbackGithubToken.existingSecret | default (include "kubestellar-console.fullname" .) }}
+                  key: {{ .Values.feedbackGithubToken.existingSecretKey | default "feedback-github-token" }}
+            {{- end }}
             {{- if or .Values.googleDrive.existingSecret .Values.googleDrive.apiKey }}
             - name: GOOGLE_DRIVE_API_KEY
               valueFrom:

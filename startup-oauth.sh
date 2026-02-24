@@ -24,6 +24,7 @@
 #   2. Create a .env file:
 #      GITHUB_CLIENT_ID=<your-client-id>
 #      GITHUB_CLIENT_SECRET=<your-client-secret>
+#      FEEDBACK_GITHUB_TOKEN=<your-pat>  (optional, enables Contribute dialog issue creation)
 #   3. Run: ./startup-oauth.sh           (production build, fast load)
 #      Or:  ./startup-oauth.sh --dev     (Vite dev server, HMR)
 

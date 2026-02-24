@@ -46,6 +46,9 @@ type FeedbackConfig struct {
 
 // NewFeedbackHandler creates a new feedback handler
 func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
+	if cfg.GitHubToken == "" {
+		log.Printf("[Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file (requires repo scope).")
+	}
 	return &FeedbackHandler{
 		store:         s,
 		githubToken:   cfg.GitHubToken,
@@ -78,6 +81,11 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Request type must be 'bug' or 'feature'")
 	}
 
+	// Reject early if GitHub issue creation is not configured
+	if h.githubToken == "" || h.repoOwner == "" || h.repoName == "" {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Issue submission is not available: FEEDBACK_GITHUB_TOKEN is not configured. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file (requires a GitHub personal access token with repo scope).")
+	}
+
 	// Get user info for the issue
 	user, err := h.store.GetUser(userID)
 	if err != nil || user == nil {
@@ -98,17 +106,16 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	// Create GitHub issue
-	if h.githubToken != "" && h.repoOwner != "" && h.repoName != "" {
-		issueNumber, _, err := h.createGitHubIssue(request, user)
-		if err != nil {
-			log.Printf("Failed to create GitHub issue: %v", err)
-			// Continue anyway - issue creation is best-effort
-		} else {
-			request.GitHubIssueNumber = &issueNumber
-			request.Status = models.RequestStatusOpen
-			h.store.UpdateFeatureRequest(request)
-		}
+	issueNumber, _, err := h.createGitHubIssue(request, user)
+	if err != nil {
+		log.Printf("Failed to create GitHub issue: %v", err)
+		// Clean up the orphaned database record
+		h.store.CloseFeatureRequest(request.ID, false)
+		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("Failed to create GitHub issue: %v", err))
 	}
+	request.GitHubIssueNumber = &issueNumber
+	request.Status = models.RequestStatusOpen
+	h.store.UpdateFeatureRequest(request)
 
 	// Create notification for the user
 	notifTitle := "Request Submitted"
