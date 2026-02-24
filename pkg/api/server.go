@@ -13,6 +13,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -254,6 +255,11 @@ func startLoadingServer(addr string) *http.Server {
 func (s *Server) setupMiddleware() {
 	// Recovery middleware
 	s.app.Use(recover.New())
+
+	// Gzip/Brotli compression — reduces JS/CSS/WASM transfer size ~70%
+	s.app.Use(compress.New(compress.Config{
+		Level: compress.LevelDefault,
+	}))
 
 	// Logger
 	s.app.Use(logger.New(logger.Config{
