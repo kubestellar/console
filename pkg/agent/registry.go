@@ -203,6 +203,7 @@ func InitializeProviders() error {
 
 	// Register CLI-based tool-capable agents
 	registry.Register(NewCodexProvider())
+	registry.Register(NewCopilotCLIProvider())
 	registry.Register(NewGeminiCLIProvider())
 	registry.Register(NewAntigravityProvider())
 	registry.Register(NewGHCopilotProvider())
