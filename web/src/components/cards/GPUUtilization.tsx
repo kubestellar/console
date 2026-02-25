@@ -113,9 +113,9 @@ export function GPUUtilization() {
   const filteredNodes = useMemo(() => {
     // First filter to only nodes from reachable clusters
     let result = gpuNodes.filter(n => {
-      // Extract cluster name from the node's cluster field (may be prefixed)
-      const clusterName = n.cluster.split('/')[0]
-      return reachableClusterNames.has(clusterName)
+      // Match using full name or last segment (handles "namespace/cluster-name" format)
+      const lastPart = n.cluster.split('/').pop() ?? n.cluster
+      return reachableClusterNames.has(n.cluster) || reachableClusterNames.has(lastPart)
     })
     if (!isAllClustersSelected) {
       result = result.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
@@ -161,30 +161,6 @@ export function GPUUtilization() {
       setHistory(newHistory)
     }
   }, [currentStats, isLoading])
-
-  // Initialize with simulated history
-  useEffect(() => {
-    if (history.length === 0 && currentStats.total > 0) {
-      const now = new Date()
-      const initialPoints: GPUPoint[] = []
-
-      for (let i = 9; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 60000)
-        // Simulate some variance in allocation
-        const variance = Math.floor(Math.random() * Math.min(2, currentStats.available + 1))
-        const allocatedVariance = Math.max(0, Math.min(currentStats.total, currentStats.allocated + variance - 1))
-        initialPoints.push({
-          time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          allocated: allocatedVariance,
-          available: currentStats.total - allocatedVariance,
-          total: currentStats.total,
-        })
-      }
-
-      historyRef.current = initialPoints
-      setHistory(initialPoints)
-    }
-  }, [currentStats, history.length])
 
   // Pie chart data
   const pieData = [
@@ -408,11 +384,14 @@ export function GPUUtilization() {
       </div>
 
       {/* GPU Nodes summary */}
-      <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
-        {filteredNodes.length} GPU node{filteredNodes.length !== 1 ? 's' : ''} across {
-          new Set(filteredNodes.map(n => n.cluster.split('/')[0])).size
-        } cluster{new Set(filteredNodes.map(n => n.cluster.split('/')[0])).size !== 1 ? 's' : ''}
-      </div>
+      {(() => {
+        const clusterCount = new Set(filteredNodes.map(n => n.cluster.split('/').pop() ?? n.cluster)).size
+        return (
+          <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
+            {filteredNodes.length} GPU node{filteredNodes.length !== 1 ? 's' : ''} across {clusterCount} cluster{clusterCount !== 1 ? 's' : ''}
+          </div>
+        )
+      })()}
     </div>
   )
 }

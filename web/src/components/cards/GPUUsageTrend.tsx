@@ -201,32 +201,6 @@ export function GPUUsageTrend() {
     }
   }, [currentTotals, isLoading, timeRangeConfig.points])
 
-  // Initialize with simulated history when first loading
-  useEffect(() => {
-    if (history.length === 0 && currentTotals.available > 0) {
-      const now = new Date()
-      const initialPoints: GPUDataPoint[] = []
-      const points = timeRangeConfig.points
-      const intervalMs = timeRangeConfig.intervalMs
-
-      for (let i = points - 1; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * intervalMs)
-        // Add some variance to make it look like real historical data
-        const allocatedVariance = Math.max(0, currentTotals.allocated + Math.floor((Math.random() - 0.5) * 2))
-        const bounded = Math.min(allocatedVariance, currentTotals.available)
-        initialPoints.push({
-          time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          available: currentTotals.available,
-          allocated: bounded,
-          free: currentTotals.available - bounded,
-        })
-      }
-
-      historyRef.current = initialPoints
-      setHistory(initialPoints)
-    }
-  }, [currentTotals, history.length, timeRangeConfig.points, timeRangeConfig.intervalMs])
-
   // Calculate usage percentage
   const usagePercent = currentTotals.available > 0
     ? Math.round((currentTotals.allocated / currentTotals.available) * 100)
@@ -349,7 +323,7 @@ export function GPUUsageTrend() {
       <div className="flex-1 min-h-[160px]">
         {history.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            No GPU data available
+            Collecting data...
           </div>
         ) : (
           <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`GPU usage trend chart: ${currentTotals.allocated} of ${currentTotals.available} GPUs in use (${usagePercent}% utilization)`}>
