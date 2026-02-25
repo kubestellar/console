@@ -485,12 +485,16 @@ function KubeChessInternal() {
 
   // Save game state
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState))
+    } catch { /* ignore storage errors */ }
   }, [gameState])
 
   // Save stats
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(stats))
+    try {
+      localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(stats))
+    } catch { /* ignore storage errors */ }
   }, [stats])
 
   // AI move

@@ -8,15 +8,23 @@ const DISMISSED_KEY = 'kc-welcome-dismissed'
 
 export function WelcomeCard() {
   const { t } = useTranslation()
-  const [dismissed, setDismissed] = useState(() =>
-    localStorage.getItem(DISMISSED_KEY) === 'true'
-  )
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(DISMISSED_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
 
   if (dismissed) return null
 
   const handleDismiss = () => {
     setDismissed(true)
-    localStorage.setItem(DISMISSED_KEY, 'true')
+    try {
+      localStorage.setItem(DISMISSED_KEY, 'true')
+    } catch {
+      // Ignore storage errors (e.g. private browsing)
+    }
   }
 
   return (
