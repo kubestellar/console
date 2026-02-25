@@ -213,7 +213,16 @@ export function MissionSuggestions() {
               {isExpanded && (
                 <div
                   ref={dropdownRef}
+                  role="menu"
                   className={`absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border ${style.border} bg-card shadow-xl`}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                    e.preventDefault()
+                    const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                    const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                    if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                    else items[Math.max(idx - 1, 0)]?.focus()
+                  }}
                 >
                   <div className="p-3">
                     {/* Description */}

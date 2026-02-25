@@ -707,7 +707,16 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
       <BaseModal.Content className="max-h-[70vh]">
       <div className="flex flex-col">
         {/* Tabs */}
-        <div className="flex items-center gap-1 border-b border-border pb-2 mb-4">
+        <div
+          role="tablist"
+          className="flex items-center gap-1 border-b border-border pb-2 mb-4"
+          onKeyDown={(e) => {
+            const tabIds: Tab[] = ['declarative', 'code', 'ai', 'manage']
+            const idx = tabIds.indexOf(tab)
+            if (e.key === 'ArrowRight') handleTabChange(tabIds[Math.min(idx + 1, tabIds.length - 1)])
+            else if (e.key === 'ArrowLeft') handleTabChange(tabIds[Math.max(idx - 1, 0)])
+          }}
+        >
           {[
             { id: 'declarative' as Tab, label: t('dashboard.cardFactory.declarativeTab'), icon: Layers },
             { id: 'code' as Tab, label: t('dashboard.cardFactory.customCodeTab'), icon: Code },
@@ -716,6 +725,9 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
           ].map(t => (
             <button
               key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              tabIndex={tab === t.id ? 0 : -1}
               onClick={() => handleTabChange(t.id)}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',

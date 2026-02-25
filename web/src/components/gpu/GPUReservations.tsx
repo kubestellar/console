@@ -579,7 +579,16 @@ export function GPUReservations() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-border">
+      <div
+        role="tablist"
+        className="flex gap-1 mb-6 border-b border-border"
+        onKeyDown={(e) => {
+          const ids = ['overview', 'calendar', 'quotas', 'inventory', 'dashboard'] as const
+          const idx = ids.indexOf(activeTab)
+          if (e.key === 'ArrowRight') setActiveTab(ids[Math.min(idx + 1, ids.length - 1)])
+          else if (e.key === 'ArrowLeft') setActiveTab(ids[Math.max(idx - 1, 0)])
+        }}
+      >
         {[
           { id: 'overview' as const, label: t('gpuReservations.tabs.overview'), icon: TrendingUp },
           { id: 'calendar' as const, label: t('gpuReservations.tabs.calendar'), icon: Calendar },
@@ -591,6 +600,9 @@ export function GPUReservations() {
           return (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-[2px] transition-colors',

@@ -89,6 +89,8 @@ export function ClusterFilterDropdown({
         <button
           ref={buttonRef}
           onClick={() => setShowClusterFilter(!showClusterFilter)}
+          aria-haspopup="listbox"
+          aria-expanded={showClusterFilter}
           className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
             localClusterFilter.length > 0
               ? 'bg-purple-900 border-purple-800 text-purple-400'
@@ -103,15 +105,27 @@ export function ClusterFilterDropdown({
         {/* Portal dropdown to escape overflow-hidden containers */}
         {showClusterFilter && dropdownStyle && createPortal(
           <div
+            role="listbox"
+            aria-label={t('clusterFilter.filterByCluster')}
             className="fixed w-40 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
             style={{
               top: dropdownStyle.top,
               left: dropdownStyle.left,
               right: dropdownStyle.right,
             }}
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+              e.preventDefault()
+              const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="option"]:not([disabled])')
+              const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+              if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+              else items[Math.max(idx - 1, 0)]?.focus()
+            }}
           >
             <div className="p-1">
               <button
+                role="option"
+                aria-selected={localClusterFilter.length === 0}
                 onClick={clearClusterFilter}
                 className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
                   localClusterFilter.length === 0 ? 'bg-purple-900 text-purple-400' : 'hover:bg-secondary text-foreground'
@@ -140,6 +154,8 @@ export function ClusterFilterDropdown({
                 return (
                   <button
                     key={cluster.name}
+                    role="option"
+                    aria-selected={localClusterFilter.includes(cluster.name)}
                     onClick={() => !isUnreachable && toggleClusterFilter(cluster.name)}
                     disabled={isUnreachable}
                     className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${

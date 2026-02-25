@@ -289,8 +289,13 @@ function ModalTabs({
   onTabChange,
   className = '',
 }: ModalTabsProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const idx = tabs.findIndex(t => t.id === activeTab)
+    if (e.key === 'ArrowRight') onTabChange(tabs[Math.min(idx + 1, tabs.length - 1)].id)
+    else if (e.key === 'ArrowLeft') onTabChange(tabs[Math.max(idx - 1, 0)].id)
+  }
   return (
-    <div className={`flex border-b border-border ${className}`}>
+    <div role="tablist" onKeyDown={handleKeyDown} className={`flex border-b border-border ${className}`}>
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab
         const Icon = tab.icon
@@ -298,6 +303,9 @@ function ModalTabs({
         return (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
             onClick={() => onTabChange(tab.id)}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
               isActive

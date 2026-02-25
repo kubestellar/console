@@ -138,6 +138,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     <div ref={dropdownRef} className={cn('relative flex items-center gap-1', className, isGreyedOut && 'opacity-40 pointer-events-none')}>
       <button
         onClick={() => !isDemoMode && setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={cn(
           'flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors',
           'bg-secondary/50 border-border hover:bg-secondary',
@@ -161,12 +163,28 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 top-full mt-1 right-0 w-72 rounded-lg bg-card border border-border shadow-lg overflow-hidden">
+        <div
+          role="listbox"
+          aria-label={t('agent.selectAgent')}
+          className="absolute z-50 top-full mt-1 right-0 w-72 rounded-lg bg-card border border-border shadow-lg overflow-hidden"
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+            e.preventDefault()
+            const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="option"]:not([aria-disabled="true"])')
+            const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+            if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+            else items[Math.max(idx - 1, 0)]?.focus()
+          }}
+        >
           {sortedAgents.length > 0 && (
             <div className="py-1">
               {sortedAgents.map((agent: AgentInfo) => (
                 <div
                   key={agent.name}
+                  role="option"
+                  aria-selected={agent.name === selectedAgent}
+                  aria-disabled={!agent.available}
+                  tabIndex={agent.available ? 0 : -1}
                   className={cn(
                     'w-full flex items-start gap-3 px-3 py-2 text-left transition-colors',
                     agent.available
@@ -175,6 +193,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                     agent.name === selectedAgent && 'bg-primary/10'
                   )}
                   onClick={() => agent.available && handleSelect(agent.name)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (agent.available) handleSelect(agent.name) } }}
                 >
                   <AgentIcon provider={agent.provider} className={cn('w-5 h-5 mt-0.5 flex-shrink-0', !agent.available && 'opacity-40')} />
                   <div className="flex-1 min-w-0">

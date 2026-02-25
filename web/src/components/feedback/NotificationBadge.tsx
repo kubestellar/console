@@ -113,7 +113,19 @@ export function NotificationBadge() {
           />
 
           {/* Panel */}
-          <div className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-lg shadow-xl z-50">
+          <div
+            role="menu"
+            aria-label="Notifications"
+            className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-lg shadow-xl z-50"
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+              e.preventDefault()
+              const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')
+              const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+              if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+              else items[Math.max(idx - 1, 0)]?.focus()
+            }}
+          >
             {/* Header */}
             <div className="p-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -155,7 +167,10 @@ export function NotificationBadge() {
                 notifications.slice(0, 10).map(notification => (
                   <div
                     key={notification.id}
+                    role="menuitem"
+                    tabIndex={0}
                     onClick={() => handleNotificationClick(notification)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(notification) } }}
                     className={`p-3 border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors ${
                       !notification.read ? 'bg-purple-500/5' : ''
                     }`}

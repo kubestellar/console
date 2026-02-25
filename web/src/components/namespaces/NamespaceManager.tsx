@@ -1041,10 +1041,24 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
                   Add User
                 </button>
                 {showUserDropdown && availableUsers.length > 0 && (
-                  <div className="absolute z-10 top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div
+                    role="listbox"
+                    aria-label="Select user"
+                    className="absolute z-10 top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                    onKeyDown={(e) => {
+                      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                      e.preventDefault()
+                      const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="option"]')
+                      const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                      if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                      else items[Math.max(idx - 1, 0)]?.focus()
+                    }}
+                  >
                     {availableUsers.map(user => (
                       <button
                         key={user}
+                        role="option"
+                        aria-selected={false}
                         onClick={() => addUserAccess(user)}
                         className="w-full px-3 py-2 text-left text-sm text-white hover:bg-secondary/50 transition-colors"
                       >
@@ -1063,10 +1077,24 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
                   Add Group
                 </button>
                 {showGroupDropdown && availableGroups.length > 0 && (
-                  <div className="absolute z-10 top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div
+                    role="listbox"
+                    aria-label="Select group"
+                    className="absolute z-10 top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                    onKeyDown={(e) => {
+                      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                      e.preventDefault()
+                      const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="option"]')
+                      const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                      if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                      else items[Math.max(idx - 1, 0)]?.focus()
+                    }}
+                  >
                     {availableGroups.map(group => (
                       <button
                         key={group}
+                        role="option"
+                        aria-selected={false}
                         onClick={() => addGroupAccess(group)}
                         className="w-full px-3 py-2 text-left text-sm text-white hover:bg-secondary/50 transition-colors"
                       >

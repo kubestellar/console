@@ -122,9 +122,21 @@ export function FloatingDashboardActions({
       <div ref={menuRef} className={`fixed ${positionClasses} z-40 flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
         {/* Expanded menu items */}
         {isOpen && (
-          <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <div
+            role="menu"
+            className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150"
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+              e.preventDefault()
+              const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')
+              const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+              if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+              else items[Math.max(idx - 1, 0)]?.focus()
+            }}
+          >
             {onImport && (
               <button
+                role="menuitem"
                 onClick={handleImportClick}
                 className={menuBtnClass}
                 title={t('dashboard.actions.importTitle')}
@@ -135,6 +147,7 @@ export function FloatingDashboardActions({
             )}
             {onExport && (
               <button
+                role="menuitem"
                 onClick={() => { setIsOpen(false); onExport() }}
                 className={menuBtnClass}
                 title={t('dashboard.actions.exportTitle')}
@@ -145,6 +158,7 @@ export function FloatingDashboardActions({
             )}
             {showResetOption && (
               <button
+                role="menuitem"
                 onClick={() => { setIsOpen(false); setIsResetDialogOpen(true) }}
                 className={menuBtnClass}
                 title={t('dashboard.actions.resetTitle')}
@@ -154,6 +168,7 @@ export function FloatingDashboardActions({
               </button>
             )}
             <button
+              role="menuitem"
               onClick={() => { setIsOpen(false); setIsCustomizerOpen(true) }}
               className={menuBtnClass}
               title={t('dashboard.actions.customizeTitle')}
@@ -162,6 +177,7 @@ export function FloatingDashboardActions({
               {t('dashboard.actions.customize')}
             </button>
             <button
+              role="menuitem"
               onClick={() => { setIsOpen(false); onOpenTemplates() }}
               data-tour="templates"
               className={menuBtnClass}
@@ -171,6 +187,7 @@ export function FloatingDashboardActions({
               {t('dashboard.actions.templates')}
             </button>
             <button
+              role="menuitem"
               onClick={() => { setIsOpen(false); onAddCard() }}
               data-tour="add-card"
               className={menuBtnClass}
