@@ -14,9 +14,9 @@ export function UnifiedCardTest() {
   return (
     <div className="p-6 pt-20">
       <h1 className="text-2xl font-bold mb-6">UnifiedCard Framework Test</h1>
-      <p className="text-muted-foreground mb-8">
+      <div className="text-muted-foreground mb-8">
         Side-by-side comparison of UnifiedCard (left) vs Legacy Component (right)
-      </p>
+      </div>
 
       <div className="grid grid-cols-2 gap-6">
         {/* UnifiedCard rendering */}

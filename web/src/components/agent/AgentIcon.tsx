@@ -93,7 +93,7 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
           {/* Cline icon - terminal with AI spark */}
           <rect x="2" y="4" width="20" height="16" rx="2" fill="#1A1A2E" />
           <path d="M6 10l3 2-3 2" stroke="#E94560" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <line x1="12" y1="14" x2="18" y2="14" stroke="#E94560" strokeWidth="2" strokeLinecap="round" />
+          <path d="M12 14 H18" stroke="#E94560" strokeWidth="2" strokeLinecap="round" fill="none" />
         </svg>
       )
     case 'jetbrains':

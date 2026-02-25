@@ -32,9 +32,9 @@ export function UnifiedStatsTest() {
   return (
     <div className="p-6 pt-20">
       <h1 className="text-2xl font-bold mb-6">UnifiedStatsSection Framework Test</h1>
-      <p className="text-muted-foreground mb-8">
+      <div className="text-muted-foreground mb-8">
         Side-by-side comparison of UnifiedStatsSection (top) vs Legacy StatsOverview (bottom)
-      </p>
+      </div>
 
       {/* UnifiedStatsSection rendering */}
       <div className="mb-8">

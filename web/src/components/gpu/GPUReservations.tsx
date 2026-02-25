@@ -575,7 +575,7 @@ export function GPUReservations() {
             </span>
           )}
         </div>
-        <p className="text-muted-foreground">{t('gpuReservations.subtitle')}</p>
+        <div className="text-muted-foreground">{t('gpuReservations.subtitle')}</div>
       </div>
 
       {/* Tabs */}
@@ -613,18 +613,23 @@ export function GPUReservations() {
         <div className="ml-auto pb-2 flex items-center gap-3">
           {/* My Reservations filter */}
           {user && (
-            <button
-              onClick={() => setShowOnlyMine(!showOnlyMine)}
+            <label
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border cursor-pointer',
                 showOnlyMine
                   ? 'border-purple-500 bg-purple-500/10 text-purple-400'
                   : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
               )}
             >
+              <input
+                type="checkbox"
+                checked={showOnlyMine}
+                onChange={() => setShowOnlyMine(!showOnlyMine)}
+                className="sr-only"
+              />
               {showOnlyMine ? <User className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
               {t('gpuReservations.myReservations')}
-            </button>
+            </label>
           )}
           <button
             onClick={() => { setEditingReservation(null); setShowReservationForm(true) }}
@@ -792,18 +797,22 @@ export function GPUReservations() {
         <div className="space-y-6">
           <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
             <div className="flex items-center justify-center gap-4 mb-4">
-              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" aria-label="Previous month">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <h3 className="text-lg font-medium text-foreground min-w-[180px] text-center">
-                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-              </h3>
-              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" aria-label="Next month">
-                <ChevronRight className="w-5 h-5" />
-              </button>
+              {(['prev', 'heading', 'next'] as const).map(item => {
+                if (item === 'heading') return (
+                  <h3 key="heading" className="text-lg font-medium text-foreground min-w-[180px] text-center">
+                    {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                  </h3>
+                )
+                const isNext = item === 'next'
+                return (
+                  <button key={item} onClick={isNext ? nextMonth : prevMonth}
+                    className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
+                    aria-label={isNext ? 'Next month' : 'Previous month'}>
+                    {isNext ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                  </button>
+                )
+              })}
             </div>
-
-            {/* Calendar Grid - Spanning Bars */}
             <div className="border border-border/50 rounded-lg overflow-hidden">
               {/* Day-of-week header */}
               <div className="grid grid-cols-7 border-b border-border/50">
@@ -993,16 +1002,15 @@ export function GPUReservations() {
                 )}
                 {/* Actions */}
                 <div className="col-span-2 flex gap-3 pt-2 border-t border-border">
-                  <button onClick={() => { setEditingReservation(selectedReservation); setShowReservationForm(true); setSelectedReservation(null) }}
-                    disabled={deleteConfirmId !== null || showReservationForm}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-purple-400/50">
-                    <Pencil className="w-3.5 h-3.5" /> {t('gpuReservations.reservationDetails.actions.edit')}
-                  </button>
-                  <button onClick={() => { setDeleteConfirmId(selectedReservation.id); setSelectedReservation(null) }}
-                    disabled={deleteConfirmId !== null || showReservationForm}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-red-400/50">
-                    <Trash2 className="w-3.5 h-3.5" /> {t('gpuReservations.reservationDetails.actions.delete')}
-                  </button>
+                  {([
+                    { key: 'edit', icon: Pencil, label: t('gpuReservations.reservationDetails.actions.edit'), className: 'text-purple-400 hover:bg-purple-500/10 disabled:text-purple-400/50', onClick: () => { setEditingReservation(selectedReservation); setShowReservationForm(true); setSelectedReservation(null) } },
+                    { key: 'delete', icon: Trash2, label: t('gpuReservations.reservationDetails.actions.delete'), className: 'text-red-400 hover:bg-red-500/10 disabled:text-red-400/50', onClick: () => { setDeleteConfirmId(selectedReservation.id); setSelectedReservation(null) } },
+                  ] as const).map(({ key, icon: ActionIcon, label, className, onClick }) => (
+                    <button key={key} onClick={onClick} disabled={deleteConfirmId !== null || showReservationForm}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm ${className} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}>
+                      <ActionIcon className="w-3.5 h-3.5" /> {label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1047,23 +1055,17 @@ export function GPUReservations() {
                       {r.status}
                     </span>
                     <ClusterBadge cluster={r.cluster} size="sm" />
-                    <button onClick={() => setSelectedReservation(r)}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-                      aria-label={t('gpuReservations.list.viewReservation', { title: r.title })}>
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => { setEditingReservation(r); setShowReservationForm(true) }}
-                      disabled={deleteConfirmId !== null || showReservationForm}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      aria-label={t('gpuReservations.list.editReservation', { title: r.title })}>
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeleteConfirmId(r.id)}
-                      disabled={deleteConfirmId !== null || showReservationForm}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      aria-label={t('gpuReservations.list.deleteReservation', { title: r.title })}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {([
+                      { key: 'view', icon: Eye, onClick: () => setSelectedReservation(r), disabled: false, colorClass: 'hover:text-foreground', label: t('gpuReservations.list.viewReservation', { title: r.title }) },
+                      { key: 'edit', icon: Pencil, onClick: () => { setEditingReservation(r); setShowReservationForm(true) }, disabled: deleteConfirmId !== null || showReservationForm, colorClass: 'hover:text-purple-400 disabled:hover:bg-transparent', label: t('gpuReservations.list.editReservation', { title: r.title }) },
+                      { key: 'delete', icon: Trash2, onClick: () => setDeleteConfirmId(r.id), disabled: deleteConfirmId !== null || showReservationForm, colorClass: 'hover:text-red-400 disabled:hover:bg-transparent', label: t('gpuReservations.list.deleteReservation', { title: r.title }) },
+                    ] as const).map(({ key, icon: ActionIcon, onClick, disabled, colorClass, label }) => (
+                      <button key={key} onClick={onClick} disabled={disabled}
+                        className={`p-1.5 rounded hover:bg-secondary text-muted-foreground ${colorClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        aria-label={label}>
+                        <ActionIcon className="w-4 h-4" />
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1095,8 +1097,8 @@ export function GPUReservations() {
                 {/* Description and notes */}
                 {(r.description || r.notes) && (
                   <div className="mt-3 pt-3 border-t border-border/50 text-sm text-muted-foreground">
-                    {r.description && <p>{r.description}</p>}
-                    {r.notes && <p className="mt-1 italic">{r.notes}</p>}
+                    {r.description && <div>{r.description}</div>}
+                    {r.notes && <div className="mt-1 italic">{r.notes}</div>}
                   </div>
                 )}
 
@@ -1119,7 +1121,7 @@ export function GPUReservations() {
           {gpuClusters.length === 0 && !nodesLoading && (
             <div className={cn('glass p-8 rounded-lg text-center', demoMode && 'border-2 border-yellow-500/50')}>
               <Server className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">{t('gpuReservations.inventory.noGpuNodes')}</p>
+              <div className="text-muted-foreground">{t('gpuReservations.inventory.noGpuNodes')}</div>
             </div>
           )}
           {gpuClusters.map(cluster => {
@@ -1265,25 +1267,25 @@ export function GPUReservations() {
       <BaseModal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} size="sm">
         <BaseModal.Header title={t('gpuReservations.delete.title')} icon={Trash2} onClose={() => setDeleteConfirmId(null)} showBack={false} />
         <BaseModal.Content>
-          <p className="text-muted-foreground">
+          <div className="text-muted-foreground">
             {t('gpuReservations.delete.confirmMessage')} <strong className="text-foreground">{deleteConfirmReservation?.title}</strong>?
-          </p>
-          <p className="text-sm text-red-400 mt-2">
+          </div>
+          <div className="text-sm text-red-400 mt-2">
             {t('gpuReservations.delete.cannotUndo')}
-          </p>
+          </div>
         </BaseModal.Content>
         <BaseModal.Footer>
           <div className="flex-1" />
           <div className="flex gap-3">
-            <button onClick={() => setDeleteConfirmId(null)}
-              className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors">
-              {t('gpuReservations.delete.cancel')}
-            </button>
-            <button onClick={handleDeleteReservation} disabled={isDeleting}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors">
-              {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {t('gpuReservations.delete.delete')}
-            </button>
+            {([
+              { key: 'cancel', label: t('gpuReservations.delete.cancel'), onClick: () => setDeleteConfirmId(null), disabled: false, className: 'px-4 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors' },
+              { key: 'delete', label: t('gpuReservations.delete.delete'), onClick: handleDeleteReservation, disabled: isDeleting, className: 'flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors' },
+            ] as const).map(({ key, label, onClick, disabled, className }) => (
+              <button key={key} onClick={onClick} disabled={disabled} className={className}>
+                {key === 'delete' && isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {label}
+              </button>
+            ))}
           </div>
         </BaseModal.Footer>
       </BaseModal>
@@ -1522,7 +1524,7 @@ function ReservationFormModal({
               ))}
             </select>
             {gpuClusters.length === 0 && (
-              <p className="text-xs text-yellow-400 mt-1">{t('gpuReservations.form.fields.noClustersWithGpus')}</p>
+              <div className="text-xs text-yellow-400 mt-1">{t('gpuReservations.form.fields.noClustersWithGpus')}</div>
             )}
           </div>
 
@@ -1704,15 +1706,15 @@ function ReservationFormModal({
       <BaseModal.Footer>
         <div className="flex-1" />
         <div className="flex gap-3">
-          <button onClick={handleClose}
-            className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors">
-            {t('gpuReservations.form.buttons.cancel')}
-          </button>
-          <button onClick={handleSave} disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 transition-colors">
-            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {editingReservation ? t('gpuReservations.form.buttons.update') : t('gpuReservations.form.buttons.create')}
-          </button>
+          {([
+            { key: 'cancel', label: t('gpuReservations.form.buttons.cancel'), onClick: handleClose, disabled: false, className: 'px-4 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors' },
+            { key: 'save', label: editingReservation ? t('gpuReservations.form.buttons.update') : t('gpuReservations.form.buttons.create'), onClick: handleSave, disabled: isSaving, className: 'flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 transition-colors' },
+          ] as const).map(({ key, label, onClick, disabled, className }) => (
+            <button key={key} onClick={onClick} disabled={disabled} className={className}>
+              {key === 'save' && isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {label}
+            </button>
+          ))}
         </div>
       </BaseModal.Footer>
     </BaseModal>

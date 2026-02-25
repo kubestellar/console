@@ -272,30 +272,19 @@ export function GitOps() {
         </select>
 
         <div className="flex gap-2">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-card/50 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t('common.all')}
-          </button>
-          <button
-            onClick={() => setStatusFilter('synced')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === 'synced' ? 'bg-green-500 text-white' : 'bg-card/50 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t('gitops.synced')}
-          </button>
-          <button
-            onClick={() => setStatusFilter('drifted')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === 'drifted' ? 'bg-yellow-500 text-white' : 'bg-card/50 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t('gitops.drifted')}
-          </button>
+          {([
+            { value: 'all', label: t('common.all'), activeClass: 'bg-primary text-primary-foreground' },
+            { value: 'synced', label: t('gitops.synced'), activeClass: 'bg-green-500 text-white' },
+            { value: 'drifted', label: t('gitops.drifted'), activeClass: 'bg-yellow-500 text-white' },
+          ] as const).map(({ value, label, activeClass }) => (
+            <button key={value} onClick={() => setStatusFilter(value)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === value ? activeClass : 'bg-card/50 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -307,8 +296,8 @@ export function GitOps() {
       {filteredApps.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🔄</div>
-          <p className="text-lg text-foreground">{t('gitops.noApplications')}</p>
-          <p className="text-sm text-muted-foreground">{t('gitops.configureHint')}</p>
+          <div className="text-lg text-foreground">{t('gitops.noApplications')}</div>
+          <div className="text-sm text-muted-foreground">{t('gitops.configureHint')}</div>
         </div>
       ) : (
         <div className="space-y-4 mb-6 border-2 border-yellow-500/30 rounded-lg p-4">
@@ -421,12 +410,14 @@ export function GitOps() {
             {t('gitops.integrationDescription')}
           </p>
           <div className="flex gap-2">
-            <button className="px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors">
-              {t('gitops.configureArgoCD')}
-            </button>
-            <button className="px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors">
-              {t('gitops.configureFlux')}
-            </button>
+            {([
+              { key: 'argocd', label: t('gitops.configureArgoCD') },
+              { key: 'flux', label: t('gitops.configureFlux') },
+            ] as const).map(({ key, label }) => (
+              <button key={key} className="px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors">
+                {label}
+              </button>
+            ))}
           </div>
         </div>
       </DashboardPage>

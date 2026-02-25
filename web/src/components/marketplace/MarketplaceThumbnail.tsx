@@ -93,6 +93,7 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
   return (
     <div className={`h-36 overflow-hidden relative ${className || ''}`}>
       <svg viewBox="0 0 400 144" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
+        {/* SVG defs: linearGradient elements (not HTML <ul>/<ol> list items) */}
         <defs>
           <linearGradient id={`grad-${itemId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={config.gradient[0]} stopOpacity={isHelpWanted ? 0.15 : 0.25} />

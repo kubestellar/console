@@ -53,12 +53,24 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
       }
       return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">{children}</a>
     },
-    h1: ({ children }: { children?: React.ReactNode }) => <h1 className="mt-6 mb-3 pt-3 border-t border-border/30 first:border-t-0 first:pt-0 first:mt-0 text-xl font-bold">{children}</h1>,
-    h2: ({ children }: { children?: React.ReactNode }) => <h2 className="mt-6 mb-3 pt-3 border-t border-border/30 first:border-t-0 first:pt-0 first:mt-0 text-lg font-bold">{children}</h2>,
-    h3: ({ children }: { children?: React.ReactNode }) => <h3 className="mt-5 mb-2 pt-2 border-t border-border/20 first:border-t-0 first:pt-0 first:mt-0 text-base font-semibold">{children}</h3>,
-    h4: ({ children }: { children?: React.ReactNode }) => <h4 className="mt-4 mb-2 font-semibold">{children}</h4>,
-    h5: ({ children }: { children?: React.ReactNode }) => <h5 className="mt-4 mb-2 font-medium">{children}</h5>,
-    h6: ({ children }: { children?: React.ReactNode }) => <h6 className="mt-3 mb-2 font-medium">{children}</h6>,
+    h1: ({ children }: { children?: React.ReactNode }) => (
+      <h1 className="mt-6 mb-3 pt-3 border-t border-border/30 first:border-t-0 first:pt-0 first:mt-0 text-xl font-bold">{children}</h1>
+    ),
+    h2: ({ children }: { children?: React.ReactNode }) => (
+      <h2 className="mt-6 mb-3 pt-3 border-t border-border/30 first:border-t-0 first:pt-0 first:mt-0 text-lg font-bold">{children}</h2>
+    ),
+    h3: ({ children }: { children?: React.ReactNode }) => (
+      <h3 className="mt-5 mb-2 pt-2 border-t border-border/20 first:border-t-0 first:pt-0 first:mt-0 text-base font-semibold">{children}</h3>
+    ),
+    h4: ({ children }: { children?: React.ReactNode }) => (
+      <h4 className="mt-4 mb-2 font-semibold">{children}</h4>
+    ),
+    h5: ({ children }: { children?: React.ReactNode }) => (
+      <h5 className="mt-4 mb-2 font-medium">{children}</h5>
+    ),
+    h6: ({ children }: { children?: React.ReactNode }) => (
+      <h6 className="mt-3 mb-2 font-medium">{children}</h6>
+    ),
     p: ({ children }: { children?: React.ReactNode }) => <p className="my-4 leading-relaxed">{children}</p>,
     ul: ({ children }: { children?: React.ReactNode }) => <ul className="my-4 ml-4 list-disc space-y-2">{children}</ul>,
     ol: ({ children }: { children?: React.ReactNode }) => <ol className="my-4 ml-4 list-decimal space-y-2">{children}</ol>,
