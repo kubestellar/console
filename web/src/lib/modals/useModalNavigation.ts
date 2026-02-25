@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { UseModalNavigationOptions, UseModalNavigationResult } from './types'
 
 /**
@@ -218,4 +218,34 @@ export function useModal({
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useModalFocusTrap(modalRef, isOpen)
   }
+}
+
+/**
+ * useModalState - Simple boolean toggle for modal open/close state
+ *
+ * Replaces the common pattern:
+ * ```tsx
+ * const [isOpen, setIsOpen] = useState(false)
+ * setIsOpen(true)  // open
+ * setIsOpen(false) // close
+ * ```
+ *
+ * With:
+ * ```tsx
+ * const { isOpen, open, close, toggle } = useModalState()
+ * ```
+ */
+export interface UseModalStateResult {
+  isOpen: boolean
+  open: () => void
+  close: () => void
+  toggle: () => void
+}
+
+export function useModalState(initialOpen = false): UseModalStateResult {
+  const [isOpen, setIsOpen] = useState(initialOpen)
+  const open = useCallback(() => setIsOpen(true), [])
+  const close = useCallback(() => setIsOpen(false), [])
+  const toggle = useCallback(() => setIsOpen(prev => !prev), [])
+  return { isOpen, open, close, toggle }
 }

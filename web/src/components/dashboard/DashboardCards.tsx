@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout } from 'lucide-react'
+import { useModalState } from '../../lib/modals'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from './AddCardModal'
@@ -47,9 +48,9 @@ export function DashboardCards({
 }: DashboardCardsProps) {
   const { t } = useTranslation()
   const [showCards, setShowCards] = useState(!defaultCollapsed)
-  const [isAddCardOpen, setIsAddCardOpen] = useState(false)
-  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
-  const [isConfigureOpen, setIsConfigureOpen] = useState(false)
+  const addCardModal = useModalState()
+  const templatesModal = useModalState()
+  const configureModal = useModalState()
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
 
   // Listen for marketplace card-preset installs
@@ -66,17 +67,17 @@ export function DashboardCards({
     suggestions.forEach(card => {
       onAddCard(card.type, card.config, card.title)
     })
-    setIsAddCardOpen(false)
+    addCardModal.close()
   }
 
   const handleConfigureCard = (cardId: string) => {
     setSelectedCardId(cardId)
-    setIsConfigureOpen(true)
+    configureModal.open()
   }
 
   const handleSaveConfig = (cardId: string, config: Record<string, unknown>, _title?: string) => {
     onUpdateCardConfig(cardId, config)
-    setIsConfigureOpen(false)
+    configureModal.close()
     setSelectedCardId(null)
   }
 
@@ -88,7 +89,7 @@ export function DashboardCards({
       title: card.title,
     }))
     onReplaceCards(newCards)
-    setIsTemplatesOpen(false)
+    templatesModal.close()
   }
 
   const selectedCard = cards.find(c => c.id === selectedCardId)
@@ -120,14 +121,14 @@ export function DashboardCards({
         {showCards && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsTemplatesOpen(true)}
+              onClick={templatesModal.open}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
             >
               <Layout className="w-3.5 h-3.5" />
               {t('dashboard.actions.templates')}
             </button>
             <button
-              onClick={() => setIsAddCardOpen(true)}
+              onClick={addCardModal.open}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -148,7 +149,7 @@ export function DashboardCards({
                 {emptyDescription}
               </p>
               <button
-                onClick={() => setIsAddCardOpen(true)}
+                onClick={addCardModal.open}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -184,21 +185,21 @@ export function DashboardCards({
 
       {/* Modals */}
       <AddCardModal
-        isOpen={isAddCardOpen}
-        onClose={() => setIsAddCardOpen(false)}
+        isOpen={addCardModal.isOpen}
+        onClose={addCardModal.close}
         onAddCards={handleAddCards}
       />
 
       <TemplatesModal
-        isOpen={isTemplatesOpen}
-        onClose={() => setIsTemplatesOpen(false)}
+        isOpen={templatesModal.isOpen}
+        onClose={templatesModal.close}
         onApplyTemplate={handleApplyTemplate}
       />
 
       <ConfigureCardModal
-        isOpen={isConfigureOpen}
+        isOpen={configureModal.isOpen}
         onClose={() => {
-          setIsConfigureOpen(false)
+          configureModal.close()
           setSelectedCardId(null)
         }}
         card={configureCard}

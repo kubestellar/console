@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Layout, RotateCcw, Download, Upload, Pencil } from 'lucide-react'
+import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
 import { ResetMode } from '../../hooks/useDashboardReset'
@@ -38,23 +39,24 @@ export function FloatingDashboardActions({
   const { t } = useTranslation()
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
   const { isMobile } = useMobile()
-  const [isOpen, setIsOpen] = useState(false)
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
-  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
+  const menu = useModalState()
+  const resetDialog = useModalState()
+  const customizer = useModalState()
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { isOpen: menuIsOpen, close: closeMenu } = menu
 
   // Close menu when clicking outside
   useEffect(() => {
-    if (!isOpen) return
+    if (!menuIsOpen) return
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
+        closeMenu()
       }
     }
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsOpen(false)
+        closeMenu()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -63,7 +65,7 @@ export function FloatingDashboardActions({
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [isOpen])
+  }, [menuIsOpen, closeMenu])
 
   // Desktop: shift button left based on mission sidebar state
   // Mobile: always bottom left
@@ -77,7 +79,7 @@ export function FloatingDashboardActions({
   const positionClasses = getPositionClasses()
 
   const handleReset = (mode: ResetMode) => {
-    setIsResetDialogOpen(false)
+    resetDialog.close()
     if (onReset) {
       onReset(mode)
     } else if (onResetToDefaults && mode === 'replace') {
@@ -86,7 +88,7 @@ export function FloatingDashboardActions({
   }
 
   const handleImportClick = () => {
-    setIsOpen(false)
+    menu.close()
     fileInputRef.current?.click()
   }
 
@@ -121,7 +123,7 @@ export function FloatingDashboardActions({
 
       <div ref={menuRef} className={`fixed ${positionClasses} z-40 flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
         {/* Expanded menu items */}
-        {isOpen && (
+        {menu.isOpen && (
           <div
             role="menu"
             className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150"
@@ -148,7 +150,7 @@ export function FloatingDashboardActions({
             {onExport && (
               <button
                 role="menuitem"
-                onClick={() => { setIsOpen(false); onExport() }}
+                onClick={() => { menu.close(); onExport() }}
                 className={menuBtnClass}
                 title={t('dashboard.actions.exportTitle')}
               >
@@ -159,7 +161,7 @@ export function FloatingDashboardActions({
             {showResetOption && (
               <button
                 role="menuitem"
-                onClick={() => { setIsOpen(false); setIsResetDialogOpen(true) }}
+                onClick={() => { menu.close(); resetDialog.open() }}
                 className={menuBtnClass}
                 title={t('dashboard.actions.resetTitle')}
               >
@@ -168,8 +170,8 @@ export function FloatingDashboardActions({
               </button>
             )}
             <button
-              role="menuitem"
-              onClick={() => { setIsOpen(false); setIsCustomizerOpen(true) }}
+                role="menuitem"
+                onClick={() => { menu.close(); customizer.open() }}
               className={menuBtnClass}
               title={t('dashboard.actions.customizeTitle')}
             >
@@ -177,8 +179,8 @@ export function FloatingDashboardActions({
               {t('dashboard.actions.customize')}
             </button>
             <button
-              role="menuitem"
-              onClick={() => { setIsOpen(false); onOpenTemplates() }}
+                role="menuitem"
+                onClick={() => { menu.close(); onOpenTemplates() }}
               data-tour="templates"
               className={menuBtnClass}
               title={t('dashboard.actions.templatesTitle')}
@@ -187,8 +189,8 @@ export function FloatingDashboardActions({
               {t('dashboard.actions.templates')}
             </button>
             <button
-              role="menuitem"
-              onClick={() => { setIsOpen(false); onAddCard() }}
+                role="menuitem"
+                onClick={() => { menu.close(); onAddCard() }}
               data-tour="add-card"
               className={menuBtnClass}
               title={t('dashboard.actions.addCardTitle')}
@@ -201,29 +203,29 @@ export function FloatingDashboardActions({
 
         {/* FAB toggle - smaller on mobile */}
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={menu.toggle}
           className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
             isMobile ? 'w-8 h-8' : 'w-10 h-10'
           } ${
-            isOpen
+            menu.isOpen
               ? 'bg-card border border-border rotate-45'
               : 'bg-gradient-ks hover:scale-110 hover:shadow-xl'
           }`}
-          title={isOpen ? t('dashboard.actions.closeMenu') : t('dashboard.actions.dashboardActions')}
+          title={menu.isOpen ? t('dashboard.actions.closeMenu') : t('dashboard.actions.dashboardActions')}
         >
           <Plus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-foreground`} />
         </button>
       </div>
 
       <ResetDialog
-        isOpen={isResetDialogOpen}
-        onClose={() => setIsResetDialogOpen(false)}
+        isOpen={resetDialog.isOpen}
+        onClose={resetDialog.close}
         onReset={handleReset}
       />
 
       <SidebarCustomizer
-        isOpen={isCustomizerOpen}
-        onClose={() => setIsCustomizerOpen(false)}
+        isOpen={customizer.isOpen}
+        onClose={customizer.close}
       />
     </>
   )

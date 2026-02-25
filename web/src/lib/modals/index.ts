@@ -20,7 +20,9 @@ export {
   useModalBackdropClose,
   useModalFocusTrap,
   useModal,
+  useModalState,
   type UseModalOptions,
+  type UseModalStateResult,
 } from './useModalNavigation'
 
 // Modal Sections
