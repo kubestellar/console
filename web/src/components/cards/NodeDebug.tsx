@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useCardLoadingState } from './CardDataContext'
+import { useToast } from '../ui/Toast'
 
 const DEBUG_COMMANDS = [
   { label: 'Node Info', cmd: (node: string) => [`describe`, `node`, node] },
@@ -67,6 +68,7 @@ export function NodeDebug() {
   const { t } = useTranslation('cards')
   const { nodes, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
   const { execute } = useKubectl()
+  const { showToast } = useToast()
   const { showSkeleton } = useCardLoadingState({
     isLoading,
     hasAnyData: nodes.length > 0,
@@ -94,12 +96,13 @@ export function NodeDebug() {
     try {
       const result = await execute(selectedCluster || 'default', args)
       setOutput(`$ ${cmdStr}\n\n${result || 'Command completed'}`)
+      showToast(t('nodeDebug.commandCompleted'), 'success')
     } catch (err) {
       setOutput(`$ ${cmdStr}\n\nError: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setIsRunning(false)
     }
-  }, [selectedNode, selectedCluster, execute])
+  }, [selectedNode, selectedCluster, execute, showToast, t])
 
   const handleExec = useCallback(async (shellCmd: string) => {
     if (!selectedNode || !shellCmd.trim()) return
@@ -115,12 +118,13 @@ export function NodeDebug() {
     try {
       const result = await execute(selectedCluster || 'default', args)
       setOutput(`$ ${cmdStr}\n\n${result || 'Command completed (no output)'}`)
+      showToast(t('nodeDebug.commandCompleted'), 'success')
     } catch (err) {
       setOutput(`$ ${cmdStr}\n\nError: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setIsRunning(false)
     }
-  }, [selectedNode, selectedCluster, execImage, execute])
+  }, [selectedNode, selectedCluster, execImage, execute, showToast, t])
 
   if (showSkeleton) {
     return (

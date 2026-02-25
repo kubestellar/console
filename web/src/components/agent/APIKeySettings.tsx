@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Copy, Plug } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { KC_AGENT, AI_PROVIDER_DOCS } from '../../config/externalApis'
 import { useTranslation } from 'react-i18next'
 import { emitApiKeyConfigured, emitApiKeyRemoved, emitConversionStep } from '../../lib/analytics'
@@ -107,6 +107,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingProvider, setEditingProvider] = useState<string | null>(null)
+  const [deleteConfirmProvider, setDeleteConfirmProvider] = useState<string | null>(null)
   const [newKeyValue, setNewKeyValue] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -326,7 +327,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                     <div className="flex items-center gap-2">
                       {key.configured && key.source !== 'env' && (
                         <button
-                          onClick={() => handleDeleteKey(key.provider)}
+                          onClick={() => setDeleteConfirmProvider(key.provider)}
                           disabled={saving}
                           className="p-1.5 hover:bg-destructive/20 rounded transition-colors text-muted-foreground hover:text-destructive"
                           title={t('agent.removeKey')}
@@ -424,6 +425,22 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
           {t('agent.securityNote')}
         </p>
       </BaseModal.Footer>
+
+      <ConfirmDialog
+        isOpen={deleteConfirmProvider !== null}
+        onClose={() => setDeleteConfirmProvider(null)}
+        onConfirm={() => {
+          if (deleteConfirmProvider) {
+            handleDeleteKey(deleteConfirmProvider)
+            setDeleteConfirmProvider(null)
+          }
+        }}
+        title={t('agent.removeKey')}
+        message={t('dashboard.delete.warning')}
+        confirmLabel={t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
     </BaseModal>
   )
 }

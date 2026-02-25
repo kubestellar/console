@@ -10,7 +10,7 @@ import {
 // which resolves icon names at runtime using Icons[name]
 import * as Icons from 'lucide-react'
 import { LucideIcon } from 'lucide-react'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import {
   saveDynamicStatsDefinition,
@@ -248,6 +248,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
 
   // Manage state
   const [existingStats, setExistingStats] = useState<StatsDefinition[]>([])
+  const [deleteConfirmType, setDeleteConfirmType] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   // Preview state
@@ -789,7 +790,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDelete(stats.type)}
+                    onClick={() => setDeleteConfirmType(stats.type)}
                     className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
                     title={t('dashboard.statFactory.deleteStatBlock')}
                   >
@@ -801,6 +802,22 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
           </div>
         )}
       </BaseModal.Content>
+
+      <ConfirmDialog
+        isOpen={deleteConfirmType !== null}
+        onClose={() => setDeleteConfirmType(null)}
+        onConfirm={() => {
+          if (deleteConfirmType) {
+            handleDelete(deleteConfirmType)
+            setDeleteConfirmType(null)
+          }
+        }}
+        title={t('dashboard.statFactory.deleteStatBlock')}
+        message={t('dashboard.delete.warning')}
+        confirmLabel={t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
     </BaseModal>
   )
 }

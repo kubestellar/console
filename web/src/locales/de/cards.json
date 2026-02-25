@@ -1863,7 +1863,8 @@
     "categorySystem": "System",
     "categoryKubernetes": "Kubernetes",
     "categoryNetwork": "Network",
-    "categoryStorage": "Storage"
+    "categoryStorage": "Storage",
+    "commandCompleted": "Command completed"
   },
   "predictiveHealth": {
     "criticalCount": "{{count}} critical",

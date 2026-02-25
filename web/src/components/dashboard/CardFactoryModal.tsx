@@ -4,7 +4,7 @@ import {
   X, Plus, Code, Layers, Wand2, Eye, Save, Sparkles,
   AlertTriangle, CheckCircle, Loader2, Trash2, LayoutTemplate,
 } from 'lucide-react'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import { saveDynamicCard, deleteDynamicCard, getAllDynamicCards } from '../../lib/dynamic-cards'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
@@ -492,6 +492,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
 
   // Manage state
   const [existingCards, setExistingCards] = useState<DynamicCardDefinition[]>([])
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -1095,7 +1096,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                       </p>
                     </div>
                     <button
-                      onClick={() => handleDelete(card.id)}
+                      onClick={() => setDeleteConfirmId(card.id)}
                       className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
                       title={t('dashboard.cardFactory.deleteCard')}
                     >
@@ -1109,6 +1110,22 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
         </div>
       </div>
       </BaseModal.Content>
+
+      <ConfirmDialog
+        isOpen={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => {
+          if (deleteConfirmId) {
+            handleDelete(deleteConfirmId)
+            setDeleteConfirmId(null)
+          }
+        }}
+        title={t('dashboard.cardFactory.deleteCard')}
+        message={t('dashboard.delete.warning')}
+        confirmLabel={t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
     </BaseModal>
   )
 }
