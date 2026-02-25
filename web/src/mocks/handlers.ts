@@ -1,4 +1,4 @@
-import { http, HttpResponse, delay, passthrough } from 'msw'
+import { http, HttpResponse, delay } from 'msw'
 
 /**
  * MSW (Mock Service Worker) handlers for KubeStellar Console
@@ -235,10 +235,14 @@ export const handlers = [
     return HttpResponse.json({ status: 'ok', version: 'demo' })
   }),
 
-  // Active users (for presence tracking) — passthrough to real Netlify function
-  // so the count reflects actual connected sessions
-  http.get('/api/active-users', () => passthrough()),
-  http.post('/api/active-users', () => passthrough()),
+  // Active users (for presence tracking) — return demo count when MSW is active
+  // POST heartbeat is accepted but no-op in mock mode
+  http.get('/api/active-users', () => {
+    return HttpResponse.json({ activeUsers: 3, totalConnections: 3 })
+  }),
+  http.post('/api/active-users', () => {
+    return new HttpResponse(null, { status: 204 })
+  }),
 
   // Permissions
   http.get('/api/permissions/summary', async () => {
