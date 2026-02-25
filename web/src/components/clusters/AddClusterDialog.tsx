@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { X, Terminal, Upload, FormInput, Copy, Check, Loader2, ChevronDown, ChevronUp, Shield, KeyRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
@@ -42,11 +42,17 @@ const COMMANDS = [
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }, [text])
 
   return (
@@ -86,6 +92,11 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   const [testResult, setTestResult] = useState<{ reachable: boolean; serverVersion?: string; error?: string } | null>(null)
   const [connectError, setConnectError] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(closeTimerRef.current)
+  }, [])
 
   const resetConnectState = useCallback(() => {
     setConnectStep(1)
@@ -156,7 +167,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       const count = data.importedCount ?? previewContexts.filter((c) => c.isNew).length
       setImportedCount(count)
       setImportState('done')
-      setTimeout(() => {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = setTimeout(() => {
         resetImportState()
         onClose()
       }, 1500)
@@ -218,7 +230,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
         throw new Error(body.error || res.statusText)
       }
       setConnectState('done')
-      setTimeout(() => {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = setTimeout(() => {
         resetConnectState()
         onClose()
       }, 1500)

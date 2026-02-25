@@ -22,7 +22,7 @@
  * ```
  */
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect, useRef } from 'react'
 import { Copy, Check, ChevronDown, ChevronRight, ExternalLink, AlertCircle } from 'lucide-react'
 import { getStatusColors, NavigationTarget } from './types'
 
@@ -79,6 +79,11 @@ function KeyValueItem({
   onNavigate?: (target: NavigationTarget) => void
 }) {
   const [copied, setCopied] = useState(false)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
 
   const handleCopy = async () => {
     const textValue = typeof item.value === 'string'
@@ -87,7 +92,8 @@ function KeyValueItem({
 
     await navigator.clipboard.writeText(textValue)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   const renderValue = () => {

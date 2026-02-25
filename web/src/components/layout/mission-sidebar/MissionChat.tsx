@@ -154,9 +154,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   useEffect(() => {
     if (isFullScreen) {
       // Small delay to allow layout to settle
-      setTimeout(() => {
+      const id = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
+      return () => clearTimeout(id)
     }
   }, [isFullScreen])
 

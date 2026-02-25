@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, Coins, RefreshCw } from 'lucide-react'
 import type { TokenUsage } from '../../../hooks/useTokenUsage'
@@ -16,6 +16,11 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
   const [warningThreshold, setWarningThreshold] = useState(usage.warningThreshold * 100)
   const [criticalThreshold, setCriticalThreshold] = useState(usage.criticalThreshold * 100)
   const [saved, setSaved] = useState(false)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(savedTimerRef.current)
+  }, [])
 
   const handleSaveTokenSettings = () => {
     updateSettings({
@@ -24,7 +29,8 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
       criticalThreshold: criticalThreshold / 100,
     })
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
   }
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Download } from 'lucide-react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { BaseModal } from '../../lib/modals'
@@ -16,8 +16,13 @@ export function AgentSetupDialog() {
   const { status, isConnected } = useLocalAgent()
   const [show, setShow] = useState(false)
   const [copied, setCopied] = useState(false)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   const installCommand = 'brew install kubestellar/tap/kc-agent && kc-agent'
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
 
   useEffect(() => {
     // Only show after initial connection check completes
@@ -41,7 +46,8 @@ export function AgentSetupDialog() {
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(installCommand)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   const handleSnooze = () => {

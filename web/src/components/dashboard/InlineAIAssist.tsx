@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, ChevronDown, ChevronUp, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
@@ -37,6 +37,8 @@ export function InlineAIAssist<T>({
   const enabled = isFeatureEnabled('naturalLanguage')
   const trackedMission = missionId ? missions.find(m => m.id === missionId) : null
 
+  const phaseTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
   // Watch mission completion
   useEffect(() => {
     if (!trackedMission || phase !== 'generating') return
@@ -55,7 +57,8 @@ export function InlineAIAssist<T>({
           if (validation.valid) {
             onResult(validation.result)
             setPhase('success')
-            setTimeout(() => {
+            clearTimeout(phaseTimerRef.current)
+            phaseTimerRef.current = setTimeout(() => {
               setPhase('collapsed')
               setInput('')
             }, 1500)
@@ -66,7 +69,8 @@ export function InlineAIAssist<T>({
         } else {
           onResult(data as T)
           setPhase('success')
-          setTimeout(() => {
+          clearTimeout(phaseTimerRef.current)
+          phaseTimerRef.current = setTimeout(() => {
             setPhase('collapsed')
             setInput('')
           }, 1500)
@@ -81,6 +85,7 @@ export function InlineAIAssist<T>({
       setError('AI generation failed. Check your agent connection.')
       setPhase('error')
     }
+    return () => clearTimeout(phaseTimerRef.current)
   }, [trackedMission, phase, validateResult, onResult])
 
   const handleGenerate = useCallback(() => {

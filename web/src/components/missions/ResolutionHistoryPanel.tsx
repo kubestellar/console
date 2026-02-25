@@ -5,7 +5,7 @@
  * Displayed in the fullscreen mission view sidebar.
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   BookMarked,
   Star,
@@ -34,6 +34,11 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   const [showPersonal, setShowPersonal] = useState(true)
   const [showShared, setShowShared] = useState(true)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(deleteConfirmTimerRef.current)
+  }, [])
 
   const toggleExpand = (id: string) => {
     setExpandedId(prev => prev === id ? null : id)
@@ -47,7 +52,8 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
     } else {
       setDeleteConfirmId(id)
       // Auto-clear confirm after 3s
-      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000)
+      clearTimeout(deleteConfirmTimerRef.current)
+      deleteConfirmTimerRef.current = setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000)
     }
   }
 

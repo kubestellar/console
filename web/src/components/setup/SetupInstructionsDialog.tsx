@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
@@ -34,11 +34,17 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
   const [showOAuthGuide, setShowOAuthGuide] = useState(false)
   const [showDevGuide, setShowDevGuide] = useState(false)
   const [showK8sGuide, setShowK8sGuide] = useState(false)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
 
   const copyToClipboard = async (text: string, stepKey: number) => {
     await navigator.clipboard.writeText(text)
     setCopiedStep(stepKey)
-    setTimeout(() => setCopiedStep(null), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), 2000)
   }
 
   return (

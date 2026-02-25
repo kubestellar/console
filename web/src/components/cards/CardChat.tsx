@@ -83,8 +83,13 @@ export function CardChat({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   const quickPrompts = QUICK_PROMPTS[cardType] || QUICK_PROMPTS.default
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
 
   useEffect(() => {
     if (isOpen) {
@@ -121,7 +126,8 @@ export function CardChat({
   const handleCopy = (id: string, content: string) => {
     navigator.clipboard.writeText(content)
     setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopiedId(null), 2000)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

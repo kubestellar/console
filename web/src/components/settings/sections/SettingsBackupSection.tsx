@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HardDrive, Check, Loader2, AlertCircle, WifiOff, Download, Upload, Shield } from 'lucide-react'
 import type { SyncStatus } from '../../../hooks/usePersistedSettings'
@@ -44,6 +44,11 @@ export function SettingsBackupSection({
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const importSuccessTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(importSuccessTimerRef.current)
+  }, [])
 
   const status = STATUS_CONFIG[syncStatus]
   const StatusIcon = status.icon
@@ -72,7 +77,8 @@ export function SettingsBackupSection({
     try {
       await onImport(file)
       setImportSuccess(true)
-      setTimeout(() => setImportSuccess(false), 3000)
+      clearTimeout(importSuccessTimerRef.current)
+      importSuccessTimerRef.current = setTimeout(() => setImportSuccess(false), 3000)
     } catch {
       setImportError(t('settings.backup.importFailed'))
     } finally {
