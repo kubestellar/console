@@ -21,6 +21,7 @@ export function NetworkPolicyCoverage() {
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,
+    errorMessage: isFailed ? 'Failed to load network policy data' : undefined,
   })
 
   // Build namespace coverage from pod data

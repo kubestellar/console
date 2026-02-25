@@ -74,6 +74,8 @@ export function DashboardHeader({
 
   // Use external override if it has a value, otherwise use self-managed
   const displayTimestamp = externalLastUpdated ?? internalLastUpdated
+  // Alias isFetching as isLoading for consistent loading state semantics
+  const isLoading = isFetching
 
   return (
     <div data-testid="dashboard-header" className="flex items-center justify-between mb-6">
@@ -90,6 +92,7 @@ export function DashboardHeader({
         <span
           className={`flex items-center gap-1 text-xs w-[72px] ${isFetching ? 'text-amber-400 animate-pulse' : 'invisible'}`}
           title="Updating..."
+          aria-busy={isLoading}
         >
           <Hourglass className="w-3 h-3" />
           <span>{t('common.updating')}</span>

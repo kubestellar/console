@@ -389,6 +389,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback || isDemo,
+    errorMessage: isFailed ? 'Failed to load workloads' : undefined,
   })
   const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
     try {

@@ -119,6 +119,7 @@ export function Layout({ children }: LayoutProps) {
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
   const [restartState, setRestartState] = useState<'idle' | 'restarting' | 'waiting' | 'copied'>('idle')
+  const [restartError, setRestartError] = useState<string | null>(null)
 
   const handleCopyFallback = useCallback(async () => {
     try {
@@ -148,6 +149,7 @@ export function Layout({ children }: LayoutProps) {
       }
       handleCopyFallback()
     } catch {
+      setRestartError('Could not reach agent — please restart manually')
       handleCopyFallback()
     }
   }, [handleCopyFallback])
@@ -466,7 +468,7 @@ export function Layout({ children }: LayoutProps) {
                   <button
                     onClick={handleRestartBackend}
                     className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded text-xs transition-colors"
-                    title="Restart the backend server"
+                    title={restartError ?? 'Restart the backend server'}
                   >
                     <RotateCcw className="w-3 h-3" />
                     Restart

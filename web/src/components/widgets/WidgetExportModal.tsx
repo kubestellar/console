@@ -46,6 +46,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const [copied, setCopied] = useState(false)
   const [showCode, setShowCode] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
@@ -99,6 +100,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const handleDownload = () => {
     if (!widgetCode) return
 
+    setIsLoading(true)
     const blob = new Blob([widgetCode], { type: 'text/javascript' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -108,6 +110,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    setIsLoading(false)
   }
 
   // Copy to clipboard
@@ -313,7 +316,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             </button>
             <button
               onClick={handleDownload}
-              disabled={!widgetCode}
+              disabled={!widgetCode || isLoading}
               className="px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 rounded flex items-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />

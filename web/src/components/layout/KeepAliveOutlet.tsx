@@ -12,6 +12,7 @@
 import { Suspense, useRef, useCallback, useMemo } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
 import { ContentLoadingSkeleton } from './Layout'
+import { ChunkErrorBoundary } from '../ChunkErrorBoundary'
 
 const MAX_CACHED = 8
 
@@ -82,9 +83,11 @@ export function KeepAliveOutlet() {
           style={{ display: active ? 'contents' : 'none' }}
           ref={active ? () => triggerResizeOnActivation(path) : undefined}
         >
-          <Suspense fallback={<ContentLoadingSkeleton />}>
-            {element}
-          </Suspense>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<ContentLoadingSkeleton />}>
+              {element}
+            </Suspense>
+          </ChunkErrorBoundary>
         </div>
       ))}
     </>

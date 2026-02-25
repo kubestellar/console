@@ -814,6 +814,7 @@ export function NightlyE2EStatus() {
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback,
+    errorMessage: isFailed ? 'Failed to load nightly E2E status' : undefined,
   })
 
   const selectedGuide = useMemo(() => {

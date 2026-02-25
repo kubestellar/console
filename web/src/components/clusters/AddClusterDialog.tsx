@@ -100,6 +100,10 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     return () => clearTimeout(closeTimerRef.current)
   }, [])
 
+  // Derived loading state — true while any async operation is in progress
+  const isLoading = importState === 'previewing' || importState === 'importing' ||
+    connectState === 'testing' || connectState === 'adding'
+
   const resetConnectState = useCallback(() => {
     setConnectStep(1)
     setConnectState('idle')
@@ -278,7 +282,10 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       />
 
       {/* Dialog */}
-      <div className="relative w-full max-w-2xl mx-4 bg-card border border-white/10 rounded-xl shadow-2xl">
+      <div
+        className="relative w-full max-w-2xl mx-4 bg-card border border-white/10 rounded-xl shadow-2xl"
+        aria-busy={isLoading}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-foreground">{t('cluster.addClusterTitle')}</h2>

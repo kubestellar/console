@@ -808,6 +808,7 @@ function useVersionCheckCore() {
     latestRelease,
     hasUpdate,
     isChecking,
+    isLoading: isChecking,
     error,
     lastChecked,
     skippedVersions,

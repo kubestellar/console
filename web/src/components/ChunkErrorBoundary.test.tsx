@@ -78,4 +78,13 @@ describe('ChunkErrorBoundary Component', () => {
       )
     }).toThrow('Some other error')
   })
+
+  it('renders loading state children without interference', () => {
+    render(
+      <ChunkErrorBoundary>
+        <div>Loading...</div>
+      </ChunkErrorBoundary>
+    )
+    expect(screen.getByText('Loading...')).toBeTruthy()
+  })
 })
