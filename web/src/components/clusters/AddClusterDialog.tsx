@@ -21,8 +21,7 @@ interface PreviewContext {
   isNew: boolean
 }
 
-/** Template placeholder shown in the example kubectl command – not a real endpoint */
-const EXAMPLE_SERVER_URL = ['https://', '<api-server>:6443'].join('')
+const EXAMPLE_SERVER_URL = 'https://<api-server>:6443' // SECURITY: Safe — template placeholder, not a real endpoint
 
 const COMMANDS = [
   {
