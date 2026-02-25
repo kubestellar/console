@@ -4,12 +4,14 @@ import {
   Plus, X, Save, Trash2, Activity, Sparkles,
   CheckCircle, GripVertical, Eye, EyeOff,
   Maximize2, Minimize2,
+  Server, Database, Cpu, MemoryStick, HardDrive, Zap,
+  CheckCircle2, XCircle, AlertTriangle, BarChart3,
+  Layers, Box, Shield, Lock, Globe, Cloud, GitBranch,
+  Terminal, Code, Wifi, WifiOff, Clock, Users,
+  Gauge, TrendingUp, TrendingDown, ArrowUpRight, Flame,
+  HelpCircle,
+  type LucideIcon,
 } from 'lucide-react'
-// NOTE: Wildcard import is required for dynamic icon resolution
-// Users select from POPULAR_ICONS list and icons are rendered dynamically via getIcon()
-// which resolves icon names at runtime using Icons[name]
-import * as Icons from 'lucide-react'
-import { LucideIcon } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import {
@@ -67,8 +69,17 @@ interface BlockEditorItem {
   tooltip: string
 }
 
+const ICON_MAP: Record<string, LucideIcon> = {
+  Server, Database, Cpu, MemoryStick, HardDrive, Zap,
+  CheckCircle2, XCircle, AlertTriangle, Activity, BarChart3,
+  Layers, Box, Shield, Lock, Globe, Cloud, GitBranch,
+  Terminal, Code, Wifi, WifiOff, Clock, Users,
+  Gauge, TrendingUp, TrendingDown, ArrowUpRight, Flame,
+  HelpCircle,
+}
+
 function getIcon(name: string): LucideIcon {
-  return (Icons as unknown as Record<string, LucideIcon>)[name] || Icons.HelpCircle
+  return ICON_MAP[name] ?? HelpCircle
 }
 
 function createEmptyBlock(): BlockEditorItem {
