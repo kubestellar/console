@@ -23,7 +23,7 @@ export function WelcomeCard() {
     <div className="mb-4 rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent p-5 relative">
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 p-1 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+        className="absolute top-3 right-3 p-1 rounded-lg hover:bg-gray-500/10 dark:hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
         title={t('dashboard.welcome.dismiss')}
       >
         <X className="w-4 h-4" />

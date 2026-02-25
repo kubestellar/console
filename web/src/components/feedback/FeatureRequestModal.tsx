@@ -67,7 +67,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
     fix_ready: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
     fix_complete: { color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' },
     unable_to_fix: { color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
-    closed: { color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
+    closed: { color: 'text-gray-500 dark:text-gray-400', bgColor: 'bg-gray-500/20' },
   }
   // Show different label for closed status based on who closed it
   let label = STATUS_LABELS[status]
@@ -634,7 +634,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                       {statusInfo.label}
                                     </span>
                                     {request.status === 'fix_complete' && (
-                                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-500/20 text-gray-400">
+                                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-500/20 text-gray-500 dark:text-gray-400">
                                         Closed
                                       </span>
                                     )}
@@ -965,7 +965,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                               </span>
                             )}
                             {githubRewards.breakdown.other_issues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-[10px]">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-500/20 text-gray-500 dark:text-gray-400 text-[10px]">
                                 <AlertCircle className="w-2.5 h-2.5" />
                                 {githubRewards.breakdown.other_issues} Issues
                               </span>
