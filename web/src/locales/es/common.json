@@ -1462,7 +1462,8 @@
     "addKey": "Add Key",
     "envVariableNote": "Key is set via environment variable. Modify the environment to change it.",
     "keysSavedTo": "Keys saved to",
-    "securityNote": "API keys are stored securely on your local machine and never sent to our servers."
+    "securityNote": "API keys are stored securely on your local machine and never sent to our servers.",
+    "selectAgent": "Select AI agent"
   },
   "navbar": {
     "closeMenu": "Close menu",
