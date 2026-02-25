@@ -51,9 +51,7 @@ export function Pods() {
   const handlePodIssueKeyDown = useCallback((e: React.KeyboardEvent, cluster: string | undefined, namespace: string, name: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault() // Prevent default for both Enter and Space to match button behavior
-      if (cluster) {
-        drillToPod(cluster, namespace, name)
-      }
+      drillToPod(cluster || '', namespace, name)
     }
   }, [drillToPod])
 
@@ -169,7 +167,7 @@ export function Pods() {
           {filteredPodIssues.map((issue, i) => (
             <div
               key={i}
-              onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name)}
+              onClick={() => drillToPod(issue.cluster || '', issue.namespace, issue.name)}
               onKeyDown={(e) => handlePodIssueKeyDown(e, issue.cluster, issue.namespace, issue.name)}
               role="button"
               tabIndex={0}
