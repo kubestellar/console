@@ -22,6 +22,52 @@ import { useCardData, CardClusterFilter, CardSearchInput, CardAIActions } from '
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
+// Severity color map — defined at module level to avoid re-creation on each render
+const SEVERITY_COLORS: Record<AlertSeverity, string> = {
+  critical: 'bg-red-500/20 text-red-400 border-red-500/30',
+  warning: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  info: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+}
+
+// Severity indicator badge — extracted to module level to prevent re-creation on every render
+function SeverityBadge({ severity }: { severity: AlertSeverity }) {
+  return (
+    <span className={`px-1.5 py-0.5 text-xs rounded border ${SEVERITY_COLORS[severity]}`}>
+      {severity}
+    </span>
+  )
+}
+
+// Stats summary row shown at the top of the alerts card
+function AlertStatsRow({ critical, warning, acknowledged }: { critical: number; warning: number; acknowledged: number }) {
+  const { t } = useTranslation('cards')
+  return (
+    <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+        <div className="flex items-center gap-1.5 mb-1">
+          <AlertTriangle className="w-3 h-3 text-red-400" />
+          <span className="text-xs text-red-400">{t('activeAlerts.critical')}</span>
+        </div>
+        <span className="text-lg font-bold text-foreground">{critical}</span>
+      </div>
+      <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+        <div className="flex items-center gap-1.5 mb-1">
+          <AlertTriangle className="w-3 h-3 text-orange-400" />
+          <span className="text-xs text-orange-400">{t('activeAlerts.warning')}</span>
+        </div>
+        <span className="text-lg font-bold text-foreground">{warning}</span>
+      </div>
+      <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+        <div className="flex items-center gap-1.5 mb-1">
+          <CheckCircle className="w-3 h-3 text-green-400" />
+          <span className="text-xs text-green-400">{t('activeAlerts.ackd')}</span>
+        </div>
+        <span className="text-lg font-bold text-foreground">{acknowledged}</span>
+      </div>
+    </div>
+  )
+}
+
 // Format relative time
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatRelativeTime(dateString: string, t: (key: any, opts?: any) => string): string {
@@ -182,23 +228,6 @@ export function ActiveAlerts() {
     }
   }
 
-  // Severity indicator badge
-  const SeverityBadge = ({ severity }: { severity: AlertSeverity }) => {
-    const colors: Record<AlertSeverity, string> = {
-      critical: 'bg-red-500/20 text-red-400 border-red-500/30',
-      warning: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-      info: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    }
-
-    return (
-      <span
-        className={`px-1.5 py-0.5 text-xs rounded border ${colors[severity]}`}
-      >
-        {severity}
-      </span>
-    )
-  }
-
   return (
     <div className="h-full flex flex-col">
       {/* Header with controls */}
@@ -270,29 +299,7 @@ export function ActiveAlerts() {
       />
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-          <div className="flex items-center gap-1.5 mb-1">
-            <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span className="text-xs text-red-400">{t('activeAlerts.critical')}</span>
-          </div>
-          <span className="text-lg font-bold text-foreground">{stats.critical}</span>
-        </div>
-        <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
-          <div className="flex items-center gap-1.5 mb-1">
-            <AlertTriangle className="w-3 h-3 text-orange-400" />
-            <span className="text-xs text-orange-400">{t('activeAlerts.warning')}</span>
-          </div>
-          <span className="text-lg font-bold text-foreground">{stats.warning}</span>
-        </div>
-        <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-          <div className="flex items-center gap-1.5 mb-1">
-            <CheckCircle className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">{t('activeAlerts.ackd')}</span>
-          </div>
-          <span className="text-lg font-bold text-foreground">{stats.acknowledged}</span>
-        </div>
-      </div>
+      <AlertStatsRow critical={stats.critical} warning={stats.warning} acknowledged={stats.acknowledged} />
 
       {/* Alerts List */}
       <div className="flex-1 overflow-y-auto space-y-2">

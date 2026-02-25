@@ -69,6 +69,37 @@ function getDemoKustomizations(): Kustomization[] {
   ]
 }
 
+// Pure helper functions at module level (no dependency on component state)
+
+function getStatusIcon(status: Kustomization['status']) {
+  switch (status) {
+    case 'Ready': return CheckCircle
+    case 'NotReady': return XCircle
+    case 'Progressing': return RefreshCw
+    case 'Suspended': return Clock
+    default: return AlertTriangle
+  }
+}
+
+function getStatusColor(status: Kustomization['status']) {
+  switch (status) {
+    case 'Ready': return 'green'
+    case 'NotReady': return 'red'
+    case 'Progressing': return 'blue'
+    case 'Suspended': return 'gray'
+    default: return 'orange'
+  }
+}
+
+function formatTime(timestamp: string) {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+  return `${Math.floor(diff / 86400000)}d ago`
+}
+
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -192,35 +223,6 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     },
     defaultLimit: 5,
   })
-
-  const getStatusIcon = (status: Kustomization['status']) => {
-    switch (status) {
-      case 'Ready': return CheckCircle
-      case 'NotReady': return XCircle
-      case 'Progressing': return RefreshCw
-      case 'Suspended': return Clock
-      default: return AlertTriangle
-    }
-  }
-
-  const getStatusColor = (status: Kustomization['status']) => {
-    switch (status) {
-      case 'Ready': return 'green'
-      case 'NotReady': return 'red'
-      case 'Progressing': return 'blue'
-      case 'Suspended': return 'gray'
-      default: return 'orange'
-    }
-  }
-
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-    return `${Math.floor(diff / 86400000)}d ago`
-  }
 
   const readyCount = namespacedKustomizations.filter(k => k.status === 'Ready').length
   const notReadyCount = namespacedKustomizations.filter(k => k.status === 'NotReady').length
