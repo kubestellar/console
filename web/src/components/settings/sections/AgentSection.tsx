@@ -14,7 +14,9 @@ const INSTALL_COMMAND = 'brew install kubestellar/tap/kc-agent && kc-agent'
 export function AgentSection({ isConnected, health, refresh }: AgentSectionProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const timeoutRef = useRef<number>()
+  const refreshTimerRef = useRef<number>()
 
   const copyInstallCommand = async () => {
     await navigator.clipboard.writeText(INSTALL_COMMAND)
@@ -22,11 +24,20 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
     timeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
-  // Cleanup timeout on unmount
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    refresh()
+    refreshTimerRef.current = setTimeout(() => setIsRefreshing(false), 1000)
+  }
+
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
+      }
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
       }
     }
   }, [])
@@ -44,10 +55,11 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
           </div>
         </div>
         <button
-          onClick={refresh}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('settings.agent.refresh')}
         </button>
       </div>

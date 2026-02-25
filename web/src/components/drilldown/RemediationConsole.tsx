@@ -529,7 +529,7 @@ Labels:       app=${resourceName.split('-')[0]}
                     disabled={isExecuting}
                     className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-colors disabled:opacity-50"
                   >
-                    <RefreshCw className="w-3 h-3" />
+                    <RefreshCw className={`w-3 h-3 ${isExecuting ? 'animate-spin' : ''}`} />
                     <span>{t('remediation.retryCommand')}</span>
                   </button>
                 )}
