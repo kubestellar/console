@@ -586,7 +586,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
               'h-full rounded-full transition-all duration-500',
               mission.status === 'orbit' ? 'bg-green-500' :
               mission.status === 'abort' ? 'bg-red-500' :
-              failedClusters > 0 ? 'bg-orange-500' : 'bg-blue-500',
+              failedClusters > 0 ? 'bg-red-500' : 'bg-blue-500',
             )}
             style={{ width: `${(mission.status === 'orbit' || mission.status === 'abort') ? 100 : Math.max(progressPct, 5)}%` }}
           />

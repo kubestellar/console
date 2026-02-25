@@ -321,7 +321,7 @@ export function DeploymentDrillDown({ data }: Props) {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Status */}
-            <div className={`p-4 rounded-lg border ${isHealthy ? 'bg-green-500/10 border-green-500/20' : 'bg-orange-500/10 border-orange-500/20'}`}>
+            <div className={`p-4 rounded-lg border ${isHealthy ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <StatusIndicator status={isHealthy ? 'healthy' : 'warning'} size="lg" />

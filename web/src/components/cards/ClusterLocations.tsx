@@ -447,7 +447,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                   onClick={() => setStatusFilter(status)}
                   className={`px-2 py-0.5 text-xs rounded transition-colors ${
                     statusFilter === status
-                      ? status === 'healthy' ? 'bg-emerald-500/20 text-emerald-400'
+                      ? status === 'healthy' ? 'bg-green-500/20 text-green-400'
                         : status === 'unhealthy' ? 'bg-red-500/20 text-red-400'
                         : 'bg-purple-500/20 text-purple-400'
                       : 'bg-secondary text-muted-foreground hover:text-foreground'
@@ -544,7 +544,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                   >
                     {/* Subtle ping animation */}
                     <div
-                      className={`absolute inset-0 rounded-full animate-ping opacity-30 ${cluster.healthy ? 'bg-emerald-400' : 'bg-red-400'}`}
+                      className={`absolute inset-0 rounded-full animate-ping opacity-30 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`}
                       style={{
                         animationDuration: '3s',
                         width: 24,
@@ -564,7 +564,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                         isHovered ? 'scale-125 z-20' : ''
                       } ${
                         cluster.healthy
-                          ? 'bg-emerald-500/20 border-emerald-500/40 hover:bg-emerald-500/30'
+                          ? 'bg-green-500/20 border-green-500/40 hover:bg-green-500/30'
                           : 'bg-red-500/20 border-red-500/40 hover:bg-red-500/30'
                       }`}
                       style={{ fontSize: 8 }}
@@ -573,7 +573,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                       <span className="text-[9px] font-medium text-foreground max-w-[60px] truncate">
                         {cluster.name.length > 12 ? cluster.name.substring(0, 10) + '…' : cluster.name}
                       </span>
-                      <div className={`w-1.5 h-1.5 rounded-full ${cluster.healthy ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
                     </button>
 
                     {/* Hover tooltip */}
@@ -586,7 +586,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                           </div>
                           <div className="text-[10px] text-muted-foreground space-y-0.5">
                             <div>{t('cards:clusterLocations.region')}: {group.displayName}</div>
-                            <div>{t('common:common.status')}: <span className={cluster.healthy ? 'text-emerald-400' : 'text-red-400'}>{cluster.healthy ? t('common:common.healthy') : t('common:common.unhealthy')}</span></div>
+                            <div>{t('common:common.status')}: <span className={cluster.healthy ? 'text-green-400' : 'text-red-400'}>{cluster.healthy ? t('common:common.healthy') : t('common:common.unhealthy')}</span></div>
                             {cluster.context && <div className="truncate">{t('cards:clusterLocations.context')}: {cluster.context}</div>}
                           </div>
                         </div>
@@ -643,7 +643,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
               </div>
             ))}
             <div className="flex items-center gap-1 ml-auto">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
               <span>{t('common:common.healthy')}</span>
             </div>
             <div className="flex items-center gap-1">
