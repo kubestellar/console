@@ -173,6 +173,7 @@ export function Pods() {
               onKeyDown={(e) => handlePodIssueKeyDown(e, issue.cluster, issue.namespace, issue.name)}
               role="button"
               tabIndex={0}
+              aria-label={`View pod issue: ${issue.name} in ${issue.namespace}`}
               className={`glass p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] border-l-4 ${
                 issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'border-l-red-500' :
                 issue.reason === 'Pending' || issue.reason === 'ContainerCreating' ? 'border-l-yellow-500' :

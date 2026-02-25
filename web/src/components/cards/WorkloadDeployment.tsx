@@ -256,6 +256,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
             onClick={onSelect}
             role="button"
             tabIndex={0}
+            aria-label={`Select workload ${workload.name}`}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}
           >
             <div className="flex items-center gap-2 cursor-pointer">

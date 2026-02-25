@@ -231,6 +231,7 @@ export const render = ({ output }) => {
             onClick={() => openUrl()}
             role="button"
             tabIndex={0}
+            aria-label="Open KubeStellar Console"
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl() } }}
           >
             <div style={{ ...styles.statusDot, backgroundColor: styles.colors.offline }} />
@@ -267,6 +268,7 @@ export const render = ({ output }) => {
           onClick={() => openUrl()}
           role="button"
           tabIndex={0}
+          aria-label="Open KubeStellar Console"
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl() } }}
         >
           <div style={{ ...styles.statusDot, backgroundColor: statusColor }} />
@@ -279,6 +281,7 @@ export const render = ({ output }) => {
             onClick={() => openUrl('/clusters')}
             role="button"
             tabIndex={0}
+            aria-label="View offline nodes in clusters"
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/clusters') } }}
           >
             <div style={{ ...styles.statValue, color: hasIssues ? styles.colors.error : styles.colors.healthy }}>
@@ -291,6 +294,7 @@ export const render = ({ output }) => {
             onClick={() => openUrl('/clusters')}
             role="button"
             tabIndex={0}
+            aria-label="View ready nodes in clusters"
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/clusters') } }}
           >
             <div style={{ ...styles.statValue, color: styles.colors.info }}>
@@ -303,6 +307,7 @@ export const render = ({ output }) => {
             onClick={() => openUrl('/gpu')}
             role="button"
             tabIndex={0}
+            aria-label="View GPU allocations"
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/gpu') } }}
           >
             <div style={{ ...styles.statValue, color: styles.colors.healthy }}>
@@ -315,6 +320,7 @@ export const render = ({ output }) => {
             onClick={() => openUrl('/clusters')}
             role="button"
             tabIndex={0}
+            aria-label="View all nodes in clusters"
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/clusters') } }}
           >
             <div style={{ ...styles.statValue, color: styles.colors.healthy }}>
