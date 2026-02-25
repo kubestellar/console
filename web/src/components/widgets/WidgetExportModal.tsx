@@ -439,7 +439,7 @@ const ps = {
   card: {
     backgroundColor: 'rgba(17, 24, 39, 0.9)',
     borderRadius: '12px',
-    padding: '12px 14px',
+    padding: '12px 16px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     color: '#f9fafb',
     fontFamily: 'Inter, -apple-system, sans-serif',
@@ -454,7 +454,7 @@ const ps = {
     marginBottom: '8px',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '8px',
   } as React.CSSProperties,
   dot: (color: string) => ({
     width: 7,
@@ -468,7 +468,7 @@ const ps = {
     backgroundColor: 'rgba(17, 24, 39, 0.9)',
     borderRadius: '6px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
-    padding: '6px 10px',
+    padding: '8px 12px',
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
@@ -487,7 +487,7 @@ const ps = {
     letterSpacing: '0.05em',
     marginTop: '1px',
   } as React.CSSProperties,
-  row: { display: 'flex', gap: '6px', alignItems: 'center' } as React.CSSProperties,
+  row: { display: 'flex', gap: '8px', alignItems: 'center' } as React.CSSProperties,
   col: { display: 'flex', flexDirection: 'column' as const, gap: '4px' } as React.CSSProperties,
   muted: { color: '#9ca3af', fontSize: '10px' } as React.CSSProperties,
   colors: { healthy: '#22c55e', warning: '#eab308', error: '#ef4444', info: '#3b82f6', purple: '#9333ea' },
@@ -559,16 +559,16 @@ function CardPreview({ cardType }: { cardType: string }) {
         <div style={ps.card}>
           <div style={ps.title}><span style={ps.dot(ps.colors.warning)} /> Pod Issues</div>
           <div style={ps.muted}>4 total issues</div>
-          <div style={{ ...ps.col, marginTop: '6px' }}>
-            <div style={{ ...ps.row, padding: '3px 6px', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '4px' }}>
+          <div style={{ ...ps.col, marginTop: '8px' }}>
+            <div style={{ ...ps.row, padding: '4px 8px', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '4px' }}>
               <span style={{ color: ps.colors.error, fontWeight: 600, fontSize: '12px' }}>2</span>
               <span style={ps.muted}>CrashLoopBackOff</span>
             </div>
-            <div style={{ ...ps.row, padding: '3px 6px', backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: '4px' }}>
+            <div style={{ ...ps.row, padding: '4px 8px', backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: '4px' }}>
               <span style={{ color: ps.colors.warning, fontWeight: 600, fontSize: '12px' }}>1</span>
               <span style={ps.muted}>OOMKilled</span>
             </div>
-            <div style={{ ...ps.row, padding: '3px 6px', backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: '4px' }}>
+            <div style={{ ...ps.row, padding: '4px 8px', backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: '4px' }}>
               <span style={{ color: ps.colors.info, fontWeight: 600, fontSize: '12px' }}>1</span>
               <span style={ps.muted}>ImagePullBackOff</span>
             </div>
@@ -601,7 +601,7 @@ function CardPreview({ cardType }: { cardType: string }) {
       return (
         <div style={ps.card}>
           <div style={ps.title}><span style={ps.dot(ps.colors.warning)} /> Hardware Health</div>
-          <div style={{ ...ps.row, marginBottom: '6px' }}>
+          <div style={{ ...ps.row, marginBottom: '8px' }}>
             <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.healthy}` }}>
               <span style={ps.statVal}>4</span>
               <span style={ps.statLbl}>{t('common.nodes')}</span>
@@ -617,11 +617,11 @@ function CardPreview({ cardType }: { cardType: string }) {
           </div>
           <div style={ps.col}>
             <div style={{ fontSize: '9px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts (2)</div>
-            <div style={{ ...ps.row, padding: '3px 6px', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '4px', borderLeft: `3px solid ${ps.colors.error}` }}>
+            <div style={{ ...ps.row, padding: '4px 8px', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '4px', borderLeft: `3px solid ${ps.colors.error}` }}>
               <span style={{ fontSize: '10px', color: ps.colors.error, fontWeight: 600 }}>GPU</span>
               <span style={{ fontSize: '9px', color: '#9ca3af', marginLeft: '2px' }}>worker-3 (-2)</span>
             </div>
-            <div style={{ ...ps.row, padding: '3px 6px', backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: '4px', borderLeft: `3px solid ${ps.colors.warning}` }}>
+            <div style={{ ...ps.row, padding: '4px 8px', backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: '4px', borderLeft: `3px solid ${ps.colors.warning}` }}>
               <span style={{ fontSize: '10px', color: ps.colors.warning, fontWeight: 600 }}>NIC</span>
               <span style={{ fontSize: '9px', color: '#9ca3af', marginLeft: '2px' }}>worker-1 (-1)</span>
             </div>
@@ -642,7 +642,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { label: 'No resource limits', count: 12, color: ps.colors.warning },
               { label: 'Running as root', count: 5, color: ps.colors.error },
             ].map((item) => (
-              <div key={item.label} style={{ ...ps.row, padding: '3px 6px', backgroundColor: item.color === ps.colors.error ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: '4px' }}>
+              <div key={item.label} style={{ ...ps.row, padding: '4px 8px', backgroundColor: item.color === ps.colors.error ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: '4px' }}>
                 <span style={{ color: item.color, fontWeight: 600, fontSize: '12px', minWidth: '16px' }}>{item.count}</span>
                 <span style={ps.muted}>{item.label}</span>
               </div>
@@ -661,7 +661,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'PodCrashLooping', severity: 'warning', ns: 'default' },
               { name: 'NodeDiskPressure', severity: 'warning', ns: 'kube-system' },
             ].map((a) => (
-              <div key={a.name} style={{ ...ps.row, padding: '3px 6px', backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: '4px', borderLeft: `3px solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
+              <div key={a.name} style={{ ...ps.row, padding: '4px 8px', backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: '4px', borderLeft: `3px solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
                 <span style={{ fontSize: '10px', color: a.severity === 'critical' ? ps.colors.error : ps.colors.warning, fontWeight: 600 }}>{a.name}</span>
                 <span style={{ fontSize: '9px', color: '#6b7280', marginLeft: 'auto' }}>{a.ns}</span>
               </div>
@@ -778,7 +778,7 @@ function CardPreview({ cardType }: { cardType: string }) {
       return (
         <div style={ps.card}>
           <div style={ps.title}><span style={ps.dot(ps.colors.info)} /> {card.displayName}</div>
-          <div style={{ ...ps.row, marginBottom: '6px' }}>
+          <div style={{ ...ps.row, marginBottom: '8px' }}>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: '16px' }}>18</span>
               <span style={ps.statLbl}>{t('common.services')}</span>
@@ -874,7 +874,7 @@ function GenericCardPreview({ card }: { card: WidgetCardDefinition }) {
 // --- Stat previews ---
 function StatPreview({ statIds }: { statIds: string[] }) {
   return (
-    <div style={{ ...ps.card, display: 'flex', gap: '6px', padding: '8px 10px' }}>
+    <div style={{ ...ps.card, display: 'flex', gap: '8px', padding: '8px 12px' }}>
       {statIds.map((id) => {
         const stat = WIDGET_STATS[id]
         const value = SAMPLE_STATS[id] ?? '—'
@@ -895,12 +895,12 @@ function TemplatePreview({ templateId }: { templateId: string }) {
   if (!template) return null
 
   const statsRow = template.stats && template.stats.length > 0 ? (
-    <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
       {template.stats.map((id) => {
         const stat = WIDGET_STATS[id]
         const value = SAMPLE_STATS[id] ?? '—'
         return (
-          <div key={id} style={{ ...ps.statBlock, flex: 1, borderTop: `2px solid ${stat?.color || '#9333ea'}`, textAlign: 'center', padding: '4px 6px' }}>
+          <div key={id} style={{ ...ps.statBlock, flex: 1, borderTop: `2px solid ${stat?.color || '#9333ea'}`, textAlign: 'center', padding: '4px 8px' }}>
             <span style={{ fontSize: '14px', fontWeight: 700, color: stat?.color || '#fff' }}>{value}</span>
             <span style={{ ...ps.statLbl, fontSize: '8px' }}>{stat?.displayName}</span>
           </div>
@@ -913,7 +913,7 @@ function TemplatePreview({ templateId }: { templateId: string }) {
     flex: 1,
     backgroundColor: 'rgba(31, 41, 55, 0.5)',
     borderRadius: '6px',
-    padding: '4px 6px',
+    padding: '4px 8px',
     border: '1px solid rgba(255, 255, 255, 0.05)',
   }
 
@@ -927,7 +927,7 @@ function TemplatePreview({ templateId }: { templateId: string }) {
 
   return (
     <div style={{ ...ps.card, maxWidth: 320 }}>
-      <div style={{ ...ps.title, fontSize: '11px', marginBottom: '6px' }}>{template.displayName}</div>
+      <div style={{ ...ps.title, fontSize: '11px', marginBottom: '8px' }}>{template.displayName}</div>
       {statsRow}
       {template.cards.length > 0 && (
         <div style={cardsContainer}>
@@ -986,9 +986,9 @@ function NightlyE2EPreview() {
   const dotColor: Record<string, string> = { g: '#22c55e', r: '#ef4444', b: '#60a5fa' }
 
   return (
-    <div style={{ ...ps.card, width: 320, fontSize: '10px', padding: '10px 12px' }}>
+    <div style={{ ...ps.card, width: 320, fontSize: '10px', padding: '8px 12px' }}>
       <div style={ps.title}><span style={ps.dot('#22c55e')} /> Nightly E2E Status</div>
-      <div style={{ display: 'flex', gap: '14px', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
         <div><span style={{ fontSize: '16px', fontWeight: 700, color: '#a855f7' }}>87%</span><div style={ps.muted}>Pass Rate</div></div>
         <div><span style={{ fontSize: '16px', fontWeight: 700 }}>16</span><div style={ps.muted}>Guides</div></div>
         <div><span style={{ fontSize: '16px', fontWeight: 700, color: '#ef4444' }}>3</span><div style={ps.muted}>Failing</div></div>

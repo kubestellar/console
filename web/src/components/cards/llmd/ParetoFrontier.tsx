@@ -431,10 +431,10 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
           const model = getModelShort(pt.model)
           const c = HARDWARE_COLORS[hw] ?? '#6b7280'
           return (
-            `<div style="font-weight:600;margin-bottom:6px;color:#f1f5f9">${model} ` +
+            `<div style="font-weight:600;margin-bottom:8px;color:#f1f5f9">${model} ` +
             `<span style="color:#94a3b8">${hw}</span> ` +
-            `<span style="background:${c}30;color:${c};padding:1px 6px;border-radius:4px;font-size:10px">${pt.config}</span></div>` +
-            `<div style="display:grid;grid-template-columns:auto auto;gap:2px 14px;font-size:11px">` +
+            `<span style="background:${c}30;color:${c};padding:2px 8px;border-radius:4px;font-size:10px">${pt.config}</span></div>` +
+            `<div style="display:grid;grid-template-columns:auto auto;gap:4px 16px;font-size:11px">` +
             `<span style="color:#94a3b8">Throughput/GPU:</span><span style="font-family:monospace;color:#e2e8f0">${pt.throughputPerGpu.toFixed(0)} tok/s</span>` +
             `<span style="color:#94a3b8">TTFT p50:</span><span style="font-family:monospace;color:#e2e8f0">${pt.ttftP50Ms.toFixed(1)} ms</span>` +
             `<span style="color:#94a3b8">TPOT p50:</span><span style="font-family:monospace;color:#e2e8f0">${pt.tpotP50Ms.toFixed(2)} ms/tok</span>` +
@@ -490,7 +490,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
   )
 
   return (
-    <div className="h-full flex flex-col" style={{ padding: '12px 14px 8px' }}>
+    <div className="h-full flex flex-col pt-3 px-4 pb-2">
       {/* Dropdown filters row */}
       <div className="flex items-end gap-3 mb-2 flex-shrink-0 flex-wrap">
         <FilterDropdown label={t('paretoFrontier.model')} value={modelFilter} onChange={setModelFilter} options={filterOptions.models} />

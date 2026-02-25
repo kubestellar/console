@@ -126,7 +126,7 @@ const styles = {
   },
   dragHandle: {
     padding: '4px 0',
-    marginBottom: '6px',
+    marginBottom: '8px',
     display: 'flex',
     justifyContent: 'center',
     cursor: 'grab',
