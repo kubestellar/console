@@ -1388,13 +1388,20 @@ function ReservationFormModal({
     : ''
 
   const handleSave = async () => {
-    setError(null)
-    if (!cluster) { setError(t('gpuReservations.form.errors.selectCluster')); return }
-    if (!namespace) { setError(t('gpuReservations.form.errors.selectNamespace')); return }
-    if (!title) { setError(t('gpuReservations.form.errors.titleRequired')); return }
     const count = parseInt(gpuCount)
-    if (!count || count < 1) { setError(t('gpuReservations.form.errors.gpuCountMin')); return }
-    if (count > maxGPUs && !editingReservation) { setError(t('gpuReservations.form.errors.gpuCountMax', { max: maxGPUs, cluster })); return }
+    const validationError = !cluster
+      ? t('gpuReservations.form.errors.selectCluster')
+      : !namespace
+      ? t('gpuReservations.form.errors.selectNamespace')
+      : !title
+      ? t('gpuReservations.form.errors.titleRequired')
+      : !count || count < 1
+      ? t('gpuReservations.form.errors.gpuCountMin')
+      : count > maxGPUs && !editingReservation
+      ? t('gpuReservations.form.errors.gpuCountMax', { max: maxGPUs, cluster })
+      : null
+    setError(validationError)
+    if (validationError) return
 
     setIsSaving(true)
     try {
