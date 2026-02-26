@@ -78,12 +78,28 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
 manualChunks: (id) => {
-          // IMPORTANT: Libraries that use React hooks/context MUST go in vendor chunk
-          // Splitting them separately causes "undefined" errors for useLayoutEffect, createContext, etc.
-          // Keep all node_modules in a single vendor chunk to avoid circular dependencies
-          if (id.includes('node_modules')) {
-            return 'vendor'
+          if (!id.includes('node_modules')) return
+          // React ecosystem must stay together (shared hooks/context internals)
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/')) {
+            return 'react-vendor'
           }
+          // 3D engine + its deps (only used by globe animation + KubeCraft)
+          if (id.includes('/three/') || id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/its-fine/') || id.includes('/react-reconciler/') || id.includes('/react-use-measure/') || id.includes('/suspend-react/')) {
+            return 'three-vendor'
+          }
+          // Charting libraries
+          if (id.includes('/echarts/') || id.includes('/echarts-for-react/') || id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
+            return 'charts-vendor'
+          }
+          // UI animation & interaction
+          if (id.includes('/framer-motion/') || id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) {
+            return 'ui-vendor'
+          }
+          // Internationalization
+          if (id.includes('/i18next') || id.includes('/react-i18next/')) {
+            return 'i18n-vendor'
+          }
+          return 'vendor'
         },
       },
     },

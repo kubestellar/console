@@ -259,7 +259,7 @@ func (s *Server) setupMiddleware() {
 
 	// Gzip/Brotli compression — reduces JS/CSS/WASM transfer size ~70%
 	s.app.Use(compress.New(compress.Config{
-		Level: compress.LevelDefault,
+		Level: compress.LevelBestCompression,
 	}))
 
 	// Logger
@@ -706,7 +706,11 @@ func (s *Server) setupRoutes() {
 
 	// Serve static files in production
 	if !s.config.DevMode {
-		s.app.Static("/", "./web/dist")
+		s.app.Static("/", "./web/dist", fiber.Static{
+			MaxAge:        31536000,      // 1 year — Vite hashes filenames for cache-busting
+			Compress:      true,          // cache compressed versions of files
+			CacheDuration: 24 * time.Hour, // keep file handles open for 24h
+		})
 		s.app.Get("/*", func(c *fiber.Ctx) error {
 			return c.SendFile("./web/dist/index.html")
 		})

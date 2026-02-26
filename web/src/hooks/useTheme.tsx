@@ -7,6 +7,28 @@ export type ThemeMode = 'dark' | 'light' | 'system'
 const STORAGE_KEY = 'kubestellar-theme-id'
 const LAST_DARK_THEME_KEY = 'kubestellar-last-dark-theme'
 
+// Default fonts already loaded in index.css — no need to lazy-load
+const DEFAULT_FONTS = new Set(['Inter', 'JetBrains Mono'])
+// Track which fonts have already been injected to avoid duplicates
+const loadedFonts = new Set<string>()
+
+/**
+ * Lazy-load a Google Font by injecting a <link> tag.
+ * Only loads fonts not already in the default CSS @import.
+ */
+function loadThemeFont(fontFamily: string) {
+  // Extract first font name from CSS font-family string (e.g., "'Fira Sans', ..." → "Fira Sans")
+  const match = fontFamily.match(/['"]?([^'",:]+)['"]?/)
+  const fontName = match?.[1]?.trim()
+  if (!fontName || DEFAULT_FONTS.has(fontName) || loadedFonts.has(fontName)) return
+
+  loadedFonts.add(fontName)
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`
+  document.head.appendChild(link)
+}
+
 // Get system theme preference
 function getSystemPrefersDark(): boolean {
   if (typeof window !== 'undefined' && window.matchMedia) {
@@ -91,7 +113,9 @@ function applyTheme(theme: Theme) {
   root.style.setProperty('--chart-color-7', colors.chartColors[6] || colors.brandPrimary)
   root.style.setProperty('--chart-color-8', colors.chartColors[7] || colors.brandSecondary)
 
-  // Font
+  // Font — lazy-load non-default Google Fonts on theme switch
+  loadThemeFont(theme.font.family)
+  loadThemeFont(theme.font.monoFamily)
   root.style.setProperty('--font-family', theme.font.family)
   root.style.setProperty('--font-mono', theme.font.monoFamily)
   root.style.setProperty('--font-weight-normal', String(theme.font.weight.normal))
