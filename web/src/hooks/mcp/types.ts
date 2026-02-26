@@ -502,6 +502,7 @@ export interface ResourceQuotaSpec {
   hard: Record<string, string>
   labels?: Record<string, string>
   annotations?: Record<string, string>  // Reservation metadata
+  ensure_namespace?: boolean  // Auto-create namespace if it doesn't exist (GPU reservation flow)
 }
 
 export interface SecurityIssue {

@@ -4100,6 +4100,34 @@ func (m *MultiClusterClient) DeleteResourceQuota(ctx context.Context, contextNam
 	return nil
 }
 
+// EnsureNamespaceExists creates a namespace if it doesn't already exist.
+// Used by GPU reservation flow to auto-create namespaces for users who don't have direct K8s RBAC.
+func (m *MultiClusterClient) EnsureNamespaceExists(ctx context.Context, contextName, namespace string) error {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err == nil {
+		return nil // already exists
+	}
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+			Labels: map[string]string{
+				"kubestellar.io/managed-by": "kubestellar-console",
+			},
+		},
+	}
+	_, err = client.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if err != nil && strings.Contains(err.Error(), "already exists") {
+		return nil
+	}
+	return err
+}
+
 // GetPodLogs returns logs from a pod
 func (m *MultiClusterClient) GetPodLogs(ctx context.Context, contextName, namespace, podName, container string, tailLines int64) (string, error) {
 	client, err := m.GetClient(contextName)

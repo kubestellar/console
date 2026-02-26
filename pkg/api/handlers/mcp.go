@@ -1259,12 +1259,13 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 // CreateOrUpdateResourceQuota creates or updates a ResourceQuota
 func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	var req struct {
-		Cluster     string            `json:"cluster"`
-		Name        string            `json:"name"`
-		Namespace   string            `json:"namespace"`
-		Hard        map[string]string `json:"hard"`
-		Labels      map[string]string `json:"labels,omitempty"`
-		Annotations map[string]string `json:"annotations,omitempty"`
+		Cluster          string            `json:"cluster"`
+		Name             string            `json:"name"`
+		Namespace        string            `json:"namespace"`
+		Hard             map[string]string `json:"hard"`
+		Labels           map[string]string `json:"labels,omitempty"`
+		Annotations      map[string]string `json:"annotations,omitempty"`
+		EnsureNamespace  bool              `json:"ensure_namespace,omitempty"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -1280,6 +1281,13 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient != nil {
+		// Auto-create namespace if requested (used by GPU reservation flow)
+		if req.EnsureNamespace {
+			if err := h.k8sClient.EnsureNamespaceExists(c.Context(), req.Cluster, req.Namespace); err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to create namespace: " + err.Error()})
+			}
+		}
+
 		spec := k8s.ResourceQuotaSpec{
 			Name:        req.Name,
 			Namespace:   req.Namespace,
