@@ -215,6 +215,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   useCardLoadingState({
     isLoading: false,
     hasAnyData: true,
+    isDemoData: true,
   })
 
   return (

@@ -73,11 +73,10 @@ const OpenCostOverview = lazy(() => import('./OpenCostOverview').then(m => ({ de
 const KubecostOverview = lazy(() => import('./KubecostOverview').then(m => ({ default: m.KubecostOverview })))
 const OPAPolicies = lazy(() => import('./OPAPolicies').then(m => ({ default: m.OPAPolicies })))
 const KyvernoPolicies = lazy(() => import('./KyvernoPolicies').then(m => ({ default: m.KyvernoPolicies })))
-const FalcoAlerts = lazy(() => import('./ComplianceCards').then(m => ({ default: m.FalcoAlerts })))
-const TrivyScan = lazy(() => import('./ComplianceCards').then(m => ({ default: m.TrivyScan })))
-const KubescapeScan = lazy(() => import('./ComplianceCards').then(m => ({ default: m.KubescapeScan })))
-const PolicyViolations = lazy(() => import('./ComplianceCards').then(m => ({ default: m.PolicyViolations })))
-const ComplianceScore = lazy(() => import('./ComplianceCards').then(m => ({ default: m.ComplianceScore })))
+// Eagerly import demo-only compliance cards — they're tiny (~255 lines total),
+// contain only hardcoded demo data, and lazy loading them causes blank cards
+// while heavier modules (OPA) saturate the dev server's transform pipeline.
+import { FalcoAlerts, TrivyScan, KubescapeScan, PolicyViolations, ComplianceScore } from './ComplianceCards'
 const VaultSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.VaultSecrets })))
 const ExternalSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.ExternalSecrets })))
 const CertManager = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.CertManager })))
