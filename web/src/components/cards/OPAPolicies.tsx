@@ -1592,11 +1592,11 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   })
   const [, setIsRefreshing] = useState(false)
 
-  // Persist statuses to localStorage when they change (only completed statuses, not loading)
+  // Persist statuses to localStorage when they change (only successful results, not loading/error)
   useEffect(() => {
-    // Filter out loading statuses - only cache complete results
+    // Filter out loading statuses and error statuses — errors should be re-checked next load
     const completedStatuses = Object.fromEntries(
-      Object.entries(statuses).filter(([_, s]) => !s.loading)
+      Object.entries(statuses).filter(([_, s]) => !s.loading && !s.error)
     )
     if (Object.keys(completedStatuses).length > 0) {
       try {
@@ -1861,16 +1861,19 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
 
     setHasTriggeredInitialCheck(true)
 
-    // Find clusters without any status (neither cached data nor loading state)
-    // Clusters with loading:true are already being checked, don't duplicate
-    const uncachedClusters = reachableClusters.filter(c => !statuses[c.name])
+    // Find clusters without valid cached status — re-check those with errors
+    // (stale errors from timeouts or connectivity issues should not prevent rechecking)
+    const needsCheck = reachableClusters.filter(c => {
+      const s = statuses[c.name]
+      return !s || s.error // No cached data or cached error → needs fresh check
+    })
 
-    if (uncachedClusters.length === 0) {
+    if (needsCheck.length === 0) {
       return
     }
 
-    if (alreadyCheckedThisSession && uncachedClusters.length < reachableClusters.length) {
-      checkClusters(uncachedClusters)
+    if (alreadyCheckedThisSession && needsCheck.length < reachableClusters.length) {
+      checkClusters(needsCheck)
     } else {
       sessionStorage.setItem(sessionKey, 'true')
       checkClusters(reachableClusters)

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -1771,6 +1772,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Client connected: %s (origin: %s)", conn.RemoteAddr(), r.Header.Get("Origin"))
 
+	// writeMu protects concurrent WebSocket writes from goroutine-based handlers
+	var writeMu sync.Mutex
+	// closed is set when the read loop exits; goroutines check it before writing
+	var closed atomic.Bool
+
 	for {
 		var msg protocol.Message
 		if err := conn.ReadJSON(&msg); err != nil {
@@ -1787,14 +1793,32 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				forceAgent = "claude"
 			}
 			s.handleChatMessageStreaming(conn, msg, forceAgent)
+		} else if msg.Type == protocol.TypeKubectl {
+			// Handle kubectl messages concurrently so one slow cluster
+			// doesn't block the entire WebSocket message loop.
+			go func(m protocol.Message) {
+				response := s.handleMessage(m)
+				if closed.Load() {
+					return
+				}
+				writeMu.Lock()
+				defer writeMu.Unlock()
+				if err := conn.WriteJSON(response); err != nil {
+					log.Printf("Write error: %v", err)
+				}
+			}(msg)
 		} else {
 			response := s.handleMessage(msg)
-			if err := conn.WriteJSON(response); err != nil {
+			writeMu.Lock()
+			err := conn.WriteJSON(response)
+			writeMu.Unlock()
+			if err != nil {
 				log.Printf("Write error: %v", err)
 				break
 			}
 		}
 	}
+	closed.Store(true)
 
 	log.Printf("Client disconnected: %s", conn.RemoteAddr())
 }
