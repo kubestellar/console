@@ -270,7 +270,7 @@ async function checkGatekeeperInstalled(clusterName: string): Promise<Gatekeeper
   try {
     const nsResult = await kubectlProxy.exec(
       ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
-      { context: clusterName, timeout: 8000, priority: true }
+      { context: clusterName, timeout: 15000, priority: true }
     )
     const installed = !!(nsResult.output && nsResult.output.includes('gatekeeper-system'))
     return { cluster: clusterName, installed, loading: installed } // loading=true means details pending
@@ -1736,13 +1736,28 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
 
       try {
         const status = await checkGatekeeperInstalled(cluster.name)
-        setStatuses(prev => ({ ...prev, [cluster.name]: status }))
+        setStatuses(prev => {
+          // Don't downgrade a known-installed cluster to not-installed due to timeout/error.
+          // Slow clusters (vllm-d, platform-eval) may timeout on the namespace check even though
+          // Gatekeeper is installed — preserve the cached installed status and queue for Phase 2.
+          if (status.error && prev[cluster.name]?.installed) {
+            installedClusters.push(cluster.name)
+            return prev
+          }
+          return { ...prev, [cluster.name]: status }
+        })
         if (status.installed) installedClusters.push(cluster.name)
       } catch {
-        setStatuses(prev => ({
-          ...prev,
-          [cluster.name]: { cluster: cluster.name, installed: false, loading: false, error: 'Connection failed' }
-        }))
+        setStatuses(prev => {
+          if (prev[cluster.name]?.installed) {
+            installedClusters.push(cluster.name)
+            return prev
+          }
+          return {
+            ...prev,
+            [cluster.name]: { cluster: cluster.name, installed: false, loading: false, error: 'Connection failed' }
+          }
+        })
       }
 
       if (phase1Queue.length > 0) await processPhase1()
