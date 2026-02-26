@@ -1104,23 +1104,16 @@ function CreatePolicyModal({
     [statuses]
   )
 
-  // Auto-select first installed cluster
-  useEffect(() => {
-    if (isOpen && !selectedCluster && installedClusters.length > 0) {
-      setSelectedCluster(installedClusters[0])
-    }
-  }, [isOpen, selectedCluster, installedClusters])
-
-  // Reset state when modal opens
+  // Reset state and auto-select first installed cluster when modal opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedCluster('')
       setFlow('choose')
       setUserDescription('')
       setYamlContent('')
       setIsAnalyzing(false)
+      setSelectedCluster(installedClusters.length > 0 ? installedClusters[0] : '')
     }
-  }, [isOpen])
+  }, [isOpen, installedClusters])
 
   // Gather cluster security data and start AI mission
   const handleAnalyzeAndSuggest = async () => {
