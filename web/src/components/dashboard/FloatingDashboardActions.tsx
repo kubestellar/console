@@ -199,7 +199,7 @@ export function FloatingDashboardActions({
               {t('dashboard.actions.addCard')}
             </button>
             {/* Health status indicator at bottom of menu */}
-            <div className="pt-1 border-t border-border/50">
+            <div className="pt-1 border-t border-border/50" role="presentation">
               <DashboardHealthIndicator size="sm" />
             </div>
           </div>
