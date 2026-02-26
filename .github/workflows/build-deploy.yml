@@ -127,6 +127,7 @@ jobs:
             --namespace kc \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
+            --set github.url=https://github.ibm.com \
             --set github.existingSecret=kc-secrets \
             --set jwt.existingSecret=kc-secrets \
             --set githubToken.existingSecret=kc-secrets \
@@ -182,6 +183,7 @@ jobs:
             --namespace kubestellar-console \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
+            --set github.url=https://github.ibm.com \
             --set github.existingSecret=kc-kubestellar-console \
             --set jwt.existingSecret=kc-kubestellar-console \
             --set githubToken.existingSecret=kc-kubestellar-console \
