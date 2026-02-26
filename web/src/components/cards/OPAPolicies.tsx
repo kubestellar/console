@@ -262,26 +262,35 @@ spec:
 let globalCheckInProgress = false
 const globalCheckedClusters = new Set<string>()
 
-async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperStatus> {
+/**
+ * Phase 1 — Fast check: single kubectl call to determine if Gatekeeper is installed.
+ * Returns immediately with installed/not-installed status so the card can render.
+ */
+async function checkGatekeeperInstalled(clusterName: string): Promise<GatekeeperStatus> {
   try {
-    // Step 1+2: Check namespace and fetch constraints in parallel.
-    // If Gatekeeper isn't installed, the constraints call fails gracefully.
-    const [nsResult, constraintsResult] = await Promise.all([
-      kubectlProxy.exec(
-        ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
-        { context: clusterName, timeout: 10000 }
-      ),
-      kubectlProxy.exec(
-        ['get', 'constraints', '-A',
-         '-o', 'custom-columns=NAME:.metadata.name,KIND:.kind,ENFORCEMENT:.spec.enforcementAction,VIOLATIONS:.status.totalViolations',
-         '--no-headers'],
-        { context: clusterName, timeout: 10000 }
-      ).catch(() => ({ output: '', error: '' })), // Graceful fallback if no CRDs
-    ])
+    const nsResult = await kubectlProxy.exec(
+      ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
+      { context: clusterName, timeout: 8000, priority: true }
+    )
+    const installed = !!(nsResult.output && nsResult.output.includes('gatekeeper-system'))
+    return { cluster: clusterName, installed, loading: installed } // loading=true means details pending
+  } catch {
+    return { cluster: clusterName, installed: false, loading: false, error: 'Connection failed' }
+  }
+}
 
-    if (!nsResult.output || !nsResult.output.includes('gatekeeper-system')) {
-      return { cluster: clusterName, installed: false, loading: false }
-    }
+/**
+ * Phase 2 — Detail fetch: get constraints, policies, and violations.
+ * Only called for clusters where Phase 1 returned installed=true.
+ */
+async function checkGatekeeperDetails(clusterName: string): Promise<GatekeeperStatus> {
+  try {
+    const constraintsResult = await kubectlProxy.exec(
+      ['get', 'constraints', '-A',
+       '-o', 'custom-columns=NAME:.metadata.name,KIND:.kind,ENFORCEMENT:.spec.enforcementAction,VIOLATIONS:.status.totalViolations',
+       '--no-headers'],
+      { context: clusterName, timeout: 10000 }
+    ).catch(() => ({ output: '', error: '' }))
 
     const policies: Policy[] = []
     let totalViolations = 0
@@ -299,12 +308,7 @@ async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperSta
 
           // Normalize deny to enforce for display
           const normalizedMode = enforcement === 'deny' ? 'enforce' : enforcement as Policy['mode']
-          policies.push({
-            name,
-            kind,
-            violations,
-            mode: normalizedMode
-          })
+          policies.push({ name, kind, violations, mode: normalizedMode })
           totalViolations += violations
           modes.add(normalizedMode)
         }
@@ -321,7 +325,7 @@ async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperSta
       primaryMode = 'dryrun'
     }
 
-    // Step 3: Fetch sample violations (only if there are violations to show)
+    // Fetch sample violations (only if there are violations to show)
     const violations: Violation[] = []
     if (totalViolations > 0 && policies.length > 0) {
       const policyWithViolations = policies.find(p => p.violations > 0)
@@ -364,8 +368,9 @@ async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperSta
       policies,
       violations
     }
-  } catch (err) {
-    return { cluster: clusterName, installed: false, loading: false, error: 'Connection failed' }
+  } catch {
+    // Details failed but Gatekeeper is installed — show installed with no details
+    return { cluster: clusterName, installed: true, loading: false, policyCount: 0, violationCount: 0 }
   }
 }
 
@@ -1675,7 +1680,9 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const effectiveClustersRef = useRef(effectiveClusters)
   effectiveClustersRef.current = effectiveClusters
 
-  // Check Gatekeeper on specified clusters
+  // Check Gatekeeper on specified clusters using two-phase loading:
+  // Phase 1 (fast): Single kubectl call per cluster to check installed/not-installed (~1-2s)
+  // Phase 2 (lazy): Fetch policies, violations in background for installed clusters
   const checkClusters = useCallback(async (clusters: { name: string }[], forceCheck = false) => {
     if (clusters.length === 0) return
 
@@ -1716,50 +1723,68 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       return updated
     })
 
-    // Check clusters with bounded concurrency (rolling pool of 3).
-    // Each checkGatekeeperStatus makes 2-3 kubectl calls internally,
-    // and kubectlProxy allows 4 concurrent — so 3 parallel cluster checks
-    // keeps the queue busy without overloading it.
-    const OPA_CHECK_CONCURRENCY = 3
-    const queue = [...clustersToCheck]
-    let completed = 0
-    const total = queue.length
+    // ── Phase 1: Fast install check (priority bypass) ──
+    // Single lightweight namespace lookup per cluster, bypasses kubectl queue
+    // so the card renders in ~1-2s instead of waiting behind other cards' requests.
+    const PHASE1_CONCURRENCY = 3
+    const phase1Queue = [...clustersToCheck]
+    const installedClusters: string[] = []
 
-    const processNext = async (): Promise<void> => {
-      const cluster = queue.shift()
+    const processPhase1 = async (): Promise<void> => {
+      const cluster = phase1Queue.shift()
       if (!cluster) return
 
       try {
-        const status = await checkGatekeeperStatus(cluster.name)
+        const status = await checkGatekeeperInstalled(cluster.name)
         setStatuses(prev => ({ ...prev, [cluster.name]: status }))
-      } catch (err) {
+        if (status.installed) installedClusters.push(cluster.name)
+      } catch {
         setStatuses(prev => ({
           ...prev,
-          [cluster.name]: { cluster: cluster.name, installed: false, loading: false, error: String(err) }
+          [cluster.name]: { cluster: cluster.name, installed: false, loading: false, error: 'Connection failed' }
         }))
-      } finally {
-        globalCheckedClusters.delete(cluster.name)
-        completed++
       }
 
-      // Process next cluster in queue (rolling concurrency)
-      if (queue.length > 0) {
-        await processNext()
-      }
+      if (phase1Queue.length > 0) await processPhase1()
     }
 
     try {
-      // Launch initial batch up to concurrency limit
-      const initialBatch = Math.min(OPA_CHECK_CONCURRENCY, queue.length)
-      await Promise.all(
-        Array.from({ length: initialBatch }, () => processNext())
-      )
+      // Phase 1: Run fast install checks — priority bypasses kubectl queue
+      const batch1 = Math.min(PHASE1_CONCURRENCY, phase1Queue.length)
+      await Promise.all(Array.from({ length: batch1 }, () => processPhase1()))
 
-      // Wait for stragglers (defensive — Promise.all above should cover all)
-      while (completed < total) {
-        await new Promise(resolve => setTimeout(resolve, 50))
+      // ── Phase 2: Detail fetch (only installed clusters, via normal queue) ──
+      // Fetches policies + violations progressively
+      if (installedClusters.length > 0) {
+        const PHASE2_CONCURRENCY = 3
+        const phase2Queue = [...installedClusters]
+
+        const processPhase2 = async (): Promise<void> => {
+          const name = phase2Queue.shift()
+          if (!name) return
+
+          try {
+            const status = await checkGatekeeperDetails(name)
+            setStatuses(prev => ({ ...prev, [name]: status }))
+          } catch {
+            // Details failed — mark as loaded with no details
+            setStatuses(prev => ({
+              ...prev,
+              [name]: { ...prev[name], loading: false }
+            }))
+          }
+
+          if (phase2Queue.length > 0) await processPhase2()
+        }
+
+        const batch2 = Math.min(PHASE2_CONCURRENCY, phase2Queue.length)
+        await Promise.all(Array.from({ length: batch2 }, () => processPhase2()))
       }
     } finally {
+      // Cleanup: ensure flags are always reset even on unexpected errors
+      for (const cluster of clustersToCheck) {
+        globalCheckedClusters.delete(cluster.name)
+      }
       setIsRefreshing(false)
       isCheckingRef.current = false
       globalCheckInProgress = false
@@ -1780,9 +1805,12 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     checkClusters(reachableClustersRef.current, true)
   }, [checkClusters])
 
-  // Track whether OPA checks have completed for at least one cluster
-  // The card should show skeleton until we have real OPA status data
-  const hasOPAData = Object.values(statuses).some(s => !s.loading)
+  // Track whether OPA checks have returned at least Phase 1 data (installed/not-installed).
+  // With two-phase loading, installed clusters have loading=true during Phase 2 (details pending),
+  // but we already know their installed status — so count them as "has data".
+  const hasOPAData = Object.values(statuses).some(s =>
+    !s.loading || s.installed // Phase 1 returned installed=true (details loading in Phase 2)
+  )
   const isOPAChecking = Object.values(statuses).some(s => s.loading) ||
     (reachableClusters.length > 0 && Object.keys(statuses).length === 0)
 
@@ -2005,7 +2033,10 @@ Let's start by discussing what kind of policy I need.`,
             const status = statuses[cluster.name]
             // Only show loading spinner for initial check (no cached data or loading state)
             // During refresh, show cached data - the refresh button spinner indicates activity
-            const isInitialLoading = !isOffline && (!status || status.loading)
+            // Phase 1 sets installed=true, loading=true (details pending in Phase 2).
+            // Show installed status immediately — only show full spinner when no status at all.
+            const isInitialLoading = !isOffline && !status
+            const isLoadingDetails = !isOffline && status?.installed && status?.loading
 
             return (
               <button
@@ -2048,24 +2079,33 @@ Let's start by discussing what kind of policy I need.`,
                 ) : status?.installed ? (
                   <div className="space-y-1">
                     <div className="flex items-center gap-3 text-xs">
-                      <span className="text-muted-foreground">
-                        {status.policyCount} {status.policyCount === 1 ? 'policy' : 'policies'}
-                      </span>
-                      {status.violationCount! > 0 && (
-                        <span className="flex items-center gap-1 text-amber-400">
-                          <AlertTriangle className="w-3 h-3" />
-                          {status.violationCount} {status.violationCount === 1 ? 'violation' : 'violations'}
+                      {isLoadingDetails ? (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Loading policies...
                         </span>
+                      ) : (
+                        <>
+                          <span className="text-muted-foreground">
+                            {status.policyCount ?? 0} {status.policyCount === 1 ? 'policy' : 'policies'}
+                          </span>
+                          {(status.violationCount ?? 0) > 0 && (
+                            <span className="flex items-center gap-1 text-amber-400">
+                              <AlertTriangle className="w-3 h-3" />
+                              {status.violationCount} {status.violationCount === 1 ? 'violation' : 'violations'}
+                            </span>
+                          )}
+                          {(status.modes && status.modes.length > 1 ? status.modes : [status.mode]).map((mode, idx) => (
+                            <span key={idx} className={`px-1.5 py-0.5 rounded text-[10px] ${
+                              mode === 'enforce' ? 'bg-red-500/20 text-red-400' :
+                              mode === 'warn' ? 'bg-amber-500/20 text-amber-400' :
+                              'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              {mode}
+                            </span>
+                          ))}
+                        </>
                       )}
-                      {(status.modes && status.modes.length > 1 ? status.modes : [status.mode]).map((mode, idx) => (
-                        <span key={idx} className={`px-1.5 py-0.5 rounded text-[10px] ${
-                          mode === 'enforce' ? 'bg-red-500/20 text-red-400' :
-                          mode === 'warn' ? 'bg-amber-500/20 text-amber-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {mode}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 ) : (
