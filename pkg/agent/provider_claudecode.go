@@ -57,6 +57,18 @@ type claudeCodeStreamEvent struct {
 	} `json:"usage,omitempty"`
 }
 
+// cleanEnvForCLI returns the current environment with CLAUDECODE unset so the
+// CLI subprocess doesn't refuse to start when launched from inside a Claude Code session.
+func cleanEnvForCLI() []string {
+	var env []string
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "CLAUDECODE=") {
+			env = append(env, e)
+		}
+	}
+	return env
+}
+
 // ClaudeCodeProvider uses the local Claude Code CLI installation
 type ClaudeCodeProvider struct {
 	cliPath string
@@ -103,6 +115,7 @@ func (c *ClaudeCodeProvider) detectCLI() {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, path, "--version")
+	cmd.Env = cleanEnvForCLI()
 	output, err := cmd.Output()
 	if err == nil {
 		c.version = strings.TrimSpace(string(output))
@@ -256,6 +269,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	}
 
 	cmd := exec.CommandContext(ctx, c.cliPath, args...)
+	cmd.Env = cleanEnvForCLI()
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -443,6 +457,7 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 		}
 
 		analysisCmd := exec.CommandContext(ctx, c.cliPath, analysisArgs...)
+		analysisCmd.Env = cleanEnvForCLI()
 		analysisStdout, err := analysisCmd.StdoutPipe()
 		if err == nil {
 			if startErr := analysisCmd.Start(); startErr == nil {
