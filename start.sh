@@ -71,24 +71,49 @@ resolve_version() {
 
     echo "Resolving latest version..." >&2
 
-    # Try to get latest stable release (non-prerelease)
-    local latest
-    latest=$(curl -sSL "${GITHUB_API}/repos/${REPO}/releases" \
-        | grep -o '"tag_name": *"[^"]*"' \
-        | head -20 \
-        | sed 's/"tag_name": *"//;s/"//' \
-        | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
-        | head -1)
+    local latest api_response http_code
 
-    # Fall back to latest release (including prereleases)
-    if [ -z "$latest" ]; then
-        latest=$(curl -sSL "${GITHUB_API}/repos/${REPO}/releases/latest" \
+    # Try to get latest stable release (non-prerelease) via releases list
+    api_response=$(curl -sSL -w '\n%{http_code}' "${GITHUB_API}/repos/${REPO}/releases" 2>/dev/null)
+    http_code=$(echo "$api_response" | tail -1)
+    api_response=$(echo "$api_response" | sed '$d')
+
+    if [ "$http_code" = "200" ]; then
+        latest=$(echo "$api_response" \
             | grep -o '"tag_name": *"[^"]*"' \
-            | sed 's/"tag_name": *"//;s/"//')
+            | head -20 \
+            | sed 's/"tag_name": *"//;s/"//' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | head -1)
+    fi
+
+    # Fall back to /releases/latest endpoint (includes prereleases)
+    if [ -z "$latest" ]; then
+        api_response=$(curl -sSL -w '\n%{http_code}' "${GITHUB_API}/repos/${REPO}/releases/latest" 2>/dev/null)
+        http_code=$(echo "$api_response" | tail -1)
+        api_response=$(echo "$api_response" | sed '$d')
+
+        if [ "$http_code" = "200" ]; then
+            latest=$(echo "$api_response" \
+                | grep -o '"tag_name": *"[^"]*"' \
+                | sed 's/"tag_name": *"//;s/"//')
+        fi
+    fi
+
+    # Fall back to git tags if API is unavailable (rate-limited, network issues)
+    if [ -z "$latest" ]; then
+        echo "  API unavailable (HTTP $http_code), trying git ls-remote..." >&2
+        latest=$(git ls-remote --tags --sort=-v:refname "https://github.com/${REPO}.git" 'v*' 2>/dev/null \
+            | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*$' \
+            | head -1 \
+            | sed 's|refs/tags/||')
     fi
 
     if [ -z "$latest" ]; then
-        echo "Error: Could not determine latest version" >&2
+        echo "Error: Could not determine latest version." >&2
+        echo "  This may be due to GitHub API rate limiting for unauthenticated requests." >&2
+        echo "  Try specifying a version manually:" >&2
+        echo "    curl -sSL https://raw.githubusercontent.com/${REPO}/main/start.sh | bash -s -- --version v0.3.14" >&2
         exit 1
     fi
 

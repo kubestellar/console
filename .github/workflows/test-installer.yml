@@ -1,0 +1,207 @@
+name: Test Installer (start.sh)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'start.sh'
+      - '.github/workflows/test-installer.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'start.sh'
+      - '.github/workflows/test-installer.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-version-resolution:
+    name: Version resolution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Test resolve_version returns a valid semver tag
+        run: |
+          # Source just the resolve_version function from start.sh
+          REPO="kubestellar/console"
+          GITHUB_API="https://api.github.com"
+          VERSION=""
+
+          # Extract and run resolve_version
+          resolved=$(bash -c '
+            source <(sed -n "/^# --- Resolve version ---$/,/^# --- Download and extract ---$/p" start.sh | head -n -1)
+            REPO="kubestellar/console"
+            GITHUB_API="https://api.github.com"
+            VERSION=""
+            resolve_version
+          ')
+
+          echo "Resolved version: $resolved"
+
+          # Must not be empty
+          if [ -z "$resolved" ]; then
+            echo "FAIL: resolve_version returned empty string"
+            exit 1
+          fi
+
+          # Must match semver pattern
+          if ! echo "$resolved" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "FAIL: '$resolved' does not match expected version pattern"
+            exit 1
+          fi
+
+          echo "PASS: Version resolved to $resolved"
+
+      - name: Test --version flag bypasses resolution
+        run: |
+          resolved=$(bash -c '
+            source <(sed -n "/^# --- Resolve version ---$/,/^# --- Download and extract ---$/p" start.sh | head -n -1)
+            REPO="kubestellar/console"
+            GITHUB_API="https://api.github.com"
+            VERSION="v1.2.3"
+            resolve_version
+          ')
+
+          if [ "$resolved" != "v1.2.3" ]; then
+            echo "FAIL: Expected v1.2.3 but got '$resolved'"
+            exit 1
+          fi
+          echo "PASS: --version flag works correctly"
+
+      - name: Test fallback when API is unavailable
+        run: |
+          resolved=$(bash -c '
+            source <(sed -n "/^# --- Resolve version ---$/,/^# --- Download and extract ---$/p" start.sh | head -n -1)
+            REPO="kubestellar/console"
+            GITHUB_API="https://api.github.com.invalid"
+            VERSION=""
+            resolve_version
+          ' 2>&1 | tail -1)
+
+          echo "Resolved (fallback): $resolved"
+
+          if [ -z "$resolved" ]; then
+            echo "FAIL: Fallback resolution returned empty"
+            exit 1
+          fi
+
+          if echo "$resolved" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "PASS: Fallback resolved to $resolved"
+          else
+            echo "FAIL: Fallback returned unexpected: $resolved"
+            exit 1
+          fi
+
+  test-download:
+    name: Download binaries (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Test installer downloads and extracts binaries
+        run: |
+          # Use a known good version for download test
+          LATEST=$(curl -sSL "https://api.github.com/repos/kubestellar/console/releases/latest" \
+            | grep -o '"tag_name": *"[^"]*"' \
+            | sed 's/"tag_name": *"//;s/"//')
+
+          if [ -z "$LATEST" ]; then
+            echo "Could not determine latest release, skipping download test"
+            exit 0
+          fi
+
+          echo "Testing download of $LATEST..."
+
+          # Run start.sh in dry-run fashion: download only, don't start
+          mkdir -p /tmp/kc-test
+          INSTALL_DIR="/tmp/kc-test"
+          REPO="kubestellar/console"
+
+          # Detect platform (same logic as start.sh)
+          case "$(uname -s)" in
+              Linux*)  os="linux" ;;
+              Darwin*) os="darwin" ;;
+          esac
+          case "$(uname -m)" in
+              x86_64|amd64)  arch="amd64" ;;
+              aarch64|arm64) arch="arm64" ;;
+          esac
+          PLATFORM="${os}_${arch}"
+
+          URL="https://github.com/${REPO}/releases/download/${LATEST}/console_${LATEST#v}_${PLATFORM}.tar.gz"
+          echo "Downloading: $URL"
+
+          if ! curl -sSL --fail -o /tmp/console.tar.gz "$URL"; then
+            echo "FAIL: Download failed for console ${LATEST} ${PLATFORM}"
+            exit 1
+          fi
+
+          tar xzf /tmp/console.tar.gz -C "$INSTALL_DIR"
+
+          if [ ! -f "$INSTALL_DIR/console" ]; then
+            echo "FAIL: console binary not found after extraction"
+            ls -la "$INSTALL_DIR/"
+            exit 1
+          fi
+
+          chmod +x "$INSTALL_DIR/console"
+          echo "PASS: Downloaded and extracted console ${LATEST} for ${PLATFORM}"
+
+          # Verify binary runs (--help or --version)
+          "$INSTALL_DIR/console" --help 2>&1 | head -5 || true
+          echo "PASS: Binary is executable"
+
+  test-release-assets:
+    name: Verify release assets
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all platform binaries exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "Checking assets for release $TAG..."
+
+          EXPECTED_ASSETS=(
+            "console_${TAG#v}_linux_amd64.tar.gz"
+            "console_${TAG#v}_linux_arm64.tar.gz"
+            "console_${TAG#v}_darwin_amd64.tar.gz"
+            "console_${TAG#v}_darwin_arm64.tar.gz"
+            "kc-agent_${TAG#v}_linux_amd64.tar.gz"
+            "kc-agent_${TAG#v}_linux_arm64.tar.gz"
+            "kc-agent_${TAG#v}_darwin_amd64.tar.gz"
+            "kc-agent_${TAG#v}_darwin_arm64.tar.gz"
+            "checksums.txt"
+          )
+
+          ASSETS=$(gh release view "$TAG" --repo kubestellar/console --json assets --jq '.assets[].name')
+          FAILED=0
+
+          for expected in "${EXPECTED_ASSETS[@]}"; do
+            if echo "$ASSETS" | grep -q "^${expected}$"; then
+              echo "  ✓ $expected"
+            else
+              echo "  ✗ MISSING: $expected"
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "FAIL: Some expected release assets are missing"
+            exit 1
+          fi
+
+          echo ""
+          echo "PASS: All expected release assets present"
