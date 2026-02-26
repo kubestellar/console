@@ -13,6 +13,10 @@
 #   --dir, -d <path>      Install directory (default: ./kubestellar-console)
 #   --port, -p <port>     Console port (default: 8080)
 #
+# kc-agent runs as a background daemon (survives Ctrl+C / terminal close).
+# To stop it:  kill $(cat ./kubestellar-console/kc-agent.pid)
+# Logs:        ./kubestellar-console/kc-agent.log
+#
 # To enable GitHub OAuth login, create a .env file:
 #   GITHUB_CLIENT_ID=your-client-id
 #   GITHUB_CLIENT_SECRET=your-client-secret
@@ -182,15 +186,14 @@ fi
 chmod +x "$INSTALL_DIR/console" 2>/dev/null || true
 chmod +x "$INSTALL_DIR/kc-agent" 2>/dev/null || true
 
-# Kill any existing instances on required ports
-for p in $PORT 8585; do
-    EXISTING_PID=$(lsof -ti :"$p" 2>/dev/null || true)
-    if [ -n "$EXISTING_PID" ]; then
-        echo "Killing existing process on port $p (PID: $EXISTING_PID)..."
-        kill -9 "$EXISTING_PID" 2>/dev/null || true
-        sleep 1
-    fi
-done
+# Kill any existing console instance on the console port
+EXISTING_PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
+if [ -n "$EXISTING_PID" ]; then
+    echo "Killing existing process on port $PORT (PID: $EXISTING_PID)..."
+    kill -9 "$EXISTING_PID" 2>/dev/null || true
+    sleep 1
+fi
+# Note: kc-agent on port 8585 is managed via PID file — not force-killed here
 
 # Load .env file if it exists
 if [ -f "$INSTALL_DIR/.env" ]; then
@@ -217,24 +220,50 @@ elif [ -f ".env" ]; then
     done < ".env"
 fi
 
-# Cleanup on exit
+# Cleanup on exit — console stops, kc-agent keeps running as a background service
 CONSOLE_PID=""
-AGENT_PID=""
 cleanup() {
     echo ""
-    echo "Shutting down..."
+    echo "Shutting down console..."
     [ -n "$CONSOLE_PID" ] && kill "$CONSOLE_PID" 2>/dev/null || true
-    [ -n "$AGENT_PID" ] && kill "$AGENT_PID" 2>/dev/null || true
+    echo "  kc-agent continues running in the background (PID file: $INSTALL_DIR/kc-agent.pid)"
+    echo "  To stop it: kill \$(cat $INSTALL_DIR/kc-agent.pid)"
     exit 0
 }
 trap cleanup SIGINT SIGTERM
 
-# Start kc-agent if available
+# Start kc-agent as a background daemon (survives console/script exit)
+AGENT_PORT=8585
 if [ -x "$INSTALL_DIR/kc-agent" ]; then
-    echo "Starting kc-agent..."
-    "$INSTALL_DIR/kc-agent" &
-    AGENT_PID=$!
-    sleep 1
+    AGENT_PID_FILE="$INSTALL_DIR/kc-agent.pid"
+    AGENT_LOG_FILE="$INSTALL_DIR/kc-agent.log"
+
+    # Check if kc-agent is already running
+    if [ -f "$AGENT_PID_FILE" ]; then
+        EXISTING_AGENT_PID=$(cat "$AGENT_PID_FILE")
+        if kill -0 "$EXISTING_AGENT_PID" 2>/dev/null; then
+            echo "kc-agent is already running (PID: $EXISTING_AGENT_PID)"
+        else
+            echo "Stale PID file found, removing..."
+            rm -f "$AGENT_PID_FILE"
+        fi
+    fi
+
+    # Start kc-agent if not already running
+    if [ ! -f "$AGENT_PID_FILE" ]; then
+        echo "Starting kc-agent as background daemon..."
+        nohup "$INSTALL_DIR/kc-agent" >> "$AGENT_LOG_FILE" 2>&1 &
+        echo $! > "$AGENT_PID_FILE"
+        sleep 1
+
+        # Verify it started
+        if kill -0 "$(cat "$AGENT_PID_FILE")" 2>/dev/null; then
+            echo "  kc-agent started (PID: $(cat "$AGENT_PID_FILE"), log: $AGENT_LOG_FILE)"
+        else
+            echo "  Warning: kc-agent failed to start. Check $AGENT_LOG_FILE for details."
+            rm -f "$AGENT_PID_FILE"
+        fi
+    fi
 fi
 
 # Generate JWT_SECRET if not set (required in production mode)
@@ -272,10 +301,13 @@ if [ "$HTTP_CODE" = "200" ]; then
     echo ""
     echo "=== KubeStellar Console is running ==="
     echo ""
-    echo "  URL: http://localhost:${PORT}"
+    echo "  Console:  http://localhost:${PORT}"
+    if [ -f "$INSTALL_DIR/kc-agent.pid" ] && kill -0 "$(cat "$INSTALL_DIR/kc-agent.pid")" 2>/dev/null; then
+        echo "  kc-agent: http://localhost:${AGENT_PORT} (PID: $(cat "$INSTALL_DIR/kc-agent.pid"))"
+    fi
     echo ""
     open_browser "http://localhost:${PORT}"
-    echo "Press Ctrl+C to stop"
+    echo "Press Ctrl+C to stop the console (kc-agent continues in background)"
     echo ""
     wait
 else
