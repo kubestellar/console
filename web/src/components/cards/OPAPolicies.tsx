@@ -270,7 +270,7 @@ async function checkGatekeeperInstalled(clusterName: string): Promise<Gatekeeper
   try {
     const nsResult = await kubectlProxy.exec(
       ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
-      { context: clusterName, timeout: 15000, priority: true }
+      { context: clusterName, timeout: 25000, priority: true }
     )
     const installed = !!(nsResult.output && nsResult.output.includes('gatekeeper-system'))
     return { cluster: clusterName, installed, loading: installed } // loading=true means details pending
@@ -1581,7 +1581,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
         const parsed = JSON.parse(cached)
         const cacheTime = localStorage.getItem(STORAGE_KEY_OPA_CACHE_TIME)
         const cacheAge = cacheTime ? Date.now() - parseInt(cacheTime, 10) : Infinity
-        if (cacheAge < 10 * 60 * 1000) { // 10 minutes
+        if (cacheAge < 60 * 60 * 1000) { // 60 minutes — installation status rarely changes
           return parsed
         }
       }
