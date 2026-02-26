@@ -1877,6 +1877,19 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     }
   }, [hasTriggeredInitialCheck, reachableClusters, statuses, checkClusters])
 
+  // Check newly reachable clusters that weren't available during the initial check.
+  // Clusters like platform-eval and vllm-d may be slow to respond to warmup but become
+  // reachable after a few minutes — this ensures they get checked when they come online.
+  useEffect(() => {
+    if (!hasTriggeredInitialCheck) return // Wait for initial check to complete first
+    if (shouldUseDemoData) return
+
+    const newlyReachable = reachableClusters.filter(c => !statusesRef.current[c.name])
+    if (newlyReachable.length === 0) return
+
+    checkClusters(newlyReachable)
+  }, [hasTriggeredInitialCheck, reachableClusters, shouldUseDemoData, checkClusters])
+
   const handleInstallOPA = (clusterName: string) => {
     startMission({
       title: `Install OPA Gatekeeper on ${clusterName}`,
