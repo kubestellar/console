@@ -264,23 +264,24 @@ const globalCheckedClusters = new Set<string>()
 
 async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperStatus> {
   try {
-    // Step 1: Check if gatekeeper-system namespace exists
-    const nsResult = await kubectlProxy.exec(
-      ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
-      { context: clusterName, timeout: 15000 }
-    )
+    // Step 1+2: Check namespace and fetch constraints in parallel.
+    // If Gatekeeper isn't installed, the constraints call fails gracefully.
+    const [nsResult, constraintsResult] = await Promise.all([
+      kubectlProxy.exec(
+        ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
+        { context: clusterName, timeout: 10000 }
+      ),
+      kubectlProxy.exec(
+        ['get', 'constraints', '-A',
+         '-o', 'custom-columns=NAME:.metadata.name,KIND:.kind,ENFORCEMENT:.spec.enforcementAction,VIOLATIONS:.status.totalViolations',
+         '--no-headers'],
+        { context: clusterName, timeout: 10000 }
+      ).catch(() => ({ output: '', error: '' })), // Graceful fallback if no CRDs
+    ])
 
     if (!nsResult.output || !nsResult.output.includes('gatekeeper-system')) {
       return { cluster: clusterName, installed: false, loading: false }
     }
-
-    // Step 2: Fetch all constraints with violation counts
-    const constraintsResult = await kubectlProxy.exec(
-      ['get', 'constraints', '-A',
-       '-o', 'custom-columns=NAME:.metadata.name,KIND:.kind,ENFORCEMENT:.spec.enforcementAction,VIOLATIONS:.status.totalViolations',
-       '--no-headers'],
-      { context: clusterName, timeout: 15000 }
-    )
 
     const policies: Policy[] = []
     let totalViolations = 0
@@ -320,16 +321,15 @@ async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperSta
       primaryMode = 'dryrun'
     }
 
-    // Step 3: Fetch some sample violations for display
+    // Step 3: Fetch sample violations (only if there are violations to show)
     const violations: Violation[] = []
     if (totalViolations > 0 && policies.length > 0) {
-      // Get violations from the first constraint with violations
       const policyWithViolations = policies.find(p => p.violations > 0)
       if (policyWithViolations) {
         const violationsResult = await kubectlProxy.exec(
           ['get', policyWithViolations.kind.toLowerCase(), policyWithViolations.name,
            '-o', 'jsonpath={.status.violations[*]}'],
-          { context: clusterName, timeout: 15000 }
+          { context: clusterName, timeout: 10000 }
         )
 
         if (violationsResult.output) {
@@ -1723,21 +1723,48 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       return updated
     })
 
-    try {
-      // Check clusters sequentially to avoid overwhelming the kubectlProxy queue
-      for (const cluster of clustersToCheck) {
-        try {
-          const status = await checkGatekeeperStatus(cluster.name)
-          // Update status immediately after each cluster check
-          setStatuses(prev => ({ ...prev, [cluster.name]: status }))
-        } catch (err) {
-          setStatuses(prev => ({
-            ...prev,
-            [cluster.name]: { cluster: cluster.name, installed: false, loading: false, error: String(err) }
-          }))
-        }
-        // Remove from global set after check completes
+    // Check clusters with bounded concurrency (rolling pool of 3).
+    // Each checkGatekeeperStatus makes 2-3 kubectl calls internally,
+    // and kubectlProxy allows 4 concurrent — so 3 parallel cluster checks
+    // keeps the queue busy without overloading it.
+    const OPA_CHECK_CONCURRENCY = 3
+    const queue = [...clustersToCheck]
+    let completed = 0
+    const total = queue.length
+
+    const processNext = async (): Promise<void> => {
+      const cluster = queue.shift()
+      if (!cluster) return
+
+      try {
+        const status = await checkGatekeeperStatus(cluster.name)
+        setStatuses(prev => ({ ...prev, [cluster.name]: status }))
+      } catch (err) {
+        setStatuses(prev => ({
+          ...prev,
+          [cluster.name]: { cluster: cluster.name, installed: false, loading: false, error: String(err) }
+        }))
+      } finally {
         globalCheckedClusters.delete(cluster.name)
+        completed++
+      }
+
+      // Process next cluster in queue (rolling concurrency)
+      if (queue.length > 0) {
+        await processNext()
+      }
+    }
+
+    try {
+      // Launch initial batch up to concurrency limit
+      const initialBatch = Math.min(OPA_CHECK_CONCURRENCY, queue.length)
+      await Promise.all(
+        Array.from({ length: initialBatch }, () => processNext())
+      )
+
+      // Wait for stragglers (defensive — Promise.all above should cover all)
+      while (completed < total) {
+        await new Promise(resolve => setTimeout(resolve, 50))
       }
     } finally {
       setIsRefreshing(false)
