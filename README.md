@@ -257,7 +257,7 @@ Opens frontend at http://localhost:5174, backend at http://localhost:8080. Uses 
 
 3. **Or start with GitHub OAuth**
 
-Create a [GitHub OAuth App](https://github.com/settings/developers):
+Create a [GitHub OAuth App](https://github.com/settings/developers) under your **GitHub organization** (not a personal account, so users see an org name in the consent dialog):
 - Homepage URL: `http://localhost:5174`
 - Callback URL: `http://localhost:8080/auth/github/callback`
 
@@ -403,7 +403,14 @@ GitHub OAuth is **required** for authentication. Follow these steps carefully:
 
 ### Creating a GitHub OAuth App
 
-1. Go to **GitHub** → **Settings** → **Developer settings** → **OAuth Apps** → **New OAuth App**
+> **Important**: Create the OAuth App under a **GitHub organization** account, not a personal account.
+> When the app is owned by an organization, users will see "Authorize by *your-org*" in the consent
+> dialog — clearly identifying it as an application. An app owned by a personal account shows
+> "by *username*", which looks like you are delegating access to a person rather than an application.
+
+1. Go to your **GitHub Organization** → **Settings** → **Developer settings** → **OAuth Apps** → **New OAuth App**
+
+   *(For personal development only, you can use **GitHub** → your personal **Settings** → **Developer settings** → **OAuth Apps**)*
 
 2. Fill in the application details:
    - **Application name**: `KubeStellar Console` (or your preferred name)

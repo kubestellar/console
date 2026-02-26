@@ -134,7 +134,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 			ClientID:     cfg.GitHubClientID,
 			ClientSecret: cfg.GitHubSecret,
 			RedirectURL:  redirectURL,
-			Scopes:       []string{"user:email", "read:user", "public_repo"},
+			Scopes:       []string{"user:email", "read:user"},
 			Endpoint:     oauthEndpoint,
 		},
 		githubAPIBase: apiBase,
