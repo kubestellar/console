@@ -116,21 +116,7 @@ export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
 let gpuFetchInProgress = false
 async function fetchGPUNodes(cluster?: string, _source?: string) {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  // If demo mode is enabled, use demo data instead of fetching
-  if (isDemoMode()) {
-    updateGPUNodeCache({
-      nodes: getDemoGPUNodes(),
-      lastUpdated: new Date(),
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      consecutiveFailures: 0,
-      lastRefresh: new Date(),
-    })
-    return
-  }
-
-  // Note: We don't skip for demo token because local agent works without auth
+  // GPU data is always live — try real sources first, fall back to demo only if all fail
 
   if (gpuFetchInProgress) return
   gpuFetchInProgress = true
@@ -177,7 +163,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     }
 
     // If agent didn't work (not just "returned 0 nodes"), try SSE streaming then REST
-    if (!agentSucceeded && token && !isDemoMode()) {
+    if (!agentSucceeded && token) {
       try {
         // Try SSE streaming first for progressive rendering
         const sseResult = await fetchSSE<GPUNode>({
