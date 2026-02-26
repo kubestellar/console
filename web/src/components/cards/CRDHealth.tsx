@@ -25,12 +25,13 @@ interface CRD {
 }
 
 type SortByOption = 'status' | 'name' | 'group' | 'instances'
+type SortTranslationKey = 'common:common.status' | 'common:common.name' | 'cards:crdHealth.group' | 'cards:crdHealth.instances'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'status' as const, labelKey: 'common.status' },
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'group' as const, labelKey: 'crdHealth.group' },
-  { value: 'instances' as const, labelKey: 'crdHealth.instances' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'status' as const, labelKey: 'common:common.status' },
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'group' as const, labelKey: 'cards:crdHealth.group' },
+  { value: 'instances' as const, labelKey: 'cards:crdHealth.instances' },
 ]
 
 const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1, Established: 2 }
@@ -38,8 +39,7 @@ const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1,
 export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const { isLoading, deduplicatedClusters } = useClusters()

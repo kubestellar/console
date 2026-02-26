@@ -18,6 +18,7 @@ import { getSeverityIcon, getSeverityColor } from '../../types/alerts'
 import type { Alert } from '../../types/alerts'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -29,8 +30,7 @@ interface AlertDetailProps {
 }
 
 // Format relative time using i18n keys from the time section
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatRelativeTime(dateString: string, t: (key: any, opts?: any) => string): string {
+function formatRelativeTime(dateString: string, t: TFunction): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -38,10 +38,10 @@ function formatRelativeTime(dateString: string, t: (key: any, opts?: any) => str
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
 
-  if (diffMins < 1) return t('time.justNow')
-  if (diffMins < MINUTES_PER_HOUR) return t('time.minutesAgo', { count: diffMins })
-  if (diffHours < HOURS_PER_DAY) return t('time.hoursAgo', { count: diffHours })
-  return t('time.daysAgo', { count: diffDays })
+  if (diffMins < 1) return t('time.justNow') as string
+  if (diffMins < MINUTES_PER_HOUR) return t('time.minutesAgo', { count: diffMins }) as string
+  if (diffHours < HOURS_PER_DAY) return t('time.hoursAgo', { count: diffHours }) as string
+  return t('time.daysAgo', { count: diffDays }) as string
 }
 
 export function AlertDetail({ alert, onClose }: AlertDetailProps) {
