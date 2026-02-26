@@ -131,6 +131,10 @@ func NewServer(cfg Config) (*Server, error) {
 	app := fiber.New(fiber.Config{
 		ErrorHandler:   customErrorHandler,
 		ReadBufferSize: 16384,
+		WriteBufferSize: 16384,
+		ReadTimeout:     30 * time.Second,
+		WriteTimeout:    5 * time.Minute, // large static assets on slow networks
+		IdleTimeout:     2 * time.Minute,
 	})
 
 	// WebSocket hub
@@ -257,10 +261,16 @@ func (s *Server) setupMiddleware() {
 	// Recovery middleware
 	s.app.Use(recover.New())
 
-	// Gzip/Brotli compression — reduces JS/CSS/WASM transfer size ~70%
-	s.app.Use(compress.New(compress.Config{
-		Level: compress.LevelBestCompression,
-	}))
+	// Gzip/Brotli compression for API responses only — static assets are pre-compressed at build time
+	s.app.Use(func(c *fiber.Ctx) error {
+		p := c.Path()
+		if strings.HasSuffix(p, ".js") || strings.HasSuffix(p, ".css") || strings.HasSuffix(p, ".wasm") || strings.HasSuffix(p, ".json") || strings.HasSuffix(p, ".svg") || strings.HasSuffix(p, ".woff2") {
+			return c.Next() // skip compress middleware — served pre-compressed with Content-Length
+		}
+		return compress.New(compress.Config{
+			Level: compress.LevelBestCompression,
+		})(c)
+	})
 
 	// Logger
 	s.app.Use(logger.New(logger.Config{
@@ -706,11 +716,8 @@ func (s *Server) setupRoutes() {
 
 	// Serve static files in production
 	if !s.config.DevMode {
-		s.app.Static("/", "./web/dist", fiber.Static{
-			MaxAge:        31536000,      // 1 year — Vite hashes filenames for cache-busting
-			Compress:      true,          // cache compressed versions of files
-			CacheDuration: 24 * time.Hour, // keep file handles open for 24h
-		})
+		// Serve pre-compressed assets (.gz/.br) with Content-Length to avoid chunked encoding
+		s.app.Use(preCompressedStatic("./web/dist"))
 		s.app.Get("/*", func(c *fiber.Ctx) error {
 			return c.SendFile("./web/dist/index.html")
 		})
@@ -718,6 +725,86 @@ func (s *Server) setupRoutes() {
 }
 
 // backendURL returns the URL where the backend is reachable for OAuth callbacks.
+// preCompressedStatic serves pre-compressed (.br, .gz) static assets with Content-Length headers.
+// This avoids chunked Transfer-Encoding, preventing ERR_INCOMPLETE_CHUNKED_ENCODING on slow networks.
+func preCompressedStatic(root string) fiber.Handler {
+	const oneYear = 31536000
+	return func(c *fiber.Ctx) error {
+		p := c.Path()
+		if p == "/" || p == "" {
+			p = "/index.html"
+		}
+		filePath := filepath.Join(root, p)
+
+		// Only serve actual static files
+		info, err := os.Stat(filePath)
+		if err != nil || info.IsDir() {
+			return c.Next()
+		}
+
+		// Content type
+		ext := filepath.Ext(filePath)
+		contentType := ""
+		switch ext {
+		case ".js":
+			contentType = "application/javascript"
+		case ".css":
+			contentType = "text/css"
+		case ".html":
+			contentType = "text/html"
+		case ".json":
+			contentType = "application/json"
+		case ".svg":
+			contentType = "image/svg+xml"
+		case ".wasm":
+			contentType = "application/wasm"
+		case ".woff2":
+			contentType = "font/woff2"
+		case ".woff":
+			contentType = "font/woff"
+		case ".png":
+			contentType = "image/png"
+		case ".ico":
+			contentType = "image/x-icon"
+		case ".webmanifest":
+			contentType = "application/manifest+json"
+		}
+
+		accept := c.Get("Accept-Encoding")
+
+		// Try brotli first, then gzip
+		if strings.Contains(accept, "br") {
+			brPath := filePath + ".br"
+			if brInfo, err := os.Stat(brPath); err == nil {
+				c.Set("Content-Encoding", "br")
+				c.Set("Content-Type", contentType)
+				c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
+				c.Set("Content-Length", fmt.Sprintf("%d", brInfo.Size()))
+				c.Set("Vary", "Accept-Encoding")
+				return c.SendFile(brPath, true)
+			}
+		}
+		if strings.Contains(accept, "gzip") {
+			gzPath := filePath + ".gz"
+			if gzInfo, err := os.Stat(gzPath); err == nil {
+				c.Set("Content-Encoding", "gzip")
+				c.Set("Content-Type", contentType)
+				c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
+				c.Set("Content-Length", fmt.Sprintf("%d", gzInfo.Size()))
+				c.Set("Vary", "Accept-Encoding")
+				return c.SendFile(gzPath, true)
+			}
+		}
+
+		// Fallback: serve uncompressed with cache headers
+		if contentType != "" {
+			c.Set("Content-Type", contentType)
+		}
+		c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
+		return c.SendFile(filePath, true)
+	}
+}
+
 // In production (non-dev), frontend and backend are served from the same origin,
 // so we use FrontendURL. In dev mode, they run on separate ports.
 func (s *Server) backendURL() string {

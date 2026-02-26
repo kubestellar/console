@@ -5,6 +5,8 @@ metadata:
   name: {{ include "kubestellar-console.fullname" . }}
   labels:
     {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    haproxy.router.openshift.io/timeout: 5m
 spec:
   {{- if .Values.route.host }}
   host: {{ .Values.route.host | quote }}

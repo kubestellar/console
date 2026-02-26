@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import istanbul from 'vite-plugin-istanbul'
+import { compression } from 'vite-plugin-compression2'
 import { execSync } from 'child_process'
 import path from 'path'
 
@@ -49,6 +50,9 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    // Pre-compress assets at build time — avoids chunked encoding on slow networks
+    compression({ algorithm: 'gzip', exclude: [/\.(br)$/], threshold: 1024 }),
+    compression({ algorithm: 'brotliCompress', exclude: [/\.(gz)$/], threshold: 1024 }),
     // Enable Istanbul instrumentation for E2E coverage
     isE2ECoverage &&
       istanbul({
