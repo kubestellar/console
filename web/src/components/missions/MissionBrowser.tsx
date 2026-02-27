@@ -151,6 +151,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   const [recommendations, setRecommendations] = useState<MissionMatch[]>([])
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [searchProgress, setSearchProgress] = useState<{ step: string; detail: string; found: number; scanned: number }>({ step: '', detail: '', found: 0, scanned: 0 })
+  const [tokenError, setTokenError] = useState<'rate_limited' | 'token_invalid' | null>(null)
 
   // Scan state
   const [isScanning, setIsScanning] = useState(false)
@@ -255,13 +256,20 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
     async function fetchRecommendations() {
       setLoadingRecommendations(true)
       setRecommendations([])
+      setTokenError(null)
       setSearchProgress({ step: 'Connecting', detail: 'Fetching cluster info…', found: 0, scanned: 0 })
 
       try {
         // Step 1: Get cluster info + browse top-level in parallel
         const [clusterWrap, topLevel] = await Promise.all([
           api.get<{ name: string; provider?: string; version?: string; resources?: string[]; issues?: string[]; labels?: Record<string, string> }>('/api/cluster/current').catch(() => null),
-          api.get<BrowseEntry[]>('/api/missions/browse?path=solutions').catch(() => ({ data: [] as BrowseEntry[] })),
+          api.get<BrowseEntry[]>('/api/missions/browse?path=solutions').catch((err) => {
+            const code = err?.response?.data?.code
+            if (code === 'rate_limited' || code === 'token_invalid') {
+              setTokenError(code)
+            }
+            return { data: [] as BrowseEntry[] }
+          }),
         ])
         if (cancelled) return
         const cluster = clusterWrap?.data ?? null
@@ -991,6 +999,44 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
           />
 
           <div className="flex-1 overflow-y-auto p-4">
+            {/* Token / rate-limit guidance banner */}
+            {tokenError && (
+              <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-amber-400 text-lg mt-0.5">⚠️</span>
+                  <div className="text-sm space-y-2">
+                    <p className="font-medium text-amber-300">
+                      {tokenError === 'rate_limited'
+                        ? 'GitHub API rate limit reached'
+                        : 'GitHub token is invalid or expired'}
+                    </p>
+                    <p className="text-muted-foreground">
+                      The solution browser needs a GitHub personal access token to fetch missions.
+                      Add one to your <code className="px-1.5 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code> file and restart the console:
+                    </p>
+                    <ol className="text-muted-foreground list-decimal list-inside space-y-1.5 ml-1">
+                      <li>
+                        <a
+                          href="https://github.com/settings/tokens/new?description=KubeStellar+Console&scopes=public_repo"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-400 hover:text-purple-300 underline"
+                        >
+                          Create a GitHub personal access token
+                        </a>
+                        {' '}(only <code className="px-1 py-0.5 bg-white/10 rounded text-xs font-mono">public_repo</code> scope needed)
+                      </li>
+                      <li>
+                        Add it to your <code className="px-1 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code> file:
+                        <pre className="mt-1 px-3 py-2 bg-black/40 rounded text-xs font-mono text-purple-300 select-all">GITHUB_TOKEN=ghp_your_token_here</pre>
+                      </li>
+                      <li>Restart the console</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Recommended for You */}
             {!selectedMission && (recommendations.length > 0 || loadingRecommendations) && (
               <CollapsibleSection

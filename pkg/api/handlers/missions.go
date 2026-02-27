@@ -99,7 +99,13 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
 	body, _ := io.ReadAll(limitedBody)
 	if resp.StatusCode != http.StatusOK {
-		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "GitHub API error", "status": resp.StatusCode})
+		code := "github_error"
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+			code = "rate_limited"
+		} else if resp.StatusCode == http.StatusUnauthorized {
+			code = "token_invalid"
+		}
+		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "GitHub API error", "status": resp.StatusCode, "code": code})
 	}
 
 	// GitHub returns type:"dir", frontend expects type:"directory" — transform
