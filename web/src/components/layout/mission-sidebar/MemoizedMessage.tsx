@@ -46,12 +46,12 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
     a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
       if (href?.startsWith('/')) {
         return (
-          <Link to={href} className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/30 rounded text-xs font-medium transition-colors no-underline">
+          <Link to={href} className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-700 dark:text-yellow-300 border border-yellow-500/30 rounded text-xs font-medium transition-colors no-underline">
             <Settings className="w-3 h-3" />{children}
           </Link>
         )
       }
-      return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">{children}</a>
+      return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300">{children}</a>
     },
     h1: ({ children }: { children?: React.ReactNode }) => (
       <h1 className="mt-6 mb-3 pt-3 border-t border-border/30 first:border-t-0 first:pt-0 first:mt-0 text-xl font-bold">{children}</h1>
@@ -78,13 +78,13 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
   }), [fontSize])
 
   const proseClasses = cn(
-    "prose prose-invert max-w-none overflow-hidden",
+    "prose dark:prose-invert max-w-none overflow-hidden",
     "prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-pre:overflow-x-auto",
-    "prose-code:text-purple-300 prose-code:bg-black/20 prose-code:px-1 prose-code:rounded prose-code:break-all",
+    "prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded prose-code:break-all",
     "prose-hr:my-6",
     "break-words [word-break:break-word]",
     FONT_SIZE_CLASSES[fontSize],
-    msg.role === 'system' ? 'text-yellow-200' : 'text-foreground'
+    msg.role === 'system' ? 'text-yellow-700 dark:text-yellow-200' : 'text-foreground'
   )
 
   const agentProvider = useMemo(() => {
@@ -129,7 +129,7 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
                 </div>
               )}
               <div className="mt-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                <div className={cn(proseClasses, "text-purple-200")}>
+                <div className={cn(proseClasses, "text-purple-700 dark:text-purple-200")}>
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                     {parsedContent.request.replace(/\r\n/g, '\n')}
                   </ReactMarkdown>

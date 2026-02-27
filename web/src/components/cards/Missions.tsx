@@ -361,7 +361,7 @@ Please:
               {activeMissions.length} active
             </span>
           ) : (
-            <span className="text-[10px] text-gray-500">No active</span>
+            <span className="text-[10px] text-muted-foreground">No active</span>
           )}
         </div>
         <CardControlsRow
@@ -392,7 +392,7 @@ Please:
             completedMissions.length > 0 ? (
               <button
                 onClick={() => setHideCompleted(!hideCompleted)}
-                className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors whitespace-nowrap"
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
               >
                 {hideCompleted ? `Show done (${completedMissions.length})` : 'Hide done'}
               </button>
@@ -449,8 +449,8 @@ Please:
       />
 
       {/* Status legend — pinned to bottom */}
-      <div className="pt-2 border-t border-gray-800 shrink-0">
-        <div className="flex items-center justify-center gap-3 text-[10px] text-gray-600">
+      <div className="pt-2 border-t border-border shrink-0">
+        <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
           <span className="flex items-center gap-1">
             <Rocket className="w-2.5 h-2.5 text-blue-400" /> Launch
           </span>
@@ -512,7 +512,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
   return (
     <div className={cn(
       'rounded-lg border transition-all',
-      isActive ? `${config.bg} border-gray-700/50` : 'bg-gray-900/30 border-gray-800/50',
+      isActive ? `${config.bg} border-border/70` : 'bg-muted/20 border-border/50',
     )}>
       {/* Summary row - use div instead of button to avoid nesting violation with inner log toggle button */}
       <div
@@ -525,8 +525,8 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
       >
         {/* Expand arrow */}
         {isExpanded
-          ? <ChevronDown className="w-3 h-3 text-gray-500 shrink-0" />
-          : <ChevronRight className="w-3 h-3 text-gray-500 shrink-0" />
+          ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
+          : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
         }
 
         {/* Status icon */}
@@ -539,16 +539,16 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
         {/* Workload name */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-200 truncate">
+            <span className="text-sm font-medium text-foreground truncate">
               {mission.workload}
             </span>
             {mission.groupName && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                 {mission.groupName}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-gray-500">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span>{mission.namespace}</span>
             <span>&middot;</span>
             <span>{totalClusters} cluster{totalClusters !== 1 ? 's' : ''}</span>
@@ -563,7 +563,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
             onClick={(e) => { e.stopPropagation(); setShowLogs(!showLogs) }}
             className={cn(
               'p-0.5 rounded transition-colors',
-              showLogs ? 'text-green-400 bg-green-500/20' : 'text-gray-500 hover:text-gray-300',
+              showLogs ? 'text-green-600 dark:text-green-400 bg-green-500/20' : 'text-muted-foreground hover:text-foreground',
             )}
             title={showLogs ? 'Hide events' : 'Show events'}
           >
@@ -580,7 +580,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
 
       {/* Progress bar — always visible so completed missions show final state */}
       <div className="px-3 pb-2">
-        <div className="h-1 rounded-full bg-gray-800 overflow-hidden">
+        <div className="h-1 rounded-full bg-muted overflow-hidden">
           <div
             className={cn(
               'h-full rounded-full transition-all duration-500',
@@ -630,10 +630,10 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
       {/* Deploy events (always available, toggle with Terminal button) */}
       {showLogs && (
         <div className="px-3 pb-2">
-          <div className="rounded bg-gray-900/80 border border-gray-800/50 overflow-hidden">
-            <div className="px-2 py-1 border-b border-gray-800/50 flex items-center gap-1.5">
-              <Terminal className="w-2.5 h-2.5 text-green-400" />
-              <span className="text-[10px] text-green-400 font-medium">Deploy Events</span>
+          <div className="rounded bg-muted/50 border border-border/50 overflow-hidden">
+            <div className="px-2 py-1 border-b border-border/50 flex items-center gap-1.5">
+              <Terminal className="w-2.5 h-2.5 text-green-600 dark:text-green-400" />
+              <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Deploy Events</span>
             </div>
             <div className="px-2 py-1.5 max-h-32 overflow-y-auto">
               {hasLogs ? (
@@ -651,7 +651,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
                         {cs.logs!.map((line, i) => (
                           <div
                             key={i}
-                            className="text-[10px] font-mono text-gray-400 leading-relaxed truncate flex items-start gap-1.5"
+                            className="text-[10px] font-mono text-muted-foreground leading-relaxed truncate flex items-start gap-1.5"
                           >
                             <span className={cn('inline-block w-1.5 h-1.5 rounded-full mt-[5px] shrink-0', clusterInfo.colors.bg, clusterInfo.colors.border, 'border')} />
                             {line}
@@ -661,7 +661,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
                     )
                   })
               ) : (
-                <div className="text-[10px] text-gray-600 italic py-1">
+                <div className="text-[10px] text-muted-foreground/70 italic py-1">
                   {(mission.status === 'orbit' || mission.status === 'abort')
                     ? 'No recent events — K8s events expire after ~1 hour'
                     : 'Waiting for events...'}
@@ -674,10 +674,10 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
 
       {/* Expanded cluster details */}
       {isExpanded && (
-        <div className="px-3 pb-2.5 pt-1 border-t border-gray-800/50 space-y-1.5">
+        <div className="px-3 pb-2.5 pt-1 border-t border-border/50 space-y-1.5">
           {mission.deployedBy && (
-            <div className="text-[10px] text-gray-600">
-              Deployed by: <span className="text-gray-400">{mission.deployedBy}</span>
+            <div className="text-[10px] text-muted-foreground/70">
+              Deployed by: <span className="text-muted-foreground">{mission.deployedBy}</span>
             </div>
           )}
           {mission.clusterStatuses.map(cs => (
@@ -727,7 +727,7 @@ function ClusterStatusRow({ status }: ClusterStatusRowProps) {
       </div>
 
       {/* Replica progress bar */}
-      <div className="flex-1 h-0.5 rounded-full bg-gray-800 overflow-hidden">
+        <div className="flex-1 h-0.5 rounded-full bg-muted overflow-hidden">
         <div
           className={cn('h-full rounded-full transition-all duration-500', config.barColor)}
           style={{ width: `${status.status === 'pending' ? 0 : Math.max(replicaProgress, 10)}%` }}
@@ -774,7 +774,7 @@ function DependencySummary({ dependencies }: { dependencies: DeployedDep[] }) {
     <div className="mt-1.5">
       <button
         onClick={() => setShowAll(!showAll)}
-        className="flex items-center gap-1.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+        className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
       >
         <Package className="w-2.5 h-2.5" />
         <span>Deployed {summary}</span>
@@ -788,8 +788,8 @@ function DependencySummary({ dependencies }: { dependencies: DeployedDep[] }) {
             const style = DEP_ACTION_STYLES[dep.action] ?? DEP_ACTION_STYLES.created
             return (
               <div key={i} className="flex items-center gap-2 text-[10px]">
-                <span className="text-gray-600 w-28 truncate">{dep.kind}</span>
-                <span className="text-gray-400 flex-1 truncate">{dep.name}</span>
+                <span className="text-muted-foreground/70 w-28 truncate">{dep.kind}</span>
+                <span className="text-muted-foreground flex-1 truncate">{dep.name}</span>
                 <span className={cn('shrink-0', style.color)}>{style.label}</span>
               </div>
             )
