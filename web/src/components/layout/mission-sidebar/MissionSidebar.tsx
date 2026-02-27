@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   X,
   ChevronRight,
@@ -13,12 +13,15 @@ import {
   Type,
   MessageSquarePlus,
   Send,
+  Globe,
 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
 import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { AgentIcon } from '../../agent/AgentIcon'
+import { MissionBrowser } from '../../missions/MissionBrowser'
+import type { MissionExport } from '../../../lib/missions/types'
 import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { MissionChat } from './MissionChat'
@@ -31,8 +34,19 @@ export function MissionSidebar() {
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
   const [showNewMission, setShowNewMission] = useState(false)
+  const [showBrowser, setShowBrowser] = useState(false)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleImportMission = useCallback((mission: MissionExport) => {
+    startMission({
+      type: 'custom',
+      title: mission.title,
+      description: mission.description || mission.title,
+      initialPrompt: mission.resolution?.summary || mission.description,
+    })
+    setShowBrowser(false)
+  }, [startMission])
 
   // Escape key: exit fullscreen first, then close sidebar
   useEffect(() => {
@@ -178,6 +192,14 @@ export function MissionSidebar() {
             title={t('missionSidebar.startNewMission')}
           >
             <MessageSquarePlus className="w-4 h-4" />
+          </button>
+          {/* Browse Community Missions */}
+          <button
+            onClick={() => setShowBrowser(true)}
+            className="p-1.5 rounded transition-colors hover:bg-secondary text-muted-foreground hover:text-foreground"
+            title="Browse community missions"
+          >
+            <Globe className="w-4 h-4" />
           </button>
           <AgentSelector compact={!isFullScreen} />
           {/* Font size controls */}
@@ -356,6 +378,13 @@ export function MissionSidebar() {
         </div>
       )}
     </div>
+
+      {/* Mission Browser Dialog */}
+      <MissionBrowser
+        isOpen={showBrowser}
+        onClose={() => setShowBrowser(false)}
+        onImport={handleImportMission}
+      />
     </>
   )
 }

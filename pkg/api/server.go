@@ -508,6 +508,10 @@ func (s *Server) setupRoutes() {
 	api.Post("/namespaces/:name/access", namespaces.GrantNamespaceAccess)
 	api.Delete("/namespaces/:name/access/:binding", namespaces.RevokeNamespaceAccess)
 
+	// Mission knowledge base routes (browse, validate, share)
+	missions := handlers.NewMissionsHandler()
+	missions.RegisterRoutes(api.Group("/missions"))
+
 	// MCP routes (cluster operations via kubestellar tools and direct k8s)
 	// SECURITY: All MCP routes require authentication in both dev and production modes
 	api.Get("/mcp/status", mcpHandlers.GetStatus)

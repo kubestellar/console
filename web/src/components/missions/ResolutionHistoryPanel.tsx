@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Trash2,
   Share2,
+  Download,
   CheckCircle,
   Clock,
   Tag,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useResolutions, type Resolution } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
+import { ShareMissionDialog } from './ShareMissionDialog'
 import { useTranslation } from 'react-i18next'
 
 interface ResolutionHistoryPanelProps {
@@ -34,6 +36,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   const [showPersonal, setShowPersonal] = useState(true)
   const [showShared, setShowShared] = useState(true)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [exportResolution, setExportResolution] = useState<Resolution | null>(null)
   const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                     onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
                     onDelete={() => handleDelete(resolution.id)}
                     onShare={() => handleShare(resolution.id)}
+                    onExport={() => setExportResolution(resolution)}
                     isDeleteConfirm={deleteConfirmId === resolution.id}
                     canShare
                   />
@@ -148,6 +152,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                     onToggle={() => toggleExpand(resolution.id)}
                     onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
                     onDelete={() => handleDelete(resolution.id)}
+                    onExport={() => setExportResolution(resolution)}
                     isDeleteConfirm={deleteConfirmId === resolution.id}
                     showSharedBy
                   />
@@ -157,6 +162,15 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
           </div>
         )}
       </div>
+
+      {/* Export dialog */}
+      {exportResolution && (
+        <ShareMissionDialog
+          resolution={exportResolution}
+          isOpen={true}
+          onClose={() => setExportResolution(null)}
+        />
+      )}
     </div>
   )
 }
@@ -168,6 +182,7 @@ interface ResolutionCardProps {
   onApply?: () => void
   onDelete: () => void
   onShare?: () => void
+  onExport?: () => void
   isDeleteConfirm: boolean
   showSharedBy?: boolean
   canShare?: boolean
@@ -180,6 +195,7 @@ function ResolutionCard({
   onApply,
   onDelete,
   onShare,
+  onExport,
   isDeleteConfirm,
   showSharedBy,
   canShare,
@@ -290,6 +306,18 @@ function ResolutionCard({
                   title="Share to team"
                 >
                   <Share2 className="w-3 h-3" />
+                </button>
+              )}
+              {onExport && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onExport()
+                  }}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded transition-colors"
+                  title="Export mission"
+                >
+                  <Download className="w-3 h-3" />
                 </button>
               )}
               <button
