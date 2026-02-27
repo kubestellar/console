@@ -67,7 +67,8 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
+	body, _ := io.ReadAll(limitedBody)
 	if resp.StatusCode != http.StatusOK {
 		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "GitHub API error", "status": resp.StatusCode})
 	}
@@ -104,7 +105,8 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
+	body, _ := io.ReadAll(limitedBody)
 	if resp.StatusCode == http.StatusNotFound {
 		return c.Status(404).JSON(fiber.Map{"error": "file not found"})
 	}
@@ -242,18 +244,43 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	defer forkResp.Body.Close()
 
+	if forkResp.StatusCode < 200 || forkResp.StatusCode >= 300 {
+		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub fork failed with status %d", forkResp.StatusCode)})
+	}
 	var forkData map[string]interface{}
-	json.NewDecoder(forkResp.Body).Decode(&forkData)
+	if err := json.NewDecoder(forkResp.Body).Decode(&forkData); err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": "failed to decode fork response"})
+	}
 	forkFullName, _ := forkData["full_name"].(string)
 	if forkFullName == "" {
 		return c.Status(502).JSON(fiber.Map{"error": "fork response missing full_name"})
 	}
 
-	// Step 2: Create branch (create ref)
+	// Step 2: Get HEAD SHA from fork's main branch, then create new branch ref
+	mainRefURL := fmt.Sprintf("%s/repos/%s/git/ref/heads/main", h.githubAPIURL, forkFullName)
+	mainRefReq, _ := http.NewRequest("GET", mainRefURL, nil)
+	mainRefReq.Header.Set("Authorization", "Bearer "+token)
+	mainRefReq.Header.Set("Accept", "application/vnd.github.v3+json")
+	mainRefResp, err := h.httpClient.Do(mainRefReq)
+	if err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": "failed to get main branch ref"})
+	}
+	defer mainRefResp.Body.Close()
+
+	var refData map[string]interface{}
+	if err := json.NewDecoder(mainRefResp.Body).Decode(&refData); err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": "failed to decode ref response"})
+	}
+	obj, _ := refData["object"].(map[string]interface{})
+	headSHA, _ := obj["sha"].(string)
+	if headSHA == "" {
+		return c.Status(502).JSON(fiber.Map{"error": "could not resolve HEAD SHA for main branch"})
+	}
+
 	refURL := fmt.Sprintf("%s/repos/%s/git/refs", h.githubAPIURL, forkFullName)
 	refPayload, _ := json.Marshal(map[string]string{
 		"ref": "refs/heads/" + req.Branch,
-		"sha": "main", // simplified; real impl would get HEAD SHA first
+		"sha": headSHA,
 	})
 	refReq, _ := http.NewRequest("POST", refURL, bytes.NewReader(refPayload))
 	refReq.Header.Set("Authorization", "Bearer "+token)

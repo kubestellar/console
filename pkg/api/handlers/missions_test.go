@@ -207,6 +207,11 @@ func TestMissions_ShareToGitHub_Success(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"full_name": "testuser/console",
 			})
+		case strings.Contains(r.URL.Path, "/git/ref/heads/main"):
+			requestLog["get_ref"]++
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"object": map[string]string{"sha": "abc123def456"},
+			})
 		case strings.Contains(r.URL.Path, "/git/refs"):
 			requestLog["ref"]++
 			w.WriteHeader(http.StatusCreated)
