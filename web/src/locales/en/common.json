@@ -558,7 +558,9 @@
       "byAuthor": "by {{author}}",
       "selectTheme": "Select Theme",
       "quickSelect": "Quick Select",
-      "marketplaceThemes": "Marketplace Themes"
+      "marketplaceThemes": "Marketplace Themes",
+      "removeThemeTitle": "Remove Theme",
+      "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone."
     }
   },
   "filters": {

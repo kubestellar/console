@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Moon, Sun, Check, Palette, ChevronDown, Trash2 } from 'lucide-react'
 import type { Theme } from '../../../lib/themes'
 import { themeGroups, getCustomThemes, removeCustomTheme } from '../../../lib/themes'
+import { ConfirmDialog } from '../../../lib/modals'
 
 interface ThemeSectionProps {
   themeId: string
@@ -15,6 +16,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
   const { t } = useTranslation()
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false)
   const [customThemes, setCustomThemes] = useState<Theme[]>(() => getCustomThemes())
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
 
   useEffect(() => {
     const handler = () => setCustomThemes(getCustomThemes())
@@ -23,11 +25,16 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
   }, [])
 
   const handleRemoveCustomTheme = (id: string) => {
-    removeCustomTheme(id)
-    window.dispatchEvent(new Event('kc-custom-themes-changed'))
-    if (id === themeId) {
-      setTheme('kubestellar')
+    try {
+      removeCustomTheme(id)
+      window.dispatchEvent(new Event('kc-custom-themes-changed'))
+      if (id === themeId) {
+        setTheme('kubestellar')
+      }
+    } catch {
+      // localStorage may be unavailable; state remains consistent
     }
+    setConfirmRemoveId(null)
   }
 
   return (
@@ -181,15 +188,15 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                           <div className="flex gap-1">
                             <div
                               className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: ct.colors.brandPrimary }}
+                              style={{ backgroundColor: ct.colors?.brandPrimary || '#666' }}
                             />
                             <div
                               className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: ct.colors.brandSecondary }}
+                              style={{ backgroundColor: ct.colors?.brandSecondary || '#666' }}
                             />
                             <div
                               className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: ct.colors.brandTertiary }}
+                              style={{ backgroundColor: ct.colors?.brandTertiary || '#666' }}
                             />
                           </div>
                           <div className="text-left">
@@ -277,9 +284,9 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                       className="flex items-center gap-3 flex-1 text-left"
                     >
                       <div className="flex gap-1">
-                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors.brandPrimary }} />
-                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors.brandSecondary }} />
-                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors.brandTertiary }} />
+                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors?.brandPrimary || '#666' }} />
+                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors?.brandSecondary || '#666' }} />
+                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors?.brandTertiary || '#666' }} />
                       </div>
                       <div>
                         <p className={`text-sm ${isSelected ? 'text-primary font-medium' : 'text-foreground'}`}>{ct.name}</p>
@@ -288,7 +295,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                       {isSelected && <Check className="w-4 h-4 text-primary ml-1" />}
                     </button>
                     <button
-                      onClick={() => handleRemoveCustomTheme(ct.id)}
+                      onClick={() => setConfirmRemoveId(ct.id)}
                       className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-950/50 rounded transition-colors"
                       title={t('common.remove')}
                     >
@@ -323,6 +330,19 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
           </span>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmRemoveId !== null}
+        onClose={() => setConfirmRemoveId(null)}
+        onConfirm={() => {
+          if (confirmRemoveId) handleRemoveCustomTheme(confirmRemoveId)
+        }}
+        title={t('settings.theme.removeThemeTitle')}
+        message={t('settings.theme.removeThemeMessage')}
+        confirmLabel={t('common.remove')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
     </div>
   )
 }
