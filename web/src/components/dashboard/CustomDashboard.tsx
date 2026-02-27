@@ -54,6 +54,12 @@ interface Card {
   title?: string
 }
 
+/** Below this width, clamp small cards to half-width (6 cols) for readability */
+const NARROW_BREAKPOINT = 1024
+
+/** Minimum card column span at narrow viewports */
+const MIN_NARROW_COLS = 6
+
 // Sortable card component
 interface SortableCardProps {
   card: Card
@@ -70,10 +76,25 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
   const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id })
 
+  // At narrow viewports (< 1024px), clamp small cards to min 6 cols
+  // so we get max 2 cards per row instead of cramped 3-up layout
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < NARROW_BREAKPOINT
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${NARROW_BREAKPOINT - 1}px)`)
+    const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches)
+    setIsNarrow(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  const effectiveW = isNarrow && (card.position?.w || 4) < MIN_NARROW_COLS ? MIN_NARROW_COLS : (card.position?.w || 4)
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${card.position?.w || 4}`,
+    gridColumn: `span ${effectiveW}`,
     opacity: isDragging ? 0.5 : 1,
   }
 
