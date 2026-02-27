@@ -269,6 +269,32 @@ export function emitMissionRated(missionType: string, rating: string) {
   send('ksc_mission_rated', { mission_type: missionType, rating })
 }
 
+// ── Mission Browser / Knowledge Base ──────────────────────────────
+
+export function emitSolutionSearchStarted(clusterConnected: boolean) {
+  send('ksc_solution_search', { cluster_connected: clusterConnected })
+}
+
+export function emitSolutionSearchCompleted(found: number, scanned: number) {
+  send('ksc_solution_search_done', { found, scanned })
+}
+
+export function emitSolutionBrowsed(path: string) {
+  send('ksc_solution_browsed', { path })
+}
+
+export function emitSolutionViewed(title: string, cncfProject?: string) {
+  send('ksc_solution_viewed', { title, cncf_project: cncfProject ?? '' })
+}
+
+export function emitSolutionImported(title: string, cncfProject?: string) {
+  send('ksc_solution_imported', { title, cncf_project: cncfProject ?? '' })
+}
+
+export function emitSolutionGitHubLink() {
+  send('ksc_solution_github_link')
+}
+
 // ── Auth ───────────────────────────────────────────────────────────
 
 export function emitLogin(method: string) {

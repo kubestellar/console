@@ -38,6 +38,14 @@ import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
+import {
+  emitSolutionSearchStarted,
+  emitSolutionSearchCompleted,
+  emitSolutionBrowsed,
+  emitSolutionViewed,
+  emitSolutionImported,
+  emitSolutionGitHubLink,
+} from '../../lib/analytics'
 import type {
   MissionExport,
   MissionMatch,
@@ -257,6 +265,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         ])
         if (cancelled) return
         const cluster = clusterWrap?.data ?? null
+        emitSolutionSearchStarted(!!cluster)
         const topDirs = (topLevel?.data ?? []).filter(e => e.type === 'directory')
 
         if (topDirs.length === 0) {
@@ -290,11 +299,10 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                   `/api/missions/file?path=${encodeURIComponent(f.path)}`
                 )
                 const parsed = typeof content === 'string' ? JSON.parse(content) : content
-                if (parsed?.format === 'kc-mission-v1' || parsed?.mission) {
-                  allMissions.push(parsed)
-                  if (cluster) {
-                    setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
-                  }
+                const normalized = normalizeMission(parsed)
+                if (normalized) {
+                  allMissions.push(normalized)
+                  setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
                 }
               } catch { /* skip */ }
             }
@@ -319,11 +327,10 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                       `/api/missions/file?path=${encodeURIComponent(f.path)}`
                     )
                     const parsed = typeof content === 'string' ? JSON.parse(content) : content
-                    if (parsed?.format === 'kc-mission-v1' || parsed?.mission) {
-                      allMissions.push(parsed)
-                      if (cluster) {
-                        setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
-                      }
+                    const normalized = normalizeMission(parsed)
+                    if (normalized) {
+                      allMissions.push(normalized)
+                      setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
                     }
                   } catch { /* skip */ }
                 }
@@ -334,6 +341,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
 
         if (cancelled) return
         setSearchProgress({ step: 'Done', detail: `${allMissions.length} missions across ${totalScanned} folders`, found: allMissions.length, scanned: totalScanned })
+        emitSolutionSearchCompleted(allMissions.length, totalScanned)
       } catch {
         setSearchProgress(prev => ({ ...prev, step: 'Error', detail: 'Could not load recommendations' }))
       } finally {
@@ -423,6 +431,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
     setShowRaw(false)
 
     if (node.type === 'directory') {
+      emitSolutionBrowsed(node.path)
       setLoading(true)
       try {
         if (node.source === 'community') {
@@ -469,8 +478,10 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         const validation = validateMissionExport(parsed)
         if (validation.valid) {
           setSelectedMission(validation.data)
+          emitSolutionViewed(validation.data.title, validation.data.cncfProject)
         } else {
           setSelectedMission(parsed as MissionExport)
+          emitSolutionViewed((parsed as MissionExport).title ?? node.name, (parsed as MissionExport).cncfProject)
         }
       } catch {
         setRawContent(null)
@@ -518,6 +529,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
 
   const handleScanComplete = useCallback((result: FileScanResult) => {
     if (result.valid && pendingImport) {
+      emitSolutionImported(pendingImport.title, pendingImport.cncfProject)
       onImport(pendingImport)
       onClose()
     }
@@ -1056,6 +1068,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-purple-400 transition-colors"
+                  onClick={() => emitSolutionGitHubLink()}
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   Browse all solutions on GitHub
@@ -1617,4 +1630,39 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** Normalize kc-mission-v1 JSON (nested format) into flat MissionExport shape */
+function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
+  // Already flat MissionExport
+  if (raw.title && raw.type && raw.tags) return raw as unknown as MissionExport
+
+  // kc-mission-v1 nested format: { format, mission: { title, type, ... }, metadata: { tags, ... } }
+  const m = raw.mission as Record<string, unknown> | undefined
+  if (!m) return null
+
+  const meta = raw.metadata as Record<string, unknown> | undefined
+  const tags = (meta?.tags as string[]) ?? []
+  const cncfProjects = (meta?.cncfProjects as string[]) ?? []
+
+  const resolution = m.resolution as Record<string, unknown> | undefined
+
+  return {
+    version: (raw.format as string) ?? 'kc-mission-v1',
+    title: (m.title as string) ?? '',
+    description: (m.description as string) ?? '',
+    type: (m.type as string) ?? 'troubleshoot',
+    tags,
+    category: (meta?.category as string) ?? undefined,
+    cncfProject: cncfProjects[0] ?? undefined,
+    steps: [],
+    resolution: resolution ? {
+      summary: (resolution.summary as string) ?? '',
+      steps: (resolution.steps as string[]) ?? [],
+    } : undefined,
+    metadata: {
+      source: (meta?.sourceIssue as string) ?? (meta?.sourceRepo as string) ?? undefined,
+      createdAt: (raw.exportedAt as string) ?? undefined,
+    },
+  } as MissionExport
 }
