@@ -4,6 +4,8 @@ A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how yo
 
 **Your clusters, your way - AI that learns how you work**
 
+[🚀 **Try the Live Demo →**](https://console.kubestellar.io?utm_source=github&utm_medium=readme&utm_campaign=live_demo)
+
 ![KubeStellar Console overview](docs/images/Console-overview.svg)
 
 ## What is KubeStellar Console?

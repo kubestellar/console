@@ -170,6 +170,9 @@ export function initAnalytics() {
     ...(tz && { timezone: tz }),
   }
 
+  // Capture UTM parameters from landing URL
+  captureUtmParams()
+
   // Fire discovery conversion step
   emitConversionStep(1, 'discovery', { deployment_type: deploymentType })
 }
@@ -378,4 +381,66 @@ export function emitConversionStep(
     step_name: stepName,
     ...details,
   })
+}
+
+// ── Deploy ─────────────────────────────────────────────────────────
+
+export function emitDeployWorkload(workloadName: string, clusterGroup: string) {
+  send('ksc_deploy_workload', { workload_name: workloadName, cluster_group: clusterGroup })
+}
+
+export function emitDeployTemplateApplied(templateName: string) {
+  send('ksc_deploy_template_applied', { template_name: templateName })
+}
+
+// ── Compliance ─────────────────────────────────────────────────────
+
+export function emitComplianceDrillDown(statType: string) {
+  send('ksc_compliance_drill_down', { stat_type: statType })
+}
+
+export function emitComplianceFilterChanged(filterType: string) {
+  send('ksc_compliance_filter_changed', { filter_type: filterType })
+}
+
+// ── Benchmarks ─────────────────────────────────────────────────────
+
+export function emitBenchmarkViewed(benchmarkType: string) {
+  send('ksc_benchmark_viewed', { benchmark_type: benchmarkType })
+}
+
+// ── Cluster Admin ──────────────────────────────────────────────────
+
+export function emitClusterAction(action: string, clusterName: string) {
+  send('ksc_cluster_action', { action, cluster_name: clusterName })
+}
+
+export function emitClusterStatsDrillDown(statType: string) {
+  send('ksc_cluster_stats_drill_down', { stat_type: statType })
+}
+
+// ── UTM Tracking ───────────────────────────────────────────────────
+
+let utmParams: Record<string, string> = {}
+
+export function captureUtmParams() {
+  const params = new URLSearchParams(window.location.search)
+  const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+  for (const key of utmKeys) {
+    const val = params.get(key)
+    if (val) utmParams[key] = val
+  }
+  if (Object.keys(utmParams).length > 0) {
+    sessionStorage.setItem('_ksc_utm', JSON.stringify(utmParams))
+    send('ksc_utm_landing', utmParams)
+  } else {
+    const stored = sessionStorage.getItem('_ksc_utm')
+    if (stored) {
+      try { utmParams = JSON.parse(stored) } catch { /* ignore */ }
+    }
+  }
+}
+
+export function getUtmParams(): Record<string, string> {
+  return { ...utmParams }
 }
