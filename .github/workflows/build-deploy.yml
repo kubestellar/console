@@ -107,10 +107,9 @@ jobs:
       - name: Configure kubeconfig
         run: |
           export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
-          echo "${{ secrets.VLLM_D_CA_CERT }}" > "$RUNNER_TEMP/ca.crt"
           kubectl config set-cluster vllm-d \
             --server=https://kubernetes.default.svc \
-            --certificate-authority="$RUNNER_TEMP/ca.crt" \
+            --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
             --embed-certs=true
           kubectl config set-credentials deployer --token="${{ secrets.VLLM_D_DEPLOY_TOKEN }}"
           kubectl config set-context deploy --cluster=vllm-d --user=deployer
