@@ -427,6 +427,10 @@ func (s *Server) setupRoutes() {
 	// Dev mode only affects things like frontend URLs and default users,
 	// NOT authentication requirements
 
+	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
+	missions := handlers.NewMissionsHandler()
+	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
+
 	// API routes (protected)
 	api := s.app.Group("/api", middleware.JWTAuth(s.config.JWTSecret))
 
@@ -508,8 +512,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/namespaces/:name/access", namespaces.GrantNamespaceAccess)
 	api.Delete("/namespaces/:name/access/:binding", namespaces.RevokeNamespaceAccess)
 
-	// Mission knowledge base routes (browse, validate, share)
-	missions := handlers.NewMissionsHandler()
+	// Mission knowledge base routes (validate, share — protected)
 	missions.RegisterRoutes(api.Group("/missions"))
 
 	// MCP routes (cluster operations via kubestellar tools and direct k8s)

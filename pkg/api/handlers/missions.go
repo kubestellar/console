@@ -37,11 +37,15 @@ func NewMissionsHandler() *MissionsHandler {
 
 // RegisterRoutes registers all mission routes on the given Fiber router group.
 func (h *MissionsHandler) RegisterRoutes(g fiber.Router) {
-	g.Get("/browse", h.BrowseConsoleKB)
-	g.Get("/file", h.GetMissionFile)
 	g.Post("/validate", h.ValidateMission)
 	g.Post("/share/slack", h.ShareToSlack)
 	g.Post("/share/github", h.ShareToGitHub)
+}
+
+// RegisterPublicRoutes registers unauthenticated browse/file routes (proxies to public GitHub repo).
+func (h *MissionsHandler) RegisterPublicRoutes(g fiber.Router) {
+	g.Get("/browse", h.BrowseConsoleKB)
+	g.Get("/file", h.GetMissionFile)
 }
 
 // ---------- Browse knowledge base ----------

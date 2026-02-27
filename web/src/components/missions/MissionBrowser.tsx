@@ -32,6 +32,7 @@ import {
   Loader2,
   Plus,
   Trash2,
+  ExternalLink,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
@@ -141,6 +142,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   // Recommendations
   const [recommendations, setRecommendations] = useState<MissionMatch[]>([])
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
+  const [searchProgress, setSearchProgress] = useState<{ step: string; detail: string; found: number; scanned: number }>({ step: '', detail: '', found: 0, scanned: 0 })
 
   // Scan state
   const [isScanning, setIsScanning] = useState(false)
@@ -244,22 +246,96 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
 
     async function fetchRecommendations() {
       setLoadingRecommendations(true)
+      setRecommendations([])
+      setSearchProgress({ step: 'Connecting', detail: 'Fetching cluster info…', found: 0, scanned: 0 })
+
       try {
-        const [missionsWrap, clusterWrap] = await Promise.all([
-          api.get<MissionExport[]>('/api/missions/browse?path=solutions&flat=true').catch(() => ({ data: [] as MissionExport[] })),
+        // Step 1: Get cluster info + browse top-level in parallel
+        const [clusterWrap, topLevel] = await Promise.all([
           api.get<{ name: string; provider?: string; version?: string; resources?: string[]; issues?: string[]; labels?: Record<string, string> }>('/api/cluster/current').catch(() => null),
+          api.get<BrowseEntry[]>('/api/missions/browse?path=solutions').catch(() => ({ data: [] as BrowseEntry[] })),
         ])
+        if (cancelled) return
+        const cluster = clusterWrap?.data ?? null
+        const topDirs = (topLevel?.data ?? []).filter(e => e.type === 'directory')
+
+        if (topDirs.length === 0) {
+          setSearchProgress({ step: 'Done', detail: 'No mission categories found', found: 0, scanned: 0 })
+          return
+        }
+
+        setSearchProgress({ step: 'Scanning', detail: `Found ${topDirs.length} categories`, found: 0, scanned: 0 })
+
+        // Step 2: Walk categories progressively — show recommendations as they arrive
+        const allMissions: MissionExport[] = []
+        let totalScanned = 0
+
+        for (const category of topDirs) {
+          if (cancelled) return
+          setSearchProgress({ step: 'Scanning', detail: category.name, found: allMissions.length, scanned: totalScanned })
+
+          try {
+            const { data: catEntries } = await api.get<BrowseEntry[]>(
+              `/api/missions/browse?path=${encodeURIComponent(category.path)}`
+            )
+            if (cancelled) return
+            const catFiles = (catEntries ?? []).filter(e => e.type === 'file' && e.name.endsWith('.json'))
+            const subDirs = (catEntries ?? []).filter(e => e.type === 'directory')
+
+            // Fetch a few sample files from this category
+            for (const f of catFiles.slice(0, 3)) {
+              if (cancelled) return
+              try {
+                const { data: content } = await api.get<string>(
+                  `/api/missions/file?path=${encodeURIComponent(f.path)}`
+                )
+                const parsed = typeof content === 'string' ? JSON.parse(content) : content
+                if (parsed?.format === 'kc-mission-v1' || parsed?.mission) {
+                  allMissions.push(parsed)
+                  if (cluster) {
+                    setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
+                  }
+                }
+              } catch { /* skip */ }
+            }
+            totalScanned++
+            setSearchProgress({ step: 'Scanning', detail: category.name, found: allMissions.length, scanned: totalScanned })
+
+            // Walk subdirectories (e.g. cncf-generated/kubernetes/)
+            for (const sub of subDirs) {
+              if (cancelled) return
+              totalScanned++
+              setSearchProgress({ step: 'Scanning', detail: `${category.name}/${sub.name}`, found: allMissions.length, scanned: totalScanned })
+              try {
+                const { data: subFiles } = await api.get<BrowseEntry[]>(
+                  `/api/missions/browse?path=${encodeURIComponent(sub.path)}`
+                )
+                if (cancelled) return
+                const jsonFiles = (subFiles ?? []).filter(e => e.type === 'file' && e.name.endsWith('.json'))
+                for (const f of jsonFiles.slice(0, 2)) {
+                  if (cancelled) return
+                  try {
+                    const { data: content } = await api.get<string>(
+                      `/api/missions/file?path=${encodeURIComponent(f.path)}`
+                    )
+                    const parsed = typeof content === 'string' ? JSON.parse(content) : content
+                    if (parsed?.format === 'kc-mission-v1' || parsed?.mission) {
+                      allMissions.push(parsed)
+                      if (cluster) {
+                        setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
+                      }
+                    }
+                  } catch { /* skip */ }
+                }
+              } catch { /* skip */ }
+            }
+          } catch { /* skip inaccessible categories */ }
+        }
 
         if (cancelled) return
-
-        const missions = missionsWrap?.data ?? []
-        const cluster = clusterWrap?.data ?? null
-        if (cluster && missions.length > 0) {
-          const matches = matchMissionsToCluster(missions, cluster)
-          setRecommendations(matches.slice(0, 6))
-        }
+        setSearchProgress({ step: 'Done', detail: `${allMissions.length} missions across ${totalScanned} folders`, found: allMissions.length, scanned: totalScanned })
       } catch {
-        // Recommendations are best-effort
+        setSearchProgress(prev => ({ ...prev, step: 'Error', detail: 'Could not load recommendations' }))
       } finally {
         if (!cancelled) setLoadingRecommendations(false)
       }
@@ -917,9 +993,41 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                 className="mb-6"
               >
                 {loadingRecommendations ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Matching missions to your cluster…
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                      <span className="flex-1">
+                        {searchProgress.step === 'Connecting' && 'Connecting to knowledge base…'}
+                        {searchProgress.step === 'Scanning' && (
+                          <>
+                            Scanning <span className="text-purple-400 font-mono">{searchProgress.detail}</span>
+                          </>
+                        )}
+                        {searchProgress.step === 'Error' && searchProgress.detail}
+                      </span>
+                      {searchProgress.found > 0 && (
+                        <span className="text-xs text-purple-400 tabular-nums">
+                          {searchProgress.found} found · {searchProgress.scanned} scanned
+                        </span>
+                      )}
+                    </div>
+                    {/* Show cards progressively as they arrive */}
+                    {filteredRecommendations.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {filteredRecommendations.map((match, i) => (
+                          <RecommendationCard
+                            key={i}
+                            match={match}
+                            onSelect={() => {
+                              setSelectedMission(match.mission)
+                              setRawContent(JSON.stringify(match.mission, null, 2))
+                              setShowRaw(false)
+                            }}
+                            onImport={() => handleImport(match.mission)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -938,6 +1046,26 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                   </div>
                 )}
               </CollapsibleSection>
+            )}
+
+            {/* Browse on GitHub link */}
+            {!selectedMission && !loading && (
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <a
+                  href="https://github.com/kubestellar/console-kb/tree/master/solutions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-purple-400 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Browse all solutions on GitHub
+                </a>
+                {searchProgress.step === 'Done' && searchProgress.found > 0 && (
+                  <span className="text-xs text-muted-foreground/60 ml-auto">
+                    {searchProgress.detail}
+                  </span>
+                )}
+              </div>
             )}
 
             {/* Directory listing or Mission preview */}
@@ -980,6 +1108,16 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                     toggleNode(node)
                     selectNode(node)
                   }
+                }}
+                onImport={async (entry) => {
+                  try {
+                    const { data: content } = await api.get<string>(
+                      `/api/missions/file?path=${encodeURIComponent(entry.path)}`
+                    )
+                    const raw = typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+                    const parsed = typeof content === 'string' ? JSON.parse(content) : content
+                    handleImport(parsed, raw)
+                  } catch { /* skip */ }
                 }}
               />
             ) : selectedPath ? (
@@ -1103,37 +1241,52 @@ function DirectoryListing({
   entries,
   viewMode,
   onSelect,
+  onImport,
 }: {
   entries: BrowseEntry[]
   viewMode: ViewMode
   onSelect: (entry: BrowseEntry) => void
+  onImport?: (entry: BrowseEntry) => void
 }) {
   if (viewMode === 'list') {
     return (
       <div className="space-y-1">
         {entries.map((entry) => (
-          <button
+          <div
             key={entry.path}
-            onClick={() => onSelect(entry)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"
           >
-            {entry.type === 'directory' ? (
-              <Folder className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-            ) : (
-              <FileJson className="w-5 h-5 text-blue-400 flex-shrink-0" />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground truncate">{entry.name}</p>
-              {entry.description && (
-                <p className="text-xs text-muted-foreground truncate">{entry.description}</p>
+            <button
+              onClick={() => onSelect(entry)}
+              className="flex items-center gap-3 min-w-0 flex-1 text-left"
+            >
+              {entry.type === 'directory' ? (
+                <Folder className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+              ) : (
+                <FileJson className="w-5 h-5 text-blue-400 flex-shrink-0" />
               )}
-            </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground truncate">{entry.name}</p>
+                {entry.description && (
+                  <p className="text-xs text-muted-foreground truncate">{entry.description}</p>
+                )}
+              </div>
+            </button>
+            {entry.type === 'file' && entry.name.endsWith('.json') && onImport && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onImport(entry) }}
+                className="opacity-0 group-hover:opacity-100 px-2.5 py-1 text-[11px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-all flex items-center gap-1"
+              >
+                <Download className="w-3 h-3" />
+                Import
+              </button>
+            )}
             {entry.size != null && (
               <span className="text-xs text-muted-foreground flex-shrink-0">
                 {formatBytes(entry.size)}
               </span>
             )}
-          </button>
+          </div>
         ))}
       </div>
     )
@@ -1142,21 +1295,34 @@ function DirectoryListing({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {entries.map((entry) => (
-        <button
+        <div
           key={entry.path}
-          onClick={() => onSelect(entry)}
-          className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 hover:border-purple-500/30 transition-colors text-center group"
+          className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 hover:border-purple-500/30 transition-colors text-center group relative"
         >
-          {entry.type === 'directory' ? (
-            <Folder className="w-10 h-10 text-yellow-400 group-hover:text-yellow-300" />
-          ) : (
-            <FileJson className="w-10 h-10 text-blue-400 group-hover:text-blue-300" />
+          <button
+            onClick={() => onSelect(entry)}
+            className="flex flex-col items-center gap-2 w-full"
+          >
+            {entry.type === 'directory' ? (
+              <Folder className="w-10 h-10 text-yellow-400 group-hover:text-yellow-300" />
+            ) : (
+              <FileJson className="w-10 h-10 text-blue-400 group-hover:text-blue-300" />
+            )}
+            <p className="text-sm font-medium text-foreground truncate w-full">{entry.name}</p>
+            {entry.description && (
+              <p className="text-xs text-muted-foreground truncate w-full">{entry.description}</p>
+            )}
+          </button>
+          {entry.type === 'file' && entry.name.endsWith('.json') && onImport && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onImport(entry) }}
+              className="mt-1 px-3 py-1 text-[11px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex items-center gap-1"
+            >
+              <Download className="w-3 h-3" />
+              Import to My Missions
+            </button>
           )}
-          <p className="text-sm font-medium text-foreground truncate w-full">{entry.name}</p>
-          {entry.description && (
-            <p className="text-xs text-muted-foreground truncate w-full">{entry.description}</p>
-          )}
-        </button>
+        </div>
       ))}
     </div>
   )
