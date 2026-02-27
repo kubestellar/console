@@ -450,7 +450,8 @@
     "clusterAdmin": "Cluster Admin",
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
-    "securityEvents": "Security & Events"
+    "securityEvents": "Security & Events",
+    "runtime": "Runtime"
   },
   "addCard": {
     "title": "Add Card",
@@ -1733,6 +1734,7 @@
         "fri": "Fri",
         "sat": "Sat"
       },
+      "host": "Host",
       "gpusCount": "GPUs: {{count}}",
       "gpusCount_one": "GPUs: {{count}}",
       "gpusCount_other": "GPUs: {{count}}"
