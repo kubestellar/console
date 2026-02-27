@@ -88,6 +88,9 @@ func (r *Registry) GetDefaultName() string {
 
 // SetDefault sets the default provider
 func (r *Registry) SetDefault(name string) error {
+	if r == nil {
+		return fmt.Errorf("registry is nil")
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

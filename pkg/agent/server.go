@@ -2429,7 +2429,7 @@ User request: %s`, req.Prompt)
 			ID:   msg.ID,
 			Type: "stream_chunk",
 			Payload: map[string]interface{}{
-				"content": fmt.Sprintf("**🔧 %s Output:**\n```\n%s\n```\n\n", execProvider.DisplayName(), execResp.Content),
+				"content": fmt.Sprintf("**🔧 %s Output:**\n```\n%s\n```\n\n", execProvider.DisplayName(), execContent),
 				"agent":   executionAgent,
 				"phase":   "executing",
 			},
