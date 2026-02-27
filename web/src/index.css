@@ -39,6 +39,18 @@
     --color-warning: #f59e0b;
     --color-error: #ef4444;
     --color-info: #06b6d4;
+    --color-neutral: #6b7280;
+
+    /* Agent provider brand colors */
+    --agent-openai: #10A37F;
+    --agent-google-blue: #4285F4;
+    --agent-google-green: #34A853;
+    --agent-google-red: #EA4335;
+    --agent-microsoft: #007ACC;
+    --agent-codeium: #09B6A2;
+    --agent-cline-bg: #1A1A2E;
+    --agent-cline-accent: #E94560;
+    --agent-raycast: #FF6363;
 
     /* Glass effect - can be overridden by theme */
     --glass-background: rgba(17, 24, 39, 0.92);

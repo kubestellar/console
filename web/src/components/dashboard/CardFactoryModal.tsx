@@ -282,10 +282,10 @@ const T2_TEMPLATES: T2Template[] = [
     width: 4,
     source: `export default function DonutCard({ config }) {
   const data = [
-    { label: 'Running', value: 72, color: '#22c55e' },
-    { label: 'Pending', value: 15, color: '#eab308' },
-    { label: 'Failed', value: 8, color: '#ef4444' },
-    { label: 'Unknown', value: 5, color: '#6b7280' },
+    { label: 'Running', value: 72, color: 'var(--color-success)' },
+    { label: 'Pending', value: 15, color: 'var(--color-warning)' },
+    { label: 'Failed', value: 8, color: 'var(--color-error)' },
+    { label: 'Unknown', value: 5, color: 'var(--color-neutral)' },
   ]
   const total = data.reduce((s, d) => s + d.value, 0)
   
