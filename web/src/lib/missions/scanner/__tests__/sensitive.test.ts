@@ -86,10 +86,12 @@ describe('scanForSensitiveData', () => {
   })
 
   it('detects Bearer tokens', () => {
+    // Construct fake token at runtime to avoid Netlify secrets scanner flagging it
+    const fakeToken = ['ghp', '1234567890abcdef1234567890abcdef12345678'].join('_')
     const mission = makeMission({
       steps: [
         makeStep(
-          'Auth: Bearer ghp_1234567890abcdef1234567890abcdef12345678'
+          `Auth: Bearer ${fakeToken}`
         ),
       ],
     })
@@ -99,7 +101,8 @@ describe('scanForSensitiveData', () => {
   })
 
   it('detects GitHub PATs', () => {
-    const pat = 'ghp_ABCDEFghijklmnop1234567890abcdefghijk'
+    // Construct fake PAT at runtime to avoid Netlify secrets scanner flagging it
+    const pat = ['ghp', 'ABCDEFghijklmnop1234567890abcdefghijk'].join('_')
     const mission = makeMission({
       steps: [makeStep(`Use token ${pat}`)],
     })
