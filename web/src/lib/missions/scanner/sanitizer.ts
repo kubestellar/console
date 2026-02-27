@@ -159,7 +159,7 @@ export function sanitizeMission(
 }
 
 export function generateSanitizationPreview(
-  mission: MissionExport,
+  _mission: MissionExport,
   findings: SensitiveFinding[]
 ): SanitizationPreviewItem[] {
   const replacements = buildReplacementMap(findings)
