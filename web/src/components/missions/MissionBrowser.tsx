@@ -30,6 +30,8 @@ import {
   Tag,
   CheckCircle,
   Loader2,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
@@ -86,6 +88,28 @@ const CATEGORY_FILTERS = [
 ] as const
 
 const SIDEBAR_WIDTH = 280
+const WATCHED_REPOS_KEY = 'kc_mission_watched_repos'
+const WATCHED_PATHS_KEY = 'kc_mission_watched_paths'
+
+function loadWatchedRepos(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(WATCHED_REPOS_KEY) || '[]')
+  } catch { return [] }
+}
+
+function saveWatchedRepos(repos: string[]) {
+  localStorage.setItem(WATCHED_REPOS_KEY, JSON.stringify(repos))
+}
+
+function loadWatchedPaths(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(WATCHED_PATHS_KEY) || '[]')
+  } catch { return [] }
+}
+
+function saveWatchedPaths(paths: string[]) {
+  localStorage.setItem(WATCHED_PATHS_KEY, JSON.stringify(paths))
+}
 
 // ============================================================================
 // Component
@@ -126,6 +150,14 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   // Drag state
   const [isDragging, setIsDragging] = useState(false)
 
+  // Watched sources
+  const [watchedRepos, setWatchedRepos] = useState<string[]>(loadWatchedRepos)
+  const [watchedPaths, setWatchedPaths] = useState<string[]>(loadWatchedPaths)
+  const [addingRepo, setAddingRepo] = useState(false)
+  const [addingPath, setAddingPath] = useState(false)
+  const [newRepoValue, setNewRepoValue] = useState('')
+  const [newPathValue, setNewPathValue] = useState('')
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ============================================================================
@@ -154,8 +186,17 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         path: '',
         type: 'directory',
         source: 'github',
-        loaded: false,
+        loaded: true,
         description: user.github_login,
+        children: watchedRepos.map((repo) => ({
+          id: `github/${repo}`,
+          name: repo.split('/').pop() || repo,
+          path: repo,
+          type: 'directory' as const,
+          source: 'github' as const,
+          loaded: false,
+          description: repo,
+        })),
       })
     }
 
@@ -166,8 +207,16 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
       type: 'directory',
       source: 'local',
       loaded: true,
-      children: [],
-      description: 'Drop files here',
+      children: watchedPaths.map((p) => ({
+        id: `local/${p}`,
+        name: p.split('/').pop() || p,
+        path: p,
+        type: 'directory' as const,
+        source: 'local' as const,
+        loaded: false,
+        description: p,
+      })),
+      description: 'Drop files or add paths',
     })
 
     setTreeNodes(rootNodes)
@@ -182,7 +231,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
     setScanResult(null)
     setPendingImport(null)
     setIsScanning(false)
-  }, [isOpen, isAuthenticated, user])
+  }, [isOpen, isAuthenticated, user, watchedRepos, watchedPaths])
 
   // ============================================================================
   // Fetch recommendations
@@ -664,15 +713,153 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         >
           <div className="p-3 space-y-1">
             {treeNodes.map((node) => (
-              <TreeNodeItem
-                key={node.id}
-                node={node}
-                depth={0}
-                expandedNodes={expandedNodes}
-                selectedPath={selectedPath}
-                onToggle={toggleNode}
-                onSelect={selectNode}
-              />
+              <div key={node.id}>
+                <div className="flex items-center">
+                  <div className="flex-1 min-w-0">
+                    <TreeNodeItem
+                      node={node}
+                      depth={0}
+                      expandedNodes={expandedNodes}
+                      selectedPath={selectedPath}
+                      onToggle={toggleNode}
+                      onSelect={selectNode}
+                    />
+                  </div>
+                  {/* Add button for repos and local */}
+                  {node.id === 'github' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setAddingRepo(!addingRepo) }}
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                      title="Add repository to watch"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {node.id === 'local' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setAddingPath(!addingPath) }}
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                      title="Add file path to watch"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline add repo form */}
+                {node.id === 'github' && addingRepo && (
+                  <div className="ml-6 mt-1 mb-2">
+                    <form onSubmit={(e) => {
+                      e.preventDefault()
+                      const val = newRepoValue.trim()
+                      if (val && !watchedRepos.includes(val)) {
+                        const updated = [...watchedRepos, val]
+                        setWatchedRepos(updated)
+                        saveWatchedRepos(updated)
+                      }
+                      setNewRepoValue('')
+                      setAddingRepo(false)
+                    }} className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={newRepoValue}
+                        onChange={(e) => setNewRepoValue(e.target.value)}
+                        placeholder="owner/repo"
+                        className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setAddingRepo(false); setNewRepoValue('') } }}
+                      />
+                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300"><CheckCircle className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => { setAddingRepo(false); setNewRepoValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground"><X className="w-3.5 h-3.5" /></button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Inline add path form */}
+                {node.id === 'local' && addingPath && (
+                  <div className="ml-6 mt-1 mb-2">
+                    <form onSubmit={(e) => {
+                      e.preventDefault()
+                      const val = newPathValue.trim()
+                      if (val && !watchedPaths.includes(val)) {
+                        const updated = [...watchedPaths, val]
+                        setWatchedPaths(updated)
+                        saveWatchedPaths(updated)
+                      }
+                      setNewPathValue('')
+                      setAddingPath(false)
+                    }} className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={newPathValue}
+                        onChange={(e) => setNewPathValue(e.target.value)}
+                        placeholder="/path/to/missions"
+                        className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setAddingPath(false); setNewPathValue('') } }}
+                      />
+                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300"><CheckCircle className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => { setAddingPath(false); setNewPathValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground"><X className="w-3.5 h-3.5" /></button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Remove buttons for watched children */}
+                {node.id === 'github' && expandedNodes.has('github') && node.children?.map((child) => (
+                  watchedRepos.includes(child.path) ? (
+                    <div key={`remove-${child.id}`} className="flex items-center ml-6">
+                      <div className="flex-1 min-w-0">
+                        <TreeNodeItem
+                          node={child}
+                          depth={1}
+                          expandedNodes={expandedNodes}
+                          selectedPath={selectedPath}
+                          onToggle={toggleNode}
+                          onSelect={selectNode}
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          const updated = watchedRepos.filter(r => r !== child.path)
+                          setWatchedRepos(updated)
+                          saveWatchedRepos(updated)
+                        }}
+                        className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0"
+                        title="Remove from watched"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : null
+                ))}
+                {node.id === 'local' && expandedNodes.has('local') && node.children?.map((child) => (
+                  watchedPaths.includes(child.path) ? (
+                    <div key={`remove-${child.id}`} className="flex items-center ml-6">
+                      <div className="flex-1 min-w-0">
+                        <TreeNodeItem
+                          node={child}
+                          depth={1}
+                          expandedNodes={expandedNodes}
+                          selectedPath={selectedPath}
+                          onToggle={toggleNode}
+                          onSelect={selectNode}
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          const updated = watchedPaths.filter(p => p !== child.path)
+                          setWatchedPaths(updated)
+                          saveWatchedPaths(updated)
+                        }}
+                        className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0"
+                        title="Remove from watched"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : null
+                ))}
+              </div>
             ))}
           </div>
 

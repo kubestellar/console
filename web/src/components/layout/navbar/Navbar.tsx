@@ -16,7 +16,6 @@ import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { UpdateIndicator } from './UpdateIndicator'
-import { ActiveUsersWidget } from './ActiveUsersWidget'
 import { ROUTES } from '../../../config/routes'
 
 export function Navbar() {
@@ -79,9 +78,6 @@ export function Navbar() {
 
         {/* Extended desktop items: lg+ (1024px) */}
         <div className="hidden lg:flex items-center gap-2">
-          {/* Active Users */}
-          <ActiveUsersWidget />
-
           {/* Update Indicator */}
           <UpdateIndicator />
 
@@ -162,9 +158,6 @@ export function Navbar() {
                   </div>
 
                   {/* Items hidden at <lg (1024px): update, token usage, feature request, tour */}
-                  <div className="px-3 py-2">
-                    <ActiveUsersWidget />
-                  </div>
                   <div className="px-3 py-2">
                     <UpdateIndicator />
                   </div>
