@@ -283,7 +283,7 @@ const T2_TEMPLATES: T2Template[] = [
     source: `export default function DonutCard({ config }) {
   const data = [
     { label: 'Running', value: 72, color: 'var(--color-success)' },
-    { label: 'Pending', value: 15, color: 'var(--color-warning)' },
+    { label: 'Pending', value: 15, color: 'var(--color-pending)' },
     { label: 'Failed', value: 8, color: 'var(--color-error)' },
     { label: 'Unknown', value: 5, color: 'var(--color-neutral)' },
   ]

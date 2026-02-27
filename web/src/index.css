@@ -40,6 +40,7 @@
     --color-error: #ef4444;
     --color-info: #06b6d4;
     --color-neutral: #6b7280;
+    --color-pending: #eab308;
 
     /* Agent provider brand colors */
     --agent-openai: #10A37F;
