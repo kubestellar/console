@@ -1,11 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { useTranslation } from 'react-i18next'
+import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 
 export function AgentStatus() {
   const { t } = useTranslation('common')
   const { status, health, error, isDemoMode } = useLocalAgent()
+  const [showSetup, setShowSetup] = useState(false)
 
   if (status === 'connecting') {
     return (
@@ -18,15 +21,24 @@ export function AgentStatus() {
 
   if (isDemoMode) {
     return (
-      <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-yellow-600 dark:text-yellow-400">
-          <div className="h-2 w-2 rounded-full bg-yellow-500" />
-          {t('agentStatus.demoModeTitle')}
+      <>
+        <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-yellow-600 dark:text-yellow-400">
+            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+            {t('agentStatus.demoModeTitle')}
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {error || t('agentStatus.demoModeDefaultMessage')}
+          </p>
+          <button
+            onClick={() => setShowSetup(true)}
+            className="mt-2 text-sm text-yellow-500 hover:text-yellow-400 underline underline-offset-2 transition-colors"
+          >
+            How to connect
+          </button>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {error || t('agentStatus.demoModeDefaultMessage')}
-        </p>
-      </div>
+        <SetupInstructionsDialog isOpen={showSetup} onClose={() => setShowSetup(false)} />
+      </>
     )
   }
 
@@ -50,7 +62,7 @@ export function AgentInstallBanner() {
     navigator.clipboard.writeText(text)
   }
 
-  const installCommand = 'brew install kubestellar/tap/kc-agent && kc-agent'
+  const installCommand = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 
   return (
     <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-6">

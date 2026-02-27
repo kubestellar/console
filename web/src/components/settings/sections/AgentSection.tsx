@@ -9,7 +9,7 @@ interface AgentSectionProps {
   refresh: () => void
 }
 
-const INSTALL_COMMAND = 'brew install kubestellar/tap/kc-agent && kc-agent'
+const INSTALL_COMMAND = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 
 export function AgentSection({ isConnected, health, refresh }: AgentSectionProps) {
   const { t } = useTranslation()

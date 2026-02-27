@@ -25,7 +25,10 @@ const (
 	// oauthStateExpiration is how long an OAuth state token remains valid.
 	oauthStateExpiration = 10 * time.Minute
 	// jwtExpiration is the lifetime of issued JWT tokens.
-	jwtExpiration = 24 * time.Hour
+	// Set to 7 days — the auth middleware signals clients to silently refresh
+	// after 50% of the lifetime (3.5 days) via the X-Token-Refresh header,
+	// so users rarely see session-expired redirects.
+	jwtExpiration = 168 * time.Hour
 	// githubHTTPTimeout is the timeout for HTTP requests to the GitHub API during auth.
 	githubHTTPTimeout = 10 * time.Second
 	// defaultOAuthCallbackURL is the fallback OAuth callback when no backend URL is configured.

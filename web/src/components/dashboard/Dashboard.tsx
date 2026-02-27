@@ -38,6 +38,7 @@ import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { MissionSuggestions } from './MissionSuggestions'
+import { MissionCTA } from './MissionCTA'
 import { TemplatesModal } from './TemplatesModal'
 import { CreateDashboardModal } from './CreateDashboardModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
@@ -865,6 +866,9 @@ export function Dashboard() {
           onAddCard={handleAddRecommendedCard}
         />
       </div>
+
+      {/* Mission CTA - encourage users who haven't tried missions yet */}
+      <MissionCTA />
 
       {/* Mission Suggestions - actionable items like scaling, restarts, security issues */}
       <MissionSuggestions />

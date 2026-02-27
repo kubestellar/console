@@ -220,6 +220,17 @@ elif [ -f ".env" ]; then
     done < ".env"
 fi
 
+# Warn when GitHub OAuth credentials are not configured
+if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
+    echo ""
+    echo "Note: No GitHub OAuth credentials found."
+    echo "  Console will start in dev mode (auto-login, no GitHub authentication)."
+    echo "  To enable GitHub login, create a .env file with:"
+    echo "    GITHUB_CLIENT_ID=<your-client-id>"
+    echo "    GITHUB_CLIENT_SECRET=<your-client-secret>"
+    echo ""
+fi
+
 # Cleanup on exit — console stops, kc-agent keeps running as a background service
 CONSOLE_PID=""
 cleanup() {

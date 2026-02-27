@@ -119,6 +119,16 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
       cardType: 'events_timeline',
       position: { w: 6, h: 3, x: 6, y: 10 },
     },
+    {
+      id: 'default-8',
+      cardType: 'compliance_score',
+      position: { w: 6, h: 3, x: 0, y: 13 },
+    },
+    {
+      id: 'default-9',
+      cardType: 'benchmark_hero',
+      position: { w: 6, h: 3, x: 6, y: 13 },
+    },
   ],
 
   // Available card types for add menu
@@ -132,6 +142,8 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
     'event_stream',
     'cluster_metrics',
     'events_timeline',
+    'compliance_score',
+    'benchmark_hero',
   ],
 
   // Features

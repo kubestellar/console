@@ -485,10 +485,23 @@ export function TourTrigger() {
   )
 }
 
+// Delay (in ms) before auto-starting the tour for first-time users.
+// Gives the welcome card time to be visible as a cue before the tour begins.
+const TOUR_AUTO_START_DELAY_MS = 3000
+
 // Auto-start tour prompt for new users
 export function TourPrompt() {
   const { hasCompletedTour, isActive, startTour, skipTour } = useTour()
   const [dismissed, setDismissed] = useState(false)
+
+  // Auto-start the tour after a short delay for users who haven't seen it yet.
+  // If the user clicks "Skip" before the timer fires, hasCompletedTour or
+  // dismissed will flip and the effect cleans up.
+  useEffect(() => {
+    if (hasCompletedTour || isActive || dismissed) return
+    const timer = setTimeout(() => startTour(), TOUR_AUTO_START_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [hasCompletedTour, isActive, dismissed, startTour])
 
   // Don't show if tour completed, dismissed, or already active
   if (hasCompletedTour || dismissed || isActive) return null

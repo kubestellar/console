@@ -1,7 +1,7 @@
 import { ReactNode, Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
-import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw } from 'lucide-react'
+import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw, Plug } from 'lucide-react'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
@@ -10,7 +10,7 @@ import { useMobile } from '../../hooks/useMobile'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
-import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
+import { useDemoMode, isDemoModeForced, hasRealToken } from '../../hooks/useDemoMode'
 import { setDemoMode } from '../../lib/demoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
@@ -319,42 +319,63 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      {/* Demo Mode Banner */}
-      {isDemoMode && (
-        <div
-          style={{ top: demoBannerTop }}
-          className={cn(
-            "fixed right-0 z-30 bg-background border-b border-yellow-500/20 transition-[left] duration-300",
-            // Mobile: full width
-            isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
-          )}>
-          <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
-            <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />
-            <span className="text-sm text-yellow-400 font-medium">
-              Demo Mode
-            </span>
-            <span className="hidden md:inline text-xs text-yellow-400/70">
-              Showing sample data only — install locally to monitor your real clusters
-            </span>
-            <button
-              onClick={() => setShowSetupDialog(true)}
-              className="hidden sm:flex ml-2 items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-full text-xs font-medium transition-colors"
-            >
-              <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden lg:inline">Want your own local KubeStellar Console?</span>
-              <span className="lg:hidden">Get Console</span>
-            </button>
-            <button
-              onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
-              className="ml-1 md:ml-2 p-1 hover:bg-yellow-500/20 rounded transition-colors"
-              aria-label={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
-              title={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
-            >
-              <X className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
-            </button>
+      {/* Demo Mode Banner — context-aware messaging:
+          - Authenticated (real JWT) but no agent: "Connect your agent"
+          - No auth / Netlify preview: "Install locally" */}
+      {isDemoMode && (() => {
+        const isAuthenticatedNoAgent = hasRealToken()
+        return (
+          <div
+            style={{ top: demoBannerTop }}
+            className={cn(
+              "fixed right-0 z-30 bg-background border-b border-yellow-500/20 transition-[left] duration-300",
+              // Mobile: full width
+              isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
+            )}>
+            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
+              {isAuthenticatedNoAgent
+                ? <Plug className="w-4 h-4 text-yellow-400" aria-hidden="true" />
+                : <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />
+              }
+              <span className="text-sm text-yellow-400 font-medium">
+                {isAuthenticatedNoAgent ? 'Agent Not Connected' : 'Demo Mode'}
+              </span>
+              <span className="hidden md:inline text-xs text-yellow-400/70">
+                {isAuthenticatedNoAgent
+                  ? 'Showing sample data — connect the kc-agent to monitor your real clusters'
+                  : 'Showing sample data only — install locally to monitor your real clusters'
+                }
+              </span>
+              <button
+                onClick={() => setShowSetupDialog(true)}
+                className="hidden sm:flex ml-2 items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-full text-xs font-medium transition-colors"
+              >
+                {isAuthenticatedNoAgent ? (
+                  <>
+                    <Plug className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span className="hidden lg:inline">How to connect the agent</span>
+                    <span className="lg:hidden">Connect</span>
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span className="hidden lg:inline">Want your own local KubeStellar Console?</span>
+                    <span className="lg:hidden">Get Console</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
+                className="ml-1 md:ml-2 p-1 hover:bg-yellow-500/20 rounded transition-colors"
+                aria-label={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
+                title={isDemoModeForced ? t('buttons.installConsole') : t('buttons.exitDemoMode')}
+              >
+                <X className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Offline Mode Banner - positioned in main content area only */}
       {showOfflineBanner && (
