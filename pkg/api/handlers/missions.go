@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -36,8 +37,8 @@ func NewMissionsHandler() *MissionsHandler {
 
 // RegisterRoutes registers all mission routes on the given Fiber router group.
 func (h *MissionsHandler) RegisterRoutes(g fiber.Router) {
-	g.Get("/kb/browse", h.BrowseConsoleKB)
-	g.Get("/kb/file", h.GetMissionFile)
+	g.Get("/browse", h.BrowseConsoleKB)
+	g.Get("/file", h.GetMissionFile)
 	g.Post("/validate", h.ValidateMission)
 	g.Post("/share/slack", h.ShareToSlack)
 	g.Post("/share/github", h.ShareToGitHub)
@@ -45,11 +46,11 @@ func (h *MissionsHandler) RegisterRoutes(g fiber.Router) {
 
 // ---------- Browse knowledge base ----------
 
-// BrowseConsoleKB lists directory contents from the kubestellar/console repo.
-// GET /api/missions/kb/browse?path=missions
+// BrowseConsoleKB lists directory contents from the kubestellar/console-kb repo.
+// GET /api/missions/browse?path=solutions
 func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	path := c.Query("path", "")
-	url := fmt.Sprintf("%s/repos/kubestellar/console/contents/%s", h.githubAPIURL, path)
+	url := fmt.Sprintf("%s/repos/kubestellar/console-kb/contents/%s?ref=master", h.githubAPIURL, path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -58,6 +59,8 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	if token := c.Get("X-GitHub-Token"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	} else if token := os.Getenv("GITHUB_TOKEN"); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
@@ -73,22 +76,44 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "GitHub API error", "status": resp.StatusCode})
 	}
 
-	c.Set("Content-Type", "application/json")
-	return c.Send(body)
+	// GitHub returns type:"dir", frontend expects type:"directory" — transform
+	var ghEntries []map[string]interface{}
+	if err := json.Unmarshal(body, &ghEntries); err != nil {
+		c.Set("Content-Type", "application/json")
+		return c.Send(body)
+	}
+
+	var entries []fiber.Map
+	for _, e := range ghEntries {
+		entryType, _ := e["type"].(string)
+		if entryType == "dir" {
+			entryType = "directory"
+		}
+		name, _ := e["name"].(string)
+		path, _ := e["path"].(string)
+		size, _ := e["size"].(float64)
+		entries = append(entries, fiber.Map{
+			"name": name,
+			"path": path,
+			"type": entryType,
+			"size": int(size),
+		})
+	}
+	return c.JSON(entries)
 }
 
 // ---------- Get a single file ----------
 
-// GetMissionFile fetches raw file content from the kubestellar/console repo.
-// GET /api/missions/kb/file?path=missions/example.yaml&ref=main
+// GetMissionFile fetches raw file content from the kubestellar/console-kb repo.
+// GET /api/missions/file?path=solutions/cncf-generated/kubernetes/kubernetes-42873.json
 func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	path := c.Query("path")
 	if path == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "path query parameter is required"})
 	}
-	ref := c.Query("ref", "main")
+	ref := c.Query("ref", "master")
 
-	url := fmt.Sprintf("%s/kubestellar/console/%s/%s", h.githubRawURL, ref, path)
+	url := fmt.Sprintf("%s/kubestellar/console-kb/%s/%s", h.githubRawURL, ref, path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -96,6 +121,8 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	}
 
 	if token := c.Get("X-GitHub-Token"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	} else if token := os.Getenv("GITHUB_TOKEN"); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
