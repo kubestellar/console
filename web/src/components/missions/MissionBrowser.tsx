@@ -1052,6 +1052,14 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                 }
                 className="mb-6"
               >
+                {/* Context subtitle */}
+                {!loadingRecommendations && (
+                  <p className="text-xs text-muted-foreground mb-3 -mt-1">
+                    {hasCluster
+                      ? '🎯 Matched based on your cluster resources, labels, and detected issues'
+                      : '🌐 Showing popular CNCF community solutions — connect a cluster for personalized recommendations'}
+                  </p>
+                )}
                 {loadingRecommendations ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
@@ -1614,14 +1622,16 @@ function RecommendationCard({
       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{mission.description}</p>
 
       {matchReasons.length > 0 && (
-        <div className="flex flex-col gap-0.5 mb-2">
+        <div className="flex flex-wrap gap-1 mb-2">
           {matchReasons.slice(0, 2).map((reason, i) => (
-            <p key={i} className={cn(
-              'text-[10px] line-clamp-1',
-              isClusterMatch ? 'text-green-400/70' : 'text-muted-foreground/70'
+            <span key={i} className={cn(
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium',
+              isClusterMatch
+                ? 'bg-green-500/15 text-green-400 border border-green-500/20'
+                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
             )}>
-              {isClusterMatch ? '✓ ' : '• '}{reason}
-            </p>
+              {isClusterMatch ? '✓' : '💡'} {reason}
+            </span>
           ))}
         </div>
       )}
