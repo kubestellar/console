@@ -221,7 +221,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
             <button
               onClick={handleApply}
               disabled={!selectedTemplate}
-              className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
             >
               {t('dashboard.templates.applyTemplate')}
               <ChevronRight className="w-4 h-4" />

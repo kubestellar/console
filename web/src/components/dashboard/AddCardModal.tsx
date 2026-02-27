@@ -1209,7 +1209,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     <button
                       onClick={handleAddBrowseCards}
                       disabled={selectedBrowseCards.size === 0}
-                      className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Plus className="w-4 h-4" />
                       {selectedBrowseCards.size > 0
@@ -1278,7 +1278,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                   <button
                     onClick={handleGenerate}
                     disabled={!query.trim() || isGenerating}
-                    className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+                    className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
                   >
                     {isGenerating ? (
                       <>
@@ -1380,7 +1380,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               <button
                 onClick={handleAddCards}
                 disabled={selectedCards.size === 0}
-                className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 {t('dashboard.addCard.addCount', { count: selectedCards.size })}
