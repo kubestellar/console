@@ -34,7 +34,7 @@ export function AgentStatus() {
             onClick={() => setShowSetup(true)}
             className="mt-2 text-sm text-yellow-500 hover:text-yellow-400 underline underline-offset-2 transition-colors"
           >
-            How to connect
+            {t('agentStatus.howToConnect')}
           </button>
         </div>
         <SetupInstructionsDialog isOpen={showSetup} onClose={() => setShowSetup(false)} />

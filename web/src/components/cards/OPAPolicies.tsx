@@ -1187,7 +1187,7 @@ function CreatePolicyModal({
       }
 
       // Get existing policies
-      const existingPolicies = statuses[selectedCluster]?.policies?.map(p => p.name).join(', ') || 'none'
+      const existingPolicies = (statuses[selectedCluster]?.policies ?? []).map(p => p.name).join(', ') || 'none'
 
       if (!mountedRef.current) return
       onClose()

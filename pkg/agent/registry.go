@@ -95,6 +95,9 @@ func (r *Registry) SetDefault(name string) error {
 	if !exists {
 		return fmt.Errorf("provider %s not found", name)
 	}
+	if provider == nil {
+		return fmt.Errorf("provider %s is nil", name)
+	}
 	if !provider.IsAvailable() {
 		return fmt.Errorf("provider %s is not available", name)
 	}

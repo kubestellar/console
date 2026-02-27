@@ -3,14 +3,13 @@ import { Sparkles, X } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 
 const DISMISSED_KEY = 'kc-mission-cta-dismissed'
-const MISSIONS_KEY = 'kc_missions'
 
 /**
  * Compact banner that nudges users to try AI Missions.
  * Only rendered if the user has no missions yet and hasn't dismissed the CTA.
  */
 export function MissionCTA() {
-  const { openSidebar } = useMissions()
+  const { missions, openSidebar } = useMissions()
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(DISMISSED_KEY) === 'true'
@@ -19,17 +18,8 @@ export function MissionCTA() {
     }
   })
 
-  // Don't show if user already has missions or dismissed
-  const hasMissions = (() => {
-    try {
-      const stored = localStorage.getItem(MISSIONS_KEY)
-      if (!stored) return false
-      const parsed = JSON.parse(stored)
-      return Array.isArray(parsed) && parsed.length > 0
-    } catch {
-      return false
-    }
-  })()
+  // Use the missions context instead of reading localStorage directly
+  const hasMissions = missions && missions.length > 0
 
   if (dismissed || hasMissions) return null
 

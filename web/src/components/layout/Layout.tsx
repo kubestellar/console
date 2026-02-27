@@ -323,7 +323,7 @@ export function Layout({ children }: LayoutProps) {
           - Authenticated (real JWT) but no agent: "Connect your agent"
           - No auth / Netlify preview: "Install locally" */}
       {isDemoMode && (() => {
-        const isAuthenticatedNoAgent = hasRealToken()
+        const isAuthenticatedNoAgent = hasRealToken() && agentStatus !== 'connected'
         return (
           <div
             style={{ top: demoBannerTop }}

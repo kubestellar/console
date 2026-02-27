@@ -2463,7 +2463,7 @@ Command output:
 	analysisResp, err := thinkingProvider.Chat(ctx, &analysisReq)
 	if err != nil {
 		log.Printf("[MixedMode] Analysis error: %v", err)
-	} else {
+	} else if analysisResp != nil {
 		conn.WriteJSON(protocol.Message{
 			ID:   msg.ID,
 			Type: "stream_chunk",

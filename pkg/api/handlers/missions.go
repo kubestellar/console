@@ -74,7 +74,10 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 	// retry without auth — the target repo is public
 	if hasToken && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusNotFound) {
 		resp.Body.Close()
-		retryReq, _ := http.NewRequest("GET", url, nil)
+		retryReq, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
 		retryReq.Header.Set("Accept", "application/vnd.github.v3+json")
 		return h.httpClient.Do(retryReq)
 	}
@@ -283,7 +286,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// Step 1: Fork the repo
 	forkURL := fmt.Sprintf("%s/repos/%s/forks", h.githubAPIURL, req.Repo)
-	forkReq, _ := http.NewRequest("POST", forkURL, nil)
+	forkReq, err := http.NewRequest("POST", forkURL, nil)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to build fork request"})
+	}
 	forkReq.Header.Set("Authorization", "Bearer "+token)
 	forkReq.Header.Set("Accept", "application/vnd.github.v3+json")
 	forkResp, err := h.httpClient.Do(forkReq)
@@ -306,7 +312,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// Step 2: Get HEAD SHA from fork's main branch, then create new branch ref
 	mainRefURL := fmt.Sprintf("%s/repos/%s/git/ref/heads/main", h.githubAPIURL, forkFullName)
-	mainRefReq, _ := http.NewRequest("GET", mainRefURL, nil)
+	mainRefReq, err := http.NewRequest("GET", mainRefURL, nil)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to build ref request"})
+	}
 	mainRefReq.Header.Set("Authorization", "Bearer "+token)
 	mainRefReq.Header.Set("Accept", "application/vnd.github.v3+json")
 	mainRefResp, err := h.httpClient.Do(mainRefReq)
@@ -330,7 +339,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		"ref": "refs/heads/" + req.Branch,
 		"sha": headSHA,
 	})
-	refReq, _ := http.NewRequest("POST", refURL, bytes.NewReader(refPayload))
+	refReq, err := http.NewRequest("POST", refURL, bytes.NewReader(refPayload))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to build branch ref request"})
+	}
 	refReq.Header.Set("Authorization", "Bearer "+token)
 	refReq.Header.Set("Accept", "application/vnd.github.v3+json")
 	h.httpClient.Do(refReq) //nolint:errcheck // best-effort
@@ -342,7 +354,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		"content": req.Content,
 		"branch":  req.Branch,
 	})
-	fileReq, _ := http.NewRequest("PUT", fileURL, bytes.NewReader(filePayload))
+	fileReq, err := http.NewRequest("PUT", fileURL, bytes.NewReader(filePayload))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to build file commit request"})
+	}
 	fileReq.Header.Set("Authorization", "Bearer "+token)
 	fileReq.Header.Set("Accept", "application/vnd.github.v3+json")
 	fileResp, err := h.httpClient.Do(fileReq)
@@ -359,7 +374,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		"base":  "main",
 		"body":  "Mission shared via KubeStellar Console",
 	})
-	prReq, _ := http.NewRequest("POST", prURL, bytes.NewReader(prPayload))
+	prReq, err := http.NewRequest("POST", prURL, bytes.NewReader(prPayload))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to build PR request"})
+	}
 	prReq.Header.Set("Authorization", "Bearer "+token)
 	prReq.Header.Set("Accept", "application/vnd.github.v3+json")
 	prResp, err := h.httpClient.Do(prReq)

@@ -36,9 +36,11 @@ func TestMissions_BrowseConsoleKB_Success(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubAPIURL = mock.URL
 
-	req, _ := http.NewRequest("GET", "/api/missions/kb/browse?path=missions", nil)
+	req, err := http.NewRequest("GET", "/api/missions/kb/browse?path=missions", nil)
+	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	body, _ := io.ReadAll(resp.Body)
@@ -61,9 +63,11 @@ func TestMissions_BrowseConsoleKB_NoPath(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubAPIURL = mock.URL
 
-	req, _ := http.NewRequest("GET", "/api/missions/kb/browse", nil)
+	req, err := http.NewRequest("GET", "/api/missions/kb/browse", nil)
+	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
@@ -73,10 +77,12 @@ func TestMissions_ValidateMission_ValidMission(t *testing.T) {
 	app, _ := setupMissionsTest()
 
 	payload := `{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}}`
-	req, _ := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var body map[string]interface{}
@@ -89,10 +95,12 @@ func TestMissions_ValidateMission_InvalidMission(t *testing.T) {
 
 	// Missing apiVersion, kind, metadata.name
 	payload := `{"apiVersion":"wrong","spec":{}}`
-	req, _ := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	var body map[string]interface{}
@@ -106,10 +114,12 @@ func TestMissions_ValidateMission_InvalidMission(t *testing.T) {
 func TestMissions_ValidateMission_EmptyBody(t *testing.T) {
 	app, _ := setupMissionsTest()
 
-	req, _ := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(""))
+	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(""))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	var body map[string]interface{}
@@ -126,10 +136,12 @@ func TestMissions_ValidateMission_TooLarge(t *testing.T) {
 	handler.RegisterRoutes(app.Group("/api/missions"))
 
 	largePayload := strings.Repeat("x", missionsMaxBodyBytes+1)
-	req, _ := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(largePayload))
+	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(largePayload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	// Handler returns 413 for payload too large
 	assert.True(t, resp.StatusCode == http.StatusRequestEntityTooLarge || resp.StatusCode == http.StatusBadRequest,
 		"expected 413 or 400, got %d", resp.StatusCode)
@@ -161,10 +173,12 @@ func TestMissions_ShareToSlack_Success(t *testing.T) {
 	handler.httpClient = &http.Client{Transport: transport}
 
 	payload := `{"webhookUrl":"https://hooks.slack.com/services/T00/B00/xxx","text":"Hello from mission"}`
-	req, _ := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var body map[string]interface{}
@@ -176,10 +190,12 @@ func TestMissions_ShareToSlack_InvalidWebhook(t *testing.T) {
 	app, _ := setupMissionsTest()
 
 	payload := `{"webhookUrl":"https://evil.com/webhook","text":"Hello"}`
-	req, _ := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
@@ -189,10 +205,12 @@ func TestMissions_ShareToGitHub_NoToken(t *testing.T) {
 	app, _ := setupMissionsTest()
 
 	payload := `{"repo":"kubestellar/console","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
-	req, _ := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
@@ -236,11 +254,13 @@ func TestMissions_ShareToGitHub_Success(t *testing.T) {
 	handler.githubAPIURL = mock.URL
 
 	payload := `{"repo":"kubestellar/console","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
-	req, _ := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Token", "ghp_test123")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var body map[string]interface{}
@@ -270,9 +290,11 @@ func TestMissions_GetMissionFile_Success(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubRawURL = mock.URL
 
-	req, _ := http.NewRequest("GET", "/api/missions/kb/file?path=missions/example.yaml", nil)
+	req, err := http.NewRequest("GET", "/api/missions/kb/file?path=missions/example.yaml", nil)
+	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	body, _ := io.ReadAll(resp.Body)
@@ -289,9 +311,11 @@ func TestMissions_GetMissionFile_NotFound(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubRawURL = mock.URL
 
-	req, _ := http.NewRequest("GET", "/api/missions/kb/file?path=missions/nonexistent.yaml", nil)
+	req, err := http.NewRequest("GET", "/api/missions/kb/file?path=missions/nonexistent.yaml", nil)
+	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 

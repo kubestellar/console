@@ -2731,7 +2731,8 @@
     "copyAndPaste": "Copy and paste this command:",
     "accessAllClusters": "Access all your clusters",
     "realtimeTokenTracking": "Real-time token tracking",
-    "runsLocally": "Runs locally (secure)"
+    "runsLocally": "Runs locally (secure)",
+    "howToConnect": "How to connect"
   },
   "login": {
     "sessionExpired": "Session expired",

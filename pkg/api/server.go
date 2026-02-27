@@ -283,6 +283,7 @@ func (s *Server) setupMiddleware() {
 		AllowOrigins:     s.config.FrontendURL,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		ExposeHeaders:    "X-Token-Refresh",
 		AllowCredentials: true,
 	}))
 }

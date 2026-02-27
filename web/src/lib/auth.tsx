@@ -41,7 +41,10 @@ function getJwtExpiryMs(token: string): number | null {
   try {
     const parts = token.split('.')
     if (parts.length !== 3) return null
-    const payload = JSON.parse(atob(parts[1]))
+    // JWT uses base64url encoding — convert to standard base64 for atob()
+    const base64Url = parts[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(base64))
     if (typeof payload.exp !== 'number') return null
     const MS_PER_SECOND = 1000
     return payload.exp * MS_PER_SECOND
@@ -90,10 +93,14 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   }
   banner.appendChild(btn)
 
-  // Reuse the existing slideUp animation from showSessionExpiredBanner
-  const style = document.createElement('style')
-  style.textContent = `@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }`
-  document.head.appendChild(style)
+  // Reuse a single <style> element for the slideUp animation to avoid unbounded DOM growth
+  const STYLE_ID = 'session-banner-animation'
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style')
+    style.id = STYLE_ID
+    style.textContent = `@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }`
+    document.head.appendChild(style)
+  }
   document.body.appendChild(banner)
 }
 
@@ -264,28 +271,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (expiryMs === null) return
 
       const timeUntilExpiry = expiryMs - Date.now()
-      if (timeUntilExpiry > 0 && timeUntilExpiry <= EXPIRY_WARNING_THRESHOLD_MS) {
-        showExpiryWarningBanner(async () => {
-          try {
-            const response = await fetch('/auth/refresh', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${currentToken}`,
-              },
-            })
-            if (response.ok) {
-              const data = await response.json()
-              if (data.token) {
-                localStorage.setItem(STORAGE_KEY_TOKEN, data.token)
-                setTokenState(data.token)
-              }
-            }
-          } catch {
-            // Refresh failed — user will see session-expired redirect naturally
-          }
-        })
+      if (timeUntilExpiry <= 0 || timeUntilExpiry > EXPIRY_WARNING_THRESHOLD_MS) {
+        // Token not near expiry (or already expired) — remove stale banner if present
+        document.getElementById('session-expiry-warning')?.remove()
+        return
       }
+      showExpiryWarningBanner(async () => {
+        try {
+          const response = await fetch('/auth/refresh', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${currentToken}`,
+            },
+          })
+          if (response.ok) {
+            const data = await response.json()
+            if (data.token) {
+              localStorage.setItem(STORAGE_KEY_TOKEN, data.token)
+              setTokenState(data.token)
+            }
+          }
+        } catch {
+          // Refresh failed — user will see session-expired redirect naturally
+        }
+      })
     }
 
     // Check once immediately, then every 60 seconds
@@ -293,6 +303,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const intervalId = setInterval(checkExpiry, EXPIRY_CHECK_INTERVAL_MS)
     return () => clearInterval(intervalId)
   }, [token])
+
+  // Listen for token updates from silentRefresh() (dispatched via StorageEvent)
+  // so the AuthProvider state stays in sync without a full page reload.
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY_TOKEN && e.newValue && e.newValue !== DEMO_TOKEN_VALUE) {
+        setTokenState(e.newValue)
+        // Remove the expiry warning banner since the token was just refreshed
+        document.getElementById('session-expiry-warning')?.remove()
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   useEffect(() => {
     if (token) {

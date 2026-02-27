@@ -85,9 +85,14 @@ function showSessionExpiredBanner(): void {
     <span><strong>Session expired</strong> — Redirecting to sign in...</span>
   `
 
-  const style = document.createElement('style')
-  style.textContent = `@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }`
-  document.head.appendChild(style)
+  // Reuse a single <style> element to avoid unbounded DOM growth
+  const STYLE_ID = 'session-banner-animation'
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style')
+    style.id = STYLE_ID
+    style.textContent = `@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }`
+    document.head.appendChild(style)
+  }
   document.body.appendChild(toast)
 }
 
@@ -260,6 +265,12 @@ class ApiClient {
           const data = await response.json()
           if (data.token) {
             localStorage.setItem(STORAGE_KEY_TOKEN, data.token)
+            // Notify AuthProvider (and other tabs) that the token changed
+            window.dispatchEvent(new StorageEvent('storage', {
+              key: STORAGE_KEY_TOKEN,
+              newValue: data.token,
+              storageArea: localStorage,
+            }))
           }
         }
       } catch {

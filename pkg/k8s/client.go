@@ -67,6 +67,9 @@ func (m *MultiClusterClient) IsInCluster() bool {
 
 // SetDynamicClient injects a dynamic client for a cluster (for testing)
 func (m *MultiClusterClient) SetDynamicClient(cluster string, client dynamic.Interface) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.dynamicClients == nil {
@@ -77,6 +80,9 @@ func (m *MultiClusterClient) SetDynamicClient(cluster string, client dynamic.Int
 
 // SetClient injects a typed client for a cluster (for testing)
 func (m *MultiClusterClient) SetClient(cluster string, client kubernetes.Interface) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.clients == nil {
@@ -87,6 +93,9 @@ func (m *MultiClusterClient) SetClient(cluster string, client kubernetes.Interfa
 
 // SetRawConfig sets the raw kubeconfig (for testing)
 func (m *MultiClusterClient) SetRawConfig(config *api.Config) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.rawConfig = config
@@ -101,6 +110,9 @@ func (m *MultiClusterClient) GetRawConfig() *api.Config {
 
 // InjectClient injects a typed client for a cluster (for testing)
 func (m *MultiClusterClient) InjectClient(contextName string, client kubernetes.Interface) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.clients == nil {
@@ -111,6 +123,9 @@ func (m *MultiClusterClient) InjectClient(contextName string, client kubernetes.
 
 // InjectDynamicClient injects a dynamic client for a cluster (for testing)
 func (m *MultiClusterClient) InjectDynamicClient(contextName string, client dynamic.Interface) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.dynamicClients == nil {
