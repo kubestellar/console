@@ -28,6 +28,22 @@ interface EChartsFormatterParam {
   data?: { point?: ParetoPoint }
 }
 
+// Minimal ECharts series config type covering both scatter/line and frontier series
+interface EChartsSeriesConfig {
+  name: string
+  type: string
+  smooth?: boolean
+  symbol?: string
+  symbolSize?: number
+  data: unknown[]
+  lineStyle?: Record<string, unknown>
+  itemStyle?: Record<string, unknown>
+  label?: Record<string, unknown>
+  emphasis?: Record<string, unknown>
+  z?: number
+  silent?: boolean
+}
+
 // ---------------------------------------------------------------------------
 // Chart presets — each defines X-axis, Y-axis, title, and optional info pills
 // ---------------------------------------------------------------------------
@@ -363,7 +379,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
 
   // ---- ECharts option ----
   const option = useMemo(() => {
-    const allSeries: Record<string, unknown>[] = [...seriesMap.entries()]
+    const allSeries: EChartsSeriesConfig[] = [...seriesMap.entries()]
       .filter(([hw]) => !hiddenHw.has(hw))
       .map(([hw, pts]) => {
         const color = HARDWARE_COLORS[hw] ?? '#6b7280'
