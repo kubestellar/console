@@ -33,19 +33,19 @@ interface HelmReleaseDisplay {
 }
 
 type SortByOption = 'status' | 'name' | 'chart' | 'updated'
+type SortTranslationKey = 'common:common.status' | 'common:common.name' | 'cards:helmReleaseStatus.chart' | 'cards:helmReleaseStatus.updated'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'status' as const, labelKey: 'common.status' },
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'chart' as const, labelKey: 'helmReleaseStatus.chart' },
-  { value: 'updated' as const, labelKey: 'helmReleaseStatus.updated' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'status' as const, labelKey: 'common:common.status' },
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'chart' as const, labelKey: 'cards:helmReleaseStatus.chart' },
+  { value: 'updated' as const, labelKey: 'cards:helmReleaseStatus.updated' },
 ]
 
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const { isLoading: clustersLoading } = useClusters()

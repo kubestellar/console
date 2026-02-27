@@ -22,11 +22,12 @@ interface HelmHistoryProps {
 }
 
 type SortByOption = 'revision' | 'status' | 'updated'
+type SortTranslationKey = 'cards:helmHistory.revision' | 'common:common.status' | 'cards:helmHistory.updated'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'revision' as const, labelKey: 'helmHistory.revision' },
-  { value: 'status' as const, labelKey: 'common.status' },
-  { value: 'updated' as const, labelKey: 'helmHistory.updated' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'revision' as const, labelKey: 'cards:helmHistory.revision' },
+  { value: 'status' as const, labelKey: 'common:common.status' },
+  { value: 'updated' as const, labelKey: 'cards:helmHistory.updated' },
 ]
 
 const STATUS_ORDER: Record<string, number> = {
@@ -40,8 +41,7 @@ const STATUS_ORDER: Record<string, number> = {
 export function HelmHistory({ config }: HelmHistoryProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const { deduplicatedClusters: allClusters } = useClusters()

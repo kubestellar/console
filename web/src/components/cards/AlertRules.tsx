@@ -21,8 +21,9 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
 type SortField = 'name' | 'severity' | 'enabled'
+type SortTranslationKey = 'alertRules.sortName' | 'alertRules.sortSeverity' | 'alertRules.sortStatus'
 
-const SORT_OPTIONS_KEYS = [
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortField; labelKey: SortTranslationKey }> = [
   { value: 'name' as const, labelKey: 'alertRules.sortName' },
   { value: 'severity' as const, labelKey: 'alertRules.sortSeverity' },
   { value: 'enabled' as const, labelKey: 'alertRules.sortStatus' },
@@ -84,8 +85,7 @@ export function AlertRulesCard() {
   })
 
   // Translated sort options
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey as any) as string }))
+  const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey) as string }))
 
   // Count enabled rules
   const enabledCount = rules.filter(r => r.enabled).length

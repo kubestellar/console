@@ -8,7 +8,16 @@ interface ArgoCDHealthProps {
   config?: Record<string, unknown>
 }
 
-const healthConfig = {
+type ArgoCDHealthLabelKey = 'argoCDHealth.healthy' | 'argoCDHealth.degraded' | 'argoCDHealth.progressing' | 'argoCDHealth.missing' | 'argoCDHealth.unknown'
+
+interface HealthConfigEntry {
+  icon: typeof CheckCircle
+  color: string
+  bg: string
+  labelKey: ArgoCDHealthLabelKey
+}
+
+const healthConfig: Record<string, HealthConfigEntry> = {
   healthy: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', labelKey: 'argoCDHealth.healthy' },
   degraded: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', labelKey: 'argoCDHealth.degraded' },
   progressing: { icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10', labelKey: 'argoCDHealth.progressing' },
@@ -114,8 +123,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
             <div key={key} className={`flex items-center justify-between p-2 rounded-lg ${config.bg}`}>
               <div className="flex items-center gap-2">
                 <Icon className={`w-4 h-4 ${config.color}`} />
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <span className="text-sm text-foreground">{t(config.labelKey as any)}</span>
+                <span className="text-sm text-foreground">{t(config.labelKey)}</span>
               </div>
               <span className={`text-sm font-bold ${config.color}`}>{count}</span>
             </div>

@@ -13,6 +13,7 @@ import {
 import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 // Stock search result interface
 interface StockSearchResult {
@@ -248,8 +249,7 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
 // Default stock symbols to track (keeping for backwards compatibility)
 
 // Market status
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getMarketStatus(t: (...args: any[]) => string): { isOpen: boolean; statusText: string } {
+function getMarketStatus(t: TFunction<readonly ['cards', 'common']>): { isOpen: boolean; statusText: string } {
   const now = new Date()
   const hour = now.getHours()
   const minutes = now.getMinutes()

@@ -11,12 +11,14 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
+type SortTranslationKey = 'cards:gitOpsDrift.severity' | 'cards:gitOpsDrift.type' | 'cards:gitOpsDrift.resource' | 'common:common.cluster'
+type DriftTypeLabelKey = 'cards:gitOpsDrift.modified' | 'cards:gitOpsDrift.missingInCluster' | 'cards:gitOpsDrift.notInGit'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'severity' as const, labelKey: 'gitOpsDrift.severity' },
-  { value: 'type' as const, labelKey: 'gitOpsDrift.type' },
-  { value: 'resource' as const, labelKey: 'gitOpsDrift.resource' },
-  { value: 'cluster' as const, labelKey: 'common.cluster' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'severity' as const, labelKey: 'cards:gitOpsDrift.severity' },
+  { value: 'type' as const, labelKey: 'cards:gitOpsDrift.type' },
+  { value: 'resource' as const, labelKey: 'cards:gitOpsDrift.resource' },
+  { value: 'cluster' as const, labelKey: 'common:common.cluster' },
 ]
 
 const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 }
@@ -28,24 +30,24 @@ interface GitOpsDriftProps {
   }
 }
 
-const driftTypeConfig = {
+const driftTypeConfig: Record<string, { icon: typeof RefreshCw; color: string; bg: string; labelKey: DriftTypeLabelKey }> = {
   modified: {
     icon: RefreshCw,
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/20',
-    labelKey: 'gitOpsDrift.modified',
+    labelKey: 'cards:gitOpsDrift.modified',
   },
   deleted: {
     icon: Minus,
     color: 'text-red-400',
     bg: 'bg-red-500/20',
-    labelKey: 'gitOpsDrift.missingInCluster',
+    labelKey: 'cards:gitOpsDrift.missingInCluster',
   },
   added: {
     icon: Plus,
     color: 'text-blue-400',
     bg: 'bg-blue-500/20',
-    labelKey: 'gitOpsDrift.notInGit',
+    labelKey: 'cards:gitOpsDrift.notInGit',
   },
 }
 
@@ -58,8 +60,7 @@ const severityColors = {
 export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const cluster = config?.cluster
@@ -322,8 +323,7 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs px-2 py-0.5 rounded ${typeConfig.bg} ${typeConfig.color}`}>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {String(t(typeConfig.labelKey as any))}
+            {String(t(typeConfig.labelKey))}
           </span>
           <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>

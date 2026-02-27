@@ -21,6 +21,7 @@ import { Pagination } from '../ui/Pagination'
 import { useCardData, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 // Severity color map — defined at module level to avoid re-creation on each render
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
@@ -69,8 +70,7 @@ function AlertStatsRow({ critical, warning, acknowledged }: { critical: number; 
 }
 
 // Format relative time
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatRelativeTime(dateString: string, t: (key: any, opts?: any) => string): string {
+function formatRelativeTime(dateString: string, t: TFunction<'cards'>): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()

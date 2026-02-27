@@ -143,11 +143,12 @@ const getStatusColors = (status: GatewayStatusType) => {
 }
 
 type SortByOption = 'name' | 'cluster' | 'status'
+type SortTranslationKey = 'common:common.name' | 'common:common.cluster' | 'common:common.status'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'cluster' as const, labelKey: 'common.cluster' },
-  { value: 'status' as const, labelKey: 'common.status' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'cluster' as const, labelKey: 'common:common.cluster' },
+  { value: 'status' as const, labelKey: 'common:common.status' },
 ]
 
 const GATEWAY_SORT_COMPARATORS: Record<SortByOption, (a: Gateway, b: Gateway) => number> = {
@@ -163,8 +164,7 @@ interface GatewayStatusProps {
 export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   // Demo data - always available, never loading/erroring

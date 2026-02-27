@@ -28,12 +28,13 @@ interface OperatorStatusProps {
 }
 
 type SortByOption = 'status' | 'name' | 'namespace' | 'version'
+type SortTranslationKey = 'common:common.status' | 'common:common.name' | 'common:common.namespace' | 'cards:operatorStatus.version'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'status' as const, labelKey: 'common.status' },
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'namespace' as const, labelKey: 'common.namespace' },
-  { value: 'version' as const, labelKey: 'operatorStatus.version' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'status' as const, labelKey: 'common:common.status' },
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'namespace' as const, labelKey: 'common:common.namespace' },
+  { value: 'version' as const, labelKey: 'cards:operatorStatus.version' },
 ]
 
 const STATUS_ORDER: Record<string, number> = { Failed: 0, Installing: 1, Upgrading: 2, Succeeded: 3 }
@@ -56,8 +57,7 @@ const FILTER_CONFIG = {
 function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const { isLoading: clustersLoading } = useClusters()

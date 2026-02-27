@@ -28,17 +28,17 @@ interface RBACItem {
 }
 
 type SortByOption = 'name' | 'rules'
+type SortTranslationKey = 'common:common.name' | 'cards:namespaceRBAC.rules'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'rules' as const, labelKey: 'namespaceRBAC.rules' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'rules' as const, labelKey: 'cards:namespaceRBAC.rules' },
 ]
 
 function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, error } = useClusters()

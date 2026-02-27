@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { AlertTriangle, AlertCircle, Clock, Scale, CheckCircle } from 'lucide-react'
+import type { TFunction } from 'i18next'
 import { useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import type { DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -16,19 +17,19 @@ import {
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'cluster'
+type SortTranslationKey = 'common:common.status' | 'common:common.name' | 'common:common.cluster'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'status' as const, labelKey: 'common.status' },
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'cluster' as const, labelKey: 'common.cluster' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'status' as const, labelKey: 'common:common.status' },
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'cluster' as const, labelKey: 'common:common.cluster' },
 ]
 
 interface DeploymentIssuesProps {
   config?: Record<string, unknown>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getIssueIcon = (status: string, t: (key: any) => string): { icon: typeof AlertCircle; tooltip: string } => {
+const getIssueIcon = (status: string, t: TFunction<readonly ['cards', 'common']>): { icon: typeof AlertCircle; tooltip: string } => {
   if (status.includes('Unavailable')) return { icon: AlertCircle, tooltip: t('deploymentIssues.tooltipUnavailable') }
   if (status.includes('Progressing')) return { icon: Clock, tooltip: t('deploymentIssues.tooltipProgressing') }
   if (status.includes('ReplicaFailure')) return { icon: Scale, tooltip: t('deploymentIssues.tooltipReplicaFailure') }
@@ -38,8 +39,7 @@ const getIssueIcon = (status: string, t: (key: any) => string): { icon: typeof A
 function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const clusterConfig = config?.cluster as string | undefined

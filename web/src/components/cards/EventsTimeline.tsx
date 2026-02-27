@@ -36,12 +36,13 @@ interface TimePoint {
 }
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
+type TimeRangeTranslationKey = 'cards:eventsTimeline.range15m' | 'cards:eventsTimeline.range1h' | 'cards:eventsTimeline.range6h' | 'cards:eventsTimeline.range24h'
 
-const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: string; bucketMinutes: number; numBuckets: number }[] = [
-  { value: '15m', labelKey: 'eventsTimeline.range15m', bucketMinutes: 1, numBuckets: 15 },
-  { value: '1h', labelKey: 'eventsTimeline.range1h', bucketMinutes: 5, numBuckets: 12 },
-  { value: '6h', labelKey: 'eventsTimeline.range6h', bucketMinutes: 30, numBuckets: 12 },
-  { value: '24h', labelKey: 'eventsTimeline.range24h', bucketMinutes: 60, numBuckets: 24 },
+const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: TimeRangeTranslationKey; bucketMinutes: number; numBuckets: number }[] = [
+  { value: '15m', labelKey: 'cards:eventsTimeline.range15m', bucketMinutes: 1, numBuckets: 15 },
+  { value: '1h', labelKey: 'cards:eventsTimeline.range1h', bucketMinutes: 5, numBuckets: 12 },
+  { value: '6h', labelKey: 'cards:eventsTimeline.range6h', bucketMinutes: 30, numBuckets: 12 },
+  { value: '24h', labelKey: 'cards:eventsTimeline.range24h', bucketMinutes: 60, numBuckets: 24 },
 ]
 
 // Group events by time buckets
@@ -91,8 +92,7 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 function EventsTimelineInternal() {
   const { t } = useTranslation(['cards', 'common'])
   const TIME_RANGE_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey as any)) })),
+    TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) })),
     [t]
   )
   const {

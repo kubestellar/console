@@ -110,7 +110,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
 /**
  * Generate real insights based on the selected stack's state
  */
-function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: any) => string): AIInsight[] {
+function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Record<string, unknown>) => string): AIInsight[] {
   const insights: AIInsight[] = []
   const now = new Date()
 
@@ -336,7 +336,7 @@ export function LLMdAIInsights() {
     }
 
     if (stackContext?.selectedStack) {
-      return generateStackInsights(stackContext.selectedStack, t as unknown as (key: string, options?: any) => string)
+      return generateStackInsights(stackContext.selectedStack, t as unknown as (key: string, options?: Record<string, unknown>) => string)
     }
 
     return []

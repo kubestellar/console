@@ -18,12 +18,13 @@ interface NamespaceEventsProps {
 }
 
 type SortByOption = 'time' | 'type' | 'object' | 'count'
+type SortTranslationKey = 'cards:namespaceEvents.time' | 'cards:namespaceEvents.type' | 'cards:namespaceEvents.object' | 'cards:namespaceEvents.count'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'time' as const, labelKey: 'namespaceEvents.time' },
-  { value: 'type' as const, labelKey: 'namespaceEvents.type' },
-  { value: 'object' as const, labelKey: 'namespaceEvents.object' },
-  { value: 'count' as const, labelKey: 'namespaceEvents.count' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'time' as const, labelKey: 'cards:namespaceEvents.time' },
+  { value: 'type' as const, labelKey: 'cards:namespaceEvents.type' },
+  { value: 'object' as const, labelKey: 'cards:namespaceEvents.object' },
+  { value: 'count' as const, labelKey: 'cards:namespaceEvents.count' },
 ]
 
 const EVENT_SORT_COMPARATORS: Record<SortByOption, (a: ClusterEvent, b: ClusterEvent) => number> = {
@@ -40,8 +41,7 @@ const EVENT_SORT_COMPARATORS: Record<SortByOption, (a: ClusterEvent, b: ClusterE
 export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const { isLoading: clustersLoading } = useClusters()

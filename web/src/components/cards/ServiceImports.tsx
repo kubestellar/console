@@ -96,11 +96,12 @@ const getTypeColor = (type: ServiceImportType) => {
 }
 
 type SortByOption = 'name' | 'type' | 'cluster'
+type SortTranslationKey = 'common:common.name' | 'cards:serviceImports.type' | 'common:common.cluster'
 
-const SORT_OPTIONS_KEYS = [
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'type' as const, labelKey: 'serviceImports.type' },
-  { value: 'cluster' as const, labelKey: 'common.cluster' },
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'type' as const, labelKey: 'cards:serviceImports.type' },
+  { value: 'cluster' as const, labelKey: 'common:common.cluster' },
 ]
 
 const IMPORT_SORT_COMPARATORS: Record<SortByOption, (a: ServiceImport, b: ServiceImport) => number> = {
@@ -116,8 +117,7 @@ interface ServiceImportsProps {
 function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   // Demo data - always available, never loading/erroring

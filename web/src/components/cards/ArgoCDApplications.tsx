@@ -26,8 +26,9 @@ interface ArgoCDApplicationsProps {
 }
 
 type SortByOption = 'syncStatus' | 'healthStatus' | 'name' | 'namespace'
+type SortTranslationKey = 'argoCDApplications.sortSyncStatus' | 'argoCDApplications.sortHealth' | 'argoCDApplications.sortName' | 'argoCDApplications.sortNamespace'
 
-const SORT_OPTIONS_KEYS = [
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
   { value: 'syncStatus' as const, labelKey: 'argoCDApplications.sortSyncStatus' },
   { value: 'healthStatus' as const, labelKey: 'argoCDApplications.sortHealth' },
   { value: 'name' as const, labelKey: 'argoCDApplications.sortName' },
@@ -77,8 +78,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   })
 
   // Translated sort options
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey as any) as string }))
+  const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey) as string }))
 
   // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
