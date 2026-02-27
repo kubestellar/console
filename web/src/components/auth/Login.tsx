@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth'
 import { checkOAuthConfigured } from '../../lib/api'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
+import { emitLogin } from '../../lib/analytics'
 
 // Lazy load the heavy Three.js globe animation
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
@@ -76,7 +77,7 @@ export function Login() {
     const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
     if (isNetlifyPreview || isDemoMode) {
-      login()
+      emitLogin('auto-netlify'); login()
       return
     }
 
@@ -84,7 +85,7 @@ export function Login() {
     // (the backend will create a dev-user JWT automatically)
     checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
       if (backendUp && !oauthConfigured) {
-        login()
+        emitLogin('auto-quickstart'); login()
       }
     })
   }, [isLoading, isAuthenticated, login, oauthError])
@@ -210,7 +211,7 @@ export function Login() {
           {/* GitHub login button */}
           <button
             data-testid="github-login-button"
-            onClick={login}
+            onClick={() => { emitLogin('github'); login() }}
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 transition-all duration-200 hover:shadow-lg"
           >
             <Github className="w-5 h-5" />

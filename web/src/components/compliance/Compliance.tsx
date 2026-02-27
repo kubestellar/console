@@ -8,6 +8,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
+import { emitComplianceDrillDown } from '../../lib/analytics'
 
 const COMPLIANCE_CARDS_KEY = 'compliance-dashboard-cards'
 
@@ -66,17 +67,17 @@ export function Compliance() {
     switch (blockId) {
       // Overall compliance
       case 'score':
-        return { value: `${posture.score}%`, sublabel: 'compliance score', onClick: () => drillToAllSecurity(), isClickable: reachableClusters.length > 0 }
+        return { value: `${posture.score}%`, sublabel: 'compliance score', onClick: () => { emitComplianceDrillDown('score'); drillToAllSecurity() }, isClickable: reachableClusters.length > 0 }
       case 'total_checks':
-        return { value: posture.totalChecks, sublabel: 'total checks', onClick: () => drillToAllSecurity(), isClickable: posture.totalChecks > 0 }
+        return { value: posture.totalChecks, sublabel: 'total checks', onClick: () => { emitComplianceDrillDown('total_checks'); drillToAllSecurity() }, isClickable: posture.totalChecks > 0 }
       case 'passing':
-        return { value: posture.passing, sublabel: 'passing', onClick: () => drillToAllSecurity('passing'), isClickable: posture.passing > 0 }
+        return { value: posture.passing, sublabel: 'passing', onClick: () => { emitComplianceDrillDown('passing'); drillToAllSecurity('passing') }, isClickable: posture.passing > 0 }
       case 'failing':
-        return { value: posture.failing, sublabel: 'failing', onClick: () => drillToAllSecurity('failing'), isClickable: posture.failing > 0 }
+        return { value: posture.failing, sublabel: 'failing', onClick: () => { emitComplianceDrillDown('failing'); drillToAllSecurity('failing') }, isClickable: posture.failing > 0 }
       case 'warning':
-        return { value: posture.warning, sublabel: 'warnings', onClick: () => drillToAllSecurity('warning'), isClickable: posture.warning > 0 }
+        return { value: posture.warning, sublabel: 'warnings', onClick: () => { emitComplianceDrillDown('warning'); drillToAllSecurity('warning') }, isClickable: posture.warning > 0 }
       case 'critical_findings':
-        return { value: posture.criticalFindings, sublabel: 'critical findings', onClick: () => drillToAllSecurity('critical'), isClickable: posture.criticalFindings > 0 }
+        return { value: posture.criticalFindings, sublabel: 'critical findings', onClick: () => { emitComplianceDrillDown('critical'); drillToAllSecurity('critical') }, isClickable: posture.criticalFindings > 0 }
 
       // Policy enforcement tools
       case 'gatekeeper_violations':

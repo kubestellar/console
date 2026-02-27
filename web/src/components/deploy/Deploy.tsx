@@ -26,6 +26,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { emitDeployWorkload, emitDeployTemplateApplied } from '../../lib/analytics'
 import { useDeployments, useHelmReleases } from '../../hooks/useMCP'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
@@ -298,6 +299,7 @@ export function Deploy() {
     if (!pendingDeploy) return
     const { workloadName, namespace, sourceCluster, targetClusters, groupName } = pendingDeploy
     setPendingDeploy(null)
+    emitDeployWorkload(workloadName, groupName)
 
     const deployId = `deploy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
@@ -434,6 +436,7 @@ export function Deploy() {
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
+    emitDeployTemplateApplied(template.name)
   }, [setCards, expandCards, setShowTemplates])
 
   // Transform card for ConfigureCardModal
