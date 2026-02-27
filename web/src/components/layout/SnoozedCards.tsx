@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock, X, ArrowRight, Bell, Lightbulb, Zap, AlertTriangle, Shield, Server, Scale, Activity } from 'lucide-react'
+import { Clock, X, ArrowRight, Bell, Lightbulb, Zap, AlertTriangle, Shield, Server, Scale, Activity, Download } from 'lucide-react'
 import { useSnoozedCards, formatTimeRemaining, SnoozedSwap } from '../../hooks/useSnoozedCards'
 import { useSnoozedRecommendations, formatElapsedTime, SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import { useSnoozedMissions, SnoozedMission, formatTimeRemaining as formatMissionTimeRemaining } from '../../hooks/useSnoozedMissions'
@@ -15,6 +15,7 @@ const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   security: Shield,
   health: Server,
   resource: Activity,
+  import: Download,
 }
 
 interface SnoozedCardsProps {

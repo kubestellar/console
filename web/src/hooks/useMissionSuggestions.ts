@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { usePodIssues, useDeploymentIssues, useSecurityIssues, useClusters, useNodes, usePods } from './useMCP'
 import { useSnoozedMissions } from './useSnoozedMissions'
+import { useConsoleKBIndex } from './useConsoleKBIndex'
+import { lazyMatchIndex, type ClusterIssue, type IndexMatchResult } from '@/lib/missions/indexMatcher'
 
 export type MissionType =
   | 'scale'           // Workloads that may need scaling
@@ -10,6 +12,7 @@ export type MissionType =
   | 'security'        // Security issues to address
   | 'health'          // Cluster health issues
   | 'resource'        // Resource pressure (nodes at capacity)
+  | 'import'          // Community KB import suggestions
 
 export interface MissionSuggestion {
   id: string
@@ -18,7 +21,7 @@ export interface MissionSuggestion {
   description: string
   priority: 'critical' | 'high' | 'medium' | 'low'
   action: {
-    type: 'ai' | 'navigate' | 'scale' | 'diagnose'
+    type: 'ai' | 'navigate' | 'scale' | 'diagnose' | 'import'
     target: string   // AI command, route, or action identifier
     label: string    // Button label
   }
@@ -42,8 +45,53 @@ const THRESHOLDS = {
   securityIssuesHigh: 1,    // Any high severity security issues
 }
 
+const MISSIONS_STORAGE_KEY = 'kc_missions'
+const MAX_IMPORT_SUGGESTIONS = 3
+
+/** Get titles of already-imported missions from localStorage */
+function getImportedMissionTitles(): Set<string> {
+  try {
+    const raw = localStorage.getItem(MISSIONS_STORAGE_KEY)
+    if (!raw) return new Set()
+    const missions = JSON.parse(raw) as Array<{ title?: string }>
+    return new Set(missions.map(m => m.title).filter(Boolean) as string[])
+  } catch {
+    return new Set()
+  }
+}
+
+/** Convert pod/deployment issues into ClusterIssue format for the index matcher */
+function buildClusterIssues(
+  podIssues: Array<{ name: string; namespace: string; cluster?: string; status: string; restarts: number }>,
+  deploymentIssues: Array<{ name: string; namespace: string; cluster?: string; replicas: number; readyReplicas: number }>,
+): ClusterIssue[] {
+  const issues: ClusterIssue[] = []
+
+  for (const p of podIssues) {
+    if (p.restarts > 5) {
+      issues.push({ type: 'CrashLoopBackOff', resource: p.name, namespace: p.namespace, cluster: p.cluster || '' })
+    }
+    if (p.status === 'OOMKilled') {
+      issues.push({ type: 'OOMKilled', resource: p.name, namespace: p.namespace, cluster: p.cluster || '' })
+    }
+    if (p.status === 'Error' || p.status === 'Failed') {
+      issues.push({ type: p.status, resource: p.name, namespace: p.namespace, cluster: p.cluster || '' })
+    }
+  }
+
+  for (const d of deploymentIssues) {
+    if (d.replicas > d.readyReplicas) {
+      issues.push({ type: 'Unavailable', resource: d.name, namespace: d.namespace, cluster: d.cluster || '' })
+    }
+  }
+
+  return issues
+}
+
 export function useMissionSuggestions() {
   const [suggestions, setSuggestions] = useState<MissionSuggestion[]>([])
+  const [importSuggestions, setImportSuggestions] = useState<MissionSuggestion[]>([])
+  const cancelMatchRef = useRef<(() => void) | null>(null)
 
   // Get data from various sources
   const { issues: podIssues } = usePodIssues()
@@ -55,6 +103,9 @@ export function useMissionSuggestions() {
 
   // Get snooze/dismiss state - also get the raw lists to trigger reactivity
   const { isSnoozed, isDismissed, snoozedMissions, dismissedMissions } = useSnoozedMissions()
+
+  // KB index for community import suggestions (deferred)
+  const { missions: kbMissions } = useConsoleKBIndex()
 
   // Analyze and generate suggestions
   const analyzeAndSuggest = useCallback(() => {
@@ -259,23 +310,98 @@ export function useMissionSuggestions() {
     return () => clearInterval(interval)
   }, [analyzeAndSuggest])
 
+  // Lazy KB index matching — runs AFTER existing suggestions are generated
+  useEffect(() => {
+    if (kbMissions.length === 0) return
+
+    // Cancel any previous matching run
+    if (cancelMatchRef.current) cancelMatchRef.current()
+
+    const clusterIssues = buildClusterIssues(podIssues, deploymentIssues)
+    if (clusterIssues.length === 0) {
+      setImportSuggestions([])
+      return
+    }
+
+    // Detect CNCF projects from pod namespaces/names
+    const detectedProjects: string[] = []
+    const projectKeywords = ['istio', 'envoy', 'prometheus', 'grafana', 'argo', 'flux', 'linkerd', 'helm', 'cert-manager', 'jaeger', 'contour', 'falco', 'kyverno']
+    const allNames = podIssues.map(p => `${p.name} ${p.namespace}`).join(' ').toLowerCase()
+    for (const kw of projectKeywords) {
+      if (allNames.includes(kw)) detectedProjects.push(kw)
+    }
+
+    // Resource kinds from deployment issues
+    const resourceKinds = deploymentIssues.length > 0 ? ['Deployment'] : []
+    if (podIssues.length > 0) resourceKinds.push('Pod')
+
+    const importedTitles = getImportedMissionTitles()
+
+    cancelMatchRef.current = lazyMatchIndex(
+      kbMissions,
+      clusterIssues,
+      detectedProjects,
+      resourceKinds,
+      (results: IndexMatchResult[], _done: boolean) => {
+        const now = Date.now()
+        const newImports: MissionSuggestion[] = results
+          .filter(r => !importedTitles.has(r.mission.title))
+          .slice(0, MAX_IMPORT_SUGGESTIONS)
+          .map(r => ({
+            id: `kb-import-${r.mission.path.replace(/[^a-zA-Z0-9]/g, '-')}`,
+            type: 'import' as const,
+            title: r.mission.title,
+            description: r.reasons.slice(0, 2).join('. ') || r.mission.description,
+            priority: 'medium' as const,
+            action: {
+              type: 'import' as const,
+              target: r.mission.path,
+              label: 'Import Mission',
+            },
+            context: {
+              details: r.reasons,
+              ...(r.matchedIssue && {
+                cluster: r.matchedIssue.cluster,
+                namespace: r.matchedIssue.namespace,
+                resource: r.matchedIssue.resource,
+              }),
+            },
+            detectedAt: now,
+          }))
+        setImportSuggestions(newImports)
+      },
+    )
+
+    return () => {
+      if (cancelMatchRef.current) {
+        cancelMatchRef.current()
+        cancelMatchRef.current = null
+      }
+    }
+  }, [kbMissions, podIssues, deploymentIssues])
+
+  // Merge core suggestions with import suggestions
+  const mergedSuggestions = useMemo(() => {
+    return [...suggestions, ...importSuggestions]
+  }, [suggestions, importSuggestions])
+
   // Filter out snoozed and dismissed suggestions
   // Include snoozedMissions and dismissedMissions in deps to trigger re-filter on snooze changes
   const visibleSuggestions = useMemo(() => {
-    return suggestions.filter(s => !isSnoozed(s.id) && !isDismissed(s.id))
-  }, [suggestions, isSnoozed, isDismissed, snoozedMissions, dismissedMissions])
+    return mergedSuggestions.filter(s => !isSnoozed(s.id) && !isDismissed(s.id))
+  }, [mergedSuggestions, isSnoozed, isDismissed, snoozedMissions, dismissedMissions])
 
   // Stats
   const stats = useMemo(() => ({
-    total: suggestions.length,
+    total: mergedSuggestions.length,
     visible: visibleSuggestions.length,
     critical: visibleSuggestions.filter(s => s.priority === 'critical').length,
     high: visibleSuggestions.filter(s => s.priority === 'high').length,
-  }), [suggestions, visibleSuggestions])
+  }), [mergedSuggestions, visibleSuggestions])
 
   return {
     suggestions: visibleSuggestions,
-    allSuggestions: suggestions,
+    allSuggestions: mergedSuggestions,
     hasSuggestions: visibleSuggestions.length > 0,
     stats,
     refresh: analyzeAndSuggest,

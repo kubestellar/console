@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Lightbulb, Clock, X, ChevronDown, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope } from 'lucide-react'
+import { Lightbulb, Clock, X, ChevronDown, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope, Download } from 'lucide-react'
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
 import { useSnoozedMissions, formatTimeRemaining } from '../../hooks/useSnoozedMissions'
 import { useMissions } from '../../hooks/useMissions'
@@ -18,6 +18,7 @@ const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   security: Shield,
   health: Server,
   resource: Activity,
+  import: Download,
 }
 
 const PRIORITY_STYLES = {
@@ -47,6 +48,13 @@ const PRIORITY_STYLES = {
   },
 }
 
+const IMPORT_STYLE = {
+  bg: 'bg-indigo-950',
+  border: 'border-indigo-700',
+  text: 'text-indigo-400',
+  badge: 'bg-indigo-900',
+}
+
 export function MissionSuggestions() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -56,6 +64,7 @@ export function MissionSuggestions() {
   const { startMission } = useMissions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [importingId, setImportingId] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Check agent status for offline skeleton display
@@ -158,6 +167,38 @@ export function MissionSuggestions() {
     setExpandedId(null)
   }
 
+  const handleImport = async (e: React.MouseEvent, suggestion: MissionSuggestion) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (suggestion.action.type !== 'import') return
+
+    setImportingId(suggestion.id)
+    try {
+      const rawUrl = `https://raw.githubusercontent.com/kubestellar/console-kb/master/solutions/${suggestion.action.target}`
+      const res = await fetch(rawUrl)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const missionData = await res.json()
+
+      startTransition(() => {
+        setExpandedId(null)
+        setImportingId(null)
+      })
+      dismissMission(suggestion.id)
+
+      setTimeout(() => {
+        startMission({
+          title: missionData.title || suggestion.title,
+          description: missionData.description || suggestion.description,
+          type: missionData.type || 'troubleshoot',
+          initialPrompt: missionData.steps?.[0]?.description || `Imported mission: ${suggestion.title}`,
+          context: { ...suggestion.context, importedFrom: suggestion.action.target },
+        })
+      }, 0)
+    } catch {
+      setImportingId(null)
+    }
+  }
+
   // Show skeleton when agent is offline and demo mode is OFF
   if (forceSkeletonForOffline) {
     return (
@@ -188,9 +229,11 @@ export function MissionSuggestions() {
         {/* Inline suggestion chips */}
         {suggestions.slice(0, 6).map((suggestion) => {
           const Icon = MISSION_ICONS[suggestion.type]
-          const style = PRIORITY_STYLES[suggestion.priority]
+          const isImport = suggestion.type === 'import'
+          const style = isImport ? IMPORT_STYLE : PRIORITY_STYLES[suggestion.priority]
           const isExpanded = expandedId === suggestion.id
           const isProcessing = processingId === suggestion.id
+          const isImporting = importingId === suggestion.id
           const snoozeRemaining = getSnoozeRemaining(suggestion.id)
 
           return (
@@ -202,10 +245,13 @@ export function MissionSuggestions() {
               >
                 <Icon className="w-3 h-3" />
                 <span className="max-w-[150px] truncate">{suggestion.title}</span>
+                {isImport && (
+                  <span className="px-1 py-0.5 rounded text-[9px] bg-indigo-800 text-indigo-300">Community</span>
+                )}
                 {suggestion.priority === 'critical' && (
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                 )}
-                {isProcessing && <div className="spinner w-3 h-3" />}
+                {(isProcessing || isImporting) && <div className="spinner w-3 h-3" />}
                 <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
               </button>
 
@@ -252,29 +298,50 @@ export function MissionSuggestions() {
 
                     {/* Action buttons */}
                     <div className="flex flex-wrap gap-1.5">
-                      <button
-                        onClick={(e) => handleAction(e, suggestion)}
-                        disabled={isProcessing}
-                        className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
-                          suggestion.priority === 'critical'
-                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : suggestion.priority === 'high'
-                            ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                            : 'bg-purple-500 hover:bg-purple-600 text-white'
-                        } disabled:opacity-50`}
-                      >
-                        <Stethoscope className="w-3 h-3" />
-                        {suggestion.action.label}
-                      </button>
-                      <button
-                        onClick={(e) => handleRepair(e, suggestion)}
-                        disabled={isProcessing}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-green-900 hover:bg-green-800 text-green-400 transition-colors flex items-center gap-1"
-                        title={t('dashboard.missions.repairTitle')}
-                      >
-                        <Wrench className="w-3 h-3" />
-                        {t('dashboard.missions.repair')}
-                      </button>
+                      {isImport ? (
+                        <>
+                          <button
+                            onClick={(e) => handleImport(e, suggestion)}
+                            disabled={isImporting}
+                            className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+                          >
+                            <Download className="w-3 h-3" />
+                            {isImporting ? 'Importing...' : suggestion.action.label}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate('/missions/browser'); setExpandedId(null) }}
+                            className="px-2 py-1.5 rounded text-xs font-medium bg-indigo-900 hover:bg-indigo-800 text-indigo-400 transition-colors flex items-center gap-1"
+                          >
+                            View in Library
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={(e) => handleAction(e, suggestion)}
+                            disabled={isProcessing}
+                            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+                              suggestion.priority === 'critical'
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : suggestion.priority === 'high'
+                                ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                                : 'bg-purple-500 hover:bg-purple-600 text-white'
+                            } disabled:opacity-50`}
+                          >
+                            <Stethoscope className="w-3 h-3" />
+                            {suggestion.action.label}
+                          </button>
+                          <button
+                            onClick={(e) => handleRepair(e, suggestion)}
+                            disabled={isProcessing}
+                            className="px-2 py-1.5 rounded text-xs font-medium bg-green-900 hover:bg-green-800 text-green-400 transition-colors flex items-center gap-1"
+                            title={t('dashboard.missions.repairTitle')}
+                          >
+                            <Wrench className="w-3 h-3" />
+                            {t('dashboard.missions.repair')}
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={(e) => handleSnooze(e, suggestion)}
                         className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors"
