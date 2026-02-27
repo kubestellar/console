@@ -64,7 +64,7 @@ const SENSITIVE_PATTERNS: SensitivePattern[] = [
   {
     type: 'jwt',
     severity: 'critical',
-    regex: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\b/g,
+    regex: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g,
     message: 'JWT token detected',
   },
   {

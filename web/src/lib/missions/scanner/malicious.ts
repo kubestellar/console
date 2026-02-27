@@ -187,7 +187,10 @@ const ALL_CHECKS: MaliciousCheck[] = [
       let m: RegExpExecArray | null
       while ((m = base64Regex.exec(text)) !== null) {
         try {
-          const decoded = atob(m[0])
+          // Browser environment
+          const decoded = typeof atob !== 'undefined'
+            ? atob(m[0])
+            : Buffer.from(m[0], 'base64').toString()
           if (/<script/i.test(decoded) || /javascript:/i.test(decoded)) {
             return m[0]
           }

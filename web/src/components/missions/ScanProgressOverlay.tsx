@@ -70,7 +70,9 @@ export function ScanProgressOverlay({
       <div className="w-full max-w-sm px-6">
         {isScanning && !result && (
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+            <div role="status" aria-live="polite" aria-label="Scanning mission file">
+              <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+            </div>
             <p className="text-sm font-medium text-foreground">Scanning mission file…</p>
             <p className="text-xs text-muted-foreground">Validating schema and checking content</p>
           </div>

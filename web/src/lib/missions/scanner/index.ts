@@ -54,7 +54,19 @@ export function fullScan(mission: MissionExport): FileScanResult {
     for (let i = 0; i < mission.steps.length; i++) {
       const step = mission.steps[i]
 
-      if (step.command && step.command.includes('kubectl delete') && !step.validation) {
+      const destructivePatterns = [
+        'kubectl delete',
+        'kubectl drain',
+        'kubectl cordon',
+        'kubectl taint',
+        'rm -rf',
+        'sudo rm',
+        /DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX)/i,
+      ]
+      const hasDestructive = step.command && destructivePatterns.some((p) =>
+        p instanceof RegExp ? p.test(step.command!) : step.command!.includes(p)
+      )
+      if (hasDestructive && !step.validation) {
         findings.push({
           severity: 'warning',
           code: 'DESTRUCTIVE_NO_VALIDATION',
@@ -64,21 +76,21 @@ export function fullScan(mission: MissionExport): FileScanResult {
       }
 
       if (step.yaml) {
-        try {
-          // Basic YAML structure check — just verify it's not empty
-          if (step.yaml.trim().length === 0) {
-            findings.push({
-              severity: 'warning',
-              code: 'EMPTY_YAML',
-              message: `Step ${i + 1} has an empty YAML block`,
-              path: `.steps[${i}].yaml`,
-            })
-          }
-        } catch {
+        const yamlStr = step.yaml.trim()
+        if (yamlStr.length === 0) {
           findings.push({
-            severity: 'error',
-            code: 'INVALID_YAML',
-            message: `Step ${i + 1} has invalid YAML`,
+            severity: 'warning',
+            code: 'EMPTY_YAML',
+            message: `Step ${i + 1} has an empty YAML block`,
+            path: `.steps[${i}].yaml`,
+          })
+        }
+        // Check for tabs — YAML requires spaces for indentation
+        if (yamlStr.includes('\t')) {
+          findings.push({
+            severity: 'warning',
+            code: 'YAML_TABS',
+            message: `Step ${i + 1} YAML contains tabs (YAML requires spaces)`,
             path: `.steps[${i}].yaml`,
           })
         }

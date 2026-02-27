@@ -205,7 +205,9 @@ describe('scanForMaliciousContent', () => {
   })
 
   it('detects base64-encoded script content', () => {
-    const encoded = btoa('<script>alert(1)</script>')
+    // Use globalThis.btoa or Buffer fallback
+    const encode = (s: string) => typeof btoa !== 'undefined' ? btoa(s) : Buffer.from(s).toString('base64')
+    const encoded = encode('<script>alert(1)</script>')
     const mission = makeMission({
       steps: [makeStep(`Encoded payload: ${encoded}`)],
     })
