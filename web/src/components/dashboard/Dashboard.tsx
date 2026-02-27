@@ -859,19 +859,18 @@ export function Dashboard() {
         <WelcomeCard />
       )}
 
-      {/* AI Recommendations */}
+      {/* AI Recommendations & Actions - both rows wrapped for tour highlight */}
       <div data-tour="recommendations">
         <CardRecommendations
           currentCardTypes={currentCardTypes}
           onAddCard={handleAddRecommendedCard}
         />
+        {/* Mission Suggestions - actionable items like scaling, restarts, security issues */}
+        <MissionSuggestions />
       </div>
 
       {/* Mission CTA - encourage users who haven't tried missions yet */}
       <MissionCTA />
-
-      {/* Mission Suggestions - actionable items like scaling, restarts, security issues */}
-      <MissionSuggestions />
 
       {/* Demo Data Banner */}
       {hasDemoDataCards && !demoBannerDismissed && (
