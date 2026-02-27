@@ -2349,6 +2349,11 @@ User request: %s`, req.Prompt)
 		conn.WriteJSON(s.errorResponse(msg.ID, "mixed_mode_error", fmt.Sprintf("Thinking agent error: %v", err)))
 		return
 	}
+	if thinkingResp == nil {
+		log.Printf("[MixedMode] Thinking agent returned nil response")
+		conn.WriteJSON(s.errorResponse(msg.ID, "mixed_mode_error", "Thinking agent returned empty response"))
+		return
+	}
 
 	// Stream the thinking response
 	conn.WriteJSON(protocol.Message{

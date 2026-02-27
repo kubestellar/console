@@ -33,6 +33,9 @@ func GetRegistry() *Registry {
 
 // Register adds a provider to the registry
 func (r *Registry) Register(provider AIProvider) error {
+	if r == nil {
+		return fmt.Errorf("registry is nil")
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
