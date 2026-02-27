@@ -136,13 +136,8 @@ jobs:
         continue-on-error: true
 
       - name: Deploy with Helm
-        env:
-          DEPLOY_TOKEN: ${{ secrets.VLLM_D_DEPLOY_TOKEN }}
         run: |
-          helm upgrade --install kc ./deploy/helm/kubestellar-console \
-            --kube-apiserver https://kubernetes.default.svc \
-            --kube-ca-file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-            --kube-token "$DEPLOY_TOKEN" \
+          helm template kc ./deploy/helm/kubestellar-console \
             --namespace kc \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
@@ -155,8 +150,7 @@ jobs:
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --set clusterName=vllm-d \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
-            --wait \
-            --timeout 5m
+            | kubectl apply -n kc -f -
 
       - name: Verify deployment
         run: |
