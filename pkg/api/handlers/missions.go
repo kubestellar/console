@@ -48,6 +48,40 @@ func (h *MissionsHandler) RegisterPublicRoutes(g fiber.Router) {
 	g.Get("/file", h.GetMissionFile)
 }
 
+// githubGet makes a GET request to the GitHub API, falling back to unauthenticated if token is expired.
+func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	hasToken := false
+	if clientToken != "" {
+		req.Header.Set("Authorization", "Bearer "+clientToken)
+		hasToken = true
+	} else if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+		hasToken = true
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// If auth failed (401/403) or got 404 with a token (raw.githubusercontent returns 404 for bad tokens),
+	// retry without auth — the target repo is public
+	if hasToken && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusNotFound) {
+		resp.Body.Close()
+		retryReq, _ := http.NewRequest("GET", url, nil)
+		retryReq.Header.Set("Accept", "application/vnd.github.v3+json")
+		return h.httpClient.Do(retryReq)
+	}
+
+	return resp, nil
+}
+
 // ---------- Browse knowledge base ----------
 
 // BrowseConsoleKB lists directory contents from the kubestellar/console-kb repo.
@@ -56,19 +90,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	path := c.Query("path", "")
 	url := fmt.Sprintf("%s/repos/kubestellar/console-kb/contents/%s?ref=master", h.githubAPIURL, path)
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to build request"})
-	}
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	if token := c.Get("X-GitHub-Token"); token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	} else if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	resp, err := h.httpClient.Do(req)
+	resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"error": "upstream request failed"})
 	}
@@ -119,18 +141,7 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 
 	url := fmt.Sprintf("%s/kubestellar/console-kb/%s/%s", h.githubRawURL, ref, path)
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to build request"})
-	}
-
-	if token := c.Get("X-GitHub-Token"); token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	} else if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	resp, err := h.httpClient.Do(req)
+	resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"error": "upstream request failed"})
 	}
