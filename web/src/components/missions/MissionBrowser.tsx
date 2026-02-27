@@ -555,7 +555,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col">
+    <div className="fixed inset-0 bg-background z-[9999] flex flex-col">
       {/* ================================================================== */}
       {/* Top bar: search + filters */}
       {/* ================================================================== */}
@@ -621,7 +621,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
 
       {/* Filter bar */}
       {showFilters && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-card/80 border-b border-border">
+        <div className="flex items-center gap-3 px-4 py-2 bg-card border-b border-border">
           <span className="text-xs text-muted-foreground font-medium">Category:</span>
           <div className="flex items-center gap-1">
             {CATEGORY_FILTERS.map((cat) => (
@@ -659,7 +659,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar — file tree */}
         <div
-          className="flex flex-col border-r border-border bg-card/50 overflow-y-auto"
+          className="flex flex-col border-r border-border bg-card overflow-y-auto"
           style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
         >
           <div className="p-3 space-y-1">
@@ -706,7 +706,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         </div>
 
         {/* Right panel */}
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="flex-1 flex flex-col overflow-hidden relative bg-background">
           {/* Scan overlay */}
           <ScanProgressOverlay
             isScanning={isScanning}
