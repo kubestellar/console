@@ -557,7 +557,8 @@
       "subtitle": "Choose your theme - inspired by oh-my-zsh",
       "byAuthor": "by {{author}}",
       "selectTheme": "Select Theme",
-      "quickSelect": "Quick Select"
+      "quickSelect": "Quick Select",
+      "marketplaceThemes": "Marketplace Themes"
     }
   },
   "filters": {
