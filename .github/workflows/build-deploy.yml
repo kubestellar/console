@@ -136,8 +136,13 @@ jobs:
         continue-on-error: true
 
       - name: Deploy with Helm
+        env:
+          DEPLOY_TOKEN: ${{ secrets.VLLM_D_DEPLOY_TOKEN }}
         run: |
           helm upgrade --install kc ./deploy/helm/kubestellar-console \
+            --kube-apiserver https://kubernetes.default.svc \
+            --kube-ca-file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+            --kube-token "$DEPLOY_TOKEN" \
             --namespace kc \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
