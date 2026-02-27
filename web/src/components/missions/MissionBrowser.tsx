@@ -152,6 +152,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [searchProgress, setSearchProgress] = useState<{ step: string; detail: string; found: number; scanned: number }>({ step: '', detail: '', found: 0, scanned: 0 })
   const [tokenError, setTokenError] = useState<'rate_limited' | 'token_invalid' | null>(null)
+  const [hasCluster, setHasCluster] = useState(false)
 
   // Scan state
   const [isScanning, setIsScanning] = useState(false)
@@ -273,6 +274,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         ])
         if (cancelled) return
         const cluster = clusterWrap?.data ?? null
+        setHasCluster(!!cluster)
         emitSolutionSearchStarted(!!cluster)
         const topDirs = (topLevel?.data ?? []).filter(e => e.type === 'directory')
 
@@ -1040,7 +1042,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
             {/* Recommended for You */}
             {!selectedMission && (recommendations.length > 0 || loadingRecommendations) && (
               <CollapsibleSection
-                title="Recommended for You"
+                title={hasCluster ? 'Recommended for Your Cluster' : 'Explore CNCF Solutions'}
                 defaultOpen={true}
                 badge={
                   <span className="flex items-center gap-1 text-xs text-purple-400">
@@ -1590,6 +1592,7 @@ function RecommendationCard({
   onImport: () => void
 }) {
   const { mission, score, matchReasons } = match
+  const isClusterMatch = score > 1
 
   return (
     <div
@@ -1600,18 +1603,27 @@ function RecommendationCard({
         <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors">
           {mission.title}
         </h4>
-        <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full bg-purple-500/10 text-purple-400 flex-shrink-0">
-          <Star className="w-3 h-3" />
-          {score}
-        </span>
+        {isClusterMatch && (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full bg-green-500/10 text-green-400 flex-shrink-0" title="Matched to your cluster">
+            <CheckCircle className="w-3 h-3" />
+            Match
+          </span>
+        )}
       </div>
 
       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{mission.description}</p>
 
       {matchReasons.length > 0 && (
-        <p className="text-[10px] text-purple-400/70 mb-2 line-clamp-1">
-          {matchReasons[0]}
-        </p>
+        <div className="flex flex-col gap-0.5 mb-2">
+          {matchReasons.slice(0, 2).map((reason, i) => (
+            <p key={i} className={cn(
+              'text-[10px] line-clamp-1',
+              isClusterMatch ? 'text-green-400/70' : 'text-muted-foreground/70'
+            )}>
+              {isClusterMatch ? '✓ ' : '• '}{reason}
+            </p>
+          ))}
+        </div>
       )}
 
       <div className="flex items-center justify-between mt-auto pt-2 border-t border-border">

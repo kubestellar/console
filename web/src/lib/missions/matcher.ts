@@ -101,10 +101,19 @@ export function matchMissionsToCluster(
       score += 5
     }
 
-    // Minimum score of 1 so all missions are included
+    // Minimum score of 1 so all missions are included — build descriptive reason
     if (score === 0) {
       score = 1
-      matchReasons.push('Community mission')
+    }
+    if (matchReasons.length === 0) {
+      const parts: string[] = []
+      if (mission.cncfProject) parts.push(mission.cncfProject)
+      if (mission.category) parts.push(mission.category)
+      if (parts.length > 0) {
+        matchReasons.push(`CNCF community · ${parts.join(' · ')}`)
+      } else {
+        matchReasons.push('CNCF community mission')
+      }
     }
 
     results.push({ mission, score, matchReasons })
