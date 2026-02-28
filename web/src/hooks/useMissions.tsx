@@ -340,15 +340,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           if (pendingRequests.current.size > 0) {
             const errorContent = `**Local Agent Not Connected**
 
-The AI missions feature requires the local agent to be running.
-
-**To get started:**
-1. Install and run the console locally:
-   \`\`\`
-   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start-dev.sh | bash
-   \`\`\`
-2. Open the console: http://localhost:5174
-3. [⚙️ Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
+Install the console locally with the KubeStellar Console agent to use AI missions.`
 
             const pendingMissionIds = new Set(pendingRequests.current.values())
             setMissions(prev => prev.map(m => {
@@ -734,15 +726,7 @@ The AI missions feature requires the local agent to be running.
     }).catch(() => {
       const errorContent = `**Local Agent Not Connected**
 
-The AI missions feature requires the local agent to be running.
-
-**To get started:**
-1. Install and run the console locally:
-   \`\`\`
-   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start-dev.sh | bash
-   \`\`\`
-2. Open the console: http://localhost:5174
-3. [⚙️ Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
+Install the console locally with the KubeStellar Console agent to use AI missions.`
 
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {

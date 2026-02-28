@@ -21,6 +21,7 @@ import { AgentBadge, AgentIcon } from '../../agent/AgentIcon'
 import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
 import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
+import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
@@ -44,6 +45,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [appliedResolutionId, setAppliedResolutionId] = useState<string | null>(null)
   const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
+  const [showSetupDialog, setShowSetupDialog] = useState(false)
 
   // Find related resolutions based on mission content
   const relatedResolutions = useMemo(() => {
@@ -149,6 +151,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       inputRef.current?.focus()
     }
   }, [mission.status])
+
+  // Auto-open setup dialog when agent connection error occurs
+  useEffect(() => {
+    const lastMsg = mission.messages[mission.messages.length - 1]
+    if (lastMsg?.role === 'system' && lastMsg.content.includes('Local Agent Not Connected')) {
+      setShowSetupDialog(true)
+    }
+  }, [mission.messages])
 
   // Scroll to bottom when entering full screen mode
   useEffect(() => {
@@ -719,6 +729,12 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       onSaved={() => {
         // Could show a toast notification here
       }}
+    />
+
+    {/* Setup Instructions Dialog - auto-opened on agent connection error */}
+    <SetupInstructionsDialog
+      isOpen={showSetupDialog}
+      onClose={() => setShowSetupDialog(false)}
     />
     </>
   )
