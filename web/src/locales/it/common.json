@@ -557,7 +557,10 @@
       "subtitle": "Choose your theme - inspired by oh-my-zsh",
       "byAuthor": "by {{author}}",
       "selectTheme": "Select Theme",
-      "quickSelect": "Quick Select"
+      "quickSelect": "Quick Select",
+      "marketplaceThemes": "Marketplace Themes",
+      "removeThemeTitle": "Remove Theme",
+      "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone."
     }
   },
   "filters": {
@@ -2728,7 +2731,8 @@
     "copyAndPaste": "Copy and paste this command:",
     "accessAllClusters": "Access all your clusters",
     "realtimeTokenTracking": "Real-time token tracking",
-    "runsLocally": "Runs locally (secure)"
+    "runsLocally": "Runs locally (secure)",
+    "howToConnect": "How to connect"
   },
   "login": {
     "sessionExpired": "Session expired",
