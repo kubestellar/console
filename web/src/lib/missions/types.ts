@@ -18,6 +18,8 @@ export interface MissionStep {
   validation?: string
 }
 
+export type MissionClass = 'solution' | 'install'
+
 export interface MissionExport {
   version: string
   title: string
@@ -26,6 +28,9 @@ export interface MissionExport {
   tags: string[]
   category?: string
   cncfProject?: string
+  missionClass?: MissionClass
+  difficulty?: string
+  installMethods?: string[]
   prerequisites?: string[]
   steps: MissionStep[]
   resolution?: {
