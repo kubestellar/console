@@ -2039,6 +2039,13 @@ function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
   const tags = (meta?.tags as string[]) ?? []
   const cncfProjects = (meta?.cncfProjects as string[]) ?? []
 
+  // Derive CNCF category from tags if not set explicitly
+  const knownCategories = ['observability', 'orchestration', 'runtime', 'provisioning', 'security',
+    'service mesh', 'app definition', 'serverless', 'storage', 'streaming', 'networking']
+  const categoryFromTags = tags.find(t => knownCategories.includes(t.toLowerCase()))
+  const category = (meta?.category as string)
+    ?? (categoryFromTags ? categoryFromTags.charAt(0).toUpperCase() + categoryFromTags.slice(1) : undefined)
+
   const resolution = m.resolution as Record<string, unknown> | undefined
 
   return {
@@ -2047,7 +2054,7 @@ function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
     description: (m.description as string) ?? '',
     type: (m.type as string) ?? 'troubleshoot',
     tags,
-    category: (meta?.category as string) ?? undefined,
+    category,
     cncfProject: cncfProjects[0] ?? undefined,
     missionClass: (raw.missionClass as string) ?? undefined,
     difficulty: (meta?.difficulty as string) ?? undefined,
