@@ -411,18 +411,13 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         const { data: entries } = await api.get<BrowseEntry[]>(
           '/api/missions/browse?path=solutions/cncf-install'
         )
-        const dirs = entries.filter(e => e.type === 'directory')
+        const jsonFiles = entries.filter(e => e.type === 'file' && e.name.endsWith('.json'))
         const missions: MissionExport[] = []
 
-        for (const dir of dirs) {
+        for (const f of jsonFiles) {
           try {
-            const { data: files } = await api.get<BrowseEntry[]>(
-              `/api/missions/browse?path=${encodeURIComponent(dir.path)}`
-            )
-            const missionFile = files.find(f => f.name === 'mission.json')
-            if (!missionFile) continue
             const { data: content } = await api.get<string>(
-              `/api/missions/file?path=${encodeURIComponent(missionFile.path)}`
+              `/api/missions/file?path=${encodeURIComponent(f.path)}`
             )
             const parsed = typeof content === 'string' ? JSON.parse(content) : content
             const normalized = normalizeMission(parsed)
@@ -612,7 +607,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
           const { data: entries } = await api.get<BrowseEntry[]>(
             `/api/missions/browse?path=${encodeURIComponent(node.path)}`
           )
-          setDirectoryEntries(entries)
+          setDirectoryEntries(entries.filter(e => e.type === 'directory' || e.name.endsWith('.json')))
         } else if (node.source === 'github') {
           const { data: entries } = await api.get<BrowseEntry[]>(
             `/api/github/missions?repo=${encodeURIComponent(node.path)}`
