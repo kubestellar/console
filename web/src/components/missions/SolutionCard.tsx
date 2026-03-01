@@ -56,15 +56,33 @@ export function SolutionCard({ mission, onImport, onSelect }: SolutionCardProps)
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-border">
-        <span className="text-[10px] text-muted-foreground">
-          {mission.steps?.length ?? 0} steps
-        </span>
+        <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+          {mission.authorGithub ? (
+            <a
+              href={`https://github.com/${mission.authorGithub}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-[10px] hover:text-purple-400 transition-colors"
+              title={mission.author ?? mission.authorGithub}
+            >
+              <img
+                src={`https://github.com/${mission.authorGithub}.png?size=32`}
+                alt={mission.authorGithub}
+                className="w-4 h-4 rounded-full"
+              />
+              <span className="truncate max-w-[80px]">{mission.authorGithub}</span>
+            </a>
+          ) : (
+            <span className="text-[10px]">{mission.steps?.length ?? 0} steps</span>
+          )}
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation()
             onImport()
           }}
-          className="px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+          className="px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
         >
           Import
         </button>

@@ -31,6 +31,8 @@ export interface MissionExport {
   missionClass?: MissionClass
   difficulty?: string
   installMethods?: string[]
+  author?: string
+  authorGithub?: string
   prerequisites?: string[]
   steps: MissionStep[]
   resolution?: {

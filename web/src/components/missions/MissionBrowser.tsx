@@ -197,6 +197,8 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   const [solutionMissions, setSolutionMissions] = useState<MissionExport[]>([])
   const [loadingInstallers, setLoadingInstallers] = useState(false)
   const [loadingSolutions, setLoadingSolutions] = useState(false)
+  const installersFetched = useRef(false)
+  const solutionsFetched = useRef(false)
   const [installerCategoryFilter, setInstallerCategoryFilter] = useState<string>('All')
   const [installerMaturityFilter, setInstallerMaturityFilter] = useState<string>('All')
   const [solutionTypeFilter, setSolutionTypeFilter] = useState<string>('All')
@@ -277,6 +279,8 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
     setActiveTab('recommended')
     setInstallerMissions([])
     setSolutionMissions([])
+    installersFetched.current = false
+    solutionsFetched.current = false
   }, [isOpen, isAuthenticated, user, watchedRepos, watchedPaths])
 
   // ============================================================================
@@ -402,7 +406,8 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   // ============================================================================
 
   useEffect(() => {
-    if (!isOpen || activeTab !== 'installers' || installerMissions.length > 0) return
+    if (!isOpen || activeTab !== 'installers' || installersFetched.current) return
+    installersFetched.current = true
     let cancelled = false
 
     async function fetchInstallers() {
@@ -415,6 +420,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         const missions: MissionExport[] = []
 
         for (const f of jsonFiles) {
+          if (cancelled) return
           try {
             const { data: content } = await api.get<string>(
               `/api/missions/file?path=${encodeURIComponent(f.path)}`
@@ -434,14 +440,15 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
 
     fetchInstallers()
     return () => { cancelled = true }
-  }, [isOpen, activeTab, installerMissions.length])
+  }, [isOpen, activeTab])
 
   // ============================================================================
   // Fetch solution missions (non-installer solutions)
   // ============================================================================
 
   useEffect(() => {
-    if (!isOpen || activeTab !== 'solutions' || solutionMissions.length > 0) return
+    if (!isOpen || activeTab !== 'solutions' || solutionsFetched.current) return
+    solutionsFetched.current = true
     let cancelled = false
 
     async function fetchSolutions() {
@@ -454,11 +461,13 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
         const missions: MissionExport[] = []
 
         for (const dir of dirs) {
+          if (cancelled) return
           try {
             const { data: files } = await api.get<BrowseEntry[]>(
               `/api/missions/browse?path=${encodeURIComponent(dir.path)}`
             )
             for (const f of files) {
+              if (cancelled) return
               if (f.type !== 'file' || !f.name.endsWith('.json')) continue
               try {
                 const { data: content } = await api.get<string>(
@@ -481,7 +490,7 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
 
     fetchSolutions()
     return () => { cancelled = true }
-  }, [isOpen, activeTab, solutionMissions.length])
+  }, [isOpen, activeTab])
 
   // ============================================================================
   // Filtered installer & solution lists
@@ -2073,6 +2082,8 @@ function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
     category,
     cncfProject: cncfProjects[0] ?? undefined,
     missionClass: (raw.missionClass as string) ?? undefined,
+    author: (raw.author as string) ?? undefined,
+    authorGithub: (raw.authorGithub as string) ?? undefined,
     difficulty: (meta?.difficulty as string) ?? undefined,
     installMethods: (meta?.installMethods as string[]) ?? undefined,
     steps: [],

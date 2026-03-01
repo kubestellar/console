@@ -82,9 +82,26 @@ export function InstallerCard({ mission, onImport, onSelect }: InstallerCardProp
           ))}
         </div>
 
-        {/* Actions */}
+        {/* Author + Actions */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="flex items-center gap-1 text-muted-foreground">
+          <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+            {mission.authorGithub && (
+              <a
+                href={`https://github.com/${mission.authorGithub}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-[10px] hover:text-purple-400 transition-colors group/author"
+                title={mission.author ?? mission.authorGithub}
+              >
+                <img
+                  src={`https://github.com/${mission.authorGithub}.png?size=32`}
+                  alt={mission.authorGithub}
+                  className="w-4 h-4 rounded-full"
+                />
+                <span className="truncate max-w-[80px]">{mission.authorGithub}</span>
+              </a>
+            )}
             {mission.cncfProject && (
               <a
                 href={`https://www.cncf.io/projects/${mission.cncfProject}`}
@@ -104,7 +121,7 @@ export function InstallerCard({ mission, onImport, onSelect }: InstallerCardProp
               e.stopPropagation()
               onImport()
             }}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+            className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
           >
             <Download className="w-3 h-3" />
             Install
