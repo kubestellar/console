@@ -1424,35 +1424,43 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                 </div>
 
                 {/* Installer grid */}
-                {loadingInstallers ? (
+                {loadingInstallers && filteredInstallers.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
                     <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
                     Loading CNCF installers…
                   </div>
-                ) : filteredInstallers.length === 0 ? (
+                ) : filteredInstallers.length === 0 && !loadingInstallers ? (
                   <EmptyState message={installerMissions.length > 0 ? 'No installers match your filters' : 'No installer missions found'} />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {filteredInstallers.map((mission, i) => (
-                      <InstallerCard
-                        key={i}
-                        mission={mission}
-                        onSelect={() => {
-                          setSelectedMission(mission)
-                          setRawContent(JSON.stringify(mission, null, 2))
-                          setShowRaw(false)
-                          setActiveTab('recommended')
-                        }}
-                        onImport={() => handleImport(mission)}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    {loadingInstallers && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                        Loading… {installerMissions.length} found so far
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {filteredInstallers.map((mission, i) => (
+                        <InstallerCard
+                          key={i}
+                          mission={mission}
+                          onSelect={() => {
+                            setSelectedMission(mission)
+                            setRawContent(JSON.stringify(mission, null, 2))
+                            setShowRaw(false)
+                            setActiveTab('recommended')
+                          }}
+                          onImport={() => handleImport(mission)}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
 
                 {/* Count footer */}
-                {!loadingInstallers && filteredInstallers.length > 0 && (
+                {filteredInstallers.length > 0 && (
                   <p className="text-xs text-muted-foreground text-center pt-2">
-                    Showing {filteredInstallers.length} of {installerMissions.length} installer missions
+                    {loadingInstallers ? `${filteredInstallers.length} loaded…` : `Showing ${filteredInstallers.length} of ${installerMissions.length} installer missions`}
                   </p>
                 )}
               </div>
@@ -1487,35 +1495,43 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
                 </div>
 
                 {/* Solution grid */}
-                {loadingSolutions ? (
+                {loadingSolutions && filteredSolutions.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
                     <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
                     Loading solutions…
                   </div>
-                ) : filteredSolutions.length === 0 ? (
+                ) : filteredSolutions.length === 0 && !loadingSolutions ? (
                   <EmptyState message={solutionMissions.length > 0 ? 'No solutions match your filters' : 'No solution missions found'} />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {filteredSolutions.map((mission, i) => (
-                      <SolutionCard
-                        key={i}
-                        mission={mission}
-                        onSelect={() => {
-                          setSelectedMission(mission)
-                          setRawContent(JSON.stringify(mission, null, 2))
-                          setShowRaw(false)
-                          setActiveTab('recommended')
-                        }}
-                        onImport={() => handleImport(mission)}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    {loadingSolutions && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                        Loading… {solutionMissions.length} found so far
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {filteredSolutions.map((mission, i) => (
+                        <SolutionCard
+                          key={i}
+                          mission={mission}
+                          onSelect={() => {
+                            setSelectedMission(mission)
+                            setRawContent(JSON.stringify(mission, null, 2))
+                            setShowRaw(false)
+                            setActiveTab('recommended')
+                          }}
+                          onImport={() => handleImport(mission)}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
 
                 {/* Count footer */}
-                {!loadingSolutions && filteredSolutions.length > 0 && (
+                {filteredSolutions.length > 0 && (
                   <p className="text-xs text-muted-foreground text-center pt-2">
-                    Showing {filteredSolutions.length} of {solutionMissions.length} solution missions
+                    {loadingSolutions ? `${filteredSolutions.length} loaded…` : `Showing ${filteredSolutions.length} of ${solutionMissions.length} solution missions`}
                   </p>
                 )}
               </div>
