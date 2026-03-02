@@ -99,7 +99,8 @@ async function fetchContourStatus(): Promise<ContourStatus> {
   const allHealthy =
     contourReady === contourPodList.length &&
     envoyReady === envoyPodList.length &&
-    contourPodList.length > 0
+    contourPodList.length > 0 &&
+    envoyPodList.length > 0
 
   // HTTPProxy stats are not currently surfaced through the stock API endpoints.
   // We leave them as zeros in live mode so the card clearly indicates
@@ -134,10 +135,13 @@ export function useContourStatus(): UseContourStatusResult {
       fetcher: fetchContourStatus,
     })
 
-  const hasAnyData =
-    data.contourPods.total > 0 ||
-    data.envoyPods.total > 0 ||
-    data.health === 'not-installed'
+  // hasAnyData is true only when live pod data exists.
+  // 'not-installed' is NOT counted as "has data" so that:
+  //   - a successful fetch with no pods (health='not-installed') triggers showEmptyState,
+  //     and the component falls through to the data.health === 'not-installed' check.
+  //   - a failed fetch with initial data (also health='not-installed') sets error=true
+  //     so the component shows the fetchError UI instead.
+  const hasAnyData = data.contourPods.total > 0 || data.envoyPods.total > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,

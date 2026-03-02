@@ -39,7 +39,16 @@ export function ContourStatus() {
     )
   }
 
-  if (data.health === 'not-installed' || (error && showEmptyState)) {
+  if (error && showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+        <AlertTriangle className="w-6 h-6 text-red-400" />
+        <p className="text-sm text-red-400">{t('contour.fetchError')}</p>
+      </div>
+    )
+  }
+
+  if (data.health === 'not-installed') {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Globe className="w-6 h-6 text-muted-foreground/50" />
