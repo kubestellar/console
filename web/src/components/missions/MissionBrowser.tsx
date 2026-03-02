@@ -1930,7 +1930,10 @@ function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
     authorGithub: (raw.authorGithub as string) ?? undefined,
     difficulty: (meta?.difficulty as string) ?? undefined,
     installMethods: (meta?.installMethods as string[]) ?? undefined,
-    steps: [],
+    steps: (m.steps as MissionExport['steps']) ?? [],
+    uninstall: (m.uninstall as MissionExport['uninstall']) ?? undefined,
+    upgrade: (m.upgrade as MissionExport['upgrade']) ?? undefined,
+    troubleshooting: (m.troubleshooting as MissionExport['troubleshooting']) ?? undefined,
     resolution: resolution ? {
       summary: (resolution.summary as string) ?? '',
       steps: (resolution.steps as string[]) ?? [],

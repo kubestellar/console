@@ -3,7 +3,7 @@
  * Shows category icon+gradient, maturity badge, difficulty, install methods, and import button.
  */
 
-import { ExternalLink, Download } from 'lucide-react'
+import { ExternalLink, Download, Wrench } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import {
   CNCF_CATEGORY_GRADIENTS,
@@ -26,6 +26,10 @@ export function InstallerCard({ mission, onImport, onSelect }: InstallerCardProp
   const maturityTag = mission.tags?.find(t => ['graduated', 'incubating', 'sandbox'].includes(t))
   const maturity = maturityTag ? MATURITY_CONFIG[maturityTag] : null
   const difficulty = mission.difficulty ? DIFFICULTY_CONFIG[mission.difficulty] : null
+  // Strip repetitive "Install and Configure … on Kubernetes" prefix/suffix for cleaner cards
+  const shortTitle = (mission.title ?? '')
+    .replace(/^Install and Configure\s+/i, '')
+    .replace(/\s+on Kubernetes$/i, '')
 
   return (
     <div
@@ -58,8 +62,9 @@ export function InstallerCard({ mission, onImport, onSelect }: InstallerCardProp
 
       {/* Content */}
       <div className="flex flex-col flex-1 p-3 gap-2">
-        <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors">
-          {mission.title}
+        <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors inline-flex items-center gap-1.5">
+          <Wrench className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+          {shortTitle || mission.title}
         </h4>
         <p className="text-xs text-muted-foreground line-clamp-2">{mission.description}</p>
 
