@@ -1266,9 +1266,40 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
           <div className="flex-1 overflow-y-auto p-4">
             {/* ============================================================ */}
+            {/* MISSION DETAIL VIEW (renders above any tab when a mission is selected) */}
+            {/* ============================================================ */}
+            {selectedMission && (
+              <>
+                <MissionDetailView
+                  mission={selectedMission}
+                  rawContent={rawContent}
+                  showRaw={showRaw}
+                  onToggleRaw={() => setShowRaw(!showRaw)}
+                  onImport={() => handleImport(selectedMission, rawContent ?? undefined)}
+                  onBack={() => {
+                    setSelectedMission(null)
+                    setRawContent(null)
+                    setShowRaw(false)
+                  }}
+                  onImprove={selectedMission.missionClass === 'install' ? () => setShowImproveDialog(true) : undefined}
+                  matchScore={recommendations.find(
+                    (r) => r.mission.title === selectedMission.title
+                  )?.score}
+                />
+                {showImproveDialog && (
+                  <ImproveMissionDialog
+                    mission={selectedMission}
+                    isOpen={showImproveDialog}
+                    onClose={() => setShowImproveDialog(false)}
+                  />
+                )}
+              </>
+            )}
+
+            {/* ============================================================ */}
             {/* RECOMMENDED TAB (existing content) */}
             {/* ============================================================ */}
-            {activeTab === 'recommended' && (<>
+            {!selectedMission && activeTab === 'recommended' && (<>
             {/* Token / rate-limit guidance banner */}
             {tokenError && (
               <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
@@ -1405,34 +1436,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               </div>
             )}
 
-            {/* Directory listing or Mission preview */}
-            {selectedMission ? (
-              <>
-                <MissionDetailView
-                  mission={selectedMission}
-                  rawContent={rawContent}
-                  showRaw={showRaw}
-                  onToggleRaw={() => setShowRaw(!showRaw)}
-                  onImport={() => handleImport(selectedMission, rawContent ?? undefined)}
-                  onBack={() => {
-                    setSelectedMission(null)
-                    setRawContent(null)
-                    setShowRaw(false)
-                  }}
-                  onImprove={selectedMission.missionClass === 'install' ? () => setShowImproveDialog(true) : undefined}
-                  matchScore={recommendations.find(
-                    (r) => r.mission.title === selectedMission.title
-                  )?.score}
-                />
-                {showImproveDialog && (
-                  <ImproveMissionDialog
-                    mission={selectedMission}
-                    isOpen={showImproveDialog}
-                    onClose={() => setShowImproveDialog(false)}
-                  />
-                )}
-              </>
-            ) : loading ? (
+            {/* Directory listing */}
+            {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
               </div>
@@ -1477,7 +1482,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {/* ============================================================ */}
             {/* INSTALLERS TAB */}
             {/* ============================================================ */}
-            {activeTab === 'installers' && (
+            {!selectedMission && activeTab === 'installers' && (
               <div className="space-y-4">
                 {/* Installer filters */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -1536,7 +1541,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                             setSelectedMission(mission)
                             setRawContent(JSON.stringify(mission, null, 2))
                             setShowRaw(false)
-                            setActiveTab('recommended')
                           }}
                           onImport={() => handleImport(mission)}
                         />
@@ -1557,7 +1561,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {/* ============================================================ */}
             {/* SOLUTIONS TAB */}
             {/* ============================================================ */}
-            {activeTab === 'solutions' && (
+            {!selectedMission && activeTab === 'solutions' && (
               <div className="space-y-4">
                 {/* Solution filters */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -1607,7 +1611,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                             setSelectedMission(mission)
                             setRawContent(JSON.stringify(mission, null, 2))
                             setShowRaw(false)
-                            setActiveTab('recommended')
                           }}
                           onImport={() => handleImport(mission)}
                         />
