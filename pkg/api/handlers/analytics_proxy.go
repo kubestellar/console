@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -90,7 +91,11 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 		if realMeasurementID != "" && params.Get("tid") != "" {
 			params.Set("tid", realMeasurementID)
 		}
-		if clientIP != "" {
+		// Only set _uip when we have a routable (public) IP.
+		// For localhost deployments the proxy's outbound IP IS the
+		// user's real public IP, so omitting _uip lets GA4 geolocate
+		// from the connection source — which is correct.
+		if clientIP != "" && !isPrivateIP(clientIP) {
 			params.Set("_uip", clientIP)
 		}
 		qs = params.Encode()
@@ -103,7 +108,7 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 	}
 	req.Header.Set("Content-Type", c.Get("Content-Type", "text/plain"))
 	req.Header.Set("User-Agent", c.Get("User-Agent"))
-	if clientIP != "" {
+	if clientIP != "" && !isPrivateIP(clientIP) {
 		req.Header.Set("X-Forwarded-For", clientIP)
 	}
 
@@ -152,4 +157,17 @@ func stripPort(host string) string {
 		return host[:i]
 	}
 	return host
+}
+
+// isPrivateIP returns true for loopback, link-local, and RFC-1918 addresses.
+// When the proxy runs on the user's own machine (localhost install), c.IP()
+// returns 127.0.0.1 — sending that as _uip tells GA4 the user is at a
+// non-routable address, killing geolocation.  By detecting private IPs we
+// can skip the _uip override and let GA4 use the connection's source IP.
+func isPrivateIP(ip string) bool {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return false
+	}
+	return parsed.IsLoopback() || parsed.IsPrivate() || parsed.IsLinkLocalUnicast()
 }
