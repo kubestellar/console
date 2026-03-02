@@ -254,19 +254,27 @@ function startMissionCacheFetch() {
   fetchSolutionsToCache()
 }
 
-function resetMissionCache() {
+function resetInstallerCache() {
   missionCache.installers = []
-  missionCache.solutions = []
   missionCache.installersDone = false
-  missionCache.solutionsDone = false
   missionCache.installersFetching = false
-  missionCache.solutionsFetching = false
-  if (missionCache.abortController) {
-    missionCache.abortController.abort()
-    missionCache.abortController = null
-  }
   notifyCacheListeners()
-  startMissionCacheFetch()
+  fetchInstallersToCache()
+}
+
+function resetSolutionCache() {
+  missionCache.solutions = []
+  missionCache.solutionsDone = false
+  missionCache.solutionsFetching = false
+  notifyCacheListeners()
+  fetchSolutionsToCache()
+}
+
+function resetMissionCache(tab?: 'installers' | 'solutions') {
+  if (tab === 'installers') return resetInstallerCache()
+  if (tab === 'solutions') return resetSolutionCache()
+  resetInstallerCache()
+  resetSolutionCache()
 }
 
 // ============================================================================
@@ -1082,11 +1090,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           </button>
         ))}
         <button
-          onClick={() => resetMissionCache()}
+          onClick={() => resetMissionCache(activeTab === 'installers' || activeTab === 'solutions' ? activeTab : undefined)}
           className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
-          title="Refresh all mission data"
+          title={activeTab === 'installers' ? 'Refresh installers' : activeTab === 'solutions' ? 'Refresh solutions' : 'Refresh all mission data'}
         >
-          <RefreshCw className={cn('w-3.5 h-3.5', (!missionCache.installersDone || !missionCache.solutionsDone) && 'animate-spin')} />
+          <RefreshCw className={cn('w-3.5 h-3.5', (activeTab === 'installers' ? !missionCache.installersDone : activeTab === 'solutions' ? !missionCache.solutionsDone : (!missionCache.installersDone || !missionCache.solutionsDone)) && 'animate-spin')} />
         </button>
       </div>
 

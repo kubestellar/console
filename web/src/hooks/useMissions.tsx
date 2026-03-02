@@ -6,7 +6,7 @@ import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolut
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 
-export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed'
+export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved'
 
 export interface MissionMessage {
   id: string
@@ -51,6 +51,15 @@ export interface Mission {
   agent?: string
   /** Resolutions that were auto-matched for this mission */
   matchedResolutions?: MatchedResolution[]
+  /** Original imported mission data (for saved/library missions) */
+  importedFrom?: {
+    title: string
+    description: string
+    missionClass?: string
+    cncfProject?: string
+    steps?: Array<{ title: string; description: string }>
+    tags?: string[]
+  }
 }
 
 interface MissionContextValue {
@@ -74,6 +83,8 @@ interface MissionContextValue {
 
   // Actions
   startMission: (params: StartMissionParams) => string
+  saveMission: (params: SaveMissionParams) => string
+  runSavedMission: (missionId: string) => void
   sendMessage: (missionId: string, content: string) => void
   cancelMission: (missionId: string) => void
   dismissMission: (missionId: string) => void
@@ -97,6 +108,17 @@ interface StartMissionParams {
   cluster?: string
   initialPrompt: string
   context?: Record<string, unknown>
+}
+
+interface SaveMissionParams {
+  title: string
+  description: string
+  type: Mission['type']
+  missionClass?: string
+  cncfProject?: string
+  steps?: Array<{ title: string; description: string }>
+  tags?: string[]
+  initialPrompt: string
 }
 
 const MissionContext = createContext<MissionContextValue | null>(null)
@@ -749,6 +771,95 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     return missionId
   }, [ensureConnection])
 
+  // Save a mission to library without running it
+  const saveMission = useCallback((params: SaveMissionParams): string => {
+    const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+    const mission: Mission = {
+      id: missionId,
+      title: params.title,
+      description: params.description,
+      type: params.type,
+      status: 'saved',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      importedFrom: {
+        title: params.title,
+        description: params.description,
+        missionClass: params.missionClass,
+        cncfProject: params.cncfProject,
+        steps: params.steps,
+        tags: params.tags,
+      },
+    }
+
+    setMissions(prev => [mission, ...prev])
+    return missionId
+  }, [])
+
+  // Run a previously saved mission
+  const runSavedMission = useCallback((missionId: string) => {
+    const mission = missions.find(m => m.id === missionId)
+    if (!mission || mission.status !== 'saved') return
+
+    const initialPrompt = mission.importedFrom?.steps
+      ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n')}`
+      : mission.description
+
+    setMissions(prev => prev.map(m =>
+      m.id === missionId ? {
+        ...m,
+        status: 'pending',
+        messages: [{
+          id: `msg-${Date.now()}`,
+          role: 'user' as const,
+          content: initialPrompt,
+          timestamp: new Date(),
+        }],
+        updatedAt: new Date(),
+      } : m
+    ))
+    setActiveMissionId(missionId)
+    setIsSidebarOpen(true)
+    setIsSidebarMinimized(false)
+
+    ensureConnection().then(() => {
+      const requestId = `claude-${Date.now()}`
+      pendingRequests.current.set(requestId, missionId)
+
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? { ...m, status: 'running', currentStep: 'Connecting to agent...' } : m
+      ))
+
+      setActiveTokenCategory('missions')
+
+      wsRef.current?.send(JSON.stringify({
+        id: requestId,
+        type: 'chat',
+        payload: {
+          prompt: initialPrompt,
+          sessionId: missionId,
+          agent: selectedAgent || undefined,
+        }
+      }))
+    }).catch(() => {
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          status: 'failed',
+          currentStep: undefined,
+          messages: [{
+            id: `msg-${Date.now()}`,
+            role: 'system' as const,
+            content: '**Local Agent Not Connected**\n\nInstall the console locally with the KubeStellar Console agent to use AI missions.',
+            timestamp: new Date(),
+          }]
+        } : m
+      ))
+    })
+  }, [missions, ensureConnection, selectedAgent])
+
   // Send a follow-up message
   const sendMessage = useCallback((missionId: string, content: string) => {
     // Track token usage for this mission
@@ -950,6 +1061,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       defaultAgent,
       agentsLoading,
       startMission,
+      saveMission,
+      runSavedMission,
       sendMessage,
       cancelMission,
       dismissMission,
