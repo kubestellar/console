@@ -162,6 +162,11 @@ export function Arcade() {
     return stored
   })
 
+  // Re-sync pin state whenever the path changes (e.g. navigating between dashboards)
+  useEffect(() => {
+    setPinned(getRememberPosition(location.pathname))
+  }, [location.pathname])
+
   // Use the shared dashboard hook for cards, DnD, modals
   const {
     cards,

@@ -61,6 +61,11 @@ export function DashboardHeader({
   const location = useLocation()
   const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
 
+  // Re-sync pin state whenever the path changes (e.g. navigating between dashboards)
+  useEffect(() => {
+    setRememberPositionState(getRememberPosition(location.pathname))
+  }, [location.pathname])
+
   // Self-managed timestamp: updates when isFetching goes true → false
   const [internalLastUpdated, setInternalLastUpdated] = useState<Date>(() => new Date())
   const wasFetchingRef = useRef(isFetching)
