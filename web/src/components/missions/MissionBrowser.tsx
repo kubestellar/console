@@ -137,6 +137,123 @@ function saveWatchedPaths(paths: string[]) {
 }
 
 // ============================================================================
+// Module-level mission cache — survives dialog open/close and tab switches.
+// Fetch runs once; results are available instantly on subsequent opens.
+// ============================================================================
+interface MissionCache {
+  installers: MissionExport[]
+  solutions: MissionExport[]
+  installersFetching: boolean
+  solutionsFetching: boolean
+  installersDone: boolean
+  solutionsDone: boolean
+  listeners: Set<() => void>
+  abortController: AbortController | null
+}
+
+const missionCache: MissionCache = {
+  installers: [],
+  solutions: [],
+  installersFetching: false,
+  solutionsFetching: false,
+  installersDone: false,
+  solutionsDone: false,
+  listeners: new Set(),
+  abortController: null,
+}
+
+function notifyCacheListeners() {
+  missionCache.listeners.forEach(fn => fn())
+}
+
+async function fetchInstallersToCache() {
+  if (missionCache.installersDone || missionCache.installersFetching) return
+  missionCache.installersFetching = true
+  try {
+    const { data: entries } = await api.get<BrowseEntry[]>(
+      '/api/missions/browse?path=solutions/cncf-install'
+    )
+    const jsonFiles = entries.filter(e => e.type === 'file' && e.name.endsWith('.json'))
+
+    for (const f of jsonFiles) {
+      try {
+        const { data: content } = await api.get<string>(
+          `/api/missions/file?path=${encodeURIComponent(f.path)}`
+        )
+        const parsed = typeof content === 'string' ? JSON.parse(content) : content
+        const normalized = normalizeMission(parsed)
+        if (normalized) {
+          missionCache.installers.push(normalized)
+          notifyCacheListeners()
+        }
+      } catch { /* skip bad file */ }
+    }
+    missionCache.installersDone = true
+  } catch { /* skip */ }
+  finally {
+    missionCache.installersFetching = false
+    notifyCacheListeners()
+  }
+}
+
+async function fetchSolutionsToCache() {
+  if (missionCache.solutionsDone || missionCache.solutionsFetching) return
+  missionCache.solutionsFetching = true
+  try {
+    const { data: topEntries } = await api.get<BrowseEntry[]>(
+      '/api/missions/browse?path=solutions'
+    )
+    const dirs = topEntries.filter(e => e.type === 'directory' && e.name !== 'cncf-install')
+
+    async function collectFiles(path: string, depth: number): Promise<BrowseEntry[]> {
+      if (depth > 3) return []
+      try {
+        const { data: entries } = await api.get<BrowseEntry[]>(
+          `/api/missions/browse?path=${encodeURIComponent(path)}`
+        )
+        const files: BrowseEntry[] = []
+        for (const e of entries) {
+          if (e.type === 'file' && e.name.endsWith('.json')) {
+            files.push(e)
+          } else if (e.type === 'directory') {
+            const nested = await collectFiles(e.path, depth + 1)
+            files.push(...nested)
+          }
+        }
+        return files
+      } catch { return [] }
+    }
+
+    for (const dir of dirs) {
+      const files = await collectFiles(dir.path, 1)
+      for (const f of files) {
+        try {
+          const { data: content } = await api.get<string>(
+            `/api/missions/file?path=${encodeURIComponent(f.path)}`
+          )
+          const parsed = typeof content === 'string' ? JSON.parse(content) : content
+          const normalized = normalizeMission(parsed)
+          if (normalized && normalized.missionClass !== 'install') {
+            missionCache.solutions.push(normalized)
+            notifyCacheListeners()
+          }
+        } catch { /* skip */ }
+      }
+    }
+    missionCache.solutionsDone = true
+  } catch { /* skip */ }
+  finally {
+    missionCache.solutionsFetching = false
+    notifyCacheListeners()
+  }
+}
+
+function startMissionCacheFetch() {
+  fetchInstallersToCache()
+  fetchSolutionsToCache()
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -194,13 +311,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Tab state
   const [activeTab, setActiveTab] = useState<BrowserTab>('recommended')
 
-  // Installer & Solution missions (fetched from KB)
-  const [installerMissions, setInstallerMissions] = useState<MissionExport[]>([])
-  const [solutionMissions, setSolutionMissions] = useState<MissionExport[]>([])
-  const [loadingInstallers, setLoadingInstallers] = useState(false)
-  const [loadingSolutions, setLoadingSolutions] = useState(false)
-  const installersFetched = useRef(false)
-  const solutionsFetched = useRef(false)
+  // Installer & Solution missions — backed by module-level cache
+  const [installerMissions, setInstallerMissions] = useState<MissionExport[]>(missionCache.installers)
+  const [solutionMissions, setSolutionMissions] = useState<MissionExport[]>(missionCache.solutions)
+  const [, forceUpdate] = useState(0)
+  const loadingInstallers = !missionCache.installersDone
+  const loadingSolutions = !missionCache.solutionsDone
   const [installerCategoryFilter, setInstallerCategoryFilter] = useState<string>('All')
   const [installerMaturityFilter, setInstallerMaturityFilter] = useState<string>('All')
   const [solutionTypeFilter, setSolutionTypeFilter] = useState<string>('All')
@@ -279,10 +395,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     setPendingImport(null)
     setIsScanning(false)
     setActiveTab('recommended')
-    setInstallerMissions([])
-    setSolutionMissions([])
-    installersFetched.current = false
-    solutionsFetched.current = false
   }, [isOpen, isAuthenticated, user, watchedRepos, watchedPaths])
 
   // ============================================================================
@@ -404,108 +516,28 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   }, [isOpen])
 
   // ============================================================================
-  // Fetch installer missions (cncf-install directory)
+  // Subscribe to module-level mission cache and trigger fetch on first open
   // ============================================================================
 
-  // Fetch installers and solutions in the background as soon as the dialog opens.
-  // Runs independently of which tab is active so data is ready when the user switches.
   useEffect(() => {
     if (!isOpen) return
-    let cancelled = false
 
-    async function fetchInstallers() {
-      if (installersFetched.current) return
-      setLoadingInstallers(true)
-      try {
-        const { data: entries } = await api.get<BrowseEntry[]>(
-          '/api/missions/browse?path=solutions/cncf-install'
-        )
-        const jsonFiles = entries.filter(e => e.type === 'file' && e.name.endsWith('.json'))
-        const missions: MissionExport[] = []
+    // Sync local state from cache immediately (covers re-open with cached data)
+    setInstallerMissions([...missionCache.installers])
+    setSolutionMissions([...missionCache.solutions])
 
-        for (const f of jsonFiles) {
-          if (cancelled) return
-          try {
-            const { data: content } = await api.get<string>(
-              `/api/missions/file?path=${encodeURIComponent(f.path)}`
-            )
-            const parsed = typeof content === 'string' ? JSON.parse(content) : content
-            const normalized = normalizeMission(parsed)
-            if (normalized) {
-              missions.push(normalized)
-              if (!cancelled) setInstallerMissions([...missions])
-            }
-          } catch { /* skip */ }
-        }
-        if (!cancelled) {
-          setInstallerMissions(missions)
-          installersFetched.current = true
-        }
-      } catch { /* skip */ }
-      finally { if (!cancelled) setLoadingInstallers(false) }
+    // Listen for incremental updates from the background fetch
+    const listener = () => {
+      setInstallerMissions([...missionCache.installers])
+      setSolutionMissions([...missionCache.solutions])
+      forceUpdate(n => n + 1)
     }
+    missionCache.listeners.add(listener)
 
-    async function fetchSolutions() {
-      if (solutionsFetched.current) return
-      setLoadingSolutions(true)
-      try {
-        const { data: topEntries } = await api.get<BrowseEntry[]>(
-          '/api/missions/browse?path=solutions'
-        )
-        const dirs = topEntries.filter(e => e.type === 'directory' && e.name !== 'cncf-install')
-        const missions: MissionExport[] = []
+    // Kick off fetches (no-op if already done or in progress)
+    startMissionCacheFetch()
 
-        // Recursively collect JSON files from nested directories (max 3 levels)
-        async function collectFiles(path: string, depth: number): Promise<BrowseEntry[]> {
-          if (cancelled || depth > 3) return []
-          try {
-            const { data: entries } = await api.get<BrowseEntry[]>(
-              `/api/missions/browse?path=${encodeURIComponent(path)}`
-            )
-            const files: BrowseEntry[] = []
-            for (const e of entries) {
-              if (cancelled) return files
-              if (e.type === 'file' && e.name.endsWith('.json')) {
-                files.push(e)
-              } else if (e.type === 'directory') {
-                const nested = await collectFiles(e.path, depth + 1)
-                files.push(...nested)
-              }
-            }
-            return files
-          } catch { return [] }
-        }
-
-        for (const dir of dirs) {
-          if (cancelled) return
-          const files = await collectFiles(dir.path, 1)
-          for (const f of files) {
-            if (cancelled) return
-            try {
-              const { data: content } = await api.get<string>(
-                `/api/missions/file?path=${encodeURIComponent(f.path)}`
-              )
-              const parsed = typeof content === 'string' ? JSON.parse(content) : content
-              const normalized = normalizeMission(parsed)
-              if (normalized && normalized.missionClass !== 'install') {
-                missions.push(normalized)
-                if (!cancelled) setSolutionMissions([...missions])
-              }
-            } catch { /* skip */ }
-          }
-        }
-        if (!cancelled) {
-          setSolutionMissions(missions)
-          solutionsFetched.current = true
-        }
-      } catch { /* skip */ }
-      finally { if (!cancelled) setLoadingSolutions(false) }
-    }
-
-    // Fire both in parallel
-    fetchInstallers()
-    fetchSolutions()
-    return () => { cancelled = true }
+    return () => { missionCache.listeners.delete(listener) }
   }, [isOpen])
 
   // ============================================================================
