@@ -455,28 +455,44 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         const dirs = topEntries.filter(e => e.type === 'directory' && e.name !== 'cncf-install')
         const missions: MissionExport[] = []
 
+        // Recursively collect JSON files from nested directories (max 3 levels)
+        async function collectFiles(path: string, depth: number): Promise<BrowseEntry[]> {
+          if (cancelled || depth > 3) return []
+          try {
+            const { data: entries } = await api.get<BrowseEntry[]>(
+              `/api/missions/browse?path=${encodeURIComponent(path)}`
+            )
+            const files: BrowseEntry[] = []
+            for (const e of entries) {
+              if (cancelled) return files
+              if (e.type === 'file' && e.name.endsWith('.json')) {
+                files.push(e)
+              } else if (e.type === 'directory') {
+                const nested = await collectFiles(e.path, depth + 1)
+                files.push(...nested)
+              }
+            }
+            return files
+          } catch { return [] }
+        }
+
         for (const dir of dirs) {
           if (cancelled) return
-          try {
-            const { data: files } = await api.get<BrowseEntry[]>(
-              `/api/missions/browse?path=${encodeURIComponent(dir.path)}`
-            )
-            for (const f of files) {
-              if (cancelled) return
-              if (f.type !== 'file' || !f.name.endsWith('.json')) continue
-              try {
-                const { data: content } = await api.get<string>(
-                  `/api/missions/file?path=${encodeURIComponent(f.path)}`
-                )
-                const parsed = typeof content === 'string' ? JSON.parse(content) : content
-                const normalized = normalizeMission(parsed)
-                if (normalized && normalized.missionClass !== 'install') {
-                  missions.push(normalized)
-                  if (!cancelled) setSolutionMissions([...missions])
-                }
-              } catch { /* skip */ }
-            }
-          } catch { /* skip */ }
+          const files = await collectFiles(dir.path, 1)
+          for (const f of files) {
+            if (cancelled) return
+            try {
+              const { data: content } = await api.get<string>(
+                `/api/missions/file?path=${encodeURIComponent(f.path)}`
+              )
+              const parsed = typeof content === 'string' ? JSON.parse(content) : content
+              const normalized = normalizeMission(parsed)
+              if (normalized && normalized.missionClass !== 'install') {
+                missions.push(normalized)
+                if (!cancelled) setSolutionMissions([...missions])
+              }
+            } catch { /* skip */ }
+          }
         }
         if (!cancelled) {
           setSolutionMissions(missions)
@@ -1898,7 +1914,7 @@ function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
   // Already flat MissionExport
   if (raw.title && raw.type && raw.tags) return raw as unknown as MissionExport
 
-  // kc-mission-v1 nested format: { format, mission: { title, type, ... }, metadata: { tags, ... } }
+  // kc-mission-v1 nested format: { version|format, mission: { ... }, metadata: { ... } }
   const m = raw.mission as Record<string, unknown> | undefined
   if (!m) return null
 
@@ -1914,16 +1930,17 @@ function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
     ?? (categoryFromTags ? categoryFromTags.charAt(0).toUpperCase() + categoryFromTags.slice(1) : undefined)
 
   const resolution = m.resolution as Record<string, unknown> | undefined
+  const sourceUrls = meta?.sourceUrls as Record<string, string> | undefined
 
   return {
-    version: (raw.format as string) ?? 'kc-mission-v1',
+    version: (raw.version as string) ?? (raw.format as string) ?? 'kc-mission-v1',
     title: (m.title as string) ?? '',
     description: (m.description as string) ?? '',
     type: (m.type as string) ?? 'troubleshoot',
     tags,
     category,
     cncfProject: cncfProjects[0] ?? undefined,
-    missionClass: (raw.missionClass as string) ?? undefined,
+    missionClass: (raw.missionClass as string) ?? ((m.type as string) === 'install' ? 'install' : undefined),
     author: (raw.author as string) ?? undefined,
     authorGithub: (raw.authorGithub as string) ?? undefined,
     difficulty: (meta?.difficulty as string) ?? undefined,
@@ -1937,7 +1954,7 @@ function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
       steps: (resolution.steps as string[]) ?? [],
     } : undefined,
     metadata: {
-      source: (meta?.sourceIssue as string) ?? (meta?.sourceRepo as string) ?? undefined,
+      source: sourceUrls?.issue ?? sourceUrls?.source ?? (meta?.sourceIssue as string) ?? (meta?.sourceRepo as string) ?? undefined,
       createdAt: (raw.exportedAt as string) ?? undefined,
     },
   } as MissionExport
