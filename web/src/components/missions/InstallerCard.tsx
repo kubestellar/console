@@ -17,9 +17,10 @@ interface InstallerCardProps {
   mission: MissionExport
   onImport: () => void
   onSelect: () => void
+  compact?: boolean
 }
 
-export function InstallerCard({ mission, onImport, onSelect }: InstallerCardProps) {
+export function InstallerCard({ mission, onImport, onSelect, compact }: InstallerCardProps) {
   const category = mission.category ?? 'Orchestration'
   const gradient = CNCF_CATEGORY_GRADIENTS[category] ?? ['#6366f1', '#8b5cf6']
   const iconPath = CNCF_CATEGORY_ICONS[category] ?? CNCF_CATEGORY_ICONS['Orchestration']
@@ -30,6 +31,46 @@ export function InstallerCard({ mission, onImport, onSelect }: InstallerCardProp
   const shortTitle = (mission.title ?? '')
     .replace(/^Install and Configure\s+/i, '')
     .replace(/\s+on Kubernetes$/i, '')
+
+  if (compact) {
+    return (
+      <div
+        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border bg-card hover:border-purple-500/30 transition-all cursor-pointer group"
+        onClick={onSelect}
+      >
+        <div
+          className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+          style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
+        >
+          <svg viewBox="0 0 24 24" className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d={iconPath} />
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium text-foreground truncate group-hover:text-purple-400 transition-colors">
+            {shortTitle || mission.title}
+          </h4>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className={cn('text-[10px]', mission.steps?.length ? 'text-green-400' : 'text-muted-foreground/30')} title="Install"><Download className="w-3 h-3" /></span>
+          <span className={cn('text-[10px]', mission.uninstall?.length ? 'text-red-400' : 'text-muted-foreground/30')} title="Uninstall"><Trash2 className="w-3 h-3" /></span>
+          <span className={cn('text-[10px]', mission.upgrade?.length ? 'text-blue-400' : 'text-muted-foreground/30')} title="Upgrade"><ArrowUpCircle className="w-3 h-3" /></span>
+          <span className={cn('text-[10px]', mission.troubleshooting?.length ? 'text-yellow-400' : 'text-muted-foreground/30')} title="Troubleshoot"><AlertTriangle className="w-3 h-3" /></span>
+        </div>
+        {maturity && (
+          <span className={cn('px-1.5 py-0.5 text-[10px] font-medium rounded-full border flex-shrink-0', maturity.bg, maturity.color, maturity.border)}>
+            {maturity.label}
+          </span>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onImport() }}
+          className="px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
+        >
+          <Download className="w-3 h-3" />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div

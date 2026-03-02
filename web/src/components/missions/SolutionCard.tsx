@@ -19,10 +19,39 @@ interface SolutionCardProps {
   mission: MissionExport
   onImport: () => void
   onSelect: () => void
+  compact?: boolean
 }
 
-export function SolutionCard({ mission, onImport, onSelect }: SolutionCardProps) {
+export function SolutionCard({ mission, onImport, onSelect, compact }: SolutionCardProps) {
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
+
+  if (compact) {
+    return (
+      <div
+        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border bg-card hover:border-purple-500/30 transition-all cursor-pointer group"
+        onClick={onSelect}
+      >
+        <span className={cn('flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded-full', typeStyle.bg, typeStyle.color)}>
+          {mission.type}
+        </span>
+        <h4 className="flex-1 text-sm font-medium text-foreground truncate group-hover:text-purple-400 transition-colors">
+          {mission.title}
+        </h4>
+        {mission.category && (
+          <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 flex-shrink-0">
+            {mission.category}
+          </span>
+        )}
+        <span className="text-[10px] text-muted-foreground flex-shrink-0">{mission.steps?.length ?? 0} steps</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onImport() }}
+          className="px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
+        >
+          Import
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div

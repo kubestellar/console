@@ -28,6 +28,7 @@ import {
   Plus,
   Trash2,
   ExternalLink,
+  RefreshCw,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
@@ -253,6 +254,21 @@ function startMissionCacheFetch() {
   fetchSolutionsToCache()
 }
 
+function resetMissionCache() {
+  missionCache.installers = []
+  missionCache.solutions = []
+  missionCache.installersDone = false
+  missionCache.solutionsDone = false
+  missionCache.installersFetching = false
+  missionCache.solutionsFetching = false
+  if (missionCache.abortController) {
+    missionCache.abortController.abort()
+    missionCache.abortController = null
+  }
+  notifyCacheListeners()
+  startMissionCacheFetch()
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -386,15 +402,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     setSelectedPath(null)
     setSelectedMission(null)
     setDirectoryEntries([])
-    setSearchQuery('')
-    setCategoryFilter('All')
-    setCncfFilter('')
     setShowRaw(false)
     setRawContent(null)
     setScanResult(null)
     setPendingImport(null)
     setIsScanning(false)
-    setActiveTab('recommended')
+    // Preserve activeTab, searchQuery, and filter state across re-opens
   }, [isOpen, isAuthenticated, user, watchedRepos, watchedPaths])
 
   // ============================================================================
@@ -565,6 +578,22 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Filtered installer & solution lists
   // ============================================================================
 
+  // Effective search: local tab search overrides global search
+  const effectiveInstallerSearch = installerSearch || searchQuery
+  const effectiveSolutionSearch = solutionSearch || searchQuery
+
+  // AND search: each space-separated term must match somewhere in the mission
+  const andMatch = (text: string, query: string) => {
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
+    const lower = text.toLowerCase()
+    return terms.every(term => lower.includes(term))
+  }
+
+  const matchesMission = (m: MissionExport, query: string) => {
+    const haystack = [m.title, m.description, ...(m.tags || [])].join(' ')
+    return andMatch(haystack, query)
+  }
+
   const filteredInstallers = useMemo(() => {
     let list = installerMissions
     if (installerCategoryFilter !== 'All') {
@@ -573,32 +602,22 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (installerMaturityFilter !== 'All') {
       list = list.filter(m => m.tags?.includes(installerMaturityFilter))
     }
-    if (installerSearch) {
-      const q = installerSearch.toLowerCase()
-      list = list.filter(m =>
-        m.title.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q) ||
-        m.tags?.some(t => t.toLowerCase().includes(q))
-      )
+    if (effectiveInstallerSearch) {
+      list = list.filter(m => matchesMission(m, effectiveInstallerSearch))
     }
     return list
-  }, [installerMissions, installerCategoryFilter, installerMaturityFilter, installerSearch])
+  }, [installerMissions, installerCategoryFilter, installerMaturityFilter, effectiveInstallerSearch])
 
   const filteredSolutions = useMemo(() => {
     let list = solutionMissions
     if (solutionTypeFilter !== 'All') {
       list = list.filter(m => m.type === solutionTypeFilter.toLowerCase())
     }
-    if (solutionSearch) {
-      const q = solutionSearch.toLowerCase()
-      list = list.filter(m =>
-        m.title.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q) ||
-        m.tags?.some(t => t.toLowerCase().includes(q))
-      )
+    if (effectiveSolutionSearch) {
+      list = list.filter(m => matchesMission(m, effectiveSolutionSearch))
     }
     return list
-  }, [solutionMissions, solutionTypeFilter, solutionSearch])
+  }, [solutionMissions, solutionTypeFilter, effectiveSolutionSearch])
 
   // ============================================================================
   // Tree expansion & lazy loading
@@ -958,7 +977,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search missions by name, tag, or description…"
+            placeholder={activeTab === 'installers' ? 'Search installers… (AND logic: "argo events" = argo AND events)' : activeTab === 'solutions' ? 'Search solutions…' : 'Search missions by name, tag, or description…'}
             className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/40"
             autoFocus
           />
@@ -1062,6 +1081,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )}
           </button>
         ))}
+        <button
+          onClick={() => resetMissionCache()}
+          className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
+          title="Refresh all mission data"
+        >
+          <RefreshCw className={cn('w-3.5 h-3.5', (!missionCache.installersDone || !missionCache.solutionsDone) && 'animate-spin')} />
+        </button>
       </div>
 
       {/* ================================================================== */}
@@ -1532,11 +1558,15 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         Loading… {installerMissions.length} found so far
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    <div className={viewMode === 'grid'
+                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+                      : "flex flex-col gap-2"
+                    }>
                       {filteredInstallers.map((mission, i) => (
                         <InstallerCard
                           key={i}
                           mission={mission}
+                          compact={viewMode === 'list'}
                           onSelect={() => {
                             setSelectedMission(mission)
                             setRawContent(JSON.stringify(mission, null, 2))
@@ -1602,11 +1632,15 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         Loading… {solutionMissions.length} found so far
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className={viewMode === 'grid'
+                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+                      : "flex flex-col gap-2"
+                    }>
                       {filteredSolutions.map((mission, i) => (
                         <SolutionCard
                           key={i}
                           mission={mission}
+                          compact={viewMode === 'list'}
                           onSelect={() => {
                             setSelectedMission(mission)
                             setRawContent(JSON.stringify(mission, null, 2))
