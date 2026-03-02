@@ -12,6 +12,9 @@ const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
 const BACKEND_CHECK_INTERVAL = 10000 // 10 seconds between backend checks when unavailable
 const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token should be refreshed
 
+// Public API paths that don't require authentication (served without JWT on the backend)
+const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file']
+
 // Error class for unauthenticated requests
 export class UnauthenticatedError extends Error {
   constructor() {
@@ -316,7 +319,8 @@ class ApiClient {
 
   async get<T = any>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean }): Promise<{ data: T }> {
     // Skip API calls to protected endpoints when not authenticated
-    if (options?.requiresAuth !== false && !this.hasToken()) {
+    const isPublicPath = PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
+    if (options?.requiresAuth !== false && !isPublicPath && !this.hasToken()) {
       throw new UnauthenticatedError()
     }
 
