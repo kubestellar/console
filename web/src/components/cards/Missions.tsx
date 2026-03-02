@@ -490,7 +490,7 @@ interface MissionRowProps {
 }
 
 function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRepair }: MissionRowProps) {
-  const config = STATUS_CONFIG[mission.status]
+  const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.launching
   const StatusIcon = config.icon
   const elapsed = getElapsed(mission.startedAt, mission.completedAt)
   const [showLogs, setShowLogs] = useState(false)

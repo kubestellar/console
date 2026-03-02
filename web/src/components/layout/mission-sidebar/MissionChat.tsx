@@ -246,9 +246,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     // All other keys (including space) pass through to the input normally
   }
 
-  const config = STATUS_CONFIG[mission.status]
+  const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending
   const StatusIcon = config.icon
-  const TypeIcon = TYPE_ICONS[mission.type]
+  const TypeIcon = TYPE_ICONS[mission.type] || TYPE_ICONS.custom
 
   return (
     <>
@@ -644,8 +644,8 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               {/* Status */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t('common.status')}</span>
-                <span className={cn('font-medium', STATUS_CONFIG[mission.status].color)}>
-                  {STATUS_CONFIG[mission.status].label}
+                <span className={cn('font-medium', (STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending).color)}>
+                  {(STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending).label}
                 </span>
               </div>
 

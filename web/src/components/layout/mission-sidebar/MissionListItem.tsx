@@ -17,9 +17,9 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
   isCollapsed: boolean
   onToggleCollapse: () => void
 }) {
-  const config = STATUS_CONFIG[mission.status]
+  const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending
   const StatusIcon = config.icon
-  const TypeIcon = TYPE_ICONS[mission.type]
+  const TypeIcon = TYPE_ICONS[mission.type] || TYPE_ICONS.custom
 
   return (
     <div
