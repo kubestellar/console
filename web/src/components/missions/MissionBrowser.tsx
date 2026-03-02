@@ -16,18 +16,13 @@ import {
   ChevronDown,
   Upload,
   Download,
-  Star,
   Filter,
   Grid3X3,
   List,
-  Eye,
-  Code,
-  ArrowLeft,
   Sparkles,
   Github,
   HardDrive,
   Globe,
-  Tag,
   CheckCircle,
   Loader2,
   Plus,
@@ -58,6 +53,8 @@ import { ScanProgressOverlay } from './ScanProgressOverlay'
 import { CollapsibleSection } from '../ui/CollapsibleSection'
 import { InstallerCard } from './InstallerCard'
 import { SolutionCard } from './SolutionCard'
+import { MissionDetailView } from './MissionDetailView'
+import { ImproveMissionDialog } from './ImproveMissionDialog'
 import { useTranslation } from 'react-i18next'
 
 // ============================================================================
@@ -175,6 +172,9 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState<FileScanResult | null>(null)
   const [pendingImport, setPendingImport] = useState<MissionExport | null>(null)
+
+  // Improve mission dialog state
+  const [showImproveDialog, setShowImproveDialog] = useState(false)
 
   // Drag state
   const [isDragging, setIsDragging] = useState(false)
@@ -1338,21 +1338,31 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
 
             {/* Directory listing or Mission preview */}
             {selectedMission ? (
-              <MissionPreview
-                mission={selectedMission}
-                rawContent={rawContent}
-                showRaw={showRaw}
-                onToggleRaw={() => setShowRaw(!showRaw)}
-                onImport={() => handleImport(selectedMission, rawContent ?? undefined)}
-                onBack={() => {
-                  setSelectedMission(null)
-                  setRawContent(null)
-                  setShowRaw(false)
-                }}
-                matchScore={recommendations.find(
-                  (r) => r.mission.title === selectedMission.title
-                )?.score}
-              />
+              <>
+                <MissionDetailView
+                  mission={selectedMission}
+                  rawContent={rawContent}
+                  showRaw={showRaw}
+                  onToggleRaw={() => setShowRaw(!showRaw)}
+                  onImport={() => handleImport(selectedMission, rawContent ?? undefined)}
+                  onBack={() => {
+                    setSelectedMission(null)
+                    setRawContent(null)
+                    setShowRaw(false)
+                  }}
+                  onImprove={selectedMission.missionClass === 'install' ? () => setShowImproveDialog(true) : undefined}
+                  matchScore={recommendations.find(
+                    (r) => r.mission.title === selectedMission.title
+                  )?.score}
+                />
+                {showImproveDialog && (
+                  <ImproveMissionDialog
+                    mission={selectedMission}
+                    isOpen={showImproveDialog}
+                    onClose={() => setShowImproveDialog(false)}
+                  />
+                )}
+              </>
             ) : loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
@@ -1744,195 +1754,6 @@ function DirectoryListing({
           )}
         </div>
       ))}
-    </div>
-  )
-}
-
-// ============================================================================
-// Mission Preview
-// ============================================================================
-
-function MissionPreview({
-  mission,
-  rawContent,
-  showRaw,
-  onToggleRaw,
-  onImport,
-  onBack,
-  matchScore,
-}: {
-  mission: MissionExport
-  rawContent: string | null
-  showRaw: boolean
-  onToggleRaw: () => void
-  onImport: () => void
-  onBack: () => void
-  matchScore?: number
-}) {
-  const typeColors: Record<string, string> = {
-    troubleshoot: 'bg-red-500/10 text-red-400 border-red-500/20',
-    deploy: 'bg-green-500/10 text-green-400 border-green-500/20',
-    upgrade: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    analyze: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    repair: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    custom: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to listing
-      </button>
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-semibold text-foreground">{mission.title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{mission.description}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {matchScore != null && matchScore > 0 && (
-            <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
-              <Star className="w-3 h-3" />
-              {matchScore}% match
-            </span>
-          )}
-          <button
-            onClick={onToggleRaw}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors',
-              showRaw
-                ? 'bg-secondary border-border text-foreground'
-                : 'border-border text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {showRaw ? <Eye className="w-3.5 h-3.5" /> : <Code className="w-3.5 h-3.5" />}
-            {showRaw ? 'Preview' : 'View Raw'}
-          </button>
-          <button
-            onClick={onImport}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Import
-          </button>
-        </div>
-      </div>
-
-      {/* Raw view */}
-      {showRaw && rawContent ? (
-        <pre className="p-4 rounded-lg bg-secondary border border-border text-xs text-foreground font-mono overflow-x-auto max-h-[60vh] overflow-y-auto whitespace-pre-wrap">
-          {rawContent}
-        </pre>
-      ) : (
-        <>
-          {/* Badges */}
-          <div className="flex items-center flex-wrap gap-2">
-            <span
-              className={cn(
-                'px-2.5 py-1 text-xs rounded-full border',
-                typeColors[mission.type] || typeColors.custom
-              )}
-            >
-              {mission.type}
-            </span>
-            {mission.category && (
-              <span className="px-2.5 py-1 text-xs rounded-full bg-secondary text-muted-foreground border border-border">
-                {mission.category}
-              </span>
-            )}
-            {mission.cncfProject && (
-              <span className="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                {mission.cncfProject}
-              </span>
-            )}
-            {mission.tags.map((tag) => (
-              <span
-                key={tag}
-                className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-secondary text-muted-foreground"
-              >
-                <Tag className="w-3 h-3" />
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* Prerequisites */}
-          {mission.prerequisites && mission.prerequisites.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-foreground mb-2">Prerequisites</h3>
-              <ul className="space-y-1">
-                {mission.prerequisites.map((p, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Steps */}
-          {mission.steps.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-foreground mb-3">
-                Steps ({mission.steps.length})
-              </h3>
-              <div className="space-y-3">
-                {mission.steps.map((step, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-3 p-3 rounded-lg bg-secondary/50 border border-border"
-                  >
-                    <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xs font-medium">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">{step.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
-                      {step.command && (
-                        <code className="block mt-2 p-2 rounded bg-background text-xs text-foreground font-mono border border-border">
-                          {step.command}
-                        </code>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Resolution */}
-          {mission.resolution && (
-            <div>
-              <h3 className="text-sm font-medium text-foreground mb-2">Resolution</h3>
-              {mission.resolution.summary && (
-                <p className="text-sm text-muted-foreground mb-2">{mission.resolution.summary}</p>
-              )}
-              {mission.resolution.steps && mission.resolution.steps.length > 0 && (
-                <ul className="space-y-1 ml-2">
-                  {mission.resolution.steps.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="text-muted-foreground/50">•</span>
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {mission.resolution.yaml && (
-                <pre className="mt-2 p-3 rounded-lg bg-secondary border border-border text-xs text-foreground font-mono overflow-x-auto whitespace-pre-wrap">
-                  {mission.resolution.yaml}
-                </pre>
-              )}
-            </div>
-          )}
-        </>
-      )}
     </div>
   )
 }

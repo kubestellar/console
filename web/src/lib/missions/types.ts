@@ -35,6 +35,9 @@ export interface MissionExport {
   authorGithub?: string
   prerequisites?: string[]
   steps: MissionStep[]
+  uninstall?: MissionStep[]
+  upgrade?: MissionStep[]
+  troubleshooting?: MissionStep[]
   resolution?: {
     summary: string
     steps: string[]
@@ -45,6 +48,14 @@ export interface MissionExport {
     source?: string
     createdAt?: string
     updatedAt?: string
+    qualityScore?: number
+    maturity?: string
+    projectVersion?: string
+    sourceUrls?: {
+      docs?: string
+      repo?: string
+      helm?: string
+    }
   }
 }
 
