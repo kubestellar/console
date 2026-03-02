@@ -3,7 +3,7 @@
  * Shows category icon+gradient, maturity badge, difficulty, install methods, and import button.
  */
 
-import { ExternalLink, Download, Wrench } from 'lucide-react'
+import { ExternalLink, Download, Wrench, Trash2, ArrowUpCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import {
   CNCF_CATEGORY_GRADIENTS,
@@ -85,6 +85,22 @@ export function InstallerCard({ mission, onImport, onSelect }: InstallerCardProp
               {method}
             </span>
           ))}
+        </div>
+
+        {/* Section coverage icons */}
+        <div className="flex items-center gap-1.5">
+          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.steps?.length ? 'text-green-400' : 'text-muted-foreground/30')} title={mission.steps?.length ? `Install: ${mission.steps.length} steps` : 'No install steps'}>
+            <Download className="w-3 h-3" />
+          </span>
+          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.uninstall?.length ? 'text-red-400' : 'text-muted-foreground/30')} title={mission.uninstall?.length ? `Uninstall: ${mission.uninstall.length} steps` : 'No uninstall steps'}>
+            <Trash2 className="w-3 h-3" />
+          </span>
+          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.upgrade?.length ? 'text-blue-400' : 'text-muted-foreground/30')} title={mission.upgrade?.length ? `Upgrade: ${mission.upgrade.length} steps` : 'No upgrade steps'}>
+            <ArrowUpCircle className="w-3 h-3" />
+          </span>
+          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.troubleshooting?.length ? 'text-yellow-400' : 'text-muted-foreground/30')} title={mission.troubleshooting?.length ? `Troubleshooting: ${mission.troubleshooting.length} steps` : 'No troubleshooting steps'}>
+            <AlertTriangle className="w-3 h-3" />
+          </span>
         </div>
 
         {/* Author + Actions */}

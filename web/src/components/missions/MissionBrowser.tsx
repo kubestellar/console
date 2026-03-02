@@ -409,7 +409,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
   useEffect(() => {
     if (!isOpen || activeTab !== 'installers' || installersFetched.current) return
-    installersFetched.current = true
     let cancelled = false
 
     async function fetchInstallers() {
@@ -435,7 +434,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             }
           } catch { /* skip */ }
         }
-        if (!cancelled) setInstallerMissions(missions)
+        if (!cancelled) {
+          setInstallerMissions(missions)
+          installersFetched.current = true
+        }
       } catch { /* skip */ }
       finally { if (!cancelled) setLoadingInstallers(false) }
     }
@@ -471,7 +473,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
   useEffect(() => {
     if (!isOpen || activeTab !== 'solutions' || solutionsFetched.current) return
-    solutionsFetched.current = true
     let cancelled = false
 
     async function fetchSolutions() {
@@ -506,7 +507,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             }
           } catch { /* skip */ }
         }
-        if (!cancelled) setSolutionMissions(missions)
+        if (!cancelled) {
+          setSolutionMissions(missions)
+          solutionsFetched.current = true
+        }
       } catch { /* skip */ }
       finally { if (!cancelled) setLoadingSolutions(false) }
     }
