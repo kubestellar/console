@@ -1054,11 +1054,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           >
             <span>{tab.icon}</span>
             {tab.label}
-            {tab.id === 'installers' && installerMissions.length > 0 && (
-              <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full">{installerMissions.length}</span>
+            {tab.id === 'installers' && (
+              <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{installerMissions.length || '–'}</span>
             )}
-            {tab.id === 'solutions' && solutionMissions.length > 0 && (
-              <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full">{solutionMissions.length}</span>
+            {tab.id === 'solutions' && (
+              <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{solutionMissions.length || '–'}</span>
             )}
           </button>
         ))}
