@@ -252,7 +252,8 @@
     "kube_craft": "Kube Craft",
     "kube_chess": "Kube Chess",
     "provider_health": "Provider Health",
-    "flatcar_status": "Flatcar Container Linux"
+    "flatcar_status": "Flatcar Container Linux",
+    "contour_status": "Contour"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -413,7 +414,8 @@
     "kube_craft": "Build and manage your cluster world.",
     "kube_chess": "Chess game with Kubernetes-themed pieces.",
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
-    "flatcar_status": "Flatcar node OS versions, update status, and version distribution."
+    "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
+    "contour_status": "Contour ingress proxy status, HTTPProxy resources."
   },
   "categories": {
     "core": "Core",
@@ -2597,5 +2599,25 @@
     "fetchError": "Failed to fetch wasmCloud status",
     "ensureRunning": "Ensure wasmCloud is running on a connected cluster.",
     "docs": "wasmCloud Docs"
+  },
+  "contour": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Contour Not Detected",
+    "notInstalledHint": "No Contour controller or Envoy proxy pods found on connected clusters.",
+    "contourPods": "Contour Pods",
+    "envoyPods": "Envoy Pods",
+    "tlsEnabled": "TLS Routes",
+    "httpProxyStatus": "HTTPProxy Resources",
+    "valid": "Valid",
+    "invalid": "Invalid",
+    "orphaned": "Orphaned",
+    "total": "Total",
+    "openDocs": "Contour Docs",
+    "fetchError": "Failed to fetch Contour status",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }

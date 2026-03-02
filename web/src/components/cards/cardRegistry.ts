@@ -176,6 +176,8 @@ const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ d
 const FlatcarStatus = lazy(() => import('./flatcar_status').then(m => ({ default: m.FlatcarStatus })))
 // Thanos global view metrics card
 const ThanosStatus = lazy(() => import('./thanos_status').then(m => ({ default: m.ThanosStatus })))
+// Contour ingress controller card
+const ContourStatus = lazy(() => import('./contour-status').then(m => ({ default: m.ContourStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -418,6 +420,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   flatcar_status: FlatcarStatus,
   // Thanos global view metrics
   thanos_status: ThanosStatus,
+  // Contour ingress controller
+  contour_status: ContourStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -486,6 +490,7 @@ export const DEMO_DATA_CARDS = new Set([
   'buildpacks_status',
   'flatcar_status',
   'thanos_status',
+  'contour_status',
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -734,6 +739,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   flatcar_status: () => import('./flatcar_status'),
   // Thanos global view metrics
   thanos_status: () => import('./thanos_status'),
+  // Contour ingress controller
+  contour_status: () => import('./contour-status'),
 }
 
 /**
@@ -869,6 +876,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   buildpacks_status: 6,
   flatcar_status: 6,
   thanos_status: 6,
+  contour_status: 6,
 
   // MCS cards
   service_exports: 6,

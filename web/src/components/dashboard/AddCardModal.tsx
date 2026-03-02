@@ -71,6 +71,7 @@ const CARD_CATALOG = {
     { type: 'service_imports', title: 'Service Imports (MCS)', description: 'Multi-cluster service imports receiving cross-cluster traffic', visualization: 'table' },
     { type: 'gateway_status', title: 'Gateway API', description: 'Kubernetes Gateway API resources and HTTPRoutes', visualization: 'status' },
     { type: 'service_topology', title: 'Service Topology', description: 'Animated service mesh visualization with cross-cluster traffic', visualization: 'status' },
+    { type: 'contour_status', title: 'Contour', description: 'Contour ingress proxy status, HTTPProxy resources', visualization: 'status' },
   ],
   'GitOps': [
     { type: 'helm_release_status', title: 'Helm Releases', description: 'Helm release status and versions', visualization: 'status' },
