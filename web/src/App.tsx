@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
 import { DrillDownModal } from './components/drilldown/DrillDownModal'
@@ -232,6 +232,12 @@ function SettingsSyncInit() {
   return null
 }
 
+/** Redirect /missions/:missionId → /?mission=:missionId to open MissionBrowser via deep-link */
+function MissionDeepLink() {
+  const { missionId } = useParams()
+  return <Navigate to={`/?mission=${encodeURIComponent(missionId || '')}`} replace />
+}
+
 // Route-to-title map for GA4 page view granularity and browser tab labeling
 const ROUTE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
@@ -266,6 +272,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/llm-d-benchmarks': 'llm-d Benchmarks',
   '/arcade': 'Arcade',
   '/marketplace': 'Marketplace',
+  '/missions': 'Missions',
   '/history': 'Card History',
   '/settings': 'Settings',
   '/users': 'User Management',
@@ -388,6 +395,9 @@ function App() {
           <Route path="/test/unified-stats" element={<UnifiedStatsTest />} />
           <Route path="/test/unified-dashboard" element={<UnifiedDashboardTest />} />
         </Route>
+
+        {/* Mission deep-link: /missions/install-prometheus → opens MissionBrowser */}
+        <Route path="/missions/:missionId" element={<MissionDeepLink />} />
 
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>

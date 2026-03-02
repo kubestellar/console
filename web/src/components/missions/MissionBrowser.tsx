@@ -65,6 +65,8 @@ interface MissionBrowserProps {
   isOpen: boolean
   onClose: () => void
   onImport: (mission: MissionExport) => void
+  /** Deep-link: auto-select a specific mission by name (e.g. 'install-prometheus') */
+  initialMission?: string
 }
 
 interface TreeNode {
@@ -138,7 +140,7 @@ function saveWatchedPaths(paths: string[]) {
 // Component
 // ============================================================================
 
-export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProps) {
+export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: MissionBrowserProps) {
   useTranslation(['common', 'cards'])
   const { user, isAuthenticated } = useAuth()
 
@@ -441,6 +443,27 @@ export function MissionBrowser({ isOpen, onClose, onImport }: MissionBrowserProp
     fetchInstallers()
     return () => { cancelled = true }
   }, [isOpen, activeTab])
+
+  // ============================================================================
+  // Deep-link: auto-select mission by name when initialMission is set
+  // ============================================================================
+
+  useEffect(() => {
+    if (!initialMission || !isOpen || selectedMission) return
+    const match = installerMissions.find(
+      (m) => m.title.toLowerCase().includes(initialMission.toLowerCase()) ||
+             (m.cncfProject && m.cncfProject.toLowerCase() === initialMission.replace('install-', '').toLowerCase())
+    )
+    if (match) {
+      setSelectedMission(match)
+      setActiveTab('installers')
+      api.get<string>(`/api/missions/browse?path=solutions/cncf-install/install-${(match.cncfProject || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json&raw=true`)
+        .then(({ data }) => setRawContent(typeof data === 'string' ? data : JSON.stringify(data, null, 2)))
+        .catch(() => {})
+    } else if (installerMissions.length === 0 && activeTab !== 'installers') {
+      setActiveTab('installers')
+    }
+  }, [initialMission, isOpen, installerMissions, selectedMission, activeTab])
 
   // ============================================================================
   // Fetch solution missions (non-installer solutions)

@@ -63,6 +63,9 @@ export const ROUTES = {
   // Marketplace
   MARKETPLACE: '/marketplace',
 
+  // Mission deep-link (opens MissionBrowser to specific mission)
+  MISSION: '/missions/:missionId',
+
   // Widget
   WIDGET: '/widget',
 } as const
@@ -86,4 +89,11 @@ export function getLoginWithError(error: string): string {
  */
 export function getSettingsWithHash(hash: string): string {
   return `${ROUTES.SETTINGS}#${hash}`
+}
+
+/**
+ * Helper function to create a mission deep-link URL
+ */
+export function getMissionRoute(missionId: string): string {
+  return ROUTES.MISSION.replace(':missionId', encodeURIComponent(missionId))
 }

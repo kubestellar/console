@@ -15,6 +15,7 @@ import {
   Send,
   Globe,
 } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
 import { cn } from '../../../lib/cn'
@@ -37,6 +38,20 @@ export function MissionSidebar() {
   const [showBrowser, setShowBrowser] = useState(false)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Deep-link: open MissionBrowser to specific mission via ?mission= URL param
+  const [searchParams, setSearchParams] = useSearchParams()
+  const deepLinkMission = searchParams.get('mission')
+
+  useEffect(() => {
+    if (deepLinkMission) {
+      setShowBrowser(true)
+      // Clear the param from URL after opening
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('mission')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [deepLinkMission, searchParams, setSearchParams])
 
   const handleImportMission = useCallback((mission: MissionExport) => {
     startMission({
@@ -384,6 +399,7 @@ export function MissionSidebar() {
         isOpen={showBrowser}
         onClose={() => setShowBrowser(false)}
         onImport={handleImportMission}
+        initialMission={deepLinkMission || undefined}
       />
     </>
   )
