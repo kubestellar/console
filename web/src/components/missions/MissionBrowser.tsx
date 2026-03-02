@@ -407,11 +407,14 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Fetch installer missions (cncf-install directory)
   // ============================================================================
 
+  // Fetch installers and solutions in the background as soon as the dialog opens.
+  // Runs independently of which tab is active so data is ready when the user switches.
   useEffect(() => {
-    if (!isOpen || activeTab !== 'installers' || installersFetched.current) return
+    if (!isOpen) return
     let cancelled = false
 
     async function fetchInstallers() {
+      if (installersFetched.current) return
       setLoadingInstallers(true)
       try {
         const { data: entries } = await api.get<BrowseEntry[]>(
@@ -442,40 +445,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       finally { if (!cancelled) setLoadingInstallers(false) }
     }
 
-    fetchInstallers()
-    return () => { cancelled = true }
-  }, [isOpen, activeTab])
-
-  // ============================================================================
-  // Deep-link: auto-select mission by name when initialMission is set
-  // ============================================================================
-
-  useEffect(() => {
-    if (!initialMission || !isOpen || selectedMission) return
-    const match = installerMissions.find(
-      (m) => m.title.toLowerCase().includes(initialMission.toLowerCase()) ||
-             (m.cncfProject && m.cncfProject.toLowerCase() === initialMission.replace('install-', '').toLowerCase())
-    )
-    if (match) {
-      setSelectedMission(match)
-      setActiveTab('installers')
-      api.get<string>(`/api/missions/browse?path=solutions/cncf-install/install-${(match.cncfProject || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json&raw=true`)
-        .then(({ data }) => setRawContent(typeof data === 'string' ? data : JSON.stringify(data, null, 2)))
-        .catch(() => {})
-    } else if (installerMissions.length === 0 && activeTab !== 'installers') {
-      setActiveTab('installers')
-    }
-  }, [initialMission, isOpen, installerMissions, selectedMission, activeTab])
-
-  // ============================================================================
-  // Fetch solution missions (non-installer solutions)
-  // ============================================================================
-
-  useEffect(() => {
-    if (!isOpen || activeTab !== 'solutions' || solutionsFetched.current) return
-    let cancelled = false
-
     async function fetchSolutions() {
+      if (solutionsFetched.current) return
       setLoadingSolutions(true)
       try {
         const { data: topEntries } = await api.get<BrowseEntry[]>(
@@ -515,9 +486,32 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       finally { if (!cancelled) setLoadingSolutions(false) }
     }
 
+    // Fire both in parallel
+    fetchInstallers()
     fetchSolutions()
     return () => { cancelled = true }
-  }, [isOpen, activeTab])
+  }, [isOpen])
+
+  // ============================================================================
+  // Deep-link: auto-select mission by name when initialMission is set
+  // ============================================================================
+
+  useEffect(() => {
+    if (!initialMission || !isOpen || selectedMission) return
+    const match = installerMissions.find(
+      (m) => m.title.toLowerCase().includes(initialMission.toLowerCase()) ||
+             (m.cncfProject && m.cncfProject.toLowerCase() === initialMission.replace('install-', '').toLowerCase())
+    )
+    if (match) {
+      setSelectedMission(match)
+      setActiveTab('installers')
+      api.get<string>(`/api/missions/browse?path=solutions/cncf-install/install-${(match.cncfProject || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json&raw=true`)
+        .then(({ data }) => setRawContent(typeof data === 'string' ? data : JSON.stringify(data, null, 2)))
+        .catch(() => {})
+    } else if (installerMissions.length === 0 && activeTab !== 'installers') {
+      setActiveTab('installers')
+    }
+  }, [initialMission, isOpen, installerMissions, selectedMission, activeTab])
 
   // ============================================================================
   // Filtered installer & solution lists
