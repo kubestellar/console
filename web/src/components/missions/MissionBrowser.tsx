@@ -249,8 +249,8 @@ async function fetchSolutionsToCache() {
 }
 
 function startMissionCacheFetch() {
-  fetchInstallersToCache()
-  fetchSolutionsToCache()
+  // Solutions first — Recommended tab depends on solutions data
+  fetchSolutionsToCache().then(() => fetchInstallersToCache())
 }
 
 function resetInstallerCache() {
