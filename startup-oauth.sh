@@ -183,22 +183,24 @@ for p in $PORTS_TO_CLEAN; do
 done
 
 # Cleanup on exit
+SHUTDOWN_FLAG="/tmp/.kc-console-shutdown-$$"
 cleanup() {
+    touch "$SHUTDOWN_FLAG"
     echo -e "\n${YELLOW}Shutting down...${NC}"
     kill $BACKEND_PID 2>/dev/null || true
     kill $FRONTEND_PID 2>/dev/null || true
+    kill $AGENT_LOOP_PID 2>/dev/null || true
     kill $AGENT_PID 2>/dev/null || true
+    rm -f "$SHUTDOWN_FLAG"
     exit 0
 }
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
-# Start kc-agent — prefer locally-built binary (from make build), fall back to Homebrew
+# Resolve kc-agent binary path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KC_AGENT_BIN=""
 if [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
-    echo -e "${GREEN}Starting kc-agent (local build)...${NC}"
-    "$SCRIPT_DIR/bin/kc-agent" &
-    AGENT_PID=$!
-    sleep 2
+    KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
 else
     # Install/upgrade kc-agent via brew
     if command -v brew &>/dev/null; then
@@ -210,16 +212,35 @@ else
             brew update --quiet && brew install kubestellar/tap/kc-agent
         fi
     fi
-
     if command -v kc-agent &>/dev/null; then
-        echo -e "${GREEN}Starting kc-agent (Homebrew)...${NC}"
-        kc-agent &
-        AGENT_PID=$!
-        sleep 2
-    else
-        echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"
-        AGENT_PID=""
+        KC_AGENT_BIN="$(command -v kc-agent)"
     fi
+fi
+
+# Start kc-agent with auto-restart on crash
+AGENT_PID=""
+AGENT_LOOP_PID=""
+if [ -n "$KC_AGENT_BIN" ]; then
+    echo -e "${GREEN}Starting kc-agent ($KC_AGENT_BIN)...${NC}"
+    (
+        while true; do
+            "$KC_AGENT_BIN" &
+            CHILD=$!
+            echo "[kc-agent] Started (PID $CHILD)"
+            wait $CHILD
+            EXIT_CODE=$?
+            if [ -f "$SHUTDOWN_FLAG" ]; then
+                break
+            fi
+            echo -e "${YELLOW}[kc-agent] Exited with code $EXIT_CODE — restarting in 5s...${NC}"
+            sleep 5
+        done
+    ) &
+    AGENT_LOOP_PID=$!
+    sleep 2
+    AGENT_PID=$(lsof -i :8585 -t 2>/dev/null | head -1)
+else
+    echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"
 fi
 
 if [ "$USE_DEV_SERVER" = true ]; then
