@@ -122,6 +122,24 @@ test.describe('Smoke Tests', () => {
         expect(sidebarItems.length).toBeGreaterThan(0)
       }
     })
+
+    test('clicking navbar logo navigates to home from non-home route', async ({ page }) => {
+      await setupDemoMode(page)
+      
+      // Navigate to a non-home route
+      await page.goto('/settings')
+      await page.waitForLoadState('networkidle')
+      expect(page.url()).toContain('/settings')
+
+      // Click the logo button (has aria-label "Go to home dashboard")
+      const logoButton = page.locator('nav button[aria-label*="home"]')
+      await expect(logoButton).toBeVisible()
+      await logoButton.click()
+      
+      // Wait for navigation and verify we're at home
+      await page.waitForLoadState('networkidle')
+      expect(page.url()).toMatch(/\/$|\/dashboard$/)
+    })
   })
 
   test.describe('Key User Interactions', () => {

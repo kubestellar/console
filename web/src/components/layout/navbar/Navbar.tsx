@@ -52,8 +52,9 @@ export function Navbar() {
 
         {/* Logo - clickable to navigate home */}
         <button
+          type="button"
           onClick={() => navigate(ROUTES.HOME)}
-          className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity"
           aria-label={t('navbar.goHome')}
         >
           <img
