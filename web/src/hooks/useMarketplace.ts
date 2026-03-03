@@ -50,11 +50,18 @@ interface MarketplaceRegistry {
   version: string
   updatedAt: string
   items: MarketplaceItem[]
+  /** Card presets, themes, and CNCF project presets — separate key in the registry */
+  presets?: MarketplaceItem[]
 }
 
 interface CachedRegistry {
   data: MarketplaceRegistry
   fetchedAt: number
+}
+
+/** Merge items + presets from the registry into a single array */
+function mergeRegistryItems(registry: MarketplaceRegistry): MarketplaceItem[] {
+  return [...(registry.items || []), ...(registry.presets || [])]
 }
 
 interface InstalledEntry {
@@ -108,7 +115,7 @@ export function useMarketplace() {
         if (cached) {
           const parsed: CachedRegistry = JSON.parse(cached)
           if (Date.now() - parsed.fetchedAt < CACHE_TTL_MS) {
-            setItems(parsed.data.items)
+            setItems(mergeRegistryItems(parsed.data))
             setIsLoading(false)
             return
           }
@@ -122,7 +129,7 @@ export function useMarketplace() {
       const response = await fetch(REGISTRY_URL)
       if (!response.ok) throw new Error(`Registry fetch failed: ${response.status}`)
       const data: MarketplaceRegistry = await response.json()
-      setItems(data.items || [])
+      setItems(mergeRegistryItems(data))
 
       // Cache the result
       try {
