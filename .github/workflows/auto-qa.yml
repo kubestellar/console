@@ -1,5 +1,5 @@
 name: Auto-QA Agent
-# Hourly quality checks with rotating focus areas.
+# Quality checks 4x/day with rotating focus areas.
 # Layer 1 (always): Build, lint, Go build, bundle size, npm audit
 # Layer 2 (always): Resilience, Inventory consistency, UI design principles
 # Layer 3 (always): NFR coverage (testing, i18n, state, navigation, efficiency)
@@ -21,7 +21,7 @@ name: Auto-QA Agent
 
 on:
   schedule:
-    - cron: '17 * * * *' # Every hour at :17 (offset from :00 to reduce congestion)
+    - cron: '17 1,7,13,19 * * *' # 4x/day at 01:17, 07:17, 13:17, 19:17 UTC (saves ~83% PRUs vs hourly)
   workflow_dispatch:
     inputs:
       skip_audit:
