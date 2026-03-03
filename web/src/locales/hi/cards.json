@@ -1,13 +1,13 @@
 {
   "checkers": {
-    "you": "You",
-    "vs": "vs",
+    "you": " ",
+    "vs": "बनाम",
     "ai": "AI",
     "wins": "W",
     "losses": "L",
-    "easy": "Easy",
-    "medium": "Medium",
-    "hard": "Hard",
+    "easy": "आसान",
+    "medium": "मध्यम",
+    "hard": "कठिन",
     "newGame": "नया खेल",
     "aiThinking": "AI is thinking...",
     "youWin": "You win!",
