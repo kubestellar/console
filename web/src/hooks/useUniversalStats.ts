@@ -471,9 +471,12 @@ export function createMergedStatValueGetter(
       return dashboardValue
     }
 
-    // Fall back to universal getter
+    // Fall back to universal getter, preserving dashboard demo metadata
     const universalValue = universalGetter(blockId)
     if (universalValue?.value !== undefined) {
+      if (dashboardValue?.isDemo !== undefined && universalValue.isDemo === undefined) {
+        return { ...universalValue, isDemo: dashboardValue.isDemo }
+      }
       return universalValue
     }
 
