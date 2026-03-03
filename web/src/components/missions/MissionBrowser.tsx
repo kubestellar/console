@@ -36,8 +36,6 @@ import { useAuth } from '../../lib/auth'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import { useClusterContext } from '../../hooks/useClusterContext'
 import {
-  emitSolutionSearchStarted,
-  emitSolutionSearchCompleted,
   emitSolutionBrowsed,
   emitSolutionViewed,
   emitSolutionImported,
@@ -286,6 +284,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   useTranslation(['common', 'cards'])
   const { user, isAuthenticated } = useAuth()
   const { clusterContext } = useClusterContext()
+  const clusterContextRef = useRef(clusterContext)
+  clusterContextRef.current = clusterContext
 
   // Navigation state
   const [searchQuery, setSearchQuery] = useState('')
@@ -427,113 +427,37 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   useEffect(() => {
     if (!isOpen) return
 
-    let cancelled = false
-
-    async function fetchRecommendations() {
-      setLoadingRecommendations(true)
-      setRecommendations([])
-      setTokenError(null)
-      setSearchProgress({ step: 'Connecting', detail: 'Fetching cluster info…', found: 0, scanned: 0 })
-
-      try {
-        // Step 1: Use live cluster context from hooks + browse top-level
-        const cluster = clusterContext
-        const topLevel = await api.get<BrowseEntry[]>('/api/missions/browse?path=solutions').catch((err) => {
-          const code = err?.response?.data?.code
-          if (code === 'rate_limited' || code === 'token_invalid') {
-            setTokenError(code)
-          }
-          return { data: [] as BrowseEntry[] }
-        })
-        if (cancelled) return
-        setHasCluster(!!cluster)
-        emitSolutionSearchStarted(!!cluster)
-        const topDirs = (topLevel?.data ?? []).filter(e => e.type === 'directory')
-
-        if (topDirs.length === 0) {
-          setSearchProgress({ step: 'Done', detail: 'No mission categories found', found: 0, scanned: 0 })
-          return
+    // Derive recommendations from the existing mission cache (no separate scan)
+    setTokenError(null)
+    function updateRecommendations() {
+      const allMissions = [...missionCache.solutions, ...missionCache.installers]
+      if (allMissions.length === 0) {
+        if (!missionCache.solutionsDone || !missionCache.installersDone) {
+          setLoadingRecommendations(true)
+          setSearchProgress({ step: 'Scanning', detail: 'Loading missions…', found: 0, scanned: 0 })
         }
-
-        setSearchProgress({ step: 'Scanning', detail: `Found ${topDirs.length} categories`, found: 0, scanned: 0 })
-
-        // Step 2: Walk categories progressively — show recommendations as they arrive
-        const allMissions: MissionExport[] = []
-        let totalScanned = 0
-
-        for (const category of topDirs) {
-          if (cancelled) return
-          setSearchProgress({ step: 'Scanning', detail: category.name, found: allMissions.length, scanned: totalScanned })
-
-          try {
-            const { data: catEntries } = await api.get<BrowseEntry[]>(
-              `/api/missions/browse?path=${encodeURIComponent(category.path)}`
-            )
-            if (cancelled) return
-            const catFiles = (catEntries ?? []).filter(e => e.type === 'file' && e.name.endsWith('.json'))
-            const subDirs = (catEntries ?? []).filter(e => e.type === 'directory')
-
-            // Fetch a few sample files from this category
-            for (const f of catFiles.slice(0, 3)) {
-              if (cancelled) return
-              try {
-                const { data: content } = await api.get<string>(
-                  `/api/missions/file?path=${encodeURIComponent(f.path)}`
-                )
-                const parsed = typeof content === 'string' ? JSON.parse(content) : content
-                const normalized = normalizeMission(parsed)
-                if (normalized) {
-                  allMissions.push(normalized)
-                  setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
-                }
-              } catch { /* skip */ }
-            }
-            totalScanned++
-            setSearchProgress({ step: 'Scanning', detail: category.name, found: allMissions.length, scanned: totalScanned })
-
-            // Walk subdirectories (e.g. cncf-generated/kubernetes/)
-            for (const sub of subDirs) {
-              if (cancelled) return
-              totalScanned++
-              setSearchProgress({ step: 'Scanning', detail: `${category.name}/${sub.name}`, found: allMissions.length, scanned: totalScanned })
-              try {
-                const { data: subFiles } = await api.get<BrowseEntry[]>(
-                  `/api/missions/browse?path=${encodeURIComponent(sub.path)}`
-                )
-                if (cancelled) return
-                const jsonFiles = (subFiles ?? []).filter(e => e.type === 'file' && e.name.endsWith('.json'))
-                for (const f of jsonFiles.slice(0, 2)) {
-                  if (cancelled) return
-                  try {
-                    const { data: content } = await api.get<string>(
-                      `/api/missions/file?path=${encodeURIComponent(f.path)}`
-                    )
-                    const parsed = typeof content === 'string' ? JSON.parse(content) : content
-                    const normalized = normalizeMission(parsed)
-                    if (normalized) {
-                      allMissions.push(normalized)
-                      setRecommendations(matchMissionsToCluster(allMissions, cluster).slice(0, 6))
-                    }
-                  } catch { /* skip */ }
-                }
-              } catch { /* skip */ }
-            }
-          } catch { /* skip inaccessible categories */ }
-        }
-
-        if (cancelled) return
-        setSearchProgress({ step: 'Done', detail: `${allMissions.length} missions across ${totalScanned} folders`, found: allMissions.length, scanned: totalScanned })
-        emitSolutionSearchCompleted(allMissions.length, totalScanned)
-      } catch {
-        setSearchProgress(prev => ({ ...prev, step: 'Error', detail: 'Could not load recommendations' }))
-      } finally {
-        if (!cancelled) setLoadingRecommendations(false)
+        return
       }
+      const cluster = clusterContextRef.current
+      setHasCluster(!!cluster)
+      const matched = matchMissionsToCluster(allMissions, cluster).slice(0, 6)
+      setRecommendations(matched)
+      setLoadingRecommendations(false)
+      const done = missionCache.solutionsDone && missionCache.installersDone
+      setSearchProgress({
+        step: done ? 'Done' : 'Scanning',
+        detail: `${allMissions.length} missions`,
+        found: allMissions.length,
+        scanned: allMissions.length,
+      })
     }
 
-    fetchRecommendations()
-    return () => { cancelled = true }
-  }, [isOpen, clusterContext])
+    // Run immediately and subscribe to cache updates
+    updateRecommendations()
+    missionCache.listeners.add(updateRecommendations)
+    return () => { missionCache.listeners.delete(updateRecommendations) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   // ============================================================================
   // Subscribe to module-level mission cache and trigger fetch on first open
@@ -1377,9 +1301,18 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                 title={hasCluster ? 'Recommended for Your Cluster' : 'Explore CNCF Solutions'}
                 defaultOpen={true}
                 badge={
-                  <span className="flex items-center gap-1 text-xs text-purple-400">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    {filteredRecommendations.length}
+                  <span className="flex items-center gap-2 text-xs text-purple-400">
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {filteredRecommendations.length}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); resetMissionCache(); }}
+                      className="p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+                      title="Refresh recommendations"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                    </button>
                   </span>
                 }
                 className="mb-6"
