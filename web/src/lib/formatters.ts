@@ -82,3 +82,54 @@ export function formatK8sStorage(value: string): string {
   const bytes = parseK8sQuantity(value)
   return formatBytes(bytes)
 }
+
+/**
+ * Format a timestamp as relative time (e.g., "2m ago", "5h ago", "3d ago")
+ * Returns a plain English string without i18n support
+ */
+export function formatRelativeTime(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime()
+  if (isNaN(diff) || diff < 0) return 'Just now'
+  
+  const minute = 60_000
+  const hour = 60 * minute
+  const day = 24 * hour
+  
+  if (diff < minute) return 'Just now'
+  if (diff < hour) {
+    const mins = Math.floor(diff / minute)
+    return `${mins}m ago`
+  }
+  if (diff < day) {
+    const hours = Math.floor(diff / hour)
+    return `${hours}h ago`
+  }
+  const days = Math.floor(diff / day)
+  return `${days}d ago`
+}
+
+/**
+ * Create an i18n-aware relative time formatter
+ * Use this in components that need translated time strings
+ * 
+ * @example
+ * const formatTime = createRelativeTimeFormatter(t)
+ * formatTime(someISOString) // "2 minutes ago" or localized equivalent
+ */
+export function createRelativeTimeFormatter(
+  t: (key: string, options?: { count?: number }) => string
+): (isoString: string) => string {
+  return (isoString: string): string => {
+    const diff = Date.now() - new Date(isoString).getTime()
+    if (isNaN(diff) || diff < 0) return t('common.justNow')
+    
+    const minute = 60_000
+    const hour = 60 * minute
+    const day = 24 * hour
+    
+    if (diff < minute) return t('common.justNow')
+    if (diff < hour) return t('common.minutesAgo', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('common.hoursAgo', { count: Math.floor(diff / hour) })
+    return t('common.daysAgo', { count: Math.floor(diff / day) })
+  }
+}
