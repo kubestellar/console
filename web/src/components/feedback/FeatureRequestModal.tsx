@@ -915,8 +915,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                           {githubRewards && githubPoints > 0 && (
                             <button
                               onClick={() => {
-                                const prCount = githubRewards.breakdown.prs_merged + githubRewards.breakdown.prs_opened
-                                const issueCount = githubRewards.breakdown.bug_issues + githubRewards.breakdown.feature_issues + githubRewards.breakdown.other_issues
+                                const bd = githubRewards.breakdown
+                                const prCount = (bd?.prs_merged ?? 0) + (bd?.prs_opened ?? 0)
+                                const issueCount = (bd?.bug_issues ?? 0) + (bd?.feature_issues ?? 0) + (bd?.other_issues ?? 0)
                                 const text = `I've earned ${githubPoints.toLocaleString()} contributor coins on the KubeStellar Console! ${prCount > 0 ? `${prCount} PRs` : ''}${prCount > 0 && issueCount > 0 ? ' and ' : ''}${issueCount > 0 ? `${issueCount} issues` : ''} contributed to the open-source KubeStellar project.`
                                 const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}&summary=${encodeURIComponent(text)}`
                                 window.open(linkedInUrl, '_blank', 'width=600,height=600')
@@ -937,7 +938,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                         </div>
                       </div>
 
-                      {githubRewards && (
+                      {githubRewards && githubRewards.breakdown && (
                         <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
                           <div className="flex flex-wrap gap-1.5">
                             {githubRewards.breakdown.prs_merged > 0 && (

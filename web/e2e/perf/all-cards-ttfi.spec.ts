@@ -381,6 +381,10 @@ async function runMode(page: Page, mode: PerfMode): Promise<CardTTFIMetric[]> {
   const results: CardTTFIMetric[] = []
 
   for (let batch = 0; batch < batches; batch++) {
+    if (batch > 0) {
+      await page.goto('about:blank', { waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(200)
+    }
     const manifest = await getManifestForBatch(page, batch, BATCH_SIZE)
     const selected = manifest.selected || []
     if (selected.length === 0) continue

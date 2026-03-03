@@ -126,7 +126,7 @@ export function RewardsPanel() {
       </div>
 
       {/* GitHub Contributions */}
-      {githubRewards && (
+      {githubRewards && githubRewards.breakdown && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
@@ -184,7 +184,7 @@ export function RewardsPanel() {
           </div>
 
           {/* Recent contributions list */}
-          {githubRewards.contributions.length > 0 && (
+          {githubRewards.contributions?.length > 0 && (
             <div className="max-h-64 overflow-y-auto space-y-1.5 rounded-lg">
               {githubRewards.contributions.slice(0, 20).map((contrib: GitHubContribution, idx: number) => (
                 <a

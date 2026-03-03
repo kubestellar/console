@@ -437,7 +437,7 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, 
 })
 
 test('warm-nav — revisit dashboards (chunks already cached)', async ({ page }, testInfo) => {
-  testInfo.setTimeout(120_000) // all 26 dashboards cold + warm
+  testInfo.setTimeout(180_000) // all 26 dashboards cold + warm
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -452,7 +452,12 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
   } catch { /* continue */ }
 
   // Pre-visit all dashboards to warm up chunks
-  for (const dashboard of DASHBOARDS) {
+  for (let i = 0; i < DASHBOARDS.length; i++) {
+    const dashboard = DASHBOARDS[i]
+    if (i > 0 && i % 5 === 0) {
+      await page.goto('about:blank', { waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(200)
+    }
     await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
     try {
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })

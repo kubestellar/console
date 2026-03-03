@@ -369,7 +369,29 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     })
   }
 
-  // 12. Catch-all for remaining /api/** endpoints
+  // 12. GitHub rewards endpoint
+  await page.route('**/api/rewards/**', async (route) => {
+    await maybeDelay()
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        total_points: 0,
+        contributions: [],
+        breakdown: {
+          prs_merged: 0,
+          prs_opened: 0,
+          bug_issues: 0,
+          feature_issues: 0,
+          other_issues: 0,
+        },
+        cached_at: new Date().toISOString(),
+        from_cache: false,
+      }),
+    })
+  })
+
+  // 13. Catch-all for remaining /api/** endpoints
   await page.route('**/api/**', async (route) => {
     const url = route.request().url()
     const skipPatterns = [
@@ -377,7 +399,7 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       '/api/active-users', '/api/notifications', '/api/user/preferences',
       '/api/permissions/', '/health', '/api/dashboards', '/api/gpu/',
       '/api/feedback/', '/api/persistence/', '/api/config/', '/api/gitops/',
-      '/api/nightly-e2e/', '/api/public/nightly-e2e/',
+      '/api/nightly-e2e/', '/api/public/nightly-e2e/', '/api/rewards/',
     ]
     if (skipPatterns.some(p => url.includes(p))) {
       await route.fallback()
@@ -388,7 +410,7 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
   })
 
-  // 13. RSS feed CORS proxy mocks
+  // 14. RSS feed CORS proxy mocks
   await page.route('**/api.rss2json.com/**', async (route) => {
     await maybeDelay()
     await new Promise(r => setTimeout(r, 100))
@@ -433,7 +455,7 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     })
   })
 
-  // 14. Local agent (port 8585) — health returns 200, data returns 503
+  // 15. Local agent (port 8585) — health returns 200, data returns 503
   await page.route('http://127.0.0.1:8585/**', (route) => {
     const url = route.request().url()
     if (url.endsWith('/health') || url.includes('/health?')) {
@@ -447,7 +469,7 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     }
   })
 
-  // 15. WebSocket mock for kubectl proxy
+  // 16. WebSocket mock for kubectl proxy
   await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
     ws.onMessage((data) => {
       try {
