@@ -43,14 +43,11 @@ export function CrioStatus() {
     )
   }
 
-  if (error || showEmptyState) {
+  if (error && showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">
-          {error ? t('crio.fetchError') : t('crio.noCrioNodes')}
-        </p>
-        <p className="text-xs">{t('crio.noCrioNodesHint')}</p>
+        <p className="text-sm text-red-400">{t('crio.fetchError')}</p>
       </div>
     )
   }

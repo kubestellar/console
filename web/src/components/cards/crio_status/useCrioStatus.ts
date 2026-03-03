@@ -60,7 +60,7 @@ const CACHE_KEY = 'crio-status'
  * Only the fields we need for CRI-O detection are typed here.
  */
 interface BackendNodeInfo {
-  containerRuntimeVersion?: string
+  containerRuntime?: string
   conditions?: Array<{ type?: string; status?: string }>
 }
 
@@ -69,9 +69,9 @@ interface BackendNodeInfo {
  *
  * Uses GET /api/mcp/nodes which proxies through the backend to all connected
  * clusters. The backend returns { nodes: NodeInfo[], source: string } where
- * NodeInfo includes containerRuntimeVersion from node.Status.NodeInfo.
+ * NodeInfo includes containerRuntime from node.Status.NodeInfo.ContainerRuntimeVersion.
  *
- * CRI-O nodes are identified by containerRuntimeVersion containing "cri-o".
+ * CRI-O nodes are identified by containerRuntime containing "cri-o".
  */
 async function fetchCrioStatus(): Promise<CrioStatus> {
   const resp = await fetch('/api/mcp/nodes', {
@@ -87,7 +87,7 @@ async function fetchCrioStatus(): Promise<CrioStatus> {
 
   // Filter for CRI-O nodes only
   const crioNodes = items.filter((n) =>
-    n.containerRuntimeVersion?.toLowerCase().includes('cri-o'),
+    n.containerRuntime?.toLowerCase().includes('cri-o'),
   )
 
   if (crioNodes.length === 0) {
@@ -101,7 +101,7 @@ async function fetchCrioStatus(): Promise<CrioStatus> {
   // Aggregate version distribution
   const versions: Record<string, number> = {}
   for (const node of crioNodes) {
-    const runtimeVersion = node.containerRuntimeVersion ?? ''
+    const runtimeVersion = node.containerRuntime ?? ''
     // Extract version from "cri-o://1.30.0" format
     const versionMatch = runtimeVersion.match(/cri-o:\/\/(\d+\.\d+\.\d+)/)
     const version = versionMatch?.[1] ?? 'unknown'
@@ -197,7 +197,7 @@ export function useCrioStatus(): UseCrioStatusResult {
   return {
     data,
     loading: isLoading,
-    error: isFailed,
+    error: isFailed && !hasAnyData,
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
