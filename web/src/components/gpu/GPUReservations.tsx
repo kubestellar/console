@@ -274,8 +274,8 @@ export function GPUReservations() {
 
   // GPU quotas from K8s (for overview stats only)
   const gpuQuotas = useMemo(() => {
-    const filtered = resourceQuotas.filter(q =>
-      Object.keys(q.hard).some(k => GPU_KEYS.some(gk => k.includes(gk)))
+    const filtered = (resourceQuotas || []).filter(q =>
+      Object.keys(q.hard || {}).some(k => GPU_KEYS.some(gk => k.includes(gk)))
     )
     if (isAllClustersSelected) return filtered
     return filtered.filter(q => q.cluster && selectedClusters.some(c => q.cluster!.startsWith(c)))

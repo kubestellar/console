@@ -241,9 +241,9 @@ test('console error scan — all routes', async ({ page }) => {
   const routeReports: RouteReport[] = []
 
   // Listen for uncaught exceptions
-  const pageExceptions: Array<{ message: string; timestamp: number }> = []
+  const pageExceptions: Array<{ message: string; stack?: string; timestamp: number }> = []
   page.on('pageerror', (err) => {
-    pageExceptions.push({ message: err.message, timestamp: Date.now() })
+    pageExceptions.push({ message: err.message, stack: err.stack, timestamp: Date.now() })
   })
 
   // ── Setup ─────────────────────────────────────────────────────────────
@@ -308,10 +308,11 @@ test('console error scan — all routes', async ({ page }) => {
 
     // Collect any uncaught exceptions that fired during this route
     for (let i = beforeExceptions; i < pageExceptions.length; i++) {
+      const exc = pageExceptions[i]
       entries.push({
         type: 'exception',
-        text: pageExceptions[i].message,
-        timestamp: pageExceptions[i].timestamp,
+        text: exc.stack || exc.message,
+        timestamp: exc.timestamp,
       })
     }
 

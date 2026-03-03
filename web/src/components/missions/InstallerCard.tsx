@@ -93,11 +93,11 @@ function getProjectLogoUrl(cncfProject: string): string {
 // ============================================================================
 
 function CategoryIcon({ iconPath, size }: { iconPath: string; size: 'sm' | 'lg' }) {
-  const cls = size === 'lg' ? 'w-10 h-10' : 'w-4 h-4'
-  return (
+  const iconCls = size === 'lg' ? 'w-8 h-8' : 'w-4 h-4'
+  const icon = (
     <svg
       viewBox="0 0 24 24"
-      className={cn(cls, 'text-white/80')}
+      className={cn(iconCls, 'text-white drop-shadow-md')}
       fill="none"
       stroke="currentColor"
       strokeWidth={1.5}
@@ -107,6 +107,15 @@ function CategoryIcon({ iconPath, size }: { iconPath: string; size: 'sm' | 'lg' 
       <path d={iconPath} />
     </svg>
   )
+  /* Large icons get a frosted backdrop for contrast on gradient headers */
+  if (size === 'lg') {
+    return (
+      <div className="w-12 h-12 rounded-xl bg-black/25 backdrop-blur-sm shadow-sm flex items-center justify-center">
+        {icon}
+      </div>
+    )
+  }
+  return icon
 }
 
 // ============================================================================
@@ -125,14 +134,20 @@ function ProjectLogo({ cncfProject, iconPath, size }: {
   }
 
   const imgCls = size === 'lg' ? 'w-10 h-10 rounded-lg' : 'w-5 h-5 rounded'
+  /** Semi-transparent white backdrop for logo contrast on colored gradients */
+  const backdropCls = size === 'lg'
+    ? 'w-12 h-12 rounded-xl bg-white/90 shadow-sm flex items-center justify-center'
+    : 'w-6 h-6 rounded bg-white/90 shadow-sm flex items-center justify-center'
   return (
-    <img
-      src={getProjectLogoUrl(cncfProject)}
-      alt={cncfProject}
-      className={cn(imgCls, 'object-contain')}
-      onError={() => setFailed(true)}
-      loading="lazy"
-    />
+    <div className={backdropCls}>
+      <img
+        src={getProjectLogoUrl(cncfProject)}
+        alt={cncfProject}
+        className={cn(imgCls, 'object-contain')}
+        onError={() => setFailed(true)}
+        loading="lazy"
+      />
+    </div>
   )
 }
 

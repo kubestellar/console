@@ -138,8 +138,15 @@ function saveWatchedPaths(paths: string[]) {
 
 // ============================================================================
 // Module-level mission cache — survives dialog open/close and tab switches.
-// Fetch runs once; results are available instantly on subsequent opens.
+// Also persisted to localStorage so data is instant on page reload.
+// Cache refreshes only when user clicks refresh or after CACHE_TTL_MS elapses.
 // ============================================================================
+
+/** Cache time-to-live: 6 hours */
+const MISSION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+/** localStorage key for persisted mission cache */
+const MISSION_CACHE_STORAGE_KEY = 'kc-mission-cache'
+
 interface MissionCache {
   installers: MissionExport[]
   solutions: MissionExport[]
@@ -149,6 +156,7 @@ interface MissionCache {
   solutionsDone: boolean
   listeners: Set<() => void>
   abortController: AbortController | null
+  fetchedAt: number
 }
 
 const missionCache: MissionCache = {
@@ -160,120 +168,170 @@ const missionCache: MissionCache = {
   solutionsDone: false,
   listeners: new Set(),
   abortController: null,
+  fetchedAt: 0,
 }
+
+/** Try to restore mission cache from localStorage on module load */
+function restoreCacheFromStorage() {
+  try {
+    const raw = localStorage.getItem(MISSION_CACHE_STORAGE_KEY)
+    if (!raw) return false
+    const stored = JSON.parse(raw) as { installers: MissionExport[]; solutions: MissionExport[]; fetchedAt: number }
+    if (Date.now() - stored.fetchedAt > MISSION_CACHE_TTL_MS) return false
+    missionCache.installers = stored.installers || []
+    missionCache.solutions = stored.solutions || []
+    missionCache.installersDone = true
+    missionCache.solutionsDone = true
+    missionCache.fetchedAt = stored.fetchedAt
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Persist current mission cache to localStorage */
+function persistCacheToStorage() {
+  try {
+    localStorage.setItem(MISSION_CACHE_STORAGE_KEY, JSON.stringify({
+      installers: missionCache.installers,
+      solutions: missionCache.solutions,
+      fetchedAt: missionCache.fetchedAt,
+    }))
+  } catch {
+    // Storage full or unavailable — non-critical
+  }
+}
+
+// Restore cache immediately on module load
+restoreCacheFromStorage()
 
 function notifyCacheListeners() {
   missionCache.listeners.forEach(fn => fn())
 }
 
-async function fetchInstallersToCache() {
-  if (missionCache.installersDone || missionCache.installersFetching) return
-  missionCache.installersFetching = true
-  try {
-    const { data: entries } = await api.get<BrowseEntry[]>(
-      '/api/missions/browse?path=solutions/cncf-install'
-    )
-    const jsonFiles = entries.filter(e => e.type === 'file' && e.name.endsWith('.json'))
+/** Path to the pre-built solutions index (single file, ~400KB) */
+const SOLUTIONS_INDEX_PATH = 'solutions/index.json'
 
-    for (const f of jsonFiles) {
-      try {
-        const { data: content } = await api.get<string>(
-          `/api/missions/file?path=${encodeURIComponent(f.path)}`
-        )
-        const parsed = typeof content === 'string' ? JSON.parse(content) : content
-        const normalized = normalizeMission(parsed)
-        if (normalized) {
-          missionCache.installers.push(normalized)
-          notifyCacheListeners()
-        }
-      } catch { /* skip bad file */ }
-    }
-    missionCache.installersDone = true
-  } catch { /* skip */ }
-  finally {
-    missionCache.installersFetching = false
-    notifyCacheListeners()
+/**
+ * Index entry shape from solutions/index.json — lightweight metadata
+ * for browsing without loading full mission files.
+ */
+interface IndexEntry {
+  path: string
+  title: string
+  description: string
+  category?: string
+  missionClass?: string
+  author?: string
+  authorGithub?: string
+  authorAvatar?: string
+  tags?: string[]
+  cncfProjects?: string[]
+  targetResourceKinds?: string[]
+  difficulty?: string
+  issueTypes?: string[]
+  type?: string
+  installMethods?: string[]
+}
+
+/** Convert an index entry to a MissionExport (browsing metadata only — steps loaded on demand) */
+function indexEntryToMission(entry: IndexEntry): MissionExport {
+  return {
+    version: '1.0',
+    title: entry.title || '',
+    description: entry.description || '',
+    type: (entry.type as MissionExport['type']) || 'custom',
+    tags: entry.tags || [],
+    category: entry.category,
+    cncfProject: entry.cncfProjects?.[0],
+    missionClass: entry.missionClass === 'install' ? 'install' : 'solution',
+    difficulty: entry.difficulty,
+    installMethods: entry.installMethods,
+    author: entry.author,
+    authorGithub: entry.authorGithub,
+    steps: [], // loaded on demand when user selects a mission
+    metadata: {
+      source: entry.path,
+    },
   }
 }
 
-async function fetchSolutionsToCache() {
-  if (missionCache.solutionsDone || missionCache.solutionsFetching) return
-  missionCache.solutionsFetching = true
+/**
+ * Load all missions from the pre-built index in a single API call.
+ * Splits results into installers and solutions, populating both caches at once.
+ * Persists to localStorage for instant restore on next page load.
+ */
+/** Request timeout for the index fetch in milliseconds */
+const INDEX_FETCH_TIMEOUT_MS = 30_000
+
+async function fetchAllFromIndex() {
   try {
-    const { data: topEntries } = await api.get<BrowseEntry[]>(
-      '/api/missions/browse?path=solutions'
-    )
-    const dirs = topEntries.filter(e => e.type === 'directory' && e.name !== 'cncf-install')
+    // Use direct fetch — /api/missions/file is a public endpoint and should not
+    // be gated by the api.get() backend-availability check (which can block when
+    // the health check hasn't resolved yet on initial page load).
+    const url = `/api/missions/file?path=${encodeURIComponent(SOLUTIONS_INDEX_PATH)}`
+    const response = await fetch(url, { signal: AbortSignal.timeout(INDEX_FETCH_TIMEOUT_MS) })
+    if (!response.ok) throw new Error(`Index fetch failed: ${response.status}`)
+    const parsed = await response.json()
+    const missions: IndexEntry[] = parsed?.missions || []
 
-    async function collectFiles(path: string, depth: number): Promise<BrowseEntry[]> {
-      if (depth > 3) return []
-      try {
-        const { data: entries } = await api.get<BrowseEntry[]>(
-          `/api/missions/browse?path=${encodeURIComponent(path)}`
-        )
-        const files: BrowseEntry[] = []
-        for (const e of entries) {
-          if (e.type === 'file' && e.name.endsWith('.json')) {
-            files.push(e)
-          } else if (e.type === 'directory') {
-            const nested = await collectFiles(e.path, depth + 1)
-            files.push(...nested)
-          }
-        }
-        return files
-      } catch { return [] }
-    }
-
-    for (const dir of dirs) {
-      const files = await collectFiles(dir.path, 1)
-      for (const f of files) {
-        try {
-          const { data: content } = await api.get<string>(
-            `/api/missions/file?path=${encodeURIComponent(f.path)}`
-          )
-          const parsed = typeof content === 'string' ? JSON.parse(content) : content
-          const normalized = normalizeMission(parsed)
-          if (normalized && normalized.missionClass !== 'install') {
-            missionCache.solutions.push(normalized)
-            notifyCacheListeners()
-          }
-        } catch { /* skip */ }
+    for (const entry of missions) {
+      const mission = indexEntryToMission(entry)
+      if (entry.missionClass === 'install') {
+        missionCache.installers.push(mission)
+      } else {
+        missionCache.solutions.push(mission)
       }
     }
+    missionCache.fetchedAt = Date.now()
+    persistCacheToStorage()
+  } catch (err) {
+    console.warn('[MissionBrowser] Failed to fetch index:', err)
+  } finally {
+    missionCache.installersDone = true
+    missionCache.installersFetching = false
     missionCache.solutionsDone = true
-  } catch { /* skip */ }
-  finally {
     missionCache.solutionsFetching = false
     notifyCacheListeners()
   }
 }
 
+/**
+ * Start fetching missions if cache is empty or stale.
+ * Skips fetch if localStorage cache was restored and is still fresh.
+ */
 function startMissionCacheFetch() {
-  // Solutions first — Recommended tab depends on solutions data
-  fetchSolutionsToCache().then(() => fetchInstallersToCache())
+  // Already loaded from localStorage or a previous fetch — skip
+  if (missionCache.installersDone && missionCache.solutionsDone) {
+    // Check if cache is stale (older than TTL)
+    if (missionCache.fetchedAt > 0 && Date.now() - missionCache.fetchedAt < MISSION_CACHE_TTL_MS) {
+      notifyCacheListeners()
+      return
+    }
+    // Cache is stale — clear and refetch
+    missionCache.installers = []
+    missionCache.solutions = []
+    missionCache.installersDone = false
+    missionCache.solutionsDone = false
+  }
+  missionCache.installersFetching = true
+  missionCache.solutionsFetching = true
+  notifyCacheListeners()
+  fetchAllFromIndex()
 }
 
-function resetInstallerCache() {
+/** Force refresh: clear cache and refetch from index */
+function resetMissionCache() {
   missionCache.installers = []
-  missionCache.installersDone = false
-  missionCache.installersFetching = false
-  notifyCacheListeners()
-  fetchInstallersToCache()
-}
-
-function resetSolutionCache() {
   missionCache.solutions = []
+  missionCache.installersDone = false
   missionCache.solutionsDone = false
+  missionCache.installersFetching = false
   missionCache.solutionsFetching = false
+  missionCache.fetchedAt = 0
+  try { localStorage.removeItem(MISSION_CACHE_STORAGE_KEY) } catch { /* ok */ }
   notifyCacheListeners()
-  fetchSolutionsToCache()
-}
-
-function resetMissionCache(tab?: 'installers' | 'solutions') {
-  if (tab === 'installers') return resetInstallerCache()
-  if (tab === 'solutions') return resetSolutionCache()
-  resetInstallerCache()
-  resetSolutionCache()
+  startMissionCacheFetch()
 }
 
 // ============================================================================
@@ -1265,7 +1323,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           </button>
         ))}
         <button
-          onClick={() => resetMissionCache(activeTab === 'installers' || activeTab === 'solutions' ? activeTab : undefined)}
+          onClick={() => resetMissionCache()}
           className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
           title={activeTab === 'installers' ? 'Refresh installers' : activeTab === 'solutions' ? 'Refresh solutions' : 'Refresh all mission data'}
         >
@@ -2175,8 +2233,9 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/** Normalize kc-mission-v1 JSON (nested format) into flat MissionExport shape */
-function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
+/** Normalize kc-mission-v1 JSON (nested format) into flat MissionExport shape.
+ *  Kept for on-demand file loading when user selects a mission from the sidebar. */
+export function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
   // Already flat MissionExport — ensure required string fields have defaults
   if (raw.title && raw.type && raw.tags) {
     const flat = raw as unknown as MissionExport

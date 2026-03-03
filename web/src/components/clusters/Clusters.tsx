@@ -857,8 +857,8 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  const clusterGPUs = gpuNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterName.split('/')[0]))
-  const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
+  const clusterGPUs = (gpuNodes || []).filter(n => n.cluster === clusterName || n.cluster.includes(clusterName.split('/')[0]))
+  const clusterDeploymentIssues = (deploymentIssues || []).filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
 
   // Determine cluster status - use same logic as ClusterDetailModal
   // Only mark as unreachable when we have confirmed unreachable status, not when loading
@@ -1555,7 +1555,7 @@ export function Clusters() {
   }
 
   const filteredClusters = useMemo(() => {
-    let result = clusters
+    let result = clusters || []
 
     // Apply global cluster filter
     if (!isAllClustersSelected) {
@@ -1613,7 +1613,7 @@ export function Clusters() {
   // Get GPU count per cluster
   const gpuByCluster = useMemo(() => {
     const map: Record<string, { total: number; allocated: number }> = {}
-    gpuNodes.forEach(node => {
+    ;(gpuNodes || []).forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       if (!map[clusterKey]) {
         map[clusterKey] = { total: 0, allocated: 0 }
@@ -1626,7 +1626,7 @@ export function Clusters() {
 
   // Base clusters after global filter (before local health filter)
   const globalFilteredClusters = useMemo(() => {
-    let result = clusters
+    let result = clusters || []
 
     // Apply global cluster filter
     if (!isAllClustersSelected) {
@@ -1702,7 +1702,7 @@ export function Clusters() {
   }, [globalFilteredClusters, gpuByCluster])
 
   // Determine if we should show skeleton content (loading with no data OR offline without demo OR mode switching)
-  const showSkeletonContent = (isLoading && clusters.length === 0) || forceSkeletonForOffline || isModeSwitching
+  const showSkeletonContent = (isLoading && (clusters || []).length === 0) || forceSkeletonForOffline || isModeSwitching
 
   // Note: We no longer block on errors - always show demo data gracefully
   // The error variable is kept for potential future use but UI always renders

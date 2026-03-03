@@ -151,11 +151,11 @@ export function Dashboard() {
   } | null>(null)
 
   // Stats calculations for StatsOverview
-  const healthyClusters = clusters.filter(c => c.healthy).length
-  const unhealthyClusters = clusters.filter(c => !c.healthy).length
-  const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const totalNamespaces = clusters.reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
+  const healthyClusters = (clusters || []).filter(c => c.healthy).length
+  const unhealthyClusters = (clusters || []).filter(c => !c.healthy).length
+  const totalPods = (clusters || []).reduce((sum, c) => sum + (c.podCount || 0), 0)
+  const totalNodes = (clusters || []).reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const totalNamespaces = (clusters || []).reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
 
   // Dashboard-specific stats value getter
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
