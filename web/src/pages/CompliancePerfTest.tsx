@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CardWrapper } from '../components/cards/CardWrapper'
 import { DEMO_DATA_CARDS, getCardComponent, getRegisteredCardTypes } from '../components/cards/cardRegistry'
 import { formatCardTitle } from '../lib/formatCardTitle'
@@ -19,6 +20,7 @@ declare global {
       batchSize: number
       selected: ComplianceCardManifestItem[]
     }
+    __COMPLIANCE_SET_BATCH__?: (batch: number, size?: number) => void
   }
 }
 
@@ -64,9 +66,20 @@ class CardErrorBoundary extends React.Component<CardErrorBoundaryProps, CardErro
 }
 
 export function CompliancePerfTest() {
-  const params = new URLSearchParams(window.location.search)
-  const batch = Math.max(0, parsePositiveInt(params.get('batch'), 1) - 1)
-  const batchSize = parsePositiveInt(params.get('size'), DEFAULT_BATCH_SIZE)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const batch = Math.max(0, parsePositiveInt(searchParams.get('batch'), 1) - 1)
+  const batchSize = parsePositiveInt(searchParams.get('size'), DEFAULT_BATCH_SIZE)
+
+  // Expose setter for e2e tests to trigger client-side batch switching
+  useEffect(() => {
+    window.__COMPLIANCE_SET_BATCH__ = (b: number, s?: number) => {
+      const p = new URLSearchParams(searchParams)
+      p.set('batch', String(b + 1)) // URL is 1-indexed
+      if (s) p.set('size', String(s))
+      setSearchParams(p)
+    }
+    return () => { delete window.__COMPLIANCE_SET_BATCH__ }
+  }, [searchParams, setSearchParams])
 
   const allCardTypes = useMemo(
     () =>
