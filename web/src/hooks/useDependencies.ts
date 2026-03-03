@@ -3,6 +3,7 @@ import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 export interface ResolvedDependency {
   kind: string
@@ -160,7 +161,7 @@ export function useResolveDependencies() {
       try {
         const res = await fetch(
           `/api/workloads/resolve-deps/${encodeURIComponent(cluster)}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`,
-          { headers: authHeaders() },
+          { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
         )
         if (!res.ok) {
           throw new Error(`REST ${res.status}`)

@@ -7,6 +7,7 @@ import type {
 } from '../types/workloadMonitor'
 import { DEFAULT_REFRESH_MS } from '../types/workloadMonitor'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -87,7 +88,7 @@ export function useWorkloadMonitor(
     try {
       const res = await fetch(
         `/api/workloads/monitor/${encodeURIComponent(cluster)}/${encodeURIComponent(namespace)}/${encodeURIComponent(workload)}`,
-        { headers: authHeaders() },
+        { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
       )
 
       if (!res.ok) {

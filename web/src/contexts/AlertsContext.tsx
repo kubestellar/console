@@ -10,7 +10,7 @@ import type {
 } from '../types/alerts'
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
-import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN } from '../lib/constants'
+import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
 
@@ -133,7 +133,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           try {
             const resp = await fetch(
               `${API_BASE}/api/mcp/gpu-nodes/health/cronjob/results?cluster=${encodeURIComponent(cluster.name)}`,
-              { headers: { Authorization: `Bearer ${token}` } }
+              { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
             )
             if (resp.ok) {
               const data = await resp.json()
@@ -165,7 +165,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     const fetchNightlyE2E = async () => {
       try {
         const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
-        const resp = await fetch(`${API_BASE}/api/public/nightly-e2e/runs`)
+        const resp = await fetch(`${API_BASE}/api/public/nightly-e2e/runs`, {
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        })
         if (resp.ok) {
           const data = await resp.json()
           if (Array.isArray(data)) {
@@ -408,6 +410,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ alert, channels }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       // Silently ignore auth errors - user may not be logged in

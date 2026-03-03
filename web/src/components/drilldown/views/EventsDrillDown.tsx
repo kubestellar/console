@@ -3,6 +3,7 @@ import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle } from 'lucide-reac
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { getDemoMode } from '../../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 
 interface ClusterEvent {
   type: string
@@ -87,7 +88,9 @@ export function EventsDrillDown({ data }: Props) {
       }
       params.append('limit', '100')
 
-      const response = await fetch(`http://127.0.0.1:8585/events?${params}`)
+      const response = await fetch(`http://127.0.0.1:8585/events?${params}`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (response.ok) {
         const data = await response.json()
         setEvents(data.events || [])

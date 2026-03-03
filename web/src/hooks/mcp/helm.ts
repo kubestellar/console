@@ -5,6 +5,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
+import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
 // Demo Helm releases shown when in demo mode
@@ -235,7 +236,7 @@ export function useHelmReleases(cluster?: string) {
       if (!sseSucceeded) {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
         headers['Authorization'] = `Bearer ${token}`
-        const response = await fetch(url, { method: 'GET', headers })
+        const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`)
         }
@@ -404,7 +405,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers })
+      const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
@@ -558,6 +559,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       const response = await fetch(url, {
         method: 'GET',
         headers,
+        signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
       })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -671,6 +673,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
           const response = await fetch(url, {
             method: 'GET',
             headers,
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
           })
           if (!response.ok) {
             throw new Error(`API error: ${response.status}`)

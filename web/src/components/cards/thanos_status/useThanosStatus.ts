@@ -1,6 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { THANOS_DEMO_DATA, type ThanosDemoData } from './demoData'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 
 export interface ThanosTarget {
     name: string
@@ -58,6 +59,7 @@ interface PromQueryResult {
 async function fetchThanosStatus(): Promise<ThanosStatus> {
     const resp = await fetch('/api/v1/query?query=up', {
         headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
 
     if (!resp.ok) {

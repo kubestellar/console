@@ -3,7 +3,7 @@ import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
   Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
 } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN } from '../../../lib/constants'
+import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -162,6 +162,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
         try {
           const response = await fetch(`https://api.github.com/repos/${repo}/actions/runs?per_page=10`, {
             headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+            signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
           })
           if (response.status === 401 || response.status === 403) {
             // Token lacks actions scope or is invalid — fall back to demo data

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { api, checkBackendAvailability, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
-import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
+import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep } from './analytics'
 
 interface User {
@@ -284,6 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${currentToken}`,
             },
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
           if (response.ok) {
             const data = await response.json()

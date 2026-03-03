@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove } from '../lib/analytics'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const CACHE_KEY = 'kc-marketplace-registry'
@@ -126,7 +127,9 @@ export function useMarketplace() {
     }
 
     try {
-      const response = await fetch(REGISTRY_URL)
+      const response = await fetch(REGISTRY_URL, {
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
       if (!response.ok) throw new Error(`Registry fetch failed: ${response.status}`)
       const data: MarketplaceRegistry = await response.json()
       setItems(mergeRegistryItems(data))
@@ -178,7 +181,9 @@ export function useMarketplace() {
   }, [installedItems])
 
   const installItem = useCallback(async (item: MarketplaceItem): Promise<InstallResult> => {
-    const response = await fetch(item.downloadUrl)
+    const response = await fetch(item.downloadUrl, {
+      signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+    })
     if (!response.ok) throw new Error(`Download failed: ${response.status}`)
     const json = await response.json()
 
@@ -348,7 +353,8 @@ export function useAuthorProfile(handle?: string, enabled = false): AuthorProfil
     const fetchPRCount = async (repo: string): Promise<number> => {
       try {
         const res = await fetch(
-          `https://api.github.com/search/issues?q=author:${encodeURIComponent(handle)}+repo:${repo}+type:pr+is:merged&per_page=1`
+          `https://api.github.com/search/issues?q=author:${encodeURIComponent(handle)}+repo:${repo}+type:pr+is:merged&per_page=1`,
+          { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
         )
         if (!res.ok) return 0
         const data = await res.json()

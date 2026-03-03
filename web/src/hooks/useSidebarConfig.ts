@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 export interface SidebarItem {
   id: string
@@ -135,7 +136,7 @@ export async function fetchEnabledDashboards(): Promise<void> {
   if (enabledDashboardsFetched) return
   enabledDashboardsFetched = true
   try {
-    const resp = await fetch('/health')
+    const resp = await fetch('/health', { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     const data = await resp.json()
     if (data.enabled_dashboards && Array.isArray(data.enabled_dashboards) && data.enabled_dashboards.length > 0) {
       enabledDashboardIds = data.enabled_dashboards as string[]

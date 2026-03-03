@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { PredictionFeedback, StoredFeedback, PredictionType, PredictionStats } from '../types/predictions'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 const STORAGE_KEY = 'kubestellar-prediction-feedback'
 const FEEDBACK_CHANGED_EVENT = 'kubestellar-prediction-feedback-changed'
@@ -187,6 +188,7 @@ async function sendFeedbackToBackend(predictionId: string, feedback: PredictionF
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ predictionId, feedback }),
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)

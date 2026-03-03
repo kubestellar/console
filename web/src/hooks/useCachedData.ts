@@ -23,6 +23,7 @@ import { fetchSSE } from '../lib/sseClient'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   PodInfo,
   PodIssue,
@@ -70,6 +71,7 @@ async function fetchAPI<T>(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
 
   if (!response.ok) {
@@ -1387,6 +1389,7 @@ export function useCachedWorkloads(
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
         if (res.ok) {
           const data = await res.json()
@@ -1418,6 +1421,7 @@ export function useCachedWorkloads(
       if (hasRealToken && !isBackendUnavailable()) {
         const res = await fetch('/api/workloads', {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
         if (res.ok) {
           const data = await res.json()
@@ -1592,6 +1596,7 @@ export function useCachedSecurityIssues(
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
           if (response.ok) {
             const data = await response.json() as { issues: SecurityIssue[] }
@@ -1824,6 +1829,7 @@ export function useGPUHealthCronJob(cluster?: string) {
           schedule: opts?.schedule,
           tier: opts?.tier ?? 2,
         }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) {
         const text = await response.text()
@@ -1854,6 +1860,7 @@ export function useGPUHealthCronJob(cluster?: string) {
           cluster,
           namespace: opts?.namespace,
         }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) {
         const text = await response.text()
@@ -2011,6 +2018,7 @@ export const coreFetchers = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {
         const data = await response.json() as { issues: SecurityIssue[] }
@@ -2035,6 +2043,7 @@ export const coreFetchers = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (res.ok) {
         const data = await res.json()

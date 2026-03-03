@@ -60,6 +60,12 @@ export const MCP_EXTENDED_TIMEOUT_MS = 30_000
 /** Timeout for backend API health checks */
 export const BACKEND_HEALTH_CHECK_TIMEOUT_MS = 2_000
 
+/** Default timeout for fetch() calls to the local backend API */
+export const FETCH_DEFAULT_TIMEOUT_MS = 10_000
+
+/** Timeout for fetch() calls to external services (GitHub API, registries, etc.) */
+export const FETCH_EXTERNAL_TIMEOUT_MS = 15_000
+
 // ============================================================================
 // UI Feedback Timeouts
 // ============================================================================

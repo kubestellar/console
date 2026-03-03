@@ -9,6 +9,7 @@ import { WeatherAnimation, getWeatherCondition, getConditionColor } from './Weat
 import { WEATHER_API } from '../../../config/externalApis'
 import { useCardLoadingState } from '../CardDataContext'
 import { useCache } from '../../../lib/cache'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import type {
   GeocodingResult,
   ForecastDay,
@@ -133,7 +134,8 @@ export function Weather({ config }: { config?: WeatherConfig }) {
         `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m` +
         `&hourly=temperature_2m,weather_code,precipitation_probability` +
         `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
-        `&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&forecast_days=${forecastLength}&timezone=auto`
+        `&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&forecast_days=${forecastLength}&timezone=auto`,
+        { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
       )
 
       if (!response.ok) throw new Error('Failed to fetch weather data')
@@ -209,7 +211,8 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     setIsSearching(true)
     try {
       const response = await fetch(
-        `${WEATHER_API.geocodingUrl}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
+        `${WEATHER_API.geocodingUrl}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`,
+        { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
       )
 
       if (response.ok) {

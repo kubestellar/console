@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { useAuth } from '../lib/auth'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // =============================================================================
 // Types
@@ -78,7 +79,8 @@ export function usePersistence() {
 
     try {
       const response = await fetch('/api/persistence/config', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {
         const data = await response.json()
@@ -99,7 +101,8 @@ export function usePersistence() {
 
     try {
       const response = await fetch('/api/persistence/status', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {
         const data = await response.json()
@@ -124,6 +127,7 @@ export function usePersistence() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedConfig),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (response.ok) {
@@ -176,6 +180,7 @@ export function usePersistence() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cluster }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (response.ok) {
@@ -194,7 +199,7 @@ export function usePersistence() {
 
     setSyncing(true)
     try {
-      const response = await fetch('/api/persistence/sync', { method: 'POST' })
+      const response = await fetch('/api/persistence/sync', { method: 'POST', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         await fetchStatus()
         return true

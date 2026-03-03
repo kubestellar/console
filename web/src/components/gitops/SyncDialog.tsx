@@ -4,6 +4,7 @@ import { Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Serv
 import { BaseModal } from '../../lib/modals'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { safeGetItem } from '../../lib/utils/localStorage'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 
 // Sync phases
 type SyncPhase = 'detection' | 'plan' | 'execution' | 'complete'
@@ -147,6 +148,7 @@ export function SyncDialog({
           cluster,
           namespace,
         }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       updateLastLog('success')
@@ -249,6 +251,7 @@ export function SyncDialog({
           cluster,
           namespace,
         }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       updateLastLog('success')

@@ -4,6 +4,7 @@ import {
   STORAGE_KEY_TOKEN,
   STORAGE_KEY_USER_CACHE,
   DEMO_TOKEN_VALUE,
+  FETCH_DEFAULT_TIMEOUT_MS,
 } from './constants'
 import { emitSessionExpired } from './analytics'
 
@@ -263,6 +264,7 @@ class ApiClient {
         const response = await fetch(`${API_BASE}/auth/refresh`, {
           method: 'POST',
           headers: this.getHeaders(),
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
         if (response.ok) {
           const data = await response.json()

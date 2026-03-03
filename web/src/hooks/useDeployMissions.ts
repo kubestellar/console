@@ -4,6 +4,7 @@ import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -257,7 +258,7 @@ export function useDeployMissions() {
               try {
                 const res = await fetch(
                   `/api/workloads/deploy-status/${encodeURIComponent(cluster)}/${encodeURIComponent(mission.namespace)}/${encodeURIComponent(mission.workload)}`,
-                  { headers: authHeaders() }
+                  { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
                 )
                 if (!res.ok) {
                   return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
@@ -276,7 +277,7 @@ export function useDeployMissions() {
                 try {
                   const logRes = await fetch(
                     `/api/workloads/deploy-logs/${encodeURIComponent(cluster)}/${encodeURIComponent(mission.namespace)}/${encodeURIComponent(mission.workload)}?tail=8`,
-                    { headers: authHeaders() }
+                    { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
                   )
                   if (logRes.ok) {
                     const logData = await logRes.json()

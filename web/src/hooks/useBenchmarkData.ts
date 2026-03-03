@@ -18,6 +18,7 @@ import {
   type BenchmarkReport,
 } from '../lib/llmd/benchmarkMockData'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -207,6 +208,7 @@ export function useCachedBenchmarkReports() {
       // Fallback: try non-streaming endpoint (returns cache quickly)
       const res = await fetch(`/api/benchmarks/reports?since=${encodeURIComponent(stream.since)}`, {
         headers: authHeaders(),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (res.status === 503) throw new Error('BENCHMARK_UNAVAILABLE')
       if (!res.ok) throw new Error(`Benchmark API error: ${res.status}`)

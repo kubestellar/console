@@ -382,16 +382,20 @@ phase5() {
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
 
-    # Skip refetch/prefetch patterns
+    # Skip refetch/prefetch patterns and commented-out code
     echo "$line" | grep -qE '(refetch|prefetch|registerRefetch|fetchPRCount|fetchData|fetchNodes|fetchClusters|fetchGitHub|fetchStatus)' && continue
+    # The content portion (after file:line:) may have leading whitespace before //
+    local content_part
+    content_part=$(echo "$line" | cut -d: -f3- | sed 's/^[[:space:]]*//')
+    [[ "$content_part" == //* ]] && continue
 
     local filepath
     filepath=$(echo "$line" | cut -d: -f1)
     local linenum
     linenum=$(echo "$line" | cut -d: -f2)
 
-    # Check next 10 lines for 'signal' or AbortSignal
-    local end=$((linenum + 10))
+    # Check next 15 lines for 'signal' or AbortSignal (fetch options can span many lines)
+    local end=$((linenum + 15))
     local max_lines
     max_lines=$(wc -l < "$filepath" | tr -d ' ')
     [[ $end -gt $max_lines ]] && end=$max_lines

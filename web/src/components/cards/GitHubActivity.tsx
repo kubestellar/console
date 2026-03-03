@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
+import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
@@ -331,7 +331,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       }
 
       // Fetch repository info
-      const repoResponse = await fetch(`https://api.github.com/repos/${targetRepo}`, { headers })
+      const repoResponse = await fetch(`https://api.github.com/repos/${targetRepo}`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!repoResponse.ok) throw new Error(`Failed to fetch repo: ${repoResponse.statusText}`)
       const repoData = await repoResponse.json()
       setRepoInfo(repoData)
@@ -339,8 +339,8 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       // Fetch open PRs and closed/merged PRs separately to ensure we get merged PRs
       // For active repos, all "recently updated" PRs might be open ones
       const [openPRsResponse, closedPRsResponse] = await Promise.all([
-        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, { headers }),
-        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, { headers })
+        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
+        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       ])
 
       if (!openPRsResponse.ok) throw new Error(`Failed to fetch open PRs: ${openPRsResponse.statusText}`)
@@ -359,8 +359,8 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
       // Fetch open Issues count and recent issues
       const [openIssuesResponse, recentIssuesResponse] = await Promise.all([
-        fetch(`https://api.github.com/repos/${targetRepo}/issues?state=open&per_page=1`, { headers }),
-        fetch(`https://api.github.com/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { headers })
+        fetch(`https://api.github.com/repos/${targetRepo}/issues?state=open&per_page=1`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
+        fetch(`https://api.github.com/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       ])
 
       // Get open issue count from Link header or response body
@@ -384,13 +384,13 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       setIssues(filteredIssues)
 
       // Fetch Releases
-      const releasesResponse = await fetch(`https://api.github.com/repos/${targetRepo}/releases?per_page=10`, { headers })
+      const releasesResponse = await fetch(`https://api.github.com/repos/${targetRepo}/releases?per_page=10`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!releasesResponse.ok) throw new Error(`Failed to fetch releases: ${releasesResponse.statusText}`)
       const releasesData = await releasesResponse.json()
       setReleases(releasesData)
 
       // Fetch Contributors
-      const contributorsResponse = await fetch(`https://api.github.com/repos/${targetRepo}/contributors?per_page=20`, { headers })
+      const contributorsResponse = await fetch(`https://api.github.com/repos/${targetRepo}/contributors?per_page=20`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!contributorsResponse.ok) throw new Error(`Failed to fetch contributors: ${contributorsResponse.statusText}`)
       const contributorsData = await contributorsResponse.json()
       setContributors(contributorsData)

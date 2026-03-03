@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { X, Terminal, Upload, FormInput, Copy, Check, Loader2, ChevronDown, ChevronUp, Shield, KeyRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 
 interface AddClusterDialogProps {
   open: boolean
@@ -142,6 +142,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }))
@@ -164,6 +165,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }))
@@ -201,6 +203,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           caData: caData ? btoa(caData) : undefined,
           skipTlsVerify: skipTls,
         }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       const data = await res.json()
       setTestResult(data)
@@ -230,6 +233,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           skipTlsVerify: skipTls,
           namespace: namespace || undefined,
         }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }))

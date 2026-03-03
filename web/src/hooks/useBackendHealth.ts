@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
 
@@ -78,6 +79,7 @@ class BackendHealthManager {
       const response = await fetch('/health', {
         method: 'GET',
         headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (response.ok) {

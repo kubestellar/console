@@ -4,6 +4,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
+import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 
 export interface BuildpackImage {
   name: string
@@ -194,7 +195,7 @@ export function useBuildpackImages(cluster?: string) {
           headers['Authorization'] = `Bearer ${token}`
         }
 
-        const response = await fetch(url, { method: 'GET', headers })
+        const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
         if (response.status === 404) {
           // Endpoint not yet available; treat as empty list
           const newImages: BuildpackImage[] = []

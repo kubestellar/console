@@ -1,6 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { FLATCAR_DEMO_DATA, type FlatcarDemoData } from './demoData'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { compareFlatcarVersions } from './versionUtils'
 
 export interface FlatcarStatus {
@@ -44,6 +45,7 @@ interface BackendNodeInfo {
 async function fetchFlatcarStatus(): Promise<FlatcarStatus> {
   const resp = await fetch('/api/mcp/nodes', {
     headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
 
   if (!resp.ok) {

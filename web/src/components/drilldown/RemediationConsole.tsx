@@ -3,6 +3,7 @@ import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Termina
 import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { safeGetItem } from '../../lib/utils/localStorage'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { useTranslation } from 'react-i18next'
 
 interface LogEntry {
@@ -211,6 +212,7 @@ export function RemediationConsole({
           cluster,
           namespace,
         }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!response.ok) {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePersistence } from './usePersistence'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // =============================================================================
 // Types
@@ -196,7 +197,9 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     }
 
     try {
-      const response = await fetch(`/api/persistence/${endpoint}`)
+      const response = await fetch(`/api/persistence/${endpoint}`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (response.ok) {
         const data = await response.json()
         if (isMounted.current) {
@@ -223,7 +226,9 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     if (!shouldUseCRs) return null
 
     try {
-      const response = await fetch(`/api/persistence/${endpoint}/${name}`)
+      const response = await fetch(`/api/persistence/${endpoint}/${name}`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (response.ok) {
         return await response.json()
       }
@@ -242,6 +247,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {
         const created = await response.json()
@@ -264,6 +270,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {
         const updated = await response.json()
@@ -284,6 +291,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     try {
       const response = await fetch(`/api/persistence/${endpoint}/${name}`, {
         method: 'DELETE',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok || response.status === 204) {
         // Optimistic update
@@ -349,6 +357,7 @@ export function useWorkloadDeployments() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(status),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {
         return await response.json()

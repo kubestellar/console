@@ -13,6 +13,7 @@ import {
 import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
 import type { TFunction } from 'i18next'
 
 // Stock search result interface
@@ -121,7 +122,8 @@ async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
     const symbolsString = symbols.join(',')
     const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsString}&fields=symbol,longName,regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,marketCap,fiftyTwoWeekHigh,fiftyTwoWeekLow`
     const response = await fetch(
-      `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`
+      `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`,
+      { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
     )
 
     if (!response.ok) {
@@ -215,7 +217,8 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
     // Using Yahoo Finance search API via CORS proxy
     const yahooSearchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
     const response = await fetch(
-      `${CORS_PROXY}${encodeURIComponent(yahooSearchUrl)}`
+      `${CORS_PROXY}${encodeURIComponent(yahooSearchUrl)}`,
+      { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
     )
 
     if (!response.ok) {

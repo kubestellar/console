@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePersistence } from './usePersistence'
 import { useClusterGroups as useCRClusterGroups, ClusterGroup as CRClusterGroup } from './useConsoleCRs'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // ============================================================================
 // Types
@@ -169,6 +170,7 @@ export function useClusterGroups() {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify(group),
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
       } catch {
         // Backend sync is best-effort; localStorage is primary
@@ -198,6 +200,7 @@ export function useClusterGroups() {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify({ ...group, ...updates }),
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
         } catch {
           // best-effort
@@ -216,6 +219,7 @@ export function useClusterGroups() {
         await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
           method: 'DELETE',
           headers: authHeaders(),
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
       } catch {
         // best-effort
@@ -239,6 +243,7 @@ export function useClusterGroups() {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(group.query),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!resp.ok) return group.clusters
 
@@ -262,6 +267,7 @@ export function useClusterGroups() {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(query),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!resp.ok) return { clusters: [], count: 0 }
 
@@ -279,6 +285,7 @@ export function useClusterGroups() {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ prompt }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!resp.ok) {
         return { error: `Request failed: ${resp.status}` }

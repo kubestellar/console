@@ -12,7 +12,7 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
-import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE } from '../../lib/constants'
+import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
@@ -123,6 +123,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
     try {
       const res = await fetch(`${BACKEND_DEFAULT_URL}/api/feedback/preview/${prNumber}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (res.ok) {
         const data = await res.json()

@@ -11,7 +11,7 @@ import type {
 } from '../types/updates'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../lib/constants'
-import { LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
+import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 
 declare const __APP_VERSION__: string
 declare const __COMMIT_HASH__: string
@@ -595,7 +595,7 @@ function useVersionCheckCore() {
         }
       }
 
-      const response = await fetch(GITHUB_API_URL, { headers })
+      const response = await fetch(GITHUB_API_URL, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
 
       // Handle rate limiting
       if (response.status === 403) {

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import type { UpdateProgress } from '../types/updates'
-import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
+import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 const WS_RECONNECT_MS = 5000 // Reconnect interval after WebSocket disconnect
 const BACKEND_POLL_MS = 2000 // Poll interval when waiting for backend to come up
@@ -28,7 +28,7 @@ export function useUpdateProgress() {
       setProgress({ status: 'restarting', message: 'Waiting for backend to come up...', progress: 90 })
       for (let i = 0; i < BACKEND_POLL_MAX; i++) {
         try {
-          const resp = await fetch('/health', { cache: 'no-store' })
+          const resp = await fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
           if (resp.ok) {
             setProgress({ status: 'done', message: 'Update complete — restart successful', progress: 100 })
             return

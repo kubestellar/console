@@ -3,6 +3,7 @@ import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
+import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 
 export interface CrossplaneManagedResource {
   apiVersion: string
@@ -219,7 +220,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
           return
         }
 
-        const response = await fetch(url)
+        const response = await fetch(url, { signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`)
         }

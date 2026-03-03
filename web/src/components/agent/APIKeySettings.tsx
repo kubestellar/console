@@ -6,6 +6,7 @@ import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { KC_AGENT, AI_PROVIDER_DOCS } from '../../config/externalApis'
 import { useTranslation } from 'react-i18next'
 import { emitApiKeyConfigured, emitApiKeyRemoved, emitConversionStep } from '../../lib/analytics'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 
 const INSTALL_COMMAND = KC_AGENT.installCommand
 
@@ -133,7 +134,9 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`${KC_AGENT_URL}/settings/keys`)
+      const response = await fetch(`${KC_AGENT_URL}/settings/keys`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (!response.ok) {
         throw new Error(t('agent.failedToFetchKeyStatus'))
       }
@@ -162,6 +165,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider, apiKey: newKeyValue }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!response.ok) {
@@ -188,6 +192,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
       setSaving(true)
       const response = await fetch(`${KC_AGENT_URL}/settings/keys/${provider}`, {
         method: 'DELETE',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!response.ok) {

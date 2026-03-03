@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2 } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN } from '../../../lib/constants'
+import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 
 interface GitHubTokenSectionProps {
@@ -94,6 +94,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/vnd.github.v3+json',
         },
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
       })
 
       if (!response.ok) {

@@ -3,6 +3,7 @@ import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // Types
 export interface Workload {
@@ -186,7 +187,7 @@ export function useWorkloads(options?: {
       const queryString = params.toString()
       const url = `/api/workloads${queryString ? `?${queryString}` : ''}`
 
-      const res = await fetch(url, { headers: authHeaders() })
+      const res = await fetch(url, { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         throw new Error(`Failed to fetch workloads: ${res.statusText}`)
       }
@@ -225,7 +226,7 @@ export function useClusterCapabilities(enabled = true) {
     setError(null)
 
     try {
-      const res = await fetch('/api/workloads/capabilities', { headers: authHeaders() })
+      const res = await fetch('/api/workloads/capabilities', { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         throw new Error(`Failed to fetch capabilities: ${res.statusText}`)
       }
@@ -272,6 +273,7 @@ export function useDeployWorkload() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const errorData = await res.json()
@@ -318,6 +320,7 @@ export function useScaleWorkload() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const errorData = await res.json()
@@ -362,6 +365,7 @@ export function useDeleteWorkload() {
       const res = await fetch(`/api/workloads/${params.cluster}/${params.namespace}/${params.name}`, {
         method: 'DELETE',
         headers: authHeaders(),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         const errorData = await res.json()

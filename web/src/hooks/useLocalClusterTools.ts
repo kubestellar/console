@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { useDemoMode } from './useDemoMode'
 import { useClusterProgress } from './useClusterProgress'
 
@@ -64,7 +65,9 @@ export function useLocalClusterTools() {
     }
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-tools`)
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-tools`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (response.ok) {
         const data = await response.json()
         setTools(data.tools || [])
@@ -92,7 +95,9 @@ export function useLocalClusterTools() {
 
     setIsLoading(true)
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`)
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (response.ok) {
         const data = await response.json()
         setClusters(data.clusters || [])
@@ -135,6 +140,7 @@ export function useLocalClusterTools() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool, name }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (response.ok) {
@@ -179,6 +185,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters?tool=${tool}&name=${name}`, {
         method: 'DELETE',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (response.ok) {

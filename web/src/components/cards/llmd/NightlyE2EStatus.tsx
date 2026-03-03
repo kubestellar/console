@@ -18,7 +18,7 @@ import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
 import { useAIMode } from '../../../hooks/useAIMode'
 import { useMissions } from '../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
-import { BACKEND_DEFAULT_URL } from '../../../lib/constants'
+import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { useTranslation } from 'react-i18next'
 
@@ -143,7 +143,8 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
       try {
         const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
         const resp = await fetch(
-          `${API_BASE}/api/public/nightly-e2e/run-logs?repo=${encodeURIComponent(guide.repo)}&runId=${run.id}`
+          `${API_BASE}/api/public/nightly-e2e/run-logs?repo=${encodeURIComponent(guide.repo)}&runId=${run.id}`,
+          { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
         )
         let logsContent = 'Failed to fetch logs — analyze using the GitHub URL below.'
         if (resp.ok) {

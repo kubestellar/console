@@ -11,6 +11,7 @@ import { setActiveTokenCategory } from './useTokenUsage'
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL = 30000 // Poll every 30 seconds as fallback
@@ -217,6 +218,7 @@ async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: specificProviders }),
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
 
     if (response.ok) {

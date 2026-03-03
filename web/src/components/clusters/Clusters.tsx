@@ -52,7 +52,7 @@ import { Gauge } from '../charts/Gauge'
 import { ClusterCardSkeleton, StatsOverviewSkeleton } from '../ui/ClusterCardSkeleton'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 
 // Helper to format labels/annotations for tooltip
 function formatMetadata(labels?: Record<string, string>, annotations?: Record<string, string>): string {
@@ -1546,6 +1546,7 @@ export function Clusters() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ oldName, newName }),
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
     if (!response.ok) {
       const data = await response.json()

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { Alert, AlertChannel } from '../types/alerts'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
 
@@ -36,6 +37,7 @@ export function useNotificationAPI() {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ type, config } as TestNotificationRequest),
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
 
         const data = await response.json()
@@ -66,6 +68,7 @@ export function useNotificationAPI() {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ alert, channels } as SendAlertNotificationRequest),
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
 
         const data = await response.json()

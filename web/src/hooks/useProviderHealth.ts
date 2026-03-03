@@ -4,6 +4,7 @@ import { useClusters } from './mcp/clusters'
 import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudProviderIcon'
 import type { CloudProvider } from '../components/ui/CloudProviderIcon'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 const REFRESH_INTERVAL = 60_000 // 60 seconds
 const STATUS_CHECK_TIMEOUT = 5_000
 
@@ -174,7 +175,9 @@ export function useProviderHealth() {
     // --- AI Providers from /settings/keys ---
     const unconfiguredProviders: string[] = []
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`)
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (response.ok) {
         const data: KeysStatusResponse = await response.json()
         const seen = new Set<string>()

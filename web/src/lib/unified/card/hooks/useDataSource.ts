@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { CardDataSource } from '../../types'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../constants'
 
 // Hook registry - populated by registerDataHook
 const dataHookRegistry: Record<
@@ -224,6 +225,7 @@ function useApiDataSourceInternal(
         method,
         headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
         body: method === 'POST' && params ? JSON.stringify(params) : undefined,
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!response.ok) {

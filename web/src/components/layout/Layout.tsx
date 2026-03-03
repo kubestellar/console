@@ -17,7 +17,7 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
-import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
@@ -137,6 +137,7 @@ export function Layout({ children }: LayoutProps) {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/restart-backend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (resp.ok) {
         const data = await resp.json()

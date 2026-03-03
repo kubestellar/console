@@ -8,6 +8,7 @@ import {
   SETTINGS_CHANGED_EVENT,
 } from '../lib/settingsSync'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 const DEBOUNCE_MS = 1000
 
@@ -84,6 +85,7 @@ export function usePersistedSettings() {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) throw new Error('Export failed')
       const blob = await response.blob()

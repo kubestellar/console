@@ -17,6 +17,7 @@ import {
 } from '../lib/llmd/nightlyE2EDemoData'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { isNetlifyDeployment } from '../lib/demoMode'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 const REFRESH_IDLE_MS = 5 * 60 * 1000    // 5 minutes when idle
 const REFRESH_ACTIVE_MS = 2 * 60 * 1000  // 2 minutes when jobs are running
@@ -80,6 +81,7 @@ export function useNightlyE2EData() {
               ...(endpoint.includes('/public/') ? {} : getAuthHeaders()),
               Accept: 'application/json',
             },
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
           if (res.ok) {
             const data = await res.json()

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
-import { STORAGE_KEY_TOKEN } from '../../../lib/constants'
+import { STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 
 interface ProfileSectionProps {
   initialEmail: string
@@ -41,6 +41,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ email, slackId }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) {
         throw new Error('Failed to save profile')

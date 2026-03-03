@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { emitAgentConnected, emitAgentDisconnected, emitConversionStep } from '../lib/analytics'
 
 export interface AgentHealth {
@@ -202,6 +203,7 @@ class AgentManager {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (response.ok) {

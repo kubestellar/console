@@ -5,6 +5,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
+import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
 // LocalStorage cache keys
@@ -205,7 +206,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers })
+      const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }

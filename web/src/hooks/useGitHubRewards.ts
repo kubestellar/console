@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../lib/auth'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { BACKEND_DEFAULT_URL } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { GitHubRewardsResponse } from '../types/rewards'
 
 const CACHE_KEY = 'github-rewards-cache'
@@ -49,6 +50,7 @@ export function useGitHubRewards() {
       const apiBase = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
       const res = await fetch(`${apiBase}/api/rewards/github`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`API error: ${res.status}`)
       const result: GitHubRewardsResponse = await res.json()
