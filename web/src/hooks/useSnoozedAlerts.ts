@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 
 const STORAGE_KEY = 'kubestellar-snoozed-alerts'
 
@@ -76,7 +77,7 @@ export function useSnoozedAlerts() {
     }
 
     // Check every minute
-    const intervalId = setInterval(checkExpired, 60000)
+    const intervalId = setInterval(checkExpired, POLL_INTERVAL_SLOW_MS)
 
     return () => {
       listeners.delete(listener)

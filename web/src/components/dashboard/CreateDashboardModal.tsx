@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
+import { FOCUS_DELAY_MS } from '../../lib/constants/network'
 
 interface CreateDashboardModalProps {
   isOpen: boolean
@@ -34,7 +35,7 @@ export function CreateDashboardModal({
       setShowTemplates(false)
       setExpandedCategory(null)
       // Focus input after animation
-      const id = setTimeout(() => inputRef.current?.focus(), 100)
+      const id = setTimeout(() => inputRef.current?.focus(), FOCUS_DELAY_MS)
       return () => clearTimeout(id)
     }
   }, [isOpen])

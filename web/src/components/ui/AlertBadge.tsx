@@ -10,6 +10,7 @@ import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
+import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
@@ -28,7 +29,7 @@ export function AnimatedCounter({ value, className }: { value: number; className
         setDisplayValue(value)
         prevValueRef.current = value
         // Reset animation after enter completes
-        setTimeout(() => setIsAnimating(false), 200)
+        setTimeout(() => setIsAnimating(false), TRANSITION_DELAY_MS)
       }, 150)
       return () => clearTimeout(timer)
     }

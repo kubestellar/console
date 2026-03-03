@@ -7,6 +7,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
 
 // Module-level cache for GPU nodes (persists across navigation)
@@ -143,7 +144,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     if (!isAgentUnavailable()) {
       try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout for large clusters
+        const timeoutId = setTimeout(() => controller.abort(), MCP_EXTENDED_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/gpu-nodes?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -433,7 +434,7 @@ export function useNodes(cluster?: string) {
     if (cluster && !isAgentUnavailable()) {
       try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/nodes?cluster=${encodeURIComponent(cluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },

@@ -26,6 +26,7 @@ import { api } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
 
 type GroupByMode = 'cluster' | 'type'
 
@@ -150,7 +151,7 @@ export function NamespaceManager() {
         // Always try local agent first (works without backend auth)
         try {
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 8000)
+          const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_ABORT_TIMEOUT_MS)
           const response = await fetch(
             `${LOCAL_AGENT_HTTP_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`,
             { signal: controller.signal, headers: { 'Accept': 'application/json' } }

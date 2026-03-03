@@ -5,6 +5,7 @@ import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } fro
 import { useTokenUsage, type TokenCategory } from '../../../hooks/useTokenUsage'
 import { cn } from '../../../lib/cn'
 import { getSettingsWithHash } from '../../../config/routes'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.ElementType; color: string }> = {
   missions: { label: 'AI Missions', icon: Rocket, color: 'bg-purple-500' },
@@ -29,7 +30,7 @@ export function TokenUsageWidget() {
     // Trigger animation if tokens increased by more than 100 (lowered for better visibility)
     if (increase > 100) {
       setTokenAnimating(true)
-      const timer = setTimeout(() => setTokenAnimating(false), 2000)
+      const timer = setTimeout(() => setTokenAnimating(false), UI_FEEDBACK_TIMEOUT_MS)
       return () => clearTimeout(timer)
     }
     previousTokensRef.current = usage.used

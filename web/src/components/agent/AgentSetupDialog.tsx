@@ -6,6 +6,7 @@ import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { BaseModal } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useTranslation } from 'react-i18next'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
 const DISMISSED_KEY = 'kc-agent-setup-dismissed'
 const SNOOZED_KEY = 'kc-agent-setup-snoozed'
@@ -47,7 +48,7 @@ export function AgentSetupDialog() {
     await navigator.clipboard.writeText(installCommand)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const handleSnooze = () => {

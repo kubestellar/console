@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, ChevronDown, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { STORAGE_KEY_KUBECTL_HISTORY } from '../../lib/constants'
+import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
@@ -770,7 +771,7 @@ data:
             <div className="relative">
               <button
                 onClick={() => setShowFormatMenu(!showFormatMenu)}
-                onBlur={() => setTimeout(() => setShowFormatMenu(false), 200)}
+                onBlur={() => setTimeout(() => setShowFormatMenu(false), TRANSITION_DELAY_MS)}
                 className="p-1 rounded text-muted-foreground hover:text-foreground"
                 title={`Output format: ${outputFormat}`}
               >

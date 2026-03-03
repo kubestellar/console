@@ -31,6 +31,7 @@ import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { MissionChat } from './MissionChat'
 import { useTranslation } from 'react-i18next'
+import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 
 export function MissionSidebar() {
   const { t } = useTranslation(['common'])
@@ -80,7 +81,7 @@ export function MissionSidebar() {
     })
     setShowBrowser(false)
     setShowSavedToast(mission.title)
-    setTimeout(() => setShowSavedToast(null), 4000)
+    setTimeout(() => setShowSavedToast(null), SAVED_TOAST_MS)
   }, [saveMission])
 
   // Escape key: exit fullscreen first, then close sidebar
@@ -215,7 +216,7 @@ export function MissionSidebar() {
             onClick={() => {
               setShowNewMission(!showNewMission)
               if (!showNewMission) {
-                setTimeout(() => newMissionInputRef.current?.focus(), 100)
+                setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
               }
             }}
             className={cn(
@@ -380,7 +381,7 @@ export function MissionSidebar() {
               <button
                 onClick={() => {
                   setShowNewMission(true)
-                  setTimeout(() => newMissionInputRef.current?.focus(), 100)
+                  setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
                 }}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useTranslation } from 'react-i18next'
+import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 
 interface Tab {
   id: string
@@ -224,7 +225,7 @@ export function MobileBrowser() {
   // Get current time for status bar
   const [time, setTime] = useState(new Date())
   useEffect(() => {
-    const interval = setInterval(() => setTime(new Date()), 60000)
+    const interval = setInterval(() => setTime(new Date()), POLL_INTERVAL_SLOW_MS)
     return () => clearInterval(interval)
   }, [])
 

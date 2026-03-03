@@ -20,6 +20,7 @@ import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
 import { cn } from '../../lib/cn'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
 interface ShareMissionDialogProps {
   resolution: Resolution
@@ -136,7 +137,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
     }
 
     setExported(channel)
-    setTimeout(() => setExported(null), 2000)
+    setTimeout(() => setExported(null), UI_FEEDBACK_TIMEOUT_MS)
   }, [mission, scanResult, scanning, runScan])
 
   if (!isOpen) return null

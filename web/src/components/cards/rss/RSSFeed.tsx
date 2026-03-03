@@ -17,6 +17,7 @@ import {
   isValidThumbnail, normalizeRedditLink, formatTimeAgo,
 } from './RSSParser'
 import { useTranslation } from 'react-i18next'
+import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 
 type SortByOption = 'date' | 'title'
 
@@ -459,7 +460,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   // Clear success message after 3 seconds
   useEffect(() => {
     if (fetchSuccess) {
-      const timer = setTimeout(() => setFetchSuccess(null), 3000)
+      const timer = setTimeout(() => setFetchSuccess(null), TOAST_DISMISS_MS)
       return () => clearTimeout(timer)
     }
   }, [fetchSuccess])

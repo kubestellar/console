@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface ProfileSectionProps {
   initialEmail: string
@@ -51,7 +52,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
       await refreshUser()
       setIsRefreshing(false)
       setProfileSaved(true)
-      timeoutRef.current = setTimeout(() => setProfileSaved(false), 2000)
+      timeoutRef.current = setTimeout(() => setProfileSaved(false), UI_FEEDBACK_TIMEOUT_MS)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save profile'
       setError(message)

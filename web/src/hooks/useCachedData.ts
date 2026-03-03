@@ -23,7 +23,7 @@ import { fetchSSE } from '../lib/sseClient'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   PodInfo,
   PodIssue,
@@ -2188,7 +2188,7 @@ const HW_DEMO_DATA: HardwareHealthData = {
 
 async function fetchHardwareHealth(): Promise<HardwareHealthData> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 5000)
+  const timeoutId = setTimeout(() => controller.abort(), AI_PREDICTION_TIMEOUT_MS)
 
   try {
     const [alertsRes, inventoryRes] = await Promise.all([

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
 
 // Check if user is in demo mode — no token or explicit demo-token
 function isDemoUser(): boolean {
@@ -283,7 +284,7 @@ export function useFeatureRequests(currentUserId?: string) {
   // Refresh function with loading indicator (minimum 500ms to show animation)
   const refresh = useCallback(async () => {
     setIsRefreshing(true)
-    const minDelay = new Promise(resolve => setTimeout(resolve, 500))
+    const minDelay = new Promise(resolve => setTimeout(resolve, MIN_PERCEIVED_DELAY_MS))
     await Promise.all([loadRequests(), minDelay])
     setIsRefreshing(false)
   }, [loadRequests])
@@ -506,7 +507,7 @@ export function useNotifications() {
   // Refresh function with loading indicator (minimum 500ms to show animation)
   const refresh = useCallback(async () => {
     setIsRefreshing(true)
-    const minDelay = new Promise(resolve => setTimeout(resolve, 500))
+    const minDelay = new Promise(resolve => setTimeout(resolve, MIN_PERCEIVED_DELAY_MS))
     await Promise.all([loadAll(), minDelay])
     setIsRefreshing(false)
   }, [loadAll])

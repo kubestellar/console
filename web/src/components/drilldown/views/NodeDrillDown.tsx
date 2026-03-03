@@ -3,6 +3,7 @@ import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, Extern
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { useTranslation } from 'react-i18next'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface Props {
   data: Record<string, unknown>
@@ -34,7 +35,7 @@ export function NodeDrillDown({ data }: Props) {
     navigator.clipboard.writeText(cmd)
     setCopied(label)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopied(null), 2000)
+    copiedTimerRef.current = setTimeout(() => setCopied(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const startDiagnosis = () => {

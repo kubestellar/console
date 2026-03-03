@@ -15,6 +15,7 @@ import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
+import { POLL_INTERVAL_FAST_MS, PACKET_SPAWN_INTERVAL_MS } from '../../../lib/constants/network'
 
 interface ServerStats {
   id: string
@@ -263,7 +264,7 @@ export function PDDisaggregation() {
   useEffect(() => {
     const update = () => setServers(stackServers.length > 0 ? stackServers : generateServerStats())
     update()
-    const interval = setInterval(update, 2000)
+    const interval = setInterval(update, POLL_INTERVAL_FAST_MS)
     return () => clearInterval(interval)
   }, [stackServers])
 
@@ -293,7 +294,7 @@ export function PDDisaggregation() {
       setPackets(prev => [...prev.slice(-10), newPacket])
     }
 
-    const interval = setInterval(spawnPacket, 800)
+    const interval = setInterval(spawnPacket, PACKET_SPAWN_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [prefillIds, decodeIds])
 

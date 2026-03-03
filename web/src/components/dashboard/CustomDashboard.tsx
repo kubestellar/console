@@ -37,6 +37,7 @@ import { CardRecommendations } from './CardRecommendations'
 import { MissionSuggestions } from './MissionSuggestions'
 import { TemplatesModal } from './TemplatesModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
+import { POLL_INTERVAL_MS } from '../../lib/constants/network'
 import { DashboardTemplate } from './templates'
 import { BaseModal } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
@@ -307,7 +308,7 @@ export function CustomDashboard() {
   // Auto-refresh
   useEffect(() => {
     if (!autoRefresh) return
-    const interval = setInterval(() => loadDashboard(true), 30000)
+    const interval = setInterval(() => loadDashboard(true), POLL_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [autoRefresh, loadDashboard])
 

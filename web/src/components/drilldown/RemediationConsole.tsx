@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { safeGetItem } from '../../lib/utils/localStorage'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { AI_THINKING_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
 import { useTranslation } from 'react-i18next'
 
 interface LogEntry {
@@ -128,7 +129,7 @@ export function RemediationConsole({
     })
     
     // Simulate brief loading for gathering initial data
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise(resolve => setTimeout(resolve, AI_THINKING_DELAY_MS))
     setIsLoadingInitialData(false)
 
     // Get the remediation flow based on issues
@@ -147,7 +148,7 @@ export function RemediationConsole({
 
       // Wait while paused
       while (isPaused && !abortRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise(resolve => setTimeout(resolve, FOCUS_DELAY_MS))
       }
 
       await new Promise(resolve => setTimeout(resolve, step.delay))
@@ -380,7 +381,7 @@ Labels:       app=${resourceName.split('-')[0]}
           <button
             onClick={() => {
               setActiveTab('shell')
-              setTimeout(() => shellInputRef.current?.focus(), 100)
+              setTimeout(() => shellInputRef.current?.focus(), FOCUS_DELAY_MS)
             }}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',

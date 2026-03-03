@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, TRANSITION_DELAY_MS } from '../lib/constants/network'
 import { emitAgentConnected, emitAgentDisconnected, emitConversionStep } from '../lib/analytics'
 
 export interface AgentHealth {
@@ -418,7 +418,7 @@ export function isAgentUnavailable(): boolean {
 export async function triggerAggressiveDetection(): Promise<boolean> {
   agentManager.aggressiveDetect()
   // Wait briefly for the immediate health check to resolve
-  await new Promise(resolve => setTimeout(resolve, 200))
+  await new Promise(resolve => setTimeout(resolve, TRANSITION_DELAY_MS))
   return agentManager.getState().status === 'connected'
 }
 

@@ -19,6 +19,7 @@ import type { Alert } from '../../types/alerts'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
+import { RETRY_DELAY_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -87,7 +88,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     setIsRunningDiagnosis(true)
     runAIDiagnosis(alert.id)
     // The diagnosis runs async via missions
-    const timeoutId = setTimeout(() => setIsRunningDiagnosis(false), 1000)
+    const timeoutId = setTimeout(() => setIsRunningDiagnosis(false), RETRY_DELAY_MS)
     timeoutsRef.current.push(timeoutId)
   }
 
@@ -96,7 +97,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     try {
       await sendNotification(alert, webhookId)
       setSlackSent(true)
-      const timeoutId = setTimeout(() => setSlackSent(false), 3000)
+      const timeoutId = setTimeout(() => setSlackSent(false), TOAST_DISMISS_MS)
       timeoutsRef.current.push(timeoutId)
     } catch (error) {
       console.error('Failed to send Slack notification:', error)

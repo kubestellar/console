@@ -3,7 +3,7 @@ import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 
 // Types
 export interface Workload {
@@ -98,7 +98,7 @@ async function fetchWorkloadsViaAgent(opts?: {
       if (opts?.namespace) params.append('namespace', opts.namespace)
 
       const ctrl = new AbortController()
-      const tid = setTimeout(() => ctrl.abort(), 15000)
+      const tid = setTimeout(() => ctrl.abort(), MCP_HOOK_TIMEOUT_MS)
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
         signal: ctrl.signal,
         headers: { Accept: 'application/json' },
@@ -207,7 +207,7 @@ export function useWorkloads(options?: {
       return
     }
     fetchData()
-    const interval = setInterval(fetchData, 30000)
+    const interval = setInterval(fetchData, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [fetchData, enabled])
 
@@ -246,7 +246,7 @@ export function useClusterCapabilities(enabled = true) {
       return
     }
     fetchData()
-    const interval = setInterval(fetchData, 60000)
+    const interval = setInterval(fetchData, POLL_INTERVAL_SLOW_MS)
     return () => clearInterval(interval)
   }, [fetchData, enabled])
 

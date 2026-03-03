@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plug, RefreshCw, Check, X, Copy, Cpu } from 'lucide-react'
 import type { AgentHealth } from '../../../hooks/useLocalAgent'
+import { UI_FEEDBACK_TIMEOUT_MS, RETRY_DELAY_MS } from '../../../lib/constants/network'
 
 interface AgentSectionProps {
   isConnected: boolean
@@ -21,13 +22,13 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
   const copyInstallCommand = async () => {
     await navigator.clipboard.writeText(INSTALL_COMMAND)
     setCopied(true)
-    timeoutRef.current = setTimeout(() => setCopied(false), 2000)
+    timeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const handleRefresh = () => {
     setIsRefreshing(true)
     refresh()
-    refreshTimerRef.current = setTimeout(() => setIsRefreshing(false), 1000)
+    refreshTimerRef.current = setTimeout(() => setIsRefreshing(false), RETRY_DELAY_MS)
   }
 
   // Cleanup timeouts on unmount

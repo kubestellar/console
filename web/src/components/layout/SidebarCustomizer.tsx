@@ -41,6 +41,7 @@ import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
 import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
+import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
 import { BaseModal } from '../../lib/modals'
 // NOTE: Wildcard import is required for dynamic icon resolution
@@ -281,7 +282,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     setGenerationResult(null)
 
     // Simulate analyzing behavior
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await new Promise(resolve => setTimeout(resolve, NAV_AFTER_ANIMATION_MS))
 
     // Get navigation history from localStorage
     let navHistory: string[] = []

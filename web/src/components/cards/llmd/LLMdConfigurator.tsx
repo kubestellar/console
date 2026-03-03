@@ -11,6 +11,7 @@ import { getConfiguratorPresets, type ConfiguratorPreset } from '../../../lib/ll
 import { useReportCardDataState } from '../CardDataContext'
 import { Acronym } from './shared/PortalTooltip'
 import { useTranslation } from 'react-i18next'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 const CATEGORY_ICONS = {
   scheduling: Zap,
@@ -197,7 +198,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
   const copyConfig = () => {
     navigator.clipboard.writeText(yamlConfig)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   return (

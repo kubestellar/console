@@ -4,7 +4,7 @@ import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../lib/constants/network'
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -215,7 +215,7 @@ export function useDeployMissions() {
                   params.append('cluster', clusterInfo.context || cluster)
                   params.append('namespace', mission.namespace)
                   const ctrl = new AbortController()
-                  const tid = setTimeout(() => ctrl.abort(), 10000)
+                  const tid = setTimeout(() => ctrl.abort(), DEPLOY_ABORT_TIMEOUT_MS)
                   const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                     signal: ctrl.signal,
                     headers: { Accept: 'application/json' },

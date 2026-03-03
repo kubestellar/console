@@ -10,6 +10,7 @@ import { Download, Monitor, Smartphone, Copy, Check, ExternalLink, Info } from '
 import { useTranslation } from 'react-i18next'
 import { BACKEND_DEFAULT_URL } from '../../lib/constants'
 import { BaseModal } from '../../lib/modals'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import {
   WIDGET_CARDS,
   WIDGET_STATS,
@@ -119,7 +120,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
     await navigator.clipboard.writeText(widgetCode)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   // Toggle stat selection

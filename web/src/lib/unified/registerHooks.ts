@@ -13,6 +13,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { registerDataHook } from './card/hooks/useDataSource'
+import { SHORT_DELAY_MS } from '../constants/network'
 import {
   useCachedPodIssues,
   useCachedEvents,
@@ -422,7 +423,7 @@ function useDemoDataHook<T>(demoData: T[]) {
       return
     }
     setIsLoading(true)
-    const timer = setTimeout(() => setIsLoading(false), 500)
+    const timer = setTimeout(() => setIsLoading(false), SHORT_DELAY_MS)
     return () => clearTimeout(timer)
   }, [demoMode])
 

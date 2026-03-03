@@ -6,6 +6,7 @@ import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
+import { PROGRESS_SIMULATION_MS } from '../../lib/constants/network'
 
 interface Card {
   id: string
@@ -639,7 +640,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
     setAiError(null)
 
     // Small delay for UX feedback
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    await new Promise((resolve) => setTimeout(resolve, PROGRESS_SIMULATION_MS))
 
     const prompt = nlPrompt.trim()
     const detectedCardType = detectCardType(prompt)

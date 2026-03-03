@@ -24,6 +24,7 @@ import { useResolutions, type Resolution } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
 import { ShareMissionDialog } from './ShareMissionDialog'
 import { useTranslation } from 'react-i18next'
+import { DELETE_CONFIRM_TIMEOUT_MS } from '../../lib/constants/network'
 
 interface ResolutionHistoryPanelProps {
   onApplyResolution?: (resolution: Resolution) => void
@@ -56,7 +57,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
       setDeleteConfirmId(id)
       // Auto-clear confirm after 3s
       clearTimeout(deleteConfirmTimerRef.current)
-      deleteConfirmTimerRef.current = setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000)
+      deleteConfirmTimerRef.current = setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), DELETE_CONFIRM_TIMEOUT_MS)
     }
   }
 

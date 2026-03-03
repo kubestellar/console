@@ -4,6 +4,7 @@ import { Sparkles, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
 import { CARD_CONFIGS } from '../../config/cards'
+import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 
 interface Card {
   id: string
@@ -88,7 +89,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
     setAiSuggestion(null)
 
     // Simulate AI processing
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    await new Promise((resolve) => setTimeout(resolve, NAV_AFTER_ANIMATION_MS))
 
     // Parse the natural language and suggest a card type
     const prompt = nlPrompt.toLowerCase()

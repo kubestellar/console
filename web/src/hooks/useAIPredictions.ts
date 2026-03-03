@@ -11,7 +11,7 @@ import { setActiveTokenCategory } from './useTokenUsage'
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, WS_RECONNECT_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS, RETRY_DELAY_MS } from '../lib/constants/network'
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL = 30000 // Poll every 30 seconds as fallback
@@ -99,7 +99,7 @@ async function fetchAIPredictions(): Promise<void> {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    const timeoutId = setTimeout(() => controller.abort(), AI_PREDICTION_TIMEOUT_MS)
 
     const response = await fetch(`${AGENT_HTTP_URL}/predictions/ai`, {
       method: 'GET',
@@ -183,7 +183,7 @@ function connectWebSocket(): void {
       wsConnected = false
       ws = null
       // Reconnect after delay
-      setTimeout(connectWebSocket, 5000)
+      setTimeout(connectWebSocket, WS_RECONNECT_DELAY_MS)
     }
 
     ws.onerror = () => {
@@ -202,7 +202,7 @@ function connectWebSocket(): void {
 async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
   if (getDemoMode()) {
     // Simulate analysis in demo mode
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, UI_FEEDBACK_TIMEOUT_MS))
     aiPredictions = DEMO_AI_PREDICTIONS.map(p => ({
       ...p,
       id: `demo-ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -297,7 +297,7 @@ export function useAIPredictions() {
     try {
       await triggerAnalysis(specificProviders)
       // Wait a bit then fetch results
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
       await fetchAIPredictions()
     } finally {
       setIsAnalyzing(false)

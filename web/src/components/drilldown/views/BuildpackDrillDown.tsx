@@ -6,6 +6,7 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import type { BuildpackStatus } from '../../cards/buildpacks-status/BuildpacksStatus'
 import { Package, Layers, Server, Clock, FileText, History, Loader2, Stethoscope, Box, RefreshCw, GitBranch, AlertCircle, Check, Copy } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -361,7 +362,7 @@ Check:
   const handleCopy = (field: string, value: string) => {
     navigator.clipboard.writeText(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), 2000)
+    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const statusStyle = getStatusStyle(status)

@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { X, Terminal, Upload, FormInput, Copy, Check, Loader2, ChevronDown, ChevronUp, Shield, KeyRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
 interface AddClusterDialogProps {
   open: boolean
@@ -54,7 +55,7 @@ function CopyButton({ text }: { text: string }) {
     navigator.clipboard.writeText(text)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }, [text])
 
   return (

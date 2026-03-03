@@ -15,6 +15,7 @@ import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
+import { POLL_INTERVAL_FAST_MS } from '../../../lib/constants/network'
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -731,7 +732,7 @@ export function EPPRouting() {
     }
 
     updateMetrics()
-    const interval = setInterval(updateMetrics, 2000)
+    const interval = setInterval(updateMetrics, POLL_INTERVAL_FAST_MS)
     return () => clearInterval(interval)
   }, [dynamicNodes, nodePodMap, prometheusMetrics])
 

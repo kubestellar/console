@@ -4,6 +4,7 @@ import { TrendingUp, Save, RotateCcw, Sparkles, Clock, Percent, Layers, Info } f
 import type { PredictionSettings } from '../../../types/predictions'
 import { usePredictionFeedback } from '../../../hooks/usePredictionFeedback'
 import { CollapsibleSection } from '../../ui/CollapsibleSection'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface PredictionSettingsSectionProps {
   settings: PredictionSettings
@@ -29,7 +30,7 @@ export function PredictionSettingsSection({
   const handleSave = () => {
     setSaved(true)
     clearTimeout(savedTimerRef.current)
-    savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
+    savedTimerRef.current = setTimeout(() => setSaved(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const handleToggleAI = () => {

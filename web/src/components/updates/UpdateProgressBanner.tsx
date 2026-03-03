@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Check, AlertTriangle, X } from 'lucide-react'
 import type { UpdateProgress } from '../../types/updates'
+import { BANNER_DISMISS_MS } from '../../lib/constants/network'
 
 interface UpdateProgressBannerProps {
   progress: UpdateProgress | null
@@ -17,7 +18,7 @@ export function UpdateProgressBanner({ progress, onDismiss }: UpdateProgressBann
 
     // Auto-dismiss after success
     if (progress?.status === 'done') {
-      const timer = setTimeout(() => setVisible(false), 5000)
+      const timer = setTimeout(() => setVisible(false), BANNER_DISMISS_MS)
       return () => clearTimeout(timer)
     }
   }, [progress])

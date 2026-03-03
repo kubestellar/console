@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { QUICK_ABORT_TIMEOUT_MS } from '../lib/constants/network'
 
 export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
 
@@ -161,7 +162,7 @@ async function fetchTokenUsage() {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    const timeoutId = setTimeout(() => controller.abort(), QUICK_ABORT_TIMEOUT_MS)
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },

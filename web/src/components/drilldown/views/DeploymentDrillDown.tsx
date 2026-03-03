@@ -6,6 +6,7 @@ import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box, Minus, Plus } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
@@ -205,7 +206,7 @@ export function DeploymentDrillDown({ data }: Props) {
         // Success - update local state immediately
         setReplicas(targetReplicas)
         // Refetch data to get updated status
-        setTimeout(fetchData, 1000)
+        setTimeout(fetchData, RETRY_DELAY_MS)
       } else if (output.toLowerCase().includes('error') || output.toLowerCase().includes('forbidden')) {
         setScaleError(output || 'Failed to scale deployment')
       }
@@ -249,7 +250,7 @@ export function DeploymentDrillDown({ data }: Props) {
   const handleCopy = (field: string, value: string) => {
     navigator.clipboard.writeText(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), 2000)
+    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const isHealthy = readyReplicas === replicas && replicas > 0

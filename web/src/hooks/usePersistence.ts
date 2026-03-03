@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { useAuth } from '../lib/auth'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, POLL_INTERVAL_MS } from '../lib/constants/network'
 
 // =============================================================================
 // Types
@@ -222,7 +222,7 @@ export function usePersistence() {
     if (!config.enabled || !isBackendAvailable) return
 
     fetchStatus()
-    const interval = setInterval(fetchStatus, 30000) // Every 30 seconds
+    const interval = setInterval(fetchStatus, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [config.enabled, isBackendAvailable, fetchStatus])
 

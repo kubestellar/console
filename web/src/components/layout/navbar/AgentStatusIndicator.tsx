@@ -6,6 +6,7 @@ import { useDemoMode, isDemoModeForced, getDemoMode } from '../../../hooks/useDe
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 
 export function AgentStatusIndicator() {
   const { t } = useTranslation(['common'])
@@ -72,7 +73,7 @@ export function AgentStatusIndicator() {
   // Safety timeout: clear sticky flag after 3s even if agent never connects
   useEffect(() => {
     if (!isDemoMode && showDemoStyle) {
-      demoExitTimerRef.current = setTimeout(() => setShowDemoStyle(false), 3000)
+      demoExitTimerRef.current = setTimeout(() => setShowDemoStyle(false), TOAST_DISMISS_MS)
       return () => { if (demoExitTimerRef.current) clearTimeout(demoExitTimerRef.current) }
     }
   }, [isDemoMode, showDemoStyle])

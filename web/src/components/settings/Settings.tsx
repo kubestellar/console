@@ -15,6 +15,7 @@ import { useAccessibility } from '../../hooks/useAccessibility'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { usePredictionSettings } from '../../hooks/usePredictionSettings'
 import { usePersistedSettings, type SyncStatus } from '../../hooks/usePersistedSettings'
+import { BANNER_DISMISS_MS, UI_FEEDBACK_TIMEOUT_MS, TOOLTIP_HIDE_DELAY_MS } from '../../lib/constants/network'
 import { UpdateSettings } from './UpdateSettings'
 import {
   AISettingsSection,
@@ -113,7 +114,7 @@ export function Settings() {
   useEffect(() => {
     if (restoredFromFile) {
       setShowRestoredToast(true)
-      const timer = setTimeout(() => setShowRestoredToast(false), 5000)
+      const timer = setTimeout(() => setShowRestoredToast(false), BANNER_DISMISS_MS)
       return () => clearTimeout(timer)
     }
   }, [restoredFromFile])
@@ -154,13 +155,13 @@ export function Settings() {
         scrollToSection(hash, false)
         setActiveSection(hash)
         element.classList.add('ring-2', 'ring-purple-500/50')
-        setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+        setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), UI_FEEDBACK_TIMEOUT_MS)
       } else if (++attempts < maxAttempts) {
         requestAnimationFrame(tryScroll)
       }
     }
     // Initial delay for route transition, then retry with rAF
-    const timer = setTimeout(tryScroll, 50)
+    const timer = setTimeout(tryScroll, TOOLTIP_HIDE_DELAY_MS)
     return () => clearTimeout(timer)
   }, [location.pathname, location.hash])
 

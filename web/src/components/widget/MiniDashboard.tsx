@@ -13,6 +13,7 @@ import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { POLL_INTERVAL_MS } from '../../lib/constants/network'
 
 // Node data type from agent
 interface NodeData {
@@ -114,7 +115,7 @@ export function MiniDashboard() {
   // Initial fetch and subscribe to updates
   useEffect(() => {
     fetchNodes()
-    const interval = setInterval(fetchNodes, 30000)
+    const interval = setInterval(fetchNodes, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [fetchNodes])
 
@@ -200,7 +201,7 @@ export function MiniDashboard() {
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
-    const interval = setInterval(handleRefresh, 30000)
+    const interval = setInterval(handleRefresh, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [handleRefresh])
 

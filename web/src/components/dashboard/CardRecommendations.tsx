@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Clock, ChevronDown, X, Plus, AlertTriangle, Info, Lightbulb } from 'lucide-react'
 import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardRecommendations'
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
+import { AI_THINKING_DELAY_MS } from '../../lib/constants/network'
 
 interface Props {
   currentCardTypes: string[]
@@ -70,7 +71,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
 
   const handleAddCard = async (rec: CardRecommendation) => {
     setAddingCard(rec.id)
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise(resolve => setTimeout(resolve, AI_THINKING_DELAY_MS))
     onAddCard(rec.cardType, rec.config)
     setAddingCard(null)
     setExpandedRec(null)

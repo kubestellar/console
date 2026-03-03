@@ -5,6 +5,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
 
 // ---------------------------------------------------------------------------
@@ -156,7 +157,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
               params.append('cluster', c.context || c.name)
               if (namespace) params.append('namespace', namespace)
               const controller = new AbortController()
-              const timeoutId = setTimeout(() => controller.abort(), 15000)
+              const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
               const response = await fetch(`${LOCAL_AGENT_URL}/pvcs?${params}`, {
                 signal: controller.signal,
                 headers: { 'Accept': 'application/json' },

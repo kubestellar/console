@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { FOCUS_DELAY_MS } from '../lib/constants/network'
 
 const LAST_ROUTE_KEY = 'kubestellar-last-route'
 const SCROLL_POSITIONS_KEY = 'kubestellar-scroll-positions'
@@ -196,7 +197,7 @@ export function useLastRoute() {
 
       // Use shorter delay for faster convergence
       requestAnimationFrame(() => {
-        setTimeout(tryRestore, 100)
+        setTimeout(tryRestore, FOCUS_DELAY_MS)
       })
     }
 

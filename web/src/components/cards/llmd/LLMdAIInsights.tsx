@@ -12,6 +12,7 @@ import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
+import { PROGRESS_SIMULATION_MS } from '../../../lib/constants/network'
 
 const INSIGHT_ICONS = {
   optimization: Lightbulb,
@@ -352,7 +353,7 @@ export function LLMdAIInsights() {
     setChatInput('')
 
     // Generate contextual responses based on stack state
-    await new Promise(resolve => setTimeout(resolve, 800))
+    await new Promise(resolve => setTimeout(resolve, PROGRESS_SIMULATION_MS))
 
     let response: string
     const stack = stackContext?.selectedStack

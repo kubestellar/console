@@ -916,7 +916,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -955,7 +955,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
         // Add timeout to prevent hanging
         const deployPromise = kubectlProxy.getDeployments(kubectlContext, namespace)
         const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 15000)
+          setTimeout(() => resolve(null), MCP_HOOK_TIMEOUT_MS)
         )
         const deployData = await Promise.race([deployPromise, timeoutPromise])
 
@@ -1089,7 +1089,7 @@ export function useJobs(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/jobs?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -1155,7 +1155,7 @@ export function useHPAs(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/hpas?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -1213,7 +1213,7 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/replicasets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -1267,7 +1267,7 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/statefulsets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -1321,7 +1321,7 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/daemonsets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -1375,7 +1375,7 @@ export function useCronJobs(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/cronjobs?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },

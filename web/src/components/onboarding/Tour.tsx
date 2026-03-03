@@ -4,6 +4,7 @@ import { useTour, TourStep } from '../../hooks/useTour'
 import { useMissions } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { TOOLTIP_POSITION_DELAY_MS, SHORT_DELAY_MS } from '../../lib/constants/network'
 
 // KubeStellar logo with AI sparkle effect
 function KubeStellarAIIcon({ className }: { className?: string }) {
@@ -280,7 +281,7 @@ export function TourOverlay() {
           // Scroll target into view first
           target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
           // Wait for scroll to complete, then position tooltip
-          timeoutIds.push(setTimeout(positionTooltip, 400))
+          timeoutIds.push(setTimeout(positionTooltip, TOOLTIP_POSITION_DELAY_MS))
         } else {
           // Target already visible, position immediately
           positionTooltip()
@@ -298,7 +299,7 @@ export function TourOverlay() {
     // For steps that may have layout shifts (e.g., after sidebar closes),
     // reposition after a longer delay to catch the final layout
     if (currentStep.id === 'add-card' || currentStep.id === 'templates') {
-      timeoutIds.push(setTimeout(positionTooltip, 500))
+      timeoutIds.push(setTimeout(positionTooltip, SHORT_DELAY_MS))
     }
 
     // Reposition on window resize

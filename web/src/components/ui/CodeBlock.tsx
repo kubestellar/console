@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { Copy, Check, AlertCircle } from 'lucide-react'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
 interface CodeBlockProps {
   children: string
@@ -26,11 +27,11 @@ export function CodeBlock({ children, language = 'text', fontSize = 'sm' }: Code
       await navigator.clipboard.writeText(children)
       setCopied(true)
       setCopyFailed(false)
-      timeoutRef.current = setTimeout(() => setCopied(false), 2000)
+      timeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
     } catch (err) {
       console.error('Failed to copy:', err)
       setCopyFailed(true)
-      timeoutRef.current = setTimeout(() => setCopyFailed(false), 2000)
+      timeoutRef.current = setTimeout(() => setCopyFailed(false), UI_FEEDBACK_TIMEOUT_MS)
     }
   }
 

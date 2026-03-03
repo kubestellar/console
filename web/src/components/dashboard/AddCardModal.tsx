@@ -7,6 +7,7 @@ import { StatBlockFactoryModal } from './StatBlockFactoryModal'
 import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { useToast } from '../ui/Toast'
+import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../lib/constants/network'
 
 // Card catalog - all available cards organized by category
 const CARD_CATALOG = {
@@ -912,7 +913,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   useEffect(() => {
     if (isOpen && activeTab === 'browse') {
       // Delay slightly to ensure modal is rendered
-      const timer = setTimeout(() => searchInputRef.current?.focus(), 100)
+      const timer = setTimeout(() => searchInputRef.current?.focus(), FOCUS_DELAY_MS)
       return () => clearTimeout(timer)
     }
   }, [isOpen, activeTab])
@@ -925,7 +926,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
     setSelectedCards(new Set())
 
     // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
 
     const results = generateCardSuggestions(query)
     setSuggestions(results)

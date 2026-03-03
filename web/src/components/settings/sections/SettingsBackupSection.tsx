@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HardDrive, Check, Loader2, AlertCircle, WifiOff, Download, Upload, Shield } from 'lucide-react'
 import type { SyncStatus } from '../../../hooks/usePersistedSettings'
+import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 
 interface SettingsBackupSectionProps {
   syncStatus: SyncStatus
@@ -78,7 +79,7 @@ export function SettingsBackupSection({
       await onImport(file)
       setImportSuccess(true)
       clearTimeout(importSuccessTimerRef.current)
-      importSuccessTimerRef.current = setTimeout(() => setImportSuccess(false), 3000)
+      importSuccessTimerRef.current = setTimeout(() => setImportSuccess(false), TOAST_DISMISS_MS)
     } catch {
       setImportError(t('settings.backup.importFailed'))
     } finally {

@@ -18,6 +18,7 @@ import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions }
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { POLL_INTERVAL_MS } from '../../../lib/constants/network'
 
 // ============================================================================
 // Unified Item Type for all card items
@@ -268,7 +269,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     })
 
     // Poll every 30 seconds
-    const interval = setInterval(() => fetchAllNodes(), 30000)
+    const interval = setInterval(() => fetchAllNodes(), POLL_INTERVAL_MS)
 
     return () => {
       nodesSubscribers.delete(handleUpdate)

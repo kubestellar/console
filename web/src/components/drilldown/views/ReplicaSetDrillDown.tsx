@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
@@ -166,7 +167,7 @@ export function ReplicaSetDrillDown({ data }: Props) {
   const handleCopy = (field: string, value: string) => {
     navigator.clipboard.writeText(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), 2000)
+    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const isHealthy = readyReplicas === replicas && replicas > 0

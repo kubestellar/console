@@ -19,6 +19,7 @@ import { useAIMode } from '../../../hooks/useAIMode'
 import { useMissions } from '../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
 import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { POPUP_HIDE_DELAY_MS, TOOLTIP_HIDE_DELAY_MS } from '../../../lib/constants/network'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { useTranslation } from 'react-i18next'
 
@@ -113,7 +114,7 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
 
   const scheduleHide = useCallback(() => {
     cancelHide()
-    hideTimerRef.current = setTimeout(() => setShowPopup(false), 150)
+    hideTimerRef.current = setTimeout(() => setShowPopup(false), POPUP_HIDE_DELAY_MS)
   }, [cancelHide])
 
   useEffect(() => () => cancelHide(), [cancelHide])
@@ -805,7 +806,7 @@ export function NightlyE2EStatus() {
       setHoveredRun(run)
     } else {
       // Delay clearing so moving between adjacent dots doesn't flash to null
-      hoverTimeoutRef.current = setTimeout(() => setHoveredRun(null), 50)
+      hoverTimeoutRef.current = setTimeout(() => setHoveredRun(null), TOOLTIP_HIDE_DELAY_MS)
     }
   }, [])
 

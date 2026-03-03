@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
+import { LOADING_TIMEOUT_MS } from '../../../lib/constants/network'
 
 // Resource tree lens/view options
 type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
@@ -28,7 +29,7 @@ export function ClusterDrillDown({ data }: Props) {
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
   useEffect(() => {
     setLoadingTimedOut(false) // Reset on cluster change
-    const timer = setTimeout(() => setLoadingTimedOut(true), 5000)
+    const timer = setTimeout(() => setLoadingTimedOut(true), LOADING_TIMEOUT_MS)
     return () => clearTimeout(timer)
   }, [clusterName])
 

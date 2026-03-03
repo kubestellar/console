@@ -16,6 +16,7 @@ import {
   METRICS_SERVER_TIMEOUT_MS,
   MAX_CONCURRENT_KUBECTL_REQUESTS,
   POD_RESTART_ISSUE_THRESHOLD,
+  FOCUS_DELAY_MS,
 } from './constants'
 
 type MessageType = 'kubectl' | 'health' | 'clusters' | 'result' | 'error'
@@ -89,7 +90,7 @@ class KubectlProxy {
 
     if (this.isConnecting) {
       // Wait for existing connection attempt
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, FOCUS_DELAY_MS))
       return this.ensureConnected()
     }
 
@@ -720,7 +721,7 @@ class KubectlProxy {
 
     // Wait for all to complete
     while (results.length < contexts.length) {
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, FOCUS_DELAY_MS))
     }
 
     return results

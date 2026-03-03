@@ -13,6 +13,7 @@ import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { MarketplaceThumbnail } from './MarketplaceThumbnail'
+import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestIconSync } from '../../lib/iconSuggester'
 import { useTranslation } from 'react-i18next'
 
@@ -645,7 +646,7 @@ export function Marketplace() {
           }, 'primary')
         }
         showToast(`Installed "${item.name}" — redirecting to dashboard...`, 'success')
-        setTimeout(() => navigate(href), 1500)
+        setTimeout(() => navigate(href), NAV_AFTER_ANIMATION_MS)
       } else {
         showToast(`Installed "${item.name}"`, 'success')
       }

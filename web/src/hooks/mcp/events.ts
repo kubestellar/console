@@ -6,6 +6,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { registerCacheReset } from '../../lib/modeTransition'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
+import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ClusterEvent } from './types'
 
 // ---------------------------------------------------------------------------
@@ -113,7 +114,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         if (namespace) params.append('namespace', namespace)
         params.append('limit', limit.toString())
 
-        const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 15000)
+        const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), MCP_HOOK_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/events?${params}`, {
           signal,
           headers: { 'Accept': 'application/json' },

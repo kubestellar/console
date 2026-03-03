@@ -5,7 +5,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
-import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, SHORT_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
 // Demo Helm releases shown when in demo mode
@@ -372,8 +372,8 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
 
     if (!release) {
       setHistory([])
-      // Match MIN_SPIN_DURATION (500ms) so animation shows properly
-      setTimeout(() => setIsRefreshing(false), 500)
+      // Match MIN_SPIN_DURATION so animation shows properly
+      setTimeout(() => setIsRefreshing(false), SHORT_DELAY_MS)
       return
     }
     // Also set loading if no cached data (use functional update to check)
@@ -523,7 +523,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
     if (!release) {
       setValues(null)
       // Brief delay before clearing isRefreshing so animation shows
-      setTimeout(() => setIsRefreshing(false), 100)
+      setTimeout(() => setIsRefreshing(false), FOCUS_DELAY_MS)
       return
     }
 

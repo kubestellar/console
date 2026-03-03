@@ -4,6 +4,7 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { getDemoMode } from '../../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { POLL_INTERVAL_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface ClusterEvent {
   type: string
@@ -107,7 +108,7 @@ export function EventsDrillDown({ data }: Props) {
   // Initial fetch and auto-refresh every 30 seconds
   useEffect(() => {
     refetch()
-    refreshIntervalRef.current = setInterval(() => refetch(true), 30000)
+    refreshIntervalRef.current = setInterval(() => refetch(true), POLL_INTERVAL_MS)
     return () => {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
     }
@@ -140,7 +141,7 @@ export function EventsDrillDown({ data }: Props) {
       : `kubectl --context ${clusterShort} get events${namespace ? ` -n ${namespace}` : ' -A'} --sort-by=.lastTimestamp`
     navigator.clipboard.writeText(cmd)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   if (isLoading) {

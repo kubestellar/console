@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/useMCP'
+import { FLASH_ANIMATION_MS } from '../constants/network'
 import type { ClusterErrorType } from '../errorClassifier'
 
 // ============================================================================
@@ -665,7 +666,7 @@ export function useCardFlash(
       lastFlashTimeRef.current = now
 
       // Auto-reset after animation completes
-      setTimeout(() => setFlashType('none'), 1100)
+      setTimeout(() => setFlashType('none'), FLASH_ANIMATION_MS)
     }
   }, [value, threshold, cooldown, increaseType, decreaseType])
 

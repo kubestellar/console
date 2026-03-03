@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, Coins, RefreshCw } from 'lucide-react'
 import type { TokenUsage } from '../../../hooks/useTokenUsage'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface TokenUsageSectionProps {
   usage: TokenUsage
@@ -30,7 +31,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
     })
     setSaved(true)
     clearTimeout(savedTimerRef.current)
-    savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
+    savedTimerRef.current = setTimeout(() => setSaved(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   return (

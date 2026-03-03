@@ -17,6 +17,7 @@ import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
+import { KV_CACHE_UPDATE_INTERVAL_MS } from '../../../lib/constants/network'
 
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
@@ -521,7 +522,7 @@ export function KVCacheMonitor() {
     }
 
     updateStats()
-    const interval = setInterval(updateStats, 3000)
+    const interval = setInterval(updateStats, KV_CACHE_UPDATE_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [generateStats])
 

@@ -9,6 +9,7 @@ import {
   Code
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -186,7 +187,7 @@ export function AlertDrillDown({ data }: Props) {
   const handleCopy = (field: string, value: string) => {
     navigator.clipboard.writeText(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), 2000)
+    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   // Start AI diagnosis

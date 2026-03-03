@@ -21,6 +21,7 @@ import { DashboardHealthIndicator } from '../../../components/dashboard/Dashboar
 import { AddCardModal } from '../../../components/dashboard/AddCardModal'
 import { ConfigureCardModal } from '../../../components/dashboard/ConfigureCardModal'
 import { prefetchCardChunks } from '../../../components/cards/cardRegistry'
+import { SHORT_DELAY_MS } from '../../constants/network'
 
 /** Card suggestion type from AddCardModal */
 interface CardSuggestion {
@@ -118,7 +119,7 @@ export function UnifiedDashboard({
   const handleRefresh = useCallback(async () => {
     setIsLoading(true)
     // Simulate refresh - in real implementation this would trigger data refetch
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, SHORT_DELAY_MS))
     setLastUpdated(new Date())
     setIsLoading(false)
   }, [])

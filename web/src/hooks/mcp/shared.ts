@@ -10,6 +10,7 @@ import {
   METRICS_SERVER_TIMEOUT_MS,
   STORAGE_KEY_TOKEN,
 } from '../../lib/constants'
+import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
@@ -767,7 +768,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 1500)
+    const timeoutId = setTimeout(() => controller.abort(), MCP_PROBE_TIMEOUT_MS)
     const response = await fetch(`${LOCAL_AGENT_URL}/clusters`, {
       signal: controller.signal,
     })
@@ -1213,7 +1214,7 @@ async function checkHealthProgressively(clusterList: ClusterInfo[]) {
 
   // Wait for all to complete (non-blocking check)
   while (completed < clusterList.length) {
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise(resolve => setTimeout(resolve, FOCUS_DELAY_MS))
   }
 }
 

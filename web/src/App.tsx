@@ -18,6 +18,7 @@ import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { prefetchCardData } from './lib/prefetchCardData'
+import { SHORT_DELAY_MS } from './lib/constants/network'
 import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
@@ -153,7 +154,7 @@ if (typeof window !== 'undefined') {
   if (isDemoMode()) {
     prefetchRoutes()
   } else {
-    setTimeout(prefetchRoutes, 500)
+    setTimeout(prefetchRoutes, SHORT_DELAY_MS)
   }
 }
 

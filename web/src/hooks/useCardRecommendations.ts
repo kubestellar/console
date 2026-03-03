@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePodIssues, useDeploymentIssues, useWarningEvents, useGPUNodes, useClusters, useSecurityIssues } from './useMCP'
 import { useAIMode } from './useAIMode'
+import { RECOMMENDATION_INTERVAL_MS } from '../lib/constants/network'
 
 export interface CardRecommendation {
   id: string
@@ -159,7 +160,7 @@ export function useCardRecommendations(currentCardTypes: string[]) {
 
   // Re-analyze periodically
   useEffect(() => {
-    const interval = setInterval(analyzeAndRecommend, 60000) // Every minute
+    const interval = setInterval(analyzeAndRecommend, RECOMMENDATION_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [analyzeAndRecommend])
 

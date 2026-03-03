@@ -9,6 +9,7 @@ import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loade
 import { cn } from '../../../lib/cn'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import { useTranslation } from 'react-i18next'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 // Helper to determine issue severity for styling
 const getIssueSeverity = (issue: string): 'critical' | 'warning' | 'info' => {
@@ -806,7 +807,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
   const handleCopy = (field: string, value: string) => {
     navigator.clipboard.writeText(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), 2000)
+    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   // Save label changes via kubectl

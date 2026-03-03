@@ -25,6 +25,7 @@
 import { ReactNode, useState, useEffect, useRef } from 'react'
 import { Copy, Check, ChevronDown, ChevronRight, ExternalLink, AlertCircle } from 'lucide-react'
 import { getStatusColors, NavigationTarget } from './types'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../constants/network'
 
 // ============================================================================
 // Key-Value Section
@@ -93,7 +94,7 @@ function KeyValueItem({
     await navigator.clipboard.writeText(textValue)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const renderValue = () => {

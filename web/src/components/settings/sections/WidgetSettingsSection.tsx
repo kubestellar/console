@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Monitor, Download, Copy, Check, ExternalLink, Smartphone, Globe, Apple, Chrome } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { TOAST_DISMISS_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 // The widget code that gets downloaded - includes drag functionality
 const WIDGET_CODE = `/**
@@ -401,14 +402,14 @@ export function WidgetSettingsSection() {
     URL.revokeObjectURL(url)
     setDownloaded(true)
     clearTimeout(downloadedTimerRef.current)
-    downloadedTimerRef.current = setTimeout(() => setDownloaded(false), 3000)
+    downloadedTimerRef.current = setTimeout(() => setDownloaded(false), TOAST_DISMISS_MS)
   }
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(WIDGET_CODE)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const widgetPath = '~/Library/Application Support/Übersicht/widgets/'

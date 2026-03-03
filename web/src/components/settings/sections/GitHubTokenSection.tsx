@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2 } from 'lucide-react'
 import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
+import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -67,12 +68,12 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         if (section) {
           setTimeout(() => {
             section.classList.add('ring-2', 'ring-purple-500/50')
-            setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+            setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), UI_FEEDBACK_TIMEOUT_MS)
           }, 400)
         }
 
         if (input) {
-          setTimeout(() => input.focus(), 600) // Focus after scroll completes
+          setTimeout(() => input.focus(), SCROLL_COMPLETE_MS) // Focus after scroll completes
         }
 
         // Clean up URL
@@ -133,7 +134,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       setHasGithubToken(true)
       setGithubToken('')
       setGithubTokenSaved(true)
-      setTimeout(() => setGithubTokenSaved(false), 2000)
+      setTimeout(() => setGithubTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
 
       emitGitHubTokenConfigured()
       emitConversionStep(6, 'github_token')

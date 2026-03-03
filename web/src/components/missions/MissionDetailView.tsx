@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
 type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting'
 
@@ -82,7 +83,7 @@ function CopyButton({ text }: { text: string }) {
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
     })
   }, [text])
 

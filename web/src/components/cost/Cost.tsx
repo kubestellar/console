@@ -9,6 +9,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
+import { TICK_INTERVAL_MS } from '../../lib/constants/network'
 
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
 
@@ -58,7 +59,7 @@ export function Cost() {
     }
     window.addEventListener('storage', handleStorageChange)
     // Also poll for changes since storage event doesn't fire for same-tab changes
-    const interval = setInterval(handleStorageChange, 1000)
+    const interval = setInterval(handleStorageChange, TICK_INTERVAL_MS)
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       clearInterval(interval)

@@ -4,6 +4,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
 import { extractJsonFromMarkdown } from '../../lib/ai/extractJson'
 import { cn } from '../../lib/cn'
+import { CLOSE_ANIMATION_MS } from '../../lib/constants/network'
 
 type Phase = 'idle' | 'generating' | 'parsed' | 'error'
 
@@ -98,7 +99,7 @@ export function AiGenerationPanel<T>({
       setParsedResult(null)
       setParseError(null)
       // Close sidebar so modal stays focused
-      setTimeout(() => closeSidebar(), 150)
+      setTimeout(() => closeSidebar(), CLOSE_ANIMATION_MS)
     })
   }, [userPrompt, systemPrompt, missionTitle, startMission, closeSidebar, checkKeyAndRun])
 

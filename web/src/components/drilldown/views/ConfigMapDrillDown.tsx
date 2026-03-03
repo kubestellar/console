@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Layers, Server, Database } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -125,7 +126,7 @@ export function ConfigMapDrillDown({ data }: Props) {
   const handleCopy = (field: string, value: string) => {
     navigator.clipboard.writeText(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), 2000)
+    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [

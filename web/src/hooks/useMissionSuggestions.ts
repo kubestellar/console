@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePodIssues, useDeploymentIssues, useSecurityIssues, useClusters, useNodes, usePods } from './useMCP'
 import { useSnoozedMissions } from './useSnoozedMissions'
+import { MISSION_SUGGEST_INTERVAL_MS } from '../lib/constants/network'
 
 export type MissionType =
   | 'scale'           // Workloads that may need scaling
@@ -255,7 +256,7 @@ export function useMissionSuggestions() {
 
   // Re-analyze periodically (every 2 minutes)
   useEffect(() => {
-    const interval = setInterval(analyzeAndSuggest, 120000)
+    const interval = setInterval(analyzeAndSuggest, MISSION_SUGGEST_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [analyzeAndSuggest])
 

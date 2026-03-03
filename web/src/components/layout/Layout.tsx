@@ -18,6 +18,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { CLOSE_ANIMATION_MS, TICK_INTERVAL_MS, NAV_AFTER_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
@@ -48,7 +49,7 @@ function NavigationProgress() {
     if (location.pathname !== prevPath.current) {
       setIsNavigating(true)
       prevPath.current = location.pathname
-      const timer = setTimeout(() => setIsNavigating(false), 150)
+      const timer = setTimeout(() => setIsNavigating(false), CLOSE_ANIMATION_MS)
       return () => clearTimeout(timer)
     }
   }, [location.pathname])
@@ -77,13 +78,13 @@ export function ContentLoadingSkeleton() {
   const [stageIndex, setStageIndex] = useState(0)
 
   useEffect(() => {
-    const timer = setInterval(() => setElapsed(t => t + 1), 1000)
+    const timer = setInterval(() => setElapsed(t => t + 1), TICK_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [])
 
   useEffect(() => {
     if (stageIndex < LOADING_STAGES.length - 1) {
-      const timer = setTimeout(() => setStageIndex(i => i + 1), 1500)
+      const timer = setTimeout(() => setStageIndex(i => i + 1), NAV_AFTER_ANIMATION_MS)
       return () => clearTimeout(timer)
     }
   }, [stageIndex])
@@ -125,7 +126,7 @@ export function Layout({ children }: LayoutProps) {
     try {
       await navigator.clipboard.writeText('./startup-oauth.sh')
       setRestartState('copied')
-      setTimeout(() => setRestartState('idle'), 2000)
+      setTimeout(() => setRestartState('idle'), UI_FEEDBACK_TIMEOUT_MS)
     } catch {
       setRestartState('idle')
     }
@@ -243,7 +244,7 @@ export function Layout({ children }: LayoutProps) {
     if (wasDown && !backendDown) {
       setRestartState('idle')
       setWasBackendDown(true)
-      const timer = setTimeout(() => setWasBackendDown(false), 3000)
+      const timer = setTimeout(() => setWasBackendDown(false), TOAST_DISMISS_MS)
       return () => clearTimeout(timer)
     }
   }, [backendDown])

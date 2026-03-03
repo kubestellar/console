@@ -13,6 +13,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
+import { SHORT_DELAY_MS } from '../../lib/constants/network'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
@@ -70,7 +71,7 @@ export function Security() {
     try {
       // In a real implementation, this would refetch security data
       // For now, just simulate a refresh
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, SHORT_DELAY_MS))
       setLastUpdated(new Date())
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to refresh security data'

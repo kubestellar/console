@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../lib/constants/network'
 import { useDemoMode } from './useDemoMode'
 import { useClusterProgress } from './useClusterProgress'
 
@@ -119,7 +119,7 @@ export function useLocalClusterTools() {
       setError(null)
       
       // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
       
       setIsCreating(false)
       return { 
@@ -167,7 +167,7 @@ export function useLocalClusterTools() {
       setError(null)
       
       // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
       
       setIsDeleting(null)
       // In demo mode, we don't actually modify the demo data
@@ -190,7 +190,7 @@ export function useLocalClusterTools() {
 
       if (response.ok) {
         // Refresh clusters list after deletion starts
-        setTimeout(() => fetchClusters(), 2000)
+        setTimeout(() => fetchClusters(), UI_FEEDBACK_TIMEOUT_MS)
         return true
       } else {
         const text = await response.text()

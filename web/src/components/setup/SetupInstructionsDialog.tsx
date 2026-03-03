@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
 interface SetupInstructionsDialogProps {
   isOpen: boolean
@@ -44,7 +45,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
     await navigator.clipboard.writeText(text)
     setCopiedStep(stepKey)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), 2000)
+    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   return (

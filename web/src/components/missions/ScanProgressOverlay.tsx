@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { FileScanResult, ScanFinding } from '../../lib/missions/types'
+import { PROGRESS_SIMULATION_MS } from '../../lib/constants/network'
 
 interface ScanProgressOverlayProps {
   isScanning: boolean
@@ -47,7 +48,7 @@ export function ScanProgressOverlay({
 
   useEffect(() => {
     if (result && visibleFindings.length === result.findings.length) {
-      const timer = setTimeout(() => onComplete(result), 800)
+      const timer = setTimeout(() => onComplete(result), PROGRESS_SIMULATION_MS)
       return () => clearTimeout(timer)
     }
   }, [result, visibleFindings.length, onComplete])

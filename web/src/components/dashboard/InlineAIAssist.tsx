@@ -6,6 +6,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/sha
 import { useAIMode } from '../../hooks/useAIMode'
 import { extractJsonFromMarkdown } from '../../lib/ai/extractJson'
 import { cn } from '../../lib/cn'
+import { CLOSE_ANIMATION_MS } from '../../lib/constants/network'
 
 interface InlineAIAssistProps<T> {
   systemPrompt: string
@@ -102,7 +103,7 @@ export function InlineAIAssist<T>({
       setMissionId(id)
       setPhase('generating')
       setError(null)
-      setTimeout(() => closeSidebar(), 150)
+      setTimeout(() => closeSidebar(), CLOSE_ANIMATION_MS)
     })
   }, [input, systemPrompt, startMission, closeSidebar, checkKeyAndRun])
 

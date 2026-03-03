@@ -3,6 +3,7 @@ import { Copy, Check, Download, RefreshCw } from 'lucide-react'
 import { api } from '../../../lib/api'
 import { useToast } from '../../ui/Toast'
 import { useTranslation } from 'react-i18next'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface Props {
   data: Record<string, unknown>
@@ -56,7 +57,7 @@ export function YAMLDrillDown({ data }: Props) {
       await navigator.clipboard.writeText(yaml)
       setCopied(true)
       clearTimeout(copiedTimerRef.current)
-      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+      copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
     } catch (err) {
       console.error('Failed to copy:', err)
       showToast('Failed to copy to clipboard', 'error')

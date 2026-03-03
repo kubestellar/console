@@ -11,6 +11,7 @@ import type {
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
+import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
 
@@ -151,9 +152,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
 
     // Initial fetch after short delay
-    const timer = setTimeout(fetchCronJobResults, 5000)
+    const timer = setTimeout(fetchCronJobResults, INITIAL_FETCH_DELAY_MS)
     // Refresh every 60 seconds
-    const interval = setInterval(fetchCronJobResults, 60000)
+    const interval = setInterval(fetchCronJobResults, POLL_INTERVAL_SLOW_MS)
     return () => {
       clearTimeout(timer)
       clearInterval(interval)
@@ -179,7 +180,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const timer = setTimeout(fetchNightlyE2E, 8000)
+    const timer = setTimeout(fetchNightlyE2E, SECONDARY_FETCH_DELAY_MS)
     const interval = setInterval(fetchNightlyE2E, 5 * 60 * 1000)
     return () => {
       clearTimeout(timer)

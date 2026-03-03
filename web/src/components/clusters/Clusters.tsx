@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNVIDIAOperators, useNamespaceStats, useNodes, usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, useSecrets, usePodLogs, ClusterInfo, refreshSingleCluster } from '../../hooks/useMCP'
 import { AddCardModal } from '../dashboard/AddCardModal'
+import { LOADING_TIMEOUT_EXTENDED_MS } from '../../lib/constants/network'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
@@ -357,7 +358,7 @@ function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps)
 
   // Timeout after 10 seconds to prevent infinite loading
   useEffect(() => {
-    const timer = setTimeout(() => setLoadingTimedOut(true), 10000)
+    const timer = setTimeout(() => setLoadingTimedOut(true), LOADING_TIMEOUT_EXTENDED_MS)
     return () => clearTimeout(timer)
   }, [clusterName, namespace])
 

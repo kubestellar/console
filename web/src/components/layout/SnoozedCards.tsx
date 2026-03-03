@@ -6,6 +6,7 @@ import { useSnoozedRecommendations, formatElapsedTime, SnoozedRecommendation } f
 import { useSnoozedMissions, SnoozedMission, formatTimeRemaining as formatMissionTimeRemaining } from '../../hooks/useSnoozedMissions'
 import { MissionType } from '../../hooks/useMissionSuggestions'
 import { cn } from '../../lib/cn'
+import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
@@ -32,7 +33,7 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
 
   // Update every minute to refresh time display
   useEffect(() => {
-    const interval = setInterval(() => forceUpdate((n) => n + 1), 60000)
+    const interval = setInterval(() => forceUpdate((n) => n + 1), POLL_INTERVAL_SLOW_MS)
     return () => clearInterval(interval)
   }, [])
 

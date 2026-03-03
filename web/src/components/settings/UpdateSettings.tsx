@@ -28,6 +28,7 @@ import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { checkOAuthConfigured } from '../../lib/api'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import type { UpdateChannel } from '../../types/updates'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
 /** Minimum spin duration to guarantee one full rotation (matches cards) */
 const MIN_SPIN_DURATION = 1000
@@ -54,7 +55,7 @@ function scrollToSettingsSection(sectionId: string) {
   const y = elementRect.top - containerRect.top + container.scrollTop - 16
   container.scrollTo({ top: y, behavior: 'smooth' })
   element.classList.add('ring-2', 'ring-purple-500/50')
-  setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+  setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), UI_FEEDBACK_TIMEOUT_MS)
 }
 
 export function UpdateSettings() {
@@ -182,7 +183,7 @@ export function UpdateSettings() {
     await navigator.clipboard.writeText(command)
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     setCopiedCommand(id)
-    copyTimeoutRef.current = setTimeout(() => setCopiedCommand(null), 2000)
+    copyTimeoutRef.current = setTimeout(() => setCopiedCommand(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const formatLastChecked = () => {
