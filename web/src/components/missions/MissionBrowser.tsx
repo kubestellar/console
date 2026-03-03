@@ -34,6 +34,7 @@ import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
+import { useClusterContext } from '../../hooks/useClusterContext'
 import {
   emitSolutionSearchStarted,
   emitSolutionSearchCompleted,
@@ -284,6 +285,7 @@ function resetMissionCache(tab?: 'installers' | 'solutions') {
 export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: MissionBrowserProps) {
   useTranslation(['common', 'cards'])
   const { user, isAuthenticated } = useAuth()
+  const { clusterContext } = useClusterContext()
 
   // Navigation state
   const [searchQuery, setSearchQuery] = useState('')
@@ -434,19 +436,16 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       setSearchProgress({ step: 'Connecting', detail: 'Fetching cluster info…', found: 0, scanned: 0 })
 
       try {
-        // Step 1: Get cluster info + browse top-level in parallel
-        const [clusterWrap, topLevel] = await Promise.all([
-          api.get<{ name: string; provider?: string; version?: string; resources?: string[]; issues?: string[]; labels?: Record<string, string> }>('/api/cluster/current').catch(() => null),
-          api.get<BrowseEntry[]>('/api/missions/browse?path=solutions').catch((err) => {
-            const code = err?.response?.data?.code
-            if (code === 'rate_limited' || code === 'token_invalid') {
-              setTokenError(code)
-            }
-            return { data: [] as BrowseEntry[] }
-          }),
-        ])
+        // Step 1: Use live cluster context from hooks + browse top-level
+        const cluster = clusterContext
+        const topLevel = await api.get<BrowseEntry[]>('/api/missions/browse?path=solutions').catch((err) => {
+          const code = err?.response?.data?.code
+          if (code === 'rate_limited' || code === 'token_invalid') {
+            setTokenError(code)
+          }
+          return { data: [] as BrowseEntry[] }
+        })
         if (cancelled) return
-        const cluster = clusterWrap?.data ?? null
         setHasCluster(!!cluster)
         emitSolutionSearchStarted(!!cluster)
         const topDirs = (topLevel?.data ?? []).filter(e => e.type === 'directory')
@@ -534,7 +533,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
     fetchRecommendations()
     return () => { cancelled = true }
-  }, [isOpen])
+  }, [isOpen, clusterContext])
 
   // ============================================================================
   // Subscribe to module-level mission cache and trigger fetch on first open
