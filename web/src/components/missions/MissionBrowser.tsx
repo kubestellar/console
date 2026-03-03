@@ -497,7 +497,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   useEffect(() => {
     if (!initialMission || !isOpen || selectedMission) return
     const match = installerMissions.find(
-      (m) => m.title.toLowerCase().includes(initialMission.toLowerCase()) ||
+      (m) => (m.title || '').toLowerCase().includes(initialMission.toLowerCase()) ||
              (m.cncfProject && m.cncfProject.toLowerCase() === initialMission.replace('install-', '').toLowerCase())
     )
     if (match) {
@@ -846,7 +846,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       difficulty.set(diff, (difficulty.get(diff) || 0) + 1)
       const cls = r.mission.missionClass || 'unspecified'
       missionClass.set(cls, (missionClass.get(cls) || 0) + 1)
-      for (const tag of r.mission.tags) {
+      for (const tag of (r.mission.tags || [])) {
         const t = tag.toLowerCase()
         tags.set(t, (tags.get(t) || 0) + 1)
       }
@@ -899,7 +899,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
     if (categoryFilter !== 'All') {
       recs = recs.filter(
-        (r) => r.mission.type.toLowerCase() === categoryFilter.toLowerCase()
+        (r) => (r.mission.type || '').toLowerCase() === categoryFilter.toLowerCase()
       )
     }
 
@@ -917,7 +917,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
     if (selectedTags.size > 0) {
       recs = recs.filter((r) =>
-        r.mission.tags.some((tag) => selectedTags.has(tag.toLowerCase()))
+        (r.mission.tags || []).some((tag) => selectedTags.has(tag.toLowerCase()))
       )
     }
 
@@ -932,9 +932,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       const q = searchQuery.toLowerCase()
       recs = recs.filter(
         (r) =>
-          r.mission.title.toLowerCase().includes(q) ||
-          r.mission.description.toLowerCase().includes(q) ||
-          r.mission.tags.some((tag) => tag.toLowerCase().includes(q))
+          (r.mission.title || '').toLowerCase().includes(q) ||
+          (r.mission.description || '').toLowerCase().includes(q) ||
+          (r.mission.tags || []).some((tag) => tag.toLowerCase().includes(q))
       )
     }
 
@@ -2177,8 +2177,14 @@ function formatBytes(bytes: number): string {
 
 /** Normalize kc-mission-v1 JSON (nested format) into flat MissionExport shape */
 function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
-  // Already flat MissionExport
-  if (raw.title && raw.type && raw.tags) return raw as unknown as MissionExport
+  // Already flat MissionExport — ensure required string fields have defaults
+  if (raw.title && raw.type && raw.tags) {
+    const flat = raw as unknown as MissionExport
+    if (!flat.description) flat.description = ''
+    if (!flat.version) flat.version = 'unknown'
+    if (!flat.steps) flat.steps = []
+    return flat
+  }
 
   // kc-mission-v1 nested format: { version|format, mission: { ... }, metadata: { ... } }
   const m = raw.mission as Record<string, unknown> | undefined

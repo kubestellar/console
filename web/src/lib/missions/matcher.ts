@@ -148,7 +148,7 @@ export function matchMissionsToCluster(
 
       // Match troubleshoot missions against cluster issues (direct text match)
       if (mission.type === 'troubleshoot' && cluster.issues) {
-        const descLower = mission.description.toLowerCase()
+        const descLower = (mission.description || '').toLowerCase()
         for (const issue of cluster.issues) {
           if (descLower.includes(issue.toLowerCase())) {
             score += 40
@@ -159,7 +159,7 @@ export function matchMissionsToCluster(
 
       // Match upgrade missions against version
       if (mission.type === 'upgrade' && cluster.version) {
-        const descLower = mission.description.toLowerCase()
+        const descLower = (mission.description || '').toLowerCase()
         if (descLower.includes(cluster.version) || descLower.includes('upgrade')) {
           score += 15
           matchReasons.push('Relevant to cluster version')
