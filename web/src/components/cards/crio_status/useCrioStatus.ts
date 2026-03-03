@@ -184,7 +184,13 @@ export function useCrioStatus(): UseCrioStatusResult {
       fetcher: fetchCrioStatus,
     })
 
-  const hasAnyData = data.totalNodes > 0 || data.health !== 'not-installed'
+  // hasAnyData is true only when CRI-O nodes exist.
+  // 'not-installed' is NOT counted as "has data" so that:
+  //   - a successful fetch with no CRI-O nodes (health='not-installed') triggers showEmptyState,
+  //     and the component falls through to the data.health === 'not-installed' check.
+  //   - a failed fetch with initial data (also health='not-installed') sets error=true
+  //     so the component shows the fetchError UI instead.
+  const hasAnyData = data.totalNodes > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
