@@ -68,11 +68,17 @@ export function DashboardHeader({
 
   // Self-managed timestamp: updates when isFetching goes true → false
   const [internalLastUpdated, setInternalLastUpdated] = useState<Date>(() => new Date())
+  // Spin the refresh icon — starts on fetch, completes at least one full turn
+  const [spinning, setSpinning] = useState(false)
   const wasFetchingRef = useRef(isFetching)
 
   useEffect(() => {
     if (wasFetchingRef.current && !isFetching) {
       setInternalLastUpdated(new Date())
+    }
+    // Start spinning when fetch begins
+    if (!wasFetchingRef.current && isFetching) {
+      setSpinning(true)
     }
     wasFetchingRef.current = isFetching
   }, [isFetching])
@@ -149,7 +155,13 @@ export function DashboardHeader({
             className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
             title={t('common.refreshClusterData')}
           >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className="w-4 h-4"
+              style={spinning ? {
+                animation: `spin 0.6s linear ${isFetching ? 'infinite' : '1'}`,
+              } : undefined}
+              onAnimationEnd={() => setSpinning(false)}
+            />
           </button>
         </div>
         {error ? (

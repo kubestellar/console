@@ -109,6 +109,11 @@ export function useMarketplace() {
     setIsLoading(true)
     setError(null)
 
+    // On manual refresh, clear the localStorage cache so stale data never persists
+    if (skipCache) {
+      try { localStorage.removeItem(CACHE_KEY) } catch { /* non-critical */ }
+    }
+
     // Check localStorage cache (skip on manual refresh)
     if (!skipCache) {
       try {
