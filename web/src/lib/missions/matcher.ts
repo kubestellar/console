@@ -205,8 +205,14 @@ export function matchMissionsToCluster(
       }
     }
 
-    results.push({ mission, score, matchReasons })
+    results.push({ mission, score, matchPercent: 0, matchReasons })
   }
 
-  return results.sort((a, b) => b.score - a.score)
+  results.sort((a, b) => b.score - a.score)
+  const maxScore = results[0]?.score || 1
+  for (const r of results) {
+    r.matchPercent = Math.round((r.score / maxScore) * 100)
+  }
+
+  return results
 }

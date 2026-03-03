@@ -101,6 +101,7 @@ export interface BrowseEntry {
 export interface MissionMatch {
   mission: MissionExport
   score: number
+  matchPercent: number
   matchReasons: string[]
 }
 

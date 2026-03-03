@@ -291,6 +291,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('All')
   const [cncfFilter, setCncfFilter] = useState<string>('')
+  const [minMatchPercent, setMinMatchPercent] = useState<number>(0)
+  const [matchSourceFilter, setMatchSourceFilter] = useState<'all' | 'cluster' | 'community'>('all')
+  const [maturityFilter, setMaturityFilter] = useState<string>('All')
+  const [missionClassFilter, setMissionClassFilter] = useState<string>('All')
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('All')
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [showFilters, setShowFilters] = useState(false)
 
@@ -430,23 +436,23 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     // Derive recommendations from the existing mission cache (no separate scan)
     setTokenError(null)
     function updateRecommendations() {
-      const allMissions = [...missionCache.solutions, ...missionCache.installers]
+      const allMissions = [...missionCache.solutions]
       if (allMissions.length === 0) {
-        if (!missionCache.solutionsDone || !missionCache.installersDone) {
+        if (!missionCache.solutionsDone) {
           setLoadingRecommendations(true)
-          setSearchProgress({ step: 'Scanning', detail: 'Loading missions…', found: 0, scanned: 0 })
+          setSearchProgress({ step: 'Scanning', detail: 'Loading solutions…', found: 0, scanned: 0 })
         }
         return
       }
       const cluster = clusterContextRef.current
       setHasCluster(!!cluster)
-      const matched = matchMissionsToCluster(allMissions, cluster).slice(0, 6)
+      const matched = matchMissionsToCluster(allMissions, cluster)
       setRecommendations(matched)
       setLoadingRecommendations(false)
-      const done = missionCache.solutionsDone && missionCache.installersDone
+      const done = missionCache.solutionsDone
       setSearchProgress({
         step: done ? 'Done' : 'Scanning',
-        detail: `${allMissions.length} missions`,
+        detail: `${allMissions.length} solutions`,
         found: allMissions.length,
         scanned: allMissions.length,
       })
@@ -822,12 +828,96 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Filtered recommendations
   // ============================================================================
 
+  // Compute dynamic facet counts from unfiltered recommendations
+  const facetCounts = useMemo(() => {
+    const tags = new Map<string, number>()
+    const maturity = new Map<string, number>()
+    const difficulty = new Map<string, number>()
+    const missionClass = new Map<string, number>()
+    let clusterMatched = 0
+    let community = 0
+
+    for (const r of recommendations) {
+      if (r.score > 1) clusterMatched++
+      else community++
+      const mat = r.mission.metadata?.maturity || 'unknown'
+      maturity.set(mat, (maturity.get(mat) || 0) + 1)
+      const diff = r.mission.difficulty || 'unspecified'
+      difficulty.set(diff, (difficulty.get(diff) || 0) + 1)
+      const cls = r.mission.missionClass || 'unspecified'
+      missionClass.set(cls, (missionClass.get(cls) || 0) + 1)
+      for (const tag of r.mission.tags) {
+        const t = tag.toLowerCase()
+        tags.set(t, (tags.get(t) || 0) + 1)
+      }
+    }
+    const topTags = [...tags.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([tag, count]: [string, number]) => ({ tag, count }))
+
+    return { clusterMatched, community, maturity, difficulty, missionClass, topTags }
+  }, [recommendations])
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (minMatchPercent > 0) count++
+    if (categoryFilter !== 'All') count++
+    if (matchSourceFilter !== 'all') count++
+    if (maturityFilter !== 'All') count++
+    if (missionClassFilter !== 'All') count++
+    if (difficultyFilter !== 'All') count++
+    if (selectedTags.size > 0) count++
+    if (cncfFilter) count++
+    return count
+  }, [minMatchPercent, categoryFilter, matchSourceFilter, maturityFilter, missionClassFilter, difficultyFilter, selectedTags, cncfFilter])
+
+  const clearAllFilters = useCallback(() => {
+    setMinMatchPercent(0)
+    setCategoryFilter('All')
+    setMatchSourceFilter('all')
+    setMaturityFilter('All')
+    setMissionClassFilter('All')
+    setDifficultyFilter('All')
+    setSelectedTags(new Set())
+    setCncfFilter('')
+    setSearchQuery('')
+  }, [])
+
   const filteredRecommendations = useMemo(() => {
     let recs = recommendations
+
+    if (minMatchPercent > 0) {
+      recs = recs.filter((r) => r.matchPercent >= minMatchPercent)
+    }
+
+    if (matchSourceFilter === 'cluster') {
+      recs = recs.filter((r) => r.score > 1)
+    } else if (matchSourceFilter === 'community') {
+      recs = recs.filter((r) => r.score <= 1)
+    }
 
     if (categoryFilter !== 'All') {
       recs = recs.filter(
         (r) => r.mission.type.toLowerCase() === categoryFilter.toLowerCase()
+      )
+    }
+
+    if (maturityFilter !== 'All') {
+      recs = recs.filter((r) => (r.mission.metadata?.maturity || 'unknown').toLowerCase() === maturityFilter.toLowerCase())
+    }
+
+    if (missionClassFilter !== 'All') {
+      recs = recs.filter((r) => (r.mission.missionClass || 'unspecified').toLowerCase() === missionClassFilter.toLowerCase())
+    }
+
+    if (difficultyFilter !== 'All') {
+      recs = recs.filter((r) => (r.mission.difficulty || 'unspecified').toLowerCase() === difficultyFilter.toLowerCase())
+    }
+
+    if (selectedTags.size > 0) {
+      recs = recs.filter((r) =>
+        r.mission.tags.some((tag) => selectedTags.has(tag.toLowerCase()))
       )
     }
 
@@ -849,7 +939,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     }
 
     return recs
-  }, [recommendations, categoryFilter, cncfFilter, searchQuery])
+  }, [recommendations, categoryFilter, cncfFilter, searchQuery, minMatchPercent, matchSourceFilter, maturityFilter, missionClassFilter, difficultyFilter, selectedTags])
 
   // ============================================================================
   // Keyboard
@@ -917,7 +1007,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={cn(
-            'p-2 rounded-lg transition-colors',
+            'p-2 rounded-lg transition-colors relative',
             showFilters
               ? 'bg-purple-500/20 text-purple-400'
               : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
@@ -925,6 +1015,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           title="Toggle filters"
         >
           <Filter className="w-5 h-5" />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-500 text-white text-[9px] font-bold flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
         </button>
 
         <div className="flex items-center border border-border rounded-lg overflow-hidden">
@@ -955,35 +1050,192 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
       {/* Filter bar */}
       {showFilters && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-card border-b border-border">
-          <span className="text-xs text-muted-foreground font-medium">Category:</span>
-          <div className="flex items-center gap-1">
-            {CATEGORY_FILTERS.map((cat) => (
+        <div className="px-4 py-2.5 bg-card border-b border-border space-y-2">
+          {/* Row 1: Clear all + Match % + Source + Category */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {activeFilterCount > 0 && (
               <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={cn(
-                  'px-2.5 py-1 text-xs rounded-full transition-colors',
-                  categoryFilter === cat
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                    : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
-                )}
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
               >
-                {cat}
+                <X className="w-3 h-3" />
+                Clear all
               </button>
-            ))}
+            )}
+
+            <span className="text-xs text-muted-foreground font-medium">Match:</span>
+            <div className="flex items-center gap-1">
+              {[0, 25, 50, 75].map((pct) => (
+                <button
+                  key={pct}
+                  onClick={() => setMinMatchPercent(pct)}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded-full transition-colors tabular-nums',
+                    minMatchPercent === pct
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
+                  )}
+                >
+                  {pct === 0 ? 'Any' : `≥${pct}%`}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-px h-4 bg-border" />
+
+            <span className="text-xs text-muted-foreground font-medium">Source:</span>
+            <div className="flex items-center gap-1">
+              {([['all', 'All', null], ['cluster', '🎯 Cluster', facetCounts.clusterMatched], ['community', '🌐 Community', facetCounts.community]] as const).map(([val, label, count]) => (
+                <button
+                  key={val}
+                  onClick={() => setMatchSourceFilter(val)}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded-full transition-colors',
+                    matchSourceFilter === val
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
+                  )}
+                >
+                  {label}{count != null ? ` (${count})` : ''}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-px h-4 bg-border" />
+
+            <span className="text-xs text-muted-foreground font-medium">Category:</span>
+            <div className="flex items-center gap-1">
+              {CATEGORY_FILTERS.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded-full transition-colors',
+                    categoryFilter === cat
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="w-px h-5 bg-border" />
+          {/* Row 2: Class + Maturity + Difficulty + CNCF Project */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs text-muted-foreground font-medium">Class:</span>
+            <div className="flex items-center gap-1">
+              {['All', ...Array.from(facetCounts.missionClass.keys())].map((cls) => (
+                <button
+                  key={cls}
+                  onClick={() => setMissionClassFilter(cls)}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded-full transition-colors capitalize',
+                    missionClassFilter === cls
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
+                  )}
+                >
+                  {cls === 'All' ? cls : `${cls} (${facetCounts.missionClass.get(cls) || 0})`}
+                </button>
+              ))}
+            </div>
 
-          <span className="text-xs text-muted-foreground font-medium">CNCF Project:</span>
-          <input
-            type="text"
-            value={cncfFilter}
-            onChange={(e) => setCncfFilter(e.target.value)}
-            placeholder="e.g. Istio, Envoy…"
-            className="w-40 px-2.5 py-1 text-xs bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
-          />
+            <div className="w-px h-4 bg-border" />
+
+            <span className="text-xs text-muted-foreground font-medium">Maturity:</span>
+            <div className="flex items-center gap-1">
+              {['All', ...Array.from(facetCounts.maturity.keys())].map((mat) => (
+                <button
+                  key={mat}
+                  onClick={() => setMaturityFilter(mat)}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded-full transition-colors capitalize',
+                    maturityFilter === mat
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
+                  )}
+                >
+                  {mat === 'All' ? mat : `${mat} (${facetCounts.maturity.get(mat) || 0})`}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-px h-4 bg-border" />
+
+            <span className="text-xs text-muted-foreground font-medium">Difficulty:</span>
+            <div className="flex items-center gap-1">
+              {['All', ...Array.from(facetCounts.difficulty.keys())].map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() => setDifficultyFilter(diff)}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded-full transition-colors capitalize',
+                    difficultyFilter === diff
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
+                  )}
+                >
+                  {diff === 'All' ? diff : `${diff} (${facetCounts.difficulty.get(diff) || 0})`}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-px h-4 bg-border" />
+
+            <span className="text-xs text-muted-foreground font-medium">CNCF:</span>
+            <input
+              type="text"
+              value={cncfFilter}
+              onChange={(e) => setCncfFilter(e.target.value)}
+              placeholder="e.g. Istio, Envoy…"
+              className="w-36 px-2 py-0.5 text-[11px] bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+            />
+          </div>
+
+          {/* Row 3: Top tags */}
+          {facetCounts.topTags.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground font-medium">Tags:</span>
+              {facetCounts.topTags.map(({ tag, count }: { tag: string; count: number }) => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setSelectedTags((prev: Set<string>) => {
+                      const next = new Set(prev)
+                      if (next.has(tag)) next.delete(tag)
+                      else next.add(tag)
+                      return next
+                    })
+                  }}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded-full transition-colors',
+                    selectedTags.has(tag)
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent'
+                  )}
+                >
+                  {tag} <span className="opacity-60">({count})</span>
+                </button>
+              ))}
+              {selectedTags.size > 0 && (
+                <button
+                  onClick={() => setSelectedTags(new Set())}
+                  className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                >
+                  clear tags
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Active filter summary */}
+          {activeFilterCount > 0 && (
+            <div className="text-[11px] text-muted-foreground">
+              Showing {filteredRecommendations.length} of {recommendations.length} recommendations
+            </div>
+          )}
         </div>
       )}
 
@@ -1241,7 +1493,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                   onImprove={selectedMission.missionClass === 'install' ? () => setShowImproveDialog(true) : undefined}
                   matchScore={recommendations.find(
                     (r) => r.mission.title === selectedMission.title
-                  )?.score}
+                  )?.matchPercent}
                 />
                 {showImproveDialog && (
                   <ImproveMissionDialog
@@ -1817,7 +2069,7 @@ function RecommendationCard({
   onSelect: () => void
   onImport: () => void
 }) {
-  const { mission, score, matchReasons } = match
+  const { mission, score, matchPercent, matchReasons } = match
   const isClusterMatch = score > 1
 
   return (
@@ -1829,12 +2081,17 @@ function RecommendationCard({
         <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors">
           {mission.title}
         </h4>
-        {isClusterMatch && (
-          <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full bg-green-500/10 text-green-400 flex-shrink-0" title="Matched to your cluster">
-            <CheckCircle className="w-3 h-3" />
-            Match
-          </span>
-        )}
+        <span className={cn(
+          'flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full flex-shrink-0 font-medium tabular-nums',
+          matchPercent >= 80
+            ? 'bg-green-500/15 text-green-400 border border-green-500/20'
+            : matchPercent >= 50
+              ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/20'
+              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+        )} title={`Match score: ${score}`}>
+          {isClusterMatch && <CheckCircle className="w-3 h-3" />}
+          {matchPercent}%
+        </span>
       </div>
 
       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{mission.description}</p>
