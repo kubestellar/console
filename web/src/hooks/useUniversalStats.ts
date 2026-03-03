@@ -304,6 +304,7 @@ export function useUniversalStats() {
       // Alert stats
       // ══════════════════════════════════════════
       case 'firing':
+      case 'alerts_firing':
         return { value: firingAlerts, sublabel: 'firing', onClick: () => drillToAllAlerts('firing'), isClickable: firingAlerts > 0 }
       case 'resolved':
         return { value: resolvedAlerts, sublabel: 'resolved', isClickable: false }

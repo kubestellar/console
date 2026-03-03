@@ -32,7 +32,6 @@ export function ClusterAdmin() {
       case 'nodes': return { value: nodes.length, sublabel: 'total nodes', isDemo: isDemoData }
       case 'warnings': return { value: warningEvents.length, sublabel: 'warnings', isDemo: isDemoData }
       case 'pod_issues': return { value: podIssues.length, sublabel: 'pod issues', isDemo: isDemoData }
-      case 'alerts_firing': return { value: '-', sublabel: 'firing', isDemo: isDemoData }
       default: return { value: '-' }
     }
   }, [reachable, healthy, degraded, offline, nodes, warningEvents, podIssues, isDemoData])
