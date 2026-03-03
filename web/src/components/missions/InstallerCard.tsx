@@ -1,8 +1,10 @@
 /**
  * InstallerCard — Rich card for CNCF installer missions.
- * Shows category icon+gradient, maturity badge, difficulty, install methods, and import button.
+ * Shows project logo (falls back to category icon), maturity badge, difficulty,
+ * install methods, and import button.
  */
 
+import { useState } from 'react'
 import { ExternalLink, Download, Wrench, Trash2, ArrowUpCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import {
@@ -12,6 +14,131 @@ import {
   DIFFICULTY_CONFIG,
 } from '../../lib/cncf-constants'
 import type { MissionExport } from '../../lib/missions/types'
+
+/**
+ * Map cncfProject names to their GitHub org when the org name differs.
+ * Projects not listed here use cncfProject directly as the GitHub org.
+ */
+const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
+  envoy: 'envoyproxy',
+  argo: 'argoproj',
+  argocd: 'argoproj',
+  'argo-cd': 'argoproj',
+  'argo-rollouts': 'argoproj',
+  'argo-workflows': 'argoproj',
+  'argo-events': 'argoproj',
+  harbor: 'goharbor',
+  jaeger: 'jaegertracing',
+  fluentd: 'fluent',
+  'fluentd-operator': 'fluent',
+  'fluent-bit': 'fluent',
+  vitess: 'vitessio',
+  thanos: 'thanos-io',
+  cortex: 'cortexproject',
+  falco: 'falcosecurity',
+  keda: 'kedacore',
+  flux: 'fluxcd',
+  antrea: 'antrea-io',
+  armada: 'armadaproject',
+  atlantis: 'runatlantis',
+  bfe: 'bfenetworks',
+  'chaos-mesh': 'chaos-mesh',
+  contour: 'projectcontour',
+  'cloud-custodian': 'cloud-custodian',
+  'in-toto': 'in-toto',
+  'k8s-gateway-api': 'kubernetes-sigs',
+  'kube-rs': 'kube-rs',
+  'kube-vip': 'kube-vip',
+  kubeedge: 'kubeedge',
+  'metal-lb': 'metallb',
+  metallb: 'metallb',
+  'network-service-mesh': 'networkservicemesh',
+  'nats-io': 'nats-io',
+  nats: 'nats-io',
+  notary: 'notaryproject',
+  'open-policy-agent': 'open-policy-agent',
+  opa: 'open-policy-agent',
+  'open-telemetry': 'open-telemetry',
+  opentelemetry: 'open-telemetry',
+  parsec: 'parallaxsecond',
+  piraeus: 'piraeusdatastore',
+  porter: 'getporter',
+  'service-mesh-interface': 'servicemeshinterface',
+  spiffe: 'spiffe',
+  spire: 'spiffe',
+  strimzi: 'strimzi',
+  'telepresence': 'telepresenceio',
+  tikv: 'tikv',
+  trivy: 'aquasecurity',
+  volcano: 'volcano-sh',
+  'aeraki-mesh': 'aeraki-mesh',
+  akri: 'project-akri',
+  'artifact-hub': 'artifacthub',
+  'external-secrets': 'external-secrets',
+  'kube-prometheus': 'prometheus-operator',
+  'prometheus-operator': 'prometheus-operator',
+}
+
+/** GitHub avatar image size in pixels */
+const GITHUB_AVATAR_SIZE = 80
+
+/** Resolve a cncfProject name to a GitHub org avatar URL */
+function getProjectLogoUrl(cncfProject: string): string {
+  const org = PROJECT_TO_GITHUB_ORG[cncfProject.toLowerCase()] ?? cncfProject
+  return `https://github.com/${org}.png?size=${GITHUB_AVATAR_SIZE}`
+}
+
+// ============================================================================
+// CategoryIcon — SVG fallback when no project logo is available
+// ============================================================================
+
+function CategoryIcon({ iconPath, size }: { iconPath: string; size: 'sm' | 'lg' }) {
+  const cls = size === 'lg' ? 'w-10 h-10' : 'w-4 h-4'
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={cn(cls, 'text-white/80')}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={iconPath} />
+    </svg>
+  )
+}
+
+// ============================================================================
+// ProjectLogo — Tries to load the project's GitHub avatar, falls back to SVG
+// ============================================================================
+
+function ProjectLogo({ cncfProject, iconPath, size }: {
+  cncfProject?: string
+  iconPath: string
+  size: 'sm' | 'lg'
+}) {
+  const [failed, setFailed] = useState(false)
+
+  if (!cncfProject || failed) {
+    return <CategoryIcon iconPath={iconPath} size={size} />
+  }
+
+  const imgCls = size === 'lg' ? 'w-10 h-10 rounded-lg' : 'w-5 h-5 rounded'
+  return (
+    <img
+      src={getProjectLogoUrl(cncfProject)}
+      alt={cncfProject}
+      className={cn(imgCls, 'object-contain')}
+      onError={() => setFailed(true)}
+      loading="lazy"
+    />
+  )
+}
+
+// ============================================================================
+// InstallerCard
+// ============================================================================
 
 interface InstallerCardProps {
   mission: MissionExport
@@ -42,9 +169,7 @@ export function InstallerCard({ mission, onImport, onSelect, compact }: Installe
           className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
           style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
         >
-          <svg viewBox="0 0 24 24" className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-            <path d={iconPath} />
-          </svg>
+          <ProjectLogo cncfProject={mission.cncfProject} iconPath={iconPath} size="sm" />
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-medium text-foreground truncate group-hover:text-purple-400 transition-colors">
@@ -77,24 +202,14 @@ export function InstallerCard({ mission, onImport, onSelect, compact }: Installe
       className="flex flex-col rounded-lg border border-border bg-card hover:border-purple-500/30 transition-all cursor-pointer group overflow-hidden"
       onClick={onSelect}
     >
-      {/* Category gradient header with icon */}
+      {/* Category gradient header with project logo */}
       <div
         className="relative h-20 flex items-center justify-center"
         style={{
           background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
         }}
       >
-        <svg
-          viewBox="0 0 24 24"
-          className="w-10 h-10 text-white/80"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d={iconPath} />
-        </svg>
+        <ProjectLogo cncfProject={mission.cncfProject} iconPath={iconPath} size="lg" />
         {/* Category label */}
         <span className="absolute bottom-1.5 right-2 text-[10px] font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
           {category}
