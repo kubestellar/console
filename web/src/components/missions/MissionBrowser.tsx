@@ -527,7 +527,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   }
 
   const matchesMission = (m: MissionExport, query: string) => {
-    const haystack = [m.title, m.description, ...(m.tags || [])].join(' ')
+    const haystack = [m.title || '', m.description || '', ...(m.tags || [])].join(' ')
     return andMatch(haystack, query)
   }
 

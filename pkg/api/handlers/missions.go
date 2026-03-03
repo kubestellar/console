@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -73,13 +74,21 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 	// If auth failed (401/403) or got 404 with a token (raw.githubusercontent returns 404 for bad tokens),
 	// retry without auth — the target repo is public
 	if hasToken && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusNotFound) {
+		log.Printf("[missions] GitHub token returned %d for %s — retrying without auth (token may be expired)", resp.StatusCode, url)
 		resp.Body.Close()
 		retryReq, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
 		retryReq.Header.Set("Accept", "application/vnd.github.v3+json")
-		return h.httpClient.Do(retryReq)
+		retryResp, err := h.httpClient.Do(retryReq)
+		if err != nil {
+			return nil, err
+		}
+		if retryResp.StatusCode == http.StatusForbidden || retryResp.StatusCode == http.StatusTooManyRequests {
+			log.Printf("[missions] Unauthenticated retry also failed (%d) for %s — likely rate-limited (check GITHUB_TOKEN in .env)", retryResp.StatusCode, url)
+		}
+		return retryResp, nil
 	}
 
 	return resp, nil
