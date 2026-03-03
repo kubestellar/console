@@ -291,14 +291,14 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('All')
   const [cncfFilter, setCncfFilter] = useState<string>('')
-  const [minMatchPercent, setMinMatchPercent] = useState<number>(0)
+  const [minMatchPercent, setMinMatchPercent] = useState<number>(25)
   const [matchSourceFilter, setMatchSourceFilter] = useState<'all' | 'cluster' | 'community'>('all')
   const [maturityFilter, setMaturityFilter] = useState<string>('All')
   const [missionClassFilter, setMissionClassFilter] = useState<string>('All')
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All')
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(true)
 
   // Tree state
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([])
