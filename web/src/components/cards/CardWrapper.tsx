@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug,
+  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope, MonitorCheck, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
 } from 'lucide-react'
@@ -158,7 +158,6 @@ interface CardWrapperProps {
   onSwap?: (newType: string) => void
   onSwapCancel?: () => void
   onConfigure?: () => void
-  onReplace?: () => void
   onRemove?: () => void
   onRefresh?: () => void
   /** Callback when card width is changed */
@@ -863,7 +862,6 @@ export function CardWrapper({
   onSwap,
   onSwapCancel,
   onConfigure,
-  onReplace,
   onRemove,
   onRefresh,
   onWidthChange,
@@ -1485,18 +1483,6 @@ export function CardWrapper({
                           {t('cardWrapper.exportWidget')}
                         </button>
                       )}
-                      <button
-                        onClick={() => {
-                          setShowMenu(false)
-                          onReplace?.()
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
-                        role="menuitem"
-                        title={t('cardWrapper.replaceTooltip')}
-                      >
-                        <Replace className="w-4 h-4" aria-hidden="true" />
-                        {t('common:buttons.replaceCard')}
-                      </button>
                       <button
                         onClick={() => {
                           setShowMenu(false)

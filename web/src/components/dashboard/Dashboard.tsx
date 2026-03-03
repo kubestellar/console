@@ -21,7 +21,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
-import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardReplaced, emitCardConfigured } from '../../lib/analytics'
+import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardConfigured } from '../../lib/analytics'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardHistory } from '../../hooks/useCardHistory'
@@ -33,7 +33,6 @@ import { CARD_COMPONENTS, DEMO_DATA_CARDS, prefetchCardChunks } from '../cards/c
 import { ROUTES } from '../../config/routes'
 import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { AddCardModal } from './AddCardModal'
-import { ReplaceCardModal } from './ReplaceCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
@@ -80,7 +79,6 @@ export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false) // Cards are pre-populated from localStorage/defaults — never block
   const location = useLocation()
   const navigate = useNavigate()
-  const [isReplaceCardOpen, setIsReplaceCardOpen] = useState(false)
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>(() => {
@@ -116,7 +114,7 @@ export function Dashboard() {
   const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
   const { showToast } = useToast()
   const { t } = useTranslation()
-  const { recordCardRemoved, recordCardAdded, recordCardReplaced, recordCardConfigured } = useCardHistory()
+  const { recordCardRemoved, recordCardAdded, recordCardConfigured } = useCardHistory()
 
   // Cluster data for refresh functionality and stats - most cards depend on this
   // Use deduplicated clusters to avoid double-counting same server with different contexts
@@ -624,11 +622,6 @@ export function Dashboard() {
     setIsConfigureCardOpen(true)
   }, [])
 
-  const handleReplaceCard = useCallback((card: Card) => {
-    setSelectedCard(card)
-    setIsReplaceCardOpen(true)
-  }, [])
-
   const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
     setLocalCards((prev) =>
       prev.map((c) =>
@@ -653,32 +646,6 @@ export function Dashboard() {
       }
     }
   }, [dashboard, localCards])
-
-  const handleCardReplaced = useCallback((oldCardId: string, newCardType: string, newTitle?: string, newConfig?: Record<string, unknown>) => {
-    // Find the old card to get its previous type
-    const oldCard = localCards.find((c) => c.id === oldCardId)
-    if (oldCard) {
-      emitCardReplaced(oldCard.card_type, newCardType)
-      recordCardReplaced(
-        oldCardId,
-        newCardType,
-        oldCard.card_type,
-        newTitle,
-        newConfig,
-        dashboard?.id,
-        dashboard?.name
-      )
-    }
-    setLocalCards((prev) =>
-      prev.map((c) =>
-        c.id === oldCardId
-          ? { ...c, card_type: newCardType, title: newTitle, config: newConfig || {} }
-          : c
-      )
-    )
-    setIsReplaceCardOpen(false)
-    setSelectedCard(null)
-  }, [localCards, dashboard, recordCardReplaced])
 
   const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     const card = localCards.find((c) => c.id === cardId)
@@ -916,7 +883,6 @@ export function Dashboard() {
                 key={card.id}
                 card={card}
                 onConfigure={() => handleConfigureCard(card)}
-                onReplace={() => handleReplaceCard(card)}
                 onRemove={() => handleRemoveCard(card.id)}
                 onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                 isDragging={activeId === card.id}
@@ -978,17 +944,6 @@ export function Dashboard() {
         onClose={closeAddCardModal}
         onAddCards={handleAddCards}
         existingCardTypes={currentCardTypes}
-      />
-
-      {/* Replace Card Modal */}
-      <ReplaceCardModal
-        isOpen={isReplaceCardOpen}
-        card={selectedCard}
-        onClose={() => {
-          setIsReplaceCardOpen(false)
-          setSelectedCard(null)
-        }}
-        onReplace={handleCardReplaced}
       />
 
       {/* Configure Card Modal */}

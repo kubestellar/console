@@ -10,7 +10,6 @@ import type { Card } from './dashboardUtils'
 interface SortableCardProps {
   card: Card
   onConfigure: () => void
-  onReplace: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
@@ -28,7 +27,7 @@ const NARROW_BREAKPOINT = 1024
 /** Minimum card column span at narrow viewports */
 const MIN_NARROW_COLS = 6
 
-export const SortableCard = memo(function SortableCard({ card, onConfigure, onReplace, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger }: SortableCardProps) {
+export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger }: SortableCardProps) {
   const {
     attributes,
     listeners,
@@ -84,7 +83,6 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         onRefresh={onRefresh}
         lastUpdated={lastUpdated}
         onConfigure={onConfigure}
-        onReplace={onReplace}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         registerExpandTrigger={registerExpandTrigger}
