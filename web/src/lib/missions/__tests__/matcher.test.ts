@@ -49,11 +49,12 @@ describe('matchMissionsToCluster', () => {
     expect(results[0].score).toBe(40) // 20 + 20
   })
 
-  it('returns empty array when no cluster resources', () => {
+  it('returns baseline-scored results when no cluster resources', () => {
     const missions = [makeMission({ tags: ['istio'] })]
     const cluster = { name: 'empty' }
     const results = matchMissionsToCluster(missions, cluster)
-    expect(results).toHaveLength(0)
+    expect(results).toHaveLength(1)
+    expect(results[0].score).toBe(1) // baseline minimum
   })
 
   it('matches troubleshoot missions against cluster issues', () => {
@@ -66,11 +67,12 @@ describe('matchMissionsToCluster', () => {
     const cluster = { name: 'test', issues: ['CrashLoopBackOff'] }
     const results = matchMissionsToCluster(missions, cluster)
     expect(results).toHaveLength(1)
-    expect(results[0].score).toBe(40)
-    expect(results[0].matchReasons[0]).toContain('CrashLoopBackOff')
+    // 40 for direct issue text match + 35 for issue-category match on type 'troubleshoot'
+    expect(results[0].score).toBe(75)
+    expect(results[0].matchReasons.some((r) => r.includes('CrashLoopBackOff'))).toBe(true)
   })
 
-  it('does not match non-troubleshoot missions against issues', () => {
+  it('scores non-troubleshoot missions lower against issues', () => {
     const missions = [
       makeMission({
         type: 'deploy',
@@ -79,7 +81,9 @@ describe('matchMissionsToCluster', () => {
     ]
     const cluster = { name: 'test', issues: ['CrashLoopBackOff'] }
     const results = matchMissionsToCluster(missions, cluster)
-    expect(results).toHaveLength(0)
+    // deploy type does not get direct issue text match or issue-category boost
+    expect(results).toHaveLength(1)
+    expect(results[0].score).toBe(1) // baseline minimum only
   })
 
   it('matches upgrade missions against cluster version', () => {
@@ -131,14 +135,16 @@ describe('matchMissionsToCluster', () => {
     expect(results).toHaveLength(0)
   })
 
-  it('returns no matches when cluster has no data', () => {
+  it('returns baseline-scored results when cluster has no data', () => {
     const missions = [
       makeMission({ tags: ['istio'], cncfProject: 'istio' }),
       makeMission({ type: 'troubleshoot', description: 'Fix pods' }),
     ]
     const cluster = { name: 'bare-cluster' }
     const results = matchMissionsToCluster(missions, cluster)
-    expect(results).toHaveLength(0)
+    expect(results).toHaveLength(2)
+    expect(results[0].score).toBe(1) // baseline minimum
+    expect(results[1].score).toBe(1)
   })
 
   it('combines tag + CNCF project scores', () => {
