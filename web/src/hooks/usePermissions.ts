@@ -102,7 +102,7 @@ export function usePermissions() {
   // Check if user is cluster admin for a specific cluster
   // If permissions data is not available for a cluster, assume admin (don't show warning)
   const isClusterAdmin = useCallback((cluster: string): boolean => {
-    if (!permissions?.clusters[cluster]) return true // Assume admin if no data
+    if (!permissions?.clusters?.[cluster]) return true // Assume admin if no data
     return permissions.clusters[cluster].isClusterAdmin
   }, [permissions])
 
@@ -111,13 +111,13 @@ export function usePermissions() {
     cluster: string,
     permission: keyof Omit<ClusterPermissions, 'accessibleNamespaces'>
   ): boolean => {
-    if (!permissions?.clusters[cluster]) return false
+    if (!permissions?.clusters?.[cluster]) return false
     return permissions.clusters[cluster][permission]
   }, [permissions])
 
   // Check if user can access a namespace
   const canAccessNamespace = useCallback((cluster: string, namespace: string): boolean => {
-    if (!permissions?.clusters[cluster]) return false
+    if (!permissions?.clusters?.[cluster]) return false
     const clusterPerms = permissions.clusters[cluster]
     // Cluster admins can access all namespaces
     if (clusterPerms.isClusterAdmin) return true
@@ -126,25 +126,25 @@ export function usePermissions() {
 
   // Get accessible namespaces for a cluster
   const getAccessibleNamespaces = useCallback((cluster: string): string[] => {
-    if (!permissions?.clusters[cluster]) return []
+    if (!permissions?.clusters?.[cluster]) return []
     return permissions.clusters[cluster].accessibleNamespaces
   }, [permissions])
 
   // Get permissions for a specific cluster
   const getClusterPermissions = useCallback((cluster: string): ClusterPermissions | null => {
-    if (!permissions?.clusters[cluster]) return null
+    if (!permissions?.clusters?.[cluster]) return null
     return permissions.clusters[cluster]
   }, [permissions])
 
   // Get all clusters
   const clusters = useMemo(() => {
-    if (!permissions) return []
+    if (!permissions?.clusters) return []
     return Object.keys(permissions.clusters)
   }, [permissions])
 
   // Check if user has limited access (not cluster-admin) on any cluster
   const hasLimitedAccess = useMemo(() => {
-    if (!permissions) return false
+    if (!permissions?.clusters) return false
     return Object.values(permissions.clusters).some(p => !p.isClusterAdmin)
   }, [permissions])
 

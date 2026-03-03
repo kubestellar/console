@@ -127,11 +127,12 @@ export function useGPUReservations(onlyMine = false) {
     try {
       const query = onlyMine ? '?mine=true' : ''
       const { data } = await api.get<GPUReservation[]>(`/api/gpu/reservations${query}`)
+      const safeData = Array.isArray(data) ? data : []
       // In demo mode, use demo data when the DB is empty (localhost with no reservations)
-      if (demoMode && data.length === 0) {
+      if (demoMode && safeData.length === 0) {
         setReservations(DEMO_RESERVATIONS)
       } else {
-        setReservations(data)
+        setReservations(safeData)
       }
       setError(null)
     } catch (err) {

@@ -268,8 +268,8 @@ export function GPUReservations() {
 
   // Filter nodes by global cluster selection
   const nodes = useMemo(() => {
-    if (isAllClustersSelected) return rawNodes
-    return rawNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+    if (isAllClustersSelected) return rawNodes || []
+    return (rawNodes || []).filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
   }, [rawNodes, selectedClusters, isAllClustersSelected])
 
   // GPU quotas from K8s (for overview stats only)
@@ -283,7 +283,7 @@ export function GPUReservations() {
 
   // Filtered reservations respecting "My Reservations" toggle and cluster selection
   const filteredReservations = useMemo(() => {
-    let filtered = allReservations
+    let filtered = allReservations || []
     // Filter by cluster selection
     if (!isAllClustersSelected) {
       filtered = filtered.filter(r => selectedClusters.some(c => r.cluster.startsWith(c)))
@@ -299,7 +299,7 @@ export function GPUReservations() {
   // Clusters with GPU info for the dropdown
   const gpuClusters = useMemo((): GPUClusterInfo[] => {
     const clusterMap: Record<string, GPUClusterInfo> = {}
-    for (const node of rawNodes) {
+    for (const node of (rawNodes || [])) {
       if (!clusterMap[node.cluster]) {
         clusterMap[node.cluster] = {
           name: node.cluster,

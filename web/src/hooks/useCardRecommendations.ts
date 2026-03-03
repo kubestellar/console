@@ -43,42 +43,42 @@ export function useCardRecommendations(currentCardTypes: string[]) {
     const newRecommendations: CardRecommendation[] = []
 
     // Check for pod issues
-    if (podIssues.length > 5 && !currentCardTypes.includes('pod_issues')) {
+    if ((podIssues || []).length > 5 && !currentCardTypes.includes('pod_issues')) {
       newRecommendations.push({
         id: 'rec-pod-issues',
         cardType: 'pod_issues',
         title: 'Pod Issues',
-        reason: `${podIssues.length} pods have issues that need attention`,
+        reason: `${(podIssues || []).length} pods have issues that need attention`,
         priority: 'high',
       })
     }
 
     // Check for deployment issues
-    if (deploymentIssues.length > 0 && !currentCardTypes.includes('deployment_issues')) {
+    if ((deploymentIssues || []).length > 0 && !currentCardTypes.includes('deployment_issues')) {
       newRecommendations.push({
         id: 'rec-deployment-issues',
         cardType: 'deployment_issues',
         title: 'Deployment Issues',
-        reason: `${deploymentIssues.length} deployments have issues`,
-        priority: deploymentIssues.length > 3 ? 'high' : 'medium',
+        reason: `${(deploymentIssues || []).length} deployments have issues`,
+        priority: (deploymentIssues || []).length > 3 ? 'high' : 'medium',
       })
     }
 
     // Check for many warning events
-    if (warningEvents.length > 10 && !currentCardTypes.includes('event_stream')) {
+    if ((warningEvents || []).length > 10 && !currentCardTypes.includes('event_stream')) {
       newRecommendations.push({
         id: 'rec-events',
         cardType: 'event_stream',
         title: 'Event Stream',
-        reason: `${warningEvents.length} warning events in your clusters`,
+        reason: `${(warningEvents || []).length} warning events in your clusters`,
         priority: 'medium',
         config: { warningsOnly: true },
       })
     }
 
     // Check for GPU utilization
-    const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
-    const allocatedGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+    const totalGPUs = (gpuNodes || []).reduce((sum, n) => sum + n.gpuCount, 0)
+    const allocatedGPUs = (gpuNodes || []).reduce((sum, n) => sum + n.gpuAllocated, 0)
     const gpuUtilization = totalGPUs > 0 ? allocatedGPUs / totalGPUs : 0
 
     if (totalGPUs > 0) {
@@ -95,14 +95,14 @@ export function useCardRecommendations(currentCardTypes: string[]) {
           id: 'rec-gpu-overview',
           cardType: 'gpu_overview',
           title: 'GPU Overview',
-          reason: `You have ${totalGPUs} GPUs across ${gpuNodes.length} nodes`,
+          reason: `You have ${totalGPUs} GPUs across ${(gpuNodes || []).length} nodes`,
           priority: 'low',
         })
       }
     }
 
     // Check for unhealthy clusters
-    const unhealthyClusters = clusters.filter(c => !c.healthy)
+    const unhealthyClusters = (clusters || []).filter(c => !c.healthy)
     if (unhealthyClusters.length > 0 && !currentCardTypes.includes('cluster_health')) {
       newRecommendations.push({
         id: 'rec-cluster-health',
@@ -114,8 +114,8 @@ export function useCardRecommendations(currentCardTypes: string[]) {
     }
 
     // Check for security issues
-    const highSeveritySecurityIssues = securityIssues.filter(i => i.severity === 'high')
-    if (securityIssues.length > 0) {
+    const highSeveritySecurityIssues = (securityIssues || []).filter(i => i.severity === 'high')
+    if ((securityIssues || []).length > 0) {
       newRecommendations.push({
         id: 'rec-security',
         cardType: 'security_issues',

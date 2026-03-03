@@ -152,14 +152,25 @@ function dedup(entries: ConsoleEntry[]): ConsoleEntry[] {
 // ---------------------------------------------------------------------------
 
 async function mockSkipPatternRoutes(page: Page): Promise<void> {
-  const patterns = [
-    '**/api/workloads/**', '**/api/kubectl/**', '**/api/active-users*',
-    '**/api/notifications/**', '**/api/user/preferences*', '**/api/permissions/**',
-    '**/auth/**', '**/api/dashboards/**', '**/api/gpu/**', '**/api/feedback/**',
-    '**/api/persistence/**', '**/api/config/**', '**/api/gitops/**',
-    '**/api/nightly-e2e/**', '**/api/public/nightly-e2e/**', '**/api/rewards/**',
+  // Routes that return arrays need '[]' not '{}'
+  const arrayPatterns = [
+    '**/api/workloads/**', '**/api/notifications/**', '**/api/gpu/**',
+    '**/api/feedback/queue', '**/api/feedback/requests',
+    '**/api/nightly-e2e/**', '**/api/public/nightly-e2e/**',
   ]
-  for (const pattern of patterns) {
+  const objectPatterns = [
+    '**/api/kubectl/**', '**/api/active-users*',
+    '**/api/user/preferences*', '**/api/permissions/**',
+    '**/auth/**', '**/api/dashboards/**', '**/api/feedback/**',
+    '**/api/persistence/**', '**/api/config/**', '**/api/gitops/**',
+    '**/api/rewards/**',
+  ]
+  for (const pattern of arrayPatterns) {
+    await page.route(pattern, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+    )
+  }
+  for (const pattern of objectPatterns) {
     await page.route(pattern, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     )

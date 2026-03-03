@@ -89,8 +89,8 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
   const isRefreshing = requestsRefreshing || notificationsRefreshing
 
   // Exclude notifications for closed requests from the unread count
-  const closedRequestIds = new Set(requests.filter(r => r.status === 'closed').map(r => r.id))
-  const activeNotifications = notifications.filter(n => !closedRequestIds.has(n.feature_request_id || ''))
+  const closedRequestIds = new Set((requests || []).filter(r => r.status === 'closed').map(r => r.id))
+  const activeNotifications = (notifications || []).filter(n => !closedRequestIds.has(n.feature_request_id || ''))
   const unreadCount = activeNotifications.filter(n => !n.read).length
   // User can't perform actions if not authenticated or if using demo token
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE

@@ -68,3 +68,4 @@ vendor/
 /bin/*
 *.bak
 web/.netlify/
+web/e2e/test-results/

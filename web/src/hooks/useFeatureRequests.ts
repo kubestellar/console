@@ -248,8 +248,8 @@ export function useFeatureRequests(currentUserId?: string) {
       setIsLoading(true)
       // Fetch from queue endpoint to get all issues
       const { data } = await api.get<FeatureRequest[]>('/api/feedback/queue')
-      // Sort: user's issues first, then others, both by date
-      const sorted = currentUserId ? sortRequests(data || [], currentUserId) : (data || [])
+      const safeData = Array.isArray(data) ? data : []
+      const sorted = currentUserId ? sortRequests(safeData, currentUserId) : safeData
       setRequests(sorted)
       setError(null)
     } catch {
@@ -419,7 +419,7 @@ export function useNotifications() {
     }
     try {
       const { data } = await api.get<Notification[]>('/api/notifications')
-      setNotifications(data || [])
+      setNotifications(Array.isArray(data) ? data : [])
     } catch {
       // Silently fail - backend may be unavailable
     }
