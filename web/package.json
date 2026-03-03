@@ -34,6 +34,8 @@
     "test:e2e:error-resilience": "playwright test --config e2e/compliance/compliance.config.ts e2e/compliance/error-resilience.spec.ts",
     "test:e2e:all-compliance": "playwright test --config e2e/compliance/compliance.config.ts",
     "test:e2e:coverage": "./scripts/run-e2e-coverage.sh",
+    "test:consistency": "bash ../scripts/consistency-test.sh",
+    "test:consistency:strict": "bash ../scripts/consistency-test.sh --strict",
     "coverage:report": "node scripts/coverage-report.mjs",
     "coverage:clean": "rimraf .nyc_output coverage"
   },
