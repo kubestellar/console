@@ -185,12 +185,12 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
     )
   }
 
-  // Non-CNCF items keep the original SVG thumbnail
+  // Non-CNCF items use same h-20 gradient header for consistent tile height
   const config = ITEM_THUMBNAILS[itemId] || TYPE_FALLBACKS[itemType] || TYPE_FALLBACKS.dashboard
 
   return (
-    <div className={`h-36 overflow-hidden relative ${className || ''}`}>
-      <svg viewBox="0 0 400 144" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
+    <div className={`h-20 overflow-hidden relative ${className || ''}`}>
+      <svg viewBox="0 0 400 80" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
         <defs>
           <linearGradient id={`grad-${itemId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={config.gradient[0]} stopOpacity={isHelpWanted ? 0.15 : 0.25} />
@@ -201,20 +201,20 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
             <stop offset="100%" stopColor={config.gradient[1]} stopOpacity={isHelpWanted ? 0.25 : 0.4} />
           </linearGradient>
         </defs>
-        <rect width="400" height="144" fill={`url(#grad-${itemId})`} />
-        {Array.from({ length: 8 }).map((_, row) =>
+        <rect width="400" height="80" fill={`url(#grad-${itemId})`} />
+        {Array.from({ length: 4 }).map((_, row) =>
           Array.from({ length: 16 }).map((_, col) => (
             <circle
               key={`${row}-${col}`}
               cx={25 + col * 25}
-              cy={12 + row * 18}
+              cy={10 + row * 20}
               r="1"
               fill={config.gradient[0]}
               opacity={isHelpWanted ? 0.08 : 0.15}
             />
           ))
         )}
-        <g transform="translate(176, 48)" opacity={isHelpWanted ? 0.35 : 0.5}>
+        <g transform="translate(188, 28)" opacity={isHelpWanted ? 0.35 : 0.5}>
           <path
             d={config.icon}
             fill="none"
@@ -222,12 +222,11 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            transform="scale(2)"
           />
         </g>
-        <line x1="0" y1="143" x2="400" y2="143" stroke={config.gradient[0]} strokeOpacity="0.2" strokeWidth="1" />
+        <line x1="0" y1="79" x2="400" y2="79" stroke={config.gradient[0]} strokeOpacity="0.2" strokeWidth="1" />
         {isHelpWanted && (
-          <rect x="1" y="1" width="398" height="142" fill="none" stroke={config.gradient[0]} strokeOpacity="0.15" strokeWidth="1" strokeDasharray="6 4" />
+          <rect x="1" y="1" width="398" height="78" fill="none" stroke={config.gradient[0]} strokeOpacity="0.15" strokeWidth="1" strokeDasharray="6 4" />
         )}
       </svg>
     </div>

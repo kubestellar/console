@@ -175,7 +175,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
       {/* Thumbnail */}
       <div className="relative">
         {item.screenshot ? (
-          <div className="h-36 bg-muted overflow-hidden">
+          <div className="h-20 bg-muted overflow-hidden">
             <img
               src={item.screenshot}
               alt={item.name}
