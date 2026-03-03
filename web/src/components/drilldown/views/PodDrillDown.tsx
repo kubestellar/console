@@ -531,7 +531,7 @@ ${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\
 Pod: ${podName}
 Namespace: ${namespace}
 Reported Status: ${status}
-Reported Issues: ${issues.join(', ')}
+Reported Issues: ${(issues || []).join(', ')}
 
 COMPREHENSIVE POD CONTEXT:
 ${analysisContext}
@@ -706,7 +706,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
 Current Status: ${status}
 Restarts: ${restarts}
 ${reason ? `Reason: ${reason}` : ''}
-${issues.length > 0 ? `Issues: ${issues.join(', ')}` : ''}
+${(issues || []).length > 0 ? `Issues: ${(issues || []).join(', ')}` : ''}
 
 Please help me:
 1. Investigate the root cause of the issues

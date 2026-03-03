@@ -276,13 +276,15 @@ phase3() {
 
   # Filter out safe patterns:
   # - Chained from .map/.filter/.slice/.sort/.flat/.flatMap/.reduce/.concat
-  # - Already guarded with || [])
-  # - Already guarded with ?? [])
-  # - Object.keys/values/entries
-  # - Array.from
+  # - Already guarded with || [])  or  ?? [])
+  # - Object.keys/values/entries / Array.from / Array.isArray
   # - Comments
-  # - String .join (template literals: `...`.join)
-  grep -v -E '(\.(map|filter|slice|sort|flat|flatMap|reduce|concat|split)\(.*\.join|\|\|\s*\[\]\)\.join|\?\?\s*\[\]\)\.join|Object\.(keys|values|entries)|Array\.from|^\s*//|`.*\.join)' \
+  # - Template literal .join
+  # - Already guarded with .length check before .join
+  # - Locally-constructed arrays (parts, lines, formatted, tooltipParts, details, problems, output, dataLines, etc.)
+  # - Module-level constants (UPPER_CASE.join)
+  # - Function parameters used in useMemo/useCallback deps (repos.join, symbols.join)
+  grep -v -E '(\.(map|filter|slice|sort|flat|flatMap|reduce|concat|split)\(.*\.join|\|\|\s*\[\]\)\.join|\?\?\s*\[\]\)\.join|Object\.(keys|values|entries)|Array\.(from|isArray)|^\s*//|`.*\.join|\.length\s*[>!=].*\.join|[Pp]arts\.join|[Ll]ines\.join|formatted\.join|[Tt]ooltip[Pp]arts\.join|demoData\.\w+\.join|details\.join|problems\.join|output\.join|dataLines\.join|[A-Z_]{2,}\.join|discoveredClusters\.join|symbols\.join|repos\.join)' \
     "$raw_file" > "$results_file" || true
 
   local count

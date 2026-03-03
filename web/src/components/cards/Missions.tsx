@@ -222,8 +222,8 @@ export function Missions(_props: MissionsProps) {
   // AI Diagnose handler
   const handleDiagnose = useCallback((mission: DeployMission) => {
     checkKeyAndRun(() => {
-      const targetClustersStr = mission.targetClusters.join(', ')
-      const failedClusterNames = mission.clusterStatuses
+      const targetClustersStr = (mission.targetClusters || []).join(', ')
+      const failedClusterNames = (mission.clusterStatuses || [])
         .filter(cs => cs.status === 'failed')
         .map(cs => cs.cluster)
         .join(', ')
@@ -260,8 +260,8 @@ Please:
   // AI Repair handler
   const handleRepair = useCallback((mission: DeployMission) => {
     checkKeyAndRun(() => {
-      const targetClustersStr = mission.targetClusters.join(', ')
-      const failedClusterNames = mission.clusterStatuses
+      const targetClustersStr = (mission.targetClusters || []).join(', ')
+      const failedClusterNames = (mission.clusterStatuses || [])
         .filter(cs => cs.status === 'failed')
         .map(cs => cs.cluster)
       const issues = failedClusterNames.length > 0
@@ -345,7 +345,7 @@ Please:
         workload: commonComparators.string<DeployMission>('workload'),
         time: (a, b) => a.startedAt - b.startedAt,
         clusters: (a, b) =>
-          a.targetClusters.join(',').localeCompare(b.targetClusters.join(',')),
+          (a.targetClusters || []).join(',').localeCompare((b.targetClusters || []).join(',')),
       },
     },
     defaultLimit: 5,

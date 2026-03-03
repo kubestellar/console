@@ -14,7 +14,12 @@ export function useNavigationHistory() {
     }
 
     // Get existing history
-    const existingHistory = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    let existingHistory: string[] = []
+    try {
+      existingHistory = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    } catch {
+      // Corrupted data — reset
+    }
 
     // Add current path to history
     const newHistory = [location.pathname, ...existingHistory].slice(0, MAX_HISTORY)
@@ -26,7 +31,12 @@ export function useNavigationHistory() {
 
 // Get analyzed behavior data
 export function getNavigationBehavior() {
-  const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+  let history: string[] = []
+  try {
+    history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+  } catch {
+    // Corrupted data — reset
+  }
 
   // Count visits per path
   const visitCounts: Record<string, number> = {}

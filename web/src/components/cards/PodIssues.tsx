@@ -205,8 +205,8 @@ export function PodIssues() {
                     )}
                   </div>
                   {issue.issues.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate" title={issue.issues.join(', ')}>
-                      {issue.issues.join(', ')}
+                    <p className="text-xs text-muted-foreground mt-1 truncate" title={(issue.issues || []).join(', ')}>
+                      {(issue.issues || []).join(', ')}
                     </p>
                   )}
                 </div>

@@ -77,8 +77,8 @@ function ActorRow({ actor }: { actor: WasmCloudActor }) {
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span title={t('wasmcloud.cluster')}>{actor.cluster}</span>
-                <span className="truncate" title={actor.capabilities.join(', ')}>
-                    {actor.capabilities.join(', ')}
+                <span className="truncate" title={(actor.capabilities || []).join(', ')}>
+                    {(actor.capabilities || []).join(', ')}
                 </span>
             </div>
         </div>

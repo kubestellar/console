@@ -439,7 +439,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       setIsRefreshing(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusters.join(',')])
+  }, [(clusters || []).join(',')])
 
   useEffect(() => {
     console.log('[useLLMdServers] useEffect mounting, starting initial fetch')
@@ -580,7 +580,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
       setIsRefreshing(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusters.join(',')])
+  }, [(clusters || []).join(',')])
 
   useEffect(() => {
     refetch(false)

@@ -454,7 +454,7 @@ export function Events() {
             <div className="text-center py-12">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">No events found</p>
-              {!isAllClustersSelected && <p className="text-sm text-muted-foreground mt-1">Showing events from: {globalSelectedClusters.join(', ')}</p>}
+              {!isAllClustersSelected && <p className="text-sm text-muted-foreground mt-1">Showing events from: {(globalSelectedClusters || []).join(', ')}</p>}
               {hasActiveFilters && <button onClick={clearFilters} className="mt-2 text-sm text-primary hover:underline">Clear filters</button>}
             </div>
           ) : (

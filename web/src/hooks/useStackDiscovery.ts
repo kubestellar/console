@@ -705,7 +705,7 @@ export function useStackDiscovery(clusters: string[]) {
       setIsLoading(false)
       isRefetching.current = false
     }
-  }, [clusters.join(',')])
+  }, [(clusters || []).join(',')])
 
   useEffect(() => {
     // Wait for clusters to be available

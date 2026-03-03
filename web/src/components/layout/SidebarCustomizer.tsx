@@ -284,7 +284,12 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     await new Promise(resolve => setTimeout(resolve, 1500))
 
     // Get navigation history from localStorage
-    const navHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_NAV_HISTORY) || '[]')
+    let navHistory: string[] = []
+    try {
+      navHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_NAV_HISTORY) || '[]')
+    } catch {
+      // Corrupted data — reset
+    }
 
     // Count page visits
     const visitCounts: Record<string, number> = {}

@@ -367,7 +367,7 @@ export function ClusterDrillDown({ data }: Props) {
                           {issue.namespace} • {issue.restarts} restarts
                         </div>
                         {issue.issues.length > 0 && (
-                          <div className="text-xs text-red-400 mt-1">{issue.issues.join(', ')}</div>
+                          <div className="text-xs text-red-400 mt-1">{(issue.issues || []).join(', ')}</div>
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -594,7 +594,7 @@ export function ClusterDrillDown({ data }: Props) {
                                 </span>
                                 {node.roles?.length > 0 && (
                                   <span className="text-xs text-muted-foreground">
-                                    [{node.roles.join(', ')}]
+                                    [{(node.roles || []).join(', ')}]
                                   </span>
                                 )}
                                 <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
