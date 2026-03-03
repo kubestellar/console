@@ -1,14 +1,54 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { CardFactoryModal } from './CardFactoryModal'
 import { StatBlockFactoryModal } from './StatBlockFactoryModal'
 import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
-import { wrapAbbreviations } from '../shared/TechnicalAcronym'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { useToast } from '../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../lib/constants/network'
 
+// Helper function to wrap technical abbreviations in text with tooltips
+function wrapAbbreviations(text: string): ReactNode {
+  // List of abbreviations to wrap (order matters - longer ones first to avoid partial matches)
+  const abbreviations = [
+    'ConfigMaps', 'ConfigMap', 'CrashLoopBackOff', 'OOMKilled',
+    'RBAC', 'CRD', 'PVC', 'GPU', 'CPU', 'OLM', 'MCS', 'Secrets', 'Secret'
+  ]
+
+  // Build a regex pattern to match any of the abbreviations as whole words
+  const pattern = new RegExp(`\\b(${abbreviations.join('|')})\\b`, 'g')
+
+  const parts: ReactNode[] = []
+  let lastIndex = 0
+
+  // Find all matches and split the text
+  for (const match of text.matchAll(pattern)) {
+    // Add text before the match
+    if (match.index !== undefined && match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index))
+    }
+
+    // Add the wrapped abbreviation
+    if (match.index !== undefined) {
+      parts.push(
+        <TechnicalAcronym key={`${match.index}-${match[0]}`} term={match[0]}>
+          {match[0]}
+        </TechnicalAcronym>
+      )
+
+      lastIndex = match.index + match[0].length
+    }
+  }
+
+  // Add any remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+
+  return parts.length > 0 ? parts : text
+}
 // Card catalog - all available cards organized by category
 const CARD_CATALOG = {
   'Cluster Admin': [
@@ -17,7 +57,7 @@ const CARD_CATALOG = {
     { type: 'node_debug', title: 'Node Debug', description: 'Run diagnostics on nodes — disk, memory, network, and process checks', visualization: 'table' },
     { type: 'node_conditions', title: 'Node Conditions', description: 'DiskPressure, MemoryPressure, PIDPressure with cordon/uncordon/drain actions', visualization: 'table' },
     { type: 'admission_webhooks', title: 'Admission Webhooks', description: 'Mutating and validating webhook inventory with failure policies', visualization: 'table' },
-    { type: 'dns_health', title: 'DNS Health', description: 'CoreDNS pod status and health across clusters', visualization: 'status' },
+    { type: 'coredns_status', title: 'CoreDNS', description: 'CoreDNS pod health, restart counts, and cluster status', visualization: 'status' },
     { type: 'etcd_status', title: 'etcd Status', description: 'etcd member health, version, and restart counts', visualization: 'status' },
     { type: 'network_policies', title: 'Network Policies', description: 'Network policy coverage analysis by namespace', visualization: 'donut' },
     { type: 'rbac_explorer', title: 'RBAC Explorer', description: 'Cross-cluster RBAC risk analysis — find over-privileged accounts', visualization: 'table' },

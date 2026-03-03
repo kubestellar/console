@@ -380,6 +380,8 @@ export const CARD_TITLES: Record<string, string> = {
 
   // Provider health
   provider_health: 'Provider Health',
+  // CoreDNS
+  coredns_status: 'CoreDNS',
 }
 
 // Short descriptions shown via info icon tooltip in the card header
@@ -536,6 +538,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_doom: 'First-person debugging adventure.',
   kube_craft: 'Build and manage your cluster world.',
   kube_chess: 'Chess game with Kubernetes-themed pieces.',
+  // CoreDNS
+  coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
 }
 
 // Card icons with their colors - displayed in the card header next to the title
@@ -714,6 +718,8 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
 
   // Provider health
   provider_health: { icon: Activity, color: 'text-emerald-400' },
+  // CoreDNS
+  coredns_status: { icon: Network, color: 'text-cyan-400' },
 
   // Games
   sudoku_game: { icon: Puzzle, color: 'text-purple-400' },

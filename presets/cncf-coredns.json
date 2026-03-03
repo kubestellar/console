@@ -1,0 +1,10 @@
+{
+ "format": "kc-card-preset-v1",
+ "card_type": "coredns_status",
+ "title": "CoreDNS",
+ "description": "CoreDNS pod health, restart counts, and cluster status across clusters.",
+ "category": "Networking",
+ "project": "coredns",
+ "cncf_status": "graduated",
+ "config": {}
+}

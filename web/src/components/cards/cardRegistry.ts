@@ -180,6 +180,8 @@ const ThanosStatus = lazy(() => import('./thanos_status').then(m => ({ default: 
 const ContourStatus = lazy(() => import('./contour-status').then(m => ({ default: m.ContourStatus })))
 // CRI-O container runtime card
 const CrioStatus = lazy(() => import('./crio_status').then(m => ({ default: m.CrioStatus })))
+// CoreDNS card
+const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -188,7 +190,6 @@ const NodeDebug = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NodeDeb
 const ControlPlaneHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.ControlPlaneHealth })))
 const NodeConditions = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NodeConditions })))
 const AdmissionWebhooks = lazy(() => _clusterAdminBundle.then(m => ({ default: m.AdmissionWebhooks })))
-const DNSHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.DNSHealth })))
 const EtcdStatus = lazy(() => _clusterAdminBundle.then(m => ({ default: m.EtcdStatus })))
 const NetworkPolicyCoverage = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NetworkPolicyCoverage })))
 const RBACExplorer = lazy(() => _clusterAdminBundle.then(m => ({ default: m.RBACExplorer })))
@@ -409,7 +410,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   control_plane_health: ControlPlaneHealth,
   node_conditions: NodeConditions,
   admission_webhooks: AdmissionWebhooks,
-  dns_health: DNSHealth,
+  // dns_health kept for backwards compatibility but renders via CoreDNSStatus
+  dns_health: CoreDNSStatus,
   etcd_status: EtcdStatus,
   network_policies: NetworkPolicyCoverage,
   rbac_explorer: RBACExplorer,
@@ -426,6 +428,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   contour_status: ContourStatus,
   // CRI-O container runtime
   crio_status: CrioStatus,
+  // CoreDNS
+  coredns_status: CoreDNSStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -848,6 +852,7 @@ export const LIVE_DATA_CARDS = new Set([
   'control_plane_health',
   'node_conditions',
   'dns_health',
+  'coredns_status',
   'network_policies',
   'cluster_changelog',
   'predictive_health',
@@ -948,6 +953,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   node_conditions: 6,
   admission_webhooks: 6,
   dns_health: 4,
+  coredns_status: 6,
   etcd_status: 4,
   network_policies: 6,
   rbac_explorer: 6,
