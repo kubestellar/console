@@ -872,8 +872,8 @@ export function Dashboard() {
       {/* Mission CTA - encourage users who haven't tried missions yet */}
       <MissionCTA />
 
-      {/* Demo Data Banner */}
-      {hasDemoDataCards && !demoBannerDismissed && (
+      {/* Demo Data Banner — only show when demo mode is active */}
+      {hasDemoDataCards && !demoBannerDismissed && getDemoMode() && (
         <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
           <div className="flex-1">
