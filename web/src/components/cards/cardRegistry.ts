@@ -178,6 +178,8 @@ const FlatcarStatus = lazy(() => import('./flatcar_status').then(m => ({ default
 const ThanosStatus = lazy(() => import('./thanos_status').then(m => ({ default: m.ThanosStatus })))
 // Contour ingress controller card
 const ContourStatus = lazy(() => import('./contour-status').then(m => ({ default: m.ContourStatus })))
+// CRI-O container runtime card
+const CrioStatus = lazy(() => import('./crio_status').then(m => ({ default: m.CrioStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -422,6 +424,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   thanos_status: ThanosStatus,
   // Contour ingress controller
   contour_status: ContourStatus,
+  // CRI-O container runtime
+  crio_status: CrioStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -741,6 +745,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   thanos_status: () => import('./thanos_status'),
   // Contour ingress controller
   contour_status: () => import('./contour-status'),
+  // CRI-O container runtime
+  crio_status: () => import('./crio_status'),
 }
 
 /**
@@ -877,6 +883,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   flatcar_status: 6,
   thanos_status: 6,
   contour_status: 6,
+  crio_status: 6,
 
   // MCS cards
   service_exports: 6,

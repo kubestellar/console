@@ -216,6 +216,7 @@ const CARD_CATALOG = {
   ],
   'Runtime': [
     { type: 'wasmcloud_status', title: 'WasmCloud Status', description: 'wasmCloud host status, actor inventory.', visualization: 'status' },
+    { type: 'crio_status', title: 'CRI-O', description: 'CRI-O container runtime metrics, image pulls, and pod sandbox status', visualization: 'status' },
   ]
 } as const
 
