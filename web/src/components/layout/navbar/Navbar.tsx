@@ -50,13 +50,19 @@ export function Navbar() {
           )}
         </button>
 
-        {/* Logo */}
-        <img
-          src="/kubestellar-logo.svg"
-          alt="KubeStellar"
-          className="w-8 h-8 md:w-9 md:h-9"
-        />
-        <span className="text-base md:text-lg font-semibold text-foreground hidden lg:inline">KubeStellar Console</span>
+        {/* Logo - clickable to navigate home */}
+        <button
+          onClick={() => navigate(ROUTES.HOME)}
+          className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity"
+          aria-label={t('navbar.goHome')}
+        >
+          <img
+            src="/kubestellar-logo.svg"
+            alt="KubeStellar"
+            className="w-8 h-8 md:w-9 md:h-9"
+          />
+          <span className="text-base md:text-lg font-semibold text-foreground hidden lg:inline">KubeStellar Console</span>
+        </button>
       </div>
 
       {/* Search - hidden on small mobile */}
