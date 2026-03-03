@@ -198,8 +198,8 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
             Help Wanted
           </div>
         )}
-        {/* CNCF badge */}
-        {item.cncfProject && (
+        {/* CNCF badge — only shown on non-gradient thumbnails (gradient header already shows category) */}
+        {item.cncfProject && !item.cncfProject.category && (
           <div className="absolute top-2 right-2 px-1.5 py-0.5 text-[9px] font-bold bg-card text-muted-foreground rounded border border-border">
             CNCF
           </div>

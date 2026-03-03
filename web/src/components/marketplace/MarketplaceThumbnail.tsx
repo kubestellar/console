@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
 
 interface ThumbnailConfig {
   gradient: [string, string]
@@ -72,6 +72,92 @@ const CNCF_CATEGORY_ICONS: Record<string, string> = {
   'Networking': 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z', // Globe
 }
 
+/** Map CNCF project names to GitHub org for avatar URLs (shared with InstallerCard) */
+const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
+  envoy: 'envoyproxy',
+  argo: 'argoproj',
+  argocd: 'argoproj',
+  'argo-cd': 'argoproj',
+  harbor: 'goharbor',
+  jaeger: 'jaegertracing',
+  fluentd: 'fluent',
+  'fluent-bit': 'fluent',
+  vitess: 'vitessio',
+  thanos: 'thanos-io',
+  cortex: 'cortexproject',
+  falco: 'falcosecurity',
+  keda: 'kedacore',
+  flux: 'fluxcd',
+  contour: 'projectcontour',
+  'open-policy-agent': 'open-policy-agent',
+  opa: 'open-policy-agent',
+  'open-telemetry': 'open-telemetry',
+  opentelemetry: 'open-telemetry',
+  trivy: 'aquasecurity',
+  'cert-manager': 'cert-manager',
+  'kube-prometheus': 'prometheus-operator',
+  'prometheus-operator': 'prometheus-operator',
+  kubescape: 'kubescape',
+  kyverno: 'kyverno',
+  opencost: 'opencost',
+  nats: 'nats-io',
+  strimzi: 'strimzi',
+  metallb: 'metallb',
+  containerd: 'containerd',
+  coredns: 'coredns',
+  etcd: 'etcd-io',
+  linkerd: 'linkerd',
+  cilium: 'cilium',
+  crossplane: 'crossplane',
+  dapr: 'dapr',
+  backstage: 'backstage',
+  'chaos-mesh': 'chaos-mesh',
+  volcano: 'volcano-sh',
+  kubeedge: 'kubeedge',
+  spiffe: 'spiffe',
+  notary: 'notaryproject',
+}
+
+/** Extract project name from marketplace item ID (strip 'cncf-' prefix) */
+function getProjectName(itemId: string): string {
+  return itemId.startsWith('cncf-') ? itemId.slice(5) : itemId
+}
+
+function getProjectLogoUrl(projectName: string): string {
+  const org = PROJECT_TO_GITHUB_ORG[projectName.toLowerCase()] ?? projectName
+  return `https://github.com/${org}.png?size=80`
+}
+
+// ============================================================================
+// ProjectLogo — GitHub avatar with SVG fallback (matches InstallerCard style)
+// ============================================================================
+
+function ProjectLogo({ projectName, iconPath }: { projectName: string; iconPath: string }) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <div className="w-12 h-12 rounded-xl bg-black/25 backdrop-blur-sm shadow-sm flex items-center justify-center">
+        <svg viewBox="0 0 24 24" className="w-8 h-8 text-white drop-shadow-md" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <path d={iconPath} />
+        </svg>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-12 h-12 rounded-xl bg-white/90 shadow-sm flex items-center justify-center">
+      <img
+        src={getProjectLogoUrl(projectName)}
+        alt={projectName}
+        className="w-10 h-10 rounded-lg object-contain"
+        onError={() => setFailed(true)}
+        loading="lazy"
+      />
+    </div>
+  )
+}
+
 export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory, isHelpWanted }: {
   itemId: string
   itemType: 'dashboard' | 'card-preset' | 'theme'
@@ -79,21 +165,32 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
   cncfCategory?: string
   isHelpWanted?: boolean
 }) {
-  const { t: _t } = useTranslation()
-  // For CNCF items, use category-based gradients
   const cncfGradient = cncfCategory ? CNCF_CATEGORY_GRADIENTS[cncfCategory] : undefined
   const cncfIcon = cncfCategory ? CNCF_CATEGORY_ICONS[cncfCategory] : undefined
 
-  const config = ITEM_THUMBNAILS[itemId] || (cncfGradient ? {
-    gradient: cncfGradient,
-    icon: cncfIcon || TYPE_FALLBACKS['card-preset'].icon,
-    label: '',
-  } : TYPE_FALLBACKS[itemType] || TYPE_FALLBACKS.dashboard)
+  // CNCF items with a category get the installer-style gradient header + project logo
+  if (cncfGradient) {
+    const projectName = getProjectName(itemId)
+    const iconPath = cncfIcon || TYPE_FALLBACKS['card-preset'].icon
+    return (
+      <div
+        className={`relative h-20 flex items-center justify-center ${isHelpWanted ? 'opacity-70' : ''} ${className || ''}`}
+        style={{ background: `linear-gradient(135deg, ${cncfGradient[0]}, ${cncfGradient[1]})` }}
+      >
+        <ProjectLogo projectName={projectName} iconPath={iconPath} />
+        <span className="absolute bottom-1.5 right-2 text-[10px] font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
+          {cncfCategory}
+        </span>
+      </div>
+    )
+  }
+
+  // Non-CNCF items keep the original SVG thumbnail
+  const config = ITEM_THUMBNAILS[itemId] || TYPE_FALLBACKS[itemType] || TYPE_FALLBACKS.dashboard
 
   return (
     <div className={`h-36 overflow-hidden relative ${className || ''}`}>
       <svg viewBox="0 0 400 144" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
-        {/* SVG defs: linearGradient elements (not HTML <ul>/<ol> list items) */}
         <defs>
           <linearGradient id={`grad-${itemId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={config.gradient[0]} stopOpacity={isHelpWanted ? 0.15 : 0.25} />
@@ -104,9 +201,7 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
             <stop offset="100%" stopColor={config.gradient[1]} stopOpacity={isHelpWanted ? 0.25 : 0.4} />
           </linearGradient>
         </defs>
-        {/* Background */}
         <rect width="400" height="144" fill={`url(#grad-${itemId})`} />
-        {/* Grid dots pattern */}
         {Array.from({ length: 8 }).map((_, row) =>
           Array.from({ length: 16 }).map((_, col) => (
             <circle
@@ -119,7 +214,6 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
             />
           ))
         )}
-        {/* Center icon */}
         <g transform="translate(176, 48)" opacity={isHelpWanted ? 0.35 : 0.5}>
           <path
             d={config.icon}
@@ -131,10 +225,7 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
             transform="scale(2)"
           />
         </g>
-        {/* No question mark — help-wanted badge is shown as an HTML overlay */}
-        {/* Decorative lines */}
         <line x1="0" y1="143" x2="400" y2="143" stroke={config.gradient[0]} strokeOpacity="0.2" strokeWidth="1" />
-        {/* Dashed border for help-wanted */}
         {isHelpWanted && (
           <rect x="1" y="1" width="398" height="142" fill="none" stroke={config.gradient[0]} strokeOpacity="0.15" strokeWidth="1" strokeDasharray="6 4" />
         )}
