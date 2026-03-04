@@ -17,7 +17,7 @@ const DEFAULT_AIML_CARDS = getDefaultCards('ai-ml')
 
 export function AIML() {
   const { t } = useTranslation('common')
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 

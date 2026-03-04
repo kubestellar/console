@@ -16,7 +16,7 @@ const DEFAULT_OPERATORS_CARDS = getDefaultCards('operators')
 
 export function Operators() {
   const { t } = useTranslation(['cards', 'common'])
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { subscriptions: operatorSubs, refetch: refetchSubs, error: subsError } = useOperatorSubscriptions()
   const { operators: allOperators, refetch: refetchOps, error: opsError } = useOperators()
   const error = clustersError || subsError || opsError

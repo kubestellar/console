@@ -16,7 +16,7 @@ const DEFAULT_NODES_CARDS = getDefaultCards('nodes')
 
 export function Nodes() {
   const { t } = useTranslation(['cards', 'common'])
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const error = clustersError
 

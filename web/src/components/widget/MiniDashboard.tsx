@@ -89,7 +89,7 @@ export function MiniDashboard() {
   const [isSafariBrowser] = useState(() => isSafari())
 
   // Fetch data from MCP hooks
-  const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading, refetch: refetchGPU } = useGPUNodes()
 
   // Fetch nodes from local agent for offline detection

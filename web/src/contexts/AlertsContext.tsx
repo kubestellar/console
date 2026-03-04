@@ -95,7 +95,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
   const { nodes: gpuNodes, isLoading: isGPULoading, error: gpuError } = useGPUNodes()
   const { issues: podIssues, isLoading: isPodIssuesLoading, error: podIssuesError } = usePodIssues()
-  const { clusters, isLoading: isClustersLoading, error: clustersError } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: isClustersLoading, error: clustersError } = useClusters()
   const { startMission } = useMissions()
   const { isDemoMode } = useDemoMode()
   const previousDemoMode = useRef(isDemoMode)
