@@ -1,6 +1,5 @@
 export { CoinDisplay, CoinBadge } from './CoinDisplay'
 export { ContributorBanner } from './ContributorLadder'
-export { ContributorLeaderboard } from './ContributorLeaderboard'
 export { GitHubInviteModal, GitHubInviteButton } from './GitHubInvite'
 export { LinkedInShareButton, LinkedInShareCard } from './LinkedInShare'
 export { RewardsPanel } from './RewardsPanel'

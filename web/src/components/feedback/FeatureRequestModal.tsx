@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, Linkedin } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, Linkedin, Trophy } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
@@ -18,7 +18,6 @@ import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { ContributorBanner } from '../rewards/ContributorLadder'
-import { ContributorLeaderboard } from '../rewards/ContributorLeaderboard'
 import { GITHUB_REWARD_LABELS, REWARD_ACTIONS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
 
@@ -474,8 +473,19 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
               {/* Contributor banner — coins + level + progress */}
               <ContributorBanner />
 
-              {/* Leaderboard — top contributors by coins */}
-              <ContributorLeaderboard />
+              {/* Link to full leaderboard on docs site */}
+              <div className="border-b border-border/50 px-3 py-2">
+                <a
+                  href="https://kubestellar.io/leaderboard"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>View Full Leaderboard</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
 
               {/* Actions header */}
               <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">

@@ -668,8 +668,6 @@ func (s *Server) setupRoutes() {
 		Orgs:        s.config.RewardsGitHubOrgs,
 	})
 	api.Get("/rewards/github", rewardsHandler.GetGitHubRewards)
-	api.Get("/rewards/leaderboard", rewardsHandler.GetLeaderboard)
-	api.Get("/rewards/contributor/:login", rewardsHandler.GetContributorDetail)
 
 	// Nightly E2E status (GitHub Actions proxy with server-side token + cache)
 	nightlyE2E := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
