@@ -56,14 +56,14 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     setIsOpen(false)
   }
 
-  // Re-check OAuth status each time dev panel is opened
+  // Check OAuth status when dropdown opens (covers dev panel visibility)
   useEffect(() => {
-    if (showDevPanel) {
+    if (isOpen) {
       checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
         setOauthStatus({ checked: true, configured: oauthConfigured, backendUp })
       })
     }
-  }, [showDevPanel])
+  }, [isOpen])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -272,22 +272,16 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                     <button
                       onClick={() => {
                         setIsOpen(false)
-                        setShowSetupDialog(true)
+                        if (installMethod === 'dev') {
+                          setShowDevSetupDialog(true)
+                        } else {
+                          setShowSetupDialog(true)
+                        }
                       }}
                       className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
                     >
                       <Rocket className="w-3.5 h-3.5" />
                       {t('developer.setupInstructions')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsOpen(false)
-                        setShowDevSetupDialog(true)
-                      }}
-                      className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                    >
-                      <Code2 className="w-3.5 h-3.5" />
-                      {t('developer.developerSetup')}
                     </button>
                     {!oauthStatus.configured && oauthStatus.checked && (
                       <a
