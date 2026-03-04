@@ -576,7 +576,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                 <>
                                   {isOwnedByUser ? (
                                     <>
-                                      <p className="text-sm font-medium text-foreground mt-1 truncate">
+                                      <p className="text-sm font-medium text-foreground mt-1 truncate blur-sm select-none">
                                         {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
                                       </p>
                                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -991,7 +991,16 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                           <p className="text-xs">No contributions found — open issues or PRs to earn points</p>
                         </div>
                       ) : (
-                        githubRewards.contributions.map((contrib: GitHubContribution, idx: number) => (
+                        (() => {
+                          // Blur titles of contributions that match untriaged feedback requests
+                          const untriagedIssueNumbers = new Set(
+                            (requests || [])
+                              .filter(r => !isTriaged(r.status) && r.github_issue_number)
+                              .map(r => r.github_issue_number)
+                          )
+                          return githubRewards.contributions.map((contrib: GitHubContribution, idx: number) => {
+                          const isUntriaged = untriagedIssueNumbers.has(contrib.number)
+                          return (
                           <a
                             key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
                             href={contrib.url}
@@ -1002,7 +1011,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
                               <GitHubContributionIcon type={contrib.type} />
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm text-foreground truncate group-hover:text-blue-400 transition-colors">
+                                <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-sm select-none' : ''}`}>
                                   {contrib.title}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
@@ -1015,7 +1024,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                               <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </a>
-                        ))
+                          )
+                        })
+                        })()
                       )}
 
                     {githubRewards?.from_cache && (
