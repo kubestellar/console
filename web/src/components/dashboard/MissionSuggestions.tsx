@@ -214,7 +214,8 @@ export function MissionSuggestions() {
                 <div
                   ref={dropdownRef}
                   role="menu"
-                  className={`absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border ${style.border} bg-card shadow-xl`}
+                  className={`absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border ${style.border} ${style.bg} shadow-xl`}
+                  style={{ isolation: 'isolate' }}
                   onKeyDown={(e) => {
                     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                     e.preventDefault()
