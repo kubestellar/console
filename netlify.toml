@@ -35,6 +35,17 @@
   to = "/.netlify/functions/presence"
   status = 200
 
+# Missions API — proxy to Netlify Function (console-kb knowledge base)
+[[redirects]]
+  from = "/api/missions/file"
+  to = "/.netlify/functions/missions-file"
+  status = 200
+
+[[redirects]]
+  from = "/api/missions/browse"
+  to = "/.netlify/functions/missions-browse"
+  status = 200
+
 # GA4 event collection — custom lightweight tracker sends directly to /api/m
 # (Netlify Function via Config.path, no gtag.js loaded)
 
