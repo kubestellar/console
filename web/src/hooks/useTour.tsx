@@ -12,20 +12,30 @@ export interface TourStep {
   highlight?: boolean
 }
 
+/**
+ * Onboarding tour steps — kept short (4 steps) for high completion rates.
+ *
+ * The original 13-step tour had very low completion; most users skipped
+ * after step 2-3. These 4 steps cover the essential "aha moments":
+ *   1. Welcome — what this product is
+ *   2. Sidebar — how to navigate
+ *   3. Dashboard cards — the core interaction model
+ *   4. AI features — the key differentiator (search + recommendations)
+ */
 const TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
     target: '[data-tour="navbar"]',
     title: 'Welcome to KubeStellar Console',
-    content: 'This is your AI-powered multi-cluster Kubernetes dashboard. Claude AI helps you monitor, troubleshoot, and manage your clusters. Let me show you around!',
+    content: 'Your AI-powered multi-cluster Kubernetes dashboard. Claude AI helps you monitor, troubleshoot, and manage clusters — let\'s take a quick look around.',
     placement: 'bottom',
     highlight: true,
   },
   {
     id: 'sidebar',
     target: '[data-tour="sidebar"]',
-    title: 'Navigation Sidebar',
-    content: 'The top section lists your dashboards — Dashboard, Clusters, Deploy, Security, GitOps, and more. Each one is a fully customizable view where you choose which cards to show. The bottom section has utility links: Marketplace, Card History, Namespaces, User Management, and Settings. Scroll down to find snoozed AI suggestions and a shortcut to add cards.',
+    title: 'Navigation',
+    content: 'Switch between dashboards (Clusters, Deploy, Security, GitOps) in the top section. Each view is fully customizable — add or remove cards to fit your workflow. The bottom section has Settings, Marketplace, and snoozed AI suggestions.',
     placement: 'right',
     highlight: true,
   },
@@ -33,88 +43,16 @@ const TOUR_STEPS: TourStep[] = [
     id: 'dashboard-cards',
     target: '[data-tour="card-header"]',
     title: 'Dashboard Cards',
-    content: 'Each card shows real-time data from your clusters. Hover over a card to see the action menu, or drag the grip handle to reorder cards.',
+    content: 'Cards show real-time cluster data. Drag to reorder, click the menu (⋮) to configure with natural language, or click "+" at the bottom to add more cards from the catalog.',
     placement: 'bottom',
     highlight: true,
   },
   {
-    id: 'card-configure',
-    target: '[data-tour="card-menu"]',
-    title: 'Configure with AI',
-    content: 'Click the menu (⋮) and select "Configure" to customize a card using natural language. Try: "Show only critical alerts" or "Filter to production namespace".',
-    placement: 'left',
-    highlight: true,
-  },
-  {
-    id: 'ai-recommendations',
-    target: '[data-tour="recommendations"]',
-    title: 'AI-Powered Recommendations & Actions',
-    content: 'Claude analyzes your cluster activity and surfaces two rows above the cards: "AI" recommendations suggest useful cards to add, and "Actions" are ready-to-run fixes for detected issues like security alerts or unhealthy deployments.',
-    placement: 'bottom',
-    highlight: true,
-  },
-  {
-    id: 'snoozed',
-    target: '[data-tour="snoozed"]',
-    title: 'Snoozed Suggestions',
-    content: 'Not ready for a suggestion? Snooze it! Snoozed items appear here with elapsed time. Click to apply when you\'re ready.',
-    placement: 'right',
-    highlight: true,
-  },
-  {
-    id: 'drilldown',
-    target: '[data-tour="drilldown"]',
-    title: 'Drill-Down',
-    content: 'Click any resource (pod, deployment, node) to open a detailed view. Use the AI Analysis tab to get Claude\'s insights, or the Shell tab to run kubectl commands.',
-    placement: 'bottom',
-    highlight: true,
-  },
-  {
-    id: 'search',
+    id: 'ai-features',
     target: '[data-tour="search"]',
-    title: 'Search',
-    content: 'Press ⌘K to search across all clusters. Ask natural language questions like "Which pods are using the most memory?" or "Show deployments in staging".',
+    title: 'AI-Powered Features',
+    content: 'Press ⌘K to search across all clusters with natural language. Above the cards, AI recommendations suggest useful cards and Actions offer one-click fixes for detected issues. Try the AI Missions panel for complex multi-step operations.',
     placement: 'bottom',
-    highlight: true,
-  },
-  {
-    id: 'ai-missions',
-    target: '[data-tour="ai-missions"]',
-    title: 'AI Missions',
-    content: 'Launch complex AI-powered operations like cluster upgrades, troubleshooting, or analysis. Claude handles multi-step tasks autonomously while keeping you informed.',
-    placement: 'left',
-    highlight: true,
-  },
-  {
-    id: 'add-card',
-    target: '[data-tour="add-card"]',
-    title: 'Add Dashboard Cards',
-    content: 'Every dashboard in the sidebar — Dashboard, Clusters, Security, and others — is fully customizable. Click "+" to browse the card catalog and add cards for clusters, workloads, security, GitOps, and more to the current view.',
-    placement: 'top',
-    highlight: true,
-  },
-  {
-    id: 'templates',
-    target: '[data-tour="templates"]',
-    title: 'Dashboard Templates',
-    content: 'Quickly populate the current dashboard with a pre-configured set of cards for common workflows like SRE monitoring, security auditing, or GPU management. Applying a template replaces the current layout — give it a try!',
-    placement: 'top',
-    highlight: true,
-  },
-  {
-    id: 'feedback',
-    target: '[data-tour="feedback"]',
-    title: 'Bug Reports & Feature Requests',
-    content: 'Found a bug or have an idea? Click here to report issues or request new features. We track your feedback and notify you when updates are available.',
-    placement: 'left',
-    highlight: true,
-  },
-  {
-    id: 'alerts',
-    target: '[data-tour="alerts"]',
-    title: 'Alert Notifications',
-    content: 'Monitor active alerts across all clusters. Click to see alert details, acknowledge them, or let Claude diagnose issues with AI-powered analysis.',
-    placement: 'left',
     highlight: true,
   },
 ]

@@ -144,6 +144,7 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
     'events_timeline',
     'compliance_score',
     'benchmark_hero',
+    'nightly_e2e_status',
   ],
 
   // Features

@@ -23,6 +23,90 @@ const SID_KEY = '_ksc_sid'
 const SC_KEY = '_ksc_sc'
 const LAST_KEY = '_ksc_last'
 
+// ── Engagement Time Tracking ──────────────────────────────────────
+// GA4 requires the `_et` parameter (engagement time in milliseconds)
+// to calculate Average Engagement Time. Without it, GA4 reports 0s.
+// We track active user time via visibility + interaction signals.
+
+const ENGAGEMENT_HEARTBEAT_MS = 5_000  // How often to sample engagement state
+const ENGAGEMENT_IDLE_MS = 60_000      // Consider user idle after 60s of no interaction
+
+let engagementStartMs = 0          // Timestamp when current active period began
+let accumulatedEngagementMs = 0    // Total accumulated engagement time for current page
+let lastInteractionMs = 0          // Timestamp of last user interaction
+let isUserActive = false           // Whether user is currently considered active
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+
+/** Mark the user as actively engaged */
+function markActive() {
+  const now = Date.now()
+  lastInteractionMs = now
+  if (!isUserActive) {
+    isUserActive = true
+    engagementStartMs = now
+  }
+}
+
+/** Check if user has gone idle and accumulate engagement time */
+function checkEngagement() {
+  if (!isUserActive) return
+  const now = Date.now()
+  if (now - lastInteractionMs > ENGAGEMENT_IDLE_MS) {
+    // User went idle — accumulate time up to last interaction
+    accumulatedEngagementMs += lastInteractionMs - engagementStartMs
+    isUserActive = false
+  }
+}
+
+/** Get total engagement time in ms and reset the accumulator */
+function getAndResetEngagementMs(): number {
+  let total = accumulatedEngagementMs
+  if (isUserActive) {
+    // Add current active period
+    total += Date.now() - engagementStartMs
+  }
+  // Reset for next event
+  accumulatedEngagementMs = 0
+  if (isUserActive) {
+    engagementStartMs = Date.now()
+  }
+  return total
+}
+
+/** Start tracking user engagement via interaction and visibility signals */
+function startEngagementTracking() {
+  const interactionEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const
+  for (const event of interactionEvents) {
+    document.addEventListener(event, markActive, { passive: true })
+  }
+
+  // Track page visibility — pause engagement when tab is hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      if (isUserActive) {
+        accumulatedEngagementMs += Date.now() - engagementStartMs
+        isUserActive = false
+      }
+    } else {
+      markActive()
+    }
+  })
+
+  // Start heartbeat to detect idle
+  heartbeatTimer = setInterval(checkEngagement, ENGAGEMENT_HEARTBEAT_MS)
+
+  // Initial mark — user is active when page loads
+  markActive()
+}
+
+/** Stop engagement tracking (called on opt-out) */
+function stopEngagementTracking() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer)
+    heartbeatTimer = null
+  }
+}
+
 // ── Types ──────────────────────────────────────────────────────────
 
 type DeploymentType =
@@ -120,6 +204,12 @@ function send(
     p.set('seg', '1')
   }
 
+  // Engagement time — GA4 uses this to calculate Average Engagement Time
+  const engagementMs = getAndResetEngagementMs()
+  if (engagementMs > 0) {
+    p.set('_et', String(engagementMs))
+  }
+
   // Event parameters (ep.key=val)
   if (params) {
     for (const [k, v] of Object.entries(params)) {
@@ -170,6 +260,12 @@ export function initAnalytics() {
     ...(tz && { timezone: tz }),
   }
 
+  // Start tracking user engagement for GA4 engagement time metrics
+  startEngagementTracking()
+
+  // Track unhandled errors globally for error categorization
+  startGlobalErrorTracking()
+
   // Capture UTM parameters from landing URL
   captureUtmParams()
 
@@ -202,6 +298,7 @@ export function setAnalyticsOptOut(optOut: boolean) {
   localStorage.setItem(STORAGE_KEY_ANALYTICS_OPT_OUT, String(optOut))
   window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   if (optOut) {
+    stopEngagementTracking()
     document.cookie.split(';').forEach(c => {
       const name = c.split('=')[0].trim()
       if (name.startsWith('_ga') || name.startsWith('_ksc')) {
@@ -313,8 +410,29 @@ export function emitFeedbackSubmitted(type: string) {
 
 // ── Errors ─────────────────────────────────────────────────────────
 
+// Maximum length for error detail strings to avoid oversized payloads
+const ERROR_DETAIL_MAX_LEN = 100
+
 export function emitError(category: string, detail: string) {
-  send('ksc_error', { error_category: category, error_detail: detail.slice(0, 100) })
+  send('ksc_error', {
+    error_category: category,
+    error_detail: detail.slice(0, ERROR_DETAIL_MAX_LEN),
+    error_page: window.location.pathname,
+  })
+}
+
+/** Track unhandled promise rejections and runtime errors globally */
+export function startGlobalErrorTracking() {
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = event.reason?.message || String(event.reason || 'unknown')
+    emitError('unhandled_rejection', msg)
+  })
+
+  window.addEventListener('error', (event) => {
+    // Skip errors from cross-origin scripts (no useful info)
+    if (!event.message || event.message === 'Script error.') return
+    emitError('runtime', event.message)
+  })
 }
 
 export function emitSessionExpired() {
