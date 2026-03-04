@@ -817,16 +817,30 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Import flow
   // ============================================================================
 
-  const handleImport = useCallback((mission: MissionExport, raw?: string) => {
+  const handleImport = useCallback(async (mission: MissionExport, raw?: string) => {
     setPendingImport(mission)
     setIsScanning(true)
 
-    const content = raw || JSON.stringify(mission, null, 2)
+    // If steps are empty (index-only metadata), fetch full content first
+    let resolvedMission = mission
+    let resolvedRaw = raw
+    if ((!mission.steps || mission.steps.length === 0) && !raw) {
+      try {
+        const fetched = await fetchMissionContent(mission)
+        resolvedMission = fetched.mission
+        resolvedRaw = fetched.raw
+        setPendingImport(resolvedMission)
+      } catch {
+        // Fall through with index-only mission — validation will catch the empty steps
+      }
+    }
+
+    const content = resolvedRaw || JSON.stringify(resolvedMission, null, 2)
     let parsed: unknown
     try {
       parsed = JSON.parse(content)
     } catch {
-      parsed = mission
+      parsed = resolvedMission
     }
 
     const validation = validateMissionExport(parsed)

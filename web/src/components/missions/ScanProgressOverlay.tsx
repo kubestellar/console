@@ -93,7 +93,7 @@ export function ScanProgressOverlay({
 
             {visibleFindings.length > 0 && (
               <div className="w-full space-y-1.5 max-h-40 overflow-y-auto">
-                {visibleFindings.map((f, i) => (
+                {visibleFindings.map((f, i) => f ? (
                   <div
                     key={i}
                     className="flex items-start gap-2 text-xs animate-fade-in"
@@ -101,7 +101,7 @@ export function ScanProgressOverlay({
                     {severityIcon(f.severity)}
                     <span className="text-muted-foreground">{f.message}</span>
                   </div>
-                ))}
+                ) : null)}
               </div>
             )}
 
