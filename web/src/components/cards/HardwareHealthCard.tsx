@@ -412,12 +412,15 @@ export function HardwareHealthCard() {
             Warning
           </div>
         </div>
-        <div className="p-2 rounded-lg border bg-muted/20 border-muted/30">
+        <button
+          onClick={() => setViewMode('inventory')}
+          className="p-2 rounded-lg border bg-muted/20 border-muted/30 hover:bg-muted/40 transition-colors cursor-pointer text-left"
+        >
           <div className="text-xl font-bold text-foreground">{deduplicatedNodeCount}</div>
           <div className="text-[10px] text-muted-foreground">
             Nodes Tracked
           </div>
-        </div>
+        </button>
       </div>
 
       {/* View Mode Toggle */}
