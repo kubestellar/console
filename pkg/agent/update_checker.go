@@ -164,11 +164,21 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 		resp.LastUpdateResult = uc.lastUpdateError
 	}
 
-	// Fetch latest SHA when running from source (dev install method)
+	// Re-read current SHA from repo (may have changed if someone pulled locally)
 	if uc.repoPath != "" {
-		if sha, err := fetchLatestMainSHA(); err == nil {
+		if freshSHA := detectCurrentSHA(uc.repoPath); freshSHA != "" {
+			resp.CurrentSHA = freshSHA
+			uc.currentSHA = freshSHA
+		}
+	}
+
+	// Fetch latest SHA from origin/main (uses git fetch, no rate limits)
+	if uc.repoPath != "" {
+		if sha, err := fetchLatestMainSHAWithRepo(uc.repoPath); err == nil {
 			resp.LatestSHA = sha
-			resp.HasUpdate = sha != uc.currentSHA && uc.currentSHA != ""
+			resp.HasUpdate = sha != resp.CurrentSHA && resp.CurrentSHA != ""
+		} else {
+			log.Printf("[AutoUpdate] Failed to fetch latest SHA: %v", err)
 		}
 	}
 
@@ -294,10 +304,18 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 		return
 	}
 
-	latestSHA, err := fetchLatestMainSHA()
+	latestSHA, err := fetchLatestMainSHAWithRepo(repoPath)
 	if err != nil {
 		log.Printf("[AutoUpdate] Failed to check main SHA: %v", err)
 		return
+	}
+
+	// Re-read currentSHA from repo in case it was updated externally
+	if freshSHA := detectCurrentSHA(repoPath); freshSHA != "" {
+		uc.mu.Lock()
+		uc.currentSHA = freshSHA
+		currentSHA = freshSHA
+		uc.mu.Unlock()
 	}
 
 	if latestSHA == currentSHA || currentSHA == "" {
@@ -869,8 +887,57 @@ func detectCurrentSHA(repoPath string) string {
 	return strings.TrimSpace(string(out))
 }
 
+// fetchLatestMainSHA gets the latest SHA on origin/main.
+// For dev installs with a git repo, it uses `git fetch` (fast, no rate limits).
+// Falls back to GitHub API for non-repo installs.
 func fetchLatestMainSHA() (string, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
+	return fetchLatestMainSHAWithRepo("")
+}
+
+// fetchLatestMainSHAWithRepo uses git fetch when repoPath is available,
+// falling back to the GitHub API otherwise.
+func fetchLatestMainSHAWithRepo(repoPath string) (string, error) {
+	// Try git fetch + rev-parse first — instant, no rate limits, works offline
+	if repoPath != "" {
+		sha, err := gitFetchLatestSHA(repoPath)
+		if err == nil {
+			return sha, nil
+		}
+		log.Printf("[AutoUpdate] git fetch failed (%v), falling back to GitHub API", err)
+	}
+
+	// Fallback: GitHub API (unauthenticated, 60 req/hour rate limit)
+	return fetchLatestMainSHAFromGitHub()
+}
+
+// gitFetchLatestSHA runs git fetch origin main and returns the SHA of origin/main.
+func gitFetchLatestSHA(repoPath string) (string, error) {
+	const gitFetchTimeout = 15 * time.Second
+
+	ctx, cancel := context.WithTimeout(context.Background(), gitFetchTimeout)
+	defer cancel()
+
+	// Fetch only the main branch (fast, minimal data)
+	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", "main", "--no-tags")
+	fetchCmd.Dir = repoPath
+	if out, err := fetchCmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("git fetch: %w (%s)", err, strings.TrimSpace(string(out)))
+	}
+
+	// Read the fetched SHA
+	revCmd := exec.CommandContext(ctx, "git", "rev-parse", "origin/main")
+	revCmd.Dir = repoPath
+	out, err := revCmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse origin/main: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// fetchLatestMainSHAFromGitHub calls the GitHub API to get the latest main SHA.
+func fetchLatestMainSHAFromGitHub() (string, error) {
+	const githubAPITimeout = 10 * time.Second
+	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Get(githubMainRefURL)
 	if err != nil {
 		return "", err
