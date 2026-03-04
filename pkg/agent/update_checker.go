@@ -358,7 +358,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	}
 	log.Printf("[AutoUpdate] Step 1/%d complete (git pull) in %s", total, time.Since(start))
 
-	// Step 2/7: npm install
+	// Step 2/7: npm install (with automatic cache recovery)
 	webDir := repoPath + "/web"
 	log.Printf("[AutoUpdate] Step 2/%d: npm install", total)
 	uc.broadcast("update_progress", UpdateProgressPayload{
@@ -370,17 +370,13 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	})
 
 	stepStart := time.Now()
-	npmInstall := exec.Command("npm", "install", "--prefer-offline")
-	npmInstall.Dir = webDir
-	npmInstall.Stdout = os.Stdout
-	npmInstall.Stderr = os.Stderr
-	if err := npmInstall.Run(); err != nil {
+	if err := uc.resilientNpmInstall(webDir, 2, total); err != nil {
 		log.Printf("[AutoUpdate] FAILED at step 2 (npm install) after %s: %v", time.Since(start), err)
 		uc.recordError(fmt.Sprintf("npm install failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
-			Message: "npm install failed, rolling back...",
-			Error:   err.Error(),
+			Message: "npm install failed after retries, rolling back...",
+			Error:   err.Error() + " (try: sudo chown -R $(id -u):$(id -g) ~/.npm)",
 		})
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath) //nolint:errcheck
@@ -839,6 +835,66 @@ func (uc *UpdateChecker) recordError(msg string) {
 	log.Printf("[AutoUpdate] Error: %s", msg)
 }
 
+// --- npm install with resilience ---
+
+const npmInstallMaxRetries = 3 // Max retries for npm install with cache recovery
+
+// resilientNpmInstall runs npm install with automatic recovery from cache corruption.
+// On failure it runs npm cache clean --force and retries. On 2nd+ failure it also
+// removes node_modules for a completely clean install. Broadcasts progress via WebSocket.
+func (uc *UpdateChecker) resilientNpmInstall(webDir string, step, totalSteps int) error {
+	for attempt := 1; attempt <= npmInstallMaxRetries; attempt++ {
+		// Remove stale lockfiles that can block concurrent installs
+		os.Remove(webDir + "/package-lock.json.lock")
+		os.Remove(webDir + "/.package-lock.json")
+
+		npmInstall := exec.Command("npm", "install", "--prefer-offline")
+		npmInstall.Dir = webDir
+		npmInstall.Stdout = os.Stdout
+		npmInstall.Stderr = os.Stderr
+
+		if err := npmInstall.Run(); err == nil {
+			return nil // success
+		}
+
+		if attempt == npmInstallMaxRetries {
+			return fmt.Errorf("npm install failed after %d attempts", npmInstallMaxRetries)
+		}
+
+		// Broadcast retry status
+		log.Printf("[AutoUpdate] npm install failed (attempt %d/%d), cleaning cache...", attempt, npmInstallMaxRetries)
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:     "building",
+			Message:    fmt.Sprintf("npm install failed — cleaning cache (attempt %d/%d)...", attempt, npmInstallMaxRetries),
+			Progress:   18,
+			Step:       step,
+			TotalSteps: totalSteps,
+		})
+
+		// Clean npm cache (fixes EACCES, sha512 corruption)
+		cacheClean := exec.Command("npm", "cache", "clean", "--force")
+		cacheClean.Stdout = os.Stdout
+		cacheClean.Stderr = os.Stderr
+		if cleanErr := cacheClean.Run(); cleanErr != nil {
+			log.Printf("[AutoUpdate] npm cache clean also failed: %v (user may need: sudo chown -R $(id -u):$(id -g) ~/.npm)", cleanErr)
+		}
+
+		// On 2nd+ attempt, remove node_modules for a completely clean install
+		if attempt >= 2 {
+			log.Printf("[AutoUpdate] Removing node_modules for clean install...")
+			uc.broadcast("update_progress", UpdateProgressPayload{
+				Status:     "building",
+				Message:    "Removing node_modules for clean install...",
+				Progress:   18,
+				Step:       step,
+				TotalSteps: totalSteps,
+			})
+			os.RemoveAll(webDir + "/node_modules")
+		}
+	}
+	return fmt.Errorf("npm install failed after %d attempts", npmInstallMaxRetries)
+}
+
 // --- Utility functions ---
 
 type githubReleaseInfo struct {
@@ -998,12 +1054,30 @@ func runGitPull(repoPath string) error {
 func rebuildFrontend(repoPath string) error {
 	webDir := repoPath + "/web"
 
-	npmInstall := exec.Command("npm", "install", "--prefer-offline")
-	npmInstall.Dir = webDir
-	npmInstall.Stdout = os.Stdout
-	npmInstall.Stderr = os.Stderr
-	if err := npmInstall.Run(); err != nil {
-		return fmt.Errorf("npm install: %w", err)
+	// Resilient npm install with cache recovery (same logic as resilientNpmInstall)
+	var npmErr error
+	for attempt := 1; attempt <= npmInstallMaxRetries; attempt++ {
+		os.Remove(webDir + "/package-lock.json.lock")
+		os.Remove(webDir + "/.package-lock.json")
+
+		npmInstall := exec.Command("npm", "install", "--prefer-offline")
+		npmInstall.Dir = webDir
+		npmInstall.Stdout = os.Stdout
+		npmInstall.Stderr = os.Stderr
+		if npmErr = npmInstall.Run(); npmErr == nil {
+			break
+		}
+		log.Printf("[AutoUpdate] rebuildFrontend: npm install failed (attempt %d/%d), cleaning cache...", attempt, npmInstallMaxRetries)
+		cacheClean := exec.Command("npm", "cache", "clean", "--force")
+		cacheClean.Stdout = os.Stdout
+		cacheClean.Stderr = os.Stderr
+		cacheClean.Run() //nolint:errcheck
+		if attempt >= 2 {
+			os.RemoveAll(webDir + "/node_modules")
+		}
+	}
+	if npmErr != nil {
+		return fmt.Errorf("npm install: %w", npmErr)
 	}
 
 	npmBuild := exec.Command("npm", "run", "build")
