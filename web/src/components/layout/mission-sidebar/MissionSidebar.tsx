@@ -19,6 +19,7 @@ import {
   Trash2,
   CheckCircle2,
   Eye,
+  ShieldOff,
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
@@ -395,6 +396,14 @@ export function MissionSidebar() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* AI paused banner — shown when user selected "None" agent */}
+      {selectedAgent === 'none' && (
+        <div className="mx-3 mt-2 p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center gap-2">
+          <ShieldOff className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+          <p className="text-xs text-cyan-400">{t('agent.aiPausedBanner')}</p>
         </div>
       )}
 

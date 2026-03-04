@@ -80,6 +80,8 @@ interface MissionContextValue {
   defaultAgent: string | null
   /** Whether agents are loading */
   agentsLoading: boolean
+  /** Whether AI is disabled (user selected 'none' or no agent) */
+  isAIDisabled: boolean
 
   // Actions
   startMission: (params: StartMissionParams) => string
@@ -1020,11 +1022,16 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     })
   }, [])
 
+  // Special value for "no AI agent" — agent data only, no AI processing
+  const NONE_AGENT = 'none'
+
   // Select an AI agent
   const selectAgent = useCallback((agentName: string) => {
     // Persist immediately so the choice survives page refresh
     localStorage.setItem(SELECTED_AGENT_KEY, agentName)
     setSelectedAgent(agentName)
+    // Skip WebSocket message for 'none' — no backend agent to select
+    if (agentName === NONE_AGENT) return
     ensureConnection().then(() => {
       wsRef.current?.send(JSON.stringify({
         id: `select-agent-${Date.now()}`,
@@ -1084,6 +1091,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       selectedAgent,
       defaultAgent,
       agentsLoading,
+      isAIDisabled: selectedAgent === 'none' || !selectedAgent,
       startMission,
       saveMission,
       runSavedMission,

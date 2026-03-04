@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Check, Loader2, Settings } from 'lucide-react'
+import { ChevronDown, Check, Loader2, Settings, ShieldOff } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, getDemoMode } from '../../hooks/useDemoMode'
 import { AgentIcon } from './AgentIcon'
@@ -111,19 +111,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Only gray out in demo mode - allow interaction during loading/reconnection
   const isGreyedOut = isDemoMode
 
-  // If only one agent and it's available, just show it (no selector needed)
-  if (visibleAgents.length === 1 && hasAvailableAgents && !isDemoMode) {
-    return (
-      <div className={cn('flex items-center gap-2', className)}>
-        <AgentIcon provider={currentAgent.provider} className="w-5 h-5" />
-        {!compact && (
-          <span className="text-sm font-medium text-foreground">
-            {currentAgent.displayName}
-          </span>
-        )}
-      </div>
-    )
-  }
+  const isNoneSelected = selectedAgent === 'none'
+
+  // Always show dropdown (even with 1 agent) so user can access "None" option
 
   const handleSelect = (agentName: string) => {
     selectAgent(agentName)
@@ -146,14 +136,16 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           isOpen && 'ring-1 ring-primary'
         )}
       >
-        {hasAvailableAgents && currentAgent ? (
+        {isNoneSelected ? (
+          <ShieldOff className="w-4 h-4 text-cyan-400" />
+        ) : hasAvailableAgents && currentAgent ? (
           <AgentIcon provider={currentAgent.provider} className="w-4 h-4" />
         ) : (
           <AgentIcon provider="default" className="w-4 h-4" />
         )}
         {!compact && (
           <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
-            {hasAvailableAgents && currentAgent ? currentAgent.displayName : 'AI Agent'}
+            {isNoneSelected ? t('agent.noneAgent') : hasAvailableAgents && currentAgent ? currentAgent.displayName : 'AI Agent'}
           </span>
         )}
         <ChevronDown className={cn(
@@ -176,6 +168,33 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
             else items[Math.max(idx - 1, 0)]?.focus()
           }}
         >
+          {/* "None" option — agent data only, no AI */}
+          <div className="py-1 border-b border-border">
+            <div
+              role="option"
+              aria-selected={isNoneSelected}
+              tabIndex={0}
+              className={cn(
+                'w-full flex items-start gap-3 px-3 py-2 text-left transition-colors hover:bg-secondary cursor-pointer',
+                isNoneSelected && 'bg-cyan-500/10'
+              )}
+              onClick={() => handleSelect('none')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect('none') } }}
+            >
+              <ShieldOff className="w-5 h-5 mt-0.5 flex-shrink-0 text-cyan-400" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={cn('text-sm font-medium', isNoneSelected ? 'text-cyan-400' : 'text-foreground')}>
+                    {t('agent.noneAgent')}
+                  </span>
+                  {isNoneSelected && (
+                    <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('agent.noneAgentDesc')}</p>
+              </div>
+            </div>
+          </div>
           {sortedAgents.length > 0 && (
             <div className="py-1">
               {sortedAgents.map((agent: AgentInfo) => (

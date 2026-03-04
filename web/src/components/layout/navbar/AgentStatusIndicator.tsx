@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Server, Box, Wifi, WifiOff } from 'lucide-react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useMissions } from '../../../hooks/useMissions'
 import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { useDemoMode, isDemoModeForced, getDemoMode } from '../../../hooks/useDemoMode'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
@@ -11,6 +12,7 @@ import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 export function AgentStatusIndicator() {
   const { t } = useTranslation(['common'])
   const { status: agentStatus, health: agentHealth, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
+  const { selectedAgent } = useMissions()
   const { status: backendStatus, isConnected: isBackendConnected, isInClusterMode } = useBackendHealth()
   const { isDemoMode: isDemoModeHook, toggleDemoMode } = useDemoMode()
   // Synchronous fallback prevents flash of WifiOff icon during React transitions
@@ -122,6 +124,7 @@ export function AgentStatusIndicator() {
 
   // Backend health affects the indicator when agent is connected (but not in demo mode)
   const backendIssue = !showAsDemoMode && !isBackendConnected && backendStatus !== 'connecting'
+  const isLiveMode = selectedAgent === 'none'
 
   const pillStyle = showAsDemoMode
     ? { bg: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20', dot: 'bg-purple-400', label: t('agent.demoMode'), Icon: Box, title: t('agent.demoModeTitle') }
@@ -129,6 +132,8 @@ export function AgentStatusIndicator() {
     ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: t('agent.degraded'), Icon: Wifi, title: t('agent.degradedTitle', { count: dataErrorCount }) }
     : stableConnected && backendIssue
     ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: t('agent.aiLabel'), Icon: Wifi, title: t('agent.backendUnavailable') }
+    : stableConnected && isLiveMode
+    ? { bg: 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20', dot: 'bg-cyan-400', label: t('agent.liveLabel'), Icon: Wifi, title: t('agent.liveMode') }
     : stableConnected
     ? { bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20', dot: 'bg-green-400', label: t('agent.aiLabel'), Icon: Wifi, title: t('agent.localAgentConnected') }
     : stableStatus === 'connecting'
