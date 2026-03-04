@@ -82,7 +82,7 @@ export function PodIssues() {
       searchFields: ['name', 'namespace', 'cluster', 'status'],
       clusterField: 'cluster',
       statusField: 'status',
-      customPredicate: (issue, query) => issue.issues.some(i => i.toLowerCase().includes(query)),
+      customPredicate: (issue, query) => (issue.issues || []).some(i => i.toLowerCase().includes(query)),
       storageKey: 'pod-issues',
     },
     sort: {

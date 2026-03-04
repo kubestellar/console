@@ -131,7 +131,7 @@ function useUnifiedDeploymentIssues(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useCachedDeploymentIssues(cluster, namespace)
   return {
-    data: result.issues,
+    data: result.issues || [],
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch,

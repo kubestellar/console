@@ -98,7 +98,7 @@ export function useWorkloadMonitor(
 
       const data: WorkloadMonitorResponse = await res.json()
       setResources(data.resources)
-      setIssues(data.issues)
+      setIssues(data.issues || [])
       setOverallStatus(data.status)
       setWorkloadKind(data.kind)
       setWarnings(data.warnings)

@@ -82,7 +82,7 @@ export function matchMissionsToCluster(
 
   // Pre-compute issue categories
   const issueCategories = new Set<string>()
-  if (cluster?.issues) {
+  if (cluster?.issues && Array.isArray(cluster.issues)) {
     for (const issue of cluster.issues) {
       const issueLower = issue.toLowerCase()
       for (const [pattern, categories] of Object.entries(ISSUE_TO_CATEGORIES)) {
@@ -147,7 +147,7 @@ export function matchMissionsToCluster(
       }
 
       // Match troubleshoot missions against cluster issues (direct text match)
-      if (mission.type === 'troubleshoot' && cluster.issues) {
+      if (mission.type === 'troubleshoot' && Array.isArray(cluster.issues)) {
         const descLower = (mission.description || '').toLowerCase()
         for (const issue of cluster.issues) {
           if (descLower.includes(issue.toLowerCase())) {
