@@ -273,8 +273,8 @@
     "provider_health": "Provider Health",
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
-    "coredns_status": "CoreDNS",
-    "crio_status": "CRI-O"
+    "crio_status": "CRI-O",
+    "coredns_status": "CoreDNS"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
