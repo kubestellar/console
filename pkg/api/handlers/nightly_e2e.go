@@ -29,14 +29,16 @@ const (
 
 // NightlyWorkflow defines a GitHub Actions workflow to monitor.
 type NightlyWorkflow struct {
-	Repo         string `json:"repo"`
-	WorkflowFile string `json:"workflowFile"`
-	Guide        string `json:"guide"`
-	Acronym      string `json:"acronym"`
-	Platform     string `json:"platform"`
-	Model        string `json:"model"`
-	GPUType      string `json:"gpuType"`
-	GPUCount     int    `json:"gpuCount"`
+	Repo         string            `json:"repo"`
+	WorkflowFile string            `json:"workflowFile"`
+	Guide        string            `json:"guide"`
+	Acronym      string            `json:"acronym"`
+	Platform     string            `json:"platform"`
+	Model        string            `json:"model"`
+	GPUType      string            `json:"gpuType"`
+	GPUCount     int               `json:"gpuCount"`
+	LLMDImages   map[string]string `json:"llmdImages"`   // llm-d component → tag
+	OtherImages  map[string]string `json:"otherImages"`  // non-llm-d containers → tag
 }
 
 // NightlyRun represents a single workflow run from the GitHub Actions API.
@@ -59,18 +61,20 @@ type NightlyRun struct {
 
 // NightlyGuideStatus holds runs and computed stats for a single guide.
 type NightlyGuideStatus struct {
-	Guide            string       `json:"guide"`
-	Acronym          string       `json:"acronym"`
-	Platform         string       `json:"platform"`
-	Repo             string       `json:"repo"`
-	WorkflowFile     string       `json:"workflowFile"`
-	Runs             []NightlyRun `json:"runs"`
-	PassRate         int          `json:"passRate"`
-	Trend            string       `json:"trend"`
-	LatestConclusion *string      `json:"latestConclusion"`
-	Model            string       `json:"model"`
-	GPUType          string       `json:"gpuType"`
-	GPUCount         int          `json:"gpuCount"`
+	Guide            string            `json:"guide"`
+	Acronym          string            `json:"acronym"`
+	Platform         string            `json:"platform"`
+	Repo             string            `json:"repo"`
+	WorkflowFile     string            `json:"workflowFile"`
+	Runs             []NightlyRun      `json:"runs"`
+	PassRate         int               `json:"passRate"`
+	Trend            string            `json:"trend"`
+	LatestConclusion *string           `json:"latestConclusion"`
+	Model            string            `json:"model"`
+	GPUType          string            `json:"gpuType"`
+	GPUCount         int               `json:"gpuCount"`
+	LLMDImages       map[string]string `json:"llmdImages"`  // llm-d component → tag
+	OtherImages      map[string]string `json:"otherImages"` // non-llm-d containers → tag
 }
 
 // NightlyE2EResponse is the JSON response from the /api/nightly-e2e/runs endpoint.
@@ -106,29 +110,57 @@ type NightlyE2EHandler struct {
 	logCacheExp map[string]time.Time
 }
 
+// Component image tags used by each guide type (shared across platforms).
+// The main vLLM image (llm-d-cuda-dev:latest) is overridden nightly via image_override.
+var (
+	// imgCudaDev is the nightly-built dev image used by most guides
+	imgCudaDev = map[string]string{"llm-d-cuda-dev": "latest"}
+
+	// imgPD adds the routing sidecar to the base image set
+	imgPD = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0"}
+
+	// imgPPC adds the UDS tokenizer to the base image set
+	imgPPC = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-uds-tokenizer": "v0.5.1-rc1"}
+
+	// imgSA uses the inference simulator instead of cuda-dev
+	imgSA = map[string]string{"llm-d-inference-sim": "v0.7.1", "llm-d-routing-sidecar": "v0.5.0"}
+
+	// imgWEP adds the routing sidecar for wide EP
+	imgWEP = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0"}
+
+	// imgWVA adds the workload variant autoscaler (tag is dynamic, rebuilt nightly)
+	imgWVA = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-workload-variant-autoscaler": "nightly"}
+
+	// imgTPC uses only the base cuda-dev image
+	imgTPC = map[string]string{"llm-d-cuda-dev": "latest"}
+
+	// imgBM uses the base image for benchmarking
+	imgBM = map[string]string{"llm-d-cuda-dev": "latest"}
+)
+
 // nightlyWorkflows is the canonical list of nightly E2E workflows to monitor.
 // Model/GPU metadata is sourced from each workflow's YAML in GitHub Actions.
 var nightlyWorkflows = []NightlyWorkflow{
 	// OCP — all OCP guides run on H100 except WVA (A100) and SA (CPU)
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", Guide: "Precise Prefix Cache", Acronym: "PPC", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-simulated-accelerators.yaml", Guide: "Simulated Accelerators", Acronym: "SA", Platform: "OCP", Model: "Simulated", GPUType: "CPU", GPUCount: 0},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", Guide: "Tiered Prefix Cache", Acronym: "TPC", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 1},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-ocp.yaml", Guide: "WVA", Acronym: "WVA", Platform: "OCP", Model: "Llama-3.1-8B", GPUType: "A100", GPUCount: 2},
-	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-ocp.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "OCP", Model: "opt-125m", GPUType: "A100", GPUCount: 1},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, LLMDImages: imgCudaDev},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgPD},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", Guide: "Precise Prefix Cache", Acronym: "PPC", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, LLMDImages: imgPPC},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-simulated-accelerators.yaml", Guide: "Simulated Accelerators", Acronym: "SA", Platform: "OCP", Model: "Simulated", GPUType: "CPU", GPUCount: 0, LLMDImages: imgSA},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", Guide: "Tiered Prefix Cache", Acronym: "TPC", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 1, LLMDImages: imgTPC},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgWEP},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-ocp.yaml", Guide: "WVA", Acronym: "WVA", Platform: "OCP", Model: "Llama-3.1-8B", GPUType: "A100", GPUCount: 2, LLMDImages: imgWVA},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-ocp.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "OCP", Model: "opt-125m", GPUType: "A100", GPUCount: 1, LLMDImages: imgBM},
 	// GKE — all GKE guides run on L4
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-gke.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "GKE", Model: "Qwen3-32B", GPUType: "L4", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2},
-	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-gke.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "GKE", Model: "opt-125m", GPUType: "L4", GPUCount: 1},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-gke.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "GKE", Model: "Qwen3-32B", GPUType: "L4", GPUCount: 2, LLMDImages: imgCudaDev},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2, LLMDImages: imgPD},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2, LLMDImages: imgWEP},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-gke.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "GKE", Model: "opt-125m", GPUType: "L4", GPUCount: 1, LLMDImages: imgBM},
 	// CKS — all CKS guides run on H100
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-cks.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "CKS", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-cks.yaml", Guide: "WVA", Acronym: "WVA", Platform: "CKS", Model: "Llama-3.1-8B", GPUType: "H100", GPUCount: 2},
-	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nightly-benchmark-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS", Model: "opt-125m", GPUType: "H100", GPUCount: 1},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-cks.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "CKS", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, LLMDImages: imgCudaDev},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgPD},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgWEP},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-cks.yaml", Guide: "WVA", Acronym: "WVA", Platform: "CKS", Model: "Llama-3.1-8B", GPUType: "H100", GPUCount: 2, LLMDImages: imgWVA},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nightly-benchmark-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS", Model: "opt-125m", GPUType: "H100", GPUCount: 1, LLMDImages: imgBM},
 }
 
 // NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
@@ -248,6 +280,8 @@ func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
 			Model:            wf.Model,
 			GPUType:          wf.GPUType,
 			GPUCount:         wf.GPUCount,
+			LLMDImages:       wf.LLMDImages,
+			OtherImages:      wf.OtherImages,
 		}
 	}
 

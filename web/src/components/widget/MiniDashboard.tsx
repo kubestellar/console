@@ -295,7 +295,7 @@ export function MiniDashboard() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <StatusDot status={overallStatus} />
-          <h1 className="text-lg font-semibold">KubeStellar Console</h1>
+          <h1 className="text-lg font-semibold">Nodes</h1>
         </div>
         <div className="flex items-center gap-2">
           {lastUpdated && (
@@ -425,7 +425,7 @@ export function MiniDashboard() {
           </div>
         ) : (
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>KubeStellar Console Widget</span>
+            <span>Nodes Widget</span>
             <button
               onClick={openFullDashboard}
               className="flex items-center gap-1 hover:text-gray-400 transition-colors"

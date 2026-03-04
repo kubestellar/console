@@ -195,6 +195,11 @@ Please provide:
     })
   }, [guide, run, checkKeyAndRun, startMission])
 
+  const llmdImages = guide?.llmdImages
+  const otherImages = guide?.otherImages
+  const hasLLMDImages = llmdImages && Object.keys(llmdImages).length > 0
+  const hasOtherImages = otherImages && Object.keys(otherImages).length > 0
+
   return (
     <div
       ref={dotRef}
@@ -206,7 +211,6 @@ Please provide:
         href={run.htmlUrl}
         target="_blank"
         rel="noopener noreferrer"
-        title={!isFailed ? title : undefined}
         aria-label={`Run #${run.runNumber}: ${title}`}
         onClick={e => e.stopPropagation()}
       >
@@ -214,19 +218,59 @@ Please provide:
           isHighlighted ? 'ring-2 ring-white/50 scale-125' : 'group-hover:ring-2 group-hover:ring-white/30'
         } transition-all`} aria-hidden="true" />
       </a>
-      {isFailed && showPopup && popupPos && createPortal(
+      {showPopup && popupPos && createPortal(
         <div
           className="fixed z-[9999]"
           style={{ top: popupPos.top, left: popupPos.left, transform: 'translate(-50%, -100%)' }}
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
         >
-          <div className="mb-1.5 bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-2.5 py-1.5 whitespace-nowrap text-[10px]">
-            <div className="text-slate-300 mb-1">
-              Run #{run.runNumber} &middot; {isGPUFailure ? <span className="text-amber-400">GPU unavailable</span> : <span className="text-red-400">failed</span>} &middot; {formatTimeAgo(run.createdAt)}
+          <div className="mb-1.5 bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-2.5 py-1.5 text-[10px]">
+            {/* Run status line */}
+            <div className="text-slate-300 mb-1 whitespace-nowrap">
+              Run #{run.runNumber} &middot;{' '}
+              {isRunning
+                ? <span className="text-blue-400">running</span>
+                : isGPUFailure
+                  ? <span className="text-amber-400">GPU unavailable</span>
+                  : isFailed
+                    ? <span className="text-red-400">failed</span>
+                    : run.conclusion === 'success'
+                      ? <span className="text-emerald-400">passed</span>
+                      : <span className="text-slate-400">{run.conclusion}</span>
+              }
+              {' '}&middot; {formatTimeAgo(run.createdAt)}
             </div>
-            <div className="flex items-center gap-2">
-              {guide && (
+
+            {/* llm-d component tags */}
+            {hasLLMDImages && (
+              <div className="mt-1.5 pt-1.5 border-t border-slate-700">
+                <div className="text-slate-500 text-[9px] font-medium mb-0.5">llm-d components</div>
+                {Object.entries(llmdImages).map(([name, tag]) => (
+                  <div key={name} className="flex items-center gap-1 whitespace-nowrap">
+                    <span className="text-slate-400">{name}</span>
+                    <span className="text-cyan-400 font-mono">:{tag}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Other container tags */}
+            {hasOtherImages && (
+              <div className="mt-1.5 pt-1.5 border-t border-slate-700">
+                <div className="text-slate-500 text-[9px] font-medium mb-0.5">other images</div>
+                {Object.entries(otherImages).map(([name, tag]) => (
+                  <div key={name} className="flex items-center gap-1 whitespace-nowrap">
+                    <span className="text-slate-400">{name}</span>
+                    <span className="text-orange-400 font-mono">:{tag}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Action links */}
+            <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-slate-700">
+              {isFailed && guide && (
                 <button
                   onClick={handleDiagnose}
                   disabled={isDiagnosing}
