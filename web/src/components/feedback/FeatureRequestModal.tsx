@@ -233,10 +233,10 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
     } catch (err) {
       // Show the actual backend error message if available
       const message = err instanceof Error ? err.message : ''
-      // Try to parse JSON error from backend (Fiber returns {message: "..."})
+      // Try to parse JSON error from backend (Fiber returns {error: "..."})
       try {
         const parsed = JSON.parse(message)
-        setError(parsed.message || t('feedback.submitFailed'))
+        setError(parsed.error || parsed.message || t('feedback.submitFailed'))
       } catch {
         setError(message || t('feedback.submitFailed'))
       }
