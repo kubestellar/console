@@ -441,6 +441,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const [rawContent, setRawContent] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [isMissionLoading, setIsMissionLoading] = useState(false)
 
   // Recommendations
   const [recommendations, setRecommendations] = useState<MissionMatch[]>([])
@@ -627,6 +628,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const selectCardMission = useCallback(async (mission: MissionExport) => {
     // Show index metadata immediately for instant feedback
     setSelectedMission(mission)
+    setIsMissionLoading(true)
     setRawContent(JSON.stringify(mission, null, 2))
     setShowRaw(false)
 
@@ -638,6 +640,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       setRawContent((current) => current === JSON.stringify(mission, null, 2) ? raw : current)
     } catch {
       // Silently keep the index metadata — steps will show as empty
+    } finally {
+      setIsMissionLoading(false)
     }
   }, [])
 
@@ -1682,6 +1686,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                   mission={selectedMission}
                   rawContent={rawContent}
                   showRaw={showRaw}
+                  loading={isMissionLoading}
                   onToggleRaw={() => setShowRaw(!showRaw)}
                   onImport={() => handleImport(selectedMission, rawContent ?? undefined)}
                   onBack={() => {

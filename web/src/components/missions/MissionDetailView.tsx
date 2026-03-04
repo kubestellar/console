@@ -41,6 +41,9 @@ interface TabDef {
   color: string
 }
 
+/** Number of shimmer skeleton rows shown while full mission content loads */
+const LOADING_SKELETON_COUNT = 3
+
 interface MissionDetailViewProps {
   mission: MissionExport
   rawContent: string | null
@@ -56,6 +59,8 @@ interface MissionDetailViewProps {
   hideBackButton?: boolean
   /** Shareable URL for this mission (e.g. http://localhost:8080/missions/install-prometheus) */
   shareUrl?: string
+  /** Show shimmer skeleton while full mission content is being fetched */
+  loading?: boolean
 }
 
 // Extract code blocks from markdown-style description
@@ -178,6 +183,7 @@ export function MissionDetailView({
   importLabel = 'Import',
   hideBackButton = false,
   shareUrl,
+  loading = false,
 }: MissionDetailViewProps) {
   const [linkCopied, setLinkCopied] = useState(false)
   const tabs: TabDef[] = [
@@ -493,7 +499,20 @@ export function MissionDetailView({
 
           {/* Tab content */}
           <div className="space-y-3">
-            {activeTabDef.steps.length > 0 ? (
+            {loading ? (
+              /* Shimmer skeleton placeholders while full mission content loads */
+              Array.from({ length: LOADING_SKELETON_COUNT }).map((_, i) => (
+                <div key={i} className="flex gap-3 p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full animate-shimmer" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-1/3 rounded animate-shimmer" />
+                    <div className="h-3 w-full rounded animate-shimmer" />
+                    <div className="h-3 w-2/3 rounded animate-shimmer" />
+                    <div className="h-16 w-full rounded animate-shimmer" />
+                  </div>
+                </div>
+              ))
+            ) : activeTabDef.steps.length > 0 ? (
               activeTabDef.steps.map((step, i) => (
                 <StepCard
                   key={`${activeTab}-${i}`}
