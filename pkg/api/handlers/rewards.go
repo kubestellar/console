@@ -494,16 +494,28 @@ func (h *RewardsHandler) GetLeaderboard(c *fiber.Ctx) error {
 	}
 	includeLogin := c.Query("include") // ensure this user appears in results
 
-	// Check cache
+	// Check cache — but invalidate if the requested user isn't present
 	h.leaderboardMu.RLock()
 	if h.leaderboardCache != nil && time.Since(h.leaderboardCache.fetchedAt) < leaderboardCacheTTL {
 		cached := *h.leaderboardCache.response
-		h.leaderboardMu.RUnlock()
-		cached.FromCache = true
-		if len(cached.Entries) > limit {
-			cached.Entries = cached.Entries[:limit]
+		includeFound := includeLogin == ""
+		if !includeFound {
+			for _, e := range cached.Entries {
+				if e.Login == includeLogin {
+					includeFound = true
+					break
+				}
+			}
 		}
-		return c.JSON(cached)
+		if includeFound {
+			h.leaderboardMu.RUnlock()
+			cached.FromCache = true
+			if len(cached.Entries) > limit {
+				cached.Entries = cached.Entries[:limit]
+			}
+			return c.JSON(cached)
+		}
+		// Requested user not in cache — fall through to rebuild
 	}
 	h.leaderboardMu.RUnlock()
 
@@ -587,9 +599,6 @@ func (h *RewardsHandler) GetLeaderboard(c *fiber.Ctx) error {
 		if fetchErr != nil {
 			log.Printf("[leaderboard] Failed to fetch rewards for %s: %v", login, fetchErr)
 			continue
-		}
-		if rewards.TotalPoints == 0 {
-			continue // skip zero-point contributors
 		}
 
 		levelName, levelRank := getContributorLevelForPoints(rewards.TotalPoints)
