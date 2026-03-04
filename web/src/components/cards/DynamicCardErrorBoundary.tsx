@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 import { emitError } from '../../lib/analytics'
+import { isChunkLoadError } from '../../lib/chunkErrors'
 
 // Maximum number of retry attempts before disabling the retry button
 const MAX_RETRY_ATTEMPTS = 3
@@ -33,11 +34,21 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false, error: null, retryCount: 0, pendingRetry: false }
   }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(error: Error): Partial<State> | null {
+    // Let chunk load errors propagate to the global ChunkErrorBoundary,
+    // which auto-reloads the page to pick up fresh chunk references.
+    if (isChunkLoadError(error)) {
+      return null
+    }
     return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Re-throw chunk load errors so ChunkErrorBoundary handles them
+    if (isChunkLoadError(error)) {
+      throw error
+    }
+
     console.error(`[DynamicCard:${this.props.cardId}] Render error:`, error, errorInfo)
     emitError('card_render', `[${this.props.cardId}] ${error.message}`)
     this.props.onError?.(error, errorInfo)

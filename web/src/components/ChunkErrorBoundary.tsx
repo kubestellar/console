@@ -2,6 +2,7 @@ import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import i18next from 'i18next'
 import { emitError } from '../lib/analytics'
+import { isChunkLoadError } from '../lib/chunkErrors'
 
 // Reload throttle interval in milliseconds to prevent infinite reload loops
 const RELOAD_THROTTLE_MS = 30_000 // 30 seconds
@@ -85,15 +86,3 @@ export class ChunkErrorBoundary extends Component<Props, State> {
   }
 }
 
-function isChunkLoadError(error: Error): boolean {
-  const msg = error.message || ''
-  return (
-    msg.includes('Failed to fetch dynamically imported module') ||
-    msg.includes('Loading chunk') ||
-    msg.includes('Loading CSS chunk') ||
-    msg.includes('dynamically imported module') ||
-    msg.includes('error loading dynamically imported module') ||
-    // Vite-specific preload error
-    msg.includes('Unable to preload CSS')
-  )
-}
