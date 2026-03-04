@@ -6,7 +6,7 @@
 import { useClusters, usePods, useDeployments, useNamespaces, useEvents, useHelmReleases, useOperatorSubscriptions, useSecurityIssues } from './useMCP'
 
 export function useClusterData() {
-  const { clusters } = useClusters()
+  const { clusters, deduplicatedClusters } = useClusters()
   const { pods } = usePods()
   const { deployments } = useDeployments()
   const { namespaces } = useNamespaces()
@@ -17,6 +17,7 @@ export function useClusterData() {
 
   return {
     clusters,
+    deduplicatedClusters,
     pods,
     deployments,
     namespaces,

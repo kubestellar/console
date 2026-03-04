@@ -171,7 +171,7 @@ function getStatusBadge(status: string) {
 
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
-  const { clusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
+  const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
   const { nodes: cachedNodes } = useCachedNodes()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -190,7 +190,8 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const allItems = useMemo(() => {
     switch (viewType) {
       case 'all-clusters':
-        return clusters.map(c => ({
+        // Use deduplicated clusters to avoid showing duplicate contexts for the same server
+        return (deduplicatedClusters || clusters).map(c => ({
           ...c,
           name: c.name,
           cluster: c.name,
@@ -313,7 +314,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       default:
         return []
     }
-  }, [viewType, clusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes])
+  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes])
 
   // Apply initial filter from data prop
   const preFilteredItems = useMemo(() => {
