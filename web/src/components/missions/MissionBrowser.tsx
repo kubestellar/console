@@ -133,9 +133,12 @@ export function getMissionSlug(mission: MissionExport): string {
     .replace(/^-|-$/g, '')
 }
 
-/** Build a full shareable URL for a mission */
+/** UTM parameters appended to share-button URLs for GA4 campaign attribution */
+const SHARE_UTM_PARAMS = 'utm_source=mission-explorer&utm_medium=share-link&utm_campaign=mission-sharing'
+
+/** Build a full shareable URL for a mission (includes UTM campaign params) */
 function getMissionShareUrl(mission: MissionExport): string {
-  return `${window.location.origin}${getMissionRoute(getMissionSlug(mission))}`
+  return `${window.location.origin}${getMissionRoute(getMissionSlug(mission))}?${SHARE_UTM_PARAMS}`
 }
 
 const CNCF_CATEGORIES = [

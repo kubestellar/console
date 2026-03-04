@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
 import { DrillDownModal } from './components/drilldown/DrillDownModal'
@@ -243,10 +243,14 @@ function SettingsSyncInit() {
   return null
 }
 
-/** Redirect /missions/:missionId → /?mission=:missionId to open MissionBrowser via deep-link */
+/** Redirect /missions/:missionId → /?mission=:missionId to open MissionBrowser via deep-link.
+ *  Preserves UTM and other query params so GA4 campaign attribution survives the redirect. */
 function MissionDeepLink() {
   const { missionId } = useParams()
-  return <Navigate to={`/?mission=${encodeURIComponent(missionId || '')}`} replace />
+  const [searchParams] = useSearchParams()
+  const params = new URLSearchParams(searchParams)
+  params.set('mission', encodeURIComponent(missionId || ''))
+  return <Navigate to={`/?${params.toString()}`} replace />
 }
 
 // Route-to-title map for GA4 page view granularity and browser tab labeling
