@@ -11,7 +11,8 @@ const (
 	TypeClaude        MessageType = "claude"        // Legacy - routes to selected agent
 	TypeChat          MessageType = "chat"          // Generic chat with selected agent
 	TypeListAgents    MessageType = "list_agents"   // List available AI agents
-	TypeSelectAgent   MessageType = "select_agent"  // Select an AI agent
+	TypeSelectAgent   MessageType = "select_agent"   // Select an AI agent
+	TypeCancelChat    MessageType = "cancel_chat"    // Cancel in-progress chat
 	TypeRenameContext MessageType = "rename_context"
 
 	// Response types

@@ -84,7 +84,7 @@ interface MissionContextValue {
   // Actions
   startMission: (params: StartMissionParams) => string
   saveMission: (params: SaveMissionParams) => string
-  runSavedMission: (missionId: string) => void
+  runSavedMission: (missionId: string, cluster?: string) => void
   sendMessage: (missionId: string, content: string) => void
   cancelMission: (missionId: string) => void
   dismissMission: (missionId: string) => void
@@ -798,23 +798,29 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     return missionId
   }, [])
 
-  // Run a previously saved mission
-  const runSavedMission = useCallback((missionId: string) => {
+  // Run a previously saved mission, optionally targeting a specific cluster
+  const runSavedMission = useCallback((missionId: string, cluster?: string) => {
     const mission = missions.find(m => m.id === missionId)
     if (!mission || mission.status !== 'saved') return
 
-    const initialPrompt = mission.importedFrom?.steps
+    const basePrompt = mission.importedFrom?.steps
       ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n')}`
       : mission.description
+
+    // Inject cluster targeting context if a cluster was selected
+    const initialPrompt = cluster
+      ? `Target cluster: ${cluster}\n\nIMPORTANT: All kubectl commands MUST use --context=${cluster}\n\n${basePrompt}`
+      : basePrompt
 
     setMissions(prev => prev.map(m =>
       m.id === missionId ? {
         ...m,
         status: 'pending',
+        cluster: cluster || undefined,
         messages: [{
           id: `msg-${Date.now()}`,
           role: 'user' as const,
-          content: initialPrompt,
+          content: basePrompt, // Show original prompt in UI (not cluster prefix)
           timestamp: new Date(),
         }],
         updatedAt: new Date(),
@@ -860,8 +866,46 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     })
   }, [missions, ensureConnection, selectedAgent])
 
+  // Cancel a running mission — sends cancel signal to backend to kill agent process
+  const cancelMission = useCallback((missionId: string) => {
+    // Send cancel signal to backend to abort the in-progress agent turn
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        id: `cancel-${Date.now()}`,
+        type: 'cancel_chat',
+        payload: { sessionId: missionId },
+      }))
+    }
+
+    setMissions(prev => prev.map(m =>
+      m.id === missionId ? {
+        ...m,
+        status: 'failed',
+        currentStep: undefined,
+        updatedAt: new Date(),
+        messages: [
+          ...m.messages,
+          {
+            id: `msg-${Date.now()}`,
+            role: 'system',
+            content: 'Mission cancelled by user.',
+            timestamp: new Date(),
+          }
+        ]
+      } : m
+    ))
+  }, [])
+
   // Send a follow-up message
   const sendMessage = useCallback((missionId: string, content: string) => {
+    // Detect stop/cancel keywords — treat as a cancel action
+    const STOP_KEYWORDS = ['stop', 'cancel', 'abort', 'halt', 'quit']
+    const isStopCommand = STOP_KEYWORDS.some(kw => content.trim().toLowerCase() === kw)
+    if (isStopCommand) {
+      cancelMission(missionId)
+      return
+    }
+
     // Track token usage for this mission
     setActiveTokenCategory('missions')
 
@@ -925,27 +969,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-  }, [ensureConnection, missions, selectedAgent])
-
-  // Cancel a running mission
-  const cancelMission = useCallback((missionId: string) => {
-    setMissions(prev => prev.map(m =>
-      m.id === missionId ? {
-        ...m,
-        status: 'failed',
-        updatedAt: new Date(),
-        messages: [
-          ...m.messages,
-          {
-            id: `msg-${Date.now()}`,
-            role: 'system',
-            content: 'Mission cancelled by user.',
-            timestamp: new Date(),
-          }
-        ]
-      } : m
-    ))
-  }, [])
+  }, [cancelMission, ensureConnection, missions, selectedAgent])
 
   // Dismiss/remove a mission from the list
   const dismissMission = useCallback((missionId: string) => {

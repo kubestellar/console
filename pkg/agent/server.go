@@ -95,6 +95,10 @@ type Server struct {
 	backendCmd *exec.Cmd
 	backendMux sync.Mutex
 
+	// Active chat cancel functions — maps sessionID → cancel for in-progress chats
+	activeChatCtxs   map[string]context.CancelFunc
+	activeChatCtxsMu sync.Mutex
+
 	// Auto-update system
 	updateChecker *UpdateChecker
 
@@ -164,6 +168,7 @@ func NewServer(cfg Config) (*Server, error) {
 		agentToken:     agentToken,
 		sessionStart:   now,
 		todayDate:      now.Format("2006-01-02"),
+		activeChatCtxs: make(map[string]context.CancelFunc),
 	}
 
 	server.upgrader = websocket.Upgrader{
@@ -1786,13 +1791,18 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// For chat messages, use streaming handler that can send multiple responses
+		// For chat messages, run in a goroutine so cancel messages can be received
 		if msg.Type == protocol.TypeChat || msg.Type == protocol.TypeClaude {
 			forceAgent := ""
 			if msg.Type == protocol.TypeClaude {
 				forceAgent = "claude"
 			}
-			s.handleChatMessageStreaming(conn, msg, forceAgent)
+			go func(m protocol.Message, fa string) {
+				s.handleChatMessageStreaming(conn, m, fa, &writeMu, &closed)
+			}(msg, forceAgent)
+		} else if msg.Type == protocol.TypeCancelChat {
+			// Cancel an in-progress chat by session ID
+			s.handleCancelChat(conn, msg, &writeMu)
 		} else if msg.Type == protocol.TypeKubectl {
 			// Handle kubectl messages concurrently so one slow cluster
 			// doesn't block the entire WebSocket message loop.
@@ -1897,13 +1907,24 @@ func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 	}
 }
 
-// handleChatMessageStreaming handles chat messages with streaming support
-// This allows sending multiple WebSocket messages for progress events and text chunks
-func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.Message, forceAgent string) {
+// handleChatMessageStreaming handles chat messages with streaming support.
+// Runs in a goroutine so the WebSocket read loop stays free to receive cancel messages.
+// writeMu/closed are shared with the read loop for safe concurrent WebSocket writes.
+func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
+	// safeWrite sends a WebSocket message only if the connection is still open and not cancelled
+	safeWrite := func(ctx context.Context, outMsg protocol.Message) {
+		if closed.Load() || ctx.Err() != nil {
+			return
+		}
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		conn.WriteJSON(outMsg)
+	}
+
 	// Parse payload
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
-		conn.WriteJSON(s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
+		safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
 		return
 	}
 
@@ -1912,7 +1933,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		// Try legacy ClaudeRequest format for backward compatibility
 		var legacyReq protocol.ClaudeRequest
 		if err := json.Unmarshal(payloadBytes, &legacyReq); err != nil {
-			conn.WriteJSON(s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
+			safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
 			return
 		}
 		req.Prompt = legacyReq.Prompt
@@ -1920,9 +1941,23 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	}
 
 	if req.Prompt == "" {
-		conn.WriteJSON(s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
+		safeWrite(context.Background(), s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
 		return
 	}
+
+	// Create cancellable context — cancel_chat messages will call the cancel function
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Register cancel function so handleCancelChat can stop this session
+	s.activeChatCtxsMu.Lock()
+	s.activeChatCtxs[req.SessionID] = cancel
+	s.activeChatCtxsMu.Unlock()
+	defer func() {
+		s.activeChatCtxsMu.Lock()
+		delete(s.activeChatCtxs, req.SessionID)
+		s.activeChatCtxsMu.Unlock()
+	}()
 
 	// Determine which agent to use
 	agentName := req.Agent
@@ -1954,7 +1989,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		// Try mixed-mode: use thinking agent + CLI execution agent
 		if toolAgent := s.findToolCapableAgent(); toolAgent != "" {
 			log.Printf("[Chat] Mixed-mode: thinking=%s, execution=%s", agentName, toolAgent)
-			s.handleMixedModeChat(conn, msg, req, agentName, toolAgent, req.SessionID)
+			s.handleMixedModeChat(ctx, conn, msg, req, agentName, toolAgent, req.SessionID, writeMu, closed)
 			return
 		}
 		log.Printf("[Chat] No tool-capable agent available, keeping %s (best-effort)", agentName)
@@ -1970,7 +2005,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		log.Printf("[Chat] Agent %q not found, trying default", agentName)
 		provider, err = s.registry.GetDefault()
 		if err != nil {
-			conn.WriteJSON(s.errorResponse(msg.ID, "no_agent", "No AI agent available. Please configure an API key"))
+			safeWrite(ctx, s.errorResponse(msg.ID, "no_agent", "No AI agent available. Please configure an API key"))
 			return
 		}
 		agentName = provider.Name()
@@ -1978,7 +2013,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	}
 
 	if !provider.IsAvailable() {
-		conn.WriteJSON(s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available", agentName)))
+		safeWrite(ctx, s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available", agentName)))
 		return
 	}
 
@@ -1998,7 +2033,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	}
 
 	// Send initial progress message so user sees feedback immediately
-	conn.WriteJSON(protocol.Message{
+	safeWrite(ctx, protocol.Message{
 		ID:   msg.ID,
 		Type: protocol.TypeProgress,
 		Payload: protocol.ProgressPayload{
@@ -2014,8 +2049,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 
 		onChunk := func(chunk string) {
 			streamedContent.WriteString(chunk)
-			// Send stream message for text chunk
-			conn.WriteJSON(protocol.Message{
+			safeWrite(ctx, protocol.Message{
 				ID:   msg.ID,
 				Type: protocol.TypeStream,
 				Payload: protocol.ChatStreamPayload{
@@ -2027,15 +2061,15 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			})
 		}
 
+		const maxCmdDisplayLen = 60
 		onProgress := func(event StreamEvent) {
 			// Build human-readable step description
 			step := event.Tool
 			if event.Type == "tool_use" {
 				// For tool_use, show what tool is being called
 				if cmd, ok := event.Input["command"].(string); ok {
-					// Truncate long commands
-					if len(cmd) > 60 {
-						cmd = cmd[:60] + "..."
+					if len(cmd) > maxCmdDisplayLen {
+						cmd = cmd[:maxCmdDisplayLen] + "..."
 					}
 					step = fmt.Sprintf("%s: %s", event.Tool, cmd)
 				}
@@ -2043,8 +2077,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 				step = fmt.Sprintf("%s completed", event.Tool)
 			}
 
-			// Send progress message
-			conn.WriteJSON(protocol.Message{
+			safeWrite(ctx, protocol.Message{
 				ID:   msg.ID,
 				Type: protocol.TypeProgress,
 				Payload: protocol.ProgressPayload{
@@ -2056,9 +2089,14 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			})
 		}
 
-		resp, err = streamingProvider.StreamChatWithProgress(context.Background(), chatReq, onChunk, onProgress)
+		resp, err = streamingProvider.StreamChatWithProgress(ctx, chatReq, onChunk, onProgress)
 		if err != nil {
-			conn.WriteJSON(s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s: %s", agentName, err.Error())))
+			// Don't send error if we were cancelled — the frontend already knows
+			if ctx.Err() != nil {
+				log.Printf("[Chat] Session %s cancelled", req.SessionID)
+				return
+			}
+			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s: %s", agentName, err.Error())))
 			return
 		}
 
@@ -2068,11 +2106,21 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		}
 	} else {
 		// Fall back to non-streaming for providers that don't support progress
-		resp, err = provider.Chat(context.Background(), chatReq)
+		resp, err = provider.Chat(ctx, chatReq)
 		if err != nil {
-			conn.WriteJSON(s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s: %s", agentName, err.Error())))
+			if ctx.Err() != nil {
+				log.Printf("[Chat] Session %s cancelled", req.SessionID)
+				return
+			}
+			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s: %s", agentName, err.Error())))
 			return
 		}
+	}
+
+	// Don't send result if cancelled
+	if ctx.Err() != nil {
+		log.Printf("[Chat] Session %s cancelled after completion", req.SessionID)
+		return
 	}
 
 	// Ensure we have a valid response object to avoid nil panics
@@ -2097,7 +2145,7 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	}
 
 	// Send final result
-	conn.WriteJSON(protocol.Message{
+	safeWrite(ctx, protocol.Message{
 		ID:   msg.ID,
 		Type: protocol.TypeResult,
 		Payload: protocol.ChatStreamPayload{
@@ -2112,6 +2160,37 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			},
 		},
 	})
+}
+
+// handleCancelChat cancels an in-progress chat session by calling its context cancel function
+func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, writeMu *sync.Mutex) {
+	payloadBytes, _ := json.Marshal(msg.Payload)
+	var req struct {
+		SessionID string `json:"sessionId"`
+	}
+	json.Unmarshal(payloadBytes, &req)
+
+	s.activeChatCtxsMu.Lock()
+	cancelFn, ok := s.activeChatCtxs[req.SessionID]
+	s.activeChatCtxsMu.Unlock()
+
+	if ok {
+		cancelFn()
+		log.Printf("[Chat] Cancelled chat for session %s", req.SessionID)
+	} else {
+		log.Printf("[Chat] No active chat to cancel for session %s", req.SessionID)
+	}
+
+	writeMu.Lock()
+	conn.WriteJSON(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: map[string]interface{}{
+			"cancelled": ok,
+			"sessionId": req.SessionID,
+		},
+	})
+	writeMu.Unlock()
 }
 
 // handleChatMessage handles chat messages (both legacy claude and new chat types)
@@ -2298,15 +2377,25 @@ func (s *Server) errorResponse(id, code, message string) protocol.Message {
 // 1. Thinking agent (API) analyzes the prompt and generates a plan
 // 2. Execution agent (CLI) runs any commands
 // 3. Thinking agent analyzes the results
-func (s *Server) handleMixedModeChat(conn *websocket.Conn, msg protocol.Message, req protocol.ChatRequest, thinkingAgent, executionAgent string, sessionID string) {
+func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, msg protocol.Message, req protocol.ChatRequest, thinkingAgent, executionAgent string, sessionID string, writeMu *sync.Mutex, closed *atomic.Bool) {
+	// safeWrite sends a WebSocket message only if the connection is still open and not cancelled
+	safeWrite := func(outMsg protocol.Message) {
+		if closed.Load() || ctx.Err() != nil {
+			return
+		}
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		conn.WriteJSON(outMsg)
+	}
+
 	thinkingProvider, err := s.registry.Get(thinkingAgent)
 	if err != nil {
-		conn.WriteJSON(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Thinking agent %s not found", thinkingAgent)))
+		safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Thinking agent %s not found", thinkingAgent)))
 		return
 	}
 	execProvider, err := s.registry.Get(executionAgent)
 	if err != nil {
-		conn.WriteJSON(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Execution agent %s not found", executionAgent)))
+		safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Execution agent %s not found", executionAgent)))
 		return
 	}
 
@@ -2316,10 +2405,8 @@ func (s *Server) handleMixedModeChat(conn *websocket.Conn, msg protocol.Message,
 		history = append(history, ChatMessage{Role: m.Role, Content: m.Content})
 	}
 
-	ctx := context.Background()
-
 	// Phase 1: Send thinking phase indicator
-	conn.WriteJSON(protocol.Message{
+	safeWrite(protocol.Message{
 		ID:   msg.ID,
 		Type: "mixed_mode_thinking",
 		Payload: map[string]interface{}{
@@ -2345,18 +2432,22 @@ User request: %s`, req.Prompt)
 
 	thinkingResp, err := thinkingProvider.Chat(ctx, &thinkingReq)
 	if err != nil {
+		if ctx.Err() != nil {
+			log.Printf("[MixedMode] Session %s cancelled", sessionID)
+			return
+		}
 		log.Printf("[MixedMode] Thinking agent error: %v", err)
-		conn.WriteJSON(s.errorResponse(msg.ID, "mixed_mode_error", fmt.Sprintf("Thinking agent error: %v", err)))
+		safeWrite(s.errorResponse(msg.ID, "mixed_mode_error", fmt.Sprintf("Thinking agent error: %v", err)))
 		return
 	}
 	if thinkingResp == nil {
 		log.Printf("[MixedMode] Thinking agent returned nil response")
-		conn.WriteJSON(s.errorResponse(msg.ID, "mixed_mode_error", "Thinking agent returned empty response"))
+		safeWrite(s.errorResponse(msg.ID, "mixed_mode_error", "Thinking agent returned empty response"))
 		return
 	}
 
 	// Stream the thinking response
-	conn.WriteJSON(protocol.Message{
+	safeWrite(protocol.Message{
 		ID:   msg.ID,
 		Type: "stream_chunk",
 		Payload: map[string]interface{}{
@@ -2379,7 +2470,7 @@ User request: %s`, req.Prompt)
 
 	if len(commands) == 0 {
 		// No commands to execute - just return thinking response
-		conn.WriteJSON(protocol.Message{
+		safeWrite(protocol.Message{
 			ID:   msg.ID,
 			Type: "stream_end",
 			Payload: map[string]interface{}{
@@ -2391,7 +2482,7 @@ User request: %s`, req.Prompt)
 	}
 
 	// Phase 2: Execute commands via CLI agent
-	conn.WriteJSON(protocol.Message{
+	safeWrite(protocol.Message{
 		ID:   msg.ID,
 		Type: "mixed_mode_executing",
 		Payload: map[string]interface{}{
@@ -2415,9 +2506,13 @@ User request: %s`, req.Prompt)
 
 	execResp, err := execProvider.Chat(ctx, &execReq)
 	if err != nil {
+		if ctx.Err() != nil {
+			log.Printf("[MixedMode] Session %s cancelled during execution", sessionID)
+			return
+		}
 		log.Printf("[MixedMode] Execution agent error: %v", err)
 		execContent = fmt.Sprintf("Execution Error: %v", err)
-		conn.WriteJSON(protocol.Message{
+		safeWrite(protocol.Message{
 			ID:   msg.ID,
 			Type: "stream_chunk",
 			Payload: map[string]interface{}{
@@ -2430,7 +2525,7 @@ User request: %s`, req.Prompt)
 		if execResp != nil {
 			execContent = execResp.Content
 		}
-		conn.WriteJSON(protocol.Message{
+		safeWrite(protocol.Message{
 			ID:   msg.ID,
 			Type: "stream_chunk",
 			Payload: map[string]interface{}{
@@ -2442,7 +2537,7 @@ User request: %s`, req.Prompt)
 	}
 
 	// Phase 3: Feed results back to thinking agent for analysis
-	conn.WriteJSON(protocol.Message{
+	safeWrite(protocol.Message{
 		ID:   msg.ID,
 		Type: "mixed_mode_thinking",
 		Payload: map[string]interface{}{
@@ -2467,9 +2562,13 @@ Command output:
 
 	analysisResp, err := thinkingProvider.Chat(ctx, &analysisReq)
 	if err != nil {
+		if ctx.Err() != nil {
+			log.Printf("[MixedMode] Session %s cancelled during analysis", sessionID)
+			return
+		}
 		log.Printf("[MixedMode] Analysis error: %v", err)
 	} else if analysisResp != nil {
-		conn.WriteJSON(protocol.Message{
+		safeWrite(protocol.Message{
 			ID:   msg.ID,
 			Type: "stream_chunk",
 			Payload: map[string]interface{}{
@@ -2481,7 +2580,7 @@ Command output:
 	}
 
 	// End stream
-	conn.WriteJSON(protocol.Message{
+	safeWrite(protocol.Message{
 		ID:   msg.ID,
 		Type: "stream_end",
 		Payload: map[string]interface{}{

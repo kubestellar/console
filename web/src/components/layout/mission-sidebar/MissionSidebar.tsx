@@ -33,6 +33,7 @@ import type { Mission } from '../../../hooks/useMissions'
 import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { MissionChat } from './MissionChat'
+import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 
@@ -49,6 +50,8 @@ export function MissionSidebar() {
   const [viewingMission, setViewingMission] = useState<MissionExport | null>(null)
   const [viewingMissionRaw, setViewingMissionRaw] = useState(false)
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
+  // Cluster selection for install missions
+  const [pendingRunMissionId, setPendingRunMissionId] = useState<string | null>(null)
 
   // Deep-link: open MissionBrowser to specific mission via ?mission= URL param
   const [searchParams, setSearchParams] = useSearchParams()
@@ -108,6 +111,19 @@ export function MissionSidebar() {
     setViewingMission(savedMissionToExport(m))
     setViewingMissionRaw(false)
   }, [savedMissionToExport])
+
+  // Run mission — for install/deploy types, show cluster picker first
+  const handleRunMission = useCallback((missionId: string) => {
+    const mission = missions.find(m => m.id === missionId)
+    const isInstall = mission?.importedFrom?.missionClass === 'install' || mission?.type === 'deploy'
+    if (isInstall) {
+      setPendingRunMissionId(missionId)
+    } else {
+      runSavedMission(missionId)
+    }
+  }, [missions, runSavedMission])
+
+  const pendingMission = pendingRunMissionId ? missions.find(m => m.id === pendingRunMissionId) : null
 
   // Escape key: exit fullscreen first, then close sidebar
   useEffect(() => {
@@ -467,7 +483,7 @@ export function MissionSidebar() {
                         <Eye className="w-2.5 h-2.5" /> View
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); runSavedMission(m.id) }}
+                        onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
                         className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
                       >
                         <Play className="w-2.5 h-2.5" /> Run
@@ -539,7 +555,7 @@ export function MissionSidebar() {
                         <Eye className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); runSavedMission(m.id) }}
+                        onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                         title="Run this mission"
                       >
@@ -623,7 +639,7 @@ export function MissionSidebar() {
                 onImport={() => {
                   // Find the matching saved mission and run it
                   const match = savedMissions.find(m => m.title === viewingMission.title)
-                  if (match) runSavedMission(match.id)
+                  if (match) handleRunMission(match.id)
                   setViewingMission(null)
                 }}
                 onBack={() => setViewingMission(null)}
@@ -642,6 +658,19 @@ export function MissionSidebar() {
         onImport={handleImportMission}
         initialMission={deepLinkMission || undefined}
       />
+
+      {/* Cluster Selection Dialog for install missions */}
+      {pendingRunMissionId && (
+        <ClusterSelectionDialog
+          open
+          missionTitle={pendingMission?.title ?? 'Mission'}
+          onSelect={(cluster) => {
+            runSavedMission(pendingRunMissionId, cluster || undefined)
+            setPendingRunMissionId(null)
+          }}
+          onCancel={() => setPendingRunMissionId(null)}
+        />
+      )}
     </>
   )
 }
