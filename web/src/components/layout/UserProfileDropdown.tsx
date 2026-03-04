@@ -55,18 +55,33 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     setIsOpen(false)
   }
 
-  // Check OAuth status eagerly on mount so it's ready before dropdown opens
+  // Check OAuth status on mount, retrying until backend is fully up.
+  // Only mark checked=true when backendUp=true so we never flash "not configured"
+  // while the backend is still starting (it omits oauth_configured during startup).
   useEffect(() => {
-    checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
-      setOauthStatus({ checked: true, configured: oauthConfigured, backendUp })
-    })
+    let cancelled = false
+    const OAUTH_RETRY_DELAY_MS = 2_000
+    const doCheck = () => {
+      checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
+        if (cancelled) return
+        if (backendUp) {
+          setOauthStatus({ checked: true, configured: oauthConfigured, backendUp: true })
+        } else {
+          setTimeout(doCheck, OAUTH_RETRY_DELAY_MS)
+        }
+      })
+    }
+    doCheck()
+    return () => { cancelled = true }
   }, [])
 
-  // Re-check when dropdown opens (status may have changed)
+  // Re-check when dropdown opens (status may have changed since mount)
   useEffect(() => {
     if (isOpen) {
       checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
-        setOauthStatus({ checked: true, configured: oauthConfigured, backendUp })
+        if (backendUp) {
+          setOauthStatus({ checked: true, configured: oauthConfigured, backendUp: true })
+        }
       })
     }
   }, [isOpen])
