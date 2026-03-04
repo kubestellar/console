@@ -182,8 +182,13 @@ const ContourStatus = lazy(() => import('./contour-status').then(m => ({ default
 const CrioStatus = lazy(() => import('./crio_status').then(m => ({ default: m.CrioStatus })))
 // CoreDNS card
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
+<<<<<<< HEAD
 // Fluentd log collector card
 const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default: m.FluentdStatus })))
+=======
+// Lima VM card
+const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
+>>>>>>> ae466d94 (Added lima card)
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -432,8 +437,13 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   crio_status: CrioStatus,
   // CoreDNS
   coredns_status: CoreDNSStatus,
+<<<<<<< HEAD
   // Fluentd log collector
   fluentd_status: FluentdStatus,
+=======
+  // Lima VM
+  lima_status: LimaStatus,
+>>>>>>> ae466d94 (Added lima card)
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -503,7 +513,11 @@ export const DEMO_DATA_CARDS = new Set([
   'flatcar_status',
   'thanos_status',
   'contour_status',
+<<<<<<< HEAD
   'fluentd_status',
+=======
+  'lima_status',
+>>>>>>> ae466d94 (Added lima card)
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -756,6 +770,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   contour_status: () => import('./contour-status'),
   // CRI-O container runtime
   crio_status: () => import('./crio_status'),
+  // Lima VM
+  lima_status: () => import('./lima_status'),
 }
 
 /**
@@ -894,7 +910,11 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   thanos_status: 6,
   contour_status: 6,
   crio_status: 6,
+<<<<<<< HEAD
   fluentd_status: 6,
+=======
+  lima_status: 6,
+>>>>>>> ae466d94 (Added lima card)
 
   // MCS cards
   service_exports: 6,
