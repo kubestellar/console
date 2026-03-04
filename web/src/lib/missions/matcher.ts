@@ -136,7 +136,7 @@ export function matchMissionsToCluster(
           for (const [key, value] of Object.entries(cluster.labels)) {
             if (
               key.toLowerCase().includes(projectLower) ||
-              value.toLowerCase().includes(projectLower)
+              (value || '').toLowerCase().includes(projectLower)
             ) {
               score += 30
               matchReasons.push(`CNCF project "${mission.cncfProject}" found in cluster labels`)
