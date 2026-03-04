@@ -1471,6 +1471,7 @@
   "navbar": {
     "closeMenu": "Close menu",
     "openMenu": "Open menu",
+    "goHome": "Go to home dashboard",
     "themeToggle": "Theme: {{theme}} (click to toggle)",
     "moreOptions": "More options"
   },
