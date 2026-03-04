@@ -14,6 +14,10 @@ import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { POLL_INTERVAL_MS } from '../../lib/constants/network'
+import { emitWidgetLoaded, emitWidgetNavigation, emitWidgetInstalled } from '../../lib/analytics'
+
+/** UTM params appended to click-through URLs for GA4 widget campaign attribution */
+const WIDGET_UTM_PARAMS = 'utm_source=widget&utm_medium=pwa&utm_campaign=widget-usage'
 
 // Node data type from agent
 interface NodeData {
@@ -146,8 +150,9 @@ export function MiniDashboard() {
   // Track previous offline count for notifications
   const prevOfflineCountRef = useRef<number>(0)
 
-  // Request notification permission on mount
+  // Track widget load in GA4 and request notification permission
   useEffect(() => {
+    emitWidgetLoaded(isStandalone() ? 'standalone' : 'browser')
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
@@ -172,17 +177,20 @@ export function MiniDashboard() {
         notification.onclick = () => {
           window.focus()
           if (firstOfflineNode) {
-            // Build deep link URL to node drilldown
+            // Build deep link URL to node drilldown with widget campaign attribution
             const params = new URLSearchParams({
               drilldown: 'node',
               cluster: firstOfflineNode.cluster || 'unknown',
               node: firstOfflineNode.name,
               issue: 'Node went offline',
+              utm_source: 'widget',
+              utm_medium: 'notification',
+              utm_campaign: 'widget-usage',
             })
             window.location.href = `${window.location.origin}/?${params.toString()}`
           } else {
             // Fallback to main dashboard
-            window.location.href = window.location.origin + '/'
+            window.location.href = `${window.location.origin}/?${WIDGET_UTM_PARAMS}`
           }
           notification.close()
         }
@@ -248,15 +256,16 @@ export function MiniDashboard() {
     await installPrompt.prompt()
     const result = await installPrompt.userChoice
     if (result.outcome === 'accepted') {
+      emitWidgetInstalled('pwa-prompt')
       setIsInstalled(true)
       setInstallPrompt(null)
     }
   }
 
-  // Open URL in system browser (not in PWA)
-  // Use a different origin (127.0.0.1 vs localhost) to force browser window
+  // Open URL in system browser (not in PWA) with GA4 widget campaign attribution.
+  // Swaps localhost <-> 127.0.0.1 to force Chrome to open in a browser window.
   const openInBrowser = useCallback((path: string) => {
-    // Swap localhost <-> 127.0.0.1 to force Chrome to open in browser
+    emitWidgetNavigation(path)
     const currentHost = window.location.host
     let targetOrigin = window.location.origin
 
@@ -266,7 +275,8 @@ export function MiniDashboard() {
       targetOrigin = window.location.origin.replace('127.0.0.1', 'localhost')
     }
 
-    window.open(`${targetOrigin}${path}`, '_blank')
+    const separator = path.includes('?') ? '&' : '?'
+    window.open(`${targetOrigin}${path}${separator}${WIDGET_UTM_PARAMS}`, '_blank')
   }, [])
 
   // Open full dashboard in new window

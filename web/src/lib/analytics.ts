@@ -567,6 +567,28 @@ export function emitClusterStatsDrillDown(statType: string) {
   send('ksc_cluster_stats_drill_down', { stat_type: statType })
 }
 
+// ── Widget Tracking ─────────────────────────────────────────────────
+
+/** Fired once when the PWA mini-dashboard mounts (tracks active widget users) */
+export function emitWidgetLoaded(mode: 'standalone' | 'browser') {
+  send('ksc_widget_loaded', { mode })
+}
+
+/** Fired when a user clicks a stat card in the widget to open the full console */
+export function emitWidgetNavigation(targetPath: string) {
+  send('ksc_widget_navigation', { target_path: targetPath })
+}
+
+/** Fired when the PWA install prompt is accepted */
+export function emitWidgetInstalled(method: 'pwa-prompt' | 'safari-dock') {
+  send('ksc_widget_installed', { method })
+}
+
+/** Fired when the Übersicht widget JSX file is downloaded from settings */
+export function emitWidgetDownloaded(widgetType: 'uebersicht' | 'browser') {
+  send('ksc_widget_downloaded', { widget_type: widgetType })
+}
+
 // ── UTM Tracking ───────────────────────────────────────────────────
 
 let utmParams: Record<string, string> = {}

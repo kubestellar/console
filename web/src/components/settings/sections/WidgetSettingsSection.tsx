@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Monitor, Download, Copy, Check, ExternalLink, Smartphone, Globe, Apple, Chrome } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { TOAST_DISMISS_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { emitWidgetDownloaded } from '../../../lib/analytics'
 
 // The widget code that gets downloaded - includes drag functionality
 const WIDGET_CODE = `/**
@@ -400,6 +401,7 @@ export function WidgetSettingsSection() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    emitWidgetDownloaded('uebersicht')
     setDownloaded(true)
     clearTimeout(downloadedTimerRef.current)
     downloadedTimerRef.current = setTimeout(() => setDownloaded(false), TOAST_DISMISS_MS)
@@ -498,6 +500,7 @@ export function WidgetSettingsSection() {
             href="/widget"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => emitWidgetDownloaded('browser')}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
