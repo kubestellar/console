@@ -576,7 +576,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                 <>
                                   {isOwnedByUser ? (
                                     <>
-                                      <p className="text-sm font-medium text-foreground mt-1 truncate">
+                                      <p className="text-sm font-medium text-foreground mt-1 truncate blur-sm select-none">
                                         {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
                                       </p>
                                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
