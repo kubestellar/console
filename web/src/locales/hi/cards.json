@@ -273,7 +273,8 @@
     "provider_health": "Provider Health",
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
-    "coredns_status": "CoreDNS"
+    "coredns_status": "CoreDNS",
+    "crio_status": "CRI-O"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -436,7 +437,8 @@
     "kube_chess": "Chess game with Kubernetes-themed pieces.",
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
-    "contour_status": "Contour ingress proxy status, HTTPProxy resources."
+    "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
   },
   "categories": {
     "core": "Core",
@@ -2636,6 +2638,27 @@
     "total": "Total",
     "openDocs": "Contour Docs",
     "fetchError": "Failed to fetch Contour status",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
+  },
+  "crio": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "CRI-O Not Detected",
+    "notInstalledHint": "No nodes running CRI-O container runtime detected on connected clusters.",
+    "totalNodes": "CRI-O Nodes",
+    "runningContainers": "Running",
+    "stoppedContainers": "Stopped",
+    "imagePullSuccess": "Image Pull Success",
+    "podSandboxReady": "Pod Sandbox Ready",
+    "versionDistribution": "Version Distribution",
+    "recentImagePulls": "Recent Image Pulls",
+    "openCrio": "Open CRI-O Docs",
+    "noCrioNodes": "No CRI-O nodes found",
+    "noCrioNodesHint": "No nodes running CRI-O container runtime detected.",
+    "fetchError": "Failed to fetch CRI-O status",
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
