@@ -229,7 +229,7 @@ export function MissionSidebar() {
           isMobile && isSidebarOpen && "translate-y-0",
           // Desktop: right sidebar
           !isMobile && isFullScreen && "inset-0 top-16 border-l-0 rounded-none",
-          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 w-[500px] border-l shadow-xl",
+          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 w-[580px] border-l shadow-xl",
           !isMobile && !isSidebarOpen && "translate-x-full pointer-events-none"
         )}
       >

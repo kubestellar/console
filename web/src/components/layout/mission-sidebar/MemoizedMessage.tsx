@@ -126,9 +126,12 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
         )}
       </div>
       <div className={cn(
-        'flex-1 rounded-lg p-3 overflow-hidden min-w-0',
-        isFullScreen ? 'max-w-[98%]' : 'max-w-[85%]',
-        msg.role === 'user' ? 'bg-primary/10 ml-auto' : msg.role === 'assistant' ? 'bg-secondary/50' : 'bg-yellow-500/10'
+        'flex-1 rounded-lg p-3 min-w-0',
+        msg.role === 'user'
+          ? cn('bg-secondary ml-auto overflow-hidden', isFullScreen ? 'max-w-[85%]' : 'max-w-[80%]')
+          : msg.role === 'assistant'
+            ? 'bg-card border border-border overflow-x-auto'
+            : 'bg-yellow-950 border border-yellow-500/30 overflow-x-auto'
       )}>
         {msg.role === 'assistant' || msg.role === 'system' ? (
           parsedContent ? (

@@ -461,7 +461,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0">
         {mission.status === 'running' ? (
           <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
+            <div className="flex gap-2 min-w-0">
               <input
                 ref={inputRef}
                 type="text"
@@ -469,7 +469,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.typeNextMessage')}
-                className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <button
                 onClick={handleSend}
@@ -578,7 +578,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <span className={cn(config.color)}>{config.label}</span>
               <span className="text-muted-foreground">{t('missionChat.switchAgentRetry')}</span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 min-w-0">
               <input
                 ref={inputRef}
                 type="text"
@@ -586,7 +586,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.retryWithMessage')}
-                className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <button
                 onClick={handleSend}
@@ -598,7 +598,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             </div>
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-2 min-w-0">
             <input
               ref={inputRef}
               type="text"
@@ -606,7 +606,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('missionChat.typeMessage')}
-              className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
               onClick={handleSend}
