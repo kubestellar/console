@@ -70,6 +70,7 @@ export function matchMissionsToCluster(
   const expandedKeywords = new Set<string>()
   if (cluster?.resources) {
     for (const r of cluster.resources) {
+      if (!r) continue
       expandedKeywords.add(r.toLowerCase())
       // Expand via known mappings
       for (const [key, projects] of Object.entries(RESOURCE_TO_PROJECTS)) {
@@ -84,6 +85,7 @@ export function matchMissionsToCluster(
   const issueCategories = new Set<string>()
   if (cluster?.issues && Array.isArray(cluster.issues)) {
     for (const issue of cluster.issues) {
+      if (!issue) continue
       const issueLower = issue.toLowerCase()
       for (const [pattern, categories] of Object.entries(ISSUE_TO_CATEGORIES)) {
         if (issueLower.includes(pattern)) {
@@ -150,6 +152,7 @@ export function matchMissionsToCluster(
       if (mission.type === 'troubleshoot' && Array.isArray(cluster.issues)) {
         const descLower = (mission.description || '').toLowerCase()
         for (const issue of cluster.issues) {
+          if (!issue) continue
           if (descLower.includes(issue.toLowerCase())) {
             score += 40
             matchReasons.push(`Addresses cluster issue: ${issue}`)
