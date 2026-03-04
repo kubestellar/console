@@ -256,6 +256,48 @@ function indexEntryToMission(entry: IndexEntry): MissionExport {
   }
 }
 
+/** Timeout for fetching individual mission files (ms) */
+const MISSION_FILE_FETCH_TIMEOUT_MS = 15_000
+
+/**
+ * Fetch the full mission file and extract steps.
+ *
+ * Mission files in console-kb store steps under a nested `mission` object:
+ *   { mission: { steps, uninstall, upgrade, troubleshooting, ... }, metadata, ... }
+ *
+ * This function fetches the file, extracts the nested data, and merges it
+ * into the index-based MissionExport so all sections (install, uninstall,
+ * upgrade, troubleshooting) are available in the detail view.
+ */
+async function fetchMissionContent(
+  indexMission: MissionExport,
+): Promise<{ mission: MissionExport; raw: string }> {
+  const sourcePath = indexMission.metadata?.source
+  if (!sourcePath) return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
+
+  const url = `/api/missions/file?path=${encodeURIComponent(sourcePath)}`
+  const response = await fetch(url, { signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) })
+  if (!response.ok) return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
+
+  const text = await response.text()
+  const parsed = JSON.parse(text)
+
+  // Extract steps from the nested `mission` object (console-kb file format)
+  // Falls back to top-level fields if the nested structure isn't present
+  const nested = parsed.mission || {}
+  const merged: MissionExport = {
+    ...indexMission,
+    steps: nested.steps || parsed.steps || indexMission.steps,
+    uninstall: nested.uninstall || parsed.uninstall,
+    upgrade: nested.upgrade || parsed.upgrade,
+    troubleshooting: nested.troubleshooting || parsed.troubleshooting,
+    resolution: nested.resolution || parsed.resolution,
+    prerequisites: parsed.prerequisites || indexMission.prerequisites,
+  }
+
+  return { mission: merged, raw: text }
+}
+
 /**
  * Load all missions from the pre-built index in a single API call.
  * Splits results into installers and solutions, populating both caches at once.
@@ -549,6 +591,27 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   }, [isOpen])
 
   // ============================================================================
+  // Select a card mission — fetch full content on demand
+  // ============================================================================
+
+  const selectCardMission = useCallback(async (mission: MissionExport) => {
+    // Show index metadata immediately for instant feedback
+    setSelectedMission(mission)
+    setRawContent(JSON.stringify(mission, null, 2))
+    setShowRaw(false)
+
+    // Fetch full file content (steps, uninstall, upgrade, troubleshooting)
+    try {
+      const { mission: fullMission, raw } = await fetchMissionContent(mission)
+      // Only update if this mission is still selected (user might have navigated away)
+      setSelectedMission((current) => current?.title === mission.title ? fullMission : current)
+      setRawContent((current) => current === JSON.stringify(mission, null, 2) ? raw : current)
+    } catch {
+      // Silently keep the index metadata — steps will show as empty
+    }
+  }, [])
+
+  // ============================================================================
   // Deep-link: auto-select mission by name when initialMission is set
   // ============================================================================
 
@@ -559,15 +622,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
              (m.cncfProject && m.cncfProject.toLowerCase() === initialMission.replace('install-', '').toLowerCase())
     )
     if (match) {
-      setSelectedMission(match)
       setActiveTab('installers')
-      api.get<string>(`/api/missions/browse?path=solutions/cncf-install/install-${(match.cncfProject || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json&raw=true`)
-        .then(({ data }) => setRawContent(typeof data === 'string' ? data : JSON.stringify(data, null, 2)))
-        .catch(() => {})
+      selectCardMission(match)
     } else if (installerMissions.length === 0 && activeTab !== 'installers') {
       setActiveTab('installers')
     }
-  }, [initialMission, isOpen, installerMissions, selectedMission, activeTab])
+  }, [initialMission, isOpen, installerMissions, selectedMission, activeTab, selectCardMission])
 
   // ============================================================================
   // Filtered installer & solution lists
@@ -1661,11 +1721,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                           <RecommendationCard
                             key={i}
                             match={match}
-                            onSelect={() => {
-                              setSelectedMission(match.mission)
-                              setRawContent(JSON.stringify(match.mission, null, 2))
-                              setShowRaw(false)
-                            }}
+                            onSelect={() => selectCardMission(match.mission)}
                             onImport={() => handleImport(match.mission)}
                           />
                         ))}
@@ -1678,11 +1734,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                       <RecommendationCard
                         key={i}
                         match={match}
-                        onSelect={() => {
-                          setSelectedMission(match.mission)
-                          setRawContent(JSON.stringify(match.mission, null, 2))
-                          setShowRaw(false)
-                        }}
+                        onSelect={() => selectCardMission(match.mission)}
                         onImport={() => handleImport(match.mission)}
                       />
                     ))}
@@ -1817,11 +1869,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                           key={i}
                           mission={mission}
                           compact={viewMode === 'list'}
-                          onSelect={() => {
-                            setSelectedMission(mission)
-                            setRawContent(JSON.stringify(mission, null, 2))
-                            setShowRaw(false)
-                          }}
+                          onSelect={() => selectCardMission(mission)}
                           onImport={() => handleImport(mission)}
                         />
                       ))}
@@ -1891,11 +1939,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                           key={i}
                           mission={mission}
                           compact={viewMode === 'list'}
-                          onSelect={() => {
-                            setSelectedMission(mission)
-                            setRawContent(JSON.stringify(mission, null, 2))
-                            setShowRaw(false)
-                          }}
+                          onSelect={() => selectCardMission(mission)}
                           onImport={() => handleImport(mission)}
                         />
                       ))}

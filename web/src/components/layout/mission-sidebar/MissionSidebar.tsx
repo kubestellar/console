@@ -18,6 +18,7 @@ import {
   Play,
   Trash2,
   CheckCircle2,
+  Eye,
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
@@ -26,7 +27,9 @@ import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { AgentIcon } from '../../agent/AgentIcon'
 import { MissionBrowser } from '../../missions/MissionBrowser'
+import { MissionDetailView } from '../../missions/MissionDetailView'
 import type { MissionExport } from '../../../lib/missions/types'
+import type { Mission } from '../../../hooks/useMissions'
 import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { MissionChat } from './MissionChat'
@@ -43,6 +46,8 @@ export function MissionSidebar() {
   const [showBrowser, setShowBrowser] = useState(false)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const [showSavedToast, setShowSavedToast] = useState<string | null>(null)
+  const [viewingMission, setViewingMission] = useState<MissionExport | null>(null)
+  const [viewingMissionRaw, setViewingMissionRaw] = useState(false)
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Deep-link: open MissionBrowser to specific mission via ?mission= URL param
@@ -83,6 +88,26 @@ export function MissionSidebar() {
     setShowSavedToast(mission.title)
     setTimeout(() => setShowSavedToast(null), SAVED_TOAST_MS)
   }, [saveMission])
+
+  /** Convert a saved Mission to MissionExport for the detail view */
+  const savedMissionToExport = useCallback((m: Mission): MissionExport => ({
+    version: '1.0',
+    title: m.importedFrom?.title || m.title,
+    description: m.importedFrom?.description || m.description,
+    type: m.type,
+    tags: m.importedFrom?.tags || [],
+    missionClass: m.importedFrom?.missionClass as MissionExport['missionClass'],
+    cncfProject: m.importedFrom?.cncfProject,
+    steps: (m.importedFrom?.steps || []).map(s => ({
+      title: s.title,
+      description: s.description,
+    })),
+  }), [])
+
+  const handleViewSavedMission = useCallback((m: Mission) => {
+    setViewingMission(savedMissionToExport(m))
+    setViewingMissionRaw(false)
+  }, [savedMissionToExport])
 
   // Escape key: exit fullscreen first, then close sidebar
   useEffect(() => {
@@ -413,7 +438,11 @@ export function MissionSidebar() {
               </div>
               <div className="flex-1 overflow-y-auto scroll-enhanced p-1.5 space-y-1">
                 {savedMissions.map(m => (
-                  <div key={m.id} className="group p-2 rounded-lg hover:bg-secondary/60 transition-colors cursor-pointer border border-transparent hover:border-border">
+                  <div
+                    key={m.id}
+                    className="group p-2 rounded-lg hover:bg-secondary/60 transition-colors cursor-pointer border border-transparent hover:border-border"
+                    onClick={() => handleViewSavedMission(m)}
+                  >
                     <div className="flex items-start gap-2">
                       <Bookmark className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -431,6 +460,12 @@ export function MissionSidebar() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
+                        className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
+                      >
+                        <Eye className="w-2.5 h-2.5" /> View
+                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); runSavedMission(m.id) }}
                         className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
@@ -478,7 +513,11 @@ export function MissionSidebar() {
               </div>
               <div className="space-y-1.5">
                 {savedMissions.map(m => (
-                  <div key={m.id} className="group flex items-center gap-3 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+                  <div
+                    key={m.id}
+                    className="group flex items-center gap-3 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                    onClick={() => handleViewSavedMission(m)}
+                  >
                     <Bookmark className="w-4 h-4 text-amber-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
@@ -493,14 +532,21 @@ export function MissionSidebar() {
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
-                        onClick={() => runSavedMission(m.id)}
+                        onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
+                        className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
+                        title="View mission details"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); runSavedMission(m.id) }}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                         title="Run this mission"
                       >
                         <Play className="w-3 h-3" /> Run
                       </button>
                       <button
-                        onClick={() => dismissMission(m.id)}
+                        onClick={(e) => { e.stopPropagation(); dismissMission(m.id) }}
                         className="p-1.5 text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
                         title="Remove from library"
                       >
@@ -546,6 +592,41 @@ export function MissionSidebar() {
         </div>
       )}
     </div>
+
+      {/* Saved Mission Detail Modal */}
+      {viewingMission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className={cn(
+            "relative bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col",
+            isMobile ? "inset-2 fixed" : "w-[700px] max-h-[85vh]"
+          )}>
+            {/* Close button */}
+            <button
+              onClick={() => setViewingMission(null)}
+              className="absolute top-3 right-3 z-10 p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto scroll-enhanced p-6">
+              <MissionDetailView
+                mission={viewingMission}
+                rawContent={JSON.stringify(viewingMission, null, 2)}
+                showRaw={viewingMissionRaw}
+                onToggleRaw={() => setViewingMissionRaw(prev => !prev)}
+                onImport={() => {
+                  // Find the matching saved mission and run it
+                  const match = savedMissions.find(m => m.title === viewingMission.title)
+                  if (match) runSavedMission(match.id)
+                  setViewingMission(null)
+                }}
+                onBack={() => setViewingMission(null)}
+                importLabel="Run"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mission Browser Dialog */}
       <MissionBrowser

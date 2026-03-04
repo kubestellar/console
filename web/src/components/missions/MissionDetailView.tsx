@@ -49,6 +49,8 @@ interface MissionDetailViewProps {
   onBack: () => void
   onImprove?: () => void
   matchScore?: number
+  /** Override the import button label (e.g. "Run" for saved missions) */
+  importLabel?: string
 }
 
 // Extract code blocks from markdown-style description
@@ -168,6 +170,7 @@ export function MissionDetailView({
   onBack,
   onImprove,
   matchScore,
+  importLabel = 'Import',
 }: MissionDetailViewProps) {
   const tabs: TabDef[] = [
     {
@@ -272,7 +275,7 @@ export function MissionDetailView({
             className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
           >
             <Download className="w-4 h-4" />
-            Import
+            {importLabel}
           </button>
         </div>
       </div>
