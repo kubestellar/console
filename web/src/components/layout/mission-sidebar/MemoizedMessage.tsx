@@ -75,10 +75,22 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
     ul: ({ children }: { children?: React.ReactNode }) => <ul className="my-4 ml-4 list-disc space-y-2">{children}</ul>,
     ol: ({ children }: { children?: React.ReactNode }) => <ol className="my-4 ml-4 list-decimal space-y-2">{children}</ol>,
     li: ({ children }: { children?: React.ReactNode }) => <li className="my-1 leading-relaxed">{children}</li>,
+    table: ({ children }: { children?: React.ReactNode }) => (
+      <div className="overflow-x-auto w-full my-4 rounded border border-border">
+        <table className="min-w-full border-collapse text-sm">{children}</table>
+      </div>
+    ),
+    thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-secondary/50">{children}</thead>,
+    th: ({ children }: { children?: React.ReactNode }) => (
+      <th className="px-3 py-2 text-left text-xs font-semibold text-foreground border-b border-border whitespace-nowrap">{children}</th>
+    ),
+    td: ({ children }: { children?: React.ReactNode }) => (
+      <td className="px-3 py-2 text-xs text-muted-foreground border-b border-border/50 max-w-[200px] break-words">{children}</td>
+    ),
   }), [fontSize])
 
   const proseClasses = cn(
-    "prose dark:prose-invert max-w-none overflow-hidden",
+    "prose dark:prose-invert max-w-none overflow-x-auto overflow-y-hidden",
     "prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-pre:overflow-x-auto",
     "prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded prose-code:break-all",
     "prose-hr:my-6",

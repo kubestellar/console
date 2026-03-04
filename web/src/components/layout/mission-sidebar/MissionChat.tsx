@@ -252,7 +252,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
   return (
     <>
-    <div className={cn("flex flex-1 min-h-0", isFullScreen && "gap-4")}>
+    <div className={cn("flex flex-1 min-h-0 min-w-0", isFullScreen && "gap-4")}>
       {/* Left panel for resolutions (fullscreen only) */}
       {isFullScreen && (
         <div className="flex flex-col">
@@ -402,7 +402,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-0"
+        className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-0 min-w-0"
       >
         {mission.messages.map((msg, index) => {
           // Find if this is the last assistant message
@@ -458,7 +458,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       </div>
 
       {/* Input / Actions */}
-      <div className="p-4 border-t border-border flex-shrink-0 bg-card">
+      <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0">
         {mission.status === 'running' ? (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
