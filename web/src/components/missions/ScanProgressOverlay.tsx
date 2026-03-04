@@ -67,7 +67,7 @@ export function ScanProgressOverlay({
   }
 
   return (
-    <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-xl">
+    <div className="absolute inset-0 bg-background flex flex-col items-center justify-center z-10 rounded-xl">
       <div className="w-full max-w-sm px-6">
         {isScanning && !result && (
           <div className="flex flex-col items-center gap-3">
