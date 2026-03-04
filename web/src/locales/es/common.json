@@ -1405,6 +1405,8 @@
     "liveMode": "Live mode — agent connected, AI disabled",
     "noneAgent": "None",
     "noneAgentDesc": "Agent data only — no AI processing",
+    "aiAgentToggle": "AI Agent",
+    "aiAgentOnDesc": "AI processing enabled",
     "aiPausedBanner": "AI is paused — select an agent to enable AI features",
     "backendUnavailable": "Backend API unavailable",
     "localAgentConnected": "Local Agent connected",

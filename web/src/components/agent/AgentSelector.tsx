@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Check, Loader2, Settings, ShieldOff } from 'lucide-react'
+import { ChevronDown, Check, Loader2, Settings, Sparkles } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, getDemoMode } from '../../hooks/useDemoMode'
 import { AgentIcon } from './AgentIcon'
@@ -21,6 +21,10 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const isDemoMode = isDemoModeHook || getDemoMode()
   const [isOpen, setIsOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const PREV_AGENT_KEY = 'kc_previous_agent'
+  const previousAgentRef = useRef<string | null>(
+    typeof window !== 'undefined' ? localStorage.getItem(PREV_AGENT_KEY) : null
+  )
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // CLI-based agents (bob, claude-code) should be hidden when not available
@@ -137,7 +141,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         )}
       >
         {isNoneSelected ? (
-          <ShieldOff className="w-4 h-4 text-cyan-400" />
+          <Sparkles className="w-4 h-4 text-muted-foreground" />
         ) : hasAvailableAgents && currentAgent ? (
           <AgentIcon provider={currentAgent.provider} className="w-4 h-4" />
         ) : (
@@ -158,7 +162,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         <div
           role="listbox"
           aria-label={t('agent.selectAgent')}
-          className="absolute z-50 top-full mt-1 right-0 w-72 rounded-lg bg-card border border-border shadow-lg overflow-hidden"
+          className="absolute z-50 top-full mt-1 right-0 w-72 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
           onKeyDown={(e) => {
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
             e.preventDefault()
@@ -168,35 +172,48 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
             else items[Math.max(idx - 1, 0)]?.focus()
           }}
         >
-          {/* "None" option — agent data only, no AI */}
-          <div className="py-1 border-b border-border">
-            <div
-              role="option"
-              aria-selected={isNoneSelected}
-              tabIndex={0}
-              className={cn(
-                'w-full flex items-start gap-3 px-3 py-2 text-left transition-colors hover:bg-secondary cursor-pointer',
-                isNoneSelected && 'bg-cyan-500/10'
-              )}
-              onClick={() => handleSelect('none')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect('none') } }}
-            >
-              <ShieldOff className="w-5 h-5 mt-0.5 flex-shrink-0 text-cyan-400" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={cn('text-sm font-medium', isNoneSelected ? 'text-cyan-400' : 'text-foreground')}>
-                    {t('agent.noneAgent')}
-                  </span>
-                  {isNoneSelected && (
-                    <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                  )}
+          {/* AI Agent toggle — ON by default, OFF disables AI processing */}
+          <div className="px-3 py-3 border-b border-border flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className={cn('w-4 h-4', isNoneSelected ? 'text-muted-foreground' : 'text-primary')} />
+                <div>
+                  <span className="text-sm font-medium text-foreground">{t('agent.aiAgentToggle')}</span>
+                  <p className="text-xs text-muted-foreground">
+                    {isNoneSelected ? t('agent.noneAgentDesc') : t('agent.aiAgentOnDesc')}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">{t('agent.noneAgentDesc')}</p>
               </div>
+              <button
+                role="switch"
+                aria-checked={!isNoneSelected}
+                onClick={() => {
+                  if (isNoneSelected) {
+                    // Turn AI back on — restore previous agent, or fall back to first available
+                    const prev = previousAgentRef.current
+                    const restoreAgent = prev && sortedAgents.find(a => a.name === prev && a.available)
+                    handleSelect(restoreAgent ? restoreAgent.name : (sortedAgents.find(a => a.available)?.name || ''))
+                  } else {
+                    // Save current agent before turning AI off
+                    previousAgentRef.current = selectedAgent || null
+                    if (selectedAgent) localStorage.setItem(PREV_AGENT_KEY, selectedAgent)
+                    handleSelect('none')
+                  }
+                }}
+                className={cn(
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
+                  !isNoneSelected ? 'bg-primary' : 'bg-secondary'
+                )}
+              >
+                <span className={cn(
+                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  !isNoneSelected ? 'translate-x-6' : 'translate-x-1'
+                )} />
+              </button>
             </div>
           </div>
           {sortedAgents.length > 0 && (
-            <div className="py-1">
+            <div className="py-1 overflow-y-auto min-h-0">
               {sortedAgents.map((agent: AgentInfo) => (
                 <div
                   key={agent.name}
