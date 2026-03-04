@@ -76,6 +76,8 @@ export interface UpdateProgress {
   message: string
   progress: number // 0-100
   error?: string
+  step?: number      // current step number (e.g. 3)
+  totalSteps?: number // total steps in the update (e.g. 7)
 }
 
 /**

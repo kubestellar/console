@@ -469,9 +469,16 @@ export function UpdateSettings() {
         <div data-testid="update-progress-banner" className="mb-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
           <div className="flex items-center gap-3 mb-2">
             <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-            <p data-testid="update-progress-message" className="text-sm font-medium text-blue-400">
-              {updateProgress?.message ?? t('settings.updates.startingUpdate')}
-            </p>
+            <div className="flex-1 min-w-0">
+              <p data-testid="update-progress-message" className="text-sm font-medium text-blue-400">
+                {updateProgress?.message ?? t('settings.updates.startingUpdate')}
+              </p>
+              {updateProgress?.step && updateProgress?.totalSteps && (
+                <p data-testid="update-step-indicator" className="text-xs text-blue-400/50 mt-0.5">
+                  Step {updateProgress.step} of {updateProgress.totalSteps}
+                </p>
+              )}
+            </div>
           </div>
           <div className="w-full bg-secondary rounded-full h-2">
             <div

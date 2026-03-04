@@ -53,11 +53,17 @@ type UpdateCheckerConfig struct {
 
 // UpdateProgressPayload is broadcast via WebSocket during updates.
 type UpdateProgressPayload struct {
-	Status   string `json:"status"`
-	Message  string `json:"message"`
-	Progress int    `json:"progress"`
-	Error    string `json:"error,omitempty"`
+	Status     string `json:"status"`
+	Message    string `json:"message"`
+	Progress   int    `json:"progress"`
+	Error      string `json:"error,omitempty"`
+	Step       int    `json:"step,omitempty"`       // current step number (1-based)
+	TotalSteps int    `json:"totalSteps,omitempty"` // total steps in the update sequence
 }
+
+// Developer update step count — git pull, npm install, frontend build,
+// console binary, kc-agent binary, stop services, restart
+const devUpdateTotalSteps = 7
 
 // AutoUpdateStatusResponse is returned by GET /auto-update/status.
 type AutoUpdateStatusResponse struct {
@@ -309,14 +315,17 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.mu.Unlock()
 
 	start := time.Now()
+	total := devUpdateTotalSteps
 	log.Printf("[AutoUpdate] === Starting update: %s -> %s ===", short(previousSHA), short(newSHA))
 
-	// Step 1: Git pull
-	log.Printf("[AutoUpdate] Step 1/4: git pull --rebase origin main")
+	// Step 1/7: Git pull
+	log.Printf("[AutoUpdate] Step 1/%d: git pull --rebase origin main", total)
 	uc.broadcast("update_progress", UpdateProgressPayload{
-		Status:   "pulling",
-		Message:  fmt.Sprintf("Pulling %s from main...", short(newSHA)),
-		Progress: 10,
+		Status:     "pulling",
+		Message:    fmt.Sprintf("Pulling %s from main...", short(newSHA)),
+		Progress:   8,
+		Step:       1,
+		TotalSteps: total,
 	})
 
 	if err := runGitPull(repoPath); err != nil {
@@ -329,64 +338,145 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		})
 		return
 	}
-	log.Printf("[AutoUpdate] Step 1/4 complete (git pull) in %s", time.Since(start))
+	log.Printf("[AutoUpdate] Step 1/%d complete (git pull) in %s", total, time.Since(start))
 
-	// Step 2: Frontend build
-	log.Printf("[AutoUpdate] Step 2/4: npm install && npm run build")
+	// Step 2/7: npm install
+	webDir := repoPath + "/web"
+	log.Printf("[AutoUpdate] Step 2/%d: npm install", total)
 	uc.broadcast("update_progress", UpdateProgressPayload{
-		Status:   "building",
-		Message:  "Installing dependencies and building frontend...",
-		Progress: 30,
+		Status:     "building",
+		Message:    "Installing npm dependencies...",
+		Progress:   18,
+		Step:       2,
+		TotalSteps: total,
 	})
 
 	stepStart := time.Now()
-	if err := rebuildFrontend(repoPath); err != nil {
-		log.Printf("[AutoUpdate] FAILED at step 2 (frontend build) after %s: %v", time.Since(start), err)
-		uc.recordError(fmt.Sprintf("build failed: %v", err))
+	npmInstall := exec.Command("npm", "install", "--prefer-offline")
+	npmInstall.Dir = webDir
+	npmInstall.Stdout = os.Stdout
+	npmInstall.Stderr = os.Stderr
+	if err := npmInstall.Run(); err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 2 (npm install) after %s: %v", time.Since(start), err)
+		uc.recordError(fmt.Sprintf("npm install failed: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "npm install failed, rolling back...",
+			Error:   err.Error(),
+		})
+		rollbackGit(repoPath, previousSHA)
+		rebuildFrontend(repoPath) //nolint:errcheck
+		return
+	}
+	log.Printf("[AutoUpdate] Step 2/%d complete (npm install) in %s", total, time.Since(stepStart))
+
+	// Step 3/7: Frontend build (Vite)
+	log.Printf("[AutoUpdate] Step 3/%d: npm run build", total)
+	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:     "building",
+		Message:    "Building frontend with Vite...",
+		Progress:   30,
+		Step:       3,
+		TotalSteps: total,
+	})
+
+	stepStart = time.Now()
+	npmBuild := exec.Command("npm", "run", "build")
+	npmBuild.Dir = webDir
+	npmBuild.Stdout = os.Stdout
+	npmBuild.Stderr = os.Stderr
+	if err := npmBuild.Run(); err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 3 (frontend build) after %s: %v", time.Since(start), err)
+		uc.recordError(fmt.Sprintf("frontend build failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Frontend build failed, rolling back...",
 			Error:   err.Error(),
 		})
-		// Rollback
-		log.Printf("[AutoUpdate] Rolling back to %s", short(previousSHA))
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath) //nolint:errcheck
 		return
 	}
-	log.Printf("[AutoUpdate] Step 2/4 complete (frontend build) in %s", time.Since(stepStart))
+	log.Printf("[AutoUpdate] Step 3/%d complete (frontend build) in %s", total, time.Since(stepStart))
 
-	// Step 3: Go build
-	log.Printf("[AutoUpdate] Step 3/4: go build ./cmd/console && go build ./cmd/kc-agent")
+	// Step 4/7: Build console binary
+	log.Printf("[AutoUpdate] Step 4/%d: go build ./cmd/console", total)
 	uc.broadcast("update_progress", UpdateProgressPayload{
-		Status:   "building",
-		Message:  "Building Go binaries...",
-		Progress: 60,
+		Status:     "building",
+		Message:    "Building console binary...",
+		Progress:   45,
+		Step:       4,
+		TotalSteps: total,
 	})
 
 	stepStart = time.Now()
-	if err := rebuildGoBinaries(repoPath); err != nil {
-		log.Printf("[AutoUpdate] FAILED at step 3 (go build) after %s: %v", time.Since(start), err)
-		uc.recordError(fmt.Sprintf("go build failed: %v", err))
+	consolePath, err := exec.LookPath("console")
+	if err != nil {
+		consolePath = "./console"
+	}
+	consoleBuild := exec.Command("go", "build", "-o", consolePath, "./cmd/console")
+	consoleBuild.Dir = repoPath
+	consoleBuild.Env = append(os.Environ(), "GOWORK=off")
+	consoleBuild.Stdout = os.Stdout
+	consoleBuild.Stderr = os.Stderr
+	if err := consoleBuild.Run(); err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 4 (console build) after %s: %v", time.Since(start), err)
+		uc.recordError(fmt.Sprintf("go build console failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
-			Message: "Go build failed, rolling back...",
+			Message: "Console build failed, rolling back...",
 			Error:   err.Error(),
 		})
-		log.Printf("[AutoUpdate] Rolling back to %s", short(previousSHA))
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath)   //nolint:errcheck
 		rebuildGoBinaries(repoPath) //nolint:errcheck
 		return
 	}
-	log.Printf("[AutoUpdate] Step 3/4 complete (go build) in %s", time.Since(stepStart))
+	log.Printf("[AutoUpdate] Step 4/%d complete (console binary) in %s", total, time.Since(stepStart))
 
-	// Step 4: Restart
-	log.Printf("[AutoUpdate] Step 4/4: restart via startup-oauth.sh")
+	// Step 5/7: Build kc-agent binary
+	log.Printf("[AutoUpdate] Step 5/%d: go build ./cmd/kc-agent", total)
 	uc.broadcast("update_progress", UpdateProgressPayload{
-		Status:   "restarting",
-		Message:  "Restarting via startup-oauth.sh...",
-		Progress: 80,
+		Status:     "building",
+		Message:    "Building kc-agent binary...",
+		Progress:   58,
+		Step:       5,
+		TotalSteps: total,
+	})
+
+	stepStart = time.Now()
+	agentPath, err := exec.LookPath("kc-agent")
+	if err != nil {
+		agentPath = "./kc-agent"
+	}
+	agentBuild := exec.Command("go", "build", "-o", agentPath, "./cmd/kc-agent")
+	agentBuild.Dir = repoPath
+	agentBuild.Env = append(os.Environ(), "GOWORK=off")
+	agentBuild.Stdout = os.Stdout
+	agentBuild.Stderr = os.Stderr
+	if err := agentBuild.Run(); err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 5 (kc-agent build) after %s: %v", time.Since(start), err)
+		uc.recordError(fmt.Sprintf("go build kc-agent failed: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "kc-agent build failed, rolling back...",
+			Error:   err.Error(),
+		})
+		rollbackGit(repoPath, previousSHA)
+		rebuildFrontend(repoPath)   //nolint:errcheck
+		rebuildGoBinaries(repoPath) //nolint:errcheck
+		return
+	}
+	log.Printf("[AutoUpdate] Step 5/%d complete (kc-agent binary) in %s", total, time.Since(stepStart))
+
+	// Step 6/7: Stopping services
+	log.Printf("[AutoUpdate] Step 6/%d: preparing restart", total)
+	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:     "restarting",
+		Message:    "Stopping current services...",
+		Progress:   72,
+		Step:       6,
+		TotalSteps: total,
 	})
 
 	uc.mu.Lock()
@@ -395,7 +485,17 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	log.Printf("[AutoUpdate] === Update complete: %s -> %s (total: %s), restarting... ===", short(previousSHA), short(newSHA), time.Since(start))
+	log.Printf("[AutoUpdate] === Build complete: %s -> %s (total: %s), restarting... ===", short(previousSHA), short(newSHA), time.Since(start))
+
+	// Step 7/7: Restart via startup-oauth.sh
+	log.Printf("[AutoUpdate] Step 7/%d: restart via startup-oauth.sh", total)
+	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:     "restarting",
+		Message:    "Restarting via startup-oauth.sh...",
+		Progress:   82,
+		Step:       7,
+		TotalSteps: total,
+	})
 
 	// Spawn startup-oauth.sh as a detached process and exit.
 	// The script handles port cleanup, env loading, and starting all processes

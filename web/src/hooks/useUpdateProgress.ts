@@ -25,8 +25,34 @@ export function useUpdateProgress() {
     // be building/starting. Poll /health before showing "done" so the
     // "Refresh" link only appears when the backend is actually ready.
     async function waitForBackend() {
-      setProgress({ status: 'restarting', message: 'Waiting for backend to come up...', progress: 90 })
+      const RESTART_BASE_PCT = 88   // Starting progress during health polling
+      const RESTART_MAX_PCT = 99    // Max progress before "done" (100%)
+      const pctPerAttempt = (RESTART_MAX_PCT - RESTART_BASE_PCT) / BACKEND_POLL_MAX
+      const MS_PER_SEC = 1000
+
       for (let i = 0; i < BACKEND_POLL_MAX; i++) {
+        const pct = Math.round(RESTART_BASE_PCT + (i * pctPerAttempt))
+        const elapsed = Math.round((i * BACKEND_POLL_MS) / MS_PER_SEC)
+        const TEN_SEC = 10
+        const THIRTY_SEC = 30
+        const SIXTY_SEC = 60
+
+        // Show progressive messages so the user sees activity
+        let message: string
+        if (i === 0) {
+          message = 'Waiting for services to restart...'
+        } else if (elapsed < TEN_SEC) {
+          message = `Starting backend services... (${elapsed}s)`
+        } else if (elapsed < THIRTY_SEC) {
+          message = `Backend initializing... (${elapsed}s)`
+        } else if (elapsed < SIXTY_SEC) {
+          message = `Still starting up — this can take a minute... (${elapsed}s)`
+        } else {
+          message = `Almost there — waiting for health check... (${elapsed}s)`
+        }
+
+        setProgress({ status: 'restarting', message, progress: pct })
+
         try {
           const resp = await fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
           if (resp.ok) {

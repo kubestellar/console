@@ -233,9 +233,11 @@ export function Layout({ children }: LayoutProps) {
   const activeBannerCount = (showNetworkBanner ? 1 : 0) + (isDemoMode ? 1 : 0) + (showOfflineBanner ? 1 : 0)
   const totalBannerHeight = activeBannerCount * BANNER_HEIGHT
 
-  // Show bottom snackbar when backend is down, or briefly after reconnecting
+  // Show bottom snackbar when backend is down, or briefly after reconnecting.
+  // Suppress during active updates — the backend is expected to be down while restarting.
   const backendDown = backendStatus === 'disconnected'
-  const showBackendBanner = backendDown || wasBackendDown
+  const isUpdateInProgress = updateProgress != null && !['idle', 'done', 'failed'].includes(updateProgress.status)
+  const showBackendBanner = (backendDown || wasBackendDown) && !isUpdateInProgress
   const prevBackendDown = useRef(backendDown)
   useEffect(() => {
     const wasDown = prevBackendDown.current
