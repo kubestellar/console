@@ -1,22 +1,72 @@
-import { useEffect, useState, useRef } from 'react'
-import type { UpdateProgress } from '../types/updates'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import type { UpdateProgress, UpdateStepEntry } from '../types/updates'
 import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 const WS_RECONNECT_MS = 5000  // Reconnect interval after WebSocket disconnect
 const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
 const BACKEND_POLL_MAX = 90   // Max attempts (~3 min) before giving up
 
+/** Known update step labels for developer channel (7-step update) */
+const DEV_UPDATE_STEP_LABELS: Record<number, string> = {
+  1: 'Git pull',
+  2: 'npm install',
+  3: 'Frontend build',
+  4: 'Build console binary',
+  5: 'Build kc-agent binary',
+  6: 'Stopping services',
+  7: 'Restart',
+}
+
 /**
  * Hook that listens for update_progress WebSocket broadcasts from kc-agent.
  * Uses a separate WebSocket connection to avoid interfering with the shared one.
+ * Also tracks step history for detailed progress display.
  */
 export function useUpdateProgress() {
   const [progress, setProgress] = useState<UpdateProgress | null>(null)
+  const [stepHistory, setStepHistory] = useState<UpdateStepEntry[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const progressRef = useRef<UpdateProgress | null>(null)
 
   // Keep ref in sync so the connect closure always sees the latest value
   progressRef.current = progress
+
+  /** Build step entries from a progress event, preserving completed steps */
+  const updateStepHistory = useCallback((p: UpdateProgress) => {
+    if (!p.step || !p.totalSteps) return
+
+    setStepHistory(prev => {
+      const entries: UpdateStepEntry[] = []
+      for (let i = 1; i <= p.totalSteps!; i++) {
+        const label = DEV_UPDATE_STEP_LABELS[i] ?? `Step ${i}`
+        if (i < p.step!) {
+          // Completed: use previous timestamp if available, else now
+          const existing = prev.find(e => e.step === i)
+          entries.push({
+            step: i,
+            message: existing?.message ?? label,
+            status: 'completed',
+            timestamp: existing?.timestamp ?? Date.now(),
+          })
+        } else if (i === p.step!) {
+          entries.push({
+            step: i,
+            message: p.message || label,
+            status: 'active',
+            timestamp: Date.now(),
+          })
+        } else {
+          entries.push({
+            step: i,
+            message: label,
+            status: 'pending',
+            timestamp: 0,
+          })
+        }
+      }
+      return entries
+    })
+  }, [])
 
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>
@@ -92,7 +142,9 @@ export function useUpdateProgress() {
           try {
             const msg = JSON.parse(event.data)
             if (msg.type === 'update_progress' && msg.payload) {
-              setProgress(msg.payload as UpdateProgress)
+              const p = msg.payload as UpdateProgress
+              setProgress(p)
+              updateStepHistory(p)
             }
           } catch {
             // Ignore parse errors
@@ -123,9 +175,12 @@ export function useUpdateProgress() {
         wsRef.current = null
       }
     }
-  }, [])
+  }, [updateStepHistory])
 
-  const dismiss = () => setProgress(null)
+  const dismiss = () => {
+    setProgress(null)
+    setStepHistory([])
+  }
 
-  return { progress, dismiss }
+  return { progress, stepHistory, dismiss }
 }

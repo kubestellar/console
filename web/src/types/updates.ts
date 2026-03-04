@@ -80,6 +80,14 @@ export interface UpdateProgress {
   totalSteps?: number // total steps in the update (e.g. 7)
 }
 
+/** A single tracked step in the update progress history */
+export interface UpdateStepEntry {
+  step: number
+  message: string
+  status: 'completed' | 'active' | 'pending'
+  timestamp: number // Date.now() when the step was first seen
+}
+
 /**
  * Status returned by the kc-agent /auto-update/status endpoint.
  */

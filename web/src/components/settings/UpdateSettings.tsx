@@ -83,7 +83,7 @@ export function UpdateSettings() {
   } = useVersionCheck()
 
   // WebSocket-driven update progress from kc-agent
-  const { progress: updateProgress, dismiss: dismissProgress } = useUpdateProgress()
+  const { progress: updateProgress, stepHistory, dismiss: dismissProgress } = useUpdateProgress()
 
   const CHANNEL_OPTIONS: { value: UpdateChannel; label: string; description: string; devOnly?: boolean }[] = [
     {
@@ -467,19 +467,39 @@ export function UpdateSettings() {
       {/* Update Progress Banner */}
       {isUpdating && (
         <div data-testid="update-progress-banner" className="mb-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <div className="flex items-center gap-3 mb-2">
+          {/* Header with current status */}
+          <div className="flex items-center gap-3 mb-3">
             <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-            <div className="flex-1 min-w-0">
-              <p data-testid="update-progress-message" className="text-sm font-medium text-blue-400">
-                {updateProgress?.message ?? t('settings.updates.startingUpdate')}
-              </p>
-              {updateProgress?.step && updateProgress?.totalSteps && (
-                <p data-testid="update-step-indicator" className="text-xs text-blue-400/50 mt-0.5">
-                  Step {updateProgress.step} of {updateProgress.totalSteps}
-                </p>
-              )}
-            </div>
+            <p data-testid="update-progress-message" className="text-sm font-medium text-blue-400 flex-1 min-w-0">
+              {updateProgress?.message ?? t('settings.updates.startingUpdate')}
+            </p>
           </div>
+
+          {/* Step detail entries */}
+          {stepHistory.length > 0 && (
+            <div className="space-y-1.5 mb-3 pl-1">
+              {stepHistory.map((entry) => (
+                <div key={entry.step} className="flex items-center gap-2">
+                  {entry.status === 'completed' ? (
+                    <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                  ) : entry.status === 'active' ? (
+                    <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin shrink-0" />
+                  ) : (
+                    <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 shrink-0" />
+                  )}
+                  <span className={`text-xs ${
+                    entry.status === 'completed' ? 'text-green-400/80' :
+                    entry.status === 'active' ? 'text-blue-400' :
+                    'text-muted-foreground/40'
+                  }`}>
+                    {entry.message}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Progress bar */}
           <div className="w-full bg-secondary rounded-full h-2">
             <div
               data-testid="update-progress-bar"
