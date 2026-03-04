@@ -87,13 +87,13 @@ export function PremiumGauge({
 
   // Calculate arc angles based on values
   const primaryAngle = useMemo(() => {
-    const percentage = Math.min(primary.value / primary.max, 1)
+    const percentage = primary.max > 0 ? Math.min(primary.value / primary.max, 1) : 0
     return startAngle + percentage * totalAngle
   }, [primary.value, primary.max, startAngle, totalAngle])
 
   const secondaryAngle = useMemo(() => {
     if (!secondary) return startAngle
-    const percentage = Math.min(secondary.value / secondary.max, 1)
+    const percentage = secondary.max > 0 ? Math.min(secondary.value / secondary.max, 1) : 0
     return startAngle + percentage * totalAngle
   }, [secondary, startAngle, totalAngle])
 

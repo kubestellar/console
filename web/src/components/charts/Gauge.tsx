@@ -21,7 +21,7 @@ export function Gauge({
   thresholds = { warning: 70, critical: 90 },
   invertColors = false,
 }: GaugeProps) {
-  const percentage = Math.min((value / max) * 100, 100)
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
   const rotation = (percentage / 100) * 180 - 90 // -90 to 90 degrees
 
   const getColor = () => {

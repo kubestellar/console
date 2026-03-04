@@ -24,7 +24,7 @@ export function ProgressBar({
   variant = 'default',
   thresholds,
 }: ProgressBarProps) {
-  const percentage = Math.min((value / max) * 100, 100)
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
 
   const getColor = () => {
     if (color) return color
@@ -100,7 +100,7 @@ export function SegmentedProgressBar({
   showLegend = true,
   title,
 }: SegmentedProgressBarProps) {
-  const total = max || segments.reduce((sum, s) => sum + s.value, 0)
+  const total = max || segments.reduce((sum, s) => sum + s.value, 0) || 1
 
   const sizeClasses = {
     sm: 'h-1.5',
@@ -172,7 +172,7 @@ export function CircularProgress({
   label,
   thresholds,
 }: CircularProgressProps) {
-  const percentage = Math.min((value / max) * 100, 100)
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
   const radius = (size - strokeWidth) / 2
   const circumference = radius * 2 * Math.PI
   const offset = circumference - (percentage / 100) * circumference

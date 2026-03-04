@@ -29,7 +29,7 @@ interface PremiumGaugeProps {
 }
 
 function PremiumGauge({ value, maxValue, label, sublabel, size = 140 }: PremiumGaugeProps) {
-  const percentage = Math.min((value / maxValue) * 100, 100)
+  const percentage = maxValue > 0 ? Math.min((value / maxValue) * 100, 100) : 0
   const viewSize = 100
   const cx = viewSize / 2
   const cy = viewSize / 2

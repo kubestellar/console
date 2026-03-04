@@ -36,7 +36,7 @@ export function HorseshoeGauge({
   size = 180,
 }: HorseshoeGaugeProps) {
   const { t: _t } = useTranslation()
-  const percentage = Math.min((value / maxValue) * 100, 100)
+  const percentage = maxValue > 0 ? Math.min((value / maxValue) * 100, 100) : 0
   const color = getColor(percentage)
   const uniqueId = useMemo(() => `horseshoe-${Math.random().toString(36).substr(2, 9)}`, [])
 
