@@ -213,9 +213,10 @@ export function useLastRoute() {
     }
 
     try {
-      // Save the current path (including '/' for Dashboard)
-      // so refresh returns to the current page, not a stale saved route
-      localStorage.setItem(LAST_ROUTE_KEY, location.pathname)
+      // Save the current path + query string (including '/' for Dashboard)
+      // so refresh returns to the current page, not a stale saved route.
+      // Query params like ?mission= must survive the OAuth round-trip.
+      localStorage.setItem(LAST_ROUTE_KEY, location.pathname + location.search)
     } catch {
       // Ignore localStorage errors
     }
@@ -236,7 +237,7 @@ export function useLastRoute() {
     // Don't redirect away from '/' when deep link params are present —
     // let useDeepLink handle them on the current route.
     const params = new URLSearchParams(location.search)
-    if (params.has('card') || params.has('drilldown') || params.has('action')) return
+    if (params.has('card') || params.has('drilldown') || params.has('action') || params.has('mission')) return
 
     try {
       const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
