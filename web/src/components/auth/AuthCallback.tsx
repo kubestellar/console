@@ -32,9 +32,12 @@ export function AuthCallback() {
       setToken(token, true)
       setStatus(t('authCallback.fetchingUserInfo'))
 
-      // Navigate directly to the last visited dashboard route instead of '/'
-      // to avoid a flash of the default dashboard before useLastRoute redirects.
-      const destination = getLastRoute() || ROUTES.HOME
+      // Check for a return-to URL saved by ProtectedRoute (deep-link through OAuth),
+      // then fall back to the last visited dashboard route, then '/'.
+      const RETURN_TO_KEY = 'kubestellar-return-to'
+      const returnTo = localStorage.getItem(RETURN_TO_KEY)
+      if (returnTo) localStorage.removeItem(RETURN_TO_KEY)
+      const destination = returnTo || getLastRoute() || ROUTES.HOME
 
       // Add timeout to prevent hanging forever
       const timeoutId = setTimeout(() => {

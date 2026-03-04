@@ -205,8 +205,12 @@ function CardHistoryWithRestore() {
   return <CardHistory onRestoreCard={handleRestoreCard} />
 }
 
+/** Key for preserving the intended destination through the OAuth login flow */
+const RETURN_TO_KEY = 'kubestellar-return-to'
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     // If we have a token (likely authenticated), render children optimistically
@@ -220,6 +224,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
+    // Save the intended destination so AuthCallback can return here after login.
+    // This preserves deep-link params like ?mission= through the OAuth round-trip.
+    const destination = location.pathname + location.search
+    if (destination !== '/' && destination !== '/login') {
+      localStorage.setItem(RETURN_TO_KEY, destination)
+    }
     return <Navigate to={ROUTES.LOGIN} replace />
   }
 
@@ -395,10 +405,11 @@ function App() {
           <Route path="/test/unified-card" element={<UnifiedCardTest />} />
           <Route path="/test/unified-stats" element={<UnifiedStatsTest />} />
           <Route path="/test/unified-dashboard" element={<UnifiedDashboardTest />} />
+          {/* Mission deep-link: /missions/install-prometheus → opens MissionBrowser.
+              Must be inside ProtectedRoute so auth is verified before redirect,
+              and the ?mission= param survives the OAuth round-trip. */}
+          <Route path="/missions/:missionId" element={<MissionDeepLink />} />
         </Route>
-
-        {/* Mission deep-link: /missions/install-prometheus → opens MissionBrowser */}
-        <Route path="/missions/:missionId" element={<MissionDeepLink />} />
 
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
