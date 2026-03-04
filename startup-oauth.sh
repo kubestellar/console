@@ -247,6 +247,10 @@ if [ "$USE_DEV_SERVER" = true ]; then
     # Dev mode: Vite dev server with HMR (slower initial load, live reload on code changes)
     # NOTE: Do NOT pass --dev to the backend — that bypasses OAuth and creates "dev-user".
     # The --dev flag in startup-oauth.sh only controls using Vite dev server vs built assets.
+    if [ ! -d "web/node_modules" ]; then
+        echo -e "${GREEN}Installing frontend dependencies...${NC}"
+        (cd web && npm install)
+    fi
     echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
     GOWORK=off go run ./cmd/console &
     BACKEND_PID=$!
@@ -265,6 +269,10 @@ if [ "$USE_DEV_SERVER" = true ]; then
     echo -e "  Auth:     GitHub OAuth (real login)"
 else
     # Production mode: pre-built frontend served by Go backend (fast load)
+    if [ ! -d "web/node_modules" ]; then
+        echo -e "${GREEN}Installing frontend dependencies...${NC}"
+        (cd web && npm install)
+    fi
     echo -e "${GREEN}Building frontend...${NC}"
     (cd web && npm run build)
     echo -e "${GREEN}Frontend built successfully${NC}"
