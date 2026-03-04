@@ -3,6 +3,7 @@ import { Search, Server, Layers, Rocket, Box, Settings as SettingsIcon, AlertCir
 import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
+import { useCachedNodes } from '../../../hooks/useCachedData'
 import { useTranslation } from 'react-i18next'
 
 interface MultiClusterSummaryDrillDownProps {
@@ -171,6 +172,7 @@ function getStatusBadge(status: string) {
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
   const { clusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
+  const { nodes: cachedNodes } = useCachedNodes()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [clusterFilter, setClusterFilter] = useState<string>('all')
@@ -223,15 +225,26 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           status: 'active',
         }))
       case 'all-nodes':
-        // Build nodes from cluster node counts
+        // Use real node data from the cached nodes hook
+        if (cachedNodes.length > 0) {
+          return cachedNodes.map(n => ({
+            name: n.name,
+            cluster: n.cluster || '',
+            status: n.status || 'Unknown',
+            roles: n.roles,
+            cpuCapacity: n.cpuCapacity,
+            memoryCapacity: n.memoryCapacity,
+            kubeletVersion: n.kubeletVersion,
+            internalIP: n.internalIP,
+          }))
+        }
+        // Fallback: approximate from cluster metadata when node data hasn't loaded
         return clusters.flatMap(c => {
-          const nodeCount = c.nodeCount || 0
-          return Array.from({ length: Math.min(nodeCount, 10) }, (_, i) => ({
-            name: `node-${i + 1}`,
+          const count = c.nodeCount || 0
+          return Array.from({ length: count }, (_, i) => ({
+            name: `${c.name}-node-${i + 1}`,
             cluster: c.name,
             status: c.healthy ? 'Ready' : 'NotReady',
-            cpuCores: Math.round((c.cpuCores || 0) / Math.max(nodeCount, 1)),
-            memoryGB: Math.round((c.memoryGB || 0) / Math.max(nodeCount, 1)),
           }))
         })
       case 'all-events':
@@ -300,7 +313,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       default:
         return []
     }
-  }, [viewType, clusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues])
+  }, [viewType, clusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes])
 
   // Apply initial filter from data prop
   const preFilteredItems = useMemo(() => {
