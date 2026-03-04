@@ -587,6 +587,7 @@
     "oauthNotConfigured": "OAuth not configured",
     "checkingOauth": "Checking OAuth...",
     "setupInstructions": "Setup Instructions",
+    "devModeSetup": "Instruções de configuração do modo desenvolvedor",
     "configureOauth": "Configure GitHub OAuth",
     "githubRepo": "GitHub Repository",
     "docs": "Documentation",

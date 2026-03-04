@@ -287,7 +287,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                       className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
                     >
                       <Rocket className="w-3.5 h-3.5" />
-                      {t('developer.setupInstructions')}
+                      {installMethod === 'dev' ? t('developer.devModeSetup') : t('developer.setupInstructions')}
                     </button>
                     {!oauthStatus.configured && oauthStatus.checked && (
                       <a
