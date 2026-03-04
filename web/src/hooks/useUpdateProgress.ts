@@ -2,9 +2,9 @@ import { useEffect, useState, useRef } from 'react'
 import type { UpdateProgress } from '../types/updates'
 import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
-const WS_RECONNECT_MS = 5000 // Reconnect interval after WebSocket disconnect
-const BACKEND_POLL_MS = 2000 // Poll interval when waiting for backend to come up
-const BACKEND_POLL_MAX = 30  // Max attempts (~60s) before giving up
+const WS_RECONNECT_MS = 5000  // Reconnect interval after WebSocket disconnect
+const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
+const BACKEND_POLL_MAX = 90   // Max attempts (~3 min) before giving up
 
 /**
  * Hook that listens for update_progress WebSocket broadcasts from kc-agent.
@@ -30,8 +30,14 @@ export function useUpdateProgress() {
         try {
           const resp = await fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
           if (resp.ok) {
-            setProgress({ status: 'done', message: 'Update complete — restart successful', progress: 100 })
-            return
+            const data = await resp.json()
+            // The loading server returns {"status":"starting"} while the backend
+            // initializes. Only show "done" when the real server returns "ok" —
+            // otherwise the user refreshes into a loading page or blank screen.
+            if (data.status === 'ok') {
+              setProgress({ status: 'done', message: 'Update complete — restart successful', progress: 100 })
+              return
+            }
           }
         } catch {
           // Backend not ready yet

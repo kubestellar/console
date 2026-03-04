@@ -37,7 +37,7 @@ const MIN_SPIN_DURATION = 1000
 const INITIAL_PROGRESS_PCT = 5
 
 /** Estimated total update duration in seconds (pull + install + build + restart) */
-const ESTIMATED_UPDATE_SECS = 60
+const ESTIMATED_UPDATE_SECS = 180
 
 /** Countdown tick interval in milliseconds */
 const COUNTDOWN_TICK_MS = 1000
@@ -466,22 +466,23 @@ export function UpdateSettings() {
 
       {/* Update Progress Banner */}
       {isUpdating && (
-        <div className="mb-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+        <div data-testid="update-progress-banner" className="mb-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
           <div className="flex items-center gap-3 mb-2">
             <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-            <p className="text-sm font-medium text-blue-400">
+            <p data-testid="update-progress-message" className="text-sm font-medium text-blue-400">
               {updateProgress?.message ?? t('settings.updates.startingUpdate')}
             </p>
           </div>
           <div className="w-full bg-secondary rounded-full h-2">
             <div
+              data-testid="update-progress-bar"
               className="bg-blue-500 h-2 rounded-full transition-all duration-500"
               style={{ width: `${updateProgress?.progress ?? INITIAL_PROGRESS_PCT}%` }}
             />
           </div>
           <div className="flex items-center justify-between mt-2">
             <p className="text-xs text-blue-400/60">{t('settings.updates.doNotNavigate')}</p>
-            <p className="text-xs text-blue-400/60 tabular-nums">
+            <p data-testid="update-countdown" className="text-xs text-blue-400/60 tabular-nums">
               {countdown > 0
                 ? t('settings.updates.estimatedRemaining', { seconds: countdown })
                 : t('settings.updates.almostDone')}
@@ -492,13 +493,14 @@ export function UpdateSettings() {
 
       {/* Update Complete/Failed */}
       {updateProgress?.status === 'done' && (
-        <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+        <div data-testid="update-done-banner" className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-green-400" />
               <div>
                 <p className="text-sm text-green-400">{updateProgress.message}</p>
                 <button
+                  data-testid="update-refresh-button"
                   onClick={() => window.location.reload()}
                   className="text-xs text-green-400/80 hover:text-green-300 underline underline-offset-2 mt-1"
                 >
@@ -506,25 +508,25 @@ export function UpdateSettings() {
                 </button>
               </div>
             </div>
-            <button onClick={dismissProgress} className="text-green-400/60 hover:text-green-400">
+            <button data-testid="update-done-dismiss" onClick={dismissProgress} className="text-green-400/60 hover:text-green-400">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
       {updateProgress?.status === 'failed' && (
-        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+        <div data-testid="update-failed-banner" className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
               <div>
                 <p className="text-sm text-red-400">{updateProgress.message}</p>
                 {updateProgress.error && (
-                  <p className="text-xs text-red-400/70 mt-1">{updateProgress.error}</p>
+                  <p data-testid="update-failed-error" className="text-xs text-red-400/70 mt-1">{updateProgress.error}</p>
                 )}
               </div>
             </div>
-            <button onClick={dismissProgress} className="text-red-400/60 hover:text-red-400 shrink-0 ml-2">
+            <button data-testid="update-failed-dismiss" onClick={dismissProgress} className="text-red-400/60 hover:text-red-400 shrink-0 ml-2">
               <X className="w-4 h-4" />
             </button>
           </div>
