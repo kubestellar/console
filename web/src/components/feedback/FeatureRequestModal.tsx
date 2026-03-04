@@ -992,14 +992,20 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                         </div>
                       ) : (
                         (() => {
-                          // Blur titles of contributions that match untriaged feedback requests
+                          // Blur titles of contributions that match untriaged feedback requests.
+                          // While requests are still loading, blur all console issue contributions
+                          // as a safe default to prevent title leak.
+                          const requestsReady = !requestsLoading && requests.length > 0
                           const untriagedIssueNumbers = new Set(
                             (requests || [])
                               .filter(r => !isTriaged(r.status) && r.github_issue_number)
                               .map(r => r.github_issue_number)
                           )
                           return githubRewards.contributions.map((contrib: GitHubContribution, idx: number) => {
-                          const isUntriaged = untriagedIssueNumbers.has(contrib.number)
+                          const isConsoleIssue = contrib.type.startsWith('issue_') && contrib.repo?.includes('console')
+                          const isUntriaged = requestsReady
+                            ? untriagedIssueNumbers.has(contrib.number)
+                            : isConsoleIssue
                           return (
                           <a
                             key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
