@@ -31,11 +31,10 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   const [showRewards, setShowRewards] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showDevPanel, setShowDevPanel] = useState(false)
-  // If user is logged in via GitHub, OAuth is obviously configured
   const [oauthStatus, setOauthStatus] = useState<{ checked: boolean; configured: boolean; backendUp: boolean }>({
-    checked: !!user?.github_login,
-    configured: !!user?.github_login,
-    backendUp: !!user?.github_login,
+    checked: false,
+    configured: false,
+    backendUp: false,
   })
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
@@ -56,7 +55,14 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     setIsOpen(false)
   }
 
-  // Check OAuth status when dropdown opens (covers dev panel visibility)
+  // Check OAuth status eagerly on mount so it's ready before dropdown opens
+  useEffect(() => {
+    checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
+      setOauthStatus({ checked: true, configured: oauthConfigured, backendUp })
+    })
+  }, [])
+
+  // Re-check when dropdown opens (status may have changed)
   useEffect(() => {
     if (isOpen) {
       checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
