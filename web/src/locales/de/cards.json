@@ -20,6 +20,25 @@
     "youWon": "You Won!",
     "aiWinsExclaim": "AI Wins!"
   },
+  "coreDNSStatus": {
+    "pods": "Pods",
+    "healthy": "Healthy",
+    "restarts": "Restarts",
+    "noPods": "No pods found",
+    "summaryRunning": "{{count}} pods running",
+    "summaryRunning_one": "{{count}} pod running",
+    "summaryRunning_other": "{{count}} pods running",
+    "summaryRestarts": "{{count}} restarts",
+    "summaryRestarts_one": "{{count}} restart",
+    "summaryRestarts_other": "{{count}} restarts",
+    "podNotReady": "{{ready}}/{{total}} ready",
+    "ready": "Ready",
+    "noPods_hint": "CoreDNS pods in kube-system will appear here",
+    "degraded": "Degraded",
+    "summary": "{{pods}} pods across {{clusters}} clusters",
+    "summary_one": "{{pods}} pods in {{clusters}} cluster",
+    "summary_other": "{{pods}} pods across {{clusters}} clusters"
+  },
   "securityIssues": {
     "highSeverityTitle": "{{count}} high severity security issues requiring immediate attention",
     "highSeverityTitle_one": "{{count}} high severity security issue requiring immediate attention",
@@ -254,8 +273,8 @@
     "provider_health": "Provider Health",
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
-    "coredns_status": "CoreDNS",
-    "crio_status": "CRI-O"
+    "crio_status": "CRI-O",
+    "coredns_status": "CoreDNS"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
