@@ -1364,7 +1364,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         {BROWSER_TABS.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => { setSelectedMission(null); setActiveTab(tab.id) }}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors',
               activeTab === tab.id
