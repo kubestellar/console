@@ -86,8 +86,29 @@ if [ ! -f "$SCRIPT_DIR/web/package.json" ] || [ ! -d "$SCRIPT_DIR/cmd" ]; then
         if [ -n "$TAG" ]; then git checkout "$TAG"; fi
     fi
 
-    echo "Installing frontend dependencies..."
-    (cd web && npm install)
+    # Colors needed for safe_npm_install in bootstrap mode
+    RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+    MAX_NPM_RETRIES=3
+    safe_npm_install() {
+        local dir="$1"
+        local attempt=1
+        while [ $attempt -le $MAX_NPM_RETRIES ]; do
+            echo -e "${GREEN}Installing frontend dependencies (attempt $attempt/$MAX_NPM_RETRIES)...${NC}"
+            rm -f "$dir/package-lock.json.lock" "$dir/.package-lock.json" 2>/dev/null
+            if (cd "$dir" && npm install 2>&1); then
+                echo -e "${GREEN}Dependencies installed successfully${NC}"
+                return 0
+            fi
+            echo -e "${YELLOW}npm install failed — cleaning cache and retrying...${NC}"
+            npm cache clean --force 2>/dev/null || true
+            if [ $attempt -ge 2 ]; then rm -rf "$dir/node_modules"; fi
+            attempt=$((attempt + 1))
+        done
+        echo -e "${RED}Error: npm install failed after $MAX_NPM_RETRIES attempts.${NC}"
+        echo -e "${RED}Try: cd $dir && npm cache clean --force && npm install${NC}"
+        exit 1
+    }
+    safe_npm_install web
     echo ""
     exec ./startup-oauth.sh
 fi
@@ -100,6 +121,39 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+
+# Resilient npm install — handles cache corruption, permission errors, and stale locks
+MAX_NPM_RETRIES=3
+safe_npm_install() {
+    local dir="$1"
+    local attempt=1
+    while [ $attempt -le $MAX_NPM_RETRIES ]; do
+        echo -e "${GREEN}Installing frontend dependencies (attempt $attempt/$MAX_NPM_RETRIES)...${NC}"
+        # Remove stale lockfiles that block concurrent installs
+        rm -f "$dir/package-lock.json.lock" "$dir/.package-lock.json" 2>/dev/null
+        if (cd "$dir" && npm install 2>&1); then
+            echo -e "${GREEN}Dependencies installed successfully${NC}"
+            return 0
+        fi
+        local exit_code=$?
+        echo -e "${YELLOW}npm install failed (exit $exit_code)${NC}"
+
+        # Attempt recovery: clean npm cache (fixes EACCES, corruption, sha512 errors)
+        echo -e "${YELLOW}Cleaning npm cache and retrying...${NC}"
+        npm cache clean --force 2>/dev/null || true
+
+        # Remove potentially corrupted node_modules for a clean retry
+        if [ $attempt -ge 2 ]; then
+            echo -e "${YELLOW}Removing node_modules for clean install...${NC}"
+            rm -rf "$dir/node_modules"
+        fi
+
+        attempt=$((attempt + 1))
+    done
+    echo -e "${RED}Error: npm install failed after $MAX_NPM_RETRIES attempts${NC}"
+    echo -e "${RED}Try manually: cd $dir && npm cache clean --force && npm install${NC}"
+    exit 1
+}
 
 echo -e "${GREEN}=== KubeStellar Console - OAuth Mode ===${NC}"
 echo ""
@@ -248,8 +302,7 @@ if [ "$USE_DEV_SERVER" = true ]; then
     # NOTE: Do NOT pass --dev to the backend — that bypasses OAuth and creates "dev-user".
     # The --dev flag in startup-oauth.sh only controls using Vite dev server vs built assets.
     if [ ! -d "web/node_modules" ]; then
-        echo -e "${GREEN}Installing frontend dependencies...${NC}"
-        (cd web && npm install)
+        safe_npm_install web
     fi
     echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
     GOWORK=off go run ./cmd/console &
@@ -270,8 +323,7 @@ if [ "$USE_DEV_SERVER" = true ]; then
 else
     # Production mode: pre-built frontend served by Go backend (fast load)
     if [ ! -d "web/node_modules" ]; then
-        echo -e "${GREEN}Installing frontend dependencies...${NC}"
-        (cd web && npm install)
+        safe_npm_install web
     fi
     echo -e "${GREEN}Building frontend...${NC}"
     (cd web && npm run build)
