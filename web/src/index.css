@@ -54,7 +54,7 @@
     --agent-raycast: #FF6363;
 
     /* Glass effect - can be overridden by theme */
-    --glass-background: rgba(17, 24, 39, 0.92);
+    --glass-background: rgb(17, 24, 39);
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: rgba(147, 51, 234, 0.2);
 
@@ -101,7 +101,7 @@
     --input: 214 32% 91%;
     --ring: 252 73% 56%;
 
-    --glass-background: rgba(255, 255, 255, 0.95);
+    --glass-background: rgb(255, 255, 255);
     --glass-border: rgba(0, 0, 0, 0.1);
     --glass-shadow: rgba(147, 51, 234, 0.1);
     --scrollbar-thumb: rgba(147, 51, 234, 0.2);
@@ -560,12 +560,12 @@
 }
 
 .high-contrast .glass {
-  background: rgba(0, 0, 0, 0.95);
+  background: rgb(0, 0, 0);
   border: 2px solid white;
 }
 
 .light.high-contrast .glass {
-  background: rgba(255, 255, 255, 0.98);
+  background: rgb(255, 255, 255);
   border: 2px solid black;
 }
 

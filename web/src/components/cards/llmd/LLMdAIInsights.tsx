@@ -22,9 +22,9 @@ const INSIGHT_ICONS = {
 }
 
 const SEVERITY_COLORS = {
-  info: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: 'text-blue-400' },
-  warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400', icon: 'text-amber-400' },
-  critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: 'text-red-400' },
+  info: { bg: 'bg-blue-950', border: 'border-blue-500/30', text: 'text-blue-400', icon: 'text-blue-400' },
+  warning: { bg: 'bg-amber-950', border: 'border-amber-500/30', text: 'text-amber-400', icon: 'text-amber-400' },
+  critical: { bg: 'bg-red-950', border: 'border-red-500/30', text: 'text-red-400', icon: 'text-red-400' },
 }
 
 interface InsightCardProps {
@@ -88,7 +88,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
               {insight.metrics && (
                 <div className="grid grid-cols-3 gap-2">
                   {Object.entries(insight.metrics).map(([key, value]) => (
-                    <div key={key} className="bg-slate-800/50 rounded p-2 text-center">
+                    <div key={key} className="bg-slate-800 rounded p-2 text-center">
                       <div className="text-xs text-muted-foreground truncate">{key}</div>
                       <div className="text-sm font-mono text-white">{value}</div>
                     </div>
