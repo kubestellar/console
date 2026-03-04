@@ -9,6 +9,7 @@ export interface AgentHealth {
   version: string
   clusters: number
   hasClaude: boolean
+  install_method?: string
   claude?: {
     installed: boolean
     path?: string

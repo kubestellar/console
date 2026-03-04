@@ -12,6 +12,7 @@ import type {
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../lib/constants'
 import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { useLocalAgent } from './useLocalAgent'
 
 declare const __APP_VERSION__: string
 declare const __COMMIT_HASH__: string
@@ -279,9 +280,13 @@ function useVersionCheckCore() {
   )
   const [autoUpdateStatus, setAutoUpdateStatus] = useState<AutoUpdateStatus | null>(null)
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null)
-  const [agentConnected, setAgentConnected] = useState(false)
-  const [agentSupportsAutoUpdate, setAgentSupportsAutoUpdate] = useState(false)
-  const [hasCodingAgent, setHasCodingAgent] = useState(false)
+
+  // Agent connectivity & coding agent status — derived from the shared AgentManager
+  // singleton (same source as the navbar), so prereqs update in real-time
+  const { isConnected: agentConnected, health: agentHealth, refresh: refreshAgent } = useLocalAgent()
+  const hasCodingAgent = agentHealth?.hasClaude ?? false
+  const agentSupportsAutoUpdate = agentConnected && agentHealth?.install_method != null
+
   // Client-side SHA tracking for developer channel (fallback when kc-agent doesn't support auto-update)
   const [latestMainSHA, setLatestMainSHA] = useState<string | null>(null)
   // Recent commits between current and latest SHA (developer channel)
@@ -300,43 +305,6 @@ function useVersionCheckCore() {
       return __COMMIT_HASH__ || 'unknown'
     } catch {
       return 'unknown'
-    }
-  }, [])
-
-  /**
-   * Fetch install method and agent connectivity from kc-agent /health.
-   * Also fetches install_method from the backend /health (same origin) as fallback.
-   */
-  const fetchAgentInfo = useCallback(async () => {
-    // Check kc-agent connectivity
-    try {
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, { signal: AbortSignal.timeout(3000) })
-      if (resp.ok) {
-        const data = await resp.json()
-        setAgentConnected(true)
-        if (data.install_method) {
-          setInstallMethod(data.install_method as InstallMethod)
-          setAgentSupportsAutoUpdate(true)
-        }
-        if (data.hasClaude) {
-          setHasCodingAgent(true)
-        }
-      }
-    } catch {
-      setAgentConnected(false)
-    }
-
-    // Fetch install_method from backend /health (same origin) as fallback
-    try {
-      const resp = await fetch('/health', { signal: AbortSignal.timeout(3000) })
-      if (resp.ok) {
-        const data = await resp.json()
-        if (data.install_method) {
-          setInstallMethod(data.install_method as InstallMethod)
-        }
-      }
-    } catch {
-      // Backend not available
     }
   }, [])
 
@@ -691,6 +659,8 @@ function useVersionCheckCore() {
     console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
     setIsChecking(true)
     setError(null)
+    // Trigger an immediate agent health check via the shared singleton
+    refreshAgent()
     try {
       if (channel === 'developer') {
         if (agentSupportsAutoUpdate) {
@@ -708,7 +678,7 @@ function useVersionCheckCore() {
     } finally {
       setIsChecking(false)
     }
-  }, [fetchReleases, channel, fetchAutoUpdateStatus, agentSupportsAutoUpdate, fetchLatestMainSHA])
+  }, [fetchReleases, channel, fetchAutoUpdateStatus, agentSupportsAutoUpdate, fetchLatestMainSHA, refreshAgent])
 
   /**
    * Skip a specific version (won't show update notification for it).
@@ -760,10 +730,28 @@ function useVersionCheckCore() {
     }
   }, [])
 
-  // Fetch agent info on mount
+  // Sync install method from agent health (kc-agent reports it in /health)
   useEffect(() => {
-    fetchAgentInfo()
-  }, [fetchAgentInfo])
+    if (agentHealth?.install_method) {
+      setInstallMethod(agentHealth.install_method as InstallMethod)
+    }
+  }, [agentHealth?.install_method])
+
+  // Fetch install_method from backend /health as fallback (one-time on mount)
+  useEffect(() => {
+    async function fetchBackendInstallMethod() {
+      try {
+        const resp = await fetch('/health', { signal: AbortSignal.timeout(3000) })
+        if (resp.ok) {
+          const data = await resp.json()
+          if (data.install_method) {
+            setInstallMethod(data.install_method as InstallMethod)
+          }
+        }
+      } catch { /* Backend not available */ }
+    }
+    fetchBackendInstallMethod()
+  }, [])
 
   // Fetch auto-update status when channel changes or on mount
   useEffect(() => {
