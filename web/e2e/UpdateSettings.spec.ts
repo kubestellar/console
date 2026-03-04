@@ -21,13 +21,26 @@ const MOCK_USER = {
   onboarded: true,
 }
 
+/** Collected WebSocketRoute handles from mock connections */
+type WsRoutes = { routes: Array<{ send: (data: string) => void }> }
+
 /**
  * Shared setup: auth, route mocks, navigate to /settings.
- * Returns a WebSocket server handle that can send update_progress messages.
+ * Returns collected WebSocketRoute handles that can send update_progress messages.
+ *
+ * NOTE: page.routeWebSocket() returns Promise<void>. The WebSocketRoute object
+ * is passed to the handler callback, so we capture it there and broadcast
+ * messages to all connections (the app opens multiple WS connections).
  */
-async function setupUpdateTest(page: Page) {
+async function setupUpdateTest(page: Page): Promise<WsRoutes> {
   // Suppress console errors from WebSocket / agent connections
   page.on('console', () => {})
+
+  const wsRoutes: WsRoutes = { routes: [] }
+  let firstWsResolve: () => void
+  const firstWsReady = new Promise<void>((resolve) => {
+    firstWsResolve = resolve
+  })
 
   // Mock auth
   await page.route('**/api/me', (route) =>
@@ -38,7 +51,7 @@ async function setupUpdateTest(page: Page) {
     })
   )
 
-  // Mock health — default to "ok" (individual tests may override)
+  // Mock health — default to "ok" (individual tests may override after setup)
   await page.route('**/health', (route) =>
     route.fulfill({
       status: 200,
@@ -59,8 +72,10 @@ async function setupUpdateTest(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   )
 
-  // Mock the kc-agent WebSocket — returns a server handle for sending messages
-  const wsServer = await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
+  // Mock the kc-agent WebSocket — capture WebSocketRoute handles from callback
+  await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
+    wsRoutes.routes.push(ws)
+    firstWsResolve()
     ws.onMessage((data) => {
       try {
         const msg = JSON.parse(String(data))
@@ -83,14 +98,17 @@ async function setupUpdateTest(page: Page) {
   await page.waitForLoadState('domcontentloaded')
   await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
 
-  return wsServer
+  // Wait for at least one WebSocket connection to be established
+  await firstWsReady
+
+  return wsRoutes
 }
 
 /**
- * Helper: send an update_progress WebSocket message via the mock server.
+ * Helper: broadcast an update_progress WebSocket message to all mock connections.
  */
 function sendProgress(
-  wsServer: Awaited<ReturnType<Page['routeWebSocket']>>,
+  wsRoutes: WsRoutes,
   status: string,
   message: string,
   progress: number,
@@ -98,12 +116,17 @@ function sendProgress(
 ) {
   const payload: Record<string, unknown> = { status, message, progress }
   if (error) payload.error = error
-  wsServer.send(JSON.stringify({ type: 'update_progress', payload }))
+  const data = JSON.stringify({ type: 'update_progress', payload })
+  for (const ws of wsRoutes.routes) {
+    ws.send(data)
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+test.describe.configure({ mode: 'serial' })
 
 test.describe('Update Settings', () => {
   test('shows progress banner during update', async ({ page }) => {
@@ -150,20 +173,19 @@ test.describe('Update Settings', () => {
   })
 
   test('does NOT show refresh link when health returns "starting"', async ({ page }) => {
-    // Override /health to return loading server response
+    const ws = await setupUpdateTest(page)
+
+    // Override /health to return loading server response (LIFO — last route wins)
+    // Must include oauth_configured to prevent session_expired redirect
     await page.route('**/health', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ status: 'starting' }),
+        body: JSON.stringify({ status: 'starting', version: 'dev', oauth_configured: true }),
       })
     )
 
-    const ws = await setupUpdateTest(page)
-
-    // Simulate the "done" status directly — this tests the UI rendering
-    // The hook would NOT send "done" with our fix (it checks status === 'ok'),
-    // but this verifies the banner state machine works correctly
+    // Simulate the "restarting" status — tests the UI rendering
     sendProgress(ws, 'restarting', 'Waiting for backend to come up...', 90)
     await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
 
