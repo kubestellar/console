@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Shield,
   MessageSquarePlus,
+  Link,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
@@ -53,6 +54,8 @@ interface MissionDetailViewProps {
   importLabel?: string
   /** Hide the "Back to listing" button (e.g. when opened from saved missions) */
   hideBackButton?: boolean
+  /** Shareable URL for this mission (e.g. http://localhost:8080/missions/install-prometheus) */
+  shareUrl?: string
 }
 
 // Extract code blocks from markdown-style description
@@ -174,7 +177,9 @@ export function MissionDetailView({
   matchScore,
   importLabel = 'Import',
   hideBackButton = false,
+  shareUrl,
 }: MissionDetailViewProps) {
+  const [linkCopied, setLinkCopied] = useState(false)
   const tabs: TabDef[] = [
     {
       id: 'install',
@@ -252,6 +257,25 @@ export function MissionDetailView({
               <Star className="w-3 h-3" />
               {matchScore}% match
             </span>
+          )}
+          {shareUrl && (
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(shareUrl)
+                setLinkCopied(true)
+                setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+              }}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors',
+                linkCopied
+                  ? 'border-green-500/30 text-green-400'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              )}
+              title="Copy shareable link"
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
+              {linkCopied ? 'Copied!' : 'Share'}
+            </button>
           )}
           <button
             onClick={onToggleRaw}

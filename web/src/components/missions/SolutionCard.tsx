@@ -3,7 +3,10 @@
  * Shows type badge, category, tags, description, and import button.
  */
 
+import { useState } from 'react'
+import { Link, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { MissionExport } from '../../lib/missions/types'
 
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -19,10 +22,12 @@ interface SolutionCardProps {
   mission: MissionExport
   onImport: () => void
   onSelect: () => void
+  onCopyLink?: (e: React.MouseEvent) => void
   compact?: boolean
 }
 
-export function SolutionCard({ mission, onImport, onSelect, compact }: SolutionCardProps) {
+export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact }: SolutionCardProps) {
+  const [linkCopied, setLinkCopied] = useState(false)
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
 
   if (compact) {
@@ -62,9 +67,25 @@ export function SolutionCard({ mission, onImport, onSelect, compact }: SolutionC
         <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors">
           {mission.title}
         </h4>
-        <span className={cn('flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded-full', typeStyle.bg, typeStyle.color)}>
-          {mission.type}
-        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {onCopyLink && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onCopyLink(e)
+                setLinkCopied(true)
+                setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+              }}
+              className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
+              title="Copy shareable link"
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
+            </button>
+          )}
+          <span className={cn('px-1.5 py-0.5 text-[10px] font-medium rounded-full', typeStyle.bg, typeStyle.color)}>
+            {mission.type}
+          </span>
+        </div>
       </div>
 
       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{mission.description}</p>

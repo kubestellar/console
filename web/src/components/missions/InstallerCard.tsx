@@ -5,7 +5,8 @@
  */
 
 import { useState } from 'react'
-import { ExternalLink, Download, Wrench, Trash2, ArrowUpCircle, AlertTriangle } from 'lucide-react'
+import { ExternalLink, Download, Wrench, Trash2, ArrowUpCircle, AlertTriangle, Link, Check } from 'lucide-react'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { cn } from '../../lib/cn'
 import {
   CNCF_CATEGORY_GRADIENTS,
@@ -159,10 +160,12 @@ interface InstallerCardProps {
   mission: MissionExport
   onImport: () => void
   onSelect: () => void
+  onCopyLink?: (e: React.MouseEvent) => void
   compact?: boolean
 }
 
-export function InstallerCard({ mission, onImport, onSelect, compact }: InstallerCardProps) {
+export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact }: InstallerCardProps) {
+  const [linkCopied, setLinkCopied] = useState(false)
   const category = mission.category ?? 'Orchestration'
   const gradient = CNCF_CATEGORY_GRADIENTS[category] ?? ['#6366f1', '#8b5cf6']
   const iconPath = CNCF_CATEGORY_ICONS[category] ?? CNCF_CATEGORY_ICONS['Orchestration']
@@ -225,6 +228,21 @@ export function InstallerCard({ mission, onImport, onSelect, compact }: Installe
         }}
       >
         <ProjectLogo cncfProject={mission.cncfProject} iconPath={iconPath} size="lg" />
+        {/* Share link button */}
+        {onCopyLink && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onCopyLink(e)
+              setLinkCopied(true)
+              setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+            }}
+            className="absolute top-1.5 right-1.5 p-1 rounded bg-black/30 hover:bg-black/50 text-white/70 hover:text-white transition-colors"
+            title="Copy shareable link"
+          >
+            {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
+          </button>
+        )}
         {/* Category label */}
         <span className="absolute bottom-1.5 right-2 text-[10px] font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
           {category}

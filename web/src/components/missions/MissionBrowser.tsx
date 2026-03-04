@@ -29,8 +29,11 @@ import {
   Trash2,
   ExternalLink,
   RefreshCw,
+  Link,
+  Check,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
@@ -40,7 +43,9 @@ import {
   emitSolutionViewed,
   emitSolutionImported,
   emitSolutionGitHubLink,
+  emitSolutionLinkCopied,
 } from '../../lib/analytics'
+import { getMissionRoute } from '../../config/routes'
 import type {
   MissionExport,
   MissionMatch,
@@ -107,6 +112,31 @@ const CATEGORY_FILTERS = [
 const SIDEBAR_WIDTH = 280
 const WATCHED_REPOS_KEY = 'kc_mission_watched_repos'
 const WATCHED_PATHS_KEY = 'kc_mission_watched_paths'
+
+// ============================================================================
+// Slug generation for shareable deep-links
+// ============================================================================
+
+/**
+ * Generate a stable, URL-safe slug for any mission.
+ * - Installers with cncfProject: `install-<cncfProject>` (e.g. `install-prometheus`)
+ * - All others: slugified title (lowercase, non-alphanum → hyphens, dedupe, trim)
+ */
+export function getMissionSlug(mission: MissionExport): string {
+  if (mission.missionClass === 'install' && mission.cncfProject) {
+    return `install-${mission.cncfProject.toLowerCase()}`
+  }
+  return (mission.title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+/** Build a full shareable URL for a mission */
+function getMissionShareUrl(mission: MissionExport): string {
+  return `${window.location.origin}${getMissionRoute(getMissionSlug(mission))}`
+}
 
 const CNCF_CATEGORIES = [
   'All', 'Observability', 'Orchestration', 'Runtime', 'Provisioning',
@@ -612,22 +642,52 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   }, [])
 
   // ============================================================================
+  // Copy shareable link for a mission
+  // ============================================================================
+
+  const handleCopyLink = useCallback((mission: MissionExport, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const url = getMissionShareUrl(mission)
+    navigator.clipboard.writeText(url)
+    emitSolutionLinkCopied(mission.title, mission.cncfProject)
+  }, [])
+
+  // ============================================================================
   // Deep-link: auto-select mission by name when initialMission is set
   // ============================================================================
 
   useEffect(() => {
     if (!initialMission || !isOpen || selectedMission) return
-    const match = installerMissions.find(
-      (m) => (m.title || '').toLowerCase().includes(initialMission.toLowerCase()) ||
-             (m.cncfProject && m.cncfProject.toLowerCase() === initialMission.replace('install-', '').toLowerCase())
+    const slug = initialMission.toLowerCase()
+
+    // Search installers first (by slug match or title/cncfProject substring)
+    const installerMatch = installerMissions.find(
+      (m) => getMissionSlug(m) === slug ||
+             (m.title || '').toLowerCase().includes(slug) ||
+             (m.cncfProject && m.cncfProject.toLowerCase() === slug.replace('install-', ''))
     )
-    if (match) {
+    if (installerMatch) {
       setActiveTab('installers')
-      selectCardMission(match)
-    } else if (installerMissions.length === 0 && activeTab !== 'installers') {
+      selectCardMission(installerMatch)
+      return
+    }
+
+    // Search solutions (by slug match or title substring)
+    const solutionMatch = solutionMissions.find(
+      (m) => getMissionSlug(m) === slug ||
+             (m.title || '').toLowerCase().includes(slug)
+    )
+    if (solutionMatch) {
+      setActiveTab('solutions')
+      selectCardMission(solutionMatch)
+      return
+    }
+
+    // No match yet — switch to installers tab while data loads
+    if (installerMissions.length === 0 && solutionMissions.length === 0 && activeTab !== 'installers') {
       setActiveTab('installers')
     }
-  }, [initialMission, isOpen, installerMissions, selectedMission, activeTab, selectCardMission])
+  }, [initialMission, isOpen, installerMissions, solutionMissions, selectedMission, activeTab, selectCardMission])
 
   // ============================================================================
   // Filtered installer & solution lists
@@ -1623,6 +1683,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                   matchScore={recommendations.find(
                     (r) => r.mission.title === selectedMission.title
                   )?.matchPercent}
+                  shareUrl={getMissionShareUrl(selectedMission)}
                 />
                 {showImproveDialog && (
                   <ImproveMissionDialog
@@ -1734,6 +1795,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                             match={match}
                             onSelect={() => selectCardMission(match.mission)}
                             onImport={() => handleImport(match.mission)}
+                            onCopyLink={(e) => handleCopyLink(match.mission, e)}
                           />
                         ))}
                       </div>
@@ -1882,6 +1944,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                           compact={viewMode === 'list'}
                           onSelect={() => selectCardMission(mission)}
                           onImport={() => handleImport(mission)}
+                          onCopyLink={(e) => handleCopyLink(mission, e)}
                         />
                       ))}
                     </div>
@@ -1952,6 +2015,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                           compact={viewMode === 'list'}
                           onSelect={() => selectCardMission(mission)}
                           onImport={() => handleImport(mission)}
+                          onCopyLink={(e) => handleCopyLink(mission, e)}
                         />
                       ))}
                     </div>
@@ -2177,13 +2241,16 @@ function RecommendationCard({
   match,
   onSelect,
   onImport,
+  onCopyLink,
 }: {
   match: MissionMatch
   onSelect: () => void
   onImport: () => void
+  onCopyLink?: (e: React.MouseEvent) => void
 }) {
   const { mission, score, matchPercent, matchReasons } = match
   const isClusterMatch = score > 1
+  const [linkCopied, setLinkCopied] = useState(false)
 
   return (
     <div
@@ -2194,6 +2261,22 @@ function RecommendationCard({
         <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors">
           {mission.title}
         </h4>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {onCopyLink && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onCopyLink(e)
+                setLinkCopied(true)
+                setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+              }}
+              className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
+              title="Copy shareable link"
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
+            </button>
+          )}
+        </div>
         <span className={cn(
           'flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full flex-shrink-0 font-medium tabular-nums',
           matchPercent >= 80

@@ -388,6 +388,10 @@ export function emitSolutionImported(title: string, cncfProject?: string) {
   send('ksc_solution_imported', { title, cncf_project: cncfProject ?? '' })
 }
 
+export function emitSolutionLinkCopied(title: string, cncfProject?: string) {
+  send('ksc_solution_link_copied', { title, cncf_project: cncfProject ?? '' })
+}
+
 export function emitSolutionGitHubLink() {
   send('ksc_solution_github_link')
 }
