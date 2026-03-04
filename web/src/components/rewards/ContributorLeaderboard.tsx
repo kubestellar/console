@@ -2,13 +2,14 @@
  * ContributorLeaderboard — shows top contributors ranked by coins, with search and detail panel.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   Trophy, Search, RefreshCw, ChevronDown, ChevronUp,
   GitPullRequest, CircleDot, Clock, MessageSquare, Calendar, FolderGit2,
   Medal,
 } from 'lucide-react'
 import { useLeaderboard, useContributorDetail } from '../../hooks/useLeaderboard'
+import { useAuth } from '../../lib/auth'
 import { CONTRIBUTOR_LEVELS } from '../../types/rewards'
 import type { LeaderboardEntry } from '../../types/rewards'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
@@ -17,6 +18,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ContributorStats } from '../../types/rewards'
 
 const SEARCH_DEBOUNCE_MS = 300
+const DEFAULT_VISIBLE_COUNT = 5 // show top 5 by default
 const HOURS_PER_DAY = 24
 const RANK_GOLD = 1
 const RANK_SILVER = 2
@@ -234,9 +236,28 @@ export function ContributorLeaderboard() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [refreshAnimating, setRefreshAnimating] = useState(false)
+  const [showAll, setShowAll] = useState(false)
 
-  const { entries, isLoading, refresh } = useLeaderboard()
+  const { user } = useAuth()
+  const currentLogin = user?.github_login
+  const { entries, isLoading, refresh } = useLeaderboard(undefined, currentLogin || undefined)
   const { stats: detailStats, isLoading: detailLoading } = useContributorDetail(selectedLogin)
+
+  // Filter entries by search query (live filtering as user types)
+  const filteredEntries = useMemo(() => {
+    const all = entries || []
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return all
+    return all.filter(e => e.login.toLowerCase().includes(query))
+  }, [entries, searchQuery])
+
+  // Limit visible entries unless "Show all" is toggled
+  const visibleEntries = useMemo(() => {
+    if (showAll || searchQuery.trim()) return filteredEntries
+    return filteredEntries.slice(0, DEFAULT_VISIBLE_COUNT)
+  }, [filteredEntries, showAll, searchQuery])
+
+  const hasMore = filteredEntries.length > DEFAULT_VISIBLE_COUNT && !searchQuery.trim()
 
   const handleRefresh = useCallback(async () => {
     setRefreshAnimating(true)
@@ -249,16 +270,25 @@ export function ContributorLeaderboard() {
     const query = searchQuery.trim()
     if (!query) return
 
-    // Check if the query matches a leaderboard entry
-    const match = (entries || []).find(e => e.login.toLowerCase() === query.toLowerCase())
-    if (match) {
-      setSelectedLogin(match.login)
+    // If the query already matches a visible entry exactly, select it
+    const exactMatch = (entries || []).find(e => e.login.toLowerCase() === query.toLowerCase())
+    if (exactMatch) {
+      setSelectedLogin(exactMatch.login)
       setSearchResult(null)
       setSearchError(null)
       return
     }
 
-    // Search for the user via the contributor detail API
+    // If there are filtered results, select the first one
+    const partialMatches = (entries || []).filter(e => e.login.toLowerCase().includes(query.toLowerCase()))
+    if (partialMatches.length > 0) {
+      setSelectedLogin(partialMatches[0].login)
+      setSearchResult(null)
+      setSearchError(null)
+      return
+    }
+
+    // No local match — search the API for this exact username
     setSearchLoading(true)
     setSearchError(null)
     setSelectedLogin(null)
@@ -352,7 +382,11 @@ export function ContributorLeaderboard() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={e => {
+                    setSearchQuery(e.target.value)
+                    setSearchError(null)
+                    setSearchResult(null)
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleSearch()
                   }}
@@ -390,9 +424,13 @@ export function ContributorLeaderboard() {
               <Trophy className="w-5 h-5 mx-auto text-muted-foreground/50 mb-1" />
               <p className="text-[10px] text-muted-foreground">No contributors yet</p>
             </div>
+          ) : filteredEntries.length === 0 && searchQuery.trim() ? (
+            <div className="px-3 py-2 text-center">
+              <p className="text-[10px] text-muted-foreground">No matches — press Enter to search GitHub</p>
+            </div>
           ) : (
             <div>
-              {(entries || []).map(entry => (
+              {visibleEntries.map(entry => (
                 <div key={entry.login}>
                   <LeaderboardRow
                     entry={entry}
@@ -404,6 +442,14 @@ export function ContributorLeaderboard() {
                   )}
                 </div>
               ))}
+              {hasMore && (
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="w-full py-1.5 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-secondary/30 transition-colors cursor-pointer"
+                >
+                  {showAll ? `Show top ${DEFAULT_VISIBLE_COUNT}` : `Show all ${filteredEntries.length}`}
+                </button>
+              )}
             </div>
           )}
         </>

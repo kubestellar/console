@@ -10,7 +10,7 @@ import type { LeaderboardResponse, LeaderboardEntry, ContributorStats } from '..
 
 const LEADERBOARD_CACHE_KEY = 'leaderboard-cache'
 const CONTRIBUTOR_CACHE_PREFIX = 'contributor-detail-'
-const DEFAULT_LEADERBOARD_LIMIT = 5
+const DEFAULT_LEADERBOARD_LIMIT = 25 // fetch all, frontend controls visible count
 
 function loadLeaderboardCache(): LeaderboardResponse | null {
   try {
@@ -46,7 +46,7 @@ function saveContributorCache(login: string, data: ContributorStats): void {
   }
 }
 
-export function useLeaderboard(limit: number = DEFAULT_LEADERBOARD_LIMIT) {
+export function useLeaderboard(limit: number = DEFAULT_LEADERBOARD_LIMIT, includeLogin?: string) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>(() => {
     const cached = loadLeaderboardCache()
     return cached?.entries ?? []
@@ -61,7 +61,11 @@ export function useLeaderboard(limit: number = DEFAULT_LEADERBOARD_LIMIT) {
     setIsLoading(true)
     try {
       const apiBase = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
-      const res = await fetch(`${apiBase}/api/rewards/leaderboard?limit=${limit}`, {
+      const params = new URLSearchParams({ limit: String(limit) })
+      if (includeLogin) {
+        params.set('include', includeLogin)
+      }
+      const res = await fetch(`${apiBase}/api/rewards/leaderboard?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
@@ -75,7 +79,7 @@ export function useLeaderboard(limit: number = DEFAULT_LEADERBOARD_LIMIT) {
     } finally {
       setIsLoading(false)
     }
-  }, [limit])
+  }, [limit, includeLogin])
 
   useEffect(() => {
     fetchLeaderboard()

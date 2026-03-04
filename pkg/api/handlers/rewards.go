@@ -137,13 +137,13 @@ type contributorLevel struct {
 // contributorLevels is sorted ascending by minCoins, mirroring the frontend ladder.
 var contributorLevels = []contributorLevel{
 	{rank: 1, name: "Observer", minCoins: 0},
-	{rank: 2, name: "Explorer", minCoins: 100},
-	{rank: 3, name: "Navigator", minCoins: 500},
-	{rank: 4, name: "Pilot", minCoins: 1500},
-	{rank: 5, name: "Commander", minCoins: 3000},
-	{rank: 6, name: "Captain", minCoins: 5000},
-	{rank: 7, name: "Admiral", minCoins: 10000},
-	{rank: 8, name: "Legend", minCoins: 25000},
+	{rank: 2, name: "Explorer", minCoins: 500},
+	{rank: 3, name: "Navigator", minCoins: 2000},
+	{rank: 4, name: "Pilot", minCoins: 5000},
+	{rank: 5, name: "Commander", minCoins: 15000},
+	{rank: 6, name: "Captain", minCoins: 50000},
+	{rank: 7, name: "Admiral", minCoins: 150000},
+	{rank: 8, name: "Legend", minCoins: 500000},
 }
 
 // getContributorLevelForPoints returns (levelName, levelRank) for a given points total.
@@ -483,15 +483,16 @@ func parseRepoPaths(orgs string) []string {
 }
 
 // GetLeaderboard returns the top contributors ranked by reward points.
-// GET /api/rewards/leaderboard?limit=5
+// GET /api/rewards/leaderboard?limit=25&include=login
 func (h *RewardsHandler) GetLeaderboard(c *fiber.Ctx) error {
-	limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(leaderboardDefaultLimit)))
+	limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(leaderboardMaxLimit)))
 	if err != nil || limit < 1 {
-		limit = leaderboardDefaultLimit
+		limit = leaderboardMaxLimit
 	}
 	if limit > leaderboardMaxLimit {
 		limit = leaderboardMaxLimit
 	}
+	includeLogin := c.Query("include") // ensure this user appears in results
 
 	// Check cache
 	h.leaderboardMu.RLock()
@@ -549,6 +550,14 @@ func (h *RewardsHandler) GetLeaderboard(c *fiber.Ctx) error {
 			if _, exists := contributorMap[contrib.Login]; !exists {
 				contributorMap[contrib.Login] = contrib.AvatarURL
 			}
+		}
+	}
+
+	// Ensure the requested user is included (e.g., the logged-in user)
+	if includeLogin != "" {
+		if _, exists := contributorMap[includeLogin]; !exists {
+			avatar := h.fetchUserAvatar(includeLogin, token)
+			contributorMap[includeLogin] = avatar
 		}
 	}
 
