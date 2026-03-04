@@ -445,6 +445,13 @@ phase6() {
     'src/lib/analytics.ts'     # Session tracking, not cache expiry
     'src/lib/auth.tsx'         # JWT expiry management, not data caching
     'src/hooks/useDashboardCards' # UI layout persistence, no TTL
+    'src/hooks/useMissions.tsx'       # Date.now() for mission duration, not cache TTL
+    'src/hooks/useCertManager.ts'     # Date.now() for cert expiry demo data, not cache TTL
+    'src/hooks/useWorkloads.ts'       # Date.now() for demo data timestamps, not cache TTL
+    'src/components/settings/UpdateSettings.tsx'  # Date.now() for spinner elapsed, not cache TTL
+    'src/components/cards/WorkloadDeployment.tsx'  # Date.now() for demo data timestamps, not cache TTL
+    'src/components/cards/workload-monitor/GitHubCIMonitor.tsx'  # Date.now() for demo data, not cache TTL
+    'src/components/cards/Missions.tsx'  # Date.now() for demo mission timestamps, not cache TTL
   )
 
   # Find files that implement caching with TTL: have localStorage AND Date.now() - (subtraction
@@ -471,13 +478,13 @@ phase6() {
 
     local issues=""
 
-    # Check for named cache key constant (CACHE_KEY, STORAGE_KEY, or similar)
-    if ! rg -q 'const\s+\w*(CACHE_KEY|STORAGE_KEY|CACHE_PREFIX)\w*\s*=' "$filepath" 2>/dev/null; then
+    # Check for named cache key constant (CACHE_KEY, STORAGE_KEY, CACHE_PREFIX — defined or imported)
+    if ! rg -q '(const\s+\w*(CACHE_KEY|STORAGE_KEY|CACHE_PREFIX)\w*\s*=|import\s+.*\b\w*(CACHE_KEY|STORAGE_KEY|CACHE_PREFIX)\w*\b)' "$filepath" 2>/dev/null; then
       issues="${issues}missing named cache key constant; "
     fi
 
-    # Check for named TTL constant (TTL, MAX_AGE, CACHE_DURATION, CACHE_EXPIRY, etc.)
-    if ! rg -q 'const\s+\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\s*=' "$filepath" 2>/dev/null; then
+    # Check for named TTL constant (TTL, MAX_AGE, CACHE_DURATION, CACHE_EXPIRY — defined or imported)
+    if ! rg -q '(const\s+\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\s*=|import\s+.*\b\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\b)' "$filepath" 2>/dev/null; then
       issues="${issues}missing named TTL constant; "
     fi
 

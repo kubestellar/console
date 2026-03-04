@@ -33,7 +33,8 @@ const inflightRequests = new Map<string, Promise<unknown[]>>()
 
 // Result cache: serve cached data on re-navigation within 10s
 const resultCache = new Map<string, { data: unknown[]; at: number }>()
-const RESULT_CACHE_TTL = 10_000
+/** Cache TTL: 10 seconds */
+const RESULT_CACHE_TTL_MS = 10_000
 
 /**
  * Open an SSE connection and progressively collect data.
@@ -55,7 +56,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
 
   // Check result cache — if fresh, replay cached data via callbacks and resolve
   const cached = resultCache.get(fullUrl)
-  if (cached && Date.now() - cached.at < RESULT_CACHE_TTL) {
+  if (cached && Date.now() - cached.at < RESULT_CACHE_TTL_MS) {
     const items = cached.data as T[]
     // Replay per-cluster grouping for onClusterData callbacks
     const byCluster = new Map<string, T[]>()

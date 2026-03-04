@@ -359,7 +359,8 @@ const workloadStatusOrder: Record<string, number> = { Failed: 0, Degraded: 1, Pe
 const worseStatus = (a: WorkloadStatus, b: WorkloadStatus): WorkloadStatus =>
   (workloadStatusOrder[a] ?? 4) < (workloadStatusOrder[b] ?? 4) ? a : b
 
-const CLUSTER_FILTER_KEY = 'kubestellar-card-filter:workload-deployment-clusters'
+/** Storage key for persisted cluster filter selection */
+const CLUSTER_FILTER_STORAGE_KEY = 'kubestellar-card-filter:workload-deployment-clusters'
 
 interface WorkloadDeploymentProps {
   config?: Record<string, unknown>
@@ -393,7 +394,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   })
   const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem(CLUSTER_FILTER_KEY)
+      const stored = localStorage.getItem(CLUSTER_FILTER_STORAGE_KEY)
       return stored ? JSON.parse(stored) : []
     } catch { return [] }
   })
@@ -403,9 +404,9 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   const persistClusterFilter = useCallback((clusters: string[]) => {
     setLocalClusterFilterState(clusters)
     if (clusters.length === 0) {
-      localStorage.removeItem(CLUSTER_FILTER_KEY)
+      localStorage.removeItem(CLUSTER_FILTER_STORAGE_KEY)
     } else {
-      localStorage.setItem(CLUSTER_FILTER_KEY, JSON.stringify(clusters))
+      localStorage.setItem(CLUSTER_FILTER_STORAGE_KEY, JSON.stringify(clusters))
     }
   }, [])
 

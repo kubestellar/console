@@ -20,6 +20,9 @@ export const REFRESH_INTERVAL_MS = 120000
 export const CLUSTER_POLL_INTERVAL_MS = 60000  // 60 seconds
 export const GPU_POLL_INTERVAL_MS = 30000      // 30 seconds
 
+/** Cache TTL: matches cluster poll interval for freshness checks */
+export const CACHE_TTL_MS = CLUSTER_POLL_INTERVAL_MS
+
 export function getEffectiveInterval(baseInterval: number): number {
   return baseInterval
 }
@@ -333,7 +336,7 @@ export function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): 
   const serverMetrics = new Map<string, ClusterInfo>()
 
   // First pass: find clusters that have metrics for each server
-  for (const cluster of clusters) {
+  for (const cluster of (clusters || [])) {
     if (!cluster.server) continue
     const existing = serverMetrics.get(cluster.server)
     // Prefer cluster with: nodeCount > 0, then capacity, then request data
@@ -405,7 +408,7 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
   const serverGroups = new Map<string, ClusterInfo[]>()
   const noServerClusters: ClusterInfo[] = []
 
-  for (const cluster of clusters) {
+  for (const cluster of (clusters || [])) {
     if (!cluster.server) {
       // Clusters without server URL can't be deduplicated
       noServerClusters.push(cluster)
@@ -472,7 +475,7 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
 
     // Merge the best metrics from all duplicates
     let bestMetrics: Partial<ClusterInfo> = {}
-    for (const cluster of group) {
+    for (const cluster of (group || [])) {
       if (cluster.cpuCores && !bestMetrics.cpuCores) {
         bestMetrics = {
           cpuCores: cluster.cpuCores,
@@ -522,7 +525,7 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
   }
 
   // Add clusters without server URL (can't be deduplicated)
-  for (const cluster of noServerClusters) {
+  for (const cluster of (noServerClusters || [])) {
     deduplicatedClusters.push({ ...cluster, aliases: [] })
   }
 

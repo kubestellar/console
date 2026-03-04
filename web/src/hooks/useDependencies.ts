@@ -80,7 +80,7 @@ async function resolveViaAgent(
     if (result.status !== 'fulfilled') return
     const items = result.value[key] as Array<{ name: string; namespace?: string }> | null
     if (!items) return
-    for (const item of items) {
+    for (const item of (items || [])) {
       // Skip system resources
       if (item.name.startsWith('kube-') && kind !== 'Service') continue
       if (kind === 'ServiceAccount' && item.name === 'default') continue

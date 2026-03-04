@@ -945,7 +945,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     label={np.name}
                                     icon={ResourceIcon.networkpolicy}
                                     iconColor="text-rose-400"
-                                    badge={np.policyTypes.join(', ') || t('resourceTree.noTypes')}
+                                    badge={(np.policyTypes || []).join(', ') || t('resourceTree.noTypes')}
                                     badgeColor="bg-rose-500/20 text-rose-400"
                                     indent={5}
                                     expandedNodes={expandedNodes}

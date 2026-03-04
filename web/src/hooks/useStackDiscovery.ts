@@ -210,7 +210,7 @@ function buildComponentsFromDeployments(
   let epp: LLMdStackComponent | null = null
   let model = fallbackModel
 
-  for (const dep of deployments) {
+  for (const dep of (deployments || [])) {
     const depName = dep.metadata.name.toLowerCase()
     const depLabels = dep.spec.template?.metadata?.labels || {}
     const role = depLabels['llm-d.ai/role']?.toLowerCase()
@@ -422,7 +422,7 @@ export function useStackDiscovery(clusters: string[]) {
       }
 
       // Progressive discovery: process clusters sequentially, update UI after each phase
-      for (const cluster of clusters) {
+      for (const cluster of (clusters || [])) {
         try {
           // ════════════════════════════════════════════════════════════════
           // Phase 1: Fast discovery — labeled pods, InferencePools, and
@@ -453,7 +453,7 @@ export function useStackDiscovery(clusters: string[]) {
           const podsData = podsResponse.exitCode === 0 ? JSON.parse(podsResponse.output) : { items: [] }
           const pods = (podsData.items || []) as PodResource[]
           const podsByNamespace = new Map<string, PodResource[]>()
-          for (const pod of pods) {
+          for (const pod of (pods || [])) {
             const ns = pod.metadata.namespace
             if (!podsByNamespace.has(ns)) podsByNamespace.set(ns, [])
             podsByNamespace.get(ns)!.push(pod)
@@ -471,7 +471,7 @@ export function useStackDiscovery(clusters: string[]) {
           } catch { /* ignore */ }
           const services = (svcData.items || []) as ServiceResource[]
           const eppByNamespace = new Map<string, ServiceResource>()
-          for (const svc of services) {
+          for (const svc of (services || [])) {
             if (svc.metadata.name.includes('-epp') || svc.metadata.name.endsWith('epp')) {
               eppByNamespace.set(svc.metadata.namespace, svc)
             }
@@ -486,7 +486,7 @@ export function useStackDiscovery(clusters: string[]) {
           const hpaData = hpaResponse.exitCode === 0 ? JSON.parse(hpaResponse.output) : { items: [] }
           const hpas = (hpaData.items || []) as HPAResource[]
           const hpaByNamespace = new Map<string, HPAResource>()
-          for (const hpa of hpas) {
+          for (const hpa of (hpas || [])) {
             if (!hpaByNamespace.has(hpa.metadata.namespace)) hpaByNamespace.set(hpa.metadata.namespace, hpa)
           }
 
@@ -495,7 +495,7 @@ export function useStackDiscovery(clusters: string[]) {
           const wvas = (wvaData.items || []) as WVAResource[]
           const wvaByNamespace = new Map<string, WVAResource>()
           const wvaByTargetNamespace = new Map<string, WVAResource>()
-          for (const wva of wvas) {
+          for (const wva of (wvas || [])) {
             wvaByNamespace.set(wva.metadata.namespace, wva)
             const targetNs = wva.spec?.scaleTargetRef?.namespace
             if (targetNs && targetNs !== wva.metadata.namespace) {
@@ -507,7 +507,7 @@ export function useStackDiscovery(clusters: string[]) {
           const vpaData = vpaResponse.exitCode === 0 ? JSON.parse(vpaResponse.output) : { items: [] }
           const vpas = (vpaData.items || []) as VPAResource[]
           const vpaByNamespace = new Map<string, VPAResource>()
-          for (const vpa of vpas) { vpaByNamespace.set(vpa.metadata.namespace, vpa) }
+          for (const vpa of (vpas || [])) { vpaByNamespace.set(vpa.metadata.namespace, vpa) }
 
           // ── Helper: detect autoscaler for a namespace ──
           const detectAutoscaler = (namespace: string): AutoscalerInfo | undefined => {
@@ -557,13 +557,13 @@ export function useStackDiscovery(clusters: string[]) {
 
           // Build Phase 1 stacks from labeled pods
           const phase1Stacks: LLMdStack[] = []
-          for (const namespace of phase1Namespaces) {
+          for (const namespace of (phase1Namespaces || [])) {
             const nsPods = podsByNamespace.get(namespace) || []
             const prefillPods: PodResource[] = []
             const decodePods: PodResource[] = []
             const bothPods: PodResource[] = []
 
-            for (const pod of nsPods) {
+            for (const pod of (nsPods || [])) {
               const role = pod.metadata.labels?.['llm-d.ai/role']?.toLowerCase()
               const podName = pod.metadata.name.toLowerCase()
               if (role === 'prefill' || role === 'prefill-server') prefillPods.push(pod)
@@ -580,7 +580,7 @@ export function useStackDiscovery(clusters: string[]) {
             const buildFromPods = (pods: PodResource[], type: LLMdStackComponent['type']): LLMdStackComponent[] => {
               if (pods.length === 0) return []
               const byHash = new Map<string, PodResource[]>()
-              for (const pod of pods) {
+              for (const pod of (pods || [])) {
                 const hash = pod.metadata.labels?.['pod-template-hash'] || 'default'
                 if (!byHash.has(hash)) byHash.set(hash, [])
                 byHash.get(hash)!.push(pod)

@@ -162,7 +162,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   const checkAchievements = (userRewards: UserRewards): string[] => {
     const newAchievements: string[] = []
 
-    for (const achievement of ACHIEVEMENTS) {
+    for (const achievement of (ACHIEVEMENTS || [])) {
       // Skip if already earned
       if (userRewards.achievements.includes(achievement.id)) continue
 

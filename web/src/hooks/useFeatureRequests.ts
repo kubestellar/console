@@ -3,6 +3,9 @@ import { api } from '../lib/api'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
 
+/** Cache TTL: 30 seconds — polling interval for status updates */
+const CACHE_TTL_MS = 30_000
+
 // Check if user is in demo mode — no token or explicit demo-token
 function isDemoUser(): boolean {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -206,7 +209,7 @@ function sortRequests(requests: FeatureRequest[], currentGitHubLogin: string): F
   const userRequests: FeatureRequest[] = []
   const otherRequests: FeatureRequest[] = []
 
-  for (const r of requests) {
+  for (const r of (requests || [])) {
     // Compare by github_login if available (for queue items), otherwise by user_id
     const isOwner = r.github_login
       ? r.github_login === currentGitHubLogin
@@ -276,7 +279,7 @@ export function useFeatureRequests(currentUserId?: string) {
       if (hasPending) {
         loadRequests()
       }
-    }, 30000)
+    }, CACHE_TTL_MS)
 
     return () => clearInterval(interval)
   }, [requests, loadRequests])
@@ -457,7 +460,7 @@ export function useNotifications() {
     pollingRef.current = window.setInterval(() => {
       loadUnreadCount()
       loadNotifications()
-    }, 30000)
+    }, CACHE_TTL_MS)
 
     return () => {
       if (pollingRef.current) {

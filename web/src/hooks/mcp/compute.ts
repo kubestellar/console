@@ -23,6 +23,8 @@ interface GPUNodeCache {
 
 // Try to restore GPU cache from localStorage for instant display on page load
 const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
+/** Cache TTL: 30 seconds — consider GPU data stale after this */
+const CACHE_TTL_MS = 30_000
 function loadGPUCacheFromStorage(): GPUNodeCache {
   try {
     const stored = localStorage.getItem(GPU_CACHE_KEY)
@@ -313,7 +315,7 @@ export function useGPUNodes(cluster?: string) {
 
     // Fetch if cache is empty or stale (older than 30 seconds)
     const isStale = !gpuNodeCache.lastUpdated ||
-      (Date.now() - gpuNodeCache.lastUpdated.getTime()) > 30000
+      (Date.now() - gpuNodeCache.lastUpdated.getTime()) > CACHE_TTL_MS
     if (gpuNodeCache.nodes.length === 0 || isStale) {
       fetchGPUNodes(cluster)
     }

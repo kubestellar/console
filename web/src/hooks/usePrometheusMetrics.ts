@@ -128,7 +128,7 @@ export function usePrometheusMetrics(
         if (resp.status !== 'success' || !resp.data?.result) return
 
         const key = entries[i][0]
-        for (const item of resp.data.result) {
+        for (const item of (resp.data.result || [])) {
           const pod = extractPodName(item.metric)
           const val = parseFloat(item.value[1])
           if (isNaN(val)) continue

@@ -52,7 +52,7 @@ async function checkServiceHealth(providerIds: string[]): Promise<Map<string, He
       })
       if (response.ok) {
         const data: BackendHealthResponse = await response.json()
-        for (const p of data.providers) {
+        for (const p of (data.providers || [])) {
           const status = (['operational', 'degraded', 'down'].includes(p.status) ? p.status : 'unknown') as HealthStatus
           result.set(p.id, status)
         }
@@ -181,7 +181,7 @@ export function useProviderHealth() {
       if (response.ok) {
         const data: KeysStatusResponse = await response.json()
         const seen = new Set<string>()
-        for (const key of data.keys) {
+        for (const key of (data.keys || [])) {
           const normalized = normalizeAIProvider(key.provider)
           if (seen.has(normalized)) continue
           seen.add(normalized)
@@ -228,7 +228,7 @@ export function useProviderHealth() {
     // Check actual service health for unconfigured providers
     if (unconfiguredProviders.length > 0) {
       const healthMap = await checkServiceHealth(unconfiguredProviders)
-      for (const id of unconfiguredProviders) {
+      for (const id of (unconfiguredProviders || [])) {
         const provider = result.find(p => p.id === id)
         if (provider && healthMap.has(id)) {
           provider.status = healthMap.get(id)!
@@ -239,7 +239,7 @@ export function useProviderHealth() {
     // --- Cloud Providers from cluster distributions ---
     if (clusters.length > 0) {
       const providerCounts = new Map<CloudProvider, number>()
-      for (const cluster of clusters) {
+      for (const cluster of (clusters || [])) {
         const provider = detectCloudProvider(
           cluster.name,
           cluster.server,

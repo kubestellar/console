@@ -54,7 +54,7 @@ let started = false
 let abortController: AbortController | null = null
 
 function notifySubscribers() {
-  for (const cb of subscribers) cb()
+  for (const cb of (subscribers || [])) cb()
 }
 
 function getSnapshot(): StreamState {
@@ -131,7 +131,7 @@ function startGlobalStream(since: string) {
         const lines = buffer.split('\n')
         buffer = lines.pop() ?? ''
 
-        for (const line of lines) {
+        for (const line of (lines || [])) {
           if (line.startsWith(':')) continue
 
           if (line.startsWith('event: ')) {

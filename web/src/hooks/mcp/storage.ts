@@ -175,7 +175,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
           })
 
           const results = await Promise.all(fetchPromises)
-          for (const result of results) {
+          for (const result of (results || [])) {
             if (result.success) {
               anySuccess = true
               allPVCs.push(...result.pvcs)
@@ -214,7 +214,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
           const allPVCs: PVC[] = []
           let anySuccess = false
 
-          for (const c of clustersToFetch) {
+          for (const c of (clustersToFetch || [])) {
             try {
               const kubectlContext = c.context || c.name
               const pvcData = await kubectlProxy.getPVCs(kubectlContext, namespace)

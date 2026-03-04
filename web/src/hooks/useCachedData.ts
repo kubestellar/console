@@ -1101,7 +1101,7 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
   const nsGateway = new Map<string, { status: 'running' | 'stopped'; type: LLMdServer['gatewayType'] }>()
   const nsPrometheus = new Map<string, 'running' | 'stopped'>()
 
-  for (const dep of llmdDeployments) {
+  for (const dep of (llmdDeployments || [])) {
     const name = dep.metadata.name.toLowerCase()
     const status = getLLMdServerStatus(dep.spec.replicas || 0, dep.status.readyReplicas || 0)
     if (name.includes('gateway') || name.includes('ingress')) {
@@ -1112,7 +1112,7 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
     }
   }
 
-  for (const dep of llmdDeployments) {
+  for (const dep of (llmdDeployments || [])) {
     const labels = dep.spec.template?.metadata?.labels || {}
     const model = labels['llmd.org/model'] || labels['app.kubernetes.io/model'] || dep.metadata.name
     const gpuInfo = extractGPUInfo(dep)

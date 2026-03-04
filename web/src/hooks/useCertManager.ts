@@ -245,7 +245,7 @@ export function useCertManager() {
     let certManagerFound = false
 
     try {
-      for (const cluster of clusters) {
+      for (const cluster of (clusters || [])) {
         try {
           // First check if cert-manager CRD exists
           const crdCheck = await kubectlProxy.exec(
@@ -270,7 +270,7 @@ export function useCertManager() {
             const data = JSON.parse(certResponse.output)
             const items = (data.items || []) as CertificateResource[]
 
-            for (const cert of items) {
+            for (const cert of (items || [])) {
               const status = getCertificateStatus(cert)
               allCertificates.push({
                 id: `${cluster}/${cert.metadata.namespace}/${cert.metadata.name}`,
@@ -300,7 +300,7 @@ export function useCertManager() {
             const data = JSON.parse(issuerResponse.output)
             const items = (data.items || []) as IssuerResource[]
 
-            for (const issuer of items) {
+            for (const issuer of (items || [])) {
               allIssuers.push({
                 id: `${cluster}/${issuer.metadata.namespace}/${issuer.metadata.name}`,
                 name: issuer.metadata.name,
@@ -324,7 +324,7 @@ export function useCertManager() {
             const data = JSON.parse(clusterIssuerResponse.output)
             const items = (data.items || []) as IssuerResource[]
 
-            for (const issuer of items) {
+            for (const issuer of (items || [])) {
               allIssuers.push({
                 id: `${cluster}/${issuer.metadata.name}`,
                 name: issuer.metadata.name,
@@ -347,7 +347,7 @@ export function useCertManager() {
       }
 
       // Calculate certificate counts per issuer
-      for (const issuer of allIssuers) {
+      for (const issuer of (allIssuers || [])) {
         issuer.certificateCount = allCertificates.filter(cert =>
           cert.cluster === issuer.cluster &&
           cert.issuerName === issuer.name &&

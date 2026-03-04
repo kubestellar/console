@@ -32,7 +32,8 @@ export interface CanIResponse {
   reason?: string
 }
 
-const CACHE_TTL = 60000 // 1 minute cache for permissions
+/** Cache TTL: 1 minute */
+const CACHE_TTL_MS = 60_000
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 // Cache for permissions to avoid repeated API calls
@@ -50,7 +51,7 @@ export function usePermissions() {
   // Fetch permissions summary
   const fetchPermissions = useCallback(async (forceRefresh = false) => {
     // Check cache first
-    if (!forceRefresh && permissionsCache && Date.now() - cacheTime < CACHE_TTL) {
+    if (!forceRefresh && permissionsCache && Date.now() - cacheTime < CACHE_TTL_MS) {
       setPermissions(permissionsCache)
       setLoading(false)
       return

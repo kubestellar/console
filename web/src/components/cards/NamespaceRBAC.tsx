@@ -357,7 +357,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
                   )}
                   {item.subjects && (
                     <p className="text-xs text-muted-foreground mt-1 ml-6">
-                      {t('namespaceRBAC.subjects')}: {item.subjects.join(', ')}
+                      {t('namespaceRBAC.subjects')}: {(item.subjects || []).join(', ')}
                     </p>
                   )}
                 </div>

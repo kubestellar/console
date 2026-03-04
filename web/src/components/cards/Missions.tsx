@@ -140,7 +140,8 @@ const SORT_OPTIONS: { value: SortByOption; label: string }[] = [
   { value: 'clusters', label: 'Clusters' },
 ]
 
-const CLUSTER_FILTER_KEY = 'kubestellar-card-filter:deployment-missions-clusters'
+/** Storage key for persisted cluster filter selection */
+const CLUSTER_FILTER_STORAGE_KEY = 'kubestellar-card-filter:deployment-missions-clusters'
 
 export function Missions(_props: MissionsProps) {
   const { t } = useTranslation()
@@ -168,7 +169,7 @@ export function Missions(_props: MissionsProps) {
   // filterByCluster hardcodes item.cluster which DeployMission doesn't have.
   const [clusterFilter, setClusterFilter] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem(CLUSTER_FILTER_KEY)
+      const stored = localStorage.getItem(CLUSTER_FILTER_STORAGE_KEY)
       return stored ? JSON.parse(stored) : []
     } catch { return [] }
   })
@@ -178,9 +179,9 @@ export function Missions(_props: MissionsProps) {
   const persistClusterFilter = useCallback((clusters: string[]) => {
     setClusterFilter(clusters)
     if (clusters.length === 0) {
-      localStorage.removeItem(CLUSTER_FILTER_KEY)
+      localStorage.removeItem(CLUSTER_FILTER_STORAGE_KEY)
     } else {
-      localStorage.setItem(CLUSTER_FILTER_KEY, JSON.stringify(clusters))
+      localStorage.setItem(CLUSTER_FILTER_STORAGE_KEY, JSON.stringify(clusters))
     }
   }, [])
 

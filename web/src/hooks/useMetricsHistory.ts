@@ -6,6 +6,8 @@ import { getPredictionSettings } from './usePredictionSettings'
 const STORAGE_KEY = 'kubestellar-metrics-history'
 const HISTORY_CHANGED_EVENT = 'kubestellar-metrics-history-changed'
 const MAX_SNAPSHOTS = 144 // 24 hours at 10-min intervals
+/** Cache TTL: 24 hours — remove snapshots older than this */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 // Singleton state - shared across all hook instances
 let snapshots: MetricsSnapshot[] = []
@@ -18,7 +20,7 @@ if (typeof window !== 'undefined') {
     try {
       snapshots = JSON.parse(stored)
       // Remove snapshots older than 24 hours
-      const cutoff = Date.now() - (24 * 60 * 60 * 1000)
+      const cutoff = Date.now() - CACHE_TTL_MS
       snapshots = snapshots.filter(s => new Date(s.timestamp).getTime() > cutoff)
     } catch {
       // Invalid JSON, use empty array

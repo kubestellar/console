@@ -228,7 +228,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
 
     try {
       // Process clusters sequentially to avoid overwhelming the WebSocket
-      for (const cluster of clusters) {
+      for (const cluster of (clusters || [])) {
         try {
           console.log(`[useLLMdServers] Fetching from ${cluster}`)
 
@@ -268,7 +268,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             if (hpaResponse.exitCode === 0) {
               const hpaData = JSON.parse(hpaResponse.output)
               const hpas = (hpaData.items || []) as HPAResource[]
-              for (const hpa of hpas) {
+              for (const hpa of (hpas || [])) {
                 if (hpa.spec.scaleTargetRef.kind === 'Deployment') {
                   const key = `${hpa.metadata.namespace}/${hpa.spec.scaleTargetRef.name}`
                   autoscalerMap.set(key, 'hpa')
@@ -282,7 +282,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             if (vaResponse.exitCode === 0) {
               const vaData = JSON.parse(vaResponse.output)
               const vas = (vaData.items || []) as VariantAutoscalingResource[]
-              for (const va of vas) {
+              for (const va of (vas || [])) {
                 if (va.spec.targetRef?.kind === 'Deployment' || va.spec.targetRef?.name) {
                   const targetName = va.spec.targetRef?.name || ''
                   const key = `${va.metadata.namespace}/${targetName}`
@@ -349,7 +349,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
           const namespaceGatewayStatus = new Map<string, { status: 'running' | 'stopped' | 'unknown', type: LLMdServer['gatewayType'] }>()
           const namespacePrometheusStatus = new Map<string, 'running' | 'stopped' | 'unknown'>()
 
-          for (const dep of llmdDeployments) {
+          for (const dep of (llmdDeployments || [])) {
             const name = dep.metadata.name.toLowerCase()
             const ns = dep.metadata.namespace
             const status = getServerStatus(dep.spec.replicas || 0, dep.status.readyReplicas || 0)
@@ -367,7 +367,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
 
           // Build servers for this cluster
           const clusterServers: LLMdServer[] = []
-          for (const dep of llmdDeployments) {
+          for (const dep of (llmdDeployments || [])) {
             const labels = dep.spec.template?.metadata?.labels || {}
             const model = labels['llmd.org/model'] ||
                          labels['app.kubernetes.io/model'] ||
@@ -513,7 +513,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
     }
 
     try {
-      for (const cluster of clusters) {
+      for (const cluster of (clusters || [])) {
         try {
           // Get InferencePools
           const response = await kubectlProxy.exec(
@@ -530,7 +530,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
           const pools = (data.items || []) as InferencePoolResource[]
 
           const clusterModels: LLMdModel[] = []
-          for (const pool of pools) {
+          for (const pool of (pools || [])) {
             const modelName = pool.spec.selector?.matchLabels?.['llmd.org/model'] || pool.metadata.name
             const hasAccepted = pool.status?.parents?.some(p =>
               p.conditions?.some(c => c.type === 'Accepted' && c.status === 'True')

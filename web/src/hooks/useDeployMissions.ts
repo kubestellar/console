@@ -80,15 +80,16 @@ export interface DeployMission {
   warnings?: string[]
 }
 
-const MISSIONS_KEY = 'kubestellar-missions'
+/** Storage key for deploy mission data */
+const MISSIONS_STORAGE_KEY = 'kubestellar-missions'
 const POLL_INTERVAL_MS = 5000
 const MAX_MISSIONS = 50
-/** Stop polling completed missions after this duration */
-const COMPLETED_POLL_CUTOFF_MS = 5 * 60 * 1000
+/** Cache TTL: 5 minutes — stop polling completed missions after this duration */
+const CACHE_TTL_MS = 5 * 60 * 1000
 
 function loadMissions(): DeployMission[] {
   try {
-    const stored = localStorage.getItem(MISSIONS_KEY)
+    const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
     if (stored) return JSON.parse(stored)
     // Migrate from old split keys
     const oldActive = localStorage.getItem(STORAGE_KEY_MISSIONS_ACTIVE)
@@ -100,7 +101,7 @@ function loadMissions(): DeployMission[] {
       localStorage.removeItem(STORAGE_KEY_MISSIONS_ACTIVE)
       localStorage.removeItem(STORAGE_KEY_MISSIONS_HISTORY)
       if (merged.length > 0) {
-        localStorage.setItem(MISSIONS_KEY, JSON.stringify(merged))
+        localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(merged))
         return merged
       }
     }
@@ -121,7 +122,7 @@ function saveMissions(missions: DeployMission[]) {
       logs: isTerminal(m.status) ? cs.logs : undefined,
     })),
   }))
-  localStorage.setItem(MISSIONS_KEY, JSON.stringify(clean))
+  localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(clean))
 }
 
 /**
@@ -197,7 +198,7 @@ export function useDeployMissions() {
           // Stop polling completed missions after cutoff — unless logs were
           // never loaded (e.g. restored from localStorage after page reload).
           if (isCompleted && mission.completedAt &&
-              (Date.now() - mission.completedAt) > COMPLETED_POLL_CUTOFF_MS) {
+              (Date.now() - mission.completedAt) > CACHE_TTL_MS) {
             const hasAnyLogs = mission.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
             if (hasAnyLogs) return mission
             // Fall through: do one more poll to recover logs

@@ -372,7 +372,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
               {gw.addresses.length > 0 && (
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                   <Globe className="w-3 h-3" />
-                  <span className="font-mono">{gw.addresses.join(', ')}</span>
+                  <span className="font-mono">{(gw.addresses || []).join(', ')}</span>
                 </div>
               )}
               {gw.listeners.length > 0 && (

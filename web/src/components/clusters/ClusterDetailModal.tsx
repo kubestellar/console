@@ -277,7 +277,7 @@ After I approve, help me execute the repairs step by step.`,
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
               {clusterInfo?.aliases && clusterInfo.aliases.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: clusterInfo.aliases.join(', ') })}>
+                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: (clusterInfo.aliases || []).join(', ') })}>
                   {t('clusterDetail.akaLabel')} {clusterInfo.aliases.length <= 2
                     ? clusterInfo.aliases.map(a => a.split('/').pop()).join(', ')
                     : `${clusterInfo.aliases.slice(0, 2).map(a => a.split('/').pop()).join(', ')} +${clusterInfo.aliases.length - 2} more`

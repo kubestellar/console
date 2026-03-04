@@ -1,5 +1,5 @@
 import type { FeedConfig, FeedItem } from './types'
-import { FEEDS_KEY, CACHE_KEY_PREFIX, CACHE_TTL_MS, PRESET_FEEDS } from './constants'
+import { FEEDS_STORAGE_KEY, CACHE_KEY_PREFIX, CACHE_TTL_MS, PRESET_FEEDS } from './constants'
 
 // Simple hash function for cache keys (avoids btoa collision issues)
 export function hashUrl(url: string): string {
@@ -15,7 +15,7 @@ export function hashUrl(url: string): string {
 // Load saved feeds from localStorage
 export function loadSavedFeeds(): FeedConfig[] {
   try {
-    const saved = localStorage.getItem(FEEDS_KEY)
+    const saved = localStorage.getItem(FEEDS_STORAGE_KEY)
     if (saved) return JSON.parse(saved)
   } catch { /* ignore */ }
   return [PRESET_FEEDS[0]] // Default to Hacker News
@@ -24,7 +24,7 @@ export function loadSavedFeeds(): FeedConfig[] {
 // Save feeds to localStorage
 export function saveFeeds(feeds: FeedConfig[]) {
   try {
-    localStorage.setItem(FEEDS_KEY, JSON.stringify(feeds))
+    localStorage.setItem(FEEDS_STORAGE_KEY, JSON.stringify(feeds))
   } catch { /* ignore quota/private browsing errors */ }
 }
 

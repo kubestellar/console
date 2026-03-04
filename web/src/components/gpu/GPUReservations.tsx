@@ -1121,7 +1121,7 @@ export function GPUReservations() {
                   <div className="flex items-center gap-3">
                     <ClusterBadge cluster={cluster.name} size="sm" />
                     <div className="text-sm text-muted-foreground">
-                      {cluster.gpuTypes.join(', ')}
+                      {(cluster.gpuTypes || []).join(', ')}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">

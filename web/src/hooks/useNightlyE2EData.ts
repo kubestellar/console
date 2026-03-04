@@ -74,7 +74,7 @@ export function useNightlyE2EData() {
     fetcher: async () => {
       // Try authenticated endpoint first, then public fallback
       const endpoints = ['/api/nightly-e2e/runs', '/api/public/nightly-e2e/runs']
-      for (const endpoint of endpoints) {
+      for (const endpoint of (endpoints || [])) {
         try {
           const res = await fetch(endpoint, {
             headers: {

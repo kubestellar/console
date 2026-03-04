@@ -154,7 +154,7 @@ function scanPlacedCards(customDashboards: { id: string; name: string }[]): Sear
       if (!raw) continue
       const cards: StoredCard[] = JSON.parse(raw)
       if (!Array.isArray(cards)) continue
-      for (const card of cards) {
+      for (const card of (cards || [])) {
         const cardType = card.card_type
         if (!cardType) continue
         const title = card.title || CARD_TITLES[cardType] || cardType.replace(/_/g, ' ')
@@ -182,7 +182,7 @@ function scanPlacedCards(customDashboards: { id: string; name: string }[]): Sear
       if (!raw) continue
       const cards: StoredCard[] = JSON.parse(raw)
       if (!Array.isArray(cards)) continue
-      for (const card of cards) {
+      for (const card of (cards || [])) {
         const cardType = card.card_type
         if (!cardType) continue
         const title = card.title || CARD_TITLES[cardType] || cardType.replace(/_/g, ' ')
@@ -213,7 +213,7 @@ function scanPlacedCards(customDashboards: { id: string; name: string }[]): Sear
 function scanPlacedStats(): SearchItem[] {
   const items: SearchItem[] = []
 
-  for (const dashType of ALL_STATS_DASHBOARD_TYPES) {
+  for (const dashType of (ALL_STATS_DASHBOARD_TYPES || [])) {
     const dashName = DASHBOARD_NAMES[dashType]
     const route = DASHBOARD_ROUTES[dashType]
     const storageKey = `${dashType}-stats-config`
@@ -227,7 +227,7 @@ function scanPlacedStats(): SearchItem[] {
       blocks = getDefaultStatBlocks(dashType)
     }
 
-    for (const block of blocks) {
+    for (const block of (blocks || [])) {
       if (!block.visible) continue
       items.push({
         id: `stat-${block.id}-on-${dashType}`,
@@ -378,7 +378,7 @@ export function useSearchIndex(query: string) {
     for (const d of (deployments || [])) if (d.namespace) nsSet.add(d.namespace)
     for (const p of (pods || [])) if (p.namespace) nsSet.add(p.namespace)
     for (const s of (services || [])) if (s.namespace) nsSet.add(s.namespace)
-    for (const ns of Array.from(nsSet).sort()) {
+    for (const ns of (Array.from(nsSet).sort() || [])) {
       items.push({
         id: `namespace-${ns}`,
         name: ns,
@@ -461,7 +461,7 @@ export function useSearchIndex(query: string) {
 
     // Group by category
     const grouped = new Map<SearchCategory, SearchItem[]>()
-    for (const item of matched) {
+    for (const item of (matched || [])) {
       const list = grouped.get(item.category)
       if (list) {
         list.push(item)
@@ -473,7 +473,7 @@ export function useSearchIndex(query: string) {
     // Order by CATEGORY_ORDER and cap per category
     const ordered = new Map<SearchCategory, SearchItem[]>()
     let total = 0
-    for (const cat of CATEGORY_ORDER) {
+    for (const cat of (CATEGORY_ORDER || [])) {
       const items = grouped.get(cat)
       if (!items || items.length === 0) continue
       if (total >= MAX_TOTAL) break

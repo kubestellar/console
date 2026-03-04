@@ -164,7 +164,7 @@ async function agentFetchAllClusters<T>(
   )
 
   const items: T[] = []
-  for (const r of results) {
+  for (const r of (results || [])) {
     if (r.status === 'fulfilled') items.push(...r.value)
   }
   return items
@@ -264,12 +264,12 @@ export function useKagentiSummary() {
     }
 
     const frameworks: Record<string, number> = {}
-    for (const a of agents) {
+    for (const a of (agents || [])) {
       frameworks[a.framework] = (frameworks[a.framework] || 0) + 1
     }
 
     const clusterMap = new Map<string, number>()
-    for (const a of agents) {
+    for (const a of (agents || [])) {
       clusterMap.set(a.cluster, (clusterMap.get(a.cluster) || 0) + 1)
     }
 

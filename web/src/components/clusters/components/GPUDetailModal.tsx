@@ -253,7 +253,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                       Architecture
                     </div>
                     <div className="text-sm font-medium text-foreground capitalize">
-                      {gpuSpecs.families.join(', ')}
+                      {(gpuSpecs.families || []).join(', ')}
                     </div>
                   </div>
                 )}
@@ -264,7 +264,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                       CUDA Driver
                     </div>
                     <div className="text-sm font-medium text-foreground">
-                      {gpuSpecs.cudaDriverVersions.join(', ')}
+                      {(gpuSpecs.cudaDriverVersions || []).join(', ')}
                     </div>
                   </div>
                 )}
@@ -413,7 +413,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                       </div>
                       <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                         <span>{info.nodeCount} GPU node{info.nodeCount !== 1 ? 's' : ''}</span>
-                        <span>{info.gpuTypes.join(', ')}</span>
+                        <span>{(info.gpuTypes || []).join(', ')}</span>
                       </div>
                     </div>
                   )

@@ -13,6 +13,9 @@ import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useToast } from '../ui/Toast'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
 
+/** Cache TTL: 60 minutes — OPA installation status rarely changes */
+const CACHE_TTL_MS = 60 * 60 * 1000
+
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
 
@@ -1581,7 +1584,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
         const parsed = JSON.parse(cached)
         const cacheTime = localStorage.getItem(STORAGE_KEY_OPA_CACHE_TIME)
         const cacheAge = cacheTime ? Date.now() - parseInt(cacheTime, 10) : Infinity
-        if (cacheAge < 60 * 60 * 1000) { // 60 minutes — installation status rarely changes
+        if (cacheAge < CACHE_TTL_MS) {
           return parsed
         }
       }

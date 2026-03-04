@@ -1,7 +1,7 @@
 import type { FeedConfig, CorsProxy } from './types'
 
 // Storage keys
-export const FEEDS_KEY = 'rss_feed_configs'
+export const FEEDS_STORAGE_KEY = 'rss_feed_configs'
 export const CACHE_KEY_PREFIX = 'rss_feed_cache_'
 export const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 

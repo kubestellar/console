@@ -126,7 +126,7 @@ function extractErrorPattern(content: string): string | undefined {
     /message[:\s]+["']?([^"'\n]{10,100})["']?/i,
   ]
 
-  for (const pattern of errorPatterns) {
+  for (const pattern of (errorPatterns || [])) {
     const match = content.match(pattern)
     if (match) {
       return match[1].trim()
@@ -263,14 +263,14 @@ export function findSimilarResolutionsStandalone(
   const sharedResolutions = loadSharedResolutions()
   const results: SimilarResolution[] = []
 
-  for (const resolution of resolutions) {
+  for (const resolution of (resolutions || [])) {
     const similarity = calculateSignatureSimilarity(signature, resolution.issueSignature)
     if (similarity >= minSimilarity) {
       results.push({ resolution, similarity, source: 'personal' })
     }
   }
 
-  for (const resolution of sharedResolutions) {
+  for (const resolution of (sharedResolutions || [])) {
     const similarity = calculateSignatureSimilarity(signature, resolution.issueSignature)
     if (similarity >= minSimilarity) {
       results.push({ resolution, similarity, source: 'shared' })
@@ -342,7 +342,7 @@ export function useResolutions() {
     const results: SimilarResolution[] = []
 
     // Search personal resolutions
-    for (const resolution of resolutions) {
+    for (const resolution of (resolutions || [])) {
       const similarity = calculateSignatureSimilarity(signature, resolution.issueSignature)
       if (similarity >= minSimilarity) {
         results.push({ resolution, similarity, source: 'personal' })
@@ -350,7 +350,7 @@ export function useResolutions() {
     }
 
     // Search shared resolutions
-    for (const resolution of sharedResolutions) {
+    for (const resolution of (sharedResolutions || [])) {
       const similarity = calculateSignatureSimilarity(signature, resolution.issueSignature)
       if (similarity >= minSimilarity) {
         results.push({ resolution, similarity, source: 'shared' })

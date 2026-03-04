@@ -130,7 +130,7 @@ async function fetchWorkloadsViaAgent(opts?: {
   )
 
   const items: Workload[] = []
-  for (const r of results) {
+  for (const r of (results || [])) {
     if (r.status === 'fulfilled') items.push(...r.value)
   }
   return items.length > 0 ? items : null

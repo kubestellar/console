@@ -43,13 +43,13 @@ export function useClusterContext(): {
 
     // Build resources[] from operators + helm releases
     const resources = new Set<string>()
-    for (const op of operators) {
+    for (const op of (operators || [])) {
       resources.add(op.name.toLowerCase())
       // Extract base name (e.g. "prometheus-operator" → "prometheus")
       const base = op.name.replace(/-operator$/, '').replace(/-controller$/, '').toLowerCase()
       if (base !== op.name.toLowerCase()) resources.add(base)
     }
-    for (const rel of releases) {
+    for (const rel of (releases || [])) {
       resources.add(rel.name.toLowerCase())
       // Extract chart base name (e.g. "prometheus-25.8.0" → "prometheus")
       const chartBase = rel.chart.replace(/-[\d.]+$/, '').toLowerCase()
@@ -58,15 +58,15 @@ export function useClusterContext(): {
 
     // Build issues[] from pod issues + security issues
     const issues = new Set<string>()
-    for (const pi of podIssues) {
-      for (const issue of pi.issues) {
+    for (const pi of (podIssues || [])) {
+      for (const issue of (pi.issues || [])) {
         issues.add(issue)
       }
       if (pi.status && pi.status !== 'Running') {
         issues.add(pi.status)
       }
     }
-    for (const si of securityIssues) {
+    for (const si of (securityIssues || [])) {
       issues.add(si.issue)
     }
 
@@ -76,9 +76,9 @@ export function useClusterContext(): {
       labels['distribution'] = primary.distribution
     }
     // Add namespace-derived labels (presence of monitoring/istio-system etc.)
-    for (const cluster of healthyClusters) {
+    for (const cluster of (healthyClusters || [])) {
       if (cluster.namespaces) {
-        for (const ns of cluster.namespaces) {
+        for (const ns of (cluster.namespaces || [])) {
           if (ns.includes('istio')) labels['cncf.io/project'] = 'istio'
           if (ns.includes('linkerd')) labels['cncf.io/project'] = 'linkerd'
           if (ns.includes('monitoring') || ns.includes('prometheus')) labels['monitoring'] = 'true'

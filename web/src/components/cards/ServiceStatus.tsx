@@ -238,7 +238,7 @@ export function ServiceStatus() {
               <div className="flex items-center gap-2 shrink-0">
                 {service.ports && service.ports.length > 0 && (
                   <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                    {service.ports.join(', ')}
+                    {(service.ports || []).join(', ')}
                   </span>
                 )}
                 <span className={`px-1.5 py-0.5 rounded text-xs shrink-0 ${getTypeColor(service.type || 'ClusterIP')}`}>

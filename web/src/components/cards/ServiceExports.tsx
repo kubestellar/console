@@ -316,7 +316,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
                   </span>
                 </div>
                 {exp.targetClusters && exp.targetClusters.length > 0 && (
-                  <span className="text-xs text-muted-foreground" title={exp.targetClusters.join(', ')}>
+                  <span className="text-xs text-muted-foreground" title={(exp.targetClusters || []).join(', ')}>
                     → {t('common:common.nClusters', { count: exp.targetClusters.length })}
                   </span>
                 )}
