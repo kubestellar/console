@@ -18,6 +18,7 @@ import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { ContributorBanner } from '../rewards/ContributorLadder'
+import { ContributorLeaderboard } from '../rewards/ContributorLeaderboard'
 import { GITHUB_REWARD_LABELS, REWARD_ACTIONS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
 
@@ -472,6 +473,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Contributor banner — coins + level + progress */}
               <ContributorBanner />
+
+              {/* Leaderboard — top contributors by coins */}
+              <ContributorLeaderboard />
 
               {/* Actions header */}
               <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">

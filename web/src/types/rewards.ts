@@ -39,11 +39,37 @@ export interface UserRewards {
 }
 
 export interface LeaderboardEntry {
-  userId: string
-  username: string
-  avatarUrl?: string
-  totalCoins: number
+  login: string
+  avatar_url: string
+  total_points: number
   rank: number
+  breakdown: GitHubRewardsBreakdown
+  level: string
+  level_rank: number
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[]
+  cached_at: string
+  from_cache: boolean
+}
+
+export interface ContributorStats {
+  login: string
+  avatar_url: string
+  total_points: number
+  breakdown: GitHubRewardsBreakdown
+  level: string
+  level_rank: number
+  avg_pr_iterations: number
+  avg_pr_time_hours: number
+  first_contribution: string
+  most_active_repo: string
+  total_prs: number
+  total_issues: number
+  contributions: GitHubContribution[]
+  cached_at: string
+  from_cache: boolean
 }
 
 export interface Achievement {
