@@ -595,10 +595,16 @@ export function MissionSidebar() {
 
       {/* Saved Mission Detail Modal */}
       {viewingMission && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setViewingMission(null) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setViewingMission(null) }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
           <div className={cn(
             "relative bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col",
-            isMobile ? "inset-2 fixed" : "w-[700px] max-h-[85vh]"
+            isMobile ? "inset-2 fixed" : "w-[900px] max-h-[85vh]"
           )}>
             {/* Close button */}
             <button
@@ -622,6 +628,7 @@ export function MissionSidebar() {
                 }}
                 onBack={() => setViewingMission(null)}
                 importLabel="Run"
+                hideBackButton
               />
             </div>
           </div>

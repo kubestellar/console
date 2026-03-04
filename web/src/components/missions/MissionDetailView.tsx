@@ -51,6 +51,8 @@ interface MissionDetailViewProps {
   matchScore?: number
   /** Override the import button label (e.g. "Run" for saved missions) */
   importLabel?: string
+  /** Hide the "Back to listing" button (e.g. when opened from saved missions) */
+  hideBackButton?: boolean
 }
 
 // Extract code blocks from markdown-style description
@@ -171,6 +173,7 @@ export function MissionDetailView({
   onImprove,
   matchScore,
   importLabel = 'Import',
+  hideBackButton = false,
 }: MissionDetailViewProps) {
   const tabs: TabDef[] = [
     {
@@ -226,14 +229,16 @@ export function MissionDetailView({
 
   return (
     <div className="space-y-5">
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to listing
-      </button>
+      {/* Back button — hidden when opened from saved missions (no listing context) */}
+      {!hideBackButton && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to listing
+        </button>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">

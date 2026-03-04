@@ -316,7 +316,7 @@ export function InstallerCard({ mission, onImport, onSelect, compact }: Installe
             className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
           >
             <Download className="w-3 h-3" />
-            Install
+            Import
           </button>
         </div>
       </div>
