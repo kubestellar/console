@@ -3,7 +3,7 @@ import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayl
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
-import { LOCAL_AGENT_WS_URL } from '../lib/constants'
+import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved'
@@ -868,15 +868,26 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     })
   }, [missions, ensureConnection, selectedAgent])
 
-  // Cancel a running mission — sends cancel signal to backend to kill agent process
+  // Cancel a running mission — sends cancel signal to backend to kill agent process.
+  // Uses WebSocket if connected, otherwise falls back to HTTP POST endpoint.
   const cancelMission = useCallback((missionId: string) => {
-    // Send cancel signal to backend to abort the in-progress agent turn
+    // Try WebSocket first (fastest path when connected)
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         id: `cancel-${Date.now()}`,
         type: 'cancel_chat',
         payload: { sessionId: missionId },
       }))
+    } else {
+      // HTTP fallback — WS may be disconnected during long agent runs
+      fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: missionId }),
+      }).catch(() => {
+        // Best-effort: if both WS and HTTP fail, the local state update
+        // still marks the mission as cancelled in the UI
+      })
     }
 
     setMissions(prev => prev.map(m =>

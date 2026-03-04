@@ -327,6 +327,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
 	mux.HandleFunc("/local-clusters", s.handleLocalClusters)
 
+	// Chat cancel endpoint — HTTP fallback when WebSocket is disconnected
+	mux.HandleFunc("/cancel-chat", s.handleCancelChatHTTP)
+
 	// Backend process management
 	mux.HandleFunc("/restart-backend", s.handleRestartBackend)
 
@@ -2191,6 +2194,49 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 		},
 	})
 	writeMu.Unlock()
+}
+
+// handleCancelChatHTTP is the HTTP fallback for cancelling in-progress chat sessions.
+// Used when the WebSocket connection is unavailable (e.g., disconnected during long agent runs).
+func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		SessionID string `json:"sessionId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.SessionID == "" {
+		http.Error(w, `{"error":"sessionId is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	s.activeChatCtxsMu.Lock()
+	cancelFn, ok := s.activeChatCtxs[req.SessionID]
+	s.activeChatCtxsMu.Unlock()
+
+	if ok {
+		cancelFn()
+		log.Printf("[Chat] Cancelled chat via HTTP for session %s", req.SessionID)
+	} else {
+		log.Printf("[Chat] No active chat to cancel via HTTP for session %s", req.SessionID)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"cancelled": ok,
+		"sessionId": req.SessionID,
+	})
 }
 
 // handleChatMessage handles chat messages (both legacy claude and new chat types)
