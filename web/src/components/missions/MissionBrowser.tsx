@@ -653,12 +653,20 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   }, [])
 
   // ============================================================================
-  // Deep-link: auto-select mission by name when initialMission is set
+  // Deep-link: auto-select mission by name when initialMission is set.
+  // The slug is saved in a ref so it survives the URL param being removed
+  // (MissionSidebar clears ?mission= after opening, but data may not have
+  // loaded yet — the ref keeps the slug alive for later matching).
   // ============================================================================
 
+  const deepLinkSlugRef = useRef<string | null>(null)
+  if (initialMission && !deepLinkSlugRef.current) {
+    deepLinkSlugRef.current = initialMission.toLowerCase()
+  }
+
   useEffect(() => {
-    if (!initialMission || !isOpen || selectedMission) return
-    const slug = initialMission.toLowerCase()
+    const slug = deepLinkSlugRef.current
+    if (!slug || !isOpen || selectedMission) return
 
     // Search installers first (by slug match or title/cncfProject substring)
     const installerMatch = installerMissions.find(
@@ -669,6 +677,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (installerMatch) {
       setActiveTab('installers')
       selectCardMission(installerMatch)
+      deepLinkSlugRef.current = null // consumed
       return
     }
 
@@ -680,6 +689,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (solutionMatch) {
       setActiveTab('solutions')
       selectCardMission(solutionMatch)
+      deepLinkSlugRef.current = null // consumed
       return
     }
 

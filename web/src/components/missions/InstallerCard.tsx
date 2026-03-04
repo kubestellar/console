@@ -326,16 +326,33 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
               </a>
             )}
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onImport()
-            }}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
-          >
-            <Download className="w-3 h-3" />
-            Import
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {onCopyLink && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCopyLink(e)
+                  setLinkCopied(true)
+                  setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                }}
+                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
+                title="Copy shareable link"
+              >
+                {linkCopied ? <Check className="w-3 h-3 text-green-400" /> : <Link className="w-3 h-3" />}
+                {linkCopied ? 'Copied' : 'Share'}
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onImport()
+              }}
+              className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              Import
+            </button>
+          </div>
         </div>
       </div>
     </div>
