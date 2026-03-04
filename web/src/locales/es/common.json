@@ -589,7 +589,24 @@
     "setupInstructions": "Setup Instructions",
     "configureOauth": "Configure GitHub OAuth",
     "githubRepo": "GitHub Repository",
-    "docs": "Documentation"
+    "docs": "Documentation",
+    "developerSetup": "Developer Setup"
+  },
+  "developerSetup": {
+    "title": "Developer Setup",
+    "description": "Run the console from source with GitHub OAuth",
+    "prerequisites": "Prerequisites",
+    "cloneRepo": "Clone the repository",
+    "configureOAuth": "Configure GitHub OAuth",
+    "oauthStep1": "Create a new OAuth app at",
+    "oauthStep2": "Fill in the app details:",
+    "oauthStep3": "Click \"Register application\", then copy the Client ID and generate a Client Secret.",
+    "envFile": "Create a .env file in the project root:",
+    "startDev": "Start the console",
+    "startDevDesc": "Compiles backend + agent from source, starts Vite dev server with hot reload.",
+    "updateChannelTitle": "Developer update channel",
+    "updateChannelDesc": "Dev installs can track the main branch for automatic updates via commit SHA.",
+    "updateChannelNote": "Checks for updates every 5 minutes and auto-rebuilds from source."
   },
   "language": {
     "select": "Select Language"

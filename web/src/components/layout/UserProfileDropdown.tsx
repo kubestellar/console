@@ -8,6 +8,7 @@ import { languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { checkOAuthConfigured } from '../../lib/api'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
 import { FeatureRequestModal } from '../feedback/FeatureRequestModal'
 
 interface UserProfileDropdownProps {
@@ -26,6 +27,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   const [isOpen, setIsOpen] = useState(false)
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [showDevSetupDialog, setShowDevSetupDialog] = useState(false)
   const [showRewards, setShowRewards] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showDevPanel, setShowDevPanel] = useState(false)
@@ -277,6 +279,16 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                       <Rocket className="w-3.5 h-3.5" />
                       {t('developer.setupInstructions')}
                     </button>
+                    <button
+                      onClick={() => {
+                        setIsOpen(false)
+                        setShowDevSetupDialog(true)
+                      }}
+                      className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      <Code2 className="w-3.5 h-3.5" />
+                      {t('developer.developerSetup')}
+                    </button>
                     {!oauthStatus.configured && oauthStatus.checked && (
                       <a
                         href="https://github.com/settings/developers"
@@ -379,6 +391,12 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
         onClose={() => setShowSetupDialog(false)}
+      />
+
+      {/* Developer setup dialog — dev-focused instructions with OAuth */}
+      <DeveloperSetupDialog
+        isOpen={showDevSetupDialog}
+        onClose={() => setShowDevSetupDialog(false)}
       />
 
       {/* Rewards panel — opens feedback dialog to GitHub contributions tab */}
