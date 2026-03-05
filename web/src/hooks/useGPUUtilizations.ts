@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { api } from '../lib/api'
 
 /** How often to refresh utilization data (5 minutes) */
 const GPU_UTIL_REFRESH_MS = 300_000
@@ -31,11 +32,9 @@ export function useGPUUtilizations(reservationIds: string[]) {
     try {
       setIsLoading(true)
       const params = new URLSearchParams({ ids: ids.join(',') })
-      const response = await fetch(`/api/gpu/utilizations?${params.toString()}`)
-      if (!response.ok) {
-        return
-      }
-      const result = await response.json()
+      const { data: result } = await api.get<Record<string, GPUUtilizationSnapshot[]>>(
+        `/api/gpu/utilizations?${params.toString()}`
+      )
       setData(result || {})
     } catch {
       // Silently fail — utilization is supplementary data
