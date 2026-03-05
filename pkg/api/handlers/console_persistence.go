@@ -451,8 +451,26 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(group *v1alpha1.Cluste
 	if h.k8sClient != nil && len(group.Spec.DynamicFilters) > 0 {
 		clusters, err := h.k8sClient.ListClusters(context.Background())
 		if err == nil {
+			// Get cached health data (no extra network calls).
+			// GetCachedHealth always returns a non-nil map; individual entries
+			// may be nil for clusters that have not yet been health-checked.
+			healthMap := h.k8sClient.GetCachedHealth()
+
+			// Fetch nodes per cluster only when a filter requires node-level data.
+			nodesByCluster := make(map[string][]k8s.NodeInfo)
+			if clusterFilterNeedsNodes(group.Spec.DynamicFilters) {
+				for _, cluster := range clusters {
+					nodes, nodeErr := h.k8sClient.GetNodes(context.Background(), cluster.Name)
+					if nodeErr == nil {
+						nodesByCluster[cluster.Name] = nodes
+					}
+				}
+			}
+
 			for _, cluster := range clusters {
-				if h.clusterMatchesFilters(cluster, group.Spec.DynamicFilters) {
+				health := healthMap[cluster.Name]
+				nodes := nodesByCluster[cluster.Name]
+				if h.clusterMatchesFilters(cluster, health, nodes, group.Spec.DynamicFilters) {
 					matched[cluster.Name] = true
 				}
 			}
@@ -469,9 +487,9 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(group *v1alpha1.Cluste
 }
 
 // clusterMatchesFilters checks if a cluster matches all filters
-func (h *ConsolePersistenceHandlers) clusterMatchesFilters(cluster k8s.ClusterInfo, filters []v1alpha1.ClusterFilter) bool {
+func (h *ConsolePersistenceHandlers) clusterMatchesFilters(cluster k8s.ClusterInfo, health *k8s.ClusterHealth, nodes []k8s.NodeInfo, filters []v1alpha1.ClusterFilter) bool {
 	for _, filter := range filters {
-		if !h.clusterMatchesFilter(cluster, filter) {
+		if !h.clusterMatchesFilter(cluster, health, nodes, filter) {
 			return false
 		}
 	}
@@ -479,17 +497,55 @@ func (h *ConsolePersistenceHandlers) clusterMatchesFilters(cluster k8s.ClusterIn
 }
 
 // clusterMatchesFilter checks if a cluster matches a single filter
-func (h *ConsolePersistenceHandlers) clusterMatchesFilter(cluster k8s.ClusterInfo, filter v1alpha1.ClusterFilter) bool {
-	// TODO: Implement filter evaluation based on cluster properties
-	// This is a simplified version - real implementation would check:
-	// - name, healthy, gpuCount, cpuCount, memoryGB, nodeCount, region, zone, provider, version, label
+func (h *ConsolePersistenceHandlers) clusterMatchesFilter(cluster k8s.ClusterInfo, health *k8s.ClusterHealth, nodes []k8s.NodeInfo, filter v1alpha1.ClusterFilter) bool {
 	switch filter.Field {
 	case "name":
 		return matchString(cluster.Name, filter.Operator, filter.Value)
 	case "healthy":
-		return matchBool(cluster.Healthy, filter.Operator, filter.Value)
+		return compareBool(cluster.Healthy, filter.Operator, filter.Value)
+	case "reachable":
+		if health == nil {
+			return false
+		}
+		return compareBool(health.Reachable, filter.Operator, filter.Value)
+	case "nodeCount":
+		return compareInt(int64(cluster.NodeCount), filter.Operator, filter.Value)
+	case "podCount":
+		return compareInt(int64(cluster.PodCount), filter.Operator, filter.Value)
+	case "cpuCores":
+		if health == nil {
+			return false
+		}
+		return compareInt(int64(health.CpuCores), filter.Operator, filter.Value)
+	case "memoryGB":
+		if health == nil {
+			return false
+		}
+		return compareFloat(health.MemoryGB, filter.Operator, filter.Value)
+	case "gpuCount":
+		total := clusterGPUCount(nodes)
+		return compareInt(int64(total), filter.Operator, filter.Value)
+	case "gpuType":
+		types := clusterGPUTypes(nodes)
+		return compareStringSet(types, filter.Operator, filter.Value)
+	case "label":
+		// Returns true when any node in the cluster carries a label whose key
+		// matches filter.LabelKey and whose value satisfies the operator/value pair.
+		for _, node := range nodes {
+			if val, ok := node.Labels[filter.LabelKey]; ok {
+				if matchString(val, filter.Operator, filter.Value) {
+					return true
+				}
+			}
+		}
+		return false
 	default:
-		return true // Unknown filter, assume match
+		// Fields like "region", "zone", "provider", and "version" are referenced
+		// in the original issue but are not yet present in the ClusterInfo or
+		// ClusterHealth data models. Until those fields are added, filters on
+		// them intentionally return false so they do not silently match all clusters.
+		log.Printf("clusterMatchesFilter: unsupported filter field %q, skipping cluster %q", filter.Field, cluster.Name)
+		return false
 	}
 }
 
@@ -506,16 +562,15 @@ func matchString(actual, operator, expected string) bool {
 	}
 }
 
-func matchBool(actual bool, operator, expected string) bool {
-	expectedBool := expected == "true"
-	switch operator {
-	case "eq":
-		return actual == expectedBool
-	case "neq":
-		return actual != expectedBool
-	default:
-		return false
+// clusterFilterNeedsNodes returns true if any filter in the slice requires
+// per-node data (GPU counts/types or node label matching).
+func clusterFilterNeedsNodes(filters []v1alpha1.ClusterFilter) bool {
+	for _, f := range filters {
+		if f.Field == "gpuCount" || f.Field == "gpuType" || f.Field == "label" {
+			return true
+		}
 	}
+	return false
 }
 
 // =============================================================================
