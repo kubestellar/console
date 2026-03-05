@@ -65,10 +65,10 @@ function isTokenExpired(cluster: ClusterInfo): boolean {
 
 // Auth method badge labels — intentionally subtle (muted text, no colored backgrounds)
 const AUTH_BADGE_MAP: Record<string, { label: string; color: string }> = {
-  exec: { label: 'IAM', color: 'bg-white/5 text-muted-foreground' },
-  token: { label: 'Token', color: 'bg-white/5 text-muted-foreground' },
-  certificate: { label: 'Cert', color: 'bg-white/5 text-muted-foreground' },
-  'auth-provider': { label: 'IAM', color: 'bg-white/5 text-muted-foreground' },
+  exec: { label: 'iam', color: 'bg-white/5 text-muted-foreground' },
+  token: { label: 'token', color: 'bg-white/5 text-muted-foreground' },
+  certificate: { label: 'cert', color: 'bg-white/5 text-muted-foreground' },
+  'auth-provider': { label: 'iam', color: 'bg-white/5 text-muted-foreground' },
 }
 
 // Session refresh commands per exec-plugin CLI name

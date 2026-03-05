@@ -517,8 +517,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
                                   ctx.authMethod === 'certificate' ? 'bg-green-500/20 text-green-400' :
                                   'bg-blue-500/20 text-blue-400'
                                 }`}>
-                                  {ctx.authMethod === 'exec' || ctx.authMethod === 'auth-provider' ? 'IAM' :
-                                   ctx.authMethod === 'token' ? 'Token' : 'Cert'}
+                                  {ctx.authMethod === 'exec' || ctx.authMethod === 'auth-provider' ? 'iam' :
+                                   ctx.authMethod === 'token' ? 'token' : 'cert'}
                                 </span>
                               )}
                               {ctx.isNew ? (
