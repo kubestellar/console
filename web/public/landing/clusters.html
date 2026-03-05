@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Cluster Management - KubeStellar Console</title>
+  <meta name="description" content="Monitor and manage multiple Kubernetes clusters from a single dashboard. View cluster health, node status, resource utilization, and deploy workloads across clusters." />
+  <meta name="keywords" content="kubernetes multi-cluster, cluster management, kubernetes cluster monitoring, multi-cluster dashboard, kubernetes fleet management" />
+  <link rel="canonical" href="https://console.kubestellar.io/clusters" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Multi-Cluster Management - KubeStellar Console" />
+  <meta property="og:description" content="Monitor and manage multiple Kubernetes clusters from a single dashboard. View cluster health, node status, resource utilization, and deploy workloads across clusters." />
+  <meta property="og:url" content="https://console.kubestellar.io/clusters" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Multi-Cluster Management - KubeStellar Console" />
+  <meta name="twitter:description" content="Monitor and manage multiple Kubernetes clusters from a single dashboard. View cluster health, node status, resource utilization, and deploy workloads across clusters." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Multi-Cluster Management",
+    "description": "Monitor and manage multiple Kubernetes clusters from a single dashboard. View cluster health, node status, resource utilization, and deploy workloads across clusters.",
+    "url": "https://console.kubestellar.io/clusters",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Multi-cluster monitoring, Cluster health tracking, Cross-cluster search, Node management, Resource utilization, Cluster federation"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Multi-Cluster <span class="accent">Kubernetes</span> Management</h1>
+    <p class="subtitle">Monitor and manage all your Kubernetes clusters from a single dashboard. View cluster health, node status, resource utilization, and deploy workloads across your entire fleet.</p>
+    <div class="hero-actions">
+      <a href="/clusters" class="btn-primary">View Clusters</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Complete Cluster Visibility and Control</h2>
+      <p>Everything you need to monitor, manage, and scale your Kubernetes clusters from one place.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2B22;</div>
+        <h3>Unified Dashboard</h3>
+        <p>See all clusters at a glance: EKS, GKE, AKS, OpenShift, kind, k3s. One dashboard to monitor every cluster in your fleet regardless of provider or distribution.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2764;</div>
+        <h3>Cluster Health Monitoring</h3>
+        <p>Real-time health status, node conditions, and resource metrics. Instantly identify unhealthy clusters and drill into the root cause of issues.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F50D;</div>
+        <h3>Cross-Cluster Search</h3>
+        <p>Find any resource across all connected clusters instantly. Search pods, deployments, services, and custom resources without switching contexts.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2699;</div>
+        <h3>Node Management</h3>
+        <p>Monitor node status, capacity, and scheduling across clusters. Track node readiness, resource pressure conditions, and workload distribution per node.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F4CA;</div>
+        <h3>Resource Utilization</h3>
+        <p>CPU, memory, and storage usage trends across your fleet. Visualize resource consumption over time and identify clusters that need scaling.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F517;</div>
+        <h3>Cluster Federation</h3>
+        <p>Connect any conformant Kubernetes cluster in seconds. Add new clusters to your fleet with minimal configuration and start managing them immediately.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Any</div>
+        <div class="stat-label">Cloud Provider</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Health</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Cross-Cluster</div>
+        <div class="stat-label">Search</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Zero</div>
+        <div class="stat-label">Lock-In</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>One dashboard for all your Kubernetes clusters.</h2>
+    <p>Stop juggling kubectl contexts and cloud provider consoles. See everything in one place.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

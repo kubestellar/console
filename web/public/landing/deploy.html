@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Cluster Workload Deployment - KubeStellar Console</title>
+  <meta name="description" content="Deploy applications across multiple Kubernetes clusters with smart placement. Drag-and-drop deployment, Helm chart management, and GitOps integration." />
+  <meta name="keywords" content="kubernetes multi-cluster deployment, deploy across clusters, kubernetes workload placement, helm deployment dashboard" />
+  <link rel="canonical" href="https://console.kubestellar.io/deploy" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Multi-Cluster Workload Deployment - KubeStellar Console" />
+  <meta property="og:description" content="Deploy applications across multiple Kubernetes clusters with smart placement. Drag-and-drop deployment, Helm chart management, and GitOps integration." />
+  <meta property="og:url" content="https://console.kubestellar.io/deploy" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Multi-Cluster Workload Deployment - KubeStellar Console" />
+  <meta name="twitter:description" content="Deploy applications across multiple Kubernetes clusters with smart placement. Drag-and-drop deployment, Helm chart management, and GitOps integration." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Multi-Cluster Deployment",
+    "description": "Deploy applications across multiple Kubernetes clusters with smart placement. Drag-and-drop deployment, Helm chart management, and GitOps integration.",
+    "url": "https://console.kubestellar.io/deploy",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": [
+      "Smart cluster placement",
+      "Helm chart management",
+      "GitOps integration",
+      "Drag-and-drop deployment",
+      "Rolling updates across clusters",
+      "Deployment history with rollback"
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Multi-Cluster <span class="accent">Deployment</span> Made Easy</h1>
+    <p class="subtitle">Deploy applications across multiple Kubernetes clusters with smart placement, Helm chart management, and GitOps integration. One dashboard, all your clusters.</p>
+    <div class="hero-actions">
+      <a href="/deploy" class="btn-primary">Start Deploying</a>
+      <a href="https://docs.kubestellar.io" class="btn-secondary" target="_blank" rel="noopener noreferrer">View Documentation</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Deployment Features Built for Scale</h2>
+      <p>Everything you need to deploy, manage, and monitor workloads across your entire Kubernetes fleet.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2B22;</div>
+        <h3>Smart Placement</h3>
+        <p>Automatically select optimal clusters based on resource availability and constraints. Define placement policies and let KubeStellar distribute workloads intelligently.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2318;</div>
+        <h3>Helm Chart Management</h3>
+        <p>Deploy and manage Helm charts across clusters directly from the dashboard. Browse repositories, configure values, and install charts without touching the CLI.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x21BB;</div>
+        <h3>GitOps Integration</h3>
+        <p>Sync deployments from Git repositories with Argo CD integration. Monitor sync status, detect drift, and ensure clusters match their desired state automatically.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2630;</div>
+        <h3>Drag-and-Drop Deploy</h3>
+        <p>Visual deployment interface &mdash; drag workloads to target clusters with an intuitive UI. No YAML editing required for common deployment scenarios.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x21C4;</div>
+        <h3>Rolling Updates</h3>
+        <p>Coordinated rolling updates across multiple clusters simultaneously. Monitor rollout progress, pause on failures, and ensure zero-downtime deployments at scale.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x29D6;</div>
+        <h3>Deployment History</h3>
+        <p>Track all deployments with full audit trail and rollback capability. Compare revisions, identify regressions, and restore previous configurations with a single click.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Comparison Table -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Manual kubectl vs. KubeStellar Console</h2>
+      <p>See how KubeStellar Console streamlines multi-cluster deployment workflows.</p>
+    </div>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Manual kubectl</th>
+          <th>KubeStellar Console</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Deploy to 5 clusters</td>
+          <td class="cross">5 separate commands</td>
+          <td class="check">One click</td>
+        </tr>
+        <tr>
+          <td>Rollback</td>
+          <td class="cross">Manual per cluster</td>
+          <td class="check">Coordinated rollback</td>
+        </tr>
+        <tr>
+          <td>Helm management</td>
+          <td class="cross">CLI per cluster</td>
+          <td class="check">Visual dashboard</td>
+        </tr>
+        <tr>
+          <td>Drift detection</td>
+          <td class="cross">Manual diffing</td>
+          <td class="check">Automatic alerts</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Multi-Cluster</div>
+        <div class="stat-label">Deploy across all clusters at once</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Helm &amp; Kustomize</div>
+        <div class="stat-label">Native support for both tools</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">GitOps Native</div>
+        <div class="stat-label">Built-in Argo CD integration</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">One-Click Deploy</div>
+        <div class="stat-label">From dashboard to production</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Deploy everywhere. Manage from anywhere.</h2>
+    <p>Take control of your multi-cluster deployments with a unified dashboard that scales with your infrastructure.</p>
+    <a href="/" class="btn-primary">Open Console</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

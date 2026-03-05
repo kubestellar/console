@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kubernetes GPU Management &amp; Namespace Allocation - KubeStellar Console</title>
+  <meta name="description" content="Manage GPU resources across Kubernetes clusters. Track GPU utilization, allocate GPUs by namespace, and optimize AI/ML workload placement.">
+  <meta name="keywords" content="kubernetes GPU management, GPU allocation kubernetes, kubernetes AI ML, GPU namespace allocation, GPU monitoring kubernetes">
+  <link rel="canonical" href="https://console.kubestellar.io/gpu-reservations">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Kubernetes GPU Management &amp; Namespace Allocation - KubeStellar Console">
+  <meta property="og:description" content="Manage GPU resources across Kubernetes clusters. Track GPU utilization, allocate GPUs by namespace, and optimize AI/ML workload placement.">
+  <meta property="og:url" content="https://console.kubestellar.io/gpu-reservations">
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png">
+  <meta property="og:image:width" content="2048">
+  <meta property="og:image:height" content="400">
+  <meta property="og:site_name" content="KubeStellar Console">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Kubernetes GPU Management &amp; Namespace Allocation - KubeStellar Console">
+  <meta name="twitter:description" content="Manage GPU resources across Kubernetes clusters. Track GPU utilization, allocate GPUs by namespace, and optimize AI/ML workload placement.">
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png">
+
+  <link rel="stylesheet" href="/landing/style.css">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - GPU Management",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "description": "Manage GPU resources across Kubernetes clusters. Track GPU utilization, allocate GPUs by namespace, and optimize AI/ML workload placement.",
+    "url": "https://console.kubestellar.io/gpu-reservations",
+    "image": "https://console.kubestellar.io/kubestellar.png",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Real-time GPU utilization dashboard",
+      "Namespace-level GPU allocation and quotas",
+      "Multi-cluster GPU inventory tracking",
+      "GPU reservation system for training jobs",
+      "GPU cost tracking by namespace and workload",
+      "Smart AI/ML workload placement"
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav" aria-label="Main navigation">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Kubernetes <span class="accent">GPU Management</span> &amp; Allocation</h1>
+    <p class="subtitle">Track GPU utilization across clusters, allocate resources by namespace, and optimize AI/ML workload placement &mdash; all from a single dashboard.</p>
+    <div class="hero-actions">
+      <a href="/gpu-reservations" class="btn-primary">Manage GPUs</a>
+      <a href="/" class="btn-secondary">View Demo</a>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- Features Grid -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Complete GPU Resource Management</h2>
+      <p>Everything you need to manage GPU resources across your multi-cluster Kubernetes environment.</p>
+    </div>
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="6 8 10 12 14 8 18 12"/></svg>
+        </div>
+        <h3>GPU Utilization Dashboard</h3>
+        <p>Real-time GPU utilization metrics across all clusters. Monitor memory usage, compute load, and temperature for every GPU in your fleet.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Namespace Allocation</h3>
+        <p>Allocate GPU quotas by namespace and team. Set limits, enforce fair-share policies, and prevent resource starvation across your organization.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="15" x2="22" y2="15"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="15" x2="4" y2="15"/></svg>
+        </div>
+        <h3>Multi-Cluster GPU Inventory</h3>
+        <p>See all GPUs across clusters: A100, H100, L40S, T4 and more. Full inventory with model, memory, driver version, and availability status.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="7" y="14" width="4" height="4" rx="1"/></svg>
+        </div>
+        <h3>Reservation System</h3>
+        <p>Reserve GPU time slots for training jobs. Schedule large model training runs without conflicts and ensure resources are available when needed.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon yellow">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h3>Cost Tracking</h3>
+        <p>Track GPU spending by namespace and workload. Understand per-job costs, identify waste, and optimize GPU spend with detailed cost attribution reports.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <h3>Smart Placement</h3>
+        <p>Automatically place AI/ML workloads on optimal GPU nodes. Factor in GPU type, memory, network topology, and current utilization for best performance.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- Stats Row -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Multi-Cluster</div>
+        <div class="stat-label">Unified GPU view across all clusters</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Real-Time Metrics</div>
+        <div class="stat-label">Live GPU utilization and health data</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Namespace Quotas</div>
+        <div class="stat-label">Fair-share GPU allocation by team</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Cost Tracking</div>
+        <div class="stat-label">Per-workload GPU cost attribution</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <h2>Stop wasting GPU resources.</h2>
+    <p>Get full visibility into GPU utilization across your Kubernetes clusters and start optimizing today.</p>
+    <a href="/gpu-reservations" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://kubestellar.io">KubeStellar</a>
+      <a href="https://github.com/kubestellar">GitHub</a>
+      <a href="https://docs.kubestellar.io">Documentation</a>
+      <a href="https://kubestellar.io/community">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

@@ -1,12 +1,13 @@
 /**
- * Netlify Edge Function: SEO Meta Tag Injection
+ * Netlify Edge Function: SEO Meta Tag Injection + Landing Pages
  *
- * Injects per-route <title>, <meta description>, Open Graph tags, and JSON-LD
- * structured data into the HTML response. This only runs on Netlify (not on
- * localhost or cluster deployments), so the SPA remains clean for self-hosted users.
+ * Two responsibilities:
+ * 1. Injects per-route <title>, <meta description>, Open Graph tags, and JSON-LD
+ *    structured data into the HTML response for all visitors.
+ * 2. Serves static landing pages (rich HTML content) to search engine crawlers
+ *    instead of the empty SPA shell. Human visitors get the normal React app.
  *
- * Edge Functions run at the CDN level and can modify responses before they reach
- * the browser, making them ideal for injecting SEO content into an SPA's index.html.
+ * This only runs on Netlify (not on localhost or cluster deployments).
  */
 
 import type { Context } from "https://edge.netlify.com";
@@ -14,6 +15,44 @@ import type { Context } from "https://edge.netlify.com";
 const SITE_URL = "https://console.kubestellar.io";
 const SITE_NAME = "KubeStellar Console";
 const DEFAULT_IMAGE = `${SITE_URL}/kubestellar.png`;
+
+/** Known search engine crawler user-agent patterns */
+const CRAWLER_UA_PATTERNS = [
+  "googlebot",
+  "bingbot",
+  "slurp",
+  "duckduckbot",
+  "baiduspider",
+  "yandexbot",
+  "facebookexternalhit",
+  "twitterbot",
+  "linkedinbot",
+  "whatsapp",
+  "slackbot",
+  "telegrambot",
+  "discordbot",
+  "applebot",
+  "semrushbot",
+  "ahrefsbot",
+  "mj12bot",
+  "petalbot",
+];
+
+/** Routes that have static landing pages in /landing/ */
+const LANDING_PAGE_MAP: Record<string, string> = {
+  "/": "/landing/index.html",
+  "/clusters": "/landing/clusters.html",
+  "/missions": "/landing/missions.html",
+  "/gpu-reservations": "/landing/gpu.html",
+  "/deploy": "/landing/deploy.html",
+  "/security": "/landing/security.html",
+};
+
+/** Check if the user-agent belongs to a search engine crawler or social bot */
+function isCrawler(userAgent: string): boolean {
+  const ua = userAgent.toLowerCase();
+  return CRAWLER_UA_PATTERNS.some((pattern) => ua.includes(pattern));
+}
 
 /** Actual dimensions of kubestellar.png used for OG image previews */
 const OG_IMAGE_WIDTH = 2048;
@@ -250,6 +289,26 @@ export default async (request: Request, context: Context) => {
     return;
   }
 
+  // Serve static landing pages to search engine crawlers and social bots.
+  // These pages have rich, crawlable HTML content instead of the empty SPA shell.
+  const userAgent = request.headers.get("user-agent") || "";
+  const landingPath = LANDING_PAGE_MAP[pathname];
+  if (landingPath && isCrawler(userAgent)) {
+    const landingUrl = new URL(landingPath, request.url);
+    const landingResponse = await fetch(landingUrl.toString());
+    if (landingResponse.ok) {
+      return new Response(await landingResponse.text(), {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=3600",
+          "x-robots-tag": "index, follow",
+        },
+      });
+    }
+    // Fall through to SPA + meta injection if landing page fetch fails
+  }
+
   // Get the response from the origin (index.html via SPA redirect)
   const response = await context.next();
   const contentType = response.headers.get("content-type") || "";
@@ -296,5 +355,6 @@ export const config = {
     "/*.ico",
     "/*.json",
     "/*.woff2",
+    "/landing/*",
   ],
 };

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes Security Dashboard - KubeStellar Console</title>
+  <meta name="description" content="Monitor security posture across Kubernetes clusters. RBAC analysis, vulnerability scanning, network policy management, and compliance reporting." />
+  <meta name="keywords" content="kubernetes security, kubernetes RBAC, kubernetes security dashboard, cluster security monitoring, kubernetes compliance" />
+  <link rel="canonical" href="https://console.kubestellar.io/security" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Kubernetes Security Dashboard - KubeStellar Console" />
+  <meta property="og:description" content="Monitor security posture across Kubernetes clusters. RBAC analysis, vulnerability scanning, network policy management, and compliance reporting." />
+  <meta property="og:url" content="https://console.kubestellar.io/security" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kubernetes Security Dashboard - KubeStellar Console" />
+  <meta name="twitter:description" content="Monitor security posture across Kubernetes clusters. RBAC analysis, vulnerability scanning, network policy management, and compliance reporting." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Security Dashboard",
+    "description": "Monitor security posture across Kubernetes clusters. RBAC analysis, vulnerability scanning, network policy management, and compliance reporting.",
+    "url": "https://console.kubestellar.io/security",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Kubernetes <span class="accent">Security</span> Dashboard</h1>
+    <p class="subtitle">Monitor your security posture across all Kubernetes clusters. RBAC analysis, vulnerability scanning, network policy management, and compliance reporting in one place.</p>
+    <div class="hero-actions">
+      <a href="/security" class="btn-primary">View Security</a>
+      <a href="https://docs.kubestellar.io" class="btn-secondary" target="_blank" rel="noopener noreferrer">Learn More</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Comprehensive Security for Every Cluster</h2>
+      <p>Unified visibility into RBAC, vulnerabilities, network policies, and compliance across your entire Kubernetes fleet.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F512;</div>
+        <h3>RBAC Analysis</h3>
+        <p>Visualize and audit role bindings, permissions, and access patterns. Detect overly permissive roles, orphaned bindings, and privilege escalation paths across all clusters.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F41B;</div>
+        <h3>Vulnerability Scanning</h3>
+        <p>Identify CVEs in container images across all clusters. Prioritize critical vulnerabilities, track remediation progress, and enforce image policies before deployment.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F310;</div>
+        <h3>Network Policies</h3>
+        <p>Monitor and manage network policies across namespaces. Visualize ingress and egress rules, detect unprotected workloads, and enforce zero-trust networking.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F4CB;</div>
+        <h3>Compliance Reporting</h3>
+        <p>Generate compliance reports for SOC2, PCI-DSS, HIPAA, and more. Automated checks against industry benchmarks with exportable audit trails.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F6E1;</div>
+        <h3>Security Posture Score</h3>
+        <p>Aggregate security score across your entire fleet. Track improvements over time, compare clusters, and identify the weakest links in your security chain.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4DD;</div>
+        <h3>Audit Logging</h3>
+        <p>Track all security-relevant events and API access. Searchable audit logs with real-time alerting for suspicious activity and policy violations.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Multi-Cluster</div>
+        <div class="stat-label">RBAC</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">CVE</div>
+        <div class="stat-label">Detection</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Compliance</div>
+        <div class="stat-label">Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Alerts</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Secure every cluster. Trust every deployment.</h2>
+    <p>Take control of your Kubernetes security posture with comprehensive monitoring, auditing, and compliance reporting.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>
