@@ -9,13 +9,16 @@
  * GitHub API and is never exposed to the client.
  */
 import { getStore } from "@netlify/blobs";
+import { unzipSync } from "fflate";
 
 const CACHE_STORE = "nightly-e2e";
 const CACHE_KEY = "runs";
 const IMAGE_CACHE_KEY = "guide-images";
+const RUN_IMAGE_CACHE_KEY = "run-images"; // per-run artifact image metadata
 const CACHE_IDLE_TTL_MS = 5 * 60 * 1000;   // 5 minutes
 const CACHE_ACTIVE_TTL_MS = 2 * 60 * 1000; // 2 minutes when jobs running
 const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes for image tags
+const ARTIFACT_FETCH_TIMEOUT_MS = 10_000;   // timeout for individual artifact downloads
 const RUNS_PER_PAGE = 7;
 const GITHUB_API = "https://api.github.com";
 const IMAGE_REPO = "llm-d/llm-d";
@@ -43,6 +46,15 @@ interface ImageCacheEntry {
   expiresAt: number;
 }
 
+interface RunImageMetadata {
+  llmdImages: Record<string, string>;
+  otherImages: Record<string, string>;
+}
+
+interface RunImageCache {
+  runs: Record<string, RunImageMetadata | null>; // run ID → metadata (null = no artifact)
+}
+
 interface NightlyRun {
   id: number;
   status: string;
@@ -56,6 +68,8 @@ interface NightlyRun {
   gpuType: string;
   gpuCount: number;
   event: string;
+  llmdImages?: Record<string, string>;
+  otherImages?: Record<string, string>;
 }
 
 interface NightlyGuideStatus {
@@ -309,6 +323,138 @@ async function fetchGuideImages(
 }
 
 // ---------------------------------------------------------------------------
+// Per-run image metadata from workflow artifacts
+// ---------------------------------------------------------------------------
+
+/** Fetch all image-metadata artifacts for a repo (single API call per repo) */
+async function fetchRepoArtifacts(
+  repo: string,
+  token: string,
+): Promise<Map<number, number>> {
+  const url = `${GITHUB_API}/repos/${repo}/actions/artifacts?name=image-metadata&per_page=100`;
+  const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(ARTIFACT_FETCH_TIMEOUT_MS) });
+  if (!res.ok) return new Map();
+
+  const data = await res.json();
+  const result = new Map<number, number>(); // runId → artifactId
+  for (const artifact of data.artifacts ?? []) {
+    if (artifact.workflow_run?.id) {
+      result.set(artifact.workflow_run.id, artifact.id);
+    }
+  }
+  return result;
+}
+
+/** Download and unzip a single artifact, returning parsed image metadata */
+async function downloadArtifact(
+  repo: string,
+  artifactId: number,
+  token: string,
+): Promise<RunImageMetadata | null> {
+  try {
+    const url = `${GITHUB_API}/repos/${repo}/actions/artifacts/${artifactId}/zip`;
+    const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await fetch(url, { headers, redirect: "follow", signal: AbortSignal.timeout(ARTIFACT_FETCH_TIMEOUT_MS) });
+    if (!res.ok) return null;
+
+    const buffer = await res.arrayBuffer();
+    const unzipped = unzipSync(new Uint8Array(buffer));
+    const jsonFile = Object.values(unzipped)[0];
+    if (!jsonFile) return null;
+
+    const text = new TextDecoder().decode(jsonFile);
+    const metadata = JSON.parse(text);
+    return {
+      llmdImages: metadata.llmdImages || {},
+      otherImages: metadata.otherImages || {},
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enrich completed runs with per-run image metadata from workflow artifacts.
+ * Uses a persistent cache so only new runs trigger artifact downloads.
+ */
+async function enrichRunsWithImages(
+  allGuides: { repo: string; runs: NightlyRun[] }[],
+  token: string,
+  store: ReturnType<typeof getStore>,
+): Promise<void> {
+  // Load cached run images
+  let cache: RunImageCache = { runs: {} };
+  try {
+    const cached = await store.get(RUN_IMAGE_CACHE_KEY, { type: "text" });
+    if (cached) cache = JSON.parse(cached);
+  } catch { /* cache miss */ }
+
+  // Find completed runs that aren't cached yet
+  const uncachedRuns: { repo: string; run: NightlyRun }[] = [];
+  for (const guide of allGuides) {
+    for (const run of guide.runs) {
+      if (run.status !== "completed") continue;
+      if (String(run.id) in cache.runs) {
+        // Apply cached metadata
+        const meta = cache.runs[String(run.id)];
+        if (meta) {
+          run.llmdImages = meta.llmdImages;
+          run.otherImages = meta.otherImages;
+        }
+        continue;
+      }
+      uncachedRuns.push({ repo: guide.repo, run });
+    }
+  }
+
+  if (uncachedRuns.length === 0) return;
+
+  // Fetch artifact listings per repo (deduplicated)
+  const repos = [...new Set(uncachedRuns.map(r => r.repo))];
+  const artifactMaps = new Map<string, Map<number, number>>();
+  await Promise.all(
+    repos.map(async (repo) => {
+      artifactMaps.set(repo, await fetchRepoArtifacts(repo, token));
+    })
+  );
+
+  // Download artifacts for uncached runs (parallel, with concurrency limit)
+  let cacheUpdated = false;
+  await Promise.all(
+    uncachedRuns.map(async ({ repo, run }) => {
+      const artifacts = artifactMaps.get(repo);
+      const artifactId = artifacts?.get(run.id);
+
+      if (!artifactId) {
+        // No artifact for this run — cache null so we don't retry
+        cache.runs[String(run.id)] = null;
+        cacheUpdated = true;
+        return;
+      }
+
+      const metadata = await downloadArtifact(repo, artifactId, token);
+      cache.runs[String(run.id)] = metadata;
+      cacheUpdated = true;
+
+      if (metadata) {
+        run.llmdImages = metadata.llmdImages;
+        run.otherImages = metadata.otherImages;
+      }
+    })
+  );
+
+  // Persist updated cache (best-effort)
+  if (cacheUpdated) {
+    store.set(RUN_IMAGE_CACHE_KEY, JSON.stringify(cache)).catch(() => {});
+  }
+}
+
+// ---------------------------------------------------------------------------
 // GitHub API fetchers
 // ---------------------------------------------------------------------------
 
@@ -420,7 +566,7 @@ async function fetchAll(
     fetchGuideImages(token, store),
   ]);
 
-  return NIGHTLY_WORKFLOWS.map((wf, i) => {
+  const guides = NIGHTLY_WORKFLOWS.map((wf, i) => {
     const result = results[i];
     const runs =
       result.status === "fulfilled" ? result.value : [];
@@ -430,7 +576,7 @@ async function fetchAll(
       latestConclusion = runs[0].conclusion ?? runs[0].status;
     }
 
-    // Use dynamically fetched images for this guide
+    // Guide-level images as fallback for runs without per-run artifacts
     const llmdImages = wf.guidePath ? (guideImages[wf.guidePath] ?? {}) : {};
 
     return {
@@ -450,6 +596,11 @@ async function fetchAll(
       otherImages: wf.otherImages,
     };
   });
+
+  // Enrich individual runs with per-run image metadata from workflow artifacts
+  await enrichRunsWithImages(guides, token, store);
+
+  return guides;
 }
 
 // ---------------------------------------------------------------------------

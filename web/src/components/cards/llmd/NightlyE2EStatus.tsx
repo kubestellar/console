@@ -195,8 +195,9 @@ Please provide:
     })
   }, [guide, run, checkKeyAndRun, startMission])
 
-  const llmdImages = guide?.llmdImages
-  const otherImages = guide?.otherImages
+  // Prefer per-run images (from workflow artifact) over guide-level fallback
+  const llmdImages = run.llmdImages ?? guide?.llmdImages
+  const otherImages = run.otherImages ?? guide?.otherImages
   const hasLLMDImages = llmdImages && Object.keys(llmdImages).length > 0
   const hasOtherImages = otherImages && Object.keys(otherImages).length > 0
 

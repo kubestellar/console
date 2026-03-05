@@ -324,13 +324,45 @@ ${wrapOpen}
                     {runs.map((r, i) => {
                       const isGpu = r.conclusion === 'failure' && r.failureReason === 'gpu_unavailable';
                       const isFailed = r.conclusion === 'failure';
-                      const dotLabel = (r.conclusion || r.status) + (isGpu ? ' (GPU)' : '') + ' — ' + timeAgo(r.updatedAt || r.createdAt);
-                      const dotColor = r.status !== 'completed' ? '#60a5fa' : isGpu ? '#f59e0b' : (conclusionColors[r.conclusion] || '#6b7280');
+                      const isRunning = r.status !== 'completed';
+                      const statusColor = isRunning ? '#60a5fa' : r.conclusion === 'success' ? '#22c55e' : isGpu ? '#f59e0b' : isFailed ? '#ef4444' : '#94a3b8';
+                      const statusText = isRunning ? 'running' : isGpu ? 'GPU unavailable' : isFailed ? 'failed' : r.conclusion === 'success' ? 'passed' : (r.conclusion || r.status);
+                      const dotColor = isRunning ? '#60a5fa' : isGpu ? '#f59e0b' : (conclusionColors[r.conclusion] || '#6b7280');
+                      const dotLLMD = r.llmdImages || g.llmdImages;
+                      const dotOther = r.otherImages || g.otherImages;
+                      const hasLLMD = dotLLMD && Object.keys(dotLLMD).length > 0;
+                      const hasOther = dotOther && Object.keys(dotOther).length > 0;
                       return (
-                      <span key={i} className={'dot-tip-wrap' + (isFailed ? ' has-links' : '')} onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
+                      <span key={i} className={'dot-tip-wrap' + ((isFailed || hasLLMD) ? ' has-links' : '')} onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
                         <span className="tip">
-                          {dotLabel}
-                          {isFailed && r.htmlUrl && <span><br/><a href={r.htmlUrl + '#logs'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }}>View Logs</a></span>}
+                          <div style={{color: '#cbd5e1', marginBottom: hasLLMD || hasOther ? 3 : 0}}>
+                            {r.runNumber ? 'Run #' + r.runNumber + ' · ' : ''}
+                            <span style={{color: statusColor}}>{statusText}</span>
+                            {' · '}{timeAgo(r.updatedAt || r.createdAt)}
+                          </div>
+                          {hasLLMD && (
+                            <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}>
+                              <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 1}}>llm-d components</div>
+                              {Object.entries(dotLLMD).map(([name, tag]) => (
+                                <div key={name} style={{display: 'flex', gap: 4}}>
+                                  <span style={{color: '#94a3b8'}}>{name}</span>
+                                  <span style={{color: '#22d3ee', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {hasOther && (
+                            <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}>
+                              <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 1}}>other images</div>
+                              {Object.entries(dotOther).map(([name, tag]) => (
+                                <div key={name} style={{display: 'flex', gap: 4}}>
+                                  <span style={{color: '#94a3b8'}}>{name}</span>
+                                  <span style={{color: '#fb923c', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {r.htmlUrl && <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}><a href={r.htmlUrl + '#logs'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }} style={{color: '#60a5fa', fontSize: '9px'}}>View Logs</a></div>}
                         </span>
                         <span style={{
                           width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',

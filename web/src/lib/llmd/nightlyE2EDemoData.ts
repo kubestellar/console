@@ -31,6 +31,8 @@ export interface NightlyRun {
   gpuType: string
   gpuCount: number
   event: string
+  llmdImages?: Record<string, string>   // per-run resolved images (from workflow artifact)
+  otherImages?: Record<string, string>  // per-run non-llm-d images
 }
 
 export interface NightlyGuideStatus {

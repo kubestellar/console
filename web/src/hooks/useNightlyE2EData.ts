@@ -114,6 +114,8 @@ export function useNightlyE2EData() {
                       gpuType: r.gpuType ?? g.gpuType ?? 'Unknown',
                       gpuCount: r.gpuCount ?? g.gpuCount ?? 0,
                       event: r.event ?? 'schedule',
+                      llmdImages: r.llmdImages,
+                      otherImages: r.otherImages,
                     })
                   ),
                   passRate: g.passRate,
