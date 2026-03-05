@@ -11,6 +11,7 @@ import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
+import { useModalState } from '../../lib/modals'
 
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
@@ -73,7 +74,7 @@ export function AlertBadge() {
   const { open: openDrillDown } = useDrillDown()
   const { missions, setActiveMission, openSidebar } = useMissions()
   const { isMobile } = useMobile()
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close, toggle } = useModalState()
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all')
   const [selectedAlertIds, setSelectedAlertIds] = useState<Set<string>>(new Set())
@@ -85,13 +86,13 @@ export function AlertBadge() {
 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        close()
       }
     }
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsOpen(false)
+        close()
       }
     }
 
@@ -102,7 +103,7 @@ export function AlertBadge() {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [isOpen])
+  }, [isOpen, close])
 
   // Check if a mission exists for an alert
   const getMissionForAlert = useCallback((alert: Alert) => {
@@ -117,7 +118,7 @@ export function AlertBadge() {
     if (mission) {
       setActiveMission(mission.id)
       openSidebar()
-      setIsOpen(false)
+      close()
     }
   }
 
@@ -153,7 +154,7 @@ export function AlertBadge() {
   const displayedAlerts = filteredAlerts
 
   const handleAlertClick = (alert: Alert) => {
-    setIsOpen(false)
+    close()
     if (alert.cluster) {
       openDrillDown({
         type: 'cluster',
@@ -177,7 +178,7 @@ export function AlertBadge() {
   const handleDiagnose = (e: React.MouseEvent, alertId: string) => {
     e.stopPropagation()
     runAIDiagnosis(alertId)
-    setIsOpen(false) // Close dialog after starting diagnosis
+    close() // Close dialog after starting diagnosis
   }
 
   // Toggle selection for a single alert
@@ -234,7 +235,7 @@ export function AlertBadge() {
     <div className="relative" data-tour="alerts">
       {/* Badge Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className={`relative p-2 rounded-lg hover:bg-secondary/50 transition-colors ${
           stats.critical > 0 ? 'text-red-400' : stats.warning > 0 ? 'text-orange-400' : 'text-muted-foreground'
         }`}
@@ -257,7 +258,7 @@ export function AlertBadge() {
           {isMobile && (
             <div
               className="fixed inset-0 bg-black/50 z-40"
-              onClick={() => setIsOpen(false)}
+              onClick={close}
             />
           )}
           <div
@@ -290,7 +291,7 @@ export function AlertBadge() {
                 )}
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={close}
                 className="p-1 rounded hover:bg-secondary/50 text-muted-foreground"
               >
                 <X className="w-4 h-4" />
@@ -506,7 +507,7 @@ export function AlertBadge() {
             <div className="p-2 border-t border-border text-center">
               <button
                 onClick={() => {
-                  setIsOpen(false)
+                  close()
                   navigate(ROUTES.ALERTS)
                 }}
                 className="text-xs text-purple-400 hover:text-purple-300 transition-colors"

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import {
   Server, CheckCircle2, XCircle, WifiOff, Box, Cpu, MemoryStick, HardDrive, Zap, Layers,
@@ -167,7 +168,7 @@ export function StatsOverview({
   // Show skeleton during mode switching for smooth transitions
   const effectiveIsLoading = isLoading || forceLoadingForOffline || isModeSwitching
   const effectiveHasData = forceLoadingForOffline ? false : hasData
-  const [isConfigOpen, setIsConfigOpen] = useState(false)
+  const { isOpen, open: openConfig, close: closeConfig } = useModalState()
 
   // Manage collapsed state with localStorage persistence
   const storageKey = collapsedStorageKey || `kubestellar-${dashboardType}-stats-collapsed`
@@ -232,7 +233,7 @@ export function StatsOverview({
         </div>
         {showConfigButton && isExpanded && (
           <button
-            onClick={() => setIsConfigOpen(true)}
+            onClick={openConfig}
             className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
             title={t('statsOverview.configureStats')}
           >
@@ -263,8 +264,8 @@ export function StatsOverview({
 
       {/* Config modal */}
       <StatsConfigModal
-        isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
+        isOpen={isOpen}
+        onClose={closeConfig}
         blocks={blocks}
         onSave={saveBlocks}
         defaultBlocks={defaultBlocks}
