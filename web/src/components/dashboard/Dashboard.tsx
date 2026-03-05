@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, X } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -29,7 +28,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { DashboardDropZone } from './DashboardDropZone'
 import { useToast } from '../ui/Toast'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS, prefetchCardChunks } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, prefetchCardChunks } from '../cards/cardRegistry'
 import { ROUTES } from '../../config/routes'
 import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { AddCardModal } from './AddCardModal'
@@ -90,7 +89,6 @@ export function Dashboard() {
     }
     return DEFAULT_DASHBOARD_CARDS
   })
-  const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
@@ -754,10 +752,6 @@ export function Dashboard() {
     prefetchCardChunks(localCards.map(c => c.card_type))
   }, [localCards])
 
-  // Check if any cards are using demo data
-  const hasDemoDataCards = localCards.some(c => DEMO_DATA_CARDS.has(c.card_type))
-  const demoDataCardCount = localCards.filter(c => DEMO_DATA_CARDS.has(c.card_type)).length
-
   if (isLoading && localCards.length === 0) {
     return (
       <div className="pt-16">
@@ -838,26 +832,6 @@ export function Dashboard() {
 
       {/* Mission CTA - encourage users who haven't tried missions yet */}
       <MissionCTA />
-
-      {/* Demo Data Banner — only show when demo mode is active */}
-      {hasDemoDataCards && !demoBannerDismissed && getDemoMode() && (
-        <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-          <div className="flex-1">
-            <span className="text-sm text-yellow-300 font-medium">{t('dashboard.demoData.title')}</span>
-            <span className="text-sm text-yellow-400/80 ml-2">
-              {t('dashboard.demoData.description', { count: demoDataCardCount })}
-            </span>
-          </div>
-          <button
-            onClick={() => setDemoBannerDismissed(true)}
-            className="p-1 rounded hover:bg-yellow-500/20 text-yellow-400/70 hover:text-yellow-400 transition-colors"
-            title={t('dashboard.recommendations.dismiss')}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* Dashboard drop zone (shows when dragging) */}
       <DashboardDropZone
