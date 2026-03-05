@@ -112,9 +112,9 @@ export function useFluentdStatus(): UseFluentdStatusResult {
       fetcher: fetchFluentdStatus,
     })
 
-  // Never show demo data during initial loading — this ensures CardWrapper
-  // shows a loading skeleton instead of demo data + Demo badge on first visit.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
+  // isDemoFallback is only true once initial loading has completed (demo mode
+  // or demo fallback), so we can pass it through directly.
+  const effectiveIsDemoData = isDemoFallback
 
   const hasAnyData = data.pods.total > 0
 
