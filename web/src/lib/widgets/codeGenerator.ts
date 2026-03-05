@@ -37,10 +37,12 @@ export function generateCardWidget(
     throw new Error(`Unknown card type: ${cardType}`)
   }
 
-  const curlUrl = resolveWidgetEndpoint(apiEndpoint, card.apiEndpoints[0])
+  const baseUrl = resolveWidgetEndpoint(apiEndpoint, card.apiEndpoints[0])
+  /** Append source param so the backend can attribute traffic from exported widgets */
+  const curlUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'source=ubersicht-widget'
   const widgetName = cardType.replace(/_/g, '-')
-  // Derive the console frontend URL from the API endpoint
-  const consoleUrl = apiEndpoint.replace(/\/api$/, '').replace(/:\d+$/, ':5174')
+  // Use the API endpoint origin as the console URL (backend serves the frontend)
+  const consoleUrl = apiEndpoint.replace(/\/api$/, '')
   const shellCode = generateWidgetShell(widgetName, consoleUrl)
 
   return `/**
@@ -293,6 +295,28 @@ ${wrapOpen}
                         );
                       })()}
                       {runs.length === 1 && <div style={{fontSize: '8px', color: '#64748b'}}>Only 1 run — no trend yet</div>}
+                      {g.llmdImages && Object.keys(g.llmdImages).length > 0 && (
+                        <div style={{marginTop: 4, paddingTop: 4, borderTop: '1px solid #334155'}}>
+                          <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 2}}>llm-d components</div>
+                          {Object.entries(g.llmdImages).map(([name, tag]) => (
+                            <div key={name} style={{display: 'flex', gap: 4, whiteSpace: 'nowrap'}}>
+                              <span style={{color: '#94a3b8'}}>{name}</span>
+                              <span style={{color: '#22d3ee', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {g.otherImages && Object.keys(g.otherImages).length > 0 && (
+                        <div style={{marginTop: 4, paddingTop: 4, borderTop: '1px solid #334155'}}>
+                          <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 2}}>other images</div>
+                          {Object.entries(g.otherImages).map(([name, tag]) => (
+                            <div key={name} style={{display: 'flex', gap: 4, whiteSpace: 'nowrap'}}>
+                              <span style={{color: '#94a3b8'}}>{name}</span>
+                              <span style={{color: '#fb923c', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </span>
                     <span style={{fontSize: '10px', color: '#cbd5e1', display: 'inline-block', width: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{g.guide}</span>
                   </span>

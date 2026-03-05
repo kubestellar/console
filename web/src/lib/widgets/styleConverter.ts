@@ -366,7 +366,11 @@ const handleDragEnd = () => {
   document.removeEventListener('mouseup', handleDragEnd);
 };
 
-const openConsole = (path = '') => { run(\`open "\${CONSOLE_URL}\${path}"\`); };
+const WIDGET_UTM = 'utm_source=widget&utm_medium=ubersicht&utm_campaign=widget-usage';
+const openConsole = (path = '') => {
+  const sep = path.includes('?') ? '&' : '?';
+  run(\`open "\${CONSOLE_URL}\${path}\${sep}\${WIDGET_UTM}"\`);
+};
 
 export const className = css\`
   position: fixed;

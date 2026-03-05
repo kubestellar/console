@@ -5,8 +5,13 @@ import { cn } from '../../../lib/cn'
 import { TOAST_DISMISS_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { emitWidgetDownloaded } from '../../../lib/analytics'
 
-// The widget code that gets downloaded - includes drag functionality
-const WIDGET_CODE = `/**
+/** Build the Übersicht widget code with the current console origin injected.
+ *  This avoids hardcoded URLs so the widget works regardless of deployment
+ *  (localhost, cluster-deployed, console.kubestellar.io). */
+function buildWidgetCode(consoleOrigin: string): string {
+  // kc-agent always runs on the same host as the user's browser
+  const agentUrl = 'http://127.0.0.1:8585'
+  return `/**
  * KubeStellar Console - Übersicht Widget
  *
  * Draggable desktop widget for monitoring Kubernetes clusters.
@@ -20,11 +25,11 @@ const WIDGET_CODE = `/**
 
 import { css, run } from "uebersicht";
 
-export const command = \`/usr/bin/curl -s --connect-timeout 2 http://127.0.0.1:8585/nodes 2>/dev/null || echo '{"offline":true}'\`;
+export const command = \`/usr/bin/curl -s --connect-timeout 2 ${agentUrl}/nodes?source=ubersicht-widget 2>/dev/null || echo '{"offline":true}'\`;
 
 export const refreshFrequency = 30000;
 
-const CONSOLE_URL = "http://localhost:5174";
+const CONSOLE_URL = "${consoleOrigin}";
 const STORAGE_KEY = "kubestellar-widget-position";
 
 // Drag state
@@ -110,8 +115,10 @@ const handleDragEnd = () => {
   document.removeEventListener("mouseup", handleDragEnd);
 };
 
+const WIDGET_UTM = "utm_source=widget&utm_medium=ubersicht&utm_campaign=widget-usage";
 const openUrl = (path = "") => {
-  run(\`open "\${CONSOLE_URL}\${path}"\`);
+  const sep = path.includes("?") ? "&" : "?";
+  run(\`open "\${CONSOLE_URL}\${path}\${sep}\${WIDGET_UTM}"\`);
 };
 
 const styles = {
@@ -343,8 +350,8 @@ export const render = ({ output }) => {
       </div>
     </div>
   );
-};
-`;
+};`
+}
 
 interface WidgetOption {
   id: string
@@ -392,7 +399,8 @@ export function WidgetSettingsSection() {
   }, [])
 
   const handleDownload = () => {
-    const blob = new Blob([WIDGET_CODE], { type: 'text/javascript' })
+    const widgetCode = buildWidgetCode(window.location.origin)
+    const blob = new Blob([widgetCode], { type: 'text/javascript' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -408,7 +416,7 @@ export function WidgetSettingsSection() {
   }
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(WIDGET_CODE)
+    await navigator.clipboard.writeText(buildWidgetCode(window.location.origin))
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
