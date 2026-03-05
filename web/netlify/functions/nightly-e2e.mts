@@ -30,6 +30,8 @@ interface NightlyWorkflow {
   model: string;
   gpuType: string;
   gpuCount: number;
+  llmdImages: Record<string, string>;
+  otherImages?: Record<string, string>;
 }
 
 interface NightlyRun {
@@ -60,6 +62,8 @@ interface NightlyGuideStatus {
   model: string;
   gpuType: string;
   gpuCount: number;
+  llmdImages: Record<string, string>;
+  otherImages?: Record<string, string>;
 }
 
 interface CacheEntry {
@@ -69,30 +73,58 @@ interface CacheEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Component image tags — must match Go handler (pkg/api/handlers/nightly_e2e.go)
+// ---------------------------------------------------------------------------
+
+/** Nightly-built dev image used by most guides */
+const IMG_CUDA_DEV: Record<string, string> = { "llm-d-cuda-dev": "latest" };
+
+/** PD adds the routing sidecar */
+const IMG_PD: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0" };
+
+/** PPC adds the UDS tokenizer */
+const IMG_PPC: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-uds-tokenizer": "v0.5.1-rc1" };
+
+/** SA uses the inference simulator instead of cuda-dev */
+const IMG_SA: Record<string, string> = { "llm-d-inference-sim": "v0.7.1", "llm-d-routing-sidecar": "v0.5.0" };
+
+/** Wide EP adds the routing sidecar */
+const IMG_WEP: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0" };
+
+/** WVA adds the workload variant autoscaler (tag is dynamic, rebuilt nightly) */
+const IMG_WVA: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-workload-variant-autoscaler": "nightly" };
+
+/** TPC uses only the base cuda-dev image */
+const IMG_TPC: Record<string, string> = { "llm-d-cuda-dev": "latest" };
+
+/** Benchmarking uses the base image */
+const IMG_BM: Record<string, string> = { "llm-d-cuda-dev": "latest" };
+
+// ---------------------------------------------------------------------------
 // Workflow definitions — must match Go handler and frontend demo data
 // ---------------------------------------------------------------------------
 
 const NIGHTLY_WORKFLOWS: NightlyWorkflow[] = [
   // OCP
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", guide: "Precise Prefix Cache", acronym: "PPC", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-simulated-accelerators.yaml", guide: "Simulated Accelerators", acronym: "SA", platform: "OCP", model: "Simulated", gpuType: "CPU", gpuCount: 0 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", guide: "Tiered Prefix Cache", acronym: "TPC", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 1 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-ocp.yaml", guide: "WVA", acronym: "WVA", platform: "OCP", model: "Llama-3.1-8B", gpuType: "A100", gpuCount: 2 },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-ocp.yaml", guide: "Benchmarking", acronym: "BM", platform: "OCP", model: "opt-125m", gpuType: "A100", gpuCount: 1 },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_CUDA_DEV },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_PD },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", guide: "Precise Prefix Cache", acronym: "PPC", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_PPC },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-simulated-accelerators.yaml", guide: "Simulated Accelerators", acronym: "SA", platform: "OCP", model: "Simulated", gpuType: "CPU", gpuCount: 0, llmdImages: IMG_SA },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", guide: "Tiered Prefix Cache", acronym: "TPC", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 1, llmdImages: IMG_TPC },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_WEP },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-ocp.yaml", guide: "WVA", acronym: "WVA", platform: "OCP", model: "Llama-3.1-8B", gpuType: "A100", gpuCount: 2, llmdImages: IMG_WVA },
+  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-ocp.yaml", guide: "Benchmarking", acronym: "BM", platform: "OCP", model: "opt-125m", gpuType: "A100", gpuCount: 1, llmdImages: IMG_BM },
   // GKE
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-gke.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "GKE", model: "Qwen3-32B", gpuType: "L4", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2 },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-gke.yaml", guide: "Benchmarking", acronym: "BM", platform: "GKE", model: "opt-125m", gpuType: "L4", gpuCount: 1 },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-gke.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "GKE", model: "Qwen3-32B", gpuType: "L4", gpuCount: 2, llmdImages: IMG_CUDA_DEV },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, llmdImages: IMG_PD },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, llmdImages: IMG_WEP },
+  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-gke.yaml", guide: "Benchmarking", acronym: "BM", platform: "GKE", model: "opt-125m", gpuType: "L4", gpuCount: 1, llmdImages: IMG_BM },
   // CKS
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-cks.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "CKS", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-cks.yaml", guide: "WVA", acronym: "WVA", platform: "CKS", model: "Llama-3.1-8B", gpuType: "H100", gpuCount: 2 },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nightly-benchmark-cks.yaml", guide: "Benchmarking", acronym: "BM", platform: "CKS", model: "opt-125m", gpuType: "H100", gpuCount: 1 },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-cks.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "CKS", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_CUDA_DEV },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_PD },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_WEP },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-cks.yaml", guide: "WVA", acronym: "WVA", platform: "CKS", model: "Llama-3.1-8B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_WVA },
+  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nightly-benchmark-cks.yaml", guide: "Benchmarking", acronym: "BM", platform: "CKS", model: "opt-125m", gpuType: "H100", gpuCount: 1, llmdImages: IMG_BM },
 ];
 
 // ---------------------------------------------------------------------------
@@ -268,6 +300,8 @@ async function fetchAll(
       model: wf.model,
       gpuType: wf.gpuType,
       gpuCount: wf.gpuCount,
+      llmdImages: wf.llmdImages,
+      otherImages: wf.otherImages,
     };
   });
 }
