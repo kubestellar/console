@@ -1215,7 +1215,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-background z-[9999] flex flex-col">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+    <div className="w-[94vw] h-[90vh] bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden">
       {/* ================================================================== */}
       {/* Top bar: search + filters */}
       {/* ================================================================== */}
@@ -2100,6 +2101,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
