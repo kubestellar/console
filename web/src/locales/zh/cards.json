@@ -275,7 +275,8 @@
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
     "crio_status": "CRI-O",
-    "coredns_status": "CoreDNS"
+    "coredns_status": "CoreDNS",
+    "keda_status": "KEDA"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -440,7 +441,8 @@
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
-    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
+    "keda_status": "KEDA 自动缩放程序状态、扩展对象指标和触发器队列深度。"
   },
   "categories": {
     "core": "Core",
@@ -478,7 +480,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "orchestration": "编排"
   },
   "addCard": {
     "title": "Add Card",
@@ -2666,5 +2669,21 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "keda": {
+    "healthy": "健康",
+    "degraded": "降级",
+    "notInstalled": "未检测到 KEDA",
+    "notInstalledHint": "未找到 KEDA 操作器 Pod。部署 KEDA 以启用事件驱动的自动缩放。",
+    "fetchError": "获取 KEDA 状态失败",
+    "operatorPods": "Pod",
+    "total": "总计",
+    "ready": "就绪",
+    "issues": "问题",
+    "paused": "已暂停",
+    "searchPlaceholder": "搜索扩展对象…",
+    "noScaledObjects": "操作器运行中",
+    "noScaledObjectsHint": "扩展对象数据需要 KEDA CRD API。",
+    "noSearchResults": "没有与搜索匹配的扩展对象。"
   }
 }

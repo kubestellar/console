@@ -55,26 +55,38 @@ function isPodReady(pod: BackendPodInfo): boolean {
 }
 
 /**
+ * Fetch pods using the given URL, returning the parsed pod list.
+ */
+async function fetchPods(url: string): Promise<BackendPodInfo[]> {
+  const resp = await fetch(url, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+  const body: { pods?: BackendPodInfo[] } = await resp.json()
+  return Array.isArray(body?.pods) ? body.pods : []
+}
+
+/**
  * Fetch KEDA operator status via the console backend proxy.
  *
- * Uses GET /api/mcp/pods to detect KEDA operator pods.
+ * First attempts a label-filtered request using the KEDA part-of label to
+ * minimise data transfer in large clusters.  If the filtered call returns no
+ * pods we fall back to an unfiltered call so installations that do not set
+ * that label (or use custom labels) are still detected.
+ *
  * ScaledObject CRD data is not available through the current stock API
  * endpoints, so we surface pod health only in live mode.
  */
 async function fetchKedaStatus(): Promise<KedaStatus> {
-  const resp = await fetch('/api/mcp/pods', {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  })
-
-  if (!resp.ok) {
-    throw new Error(`HTTP ${resp.status}`)
-  }
-
-  const body: { pods?: BackendPodInfo[] } = await resp.json()
-  const pods = Array.isArray(body?.pods) ? body.pods : []
-
-  const kedaPods = pods.filter(isKedaOperatorPod)
+  // Try label-filtered first (transfers far fewer bytes in large clusters)
+  const labeledPods = await fetchPods(
+    '/api/mcp/pods?labelSelector=app.kubernetes.io%2Fpart-of%3Dkeda-operator',
+  )
+  const kedaPods = labeledPods.length > 0
+    ? labeledPods.filter(isKedaOperatorPod)
+    : // Fall back to unfiltered scan if the label isn't present
+      (await fetchPods('/api/mcp/pods')).filter(isKedaOperatorPod)
 
   if (kedaPods.length === 0) {
     return {

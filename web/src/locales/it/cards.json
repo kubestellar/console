@@ -275,7 +275,8 @@
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
     "crio_status": "CRI-O",
-    "coredns_status": "CoreDNS"
+    "coredns_status": "CoreDNS",
+    "keda_status": "KEDA"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -440,7 +441,8 @@
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
-    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
+    "keda_status": "Stato dell'autoscaler KEDA, metriche degli oggetti scalati e profondità della coda dei trigger."
   },
   "categories": {
     "core": "Core",
@@ -478,7 +480,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "orchestration": "Orchestrazione"
   },
   "addCard": {
     "title": "Add Card",
@@ -2666,5 +2669,21 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "keda": {
+    "healthy": "Sano",
+    "degraded": "Degradato",
+    "notInstalled": "KEDA non rilevato",
+    "notInstalledHint": "Nessun Pod dell'operatore KEDA trovato. Distribuire KEDA per abilitare l'autoscaling guidato dagli eventi.",
+    "fetchError": "Impossibile recuperare lo stato KEDA",
+    "operatorPods": "Pod",
+    "total": "Totale",
+    "ready": "Pronto",
+    "issues": "Problemi",
+    "paused": "In pausa",
+    "searchPlaceholder": "Cerca oggetti scalati…",
+    "noScaledObjects": "Operatore in esecuzione",
+    "noScaledObjectsHint": "I dati degli oggetti scalati richiedono l'API CRD di KEDA.",
+    "noSearchResults": "Nessun oggetto scalato corrisponde alla ricerca."
   }
 }

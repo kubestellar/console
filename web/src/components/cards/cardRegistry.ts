@@ -778,6 +778,21 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   crossplane_managed_resources: () => import('./crossplane-status'),
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
+  //wasmcloud
+  wasmcloud_status: () => import('./wasmcloud_status'),
+  // Flatcar Container Linux
+  flatcar_status: () => import('./flatcar_status'),
+  // Thanos global view metrics
+  thanos_status: () => import('./thanos_status'),
+  // Contour ingress controller
+  contour_status: () => import('./contour-status'),
+  // CRI-O container runtime
+  crio_status: () => import('./crio_status'),
+
+  // Lima VM
+  lima_status: () => import('./lima_status'),
+  // KEDA autoscaler
+  keda_status: () => import('./keda_status'),
 }
 
 /**

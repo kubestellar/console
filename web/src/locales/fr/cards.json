@@ -275,7 +275,8 @@
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
     "crio_status": "CRI-O",
-    "coredns_status": "CoreDNS"
+    "coredns_status": "CoreDNS",
+    "keda_status": "KEDA"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -440,7 +441,8 @@
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
-    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
+    "keda_status": "État de l'autoscaler KEDA, métriques des objets mis à l'échelle et profondeur de file d'attente des déclencheurs."
   },
   "categories": {
     "core": "Core",
@@ -478,7 +480,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "orchestration": "Orchestration"
   },
   "addCard": {
     "title": "Add Card",
@@ -2666,5 +2669,21 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "keda": {
+    "healthy": "Sain",
+    "degraded": "Dégradé",
+    "notInstalled": "KEDA non détecté",
+    "notInstalledHint": "Aucun Pod d'opérateur KEDA trouvé. Déployez KEDA pour activer la mise à l'échelle automatique basée sur les événements.",
+    "fetchError": "Échec de la récupération du statut KEDA",
+    "operatorPods": "Pods",
+    "total": "Total",
+    "ready": "Prêt",
+    "issues": "Problèmes",
+    "paused": "En pause",
+    "searchPlaceholder": "Rechercher des objets mis à l'échelle…",
+    "noScaledObjects": "Opérateur en cours d'exécution",
+    "noScaledObjectsHint": "Les données des objets mis à l'échelle nécessitent l'API CRD de KEDA.",
+    "noSearchResults": "Aucun objet mis à l'échelle ne correspond à votre recherche."
   }
 }
