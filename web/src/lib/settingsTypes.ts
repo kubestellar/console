@@ -65,6 +65,8 @@ export interface AllSettings {
   predictions: PredictionSettingsData
   tokenUsage: TokenUsageSettingsData
   theme: string
+  /** Custom marketplace themes (full JSON objects, persisted alongside the theme ID) */
+  customThemes?: Record<string, unknown>[]
   accessibility: AccessibilitySettingsData
   profile: ProfileSettingsData
   widget: WidgetSettingsData

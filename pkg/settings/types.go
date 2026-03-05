@@ -1,5 +1,7 @@
 package settings
 
+import "encoding/json"
+
 // SettingsFile is the top-level structure for ~/.kc/settings.json
 type SettingsFile struct {
 	Version        int               `json:"version"`
@@ -15,6 +17,9 @@ type PlaintextSettings struct {
 	Predictions   PredictionSettings    `json:"predictions"`
 	TokenUsage    TokenUsageSettings    `json:"tokenUsage"`
 	Theme         string                `json:"theme"`
+	// CustomThemes holds the full JSON of marketplace themes installed by the user.
+	// Stored as raw JSON to avoid defining the full theme schema in Go.
+	CustomThemes  json.RawMessage       `json:"customThemes,omitempty"`
 	Accessibility AccessibilitySettings `json:"accessibility"`
 	Profile       ProfileSettings       `json:"profile"`
 	Widget        WidgetSettings        `json:"widget"`
@@ -84,6 +89,8 @@ type AllSettings struct {
 	Predictions   PredictionSettings    `json:"predictions"`
 	TokenUsage    TokenUsageSettings    `json:"tokenUsage"`
 	Theme         string                `json:"theme"`
+	// CustomThemes holds the full JSON of marketplace themes installed by the user.
+	CustomThemes  json.RawMessage       `json:"customThemes,omitempty"`
 	Accessibility AccessibilitySettings `json:"accessibility"`
 	Profile       ProfileSettings       `json:"profile"`
 	Widget        WidgetSettings        `json:"widget"`

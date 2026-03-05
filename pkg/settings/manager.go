@@ -161,6 +161,7 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		Predictions:   sm.settings.Settings.Predictions,
 		TokenUsage:    sm.settings.Settings.TokenUsage,
 		Theme:         sm.settings.Settings.Theme,
+		CustomThemes:  sm.settings.Settings.CustomThemes,
 		Accessibility: sm.settings.Settings.Accessibility,
 		Profile:       sm.settings.Settings.Profile,
 		Widget:        sm.settings.Settings.Widget,
@@ -225,6 +226,7 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	sm.settings.Settings.Predictions = all.Predictions
 	sm.settings.Settings.TokenUsage = all.TokenUsage
 	sm.settings.Settings.Theme = all.Theme
+	sm.settings.Settings.CustomThemes = all.CustomThemes
 	sm.settings.Settings.Accessibility = all.Accessibility
 	sm.settings.Settings.Profile = all.Profile
 	sm.settings.Settings.Widget = all.Widget
