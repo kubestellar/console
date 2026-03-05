@@ -278,6 +278,17 @@ const CARD_CATALOG = {
     { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
     { type: 'stock_market_ticker', title: 'Stock Market Ticker', description: 'Track multiple stocks with real-time sparkline charts and iPhone-style design', visualization: 'timeseries' },
   ],
+  'Runtime': [
+    { type: 'wasmcloud_status', title: 'WasmCloud Status', description: 'wasmCloud host status, actor inventory.', visualization: 'status' },
+    { type: 'crio_status', title: 'CRI-O', description: 'CRI-O container runtime metrics, image pulls, and pod sandbox status', visualization: 'status' },
+
+    { type: 'lima_status', title: 'Lima', description: 'Lima virtual machine instances and resource usage', visualization: 'status' },
+
+  ],
+  'App Definition': [
+    { type: 'openfeature_status', title: 'OpenFeature', description: 'OpenFeature flag evaluation status and provider health', visualization: 'status' },
+
+  ]
 } as const
 
 /**
@@ -319,6 +330,7 @@ const CATEGORY_LOCALE_KEYS: Record<string, string> = {
   'Utilities': 'utilities',
   'Misc': 'misc',
   'Runtime': 'runtime',
+  'App Definition': 'appDefinition',
 }
 
 interface CardSuggestion {

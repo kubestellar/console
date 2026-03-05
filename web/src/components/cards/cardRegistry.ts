@@ -181,6 +181,21 @@ const CrossplaneManagedResources = lazy(() => import('./crossplane-status/Crossp
 const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
 // CoreDNS card
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+// Fluentd log collector card
+const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default: m.FluentdStatus })))
+<<<<<<< HEAD
+// Lima VM card
+const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
+=======
+=======
+// OpenFeature card
+const OpenFeatureStatus = lazy(() => import('./openfeature_status').then(m => ({ default: m.OpenFeatureStatus })))
+>>>>>>> 7f7b6864 (Added OpenFeature card)
+>>>>>>> 3f44e89c (Added OpenFeature card)
+>>>>>>> 4393614c (Added OpenFeature card)
 
 // Multi-cluster insights cards — share one chunk via barrel import
 const _insightsBundle = import('./insights')
@@ -437,6 +452,21 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   buildpacks_status: BuildpacksStatus,
   // CoreDNS
   coredns_status: CoreDNSStatus,
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  // Fluentd log collector
+  fluentd_status: FluentdStatus,
+<<<<<<< HEAD
+  // Lima VM
+  lima_status: LimaStatus,
+=======
+=======
+  // OpenFeature
+  openfeature_status: OpenFeatureStatus,
+>>>>>>> 7f7b6864 (Added OpenFeature card)
+>>>>>>> 3f44e89c (Added OpenFeature card)
+>>>>>>> 4393614c (Added OpenFeature card)
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -545,6 +575,21 @@ export const DEMO_DATA_CARDS = new Set([
   'gateway_status',
   // Note: service_topology removed — now reports isDemoData via useTopology hook
   // Note: buildpacks_status removed — reports isDemoData via useBuildpackImages hook
+<<<<<<< HEAD
+=======
+  'flatcar_status',
+  'thanos_status',
+  'contour_status',
+<<<<<<< HEAD
+  'fluentd_status',
+<<<<<<< HEAD
+  'lima_status',
+=======
+=======
+  'openfeature_status',
+>>>>>>> 7f7b6864 (Added OpenFeature card)
+>>>>>>> 3f44e89c (Added OpenFeature card)
+>>>>>>> 4393614c (Added OpenFeature card)
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -763,6 +808,26 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   crossplane_managed_resources: () => import('./crossplane-status'),
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
+<<<<<<< HEAD
+=======
+  //wasmcloud
+  wasmcloud_status: () => import('./wasmcloud_status'),
+  // Flatcar Container Linux
+  flatcar_status: () => import('./flatcar_status'),
+  // Thanos global view metrics
+  thanos_status: () => import('./thanos_status'),
+  // Contour ingress controller
+  contour_status: () => import('./contour-status'),
+  // CRI-O container runtime
+  crio_status: () => import('./crio_status'),
+<<<<<<< HEAD
+  // Lima VM
+  lima_status: () => import('./lima_status'),
+=======
+  // OpenFeature
+  openfeature_status: () => import('./openfeature_status'),
+>>>>>>> 3f44e89c (Added OpenFeature card)
+>>>>>>> 4393614c (Added OpenFeature card)
 }
 
 /**
@@ -899,6 +964,22 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   upgrade_status: 4,
   crossplane_managed_resources: 4,
   buildpacks_status: 6,
+<<<<<<< HEAD
+=======
+  flatcar_status: 6,
+  thanos_status: 6,
+  contour_status: 6,
+  crio_status: 6,
+<<<<<<< HEAD
+  fluentd_status: 6,
+<<<<<<< HEAD
+  lima_status: 6,
+=======
+=======
+  openfeature_status: 6,
+>>>>>>> 7f7b6864 (Added OpenFeature card)
+>>>>>>> 3f44e89c (Added OpenFeature card)
+>>>>>>> 4393614c (Added OpenFeature card)
 
   // MCS cards
   service_exports: 6,
