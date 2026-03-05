@@ -173,8 +173,8 @@ export function DashboardPage({
   }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    openConfigureCard(cardId, cards)
-  }, [openConfigureCard, cards])
+    openConfigureCard(cardId)
+  }, [openConfigureCard])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
     configureCard(cardId, config)

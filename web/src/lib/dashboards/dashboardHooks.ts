@@ -322,10 +322,12 @@ export interface UseDashboardModalsResult {
   /** Card being configured */
   configuringCard: DashboardCard | null
   setConfiguringCard: (card: DashboardCard | null) => void
-  /** Open configure modal for a card */
-  openConfigureCard: (cardId: string, cards: DashboardCard[]) => void
+  /** Open configure modal for a card (uses internal ref — no cards param needed) */
+  openConfigureCard: (cardId: string) => void
   /** Close configure modal and optionally save */
   closeConfigureCard: () => void
+  /** Set the cards ref (called by useDashboard to wire cards without deps) */
+  _setCardsRef: (cards: DashboardCard[]) => void
 }
 
 export function useDashboardModals(): UseDashboardModalsResult {
@@ -333,8 +335,15 @@ export function useDashboardModals(): UseDashboardModalsResult {
   const [showTemplates, setShowTemplates] = useState(false)
   const [configuringCard, setConfiguringCard] = useState<DashboardCard | null>(null)
 
-  const openConfigureCard = useCallback((cardId: string, cards: DashboardCard[]) => {
-    const card = cards.find(c => c.id === cardId)
+  // Use a ref so openConfigureCard is stable (no cards in deps)
+  const cardsRef = useRef<DashboardCard[]>([])
+
+  const _setCardsRef = useCallback((cards: DashboardCard[]) => {
+    cardsRef.current = cards
+  }, [])
+
+  const openConfigureCard = useCallback((cardId: string) => {
+    const card = cardsRef.current.find(c => c.id === cardId)
     if (card) setConfiguringCard(card)
   }, [])
 
@@ -351,6 +360,7 @@ export function useDashboardModals(): UseDashboardModalsResult {
     setConfiguringCard,
     openConfigureCard,
     closeConfigureCard,
+    _setCardsRef,
   }
 }
 
@@ -439,6 +449,9 @@ export function useDashboard(options: UseDashboardOptions): UseDashboardResult {
 
   // Modals
   const modals = useDashboardModals()
+
+  // Keep the modals cards ref in sync so openConfigureCard doesn't need cards as a dep
+  modals._setCardsRef(cardState.cards)
 
   // Card visibility
   const showCardsState = useDashboardShowCards(storageKey)

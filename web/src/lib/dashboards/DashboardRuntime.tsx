@@ -353,7 +353,7 @@ export function DashboardRuntime({
                     <SortableDashboardCard
                       key={card.id}
                       card={card}
-                      onConfigure={() => openConfigureCard(card.id, cards)}
+                      onConfigure={() => openConfigureCard(card.id)}
                       onRemove={() => removeCard(card.id)}
                       onWidthChange={(w) => updateCardWidth(card.id, w)}
                       isDragging={dnd.activeId === card.id}
