@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   GripVertical,
   X,
+  Search,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -238,6 +239,7 @@ export function GPUReservations() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showOnlyMine, setShowOnlyMine] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const [prefillDate, setPrefillDate] = useState<string | null>(null)
   const [showAddCardModal, setShowAddCardModal] = useState(false)
 
@@ -327,7 +329,7 @@ export function GPUReservations() {
     return filtered.filter(q => q.cluster && selectedClusters.some(c => q.cluster!.startsWith(c)))
   }, [resourceQuotas, selectedClusters, isAllClustersSelected])
 
-  // Filtered reservations respecting "My Reservations" toggle and cluster selection
+  // Filtered reservations respecting "My Reservations" toggle, cluster selection, and keyword search
   const filteredReservations = useMemo(() => {
     let filtered = allReservations || []
     // Filter by cluster selection
@@ -339,8 +341,22 @@ export function GPUReservations() {
       const login = user.github_login?.toLowerCase()
       filtered = filtered.filter(r => r.user_name.toLowerCase() === login)
     }
+    // Filter by keyword search
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase()
+      filtered = filtered.filter(r =>
+        r.title.toLowerCase().includes(term) ||
+        r.namespace.toLowerCase().includes(term) ||
+        r.user_name.toLowerCase().includes(term) ||
+        r.cluster.toLowerCase().includes(term) ||
+        r.status.toLowerCase().includes(term) ||
+        (r.gpu_type && r.gpu_type.toLowerCase().includes(term)) ||
+        (r.description && r.description.toLowerCase().includes(term)) ||
+        (r.notes && r.notes.toLowerCase().includes(term))
+      )
+    }
     return filtered
-  }, [allReservations, showOnlyMine, user, selectedClusters, isAllClustersSelected])
+  }, [allReservations, showOnlyMine, user, selectedClusters, isAllClustersSelected, searchTerm])
 
   // Fetch utilization data for visible reservations
   const visibleReservationIds = useMemo(
@@ -1038,6 +1054,17 @@ export function GPUReservations() {
       {/* Reservations Tab */}
       {activeTab === 'quotas' && (
         <div className="space-y-6">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t('gpuReservations.searchPlaceholder', 'Search reservations...')}
+              className="w-full pl-10 pr-4 py-2 rounded-lg bg-secondary/50 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            />
+          </div>
           {/* Filter banner when showing only user's reservations */}
           {showOnlyMine && (
             <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30">

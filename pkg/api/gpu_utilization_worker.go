@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	// defaultUtilPollIntervalMs is the default polling interval for GPU utilization (1 hour)
-	defaultUtilPollIntervalMs = 3_600_000
+	// defaultUtilPollIntervalMs is the default polling interval for GPU utilization (20 minutes)
+	defaultUtilPollIntervalMs = 1_200_000
 	// snapshotRetentionDays is how long to keep utilization snapshots before cleanup
 	snapshotRetentionDays = 90
 	// fullUtilizationPct is the utilization percentage used when GPUs are active but no metrics API exists
