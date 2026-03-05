@@ -91,7 +91,7 @@ function HeroMetric({
 }
 
 export function BenchmarkHero() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
   useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })
@@ -216,7 +216,7 @@ export function BenchmarkHero() {
             {TIME_RANGE_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
-            <option value="custom">Custom...</option>
+            <option value="custom">{t('selectors.custom')}</option>
           </select>
           {showCustom && (
             <div className="flex items-center gap-1">

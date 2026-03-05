@@ -123,7 +123,7 @@ const KEYBOARD_ROWS = [
 ]
 
 export function Kubedle(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
 
@@ -366,20 +366,20 @@ export function Kubedle(_props: CardComponentProps) {
               </button>
             </div>
             <div className="text-sm text-muted-foreground space-y-2">
-              <p>Guess the Kubernetes word in 6 tries!</p>
-              <p>Each guess must be a 5-letter word.</p>
+              <p>{t('kubedle.guessInstructions')}</p>
+              <p>{t('kubedle.letterInstructions')}</p>
               <div className="space-y-1 mt-3">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center text-white text-xs font-bold">N</div>
-                  <span>Correct letter, correct spot</span>
+                  <span>{t('kubedle.correctSpot')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-yellow-600 rounded flex items-center justify-center text-white text-xs font-bold">O</div>
-                  <span>Correct letter, wrong spot</span>
+                  <span>{t('kubedle.wrongSpot')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-zinc-700 rounded flex items-center justify-center text-white text-xs font-bold">D</div>
-                  <span>Letter not in word</span>
+                  <span>{t('kubedle.notInWord')}</span>
                 </div>
               </div>
             </div>

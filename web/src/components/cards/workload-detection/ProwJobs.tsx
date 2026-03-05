@@ -163,9 +163,9 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             onChange={(e) => setStateFilter(e.target.value as ProwJob['state'] | 'all')}
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
-            <option value="all">All States</option>
+            <option value="all">{t('selectors.allStates')}</option>
             <option value="success">{t('common.success')}</option>
-            <option value="failure">Failure</option>
+            <option value="failure">{t('common.failure')}</option>
             <option value="running">{t('common.running')}</option>
             <option value="pending">{t('common.pending')}</option>
           </select>

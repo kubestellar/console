@@ -1969,7 +1969,14 @@
     "selectNamespace": "Select namespace...",
     "selectRelease": "Select release...",
     "allGpuTypes": "All GPU Types",
-    "allTypes": "All Types"
+    "allTypes": "All Types",
+    "allStates": "All States",
+    "allCategories": "All Categories",
+    "allModels": "All Models",
+    "allStatus": "All Status",
+    "selectBase": "Select base...",
+    "selectOverlay": "Select overlay...",
+    "custom": "Custom..."
   },
   "weather": {
     "hourlyForecast": "Hourly Forecast",
@@ -1988,6 +1995,16 @@
     "periodic": "Periodic",
     "presubmit": "Presubmit",
     "postsubmit": "Postsubmit"
+  },
+  "kubedle": {
+    "guessInstructions": "Guess the Kubernetes word in 6 tries!",
+    "letterInstructions": "Each guess must be a 5-letter word.",
+    "correctSpot": "Correct letter, correct spot",
+    "wrongSpot": "Correct letter, wrong spot",
+    "notInWord": "Letter not in word"
+  },
+  "deploymentProgress": {
+    "allSatisfied": "All deployments are fully satisfied"
   },
   "cloudProviders": {
     "awsEks": "AWS EKS",
@@ -2424,7 +2441,16 @@
     "nClusters_other": "{{count}} clusters",
     "allClusters": "All clusters",
     "allNamespaces": "All namespaces",
-    "warnings": "Warnings"
+    "warnings": "Warnings",
+    "failure": "Failure",
+    "missing": "Missing",
+    "noStackData": "No stack data",
+    "rbac": "RBAC",
+    "config": "Config",
+    "networking": "Networking",
+    "scaling": "Scaling",
+    "crds": "CRDs",
+    "admission": "Admission"
   },
   "namespaces": {
     "createNamespace": "Create Namespace",

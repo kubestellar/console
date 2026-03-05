@@ -191,7 +191,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm gap-2">
         <CheckCircle className="w-8 h-8 text-green-400" />
-        <span>All deployments are fully satisfied</span>
+        <span>{t('deploymentProgress.allSatisfied')}</span>
         <span className="text-xs">{deployments.length} deployments at desired replica count</span>
       </div>
     )

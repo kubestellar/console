@@ -175,7 +175,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
               onChange={(e) => handleClusterChange(e.target.value)}
               className="flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             >
-              <option value="">Select cluster...</option>
+              <option value="">{t('selectors.selectCluster')}</option>
               {clusterNames.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}

@@ -132,7 +132,7 @@ export function HardwareLeaderboard() {
             onChange={e => setModelFilter(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white"
           >
-            <option value="all">All Models</option>
+            <option value="all">{t('selectors.allModels')}</option>
             {models.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>

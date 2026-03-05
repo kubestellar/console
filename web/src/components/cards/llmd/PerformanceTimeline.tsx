@@ -56,7 +56,7 @@ function getColor(value: number, min: number, max: number, higherBetter: boolean
 }
 
 export function PerformanceTimeline() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
@@ -144,7 +144,7 @@ export function PerformanceTimeline() {
             onChange={e => setCategory(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-white"
           >
-            <option value="all">All Categories</option>
+            <option value="all">{t('selectors.allCategories')}</option>
             {filterOpts.categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select

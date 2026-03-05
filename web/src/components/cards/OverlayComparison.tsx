@@ -23,7 +23,7 @@ interface OverlayDiff {
 }
 
 export function OverlayComparison({ config }: OverlayComparisonProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToKustomization } = useDrillDownActions()
@@ -150,7 +150,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
         }}
         className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
-        <option value="">Select cluster...</option>
+        <option value="">{t('selectors.selectCluster')}</option>
         {clusters.map(c => (
           <option key={c.name} value={c.name}>{c.name}</option>
         ))}
@@ -176,7 +176,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
                 onChange={(e) => setSelectedBase(e.target.value)}
                 className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
               >
-                <option value="">Select base...</option>
+                <option value="">{t('selectors.selectBase')}</option>
                 {overlays.map(o => (
                   <option key={o} value={o}>{o}</option>
                 ))}
@@ -190,7 +190,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
                 disabled={!selectedBase}
                 className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
               >
-                <option value="">Select overlay...</option>
+                <option value="">{t('selectors.selectOverlay')}</option>
                 {overlays.filter(o => o !== selectedBase).map(o => (
                   <option key={o} value={o}>{o}</option>
                 ))}

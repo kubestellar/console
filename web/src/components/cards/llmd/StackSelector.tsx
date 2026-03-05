@@ -233,7 +233,7 @@ export function StackSelector() {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-slate-800/50 text-slate-500 text-sm">
         <Layers className="w-4 h-4" />
-        <span>No stack data</span>
+        <span>{t('common.noStackData')}</span>
       </div>
     )
   }

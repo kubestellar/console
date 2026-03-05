@@ -53,7 +53,7 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
@@ -384,7 +384,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">Select cluster...</option>
+          <option value="">{t('selectors.selectCluster')}</option>
           {clusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -395,7 +395,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           disabled={!selectedCluster || releasesLoading}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
-          <option value="">Select release...</option>
+          <option value="">{t('selectors.selectRelease')}</option>
           {releases.map(r => (
             <option key={r} value={r}>{r}</option>
           ))}

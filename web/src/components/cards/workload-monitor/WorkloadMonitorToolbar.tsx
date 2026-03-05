@@ -87,14 +87,14 @@ export function WorkloadMonitorToolbar({
             onChange={(e) => onCategoryFilterChange(e.target.value as ResourceCategory | 'all')}
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
-            <option value="all">All Categories</option>
-            <option value="rbac">RBAC</option>
-            <option value="config">Config</option>
-            <option value="networking">Networking</option>
-            <option value="scaling">Scaling</option>
+            <option value="all">{t('selectors.allCategories')}</option>
+            <option value="rbac">{t('common.rbac')}</option>
+            <option value="config">{t('common.config')}</option>
+            <option value="networking">{t('common.networking')}</option>
+            <option value="scaling">{t('common.scaling')}</option>
             <option value="storage">{t('common.storage')}</option>
-            <option value="crd">CRDs</option>
-            <option value="admission">Admission</option>
+            <option value="crd">{t('common.crds')}</option>
+            <option value="admission">{t('common.admission')}</option>
           </select>
           {/* Status filter */}
           <select
@@ -102,11 +102,11 @@ export function WorkloadMonitorToolbar({
             onChange={(e) => onStatusFilterChange(e.target.value as ResourceHealthStatus | 'all')}
             className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
           >
-            <option value="all">All Status</option>
+            <option value="all">{t('selectors.allStatus')}</option>
             <option value="healthy">{t('common.healthy')}</option>
             <option value="degraded">{t('common.degraded')}</option>
             <option value="unhealthy">{t('common.unhealthy')}</option>
-            <option value="missing">Missing</option>
+            <option value="missing">{t('common.missing')}</option>
           </select>
           <CardControls
             limit={limit}
