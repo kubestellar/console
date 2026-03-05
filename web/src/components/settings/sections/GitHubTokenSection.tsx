@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
+import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
 import type { AllSettings } from '../../../lib/settingsTypes'
@@ -55,6 +55,11 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       }
 
       // No localStorage token — check if backend has one (e.g. from FEEDBACK_GITHUB_TOKEN)
+      // Skip if user explicitly dismissed the env token
+      if (localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED) === 'true') {
+        setIsInitializing(false)
+        return
+      }
       try {
         const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings`, {
           headers: { 'Content-Type': 'application/json' },
@@ -171,6 +176,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(githubToken.trim()))
       // User-entered tokens always have "settings" source
       localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
+      // Clear any previous env-token dismissal
+      localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED)
       window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
       setHasGithubToken(true)
       setTokenSource(TOKEN_SOURCE_SETTINGS)
@@ -190,6 +197,10 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const handleClearGithubToken = () => {
     localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN)
     localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
+    // If clearing an env-sourced token, remember the dismissal so it doesn't reappear
+    if (isEnvToken) {
+      localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED, 'true')
+    }
     setHasGithubToken(false)
     setTokenSource(null)
     setGithubRateLimit(null)

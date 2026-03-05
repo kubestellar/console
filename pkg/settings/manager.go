@@ -267,14 +267,14 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 		sm.settings.Encrypted.APIKeys = nil
 	}
 
-	// Encrypt GitHub token
-	if all.GitHubToken != "" {
+	// Encrypt GitHub token — skip if sourced from env var (don't persist ephemeral env tokens to disk)
+	if all.GitHubToken != "" && all.GitHubTokenSource != GitHubTokenSourceEnv {
 		enc, err := encrypt(sm.key, []byte(all.GitHubToken))
 		if err != nil {
 			return fmt.Errorf("failed to encrypt GitHub token: %w", err)
 		}
 		sm.settings.Encrypted.GitHubToken = enc
-	} else {
+	} else if all.GitHubTokenSource != GitHubTokenSourceEnv {
 		sm.settings.Encrypted.GitHubToken = nil
 	}
 

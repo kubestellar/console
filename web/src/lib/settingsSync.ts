@@ -85,6 +85,12 @@ export function collectFromLocalStorage(): Partial<AllSettings> {
     try { result.githubToken = atob(githubToken) } catch { result.githubToken = githubToken }
   }
 
+  // GitHub token source ("settings" or "env")
+  const githubTokenSource = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
+  if (githubTokenSource === 'settings' || githubTokenSource === 'env') {
+    result.githubTokenSource = githubTokenSource
+  }
+
   // Notification config (JSON)
   const notifications = localStorage.getItem(STORAGE_KEY_NOTIFICATION_CONFIG)
   if (notifications) {
