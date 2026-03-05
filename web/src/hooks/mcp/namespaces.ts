@@ -10,7 +10,9 @@ import type { PodInfo, NamespaceStats } from './types'
 // Use a generous timeout to avoid aborting valid but slow requests.
 const NAMESPACE_FETCH_TIMEOUT_MS = 45000
 
-export function useNamespaces(cluster?: string) {
+// When forceLive is true, skip demo mode fallback and always query the real API.
+// Used by GPU Reservations to show live namespaces when running in-cluster with OAuth.
+export function useNamespaces(cluster?: string, forceLive = false) {
   const [namespaces, setNamespaces] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,8 +45,8 @@ export function useNamespaces(cluster?: string) {
       return
     }
 
-    // Demo mode returns synthetic namespaces immediately
-    if (isDemoMode()) {
+    // Demo mode returns synthetic namespaces immediately (unless forceLive overrides)
+    if (!forceLive && isDemoMode()) {
       setNamespaces(['default', 'kube-system', 'kube-public', 'monitoring', 'production', 'staging', 'batch', 'data', 'ingress', 'security'])
       setIsLoading(false)
       setError(null)
@@ -127,7 +129,7 @@ export function useNamespaces(cluster?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [cluster])
+  }, [cluster, forceLive])
 
   useEffect(() => {
     refetch()

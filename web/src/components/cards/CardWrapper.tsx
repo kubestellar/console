@@ -144,6 +144,9 @@ interface CardWrapperProps {
   isDemoData?: boolean
   /** Whether this card is showing live/real-time data (for time-series/trend cards) */
   isLive?: boolean
+  /** Force live mode — suppress demo badge even when global demo mode is on.
+   *  Used by GPU Reservations when running in-cluster with OAuth. */
+  forceLive?: boolean
   /** Whether data refresh has failed 3+ times consecutively */
   isFailed?: boolean
   /** Number of consecutive refresh failures */
@@ -860,6 +863,7 @@ export function CardWrapper({
   lastUpdated,
   isDemoData,
   isLive,
+  forceLive,
   isFailed,
   consecutiveFailures,
   cardWidth,
@@ -1021,7 +1025,7 @@ export function CardWrapper({
   const { isDemoMode: globalDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()
   const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
-  const isDemoMode = globalDemoMode && !isDemoExempt
+  const isDemoMode = globalDemoMode && !isDemoExempt && !forceLive
 
   // Agent offline detection removed — cards render immediately regardless of agent state
   const menuContainerRef = useRef<HTMLDivElement>(null)

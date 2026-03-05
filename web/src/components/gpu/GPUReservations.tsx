@@ -101,6 +101,7 @@ const SortableGpuCard = memo(function SortableGpuCard({
   onWidthChange,
   onRefresh,
   isRefreshing,
+  forceLive,
 }: {
   id: string
   card: GpuDashCard
@@ -109,6 +110,7 @@ const SortableGpuCard = memo(function SortableGpuCard({
   onWidthChange: (w: number) => void
   onRefresh?: () => void
   isRefreshing?: boolean
+  forceLive?: boolean
 }) {
   const {
     attributes,
@@ -138,6 +140,7 @@ const SortableGpuCard = memo(function SortableGpuCard({
           title={CARD_TITLES[card.type] ?? card.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
           cardType={card.type}
           cardWidth={card.width}
+          forceLive={forceLive}
           onRemove={onRemove}
           onWidthChange={onWidthChange}
           onRefresh={onRefresh}
@@ -644,7 +647,11 @@ export function GPUReservations() {
               <input
                 type="checkbox"
                 checked={showOnlyMine}
-                onChange={() => setShowOnlyMine(!showOnlyMine)}
+                onChange={() => {
+                  setShowOnlyMine(!showOnlyMine)
+                  // Switch to Reservations tab so filtered results are visible
+                  if (!showOnlyMine) setActiveTab('quotas')
+                }}
                 className="sr-only"
               />
               {showOnlyMine ? <User className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
@@ -1209,6 +1216,7 @@ export function GPUReservations() {
                     id={dashCardIds[index]}
                     card={card}
                     index={index}
+                    forceLive={gpuLiveMode}
                     onRemove={() => handleRemoveDashboardCard(index)}
                     onWidthChange={(newWidth) => handleDashCardWidthChange(index, newWidth)}
                     onRefresh={triggerRefresh}
@@ -1250,6 +1258,7 @@ export function GPUReservations() {
         allNodes={rawNodes}
         user={user}
         prefillDate={prefillDate}
+        forceLive={gpuLiveMode}
         onSave={async (input) => {
           if (editingReservation) {
             await apiUpdateReservation(editingReservation.id, input as UpdateGPUReservationInput)
@@ -1303,6 +1312,7 @@ function ReservationFormModal({
   allNodes,
   user,
   prefillDate,
+  forceLive,
   onSave,
   onActivate,
   onSaved,
@@ -1315,6 +1325,8 @@ function ReservationFormModal({
   allNodes: GPUNode[]
   user: { github_login: string; email?: string } | null
   prefillDate?: string | null
+  /** When true, skip demo mode fallback for namespace list */
+  forceLive?: boolean
   onSave: (input: CreateGPUReservationInput | UpdateGPUReservationInput) => Promise<string | void>
   onActivate: (id: string) => Promise<void>
   onSaved: () => void
@@ -1344,7 +1356,7 @@ function ReservationFormModal({
     onClose()
   }
 
-  const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined)
+  const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined, forceLive)
 
   // Filter out system namespaces from the dropdown
   const FILTERED_NS_PREFIXES = ['openshift-', 'kube-']
