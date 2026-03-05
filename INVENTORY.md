@@ -1,7 +1,7 @@
 # KubeStellar Console - Complete Inventory
 
-Last Updated: 2026-02-25  
-Last Verified: 2026-02-25 (Auto-QA verification - all 25 drill-down views and 35 standalone modals confirmed present)
+Last Updated: 2026-03-05  
+Last Verified: 2026-03-05 (Auto-QA verification - all 25 drill-down views and 39 standalone modals confirmed present)
 
 ## Summary
 
@@ -11,7 +11,7 @@ Last Verified: 2026-02-25 (Auto-QA verification - all 25 drill-down views and 35
 | Card Types | 143 |
 | Cards with Drill-Down | 37 (+ 3 planned) |
 | Drill-Down Views | 25 |
-| Modal Dialogs | 35 standalone + 7 inline |
+| Modal Dialogs | 39 standalone + 7 inline |
 | Stats Block Types | 93 (across 14 dashboard types) |
 | Cards with Demo Data | 42 (29%) |
 | Cards with Live Data Hooks | 101 (71%) |
@@ -520,7 +520,7 @@ Based on feature requests:
 
 ---
 
-## 7. Modal Dialogs (35 Standalone + 7 Inline)
+## 7. Modal Dialogs (39 Standalone + 7 Inline)
 
 ### Standalone Modal Files
 
@@ -560,11 +560,12 @@ Based on feature requests:
 | 19 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feature requests and track updates with GitHub integration |
 | 20 | FeedbackModal | `feedback/FeedbackModal.tsx` | Feedback button | Submit bugs or feature requests via GitHub Issues |
 
-### Setup/Onboarding Modals (2)
+### Setup/Onboarding Modals (3)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
 | 21 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
 | 22 | SetupInstructionsDialog | `setup/SetupInstructionsDialog.tsx` | Help/Setup menu | Full setup instructions with copy-paste commands and OAuth configuration |
+| 39 | DeveloperSetupDialog | `setup/DeveloperSetupDialog.tsx` | Developer/Help menu | Developer setup guide with git clone commands, .env template, and startup instructions for local development |
 
 ### Deployment Modals (1)
 | # | Name | File | Trigger | Description |
@@ -576,10 +577,13 @@ Based on feature requests:
 |---|------|------|---------|-------------|
 | 24 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
 
-### Mission/Resolution Modals (1)
+### Mission/Resolution Modals (4)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
 | 25 | SaveResolutionDialog | `missions/SaveResolutionDialog.tsx` | Save resolution action | Save successful mission resolution for future reference |
+| 36 | ClusterSelectionDialog | `missions/ClusterSelectionDialog.tsx` | Run install-type mission | Prompts user to select a target cluster before running an install-type mission; auto-selects single online cluster |
+| 37 | ImproveMissionDialog | `missions/ImproveMissionDialog.tsx` | "Improve this mission" action | Pre-filled feedback dialog for suggesting improvements to AI-generated missions; opens GitHub issue with context |
+| 38 | ShareMissionDialog | `missions/ShareMissionDialog.tsx` | Share/export resolution action | Export a saved resolution as JSON file, clipboard, or markdown with security scanning before export |
 
 ### Alerts Modals (1)
 | # | Name | File | Trigger | Description |
@@ -613,7 +617,7 @@ Based on feature requests:
 
 ---
 
-### Inline Modals (6 Total)
+### Inline Modals (7 Total)
 
 These modals are defined within card/page components rather than as standalone files:
 
@@ -625,6 +629,7 @@ These modals are defined within card/page components rather than as standalone f
 | 4 | ResourceDetailModal | `clusters/Clusters.tsx` | Click pod/event item | Generic resource details with tabs: Overview/Labels/Related/Describe/Logs/Events/YAML |
 | 5 | GitHubInviteModal | `rewards/GitHubInvite.tsx` | Invite action | Invite users to GitHub repository and earn coins in rewards system |
 | 6 | Violations Display | `cards/OPAPolicies.tsx` | Policy violation actions | Shows policy violation details rendered in BaseModal (not a separate modal component) |
+| 7 | ResourceModal | `cards/NamespaceMonitor.tsx` | Click resource in namespace monitor | Shows details (name, namespace, cluster, status) for a resource item within the Namespace Monitor card |
 
 **Note:** The GPUDetailModal exported from `ResourceDetailModals.tsx` is listed as standalone modal #16 above, not as an inline modal.
 
