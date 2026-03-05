@@ -18,8 +18,8 @@ const MAX_BODY_BYTES = 10 * 1024 * 1024;
 /** Request timeout in milliseconds */
 const FETCH_TIMEOUT_MS = 30_000;
 
-/** Cache TTL: serve cached content for 1 hour before re-fetching from GitHub */
-const CACHE_TTL_MS = 60 * 60 * 1000;
+/** Cache TTL: serve cached content for 15 minutes before re-fetching from GitHub */
+const CACHE_TTL_MS = 15 * 60 * 1000;
 
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
