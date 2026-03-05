@@ -288,14 +288,34 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
   }, [alerts])
 
-  // Get active (firing) alerts - exclude acknowledged alerts by default
+  // Get active (firing) alerts - exclude acknowledged alerts by default.
+  // Deduplicate by (ruleId, cluster): keep only the most recently fired alert per pair
+  // to handle any duplicates that may have been persisted in localStorage before this fix.
   const activeAlerts = useMemo(() => {
-    return alerts.filter(a => a.status === 'firing' && !a.acknowledgedAt)
+    const firing = alerts.filter(a => a.status === 'firing' && !a.acknowledgedAt)
+    const dedupMap = new Map<string, Alert>()
+    for (const alert of firing) {
+      const key = `${alert.ruleId}::${alert.cluster ?? ''}`
+      const existing = dedupMap.get(key)
+      if (!existing || new Date(alert.firedAt) > new Date(existing.firedAt)) {
+        dedupMap.set(key, alert)
+      }
+    }
+    return Array.from(dedupMap.values())
   }, [alerts])
 
-  // Get acknowledged alerts that are still firing
+  // Get acknowledged alerts that are still firing - deduplicated by (ruleId, cluster)
   const acknowledgedAlerts = useMemo(() => {
-    return alerts.filter(a => a.status === 'firing' && a.acknowledgedAt)
+    const acked = alerts.filter(a => a.status === 'firing' && a.acknowledgedAt)
+    const dedupMap = new Map<string, Alert>()
+    for (const alert of acked) {
+      const key = `${alert.ruleId}::${alert.cluster ?? ''}`
+      const existing = dedupMap.get(key)
+      if (!existing || new Date(alert.firedAt) > new Date(existing.firedAt)) {
+        dedupMap.set(key, alert)
+      }
+    }
+    return Array.from(dedupMap.values())
   }, [alerts])
 
   // Acknowledge an alert
@@ -349,17 +369,33 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       resourceKind?: string
     ) => {
       setAlerts(prev => {
-        // Check if similar alert already exists and is firing
+        // Deduplicate by (ruleId, cluster): at most one firing alert per rule+cluster pair.
+        // If an existing firing alert is found, update it in place (e.g., when nodeNames or
+        // restart count changes) rather than appending a new duplicate.
         const existingAlert = prev.find(
           a =>
             a.ruleId === rule.id &&
             a.status === 'firing' &&
-            a.cluster === cluster &&
-            a.resource === resource
+            a.cluster === cluster
         )
 
         if (existingAlert) {
-          return prev
+          // Skip update if none of the mutable fields have changed (avoids unnecessary re-renders)
+          if (
+            existingAlert.message === message &&
+            existingAlert.resource === resource &&
+            existingAlert.namespace === namespace &&
+            existingAlert.resourceKind === resourceKind &&
+            JSON.stringify(existingAlert.details) === JSON.stringify(details)
+          ) {
+            return prev
+          }
+          // Update the existing alert with the latest details (keeps original firedAt)
+          return prev.map(a =>
+            a.id === existingAlert.id
+              ? { ...a, message, details, resource, namespace, resourceKind }
+              : a
+          )
         }
 
         const alert: Alert = {
