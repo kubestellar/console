@@ -85,7 +85,7 @@ export const LIMA_DEMO_DATA: LimaDemoData = {
   runningNodes: 3,
   stoppedNodes: 1,
   brokenNodes: 0,
-  health: 'healthy',
+  health: 'degraded',
   totalCpuCores: 12,
   totalMemoryGB: 24,
   lastCheckTime: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
