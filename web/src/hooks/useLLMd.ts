@@ -215,8 +215,6 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       return
     }
 
-    console.log(`[useLLMdServers] refetch called, silent=${silent}`)
-
     // Progressive loading: reset state
     if (!silent) {
       setIsRefreshing(true)
@@ -230,13 +228,11 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       // Process clusters sequentially to avoid overwhelming the WebSocket
       for (const cluster of (clusters || [])) {
         try {
-          console.log(`[useLLMdServers] Fetching from ${cluster}`)
 
           // Fetch deployments from all namespaces to discover llm-d workloads
           const allDeployments: DeploymentResource[] = []
 
           try {
-            console.log(`[useLLMdServers] Fetching all deployments from ${cluster}`)
             const resp = await kubectlProxy.exec(
               ['get', 'deployments', '-A', '-o', 'json'],
               { context: cluster, timeout: 15000 }
@@ -244,7 +240,6 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             if (resp.exitCode === 0 && resp.output) {
               const data = JSON.parse(resp.output)
               const items = data.items || []
-              console.log(`[useLLMdServers] Got ${items.length} deployments from ${cluster}`)
               allDeployments.push(...items)
             }
           } catch (err) {
@@ -255,7 +250,6 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             }
           }
 
-          console.log(`[useLLMdServers] Found ${allDeployments.length} deployments from ${cluster}`)
           if (allDeployments.length === 0) continue
 
           const deployments = allDeployments

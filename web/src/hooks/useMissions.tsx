@@ -265,7 +265,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)
-          console.log('[Missions] Connected to local agent')
           // Fetch available agents on connect
           fetchAgents()
 
@@ -276,7 +275,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             )
 
             if (missionsToReconnect.length > 0) {
-              console.log(`[Missions] Auto-reconnecting ${missionsToReconnect.length} interrupted mission(s)`)
 
               // Schedule reconnection after a short delay to let state settle
               setTimeout(() => {
@@ -288,8 +286,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   if (lastUserMessage && wsRef.current?.readyState === WebSocket.OPEN) {
                     // Determine which agent to use - prefer claude-code for tool execution
                     const agentToUse = mission.agent || 'claude-code'
-                    console.log(`[Missions] Resuming mission ${mission.id} with agent: ${agentToUse}`)
-                    console.log(`[Missions] Last message: "${lastUserMessage.content.substring(0, 50)}..."`)
 
                     const requestId = `claude-reconnect-${Date.now()}-${mission.id}`
                     pendingRequests.current.set(requestId, mission.id)
@@ -344,7 +340,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
         wsRef.current.onclose = () => {
           clearTimeout(timeout)
-          console.log('[Missions] Connection closed')
           wsRef.current = null
           setAgentsLoading(false) // Stop loading spinner on disconnect
           // Don't clear agents - keep them cached for display
@@ -353,7 +348,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // Auto-reconnect after a short delay (if not in demo mode)
           if (!getDemoMode()) {
             setTimeout(() => {
-              console.log('[Missions] Attempting auto-reconnect...')
               ensureConnection().catch(() => {
                 // Silent fail - will retry on next user interaction
               })
@@ -1001,7 +995,6 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
       return m
     }))
-    console.log(`[Missions] Feedback for ${missionId}: ${feedback}`)
   }, [])
 
   // Set active mission

@@ -268,7 +268,6 @@ function handleClusterDemoModeChange() {
         lastRefresh: new Date(),
       }
       notifyClusterSubscribers()
-      console.log('[Clusters] Reset to demo data for demo mode')
     }
     // When switching FROM demo mode, fullFetchClusters will be called by useClusters hook
   }

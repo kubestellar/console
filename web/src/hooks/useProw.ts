@@ -109,7 +109,6 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
   const initialLoadDone = useRef(false)
 
   const refetch = useCallback(async (silent = false) => {
-    console.log(`[useProwJobs] refetch called, silent=${silent}, cluster=${prowCluster}`)
     if (!silent) {
       setIsRefreshing(true)
       if (!initialLoadDone.current) {
@@ -118,13 +117,10 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
     }
 
     try {
-      console.log('[useProwJobs] About to call kubectlProxy.exec...')
       const response = await kubectlProxy.exec(
         ['get', 'prowjobs', '-n', namespace, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
         { context: prowCluster, timeout: 30000 }
       )
-      console.log('[useProwJobs] kubectlProxy.exec returned:', { exitCode: response.exitCode, outputLength: response.output?.length })
-
       if (response.exitCode !== 0) {
         throw new Error(response.error || 'Failed to get ProwJobs')
       }
@@ -155,7 +151,6 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
           }
         })
 
-      console.log(`[useProwJobs] Loaded ${prowJobs.length} jobs`)
       setJobs(prowJobs)
       setError(null)
       setConsecutiveFailures(0)

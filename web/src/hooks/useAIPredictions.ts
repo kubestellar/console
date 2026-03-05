@@ -169,7 +169,6 @@ function connectWebSocket(): void {
           notifySubscribers()
         } else if (message.type === 'clusters_updated') {
           // Kubeconfig changed - refresh cluster data
-          console.log('[AIPredictions WS] Received clusters_updated, refreshing clusters...')
           clusterCache.consecutiveFailures = 0
           clusterCache.isFailed = false
           fullFetchClusters()
