@@ -119,7 +119,7 @@ export function useFluentdStatus(): UseFluentdStatusResult {
   const hasAnyData = data.pods.total > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading || isRefreshing,
+    isLoading,
     hasAnyData,
     isFailed,
     consecutiveFailures,

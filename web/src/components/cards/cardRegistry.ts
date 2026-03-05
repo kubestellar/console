@@ -503,6 +503,7 @@ export const DEMO_DATA_CARDS = new Set([
   'flatcar_status',
   'thanos_status',
   'contour_status',
+  'fluentd_status',
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -893,6 +894,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   thanos_status: 6,
   contour_status: 6,
   crio_status: 6,
+  fluentd_status: 6,
 
   // MCS cards
   service_exports: 6,
