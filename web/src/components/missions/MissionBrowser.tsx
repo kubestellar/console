@@ -190,6 +190,7 @@ interface MissionCache {
   listeners: Set<() => void>
   abortController: AbortController | null
   fetchedAt: number
+  fetchError: string | null
 }
 
 const missionCache: MissionCache = {
@@ -202,6 +203,7 @@ const missionCache: MissionCache = {
   listeners: new Set(),
   abortController: null,
   fetchedAt: 0,
+  fetchError: null,
 }
 
 /** Try to restore mission cache from localStorage on module load */
@@ -359,9 +361,11 @@ async function fetchAllFromIndex() {
       }
     }
     missionCache.fetchedAt = Date.now()
+    missionCache.fetchError = null
     persistCacheToStorage()
   } catch (err) {
-    console.warn('[MissionBrowser] Failed to fetch index:', err)
+    console.error('[MissionBrowser] Failed to fetch index:', err)
+    missionCache.fetchError = err instanceof Error ? err.message : 'Failed to load missions. Please try again.'
   } finally {
     missionCache.installersDone = true
     missionCache.installersFetching = false
@@ -404,6 +408,7 @@ function resetMissionCache() {
   missionCache.installersFetching = false
   missionCache.solutionsFetching = false
   missionCache.fetchedAt = 0
+  missionCache.fetchError = null
   try { localStorage.removeItem(MISSION_CACHE_STORAGE_KEY) } catch { /* ok */ }
   notifyCacheListeners()
   startMissionCacheFetch()
@@ -483,6 +488,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const [, forceUpdate] = useState(0)
   const loadingInstallers = !missionCache.installersDone
   const loadingSolutions = !missionCache.solutionsDone
+  const [missionFetchError, setMissionFetchError] = useState<string | null>(missionCache.fetchError)
   const [installerCategoryFilter, setInstallerCategoryFilter] = useState<string>('All')
   const [installerMaturityFilter, setInstallerMaturityFilter] = useState<string>('All')
   const [solutionTypeFilter, setSolutionTypeFilter] = useState<string>('All')
@@ -614,6 +620,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     const listener = () => {
       setInstallerMissions([...missionCache.installers])
       setSolutionMissions([...missionCache.solutions])
+      setMissionFetchError(missionCache.fetchError)
       forceUpdate(n => n + 1)
     }
     missionCache.listeners.add(listener)
@@ -1756,6 +1763,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )}
 
             {/* Recommended for You */}
+            {!selectedMission && missionFetchError && recommendations.length === 0 && !loadingRecommendations && (
+              <div className="mb-4">
+                <MissionFetchErrorBanner message={missionFetchError} />
+              </div>
+            )}
+
+            {/* Recommended for You */}
             {!selectedMission && (recommendations.length > 0 || loadingRecommendations) && (
               <CollapsibleSection
                 title={hasCluster ? 'Recommended for Your Cluster' : 'Explore CNCF Solutions'}
@@ -1935,6 +1949,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                   </select>
                 </div>
 
+                {/* Fetch error banner */}
+                {missionFetchError && installerMissions.length === 0 && (
+                  <MissionFetchErrorBanner message={missionFetchError} />
+                )}
+
                 {/* Installer grid */}
                 {loadingInstallers && filteredInstallers.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
@@ -2005,6 +2024,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     ))}
                   </select>
                 </div>
+
+                {/* Fetch error banner */}
+                {missionFetchError && solutionMissions.length === 0 && (
+                  <MissionFetchErrorBanner message={missionFetchError} />
+                )}
 
                 {/* Solution grid */}
                 {loadingSolutions && filteredSolutions.length === 0 ? (
@@ -2445,4 +2469,29 @@ export function normalizeMission(raw: Record<string, unknown>): MissionExport | 
       createdAt: (raw.exportedAt as string) ?? undefined,
     },
   } as MissionExport
+}
+
+// ============================================================================
+// Mission Fetch Error Banner
+// ============================================================================
+
+function MissionFetchErrorBanner({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-red-400 text-lg mt-0.5">⚠️</span>
+        <div className="flex-1 text-sm space-y-1">
+          <p className="font-medium text-red-300">Failed to load missions</p>
+          <p className="text-muted-foreground">{message}</p>
+          <button
+            onClick={() => resetMissionCache()}
+            className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 text-xs rounded-md bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Retry
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
