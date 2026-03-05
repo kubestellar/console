@@ -159,6 +159,7 @@ function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
       lastSeen: c.lastSeen,
       distribution: c.distribution,
       namespaces: c.namespaces,
+      authMethod: c.authMethod,
     }))
     localStorage.setItem(CLUSTER_CACHE_KEY, JSON.stringify(toSave))
   } catch {
@@ -202,6 +203,7 @@ function mergeWithStoredClusters(newClusters: ClusterInfo[]): ClusterInfo[] {
         reachable: cluster.reachable ?? cached.reachable,
         distribution: cluster.distribution || cached.distribution,
         namespaces: cluster.namespaces?.length ? cluster.namespaces : cached.namespaces,
+        authMethod: cluster.authMethod || cached.authMethod,
       }
     }
     return cluster
@@ -792,6 +794,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
         nodeCount: undefined, // undefined = still checking, 0 = unreachable
         podCount: undefined,
         isCurrent: c.isCurrent,
+        authMethod: c.authMethod,
       }))
     } else {
       // Non-OK response (e.g., 503 Service Unavailable)
