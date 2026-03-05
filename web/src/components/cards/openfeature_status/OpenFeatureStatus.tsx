@@ -8,14 +8,14 @@ function useFormatRelativeTime() {
   const { t } = useTranslation('cards')
   return (isoString: string): string => {
     const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('openfeature.syncedJustNow', { defaultValue: 'just now' })
+    if (isNaN(diff) || diff < 0) return t('openfeature.syncedJustNow')
     const minute = 60_000
     const hour = 60 * minute
     const day = 24 * hour
-    if (diff < minute) return t('openfeature.syncedJustNow', { defaultValue: 'just now' })
-    if (diff < hour) return t('openfeature.syncedMinutesAgo', { count: Math.floor(diff / minute), defaultValue: `${Math.floor(diff / minute)}m ago` })
-    if (diff < day) return t('openfeature.syncedHoursAgo', { count: Math.floor(diff / hour), defaultValue: `${Math.floor(diff / hour)}h ago` })
-    return t('openfeature.syncedDaysAgo', { count: Math.floor(diff / day), defaultValue: `${Math.floor(diff / day)}d ago` })
+    if (diff < minute) return t('openfeature.syncedJustNow')
+    if (diff < hour) return t('openfeature.syncedMinutesAgo', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('openfeature.syncedHoursAgo', { count: Math.floor(diff / hour) })
+    return t('openfeature.syncedDaysAgo', { count: Math.floor(diff / day) })
   }
 }
 
@@ -42,7 +42,7 @@ export function OpenFeatureStatus() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">{t('openfeature.fetchError', { defaultValue: 'Failed to fetch OpenFeature status' })}</p>
+        <p className="text-sm text-red-400">{t('openfeature.fetchError')}</p>
       </div>
     )
   }
@@ -51,9 +51,9 @@ export function OpenFeatureStatus() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Flag className="w-6 h-6 text-muted-foreground/50" />
-        <p className="text-sm font-medium">{t('openfeature.notInstalled', { defaultValue: 'OpenFeature not detected' })}</p>
+        <p className="text-sm font-medium">{t('openfeature.notInstalled')}</p>
         <p className="text-xs text-center max-w-xs">
-          {t('openfeature.notInstalledHint', { defaultValue: 'Install flagd or an OpenFeature provider to see feature flag status' })}
+          {t('openfeature.notInstalledHint')}
         </p>
       </div>
     )
@@ -67,10 +67,10 @@ export function OpenFeatureStatus() {
     : 'bg-orange-500/15 text-orange-400'
 
   const healthLabel = isHealthy
-    ? t('openfeature.healthy', { defaultValue: 'Healthy' })
+    ? t('openfeature.healthy')
     : isDegraded
-      ? t('openfeature.degraded', { defaultValue: 'Degraded' })
-      : t('openfeature.notInstalled', { defaultValue: 'Not Installed' })
+      ? t('openfeature.degraded')
+      : t('openfeature.notInstalled')
 
   const hasFlags = data.featureFlags.total > 0
   const hasEvaluations = data.totalEvaluations > 0
@@ -96,19 +96,19 @@ export function OpenFeatureStatus() {
       {/* Metric tiles */}
       <div className="flex gap-3">
         <MetricTile
-          label={t('openfeature.providers', { defaultValue: 'Providers' })}
+          label={t('openfeature.providers')}
           value={data.providers.length.toString()}
           colorClass="text-blue-400"
           icon={<Server className="w-4 h-4 text-blue-400" />}
         />
         <MetricTile
-          label={t('openfeature.flags', { defaultValue: 'Flags' })}
+          label={t('openfeature.flags')}
           value={hasFlags ? `${data.featureFlags.enabled}/${data.featureFlags.total}` : '0'}
           colorClass={hasFlags ? 'text-green-400' : 'text-muted-foreground'}
           icon={<Flag className="w-4 h-4 text-purple-400" />}
         />
         <MetricTile
-          label={t('openfeature.evaluations', { defaultValue: 'Evaluations' })}
+          label={t('openfeature.evaluations')}
           value={hasEvaluations ? data.totalEvaluations.toLocaleString() : '0'}
           colorClass={hasEvaluations ? 'text-cyan-400' : 'text-muted-foreground'}
           icon={<Activity className="w-4 h-4 text-cyan-400" />}
@@ -119,7 +119,7 @@ export function OpenFeatureStatus() {
       {data.providers.length > 0 && (
         <div className="flex-1 flex flex-col gap-2">
           <p className="text-xs font-medium text-muted-foreground">
-            {t('openfeature.providerStatus', { defaultValue: 'Provider Status' })}
+            {t('openfeature.providerStatus')}
           </p>
           <div className="space-y-2">
             {data.providers.map((provider) => {
@@ -162,10 +162,7 @@ export function OpenFeatureStatus() {
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <AlertTriangle className="w-4 h-4 text-orange-400" />
           <span className="text-xs text-orange-400">
-            {t('openfeature.highErrorRate', { 
-              rate: data.featureFlags.errorRate.toFixed(1),
-              defaultValue: `High error rate: ${data.featureFlags.errorRate.toFixed(1)}%`
-            })}
+            {t('openfeature.highErrorRate', { rate: data.featureFlags.errorRate.toFixed(1) })}
           </span>
         </div>
       )}
@@ -178,7 +175,7 @@ export function OpenFeatureStatus() {
           rel="noopener noreferrer"
           className="hover:text-foreground transition-colors"
         >
-          {t('openfeature.learnMore', { defaultValue: 'Learn more about OpenFeature' })} →
+          {t('openfeature.learnMore')} →
         </a>
       </div>
     </div>

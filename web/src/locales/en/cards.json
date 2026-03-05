@@ -276,8 +276,16 @@
     "contour_status": "Contour",
     "crio_status": "CRI-O",
     "coredns_status": "CoreDNS",
+<<<<<<< HEAD
     "fluentd_status": "Fluentd",
     "lima_status": "Lima"
+=======
+<<<<<<< HEAD
+    "fluentd_status": "Fluentd"
+=======
+    "openfeature_status": "OpenFeature"
+>>>>>>> d9e22c69 (Addressed feedback)
+>>>>>>> 9d47aab5 (Addressed feedback)
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -446,8 +454,16 @@
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
     "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
+<<<<<<< HEAD
     "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health.",
     "lima_status": "Lima virtual machine instances and resource usage."
+=======
+<<<<<<< HEAD
+    "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health."
+=======
+    "openfeature_status": "OpenFeature flag evaluation status and provider health."
+>>>>>>> d9e22c69 (Addressed feedback)
+>>>>>>> 9d47aab5 (Addressed feedback)
   },
   "categories": {
     "core": "Core",
@@ -485,7 +501,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "appDefinition": "App Definition"
   },
   "addCard": {
     "title": "Add Card",
@@ -2674,6 +2691,7 @@
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
   },
+<<<<<<< HEAD
   "fluentd": {
     "healthy": "Healthy",
     "degraded": "Degraded",
@@ -2685,6 +2703,7 @@
     "retries": "Retries",
     "bufferUtilization": "Buffer utilization",
     "outputPlugins": "Output plugins"
+<<<<<<< HEAD
   },
   "lima": {
     "healthy": "Healthy",
@@ -2700,9 +2719,28 @@
     "status_broken": "Broken",
     "openDocs": "Lima Docs",
     "fetchError": "Failed to fetch Lima status",
+=======
+=======
+  "openfeature": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "OpenFeature not detected",
+    "notInstalledHint": "Install flagd or an OpenFeature provider to see feature flag status",
+    "providers": "Providers",
+    "flags": "Flags",
+    "evaluations": "Evaluations",
+    "providerStatus": "Provider Status",
+    "highErrorRate": "High error rate: {{rate}}%",
+    "learnMore": "Learn more about OpenFeature",
+    "fetchError": "Failed to fetch OpenFeature status",
+>>>>>>> 9d47aab5 (Addressed feedback)
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+<<<<<<< HEAD
+=======
+>>>>>>> d9e22c69 (Addressed feedback)
+>>>>>>> 9d47aab5 (Addressed feedback)
   }
 }
