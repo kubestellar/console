@@ -19,13 +19,18 @@ export function useDashboardScrollTracking() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    // The dashboard uses a <main> element with overflow-y-auto as the scroll
+    // container, not the window. Listen on the actual scrollable element.
+    const scrollContainer = document.querySelector('main') as HTMLElement | null
+
     const handleScroll = () => {
       if (hasFiredDeep.current) return // Already tracked deepest level
 
       if (debounceTimer.current) clearTimeout(debounceTimer.current)
 
       debounceTimer.current = setTimeout(() => {
-        const scrollRatio = window.scrollY / window.innerHeight
+        const el = scrollContainer || document.documentElement
+        const scrollRatio = el.scrollTop / el.clientHeight
 
         if (scrollRatio >= DEEP_SCROLL_THRESHOLD && !hasFiredDeep.current) {
           hasFiredDeep.current = true
@@ -37,9 +42,10 @@ export function useDashboardScrollTracking() {
       }, SCROLL_DEBOUNCE_MS)
     }
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
+    const target = scrollContainer || window
+    target.addEventListener('scroll', handleScroll, { passive: true })
     return () => {
-      window.removeEventListener('scroll', handleScroll)
+      target.removeEventListener('scroll', handleScroll)
       if (debounceTimer.current) clearTimeout(debounceTimer.current)
     }
   }, [])
