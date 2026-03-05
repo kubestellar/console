@@ -408,6 +408,54 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
 }
 
 // ============================================================================
+// Hook: useArgoCDTriggerSync
+// ============================================================================
+
+export interface TriggerSyncResult {
+  success: boolean
+  message: string
+}
+
+/**
+ * Returns a function to trigger an Argo CD application sync.
+ * In a real implementation this would call the ArgoCD API or run:
+ *   argocd app sync <name> --prune --force
+ * For now it simulates the action for UI demonstration.
+ */
+export function useArgoCDTriggerSync() {
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [lastResult, setLastResult] = useState<TriggerSyncResult | null>(null)
+
+  const triggerSync = useCallback(async (appName: string, namespace: string): Promise<TriggerSyncResult> => {
+    setIsSyncing(true)
+    setLastResult(null)
+    try {
+      // In a real implementation, call the ArgoCD API:
+      //   POST /api/v1/applications/{name}/sync
+      // or run: argocd app sync <name> -n <namespace>
+      await new Promise(resolve => setTimeout(resolve, 1200))
+      const result: TriggerSyncResult = {
+        success: true,
+        message: `Sync triggered for application "${appName}" in namespace "${namespace}". Argo CD will reconcile the desired state from Git.`,
+      }
+      setLastResult(result)
+      return result
+    } catch (err) {
+      const result: TriggerSyncResult = {
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to trigger sync',
+      }
+      setLastResult(result)
+      return result
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [])
+
+  return { triggerSync, isSyncing, lastResult }
+}
+
+// ============================================================================
 // Hook: useArgoCDSyncStatus
 // ============================================================================
 

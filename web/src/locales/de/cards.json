@@ -2086,7 +2086,8 @@
     "unhealthy": "Unhealthy",
     "showing": "Showing",
     "noMatchingApplications": "No applications match the current filters",
-    "clickToView": "Click to view {{name}} details"
+    "clickToView": "Click to view {{name}} details",
+    "syncNow": "Jetzt synchronisieren"
   },
   "argoCDHealth": {
     "healthy": "Healthy",
