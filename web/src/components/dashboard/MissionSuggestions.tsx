@@ -178,23 +178,42 @@ export function MissionSuggestions() {
 
   if (!hasSuggestions) return null
 
-  // Minimized pill view
+  // Minimized inline view — label + pills on one row
   if (minimized) {
     return (
       <div data-tour="mission-suggestions" className="mb-4">
-        <button
-          onClick={() => setMinimized(false)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-secondary/50 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-        >
-          <Lightbulb className="w-3.5 h-3.5 text-primary" />
-          <span>{t('dashboard.missions.actions')}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setMinimized(false)}
+            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors mr-1"
+          >
+            <Lightbulb className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium">Recommended Actions:</span>
+            <ChevronDown className="w-3 h-3" />
+          </button>
+          {suggestions.slice(0, 6).map((suggestion) => {
+            const Icon = MISSION_ICONS[suggestion.type]
+            const style = PRIORITY_STYLES[suggestion.priority]
+            return (
+              <button
+                key={suggestion.id}
+                onClick={() => { setMinimized(false); setExpandedId(suggestion.id) }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${style.border} ${style.bg} ${style.text}`}
+              >
+                <Icon className="w-3 h-3" />
+                <span className="max-w-[150px] truncate">{suggestion.title}</span>
+                {suggestion.priority === 'critical' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                )}
+              </button>
+            )
+          })}
           {stats.critical > 0 && (
             <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
               {t('dashboard.missions.critical', { count: stats.critical })}
             </span>
           )}
-          <ChevronDown className="w-3 h-3" />
-        </button>
+        </div>
       </div>
     )
   }

@@ -48,6 +48,7 @@ import { WelcomeCard } from './WelcomeCard'
 import { SmartCardSuggestions } from './SmartCardSuggestions'
 import { ContextualNudgeBanner } from './ContextualNudgeBanner'
 import { DiscoverCardsPlaceholder } from './DiscoverCardsPlaceholder'
+import { WidgetExportModal } from '../widgets/WidgetExportModal'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useContextualNudges } from '../../hooks/useContextualNudges'
@@ -98,6 +99,7 @@ export function Dashboard() {
   const [isDragging, setIsDragging] = useState(false)
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
   const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false)
+  const [isWidgetExportOpen, setIsWidgetExportOpen] = useState(false)
 
   // Get context for modals that can be triggered from sidebar
   const {
@@ -791,11 +793,10 @@ export function Dashboard() {
     if (activeNudge === 'customize') {
       openAddCardModal()
     } else if (activeNudge === 'pwa-install') {
-      // Navigate to widget settings or trigger PWA install
-      navigate('/settings#widget-settings')
+      setIsWidgetExportOpen(true)
     }
     actionNudge()
-  }, [activeNudge, actionNudge, openAddCardModal, navigate])
+  }, [activeNudge, actionNudge, openAddCardModal])
 
   const currentCardTypes = localCards.map(c => {
     if (c.card_type === 'dynamic_card' && c.config?.dynamicCardId) {
@@ -1033,6 +1034,12 @@ export function Dashboard() {
         onClose={() => setIsCreateDashboardOpen(false)}
         onCreate={handleCreateDashboardConfirm}
         existingNames={dashboards.map(d => d.name)}
+      />
+
+      {/* Widget Export Modal — opened from nudge banner */}
+      <WidgetExportModal
+        isOpen={isWidgetExportOpen}
+        onClose={() => setIsWidgetExportOpen(false)}
       />
 
       {/* Pre-deploy Confirmation Dialog */}
