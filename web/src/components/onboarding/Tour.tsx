@@ -1,22 +1,19 @@
 import { useEffect, useState, useRef } from 'react'
-import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTour, TourStep } from '../../hooks/useTour'
 import { useMissions } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { TOOLTIP_POSITION_DELAY_MS, SHORT_DELAY_MS } from '../../lib/constants/network'
 
-// KubeStellar logo with AI sparkle effect
+// KubeStellar logo — clean, no decorative overlays
 function KubeStellarAIIcon({ className }: { className?: string }) {
   return (
-    <div className={cn('relative', className)}>
-      <img
-        src="/kubestellar-logo.svg"
-        alt=""
-        className="w-full h-full"
-      />
-      <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-purple-400 animate-pulse" />
-    </div>
+    <img
+      src="/kubestellar-logo.svg"
+      alt=""
+      className={cn('w-full h-full', className)}
+    />
   )
 }
 

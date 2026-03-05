@@ -52,7 +52,7 @@ export function StatusIndicator({
           }`}
         />
         {pulse && status === 'healthy' && (
-          <span className={`absolute inset-0 ${config.bg} rounded-full animate-ping opacity-30`} />
+          <span className={`absolute inset-0 ${config.bg} rounded-full animate-pulse opacity-20`} />
         )}
       </div>
       {showLabel && (
@@ -80,7 +80,7 @@ export function StatusDot({ status, size = 'md', pulse = false }: StatusDotProps
       <div className={`${sizeConfig.dot} ${config.bg} rounded-full`} />
       {pulse && (
         <span
-          className={`absolute inset-0 ${config.bg} rounded-full animate-ping opacity-50`}
+          className={`absolute inset-0 ${config.bg} rounded-full animate-pulse opacity-20`}
         />
       )}
     </div>

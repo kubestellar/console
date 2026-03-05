@@ -42,7 +42,7 @@ export function SimpleGlobe({ className = '' }: SimpleGlobeProps) {
               }}
             >
               {/* Ripple effect */}
-              <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-75" />
+              <div className="absolute inset-0 rounded-full bg-blue-400 animate-pulse opacity-30" />
             </div>
           ))}
           

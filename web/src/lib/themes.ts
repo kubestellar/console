@@ -78,11 +78,11 @@ export interface Theme {
 const kubestellar: Theme = {
   id: 'kubestellar',
   name: 'KubeStellar',
-  description: 'Default space-inspired dark theme',
+  description: 'Clean professional dark theme',
   dark: true,
-  starField: true,
-  glowEffects: true,
-  gradientAccents: true,
+  starField: false,
+  glowEffects: false,
+  gradientAccents: false,
   colors: {
     background: '0 0% 4%',
     foreground: '0 0% 100%',
@@ -110,9 +110,9 @@ const kubestellar: Theme = {
     info: '#06b6d4',
     glassBackground: 'rgb(17, 24, 39)',
     glassBorder: 'rgba(255, 255, 255, 0.1)',
-    glassShadow: 'rgba(147, 51, 234, 0.2)',
-    scrollbarThumb: 'rgba(147, 51, 234, 0.3)',
-    scrollbarThumbHover: 'rgba(147, 51, 234, 0.5)',
+    glassShadow: 'rgba(0, 0, 0, 0.3)',
+    scrollbarThumb: 'rgba(255, 255, 255, 0.15)',
+    scrollbarThumbHover: 'rgba(255, 255, 255, 0.25)',
     chartColors: ['#9333ea', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#14b8a6'],
   },
   font: {
@@ -120,6 +120,24 @@ const kubestellar: Theme = {
     monoFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
     weight: { normal: 400, medium: 500, semibold: 600, bold: 700 },
   },
+}
+
+// KubeStellar Classic — original space-inspired theme with glow and star effects
+const kubestellarClassic: Theme = {
+  id: 'kubestellar-classic',
+  name: 'KubeStellar Classic',
+  description: 'Original space-inspired theme with glow and star effects',
+  dark: true,
+  starField: true,
+  glowEffects: true,
+  gradientAccents: true,
+  colors: {
+    ...kubestellar.colors,
+    glassShadow: 'rgba(147, 51, 234, 0.2)',
+    scrollbarThumb: 'rgba(147, 51, 234, 0.3)',
+    scrollbarThumbHover: 'rgba(147, 51, 234, 0.5)',
+  },
+  font: kubestellar.font,
 }
 
 // Batman theme - Dark Knight inspired
@@ -1439,6 +1457,7 @@ const cobalt2: Theme = {
 // All themes collection
 export const themes: Theme[] = [
   kubestellar,
+  kubestellarClassic,
   kubestellarLight,
   batman,
   dracula,
@@ -1470,7 +1489,7 @@ export const themes: Theme[] = [
 
 // Theme groups for UI organization
 export const themeGroups = [
-  { name: 'KubeStellar', themes: ['kubestellar', 'kubestellar-light'] },
+  { name: 'KubeStellar', themes: ['kubestellar', 'kubestellar-classic', 'kubestellar-light'] },
   { name: 'Popular', themes: ['dracula', 'nord', 'tokyo-night', 'monokai', 'gruvbox', 'catppuccin'] },
   { name: 'Developer', themes: ['night-owl', 'cobalt2', 'shades-of-purple', 'palenight', 'ayu-dark'] },
   { name: 'Iconic', themes: ['batman', 'matrix', 'cyberpunk', 'synthwave'] },

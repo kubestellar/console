@@ -15,7 +15,6 @@ import {
   Bot,
   Package,
   HardDrive,
-  Sparkles,
 } from 'lucide-react'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
@@ -258,7 +257,7 @@ export function SearchDropdown() {
                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                   >
-                    <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
+                    <Bot className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">Ask AI about this</p>
                       <p className="text-xs text-muted-foreground truncate">&quot;{searchQuery}&quot;</p>
@@ -285,7 +284,7 @@ export function SearchDropdown() {
                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                   >
-                    <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />
+                    <Bot className="w-5 h-5 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">Ask AI instead</p>
                       <p className="text-xs text-muted-foreground truncate">Start a mission: &quot;{searchQuery}&quot;</p>

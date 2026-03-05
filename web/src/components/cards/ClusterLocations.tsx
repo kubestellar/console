@@ -544,7 +544,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                   >
                     {/* Subtle ping animation */}
                     <div
-                      className={`absolute inset-0 rounded-full animate-ping opacity-30 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`}
+                      className={`absolute inset-0 rounded-full animate-pulse opacity-20 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`}
                       style={{
                         animationDuration: '3s',
                         width: 24,

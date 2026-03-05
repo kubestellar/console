@@ -18,7 +18,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
-import { CLOSE_ANIMATION_MS, TICK_INTERVAL_MS, NAV_AFTER_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
+import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
@@ -55,48 +55,16 @@ function NavigationProgress() {
   }, [location.pathname])
 
   if (!isNavigating) return null
-  return <div className="absolute top-0 left-0 right-0 h-0.5 bg-purple-500 animate-pulse z-50" />
+  return <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary z-50" />
 }
 
 // Lightweight fallback shown while a lazy route chunk loads.
-const LOADING_STAGES = [
-  'Loading application modules…',
-  'Initializing React components…',
-  'Preparing dashboard layout…',
-  'Connecting to backend API…',
-  'Discovering Kubernetes clusters…',
-  'Loading card components…',
-  'Fetching cluster health data…',
-  'Resolving MCP agent connection…',
-  'Hydrating cached state…',
-  'Rendering dashboard cards…',
-  'Finalizing layout…',
-]
-
 export function ContentLoadingSkeleton() {
-  const [elapsed, setElapsed] = useState(0)
-  const [stageIndex, setStageIndex] = useState(0)
-
-  useEffect(() => {
-    const timer = setInterval(() => setElapsed(t => t + 1), TICK_INTERVAL_MS)
-    return () => clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    if (stageIndex < LOADING_STAGES.length - 1) {
-      const timer = setTimeout(() => setStageIndex(i => i + 1), NAV_AFTER_ANIMATION_MS)
-      return () => clearTimeout(timer)
-    }
-  }, [stageIndex])
-
   return (
     <div className="flex items-center justify-center h-64">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-        <span className="text-sm text-muted-foreground transition-opacity duration-300">
-          {LOADING_STAGES[stageIndex]}
-        </span>
-        <span className="text-xs text-muted-foreground/50 tabular-nums">{elapsed}s</span>
+        <div className="h-6 w-6 border-2 border-muted border-t-foreground rounded-full animate-spin" />
+        <span className="text-sm text-muted-foreground">Loading…</span>
       </div>
     </div>
   )
