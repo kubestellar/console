@@ -41,6 +41,14 @@ export const STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES = 'kubestellar-cluster-provi
 export const STORAGE_KEY_MISSIONS_ACTIVE = 'kubestellar-missions-active'
 export const STORAGE_KEY_MISSIONS_HISTORY = 'kubestellar-missions-history'
 
+// ── Engagement / Nudges ───────────────────────────────────────────────
+export const STORAGE_KEY_NUDGE_DISMISSED = 'kc-nudge-dismissed'
+export const STORAGE_KEY_SMART_SUGGESTIONS_DISMISSED = 'kc-smart-suggestions-dismissed'
+export const STORAGE_KEY_DRAG_HINT_SHOWN = 'kc-drag-hint-shown'
+export const STORAGE_KEY_PWA_PROMPT_DISMISSED = 'kc-pwa-prompt-dismissed'
+export const STORAGE_KEY_SESSION_COUNT = 'kc-session-count'
+export const STORAGE_KEY_VISIT_COUNT = 'kc-visit-count'
+
 // ── Component-specific cache ───────────────────────────────────────────
 export const STORAGE_KEY_OPA_CACHE = 'opa-statuses-cache'
 export const STORAGE_KEY_OPA_CACHE_TIME = 'opa-statuses-cache-time'

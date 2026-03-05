@@ -614,6 +614,67 @@ export function emitWidgetDownloaded(widgetType: 'uebersicht' | 'browser') {
   send('ksc_widget_downloaded', { widget_type: widgetType })
 }
 
+// ── Engagement Nudges ────────────────────────────────────────────────
+
+/** Fired when contextual nudge is shown to user */
+export function emitNudgeShown(nudgeType: string) {
+  send('ksc_nudge_shown', { nudge_type: nudgeType })
+}
+
+/** Fired when user dismisses a contextual nudge */
+export function emitNudgeDismissed(nudgeType: string) {
+  send('ksc_nudge_dismissed', { nudge_type: nudgeType })
+}
+
+/** Fired when user acts on a contextual nudge (e.g. clicks "Add card") */
+export function emitNudgeActioned(nudgeType: string) {
+  send('ksc_nudge_actioned', { nudge_type: nudgeType })
+}
+
+/** Fired when smart card suggestions are shown after agent connects */
+export function emitSmartSuggestionsShown(cardCount: number) {
+  send('ksc_smart_suggestions_shown', { card_count: cardCount })
+}
+
+/** Fired when user adds a card from smart suggestions */
+export function emitSmartSuggestionAccepted(cardType: string) {
+  send('ksc_smart_suggestion_accepted', { card_type: cardType })
+}
+
+/** Fired when user adds all suggested cards at once */
+export function emitSmartSuggestionsAddAll(cardCount: number) {
+  send('ksc_smart_suggestions_add_all', { card_count: cardCount })
+}
+
+// ── "Almost" Action Tracking ────────────────────────────────────────
+// These track user intent signals — users who almost engaged but didn't.
+// Helps distinguish discovery problems from conversion problems.
+
+/** Fired when add-card modal is opened (tracks intent to add) */
+export function emitAddCardModalOpened() {
+  send('ksc_add_card_modal_opened')
+}
+
+/** Fired when add-card modal is closed without adding any cards */
+export function emitAddCardModalAbandoned() {
+  send('ksc_add_card_modal_abandoned')
+}
+
+/** Fired when user scrolls the dashboard card grid (debounced) */
+export function emitDashboardScrolled(depth: 'shallow' | 'deep') {
+  send('ksc_dashboard_scrolled', { depth })
+}
+
+/** Fired when PWA install prompt is shown */
+export function emitPwaPromptShown() {
+  send('ksc_pwa_prompt_shown')
+}
+
+/** Fired when PWA install prompt is dismissed */
+export function emitPwaPromptDismissed() {
+  send('ksc_pwa_prompt_dismissed')
+}
+
 // ── UTM Tracking ───────────────────────────────────────────────────
 
 let utmParams: Record<string, string> = {}

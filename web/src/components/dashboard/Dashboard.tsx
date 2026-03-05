@@ -45,8 +45,13 @@ import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { WelcomeCard } from './WelcomeCard'
+import { SmartCardSuggestions } from './SmartCardSuggestions'
+import { ContextualNudgeBanner } from './ContextualNudgeBanner'
+import { DiscoverCardsPlaceholder } from './DiscoverCardsPlaceholder'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { useContextualNudges } from '../../hooks/useContextualNudges'
+import { useDashboardScrollTracking } from '../../hooks/useDashboardScrollTracking'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -129,6 +134,15 @@ export function Dashboard() {
     setCards: setLocalCards,
     cards: localCards,
   })
+
+  // Contextual nudges (replaces traditional tour with in-context hints)
+  const { activeNudge, showDragHint, dismissNudge, actionNudge, recordVisit } = useContextualNudges(isCustomized)
+
+  // Track dashboard scroll depth for "almost" engagement analytics
+  useDashboardScrollTracking()
+
+  // Record dashboard visit for nudge thresholds
+  useEffect(() => { recordVisit() }, [recordVisit])
 
   // Universal stats for cross-dashboard stat blocks
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
@@ -740,6 +754,49 @@ export function Dashboard() {
     showToast(`Applied "${template.name}" template with ${newCards.length} cards`, 'success')
   }, [dashboard, recordCardAdded, showToast])
 
+  // Handle single card addition from smart suggestions or discover placeholder
+  const handleAddSingleCard = useCallback((cardType: string) => {
+    const size = getDefaultCardSize(cardType)
+    const newCard: Card = {
+      id: `rec-${Date.now()}`,
+      card_type: cardType,
+      config: {},
+      position: { x: 0, y: 0, ...size },
+    }
+    recordCardAdded(newCard.id, cardType, undefined, {}, dashboard?.id, dashboard?.name)
+    emitCardAdded(cardType, 'smart_suggestion')
+    setLocalCards((prev) => [newCard, ...prev])
+  }, [dashboard, recordCardAdded])
+
+  // Handle adding multiple cards from smart suggestions "Add all"
+  const handleAddMultipleCards = useCallback((cardTypes: string[]) => {
+    const newCards: Card[] = cardTypes.map((cardType, index) => {
+      const size = getDefaultCardSize(cardType)
+      return {
+        id: `rec-${Date.now()}-${index}`,
+        card_type: cardType,
+        config: {},
+        position: { x: 0, y: 0, ...size },
+      }
+    })
+    newCards.forEach((card) => {
+      recordCardAdded(card.id, card.card_type, undefined, {}, dashboard?.id, dashboard?.name)
+      emitCardAdded(card.card_type, 'smart_suggestion_all')
+    })
+    setLocalCards((prev) => [...newCards, ...prev])
+  }, [dashboard, recordCardAdded])
+
+  // Handle nudge CTA actions
+  const handleNudgeAction = useCallback(() => {
+    if (activeNudge === 'customize') {
+      openAddCardModal()
+    } else if (activeNudge === 'pwa-install') {
+      // Navigate to widget settings or trigger PWA install
+      navigate('/settings#widget-settings')
+    }
+    actionNudge()
+  }, [activeNudge, actionNudge, openAddCardModal, navigate])
+
   const currentCardTypes = localCards.map(c => {
     if (c.card_type === 'dynamic_card' && c.config?.dynamicCardId) {
       return `dynamic_card::${c.config.dynamicCardId as string}`
@@ -820,6 +877,22 @@ export function Dashboard() {
         <WelcomeCard />
       )}
 
+      {/* Smart Card Suggestions — shown after kc-agent connects */}
+      <SmartCardSuggestions
+        existingCardTypes={currentCardTypes}
+        onAddCard={handleAddSingleCard}
+        onAddMultipleCards={handleAddMultipleCards}
+      />
+
+      {/* Contextual nudge banner — replaces traditional tour */}
+      {activeNudge && activeNudge !== 'drag-hint' && (
+        <ContextualNudgeBanner
+          nudgeType={activeNudge}
+          onAction={handleNudgeAction}
+          onDismiss={dismissNudge}
+        />
+      )}
+
       {/* AI Recommendations & Actions - both rows wrapped for tour highlight */}
       <div data-tour="recommendations">
         <CardRecommendations
@@ -851,7 +924,13 @@ export function Dashboard() {
         onDragCancel={handleDragCancel}
       >
         <SortableContext items={localCards.map(c => c.id)} strategy={rectSortingStrategy}>
-          <div data-testid="dashboard-cards-grid" data-tour="dashboard" role="grid" aria-label="Dashboard cards" className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+          <div
+            data-testid="dashboard-cards-grid"
+            data-tour="dashboard"
+            role="grid"
+            aria-label="Dashboard cards"
+            className={`grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)] ${showDragHint ? 'animate-shimmy' : ''}`}
+          >
             {localCards.map((card) => (
               <SortableCard
                 key={card.id}
@@ -868,6 +947,15 @@ export function Dashboard() {
                 registerExpandTrigger={(expand) => { expandTriggersRef.current.set(card.id, expand) }}
               />
             ))}
+
+            {/* Discover Cards Placeholder — intentional empty slot with card carousel */}
+            {!isCustomized && (
+              <DiscoverCardsPlaceholder
+                existingCardTypes={currentCardTypes}
+                onAddCard={handleAddSingleCard}
+                onOpenCatalog={openAddCardModal}
+              />
+            )}
           </div>
         </SortableContext>
 

@@ -844,6 +844,15 @@
       "exampleOperatorStatus": "Operator status and CRDs",
       "exampleKustomizeGitOps": "Kustomize and GitOps status"
     },
+    "smartSuggestions": {
+      "title": "Recommended for your clusters",
+      "clustersConnected": "clusters connected",
+      "addAll": "Add all"
+    },
+    "discover": {
+      "addThis": "Add this card",
+      "browseCatalog": "Browse all"
+    },
     "dropZone": {
       "moveToDashboard": "Move to Dashboard",
       "noOtherDashboards": "No other dashboards available",
@@ -2907,6 +2916,18 @@
       "featureConfigurationModal": "<strong>Configuration modal</strong> - Both have settings to show/hide stats",
       "featureDemoIndicator": "<strong>Demo indicator</strong> - Both show demo badge when data.isDemo=true",
       "gapConfigSource": "<strong>Config source</strong> - Unified uses converted configs, legacy uses raw definitions"
+    }
+  },
+  "nudge": {
+    "customize": {
+      "title": "Make it yours",
+      "description": "Drag cards to rearrange, click + to add new ones, or try a template.",
+      "action": "Add a card"
+    },
+    "pwa": {
+      "title": "Quick access",
+      "description": "Install the KubeStellar widget for instant cluster status from your desktop.",
+      "action": "Install widget"
     }
   }
 }

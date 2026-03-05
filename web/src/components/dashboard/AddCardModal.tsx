@@ -8,6 +8,7 @@ import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { useToast } from '../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../lib/constants/network'
+import { emitAddCardModalOpened, emitAddCardModalAbandoned } from '../../lib/analytics'
 
 // Helper function to wrap technical abbreviations in text with tooltips
 function wrapAbbreviations(text: string): ReactNode {
@@ -951,11 +952,23 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
     return unsub
   }, [])
 
+  // Track whether cards were added during this modal session
+  const didAddCards = useRef(false)
+
   useEffect(() => {
-    if (isOpen && activeTab === 'browse') {
-      // Delay slightly to ensure modal is rendered
-      const timer = setTimeout(() => searchInputRef.current?.focus(), FOCUS_DELAY_MS)
-      return () => clearTimeout(timer)
+    if (isOpen) {
+      didAddCards.current = false
+      emitAddCardModalOpened()
+      if (activeTab === 'browse') {
+        // Delay slightly to ensure modal is rendered
+        const timer = setTimeout(() => searchInputRef.current?.focus(), FOCUS_DELAY_MS)
+        return () => clearTimeout(timer)
+      }
+    } else {
+      // Modal just closed — if no cards were added, it was abandoned
+      if (!didAddCards.current) {
+        emitAddCardModalAbandoned()
+      }
     }
   }, [isOpen, activeTab])
 
@@ -1043,6 +1056,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
 
   const handleAddCards = () => {
     const cardsToAdd = suggestions.filter((_, i) => selectedCards.has(i))
+    didAddCards.current = cardsToAdd.length > 0
     onAddCards(cardsToAdd)
     onClose()
     setQuery('')
@@ -1086,6 +1100,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       }
     }
     try {
+      didAddCards.current = cardsToAdd.length > 0
       onAddCards(cardsToAdd)
     } catch (error) {
       console.error('Error adding cards:', error)
