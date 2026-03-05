@@ -267,6 +267,12 @@ interface IndexEntry {
   issueTypes?: string[]
   type?: string
   installMethods?: string[]
+  /** CNCF project version (e.g., "1.4.1") — present for install missions */
+  projectVersion?: string
+  /** CNCF maturity level: graduated, incubating, or sandbox */
+  maturity?: string
+  /** Auto-generated quality score (0-100) */
+  qualityScore?: number
 }
 
 /** File format version used by console-kb mission files */
@@ -290,6 +296,9 @@ function indexEntryToMission(entry: IndexEntry): MissionExport {
     steps: [], // loaded on demand when user selects a mission
     metadata: {
       source: entry.path,
+      projectVersion: entry.projectVersion,
+      maturity: entry.maturity,
+      qualityScore: entry.qualityScore,
     },
   }
 }
@@ -2365,6 +2374,23 @@ function RecommendationCard({
           <span className="px-1.5 py-0.5 text-[10px] rounded bg-secondary text-muted-foreground">
             {mission.type}
           </span>
+          {mission.metadata?.projectVersion && (
+            <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+              v{mission.metadata.projectVersion}
+            </span>
+          )}
+          {mission.metadata?.maturity && (
+            <span className={cn(
+              'px-1.5 py-0.5 text-[10px] rounded border font-medium',
+              mission.metadata.maturity === 'graduated'
+                ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                : mission.metadata.maturity === 'incubating'
+                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                  : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+            )}>
+              {mission.metadata.maturity}
+            </span>
+          )}
           {mission.tags.slice(0, 2).map((tag) => (
             <span key={tag} className="px-1.5 py-0.5 text-[10px] rounded bg-secondary text-muted-foreground">
               {tag}
