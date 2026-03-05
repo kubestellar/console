@@ -52,7 +52,7 @@ function scrollToSettingsSection(sectionId: string) {
   if (!element || !container) return
   const containerRect = container.getBoundingClientRect()
   const elementRect = element.getBoundingClientRect()
-  const y = elementRect.top - containerRect.top + container.scrollTop - 16
+  const y = elementRect.top - containerRect.top + container.scrollTop - 80
   container.scrollTo({ top: y, behavior: 'smooth' })
   element.classList.add('ring-2', 'ring-purple-500/50')
   setTimeout(() => element.classList.remove('ring-2', 'ring-purple-500/50'), UI_FEEDBACK_TIMEOUT_MS)

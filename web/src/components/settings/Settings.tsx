@@ -120,8 +120,8 @@ export function Settings() {
   }, [restoredFromFile])
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // Offset for section headers inside the scroll container (px)
-  const SCROLL_OFFSET = 16
+  // Offset so scrolled-to sections land with breathing room (accounts for demo banner + visual centering)
+  const SCROLL_OFFSET = 80
 
   const getScrollContainer = () => document.getElementById('main-content')
 
