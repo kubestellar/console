@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react'
-import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound } from 'lucide-react'
+import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound, Copy, Check } from 'lucide-react'
 import { FlashingValue } from '../../ui/FlashingValue'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { StatusIndicator } from '../../charts/StatusIndicator'
@@ -63,12 +63,12 @@ function isTokenExpired(cluster: ClusterInfo): boolean {
   return cluster.errorType === 'auth'
 }
 
-// Auth method badge labels
+// Auth method badge labels — intentionally subtle (muted text, no colored backgrounds)
 const AUTH_BADGE_MAP: Record<string, { label: string; color: string }> = {
-  exec: { label: 'IAM', color: 'bg-blue-500/20 text-blue-400' },
-  token: { label: 'Token', color: 'bg-yellow-500/20 text-yellow-400' },
-  certificate: { label: 'Cert', color: 'bg-green-500/20 text-green-400' },
-  'auth-provider': { label: 'IAM', color: 'bg-blue-500/20 text-blue-400' },
+  exec: { label: 'IAM', color: 'bg-white/5 text-muted-foreground' },
+  token: { label: 'Token', color: 'bg-white/5 text-muted-foreground' },
+  certificate: { label: 'Cert', color: 'bg-white/5 text-muted-foreground' },
+  'auth-provider': { label: 'IAM', color: 'bg-white/5 text-muted-foreground' },
 }
 
 // Session refresh commands per exec-plugin CLI name
@@ -96,6 +96,27 @@ function getIAMRefreshHint(cluster: ClusterInfo): string | null {
   if (nameLower.includes('aks') || nameLower.includes('azure')) return 'az login'
   if (nameLower.includes('openshift') || nameLower.includes('ocp')) return 'oc login <api-server-url>'
   return null
+}
+
+// Inline copy button — shows a checkmark briefly after copying
+const COPY_FEEDBACK_MS = 1500
+function CopyCmd({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center p-0.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+      title={copied ? 'Copied!' : `Copy: ${text}`}
+    >
+      {copied ? <Check className="w-2.5 h-2.5 text-green-400" /> : <Copy className="w-2.5 h-2.5" />}
+    </button>
+  )
 }
 
 interface GPUInfo {
@@ -229,7 +250,9 @@ const FullClusterCard = memo(function FullClusterCard({
                 {cluster.authMethod && AUTH_BADGE_MAP[cluster.authMethod] && (
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
-                    title={`Auth: ${cluster.authMethod}`}
+                    title={cluster.authMethod === 'exec'
+                      ? `Auth: IAM (exec plugin)${getIAMRefreshHint(cluster) ? `\nLogin: ${getIAMRefreshHint(cluster)}` : ''}`
+                      : `Auth: ${cluster.authMethod}`}
                   >
                     {AUTH_BADGE_MAP[cluster.authMethod].label}
                   </span>
@@ -271,17 +294,18 @@ const FullClusterCard = memo(function FullClusterCard({
                     <span className="truncate">{cluster.user}</span>
                   </span>
                 )}
-                {/* Actionable error hint for IAM auth failures */}
-                {isTokenExpired(cluster) && cluster.authMethod === 'exec' && (() => {
+                {/* Actionable login hint for IAM clusters that are unreachable or have auth errors */}
+                {cluster.authMethod === 'exec' && (isTokenExpired(cluster) || cluster.reachable === false) && (() => {
                   const hint = getIAMRefreshHint(cluster)
                   return hint ? (
-                    <span className="text-[10px] text-red-400/80 mt-0.5">
-                      {t('cluster.authErrorIAMHint')} <code className="bg-red-500/10 px-1 rounded">{hint}</code>
+                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+                      Login: <code className="bg-white/5 px-1 rounded">{hint}</code>
+                      <CopyCmd text={hint} />
                     </span>
                   ) : null
                 })()}
                 {isTokenExpired(cluster) && cluster.authMethod !== 'exec' && (
-                  <span className="text-[10px] text-red-400/80 mt-0.5">
+                  <span className="text-[10px] text-muted-foreground mt-0.5">
                     {t('cluster.authErrorTokenHint')}
                   </span>
                 )}
@@ -434,7 +458,9 @@ const ListClusterCard = memo(function ListClusterCard({
             {cluster.authMethod && AUTH_BADGE_MAP[cluster.authMethod] && (
               <span
                 className={`text-[9px] px-1 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
-                title={`Auth: ${cluster.authMethod}`}
+                title={cluster.authMethod === 'exec'
+                  ? `Auth: IAM (exec plugin)${getIAMRefreshHint(cluster) ? `\nLogin: ${getIAMRefreshHint(cluster)}` : ''}`
+                  : `Auth: ${cluster.authMethod}`}
               >
                 {AUTH_BADGE_MAP[cluster.authMethod].label}
               </span>
@@ -457,6 +483,17 @@ const ListClusterCard = memo(function ListClusterCard({
             <Globe className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{cluster.server?.replace(/^https?:\/\//, '') || '-'}</span>
           </div>
+
+          {/* Login hint for unreachable IAM clusters */}
+          {cluster.authMethod === 'exec' && (isTokenExpired(cluster) || cluster.reachable === false) && (() => {
+            const hint = getIAMRefreshHint(cluster)
+            return hint ? (
+              <span className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground flex-shrink-0">
+                <code className="bg-white/5 px-1 rounded">{hint}</code>
+                <CopyCmd text={hint} />
+              </span>
+            ) : null
+          })()}
 
           {/* Metrics */}
           <div className="flex items-center gap-4 text-sm flex-shrink-0">
