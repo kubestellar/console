@@ -32,10 +32,11 @@ function pluginStatusIcon(status: FluentdOutputPlugin['status']) {
 }
 
 function BufferBar({ utilization }: { utilization: number }) {
+  const normalizedUtilization = Math.max(0, Math.min(utilization, 100))
   const color =
-    utilization >= 80
+    normalizedUtilization >= 80
       ? 'bg-red-500'
-      : utilization >= 50
+      : normalizedUtilization >= 50
         ? 'bg-yellow-500'
         : 'bg-green-500'
   return (
@@ -43,11 +44,11 @@ function BufferBar({ utilization }: { utilization: number }) {
       <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${color}`}
-          style={{ width: `${Math.min(utilization, 100)}%` }}
+          style={{ width: `${normalizedUtilization}%` }}
         />
       </div>
       <span className="text-xs tabular-nums w-9 text-right text-muted-foreground">
-        {utilization}%
+        {normalizedUtilization}%
       </span>
     </div>
   )
