@@ -138,4 +138,16 @@ func (m *MockStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid.U
 	return 0, nil
 }
 
+func (m *MockStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error {
+	return nil
+}
+func (m *MockStore) GetUtilizationSnapshots(reservationID string) ([]models.GPUUtilizationSnapshot, error) {
+	return nil, nil
+}
+func (m *MockStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
+	return nil, nil
+}
+func (m *MockStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, error) { return 0, nil }
+func (m *MockStore) ListActiveGPUReservations() ([]models.GPUReservation, error)   { return nil, nil }
+
 func (m *MockStore) Close() error { return nil }

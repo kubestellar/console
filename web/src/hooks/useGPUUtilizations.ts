@@ -4,6 +4,9 @@ import { api } from '../lib/api'
 /** How often to refresh utilization data (5 minutes) */
 const GPU_UTIL_REFRESH_MS = 300_000
 
+/** Timeout for GPU utilization API requests (10 seconds) */
+const GPU_UTIL_FETCH_TIMEOUT_MS = 10_000
+
 export interface GPUUtilizationSnapshot {
   id: string
   reservation_id: string
@@ -31,9 +34,10 @@ export function useGPUUtilizations(reservationIds: string[]) {
 
     try {
       setIsLoading(true)
-      const params = new URLSearchParams({ ids: ids.join(',') })
+      const params = new URLSearchParams({ ids: (ids || []).join(',') })
       const { data: result } = await api.get<Record<string, GPUUtilizationSnapshot[]>>(
-        `/api/gpu/utilizations?${params.toString()}`
+        `/api/gpu/utilizations?${params.toString()}`,
+        { timeout: GPU_UTIL_FETCH_TIMEOUT_MS },
       )
       setData(result || {})
     } catch {
@@ -44,7 +48,7 @@ export function useGPUUtilizations(reservationIds: string[]) {
   }, [])
 
   useEffect(() => {
-    const idsKey = reservationIds.sort().join(',')
+    const idsKey = (reservationIds || []).sort().join(',')
     // Only refetch if IDs actually changed
     if (idsKey === idsRef.current && Object.keys(data).length > 0) {
       return
