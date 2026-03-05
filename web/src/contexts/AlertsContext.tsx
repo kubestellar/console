@@ -20,6 +20,41 @@ function generateId(): string {
   return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
+// Shallow-compare two detail records without relying on JSON.stringify key ordering
+function shallowEqualRecords(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+  if (keysA.length !== keysB.length) return false
+  return keysA.every(key => a[key] === b[key])
+}
+
+// Build the dedup key for an alert.
+// pod_crash alerts use (ruleId, cluster, resource) so that each crashing pod on the
+// same cluster gets its own entry. All aggregate/cluster-level alert types use
+// (ruleId, cluster) only, preventing dynamic resource strings from creating duplicates.
+function alertDedupKey(ruleId: string, conditionType: string, cluster?: string, resource?: string): string {
+  if (conditionType === 'pod_crash') {
+    return `${ruleId}::${cluster ?? ''}::${resource ?? ''}`
+  }
+  return `${ruleId}::${cluster ?? ''}`
+}
+
+// Deduplicate an array of alerts using the per-type key, keeping the most recently fired entry.
+// Used to clean up historical duplicates persisted in localStorage before this fix.
+function deduplicateAlerts(alerts: Alert[], rules: AlertRule[]): Alert[] {
+  const ruleTypeMap = new Map(rules.map(r => [r.id, r.condition.type]))
+  const dedupMap = new Map<string, Alert>()
+  for (const alert of alerts) {
+    const condType = ruleTypeMap.get(alert.ruleId) ?? ''
+    const key = alertDedupKey(alert.ruleId, condType, alert.cluster, alert.resource)
+    const existing = dedupMap.get(key)
+    if (!existing || new Date(alert.firedAt) > new Date(existing.firedAt)) {
+      dedupMap.set(key, alert)
+    }
+  }
+  return Array.from(dedupMap.values())
+}
+
 // Local storage keys
 const ALERT_RULES_KEY = 'kc_alert_rules'
 const ALERTS_KEY = 'kc_alerts'
@@ -288,35 +323,17 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
   }, [alerts])
 
-  // Get active (firing) alerts - exclude acknowledged alerts by default.
-  // Deduplicate by (ruleId, cluster): keep only the most recently fired alert per pair
-  // to handle any duplicates that may have been persisted in localStorage before this fix.
+  // Get active (firing) alerts - exclude acknowledged alerts. Deduplicated via shared helper.
   const activeAlerts = useMemo(() => {
     const firing = alerts.filter(a => a.status === 'firing' && !a.acknowledgedAt)
-    const dedupMap = new Map<string, Alert>()
-    for (const alert of firing) {
-      const key = `${alert.ruleId}::${alert.cluster ?? ''}`
-      const existing = dedupMap.get(key)
-      if (!existing || new Date(alert.firedAt) > new Date(existing.firedAt)) {
-        dedupMap.set(key, alert)
-      }
-    }
-    return Array.from(dedupMap.values())
-  }, [alerts])
+    return deduplicateAlerts(firing, rules)
+  }, [alerts, rules])
 
-  // Get acknowledged alerts that are still firing - deduplicated by (ruleId, cluster)
+  // Get acknowledged alerts that are still firing. Deduplicated via shared helper.
   const acknowledgedAlerts = useMemo(() => {
     const acked = alerts.filter(a => a.status === 'firing' && a.acknowledgedAt)
-    const dedupMap = new Map<string, Alert>()
-    for (const alert of acked) {
-      const key = `${alert.ruleId}::${alert.cluster ?? ''}`
-      const existing = dedupMap.get(key)
-      if (!existing || new Date(alert.firedAt) > new Date(existing.firedAt)) {
-        dedupMap.set(key, alert)
-      }
-    }
-    return Array.from(dedupMap.values())
-  }, [alerts])
+    return deduplicateAlerts(acked, rules)
+  }, [alerts, rules])
 
   // Acknowledge an alert
   const acknowledgeAlert = useCallback((alertId: string, acknowledgedBy?: string) => {
@@ -369,14 +386,16 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       resourceKind?: string
     ) => {
       setAlerts(prev => {
-        // Deduplicate by (ruleId, cluster): at most one firing alert per rule+cluster pair.
-        // If an existing firing alert is found, update it in place (e.g., when nodeNames or
-        // restart count changes) rather than appending a new duplicate.
+        // For per-resource alert types (pod_crash), each distinct resource (pod name) gets its
+        // own alert. For cluster-aggregate types (gpu_usage, gpu_health_cronjob, node_not_ready,
+        // etc.) use (ruleId, cluster) only so that dynamic resource strings like nodeNames
+        // don't create a new duplicate on every evaluation cycle.
+        const dedupKey = alertDedupKey(rule.id, rule.condition.type, cluster, resource)
         const existingAlert = prev.find(
           a =>
             a.ruleId === rule.id &&
             a.status === 'firing' &&
-            a.cluster === cluster
+            alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource) === dedupKey
         )
 
         if (existingAlert) {
@@ -386,7 +405,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             existingAlert.resource === resource &&
             existingAlert.namespace === namespace &&
             existingAlert.resourceKind === resourceKind &&
-            JSON.stringify(existingAlert.details) === JSON.stringify(details)
+            shallowEqualRecords(existingAlert.details, details)
           ) {
             return prev
           }
