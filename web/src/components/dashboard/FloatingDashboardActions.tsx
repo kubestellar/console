@@ -209,6 +209,7 @@ export function FloatingDashboardActions({
 
         {/* FAB toggle - smaller on mobile */}
         <button
+          data-tour="fab-button"
           onClick={menu.toggle}
           className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
             isMobile ? 'w-8 h-8' : 'w-10 h-10'

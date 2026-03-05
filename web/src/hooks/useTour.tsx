@@ -14,15 +14,16 @@ export interface TourStep {
 }
 
 /**
- * Onboarding tour steps — kept short (5 steps) for high completion rates.
+ * Onboarding tour steps — kept short (6 steps) for high completion rates.
  *
  * The original 13-step tour had very low completion; most users skipped
- * after step 2-3. These 5 steps cover the essential "aha moments":
+ * after step 2-3. These 6 steps cover the essential "aha moments":
  *   1. Welcome — what this product is
  *   2. Sidebar — how to navigate 30+ dashboards
  *   3. Dashboard cards — the core interaction model
  *   4. Search — command palette (Cmd+K)
- *   5. AI Missions — guided multi-step operations
+ *   5. Add Cards — the floating + button for adding/managing cards
+ *   6. AI Missions — guided multi-step operations
  *
  * All text must be accurate on both console.kubestellar.io (demo mode)
  * and localhost with a live backend.
@@ -48,7 +49,7 @@ const TOUR_STEPS: TourStep[] = [
     id: 'dashboard-cards',
     target: '[data-tour="card-header"]',
     title: 'Dashboard Cards',
-    content: 'Cards show cluster data at a glance. Drag to reorder, click the \u22ee menu to configure or resize, and expand any card for detailed drill-downs. Use the floating + button (bottom-right) or the sidebar to add cards from the catalog.',
+    content: 'Cards show cluster data at a glance. Drag to reorder, click the \u22ee menu to configure or resize, and expand any card for detailed drill-downs.',
     placement: 'bottom',
     highlight: true,
   },
@@ -61,11 +62,19 @@ const TOUR_STEPS: TourStep[] = [
     highlight: true,
   },
   {
+    id: 'add-cards',
+    target: '[data-tour="fab-button"]',
+    title: 'Add & Manage Cards',
+    content: 'Click this button to add cards from the catalog, apply dashboard templates, export or import layouts, and customize the sidebar.',
+    placement: 'top',
+    highlight: true,
+  },
+  {
     id: 'ai-missions',
     target: '[data-tour="ai-missions-toggle"]',
     title: 'AI Missions',
-    content: 'Open the Missions panel to launch guided multi-step operations \u2014 install platforms, troubleshoot issues, and more. Choose your preferred AI provider in the navbar. In demo mode, missions run with sample data.',
-    placement: 'left',
+    content: 'Open the Missions panel for guided multi-step operations \u2014 install platforms, troubleshoot issues, and more. Choose your AI provider in the navbar.',
+    placement: 'top',
     highlight: true,
   },
 ]

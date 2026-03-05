@@ -488,7 +488,7 @@ export function TourPrompt() {
         <div className="flex-1">
           <h3 className="font-semibold text-foreground mb-1">Welcome!</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            New here? Take a quick tour to learn about dashboards, cards, search, and AI missions.
+            New here? Take a quick tour to learn about dashboards, cards, search, and AI missions. Just 6 steps!
           </p>
           <div className="flex gap-2">
             <button
