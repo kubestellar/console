@@ -125,12 +125,17 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 }
 
 // isAllowedOrigin checks if the request comes from an allowed hostname.
+// In addition to the explicit allowlist, same-origin requests are always
+// permitted — this ensures OpenShift and other dynamic deployments work
+// without maintaining an exhaustive hostname list.
 func isAllowedOrigin(c *fiber.Ctx) bool {
+	requestHost := stripPort(c.Hostname())
+
 	origin := c.Get("Origin")
 	if origin != "" {
 		if u, err := url.Parse(origin); err == nil {
 			host := stripPort(u.Hostname())
-			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") {
+			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") || host == requestHost {
 				return true
 			}
 		}
@@ -140,7 +145,7 @@ func isAllowedOrigin(c *fiber.Ctx) bool {
 	if referer != "" {
 		if u, err := url.Parse(referer); err == nil {
 			host := stripPort(u.Hostname())
-			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") {
+			if allowedOrigins[host] || strings.HasSuffix(host, ".netlify.app") || host == requestHost {
 				return true
 			}
 		}

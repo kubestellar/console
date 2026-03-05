@@ -87,6 +87,7 @@ function startEngagementTracking() {
         accumulatedEngagementMs += Date.now() - engagementStartMs
         isUserActive = false
       }
+      emitUserEngagement() // Flush engagement to GA4 before tab goes away
     } else {
       markActive()
     }
@@ -104,6 +105,25 @@ function stopEngagementTracking() {
   if (heartbeatTimer) {
     clearInterval(heartbeatTimer)
     heartbeatTimer = null
+  }
+}
+
+/**
+ * Emit a user_engagement event to GA4 with accumulated engagement time.
+ * GA4 calculates Average Engagement Time exclusively from this event type —
+ * the _et parameter on other events (page_view, custom events) is ignored
+ * for engagement metrics.
+ *
+ * Note: We do NOT call getAndResetEngagementMs() here because send() already
+ * calls it internally to set the _et parameter. Calling it here would reset
+ * the accumulator before send() reads it, resulting in _et=0.
+ */
+function emitUserEngagement() {
+  // Check if there's accumulated engagement without resetting.
+  // send() will handle getting and resetting the actual value via _et.
+  const hasEngagement = accumulatedEngagementMs > 0 || (isUserActive && Date.now() - engagementStartMs > 0)
+  if (hasEngagement) {
+    send('user_engagement', {})
   }
 }
 
@@ -263,6 +283,9 @@ export function initAnalytics() {
   // Start tracking user engagement for GA4 engagement time metrics
   startEngagementTracking()
 
+  // Flush engagement on page close (Safari doesn't always fire visibilitychange)
+  window.addEventListener('beforeunload', emitUserEngagement)
+
   // Track unhandled errors globally for error categorization
   startGlobalErrorTracking()
 
@@ -319,6 +342,8 @@ export function isAnalyticsOptedOut(): boolean {
 // ── Page views ─────────────────────────────────────────────────────
 
 export function emitPageView(path: string) {
+  emitUserEngagement() // Flush previous page's engagement time before new page_view
+  pageId = rand()      // New page ID for the new page
   send('page_view', { page_path: path, ksc_demo_mode: isDemoMode() ? 'true' : 'false' })
 }
 
