@@ -1,6 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { CRIO_DEMO_DATA, type CrioStatusDemoData } from './demoData'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 export interface CrioStatus {
   totalNodes: number
@@ -76,6 +77,7 @@ interface BackendNodeInfo {
 async function fetchCrioStatus(): Promise<CrioStatus> {
   const resp = await fetch('/api/mcp/nodes', {
     headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
 
   if (!resp.ok) {

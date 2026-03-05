@@ -2344,7 +2344,7 @@ export function useCachedCoreDNSStatus(
       )
 
       const byCluster = new Map<string, PodInfo[]>()
-      for (const pod of corednsPods) {
+      for (const pod of (corednsPods || [])) {
         const c = pod.cluster || 'unknown'
         if (!byCluster.has(c)) byCluster.set(c, [])
         byCluster.get(c)!.push(pod)

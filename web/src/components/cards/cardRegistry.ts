@@ -495,7 +495,7 @@ export const DEMO_DATA_CARDS = new Set([
   'gateway_status',
   // Service Topology - demo visualization
   'service_topology',
-  'buildpacks_status',
+  // Note: buildpacks_status removed — reports isDemoData via useBuildpackImages hook
   'flatcar_status',
   'thanos_status',
   'contour_status',
@@ -505,9 +505,9 @@ export const DEMO_DATA_CARDS = new Set([
   // ArgoCD cards - all use mock data
   'argocd_applications',
   'argocd_health',
-  'argocd_sync_status',
+  // Note: argocd_sync_status removed — reports isDemoData via demoMode check
   // GitOps cards - use mock data
-  'kustomization_status',
+  // Note: kustomization_status removed — reports isDemoData via demoMode check
   // Helm cards - all now use real data via helm CLI backend
   // Namespace cards - namespace_quotas, namespace_rbac, resource_capacity, and helm_release_status now have real data support
   // Cost management integrations - demo until connected
@@ -539,7 +539,7 @@ export const DEMO_DATA_CARDS = new Set([
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
   // Cluster admin cards - demo until backend endpoints exist
   'admission_webhooks',
-  'etcd_status',
+  // Note: etcd_status removed — reports isDemoData via useCachedPods isDemoFallback
   'rbac_explorer',
   // Kagenti cards - demo until kagenti-operator is installed on clusters
   'kagenti_status',
