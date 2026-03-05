@@ -49,6 +49,19 @@
 # GA4 event collection — custom lightweight tracker sends directly to /api/m
 # (Netlify Function via Config.path, no gtag.js loaded)
 
+# Analytics dashboard API — proxy to Netlify Function
+# Serves live GA4 Data API data (GA4_SERVICE_ACCOUNT_JSON + GA4_PROPERTY_ID in Netlify dashboard)
+[[redirects]]
+  from = "/api/analytics-dashboard"
+  to = "/.netlify/functions/analytics-dashboard"
+  status = 200
+
+# Analytics dashboard page — serve static HTML
+[[redirects]]
+  from = "/analytics"
+  to = "/analytics.html"
+  status = 200
+
 # SPA routing - redirect all routes to index.html (only if file doesn't exist)
 [[redirects]]
   from = "/*"

@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KubeStellar Console Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-hover: #242736;
+      --border: #2a2d3a;
+      --text: #e4e4e7;
+      --text-muted: #9ca3af;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --orange: #f97316;
+      --cyan: #06b6d4;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent-light), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .refresh-btn {
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover { background: var(--accent); border-color: var(--accent); }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Loading state */
+    .loading-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      padding: 16px 20px;
+      color: var(--red);
+      max-width: 600px;
+      margin: 40px auto;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .kpi-card:hover { border-color: var(--accent); }
+
+    .kpi-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-change {
+      font-size: 13px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .kpi-change.up { color: var(--green); }
+    .kpi-change.down { color: var(--red); }
+    .kpi-change.flat { color: var(--text-muted); }
+
+    /* Chart grid */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .chart-card.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .chart-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+    }
+
+    /* Tables */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+
+    .table-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(42, 45, 58, 0.5);
+    }
+
+    tr:hover td { background: var(--surface-hover); }
+
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Funnel */
+    .funnel-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 220px;
+      padding: 20px 0;
+    }
+
+    .funnel-step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .funnel-bar {
+      width: 100%;
+      border-radius: 6px 6px 0 0;
+      min-height: 4px;
+      transition: height 0.5s ease;
+    }
+
+    .funnel-label {
+      font-size: 11px;
+      text-align: center;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .funnel-value {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .funnel-pct {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .chart-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .container { padding: 16px; }
+    }
+
+    /* Insight cards */
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .insight-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .insight-card.warning { border-left-color: var(--yellow); }
+    .insight-card.success { border-left-color: var(--green); }
+    .insight-card.danger { border-left-color: var(--red); }
+
+    .insight-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .insight-body {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Section headings */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 32px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Back link */
+    .back-link {
+      color: var(--accent-light);
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .back-link:hover { text-decoration: underline; }
+
+    /* TODO banner */
+    .todo-banner {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: var(--yellow);
+    }
+
+    .todo-banner strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <a href="/" class="back-link">&larr; Console</a>
+      <h1>KubeStellar Console Analytics</h1>
+    </div>
+    <div class="header-right">
+      <span id="cache-status"></span>
+      <span class="status-dot" id="status-dot"></span>
+      <button class="refresh-btn" id="refresh-btn" onclick="loadData(true)">Refresh</button>
+    </div>
+  </div>
+
+  <div class="container" id="content">
+    <div class="loading-overlay" id="loading">
+      <div class="spinner"></div>
+      <div style="color: var(--text-muted); font-size: 14px;">Loading analytics data...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '/api/analytics-dashboard';
+    const CHART_COLORS = ['#6366f1', '#06b6d4', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#eab308', '#3b82f6'];
+    const FUNNEL_COLORS = ['#6366f1', '#818cf8', '#3b82f6', '#06b6d4', '#22c55e'];
+
+    Chart.defaults.color = '#9ca3af';
+    Chart.defaults.borderColor = 'rgba(42, 45, 58, 0.8)';
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+    let charts = [];
+
+    function fmt(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+      return Math.round(n).toLocaleString();
+    }
+
+    function fmtTime(seconds) {
+      if (seconds < 60) return Math.round(seconds) + 's';
+      const m = Math.floor(seconds / 60);
+      const s = Math.round(seconds % 60);
+      return m + 'm ' + s + 's';
+    }
+
+    function fmtPct(n) {
+      return (n * 100).toFixed(1) + '%';
+    }
+
+    function pctChange(current, previous) {
+      if (previous === 0) return current > 0 ? { value: '+100%', dir: 'up' } : { value: '0%', dir: 'flat' };
+      const change = ((current - previous) / previous) * 100;
+      const dir = change > 2 ? 'up' : change < -2 ? 'down' : 'flat';
+      const sign = change > 0 ? '+' : '';
+      return { value: sign + change.toFixed(1) + '%', dir };
+    }
+
+    function formatDate(dateStr) {
+      // GA4 date format: YYYYMMDD
+      const y = dateStr.slice(0, 4);
+      const m = dateStr.slice(4, 6);
+      const d = dateStr.slice(6, 8);
+      return m + '/' + d;
+    }
+
+    function destroyCharts() {
+      charts.forEach(c => c.destroy());
+      charts = [];
+    }
+
+    function generateInsights(data) {
+      const insights = [];
+      const ov = data.overview;
+      const ovp = data.overviewPrevious;
+
+      // User growth
+      const userGrowth = ovp.activeUsers > 0 ? ((ov.activeUsers - ovp.activeUsers) / ovp.activeUsers) * 100 : 0;
+      if (userGrowth > 20) {
+        insights.push({ type: 'success', title: 'Strong User Growth', body: `Active users up ${userGrowth.toFixed(0)}% vs previous period (${fmt(ovp.activeUsers)} → ${fmt(ov.activeUsers)}). Momentum is building.` });
+      } else if (userGrowth < -10) {
+        insights.push({ type: 'danger', title: 'User Decline', body: `Active users down ${Math.abs(userGrowth).toFixed(0)}% vs previous period. Investigate traffic sources and recent changes.` });
+      }
+
+      // Bounce rate
+      if (ov.bounceRate > 0.6) {
+        insights.push({ type: 'warning', title: 'High Bounce Rate', body: `${fmtPct(ov.bounceRate)} bounce rate suggests users aren't finding what they need. Consider improving landing page content and navigation.` });
+      }
+
+      // Funnel analysis
+      if (data.funnel.landing > 0 && data.funnel.login > 0) {
+        const loginRate = data.funnel.login / data.funnel.landing;
+        if (loginRate < 0.3) {
+          insights.push({ type: 'warning', title: 'Low Login Conversion', body: `Only ${fmtPct(loginRate)} of visitors log in. Consider reducing friction in the auth flow or improving the value proposition on the landing page.` });
+        }
+      }
+
+      if (data.funnel.agentConnected > 0 && data.funnel.missionStarted > 0) {
+        const missionRate = data.funnel.missionStarted / data.funnel.agentConnected;
+        if (missionRate < 0.2) {
+          insights.push({ type: 'warning', title: 'Agent → Mission Drop-off', body: `Only ${fmtPct(missionRate)} of users who connect an agent go on to start a mission. The missions discovery experience may need improvement.` });
+        }
+      }
+
+      // Top page engagement
+      if (data.engagementByPage.length > 0) {
+        const stickiest = [...data.engagementByPage].sort((a, b) => b.avgEngagement - a.avgEngagement)[0];
+        if (stickiest && stickiest.avgEngagement > 30) {
+          insights.push({ type: 'success', title: 'Stickiest Page', body: `"${stickiest.page}" has the highest engagement at ${fmtTime(stickiest.avgEngagement)} per user. Users find real value here.` });
+        }
+      }
+
+      // CNCF outreach
+      if (data.cncfOutreach.length > 0) {
+        const total = data.cncfOutreach.reduce((sum, r) => sum + r.sessions, 0);
+        insights.push({ type: 'success', title: 'CNCF Outreach Active', body: `${data.cncfOutreach.length} CNCF projects driving ${total} sessions. Track per-project conversion below.` });
+      }
+
+      // New vs returning
+      const returning = data.newVsReturning.find(r => r.type === 'returning');
+      const newUsers = data.newVsReturning.find(r => r.type === 'new');
+      if (returning && newUsers && newUsers.users > 0) {
+        const retentionRate = returning.users / (returning.users + newUsers.users);
+        if (retentionRate > 0.3) {
+          insights.push({ type: 'success', title: 'Good Retention', body: `${fmtPct(retentionRate)} returning users indicates the product delivers ongoing value.` });
+        } else {
+          insights.push({ type: 'warning', title: 'Low Retention', body: `Only ${fmtPct(retentionRate)} returning users. Focus on activation and "aha moment" to improve retention.` });
+        }
+      }
+
+      return insights;
+    }
+
+    function renderDashboard(data) {
+      destroyCharts();
+      const container = document.getElementById('content');
+      const ov = data.overview;
+      const ovp = data.overviewPrevious;
+
+      // Generate insights
+      const insights = generateInsights(data);
+
+      let html = '';
+
+      // TODO banner for error rate
+      html += `<div class="todo-banner">
+        <strong>TODO:</strong> Address error rate — The "error rate" in analytics refers to the ratio of failed event hits
+        (HTTP 4xx/5xx responses from the analytics proxy) to total event hits. A high error rate means analytics data is being
+        lost — events fired by the browser are not reaching GA4. Common causes: ad blockers (mitigated by our proxy),
+        network timeouts, or proxy misconfiguration. Current proxy: <code>/api/m</code> → GA4.
+        Check Netlify Function logs for <code>analytics-collect</code> errors.
+      </div>`;
+
+      // KPI cards
+      const kpis = [
+        { label: 'Active Users', value: fmt(ov.activeUsers), change: pctChange(ov.activeUsers, ovp.activeUsers) },
+        { label: 'Sessions', value: fmt(ov.sessions), change: pctChange(ov.sessions, ovp.sessions) },
+        { label: 'Page Views', value: fmt(ov.pageViews), change: pctChange(ov.pageViews, ovp.pageViews) },
+        { label: 'Avg Engagement', value: fmtTime(ov.avgEngagementTime), change: pctChange(ov.avgEngagementTime, ovp.avgEngagementTime) },
+        { label: 'Bounce Rate', value: fmtPct(ov.bounceRate), change: pctChange(ov.bounceRate, ovp.bounceRate) },
+        { label: 'Events / Session', value: ov.eventsPerSession.toFixed(1), change: pctChange(ov.eventsPerSession, ovp.eventsPerSession) },
+      ];
+
+      // Invert bounce rate direction (lower is better)
+      kpis[4].change.dir = kpis[4].change.dir === 'up' ? 'down' : kpis[4].change.dir === 'down' ? 'up' : 'flat';
+
+      html += '<div class="kpi-grid">';
+      for (const kpi of kpis) {
+        html += `<div class="kpi-card">
+          <div class="kpi-label">${kpi.label}</div>
+          <div class="kpi-value">${kpi.value}</div>
+          <div class="kpi-change ${kpi.change.dir}">${kpi.change.dir === 'up' ? '&#9650;' : kpi.change.dir === 'down' ? '&#9660;' : '&#8212;'} ${kpi.change.value} vs prev 28d</div>
+        </div>`;
+      }
+      html += '</div>';
+
+      // Insights
+      if (insights.length > 0) {
+        html += '<div class="section-title">Actionable Insights</div>';
+        html += '<div class="insights-grid">';
+        for (const ins of insights) {
+          html += `<div class="insight-card ${ins.type}">
+            <div class="insight-title">${ins.title}</div>
+            <div class="insight-body">${ins.body}</div>
+          </div>`;
+        }
+        html += '</div>';
+      }
+
+      // Charts row 1: Daily Users + Adoption Funnel
+      html += '<div class="chart-grid">';
+      html += '<div class="chart-card"><h3>Daily Active Users & Sessions</h3><div class="chart-wrapper"><canvas id="dailyChart"></canvas></div></div>';
+
+      // Funnel
+      const funnel = data.funnel;
+      const funnelSteps = [
+        { label: 'Page View', value: funnel.landing, color: FUNNEL_COLORS[0] },
+        { label: 'Login', value: funnel.login, color: FUNNEL_COLORS[1] },
+        { label: 'Agent Connected', value: funnel.agentConnected, color: FUNNEL_COLORS[2] },
+        { label: 'Solution Viewed', value: funnel.solutionViewed, color: FUNNEL_COLORS[3] },
+        { label: 'Mission Started', value: funnel.missionStarted, color: FUNNEL_COLORS[4] },
+      ];
+      const maxFunnel = Math.max(...funnelSteps.map(s => s.value), 1);
+
+      html += '<div class="chart-card"><h3>Adoption Funnel (28 days)</h3><div class="funnel-container">';
+      for (const step of funnelSteps) {
+        const heightPct = (step.value / maxFunnel) * 100;
+        const pct = funnel.landing > 0 ? ((step.value / funnel.landing) * 100).toFixed(1) + '%' : '—';
+        html += `<div class="funnel-step">
+          <div class="funnel-value">${fmt(step.value)}</div>
+          <div class="funnel-bar" style="height: ${Math.max(heightPct, 2)}%; background: ${step.color};"></div>
+          <div class="funnel-label">${step.label}</div>
+          <div class="funnel-pct">${pct}</div>
+        </div>`;
+      }
+      html += '</div></div>';
+
+      // Charts row 2: Events + Countries
+      html += '<div class="chart-card"><h3>Top Events</h3><div class="chart-wrapper"><canvas id="eventsChart"></canvas></div></div>';
+      html += '<div class="chart-card"><h3>Users by Country</h3><div class="chart-wrapper"><canvas id="countryChart"></canvas></div></div>';
+
+      // Charts row 3: Traffic Sources + Devices
+      html += '<div class="chart-card"><h3>Traffic Sources</h3><div class="chart-wrapper"><canvas id="sourceChart"></canvas></div></div>';
+      html += '<div class="chart-card"><h3>Device Categories</h3><div class="chart-wrapper"><canvas id="deviceChart"></canvas></div></div>';
+
+      html += '</div>'; // end chart-grid
+
+      // Tables
+      html += '<div class="section-title">Page Performance</div>';
+      html += '<div class="chart-grid">';
+
+      // Top Pages table
+      html += '<div class="table-card"><h3>Top Pages</h3><table><thead><tr><th>Page</th><th class="num">Views</th><th class="num">Avg Time</th></tr></thead><tbody>';
+      for (const p of data.topPages) {
+        html += `<tr><td>${p.page}</td><td class="num">${fmt(p.views)}</td><td class="num">${fmtTime(p.avgTime)}</td></tr>`;
+      }
+      html += '</tbody></table></div>';
+
+      // Engagement by Page
+      html += '<div class="table-card"><h3>Page Engagement</h3><table><thead><tr><th>Page</th><th class="num">Avg Engagement</th><th class="num">Bounce Rate</th><th class="num">Views</th></tr></thead><tbody>';
+      for (const p of data.engagementByPage) {
+        html += `<tr><td>${p.page}</td><td class="num">${fmtTime(p.avgEngagement)}</td><td class="num">${fmtPct(p.bounceRate)}</td><td class="num">${fmt(p.views)}</td></tr>`;
+      }
+      html += '</tbody></table></div>';
+
+      html += '</div>'; // end chart-grid
+
+      // Events table
+      html += '<div class="section-title">Events</div>';
+      html += '<div class="table-card"><h3>All Events (28 days)</h3><table><thead><tr><th>Event Name</th><th class="num">Count</th><th class="num">Users</th></tr></thead><tbody>';
+      for (const e of data.topEvents) {
+        html += `<tr><td><code>${e.event}</code></td><td class="num">${fmt(e.count)}</td><td class="num">${fmt(e.users)}</td></tr>`;
+      }
+      html += '</tbody></table></div>';
+
+      // CNCF Outreach
+      if (data.cncfOutreach.length > 0) {
+        html += '<div class="section-title">CNCF Outreach Campaign</div>';
+        html += '<div class="table-card"><h3>Per-Project Performance</h3><table><thead><tr><th>Project</th><th class="num">Sessions</th><th class="num">Users</th><th class="num">Events</th></tr></thead><tbody>';
+        for (const p of data.cncfOutreach) {
+          html += `<tr><td>${p.project}</td><td class="num">${p.sessions}</td><td class="num">${p.users}</td><td class="num">${p.events}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+      }
+
+      // New vs Returning
+      html += '<div class="section-title">Audience</div>';
+      html += '<div class="chart-grid">';
+      html += '<div class="table-card"><h3>New vs Returning Users</h3><table><thead><tr><th>Type</th><th class="num">Users</th><th class="num">Sessions</th></tr></thead><tbody>';
+      for (const r of data.newVsReturning) {
+        html += `<tr><td style="text-transform: capitalize;">${r.type}</td><td class="num">${fmt(r.users)}</td><td class="num">${fmt(r.sessions)}</td></tr>`;
+      }
+      html += '</tbody></table></div>';
+
+      // Traffic sources table
+      html += '<div class="table-card"><h3>Traffic Sources</h3><table><thead><tr><th>Source</th><th>Medium</th><th class="num">Sessions</th><th class="num">Users</th></tr></thead><tbody>';
+      for (const s of data.trafficSources) {
+        html += `<tr><td>${s.source}</td><td>${s.medium}</td><td class="num">${s.sessions}</td><td class="num">${s.users}</td></tr>`;
+      }
+      html += '</tbody></table></div>';
+      html += '</div>'; // end chart-grid
+
+      container.innerHTML = html;
+
+      // Render charts
+      renderDailyChart(data.dailyUsers);
+      renderEventsChart(data.topEvents.slice(0, 10));
+      renderCountryChart(data.countries.slice(0, 8));
+      renderSourceChart(data.trafficSources.slice(0, 6));
+      renderDeviceChart(data.devices);
+    }
+
+    function renderDailyChart(dailyUsers) {
+      const ctx = document.getElementById('dailyChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dailyUsers.map(d => formatDate(d.date)),
+          datasets: [
+            {
+              label: 'Users',
+              data: dailyUsers.map(d => d.users),
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+            },
+            {
+              label: 'Sessions',
+              data: dailyUsers.map(d => d.sessions),
+              borderColor: '#06b6d4',
+              backgroundColor: 'rgba(6, 182, 212, 0.05)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: false, mode: 'index' },
+          plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderEventsChart(events) {
+      const ctx = document.getElementById('eventsChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: events.map(e => e.event),
+          datasets: [{
+            label: 'Event Count',
+            data: events.map(e => e.count),
+            backgroundColor: CHART_COLORS.slice(0, events.length),
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true },
+            y: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderCountryChart(countries) {
+      const ctx = document.getElementById('countryChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: countries.map(c => c.country),
+          datasets: [{
+            data: countries.map(c => c.users),
+            backgroundColor: CHART_COLORS,
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderSourceChart(sources) {
+      const ctx = document.getElementById('sourceChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sources.map(s => s.source + ' / ' + s.medium),
+          datasets: [{
+            label: 'Sessions',
+            data: sources.map(s => s.sessions),
+            backgroundColor: '#6366f1',
+            borderRadius: 4,
+          }, {
+            label: 'Users',
+            data: sources.map(s => s.users),
+            backgroundColor: '#06b6d4',
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { beginAtZero: true },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderDeviceChart(devices) {
+      const ctx = document.getElementById('deviceChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: devices.map(d => d.category),
+          datasets: [{
+            data: devices.map(d => d.users),
+            backgroundColor: ['#6366f1', '#06b6d4', '#22c55e', '#f97316'],
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, padding: 12 } },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    async function loadData(forceRefresh = false) {
+      const btn = document.getElementById('refresh-btn');
+      const status = document.getElementById('cache-status');
+      const dot = document.getElementById('status-dot');
+
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+
+      try {
+        const url = forceRefresh ? API_URL + '?bust=' + Date.now() : API_URL;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: resp.statusText }));
+          throw new Error(err.message || err.error || resp.statusText);
+        }
+        const data = await resp.json();
+
+        renderDashboard(data);
+
+        const cached = data.fromCache ? 'Cached' : 'Fresh';
+        const time = new Date(data.cachedAt).toLocaleTimeString();
+        status.textContent = `${cached} · ${time}`;
+        dot.style.background = '#22c55e';
+      } catch (err) {
+        document.getElementById('content').innerHTML = `
+          <div class="error-box">
+            <strong>Failed to load analytics data</strong><br>
+            ${err.message}<br><br>
+            <small>Ensure GA4_SERVICE_ACCOUNT_JSON and GA4_PROPERTY_ID are set in Netlify env vars.</small>
+          </div>`;
+        dot.style.background = '#ef4444';
+        status.textContent = 'Error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Refresh';
+      }
+    }
+
+    // Auto-refresh every 15 minutes
+    const AUTO_REFRESH_MS = 15 * 60 * 1000;
+    setInterval(() => loadData(true), AUTO_REFRESH_MS);
+
+    // Initial load
+    loadData();
+  </script>
+</body>
+</html>
