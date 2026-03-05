@@ -275,7 +275,8 @@
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
     "crio_status": "CRI-O",
-    "coredns_status": "CoreDNS"
+    "coredns_status": "CoreDNS",
+    "keda_status": "KEDA"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -440,7 +441,8 @@
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
-    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
+    "keda_status": "KEDA ऑटोस्केलर स्थिति, स्केल्ड ऑब्जेक्ट मेट्रिक्स और ट्रिगर कतार गहराई।"
   },
   "categories": {
     "core": "Core",
@@ -478,7 +480,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "orchestration": "ऑर्केस्ट्रेशन"
   },
   "addCard": {
     "title": "Add Card",
@@ -2666,5 +2669,21 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "keda": {
+    "healthy": "स्वस्थ",
+    "degraded": "ख़राब",
+    "notInstalled": "KEDA नहीं मिला",
+    "notInstalledHint": "कोई KEDA ऑपरेटर Pod नहीं मिले। इवेंट-संचालित ऑटोस्केलिंग सक्षम करने के लिए KEDA तैनात करें।",
+    "fetchError": "KEDA स्थिति प्राप्त करने में विफल",
+    "operatorPods": "Pod",
+    "total": "कुल",
+    "ready": "तैयार",
+    "issues": "समस्याएं",
+    "paused": "रुका हुआ",
+    "searchPlaceholder": "स्केल्ड ऑब्जेक्ट खोजें…",
+    "noScaledObjects": "ऑपरेटर चल रहा है",
+    "noScaledObjectsHint": "स्केल्ड ऑब्जेक्ट डेटा के लिए KEDA CRD API आवश्यक है।",
+    "noSearchResults": "आपकी खोज से कोई स्केल्ड ऑब्जेक्ट मेल नहीं खाता।"
   }
 }

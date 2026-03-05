@@ -277,7 +277,8 @@
     "crio_status": "CRI-O",
     "coredns_status": "CoreDNS",
     "fluentd_status": "Fluentd",
-    "lima_status": "Lima"
+    "lima_status": "Lima",
+    "keda_status": "KEDA"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -447,7 +448,8 @@
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
     "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
     "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health.",
-    "lima_status": "Lima virtual machine instances and resource usage."
+    "lima_status": "Lima virtual machine instances and resource usage.",
+    "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths."
   },
   "categories": {
     "core": "Core",
@@ -485,7 +487,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "orchestration": "Orchestration"
   },
   "addCard": {
     "title": "Add Card",
@@ -2738,5 +2741,21 @@
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",
     "savingsRecommendations": "Savings Recommendations"
+  },
+  "keda": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "KEDA not detected",
+    "notInstalledHint": "No KEDA operator pods found. Deploy KEDA to enable event-driven autoscaling.",
+    "fetchError": "Failed to fetch KEDA status",
+    "operatorPods": "pods",
+    "total": "Total",
+    "ready": "Ready",
+    "issues": "Issues",
+    "paused": "Paused",
+    "searchPlaceholder": "Search scaled objects…",
+    "noScaledObjects": "Operator running",
+    "noScaledObjectsHint": "ScaledObject data requires the KEDA CRD API.",
+    "noSearchResults": "No scaled objects match your search."
   }
 }

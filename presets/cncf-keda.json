@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "keda_status",
+  "title": "KEDA",
+  "description": "KEDA autoscaler status, scaled object metrics, and trigger queue depths.",
+  "category": "Orchestration",
+  "project": "keda",
+  "cncf_status": "graduated",
+  "config": {}
+}

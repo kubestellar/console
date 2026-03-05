@@ -275,7 +275,8 @@
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
     "crio_status": "CRI-O",
-    "coredns_status": "CoreDNS"
+    "coredns_status": "CoreDNS",
+    "keda_status": "KEDA"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -440,7 +441,8 @@
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
-    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
+    "keda_status": "KEDA オートスケーラーのステータス、スケールオブジェクトのメトリクス、トリガーキューの深度。"
   },
   "categories": {
     "core": "Core",
@@ -478,7 +480,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "orchestration": "オーケストレーション"
   },
   "addCard": {
     "title": "Add Card",
@@ -2666,5 +2669,21 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "keda": {
+    "healthy": "正常",
+    "degraded": "低下",
+    "notInstalled": "KEDA が検出されません",
+    "notInstalledHint": "KEDA オペレーター Pod が見つかりません。イベント駆動型オートスケーリングを有効にするには KEDA をデプロイしてください。",
+    "fetchError": "KEDA ステータスの取得に失敗しました",
+    "operatorPods": "Pod",
+    "total": "合計",
+    "ready": "準備完了",
+    "issues": "問題",
+    "paused": "一時停止",
+    "searchPlaceholder": "スケールオブジェクトを検索…",
+    "noScaledObjects": "オペレーター稼働中",
+    "noScaledObjectsHint": "スケールオブジェクトデータには KEDA CRD API が必要です。",
+    "noSearchResults": "検索に一致するスケールオブジェクトはありません。"
   }
 }
