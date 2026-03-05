@@ -414,14 +414,16 @@ export function usePVs(cluster?: string) {
 }
 
 // Hook to get ResourceQuotas
-export function useResourceQuotas(cluster?: string, namespace?: string) {
+// When forceLive is true, skip demo mode fallback and always query the real API.
+// Used by GPU Reservations to show live data when running in-cluster with OAuth.
+export function useResourceQuotas(cluster?: string, namespace?: string, forceLive = false) {
   const [resourceQuotas, setResourceQuotas] = useState<ResourceQuota[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
-    // If demo mode is enabled, use demo data
-    if (isDemoMode()) {
+    // If demo mode is enabled, use demo data (unless forceLive overrides)
+    if (!forceLive && isDemoMode()) {
       const demoQuotas = getDemoResourceQuotas().filter(q =>
         (!cluster || q.cluster === cluster) && (!namespace || q.namespace === namespace)
       )
@@ -446,7 +448,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [cluster, namespace])
+  }, [cluster, namespace, forceLive])
 
   useEffect(() => {
     refetch()

@@ -33,7 +33,8 @@ import {
 } from '../../hooks/useMCP'
 import type { GPUNode } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useDemoMode, hasRealToken } from '../../hooks/useDemoMode'
+import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
 import { DonutChart } from '../charts/PieChart'
@@ -171,7 +172,6 @@ const STATUS_COLORS: Record<string, string> = {
 export function GPUReservations() {
   const { t } = useTranslation(['cards', 'common'])
   const { nodes: rawNodes, isLoading: nodesLoading, refetch: refetchGPUNodes } = useGPUNodes()
-  const { resourceQuotas } = useResourceQuotas()
   const { refetch: refetchClusters } = useClusters()
 
   // Refresh indicator for dashboard tab — refreshes GPU nodes + clusters
@@ -182,7 +182,16 @@ export function GPUReservations() {
   const { showIndicator: isRefreshingDashboard, triggerRefresh } = useRefreshIndicator(refetchAll)
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode: demoMode } = useDemoMode()
-  const { user } = useAuth()
+  const { isInClusterMode } = useBackendHealth()
+  const { user, isAuthenticated } = useAuth()
+
+  // GPU Reservations bypasses demo mode when running in-cluster with a real OAuth token.
+  // Other pages can remain in demo mode — this exception ensures authenticated users
+  // on cluster deployments always get live GPU reservation data.
+  const gpuLiveMode = isInClusterMode && isAuthenticated && hasRealToken()
+  const effectiveDemoMode = demoMode && !gpuLiveMode
+
+  const { resourceQuotas } = useResourceQuotas(undefined, undefined, gpuLiveMode)
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -567,7 +576,7 @@ export function GPUReservations() {
       <div className="mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">{t('gpuReservations.title')}</h1>
-          {demoMode && (
+          {effectiveDemoMode && (
             <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
               <FlaskConical className="w-3 h-3" />
               {t('gpuReservations.demo')}
@@ -657,7 +666,7 @@ export function GPUReservations() {
         <div className="space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-4 gap-4">
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-purple-500/20">
                   <Zap className="w-5 h-5 text-purple-400" />
@@ -668,7 +677,7 @@ export function GPUReservations() {
                 </div>
               </div>
             </div>
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-500/20">
                   <CheckCircle2 className="w-5 h-5 text-green-400" />
@@ -679,7 +688,7 @@ export function GPUReservations() {
                 </div>
               </div>
             </div>
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/20">
                   <Settings2 className="w-5 h-5 text-blue-400" />
@@ -690,7 +699,7 @@ export function GPUReservations() {
                 </div>
               </div>
             </div>
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-yellow-500/20">
                   <AlertTriangle className="w-5 h-5 text-yellow-400" />
@@ -706,7 +715,7 @@ export function GPUReservations() {
           {/* Charts Row */}
           <div className="grid grid-cols-3 gap-4">
             {/* Utilization */}
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('gpuReservations.charts.gpuUtilization')}</h3>
               <div className="flex items-center justify-center">
                 <div className="relative w-32 h-32">
@@ -732,7 +741,7 @@ export function GPUReservations() {
             </div>
 
             {/* GPU Types */}
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('common:common.gpuTypes')}</h3>
               {stats.typeChartData.length > 0 ? (
                 <DonutChart data={stats.typeChartData} size={150} thickness={20} showLegend={true} />
@@ -742,7 +751,7 @@ export function GPUReservations() {
             </div>
 
             {/* Usage by Namespace */}
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('gpuReservations.charts.gpuUsageByNamespace')}</h3>
               {stats.usageByNamespace.length > 0 ? (
                 <DonutChart data={stats.usageByNamespace} size={150} thickness={20} showLegend={true} />
@@ -754,14 +763,14 @@ export function GPUReservations() {
 
           {/* Cluster Allocation */}
           {stats.clusterUsage.length > 0 && (
-            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+            <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('gpuReservations.charts.gpuAllocationByCluster')}</h3>
               <BarChart data={stats.clusterUsage} height={200} color={getChartColorByName('primary')} showGrid={true} />
             </div>
           )}
 
           {/* Active Reservations */}
-          <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+          <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
             <h3 className="text-sm font-medium text-muted-foreground mb-4">
               {showOnlyMine ? t('gpuReservations.overview.myGpuReservations') : t('gpuReservations.overview.activeGpuReservations')}
             </h3>
@@ -806,7 +815,7 @@ export function GPUReservations() {
       {/* Calendar Tab */}
       {activeTab === 'calendar' && (
         <div className="space-y-6">
-          <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+          <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
             <div className="flex items-center justify-center gap-4 mb-4">
               {(['prev', 'heading', 'next'] as const).map(item => {
                 if (item === 'heading') return (
@@ -966,7 +975,7 @@ export function GPUReservations() {
             {filteredReservations.map(r => {
               const isExpanded = expandedReservationId === r.id
               return (
-                <div key={r.id} className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+                <div key={r.id} className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-purple-500/20">
@@ -1116,7 +1125,7 @@ export function GPUReservations() {
           {gpuClusters.map(cluster => {
             const clusterNodes = nodes.filter(n => n.cluster === cluster.name)
             return (
-              <div key={cluster.name} className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
+              <div key={cluster.name} className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <ClusterBadge cluster={cluster.name} size="sm" />

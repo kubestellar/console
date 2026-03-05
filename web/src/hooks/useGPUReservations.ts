@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
-import { useDemoMode } from './useDemoMode'
+import { useDemoMode, hasRealToken } from './useDemoMode'
+import { isInClusterMode } from './useBackendHealth'
 
 const REFRESH_INTERVAL_MS = 30000
 
@@ -122,6 +123,10 @@ export function useGPUReservations(onlyMine = false) {
   const { isDemoMode: demoMode } = useDemoMode()
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // GPU Reservations bypasses demo mode when running in-cluster with a real OAuth token.
+  // This ensures authenticated users on cluster deployments always see live reservation data.
+  const effectiveDemo = demoMode && !(isInClusterMode() && hasRealToken())
+
   const fetchReservations = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true)
     try {
@@ -129,7 +134,7 @@ export function useGPUReservations(onlyMine = false) {
       const { data } = await api.get<GPUReservation[]>(`/api/gpu/reservations${query}`)
       const safeData = Array.isArray(data) ? data : []
       // In demo mode, use demo data when the DB is empty (localhost with no reservations)
-      if (demoMode && safeData.length === 0) {
+      if (effectiveDemo && safeData.length === 0) {
         setReservations(DEMO_RESERVATIONS)
       } else {
         setReservations(safeData)
@@ -137,7 +142,7 @@ export function useGPUReservations(onlyMine = false) {
       setError(null)
     } catch (err) {
       // API unreachable — fall back to demo data when in demo mode
-      if (demoMode) {
+      if (effectiveDemo) {
         setReservations(DEMO_RESERVATIONS)
         setError(null)
       } else if (!silent) {
@@ -146,7 +151,7 @@ export function useGPUReservations(onlyMine = false) {
     } finally {
       if (!silent) setIsLoading(false)
     }
-  }, [onlyMine, demoMode])
+  }, [onlyMine, effectiveDemo])
 
   // Re-fetches when demo mode toggles, ensuring correct data source.
   // On cluster deployments the API succeeds and data stays live.
