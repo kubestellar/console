@@ -464,6 +464,28 @@ export function MissionDetailView({
                   Helm Chart
                 </a>
               )}
+              {sourceUrls.issue && (
+                <a
+                  href={sourceUrls.issue}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Issue
+                </a>
+              )}
+              {sourceUrls.pr && (
+                <a
+                  href={sourceUrls.pr}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Pull Request
+                </a>
+              )}
             </div>
           )}
 

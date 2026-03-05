@@ -269,10 +269,13 @@ interface IndexEntry {
   installMethods?: string[]
 }
 
+/** File format version used by console-kb mission files */
+const MISSION_FILE_FORMAT_VERSION = 'kc-mission-v1'
+
 /** Convert an index entry to a MissionExport (browsing metadata only — steps loaded on demand) */
 function indexEntryToMission(entry: IndexEntry): MissionExport {
   return {
-    version: '1.0',
+    version: MISSION_FILE_FORMAT_VERSION,
     title: entry.title || '',
     description: entry.description || '',
     type: (entry.type as MissionExport['type']) || 'custom',
@@ -320,6 +323,7 @@ async function fetchMissionContent(
   // Extract steps from the nested `mission` object (console-kb file format)
   // Falls back to top-level fields if the nested structure isn't present
   const nested = parsed.mission || {}
+  const fileMeta = parsed.metadata || {}
   const merged: MissionExport = {
     ...indexMission,
     steps: nested.steps || parsed.steps || indexMission.steps,
@@ -328,6 +332,13 @@ async function fetchMissionContent(
     troubleshooting: nested.troubleshooting || parsed.troubleshooting,
     resolution: nested.resolution || parsed.resolution,
     prerequisites: parsed.prerequisites || indexMission.prerequisites,
+    metadata: {
+      ...indexMission.metadata,
+      qualityScore: fileMeta.qualityScore,
+      maturity: fileMeta.maturity,
+      projectVersion: fileMeta.projectVersion,
+      sourceUrls: fileMeta.sourceUrls,
+    },
   }
 
   return { mission: merged, raw: text }

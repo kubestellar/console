@@ -55,6 +55,8 @@ export interface MissionExport {
       docs?: string
       repo?: string
       helm?: string
+      issue?: string
+      pr?: string
     }
   }
 }
