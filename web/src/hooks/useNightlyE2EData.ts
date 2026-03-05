@@ -70,6 +70,7 @@ export function useNightlyE2EData() {
     demoData: { guides: DEMO_DATA, isDemo: true },
     persist: true,
     refreshInterval,
+    demoWhenEmpty: true, // Show demo data immediately during cold start instead of skeleton loading
     liveInDemoMode: isNetlifyDeployment, // Only fetch live in demo mode on console.kubestellar.io
     fetcher: async () => {
       // Try authenticated endpoint first, then public fallback
@@ -156,10 +157,12 @@ export function useNightlyE2EData() {
 
   return {
     guides,
-    // Don't report demo fallback while still loading — the initial demo data is a
-    // loading placeholder, not confirmed demo mode. Showing the Demo badge during
-    // cache hydration is misleading and fails cache compliance tests.
-    isDemoFallback: cacheResult.isLoading ? false : isDemo,
+    // Use the cache's own isDemoFallback which correctly handles:
+    // 1. Optimistic demo during cold-start loading (showOptimisticDemo)
+    // 2. Normal demo mode when disabled
+    // 3. demoWhenEmpty fallback after fetch returns empty
+    // Don't suppress during loading — demoWhenEmpty already handles this properly.
+    isDemoFallback: cacheResult.isDemoFallback || (!cacheResult.isLoading && isDemo),
     isLoading: hasCachedInitial ? false : cacheResult.isLoading,
     isRefreshing: cacheResult.isRefreshing || (hasCachedInitial && cacheResult.isLoading),
     isFailed: cacheResult.isFailed,
