@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Plus, X, CheckCircle2 } from 'lucide-react'
+import { Lightbulb, Plus, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useClusters } from '../../hooks/useMCP'
 import {
@@ -157,13 +157,13 @@ export function SmartCardSuggestions({
   }
 
   return (
-    <div className="mb-4 glass rounded-xl border border-purple-500/30 overflow-hidden animate-in slide-in-from-top-2 duration-300">
+    <div className="mb-4 glass rounded-xl border border-border/50 overflow-hidden animate-in slide-in-from-top-2 duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-400" />
+          <Lightbulb className="w-4 h-4 text-primary" />
           <span className="text-sm font-medium text-foreground">
-            {t('dashboard.smartSuggestions.title', 'Recommended for your clusters')}
+            {t('dashboard.smartSuggestions.title', 'Recommended Cards for your clusters')}
           </span>
           <span className="text-xs text-muted-foreground">
             {health?.clusters ?? 0} {t('dashboard.smartSuggestions.clustersConnected', 'clusters connected')}
@@ -172,7 +172,7 @@ export function SmartCardSuggestions({
         <div className="flex items-center gap-2">
           <button
             onClick={handleAddAll}
-            className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1 rounded hover:bg-purple-500/10"
+            className="text-xs text-primary hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-secondary"
           >
             {t('dashboard.smartSuggestions.addAll', 'Add all')}
           </button>
@@ -181,7 +181,7 @@ export function SmartCardSuggestions({
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title={t('common.dismiss', 'Dismiss')}
           >
-            <X className="w-3.5 h-3.5" />
+            <ChevronUp className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -199,14 +199,14 @@ export function SmartCardSuggestions({
                 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
                 ${justAdded
                   ? 'bg-green-500/20 border border-green-500/30 text-green-400'
-                  : 'bg-secondary/50 border border-border/50 hover:border-purple-500/40 hover:bg-purple-500/10 text-foreground'
+                  : 'bg-secondary/50 border border-border/50 hover:border-primary/40 hover:bg-secondary text-foreground'
                 }
               `}
             >
               {justAdded ? (
                 <CheckCircle2 className="w-3.5 h-3.5" />
               ) : (
-                <Plus className="w-3.5 h-3.5 text-purple-400" />
+                <Plus className="w-3.5 h-3.5 text-primary" />
               )}
               <span className="font-medium">{formatCardTitle(cardType)}</span>
               <span className="text-xs text-muted-foreground hidden sm:inline">

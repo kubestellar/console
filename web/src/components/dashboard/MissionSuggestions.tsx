@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Lightbulb, Clock, X, ChevronDown, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope } from 'lucide-react'
+import { Lightbulb, Clock, X, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope } from 'lucide-react'
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
 import { useSnoozedMissions, formatTimeRemaining } from '../../hooks/useSnoozedMissions'
 import { useMissions } from '../../hooks/useMissions'
@@ -56,6 +56,7 @@ export function MissionSuggestions() {
   const { startMission } = useMissions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [minimized, setMinimized] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Check agent status for offline skeleton display
@@ -161,14 +162,14 @@ export function MissionSuggestions() {
   // Show skeleton when agent is offline and demo mode is OFF
   if (forceSkeletonForOffline) {
     return (
-      <div data-tour="mission-suggestions" className="mb-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
-            <Lightbulb className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-medium">{t('dashboard.missions.actions')}</span>
-          </div>
+      <div data-tour="mission-suggestions" className="mb-4 glass rounded-xl border border-border/50 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3">
+          <Lightbulb className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">{t('dashboard.missions.actions')}</span>
+        </div>
+        <div className="flex flex-wrap gap-2 p-3 pt-0">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rounded" width={120} height={26} className="rounded-full" />
+            <Skeleton key={i} variant="rounded" width={140} height={30} className="rounded-lg" />
           ))}
         </div>
       </div>
@@ -177,15 +178,63 @@ export function MissionSuggestions() {
 
   if (!hasSuggestions) return null
 
-  return (
-    <div data-tour="mission-suggestions" className="mb-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
-          <Lightbulb className="w-4 h-4 text-purple-400" />
-          <span className="text-xs font-medium">Actions:</span>
-        </div>
+  // Minimized pill view
+  if (minimized) {
+    return (
+      <div data-tour="mission-suggestions" className="mb-4">
+        <button
+          onClick={() => setMinimized(false)}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-secondary/50 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+        >
+          <Lightbulb className="w-3.5 h-3.5 text-primary" />
+          <span>{t('dashboard.missions.actions')}</span>
+          {stats.critical > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+              {t('dashboard.missions.critical', { count: stats.critical })}
+            </span>
+          )}
+          <ChevronDown className="w-3 h-3" />
+        </button>
+      </div>
+    )
+  }
 
-        {/* Inline suggestion chips */}
+  return (
+    <div data-tour="mission-suggestions" className="mb-4 glass rounded-xl border border-border/50 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Lightbulb className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">
+            {t('dashboard.missions.actions')}
+          </span>
+          {stats.critical > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+              {t('dashboard.missions.critical', { count: stats.critical })}
+            </span>
+          )}
+          {stats.high > 0 && stats.critical === 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[10px]">
+              {t('dashboard.missions.high', { count: stats.high })}
+            </span>
+          )}
+          {suggestions.length > 6 && (
+            <span className="text-[10px] text-muted-foreground">
+              {t('dashboard.missions.moreDetails', { count: suggestions.length - 6 })}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setMinimized(true)}
+          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          title="Minimize"
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Action chips */}
+      <div className="flex flex-wrap gap-2 p-3">
         {suggestions.slice(0, 6).map((suggestion) => {
           const Icon = MISSION_ICONS[suggestion.type]
           const style = PRIORITY_STYLES[suggestion.priority]
@@ -198,10 +247,10 @@ export function MissionSuggestions() {
               {/* Compact chip */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${style.border} ${style.bg} ${style.text}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${style.border} ${style.bg} ${style.text}`}
               >
                 <Icon className="w-3 h-3" />
-                <span className="max-w-[150px] truncate">{suggestion.title}</span>
+                <span className="max-w-[180px] truncate">{suggestion.title}</span>
                 {suggestion.priority === 'critical' && (
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                 )}
@@ -246,7 +295,7 @@ export function MissionSuggestions() {
                     )}
 
                     {snoozeRemaining && snoozeRemaining > 0 && (
-                      <div className="text-xs text-purple-400 mb-2">
+                      <div className="text-xs text-muted-foreground mb-2">
                         {t('dashboard.missions.snoozedFor', { time: formatTimeRemaining(snoozeRemaining) })}
                       </div>
                     )}
@@ -261,7 +310,7 @@ export function MissionSuggestions() {
                             ? 'bg-red-500 hover:bg-red-600 text-white'
                             : suggestion.priority === 'high'
                             ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                            : 'bg-purple-500 hover:bg-purple-600 text-white'
+                            : 'bg-primary hover:bg-primary/80 text-white'
                         } disabled:opacity-50`}
                       >
                         <Stethoscope className="w-3 h-3" />
@@ -297,24 +346,6 @@ export function MissionSuggestions() {
             </div>
           )
         })}
-
-        {/* Stats badges */}
-        {stats.critical > 0 && (
-          <span className="px-1.5 py-0.5 rounded-full bg-red-950 text-red-400 text-[10px]">
-            {t('dashboard.missions.critical', { count: stats.critical })}
-          </span>
-        )}
-        {stats.high > 0 && stats.critical === 0 && (
-          <span className="px-1.5 py-0.5 rounded-full bg-orange-950 text-orange-400 text-[10px]">
-            {t('dashboard.missions.high', { count: stats.high })}
-          </span>
-        )}
-
-        {suggestions.length > 6 && (
-          <span className="text-[10px] text-muted-foreground">
-            {t('dashboard.missions.moreDetails', { count: suggestions.length - 6 })}
-          </span>
-        )}
       </div>
     </div>
   )

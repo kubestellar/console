@@ -690,7 +690,7 @@
       "documentation": "Documentation"
     },
     "missions": {
-      "actions": "Actions:",
+      "actions": "Recommended Actions for your clusters",
       "repair": "Repair",
       "repairTitle": "AI Repair - automatically fix this issue",
       "snoozeTitle": "Snooze for 24 hours",
@@ -739,7 +739,7 @@
       "addCard": "Add \"{{title}}\" card to dashboard",
       "showRealTimeData": "Show real-time cluster data",
       "addressCriticalIssues": "Address critical issues faster",
-      "ai": "AI:",
+      "ai": "Recommended Cards for your clusters",
       "adding": "Adding...",
       "snooze": "Snooze",
       "dismiss": "Dismiss",
@@ -845,7 +845,7 @@
       "exampleKustomizeGitOps": "Kustomize and GitOps status"
     },
     "smartSuggestions": {
-      "title": "Recommended for your clusters",
+      "title": "Recommended Cards for your clusters",
       "clustersConnected": "clusters connected",
       "addAll": "Add all"
     },

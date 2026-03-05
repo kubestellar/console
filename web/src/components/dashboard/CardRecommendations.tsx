@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock, ChevronDown, X, Plus, AlertTriangle, Info, Lightbulb } from 'lucide-react'
+import { Clock, ChevronDown, ChevronUp, X, Plus, AlertTriangle, Info, Lightbulb } from 'lucide-react'
 import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardRecommendations'
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
 import { AI_THINKING_DELAY_MS } from '../../lib/constants/network'
@@ -35,6 +35,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   const { snoozeRecommendation, dismissRecommendation, isSnoozed, isDismissed, snoozedRecommendations } = useSnoozedRecommendations()
   const [expandedRec, setExpandedRec] = useState<string | null>(null)
   const [addingCard, setAddingCard] = useState<string | null>(null)
+  const [minimized, setMinimized] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Force dependency on snoozedRecommendations for reactivity
@@ -102,15 +103,58 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
     }
   }
 
-  return (
-    <div data-tour="recommendations" className="mb-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
-          <Lightbulb className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium">{t('dashboard.recommendations.ai')}</span>
-        </div>
+  // Minimized pill view
+  if (minimized) {
+    return (
+      <div data-tour="recommendations" className="mb-4">
+        <button
+          onClick={() => setMinimized(false)}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-secondary/50 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+        >
+          <Lightbulb className="w-3.5 h-3.5 text-primary" />
+          <span>{t('dashboard.recommendations.ai')}</span>
+          {highPriorityCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+              {t('dashboard.recommendations.critical', { count: highPriorityCount })}
+            </span>
+          )}
+          <ChevronDown className="w-3 h-3" />
+        </button>
+      </div>
+    )
+  }
 
-        {/* Inline recommendation chips */}
+  return (
+    <div data-tour="recommendations" className="mb-4 glass rounded-xl border border-border/50 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Lightbulb className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">
+            {t('dashboard.recommendations.ai')}
+          </span>
+          {highPriorityCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+              {t('dashboard.recommendations.critical', { count: highPriorityCount })}
+            </span>
+          )}
+          {visibleRecommendations.length > 6 && (
+            <span className="text-[10px] text-muted-foreground">
+              {t('dashboard.recommendations.more', { count: visibleRecommendations.length - 6 })}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setMinimized(true)}
+          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          title="Minimize"
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Recommendation chips */}
+      <div className="flex flex-wrap gap-2 p-3">
         {visibleRecommendations.slice(0, 6).map((rec) => {
           const style = PRIORITY_STYLES[rec.priority as keyof typeof PRIORITY_STYLES] || PRIORITY_STYLES.low
           const isExpanded = expandedRec === rec.id
@@ -122,10 +166,10 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
               {/* Compact chip */}
               <button
                 onClick={() => setExpandedRec(isExpanded ? null : rec.id)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${style.border} ${style.bg} ${style.text}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${style.border} ${style.bg} ${style.text}`}
               >
                 <Icon className="w-3 h-3" />
-                <span className="max-w-[150px] truncate">{rec.title}</span>
+                <span className="max-w-[180px] truncate">{rec.title}</span>
                 {rec.priority === 'high' && (
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                 )}
@@ -198,19 +242,6 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             </div>
           )
         })}
-
-        {/* Stats badges */}
-        {highPriorityCount > 0 && (
-          <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
-            {t('dashboard.recommendations.critical', { count: highPriorityCount })}
-          </span>
-        )}
-
-        {visibleRecommendations.length > 6 && (
-          <span className="text-[10px] text-muted-foreground">
-            {t('dashboard.recommendations.more', { count: visibleRecommendations.length - 6 })}
-          </span>
-        )}
       </div>
     </div>
   )
