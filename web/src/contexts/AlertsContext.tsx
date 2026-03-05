@@ -20,8 +20,14 @@ function generateId(): string {
   return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
-// Shallow-compare two detail records without relying on JSON.stringify key ordering
-function shallowEqualRecords(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+// Shallow-compare two detail records without relying on JSON.stringify key ordering.
+// Treats null/undefined as equal to each other and unequal to any object.
+function shallowEqualRecords(
+  a: Record<string, unknown> | null | undefined,
+  b: Record<string, unknown> | null | undefined
+): boolean {
+  if (a == null && b == null) return true
+  if (a == null || b == null) return false
   const keysA = Object.keys(a)
   const keysB = Object.keys(b)
   if (keysA.length !== keysB.length) return false
