@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Download, Monitor, Smartphone, Copy, Check, ExternalLink, Info } from 'lucide-react'
+import { Download, Monitor, Smartphone, Copy, Check, ExternalLink, Info, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BACKEND_DEFAULT_URL } from '../../lib/constants'
 import { BaseModal } from '../../lib/modals'
@@ -34,7 +34,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const [activeTab, setActiveTab] = useState<ExportTab>(cardType ? 'card' : 'templates')
   const [selectedCard, setSelectedCard] = useState<string | null>(cardType || null)
   const [selectedStats, setSelectedStats] = useState<string[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>('cluster_overview')
   const [apiEndpoint, setApiEndpoint] = useState(() => {
     // Use the current site origin on Netlify deployments so exported widgets
     // fetch from the Netlify Functions; fall back to local backend otherwise.
@@ -48,6 +48,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const [showCode, setShowCode] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
   const [isLoading, setIsLoading] = useState(false)
+  const isOnPublicSite = window.location.hostname === 'console.kubestellar.io' || window.location.hostname.includes('netlify')
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
@@ -138,14 +139,14 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
         onClose={onClose}
       />
       <BaseModal.Content>
-      <div className="flex flex-col h-[550px]">
+      <div className="flex flex-col max-h-[70vh]">
         {/* Tabs */}
         <div className="flex border-b border-border mb-4">
           <button
             onClick={() => setActiveTab('templates')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'templates'
-                ? 'text-purple-400 border-purple-400'
+                ? 'text-primary border-primary'
                 : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}
           >
@@ -155,7 +156,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             onClick={() => setActiveTab('card')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'card'
-                ? 'text-purple-400 border-purple-400'
+                ? 'text-primary border-primary'
                 : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}
           >
@@ -165,7 +166,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             onClick={() => setActiveTab('stats')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'stats'
-                ? 'text-purple-400 border-purple-400'
+                ? 'text-primary border-primary'
                 : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}
           >
@@ -229,13 +230,48 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             {/* Configuration */}
             <div className="mt-4 pt-4 border-t border-border space-y-3">
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">{t('widgets.apiEndpoint')}</label>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <label className="block text-xs text-muted-foreground">{t('widgets.apiEndpoint')}</label>
+                  <div className="relative group">
+                    <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 rounded-lg bg-card border border-border shadow-xl text-xs text-muted-foreground opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                      Widgets require a locally installed or cluster-deployed Console. The API endpoint must match your deployment.
+                      {isOnPublicSite && (
+                        <a
+                          href="https://docs.kubestellar.io/stable/Getting-Started/quickstart/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block mt-1.5 text-primary hover:underline"
+                        >
+                          Install your Console now →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <input
                   type="text"
                   value={apiEndpoint}
                   onChange={(e) => setApiEndpoint(e.target.value)}
                   className="w-full px-3 py-1.5 text-sm bg-secondary rounded border border-border focus:border-purple-500 focus:outline-none"
                 />
+                {isOnPublicSite && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-yellow-400">
+                    <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                    <span>
+                      You're on console.kubestellar.io — {' '}
+                      <a
+                        href="https://docs.kubestellar.io/stable/Getting-Started/quickstart/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-yellow-300"
+                      >
+                        install your Console locally
+                      </a>
+                      {' '} for widgets to work.
+                    </span>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
