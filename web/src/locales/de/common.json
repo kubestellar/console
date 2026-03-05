@@ -1652,7 +1652,8 @@
       "copy": "Copy",
       "more": "+{{count}} more",
       "more_one": "+{{count}} more",
-      "more_other": "+{{count}} more"
+      "more_other": "+{{count}} more",
+      "manifest": "Manifest"
     },
     "ai": {
       "title": "AI Analysis",
@@ -1903,7 +1904,9 @@
       "benefit4": "Enterprise-Compliance — keine imperativen Befehle über Cluster verteilt.",
       "argocdDeclarativeSetup": "Argo CD Deklaratives Setup",
       "gitopsBestPractices": "GitOps Best Practices",
-      "defaultDeploymentName": "<deployment-name>"
+      "defaultDeploymentName": "<deployment-name>",
+      "syncSuccessMessage": "Synchronisierung für Anwendung \"{{appName}}\" im Namespace \"{{namespace}}\" ausgelöst. Argo CD gleicht den gewünschten Zustand mit Git ab.",
+      "syncFailedMessage": "Synchronisierung konnte nicht ausgelöst werden: {{error}}"
     }
   },
   "pagination": {

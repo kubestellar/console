@@ -414,7 +414,8 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
 
 export interface TriggerSyncResult {
   success: boolean
-  message: string
+  /** Raw error message from the API (only set when success is false) */
+  error?: string
 }
 
 /**
@@ -427,29 +428,26 @@ export function useArgoCDTriggerSync() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [lastResult, setLastResult] = useState<TriggerSyncResult | null>(null)
 
-  const triggerSync = useCallback(async (appName: string, namespace: string): Promise<TriggerSyncResult> => {
+  const triggerSync = useCallback(async (_appName: string, _namespace: string): Promise<TriggerSyncResult> => {
     setIsSyncing(true)
     setLastResult(null)
     try {
       // In a real implementation, call the ArgoCD API:
-      //   POST /api/v1/applications/{name}/sync
-      // or run: argocd app sync <name> -n <namespace>
+      //   POST /api/v1/applications/{_appName}/sync
+      // or run: argocd app sync <_appName> -n <_namespace>
       //
       // NOTE: The Promise below never rejects — this is intentional for the
       // mock/demo path. The catch block is kept so that the real API call
       // (which can fail with network or permission errors) is handled correctly
       // once the stub is replaced.
       await new Promise(resolve => setTimeout(resolve, MOCK_SYNC_DELAY_MS))
-      const result: TriggerSyncResult = {
-        success: true,
-        message: `Sync triggered for application "${appName}" in namespace "${namespace}". Argo CD will reconcile the desired state from Git.`,
-      }
+      const result: TriggerSyncResult = { success: true }
       setLastResult(result)
       return result
     } catch (err) {
       const result: TriggerSyncResult = {
         success: false,
-        message: err instanceof Error ? err.message : 'Failed to trigger sync',
+        error: err instanceof Error ? err.message : 'Unknown error',
       }
       setLastResult(result)
       return result

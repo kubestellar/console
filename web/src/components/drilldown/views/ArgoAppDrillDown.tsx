@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
@@ -124,6 +124,10 @@ export function ArgoAppDrillDown({ data }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [aiAnalysis] = useState<string | null>(null)
   const [aiAnalysisLoading] = useState(false)
+
+  // Stable timestamp for the declarative restart snippet — computed once per render so
+  // the displayed YAML and the copy-to-clipboard content always use the same value.
+  const restartTimestamp = useMemo(() => new Date().toISOString(), [])
 
   // Resource context for AI actions
   const resourceContext: ResourceContext = {
@@ -324,12 +328,12 @@ Please:
   const SyncIcon = syncStyle.icon
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'resources', label: 'Resources', icon: Box },
-    { id: 'history', label: 'History', icon: History },
-    { id: 'diff', label: 'Manifest', icon: GitCommit },
+    { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
+    { id: 'resources', label: t('drilldown.tabs.resources'), icon: Box },
+    { id: 'history', label: t('drilldown.tabs.history'), icon: History },
+    { id: 'diff', label: t('drilldown.tabs.manifest'), icon: GitCommit },
     { id: 'gitops', label: t('drilldown.argoApp.gitopsRestartTab'), icon: RefreshCw },
-    { id: 'ai', label: 'AI Analysis', icon: Stethoscope },
+    { id: 'ai', label: t('drilldown.tabs.aiAnalysis'), icon: Stethoscope },
   ]
 
   // Resource click handler
@@ -698,7 +702,12 @@ Please:
                     ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                     : <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                   }
-                  <span>{syncResult.message}</span>
+                  <span>
+                    {syncResult.success
+                      ? t('drilldown.argoApp.syncSuccessMessage', { appName, namespace })
+                      : t('drilldown.argoApp.syncFailedMessage', { error: syncResult.error ?? '' })
+                    }
+                  </span>
                 </div>
               )}
             </div>
@@ -728,11 +737,11 @@ spec:
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/restartedAt: "${new Date().toISOString()}"
+        kubectl.kubernetes.io/restartedAt: "${restartTimestamp}"
 `}
                 </pre>
                 <button
-                  onClick={() => handleCopy('restart-snippet', `apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: ${appName || t('drilldown.argoApp.defaultDeploymentName')}\n  namespace: ${namespace}\nspec:\n  template:\n    metadata:\n      annotations:\n        kubectl.kubernetes.io/restartedAt: "${new Date().toISOString()}"\n`)}
+                  onClick={() => handleCopy('restart-snippet', `apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: ${appName || t('drilldown.argoApp.defaultDeploymentName')}\n  namespace: ${namespace}\nspec:\n  template:\n    metadata:\n      annotations:\n        kubectl.kubernetes.io/restartedAt: "${restartTimestamp}"\n`)}
                   className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground bg-secondary/80 hover:bg-secondary transition-colors opacity-0 group-hover:opacity-100"
                 >
                   {copiedField === 'restart-snippet' ? (
