@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2 } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
+import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from 'lucide-react'
+import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
+import type { AllSettings } from '../../../lib/settingsTypes'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -19,25 +20,63 @@ const decodeToken = (encoded: string) => {
   }
 }
 
+/** Token source values matching backend GitHubTokenSource constants */
+const TOKEN_SOURCE_SETTINGS = 'settings'
+const TOKEN_SOURCE_ENV = 'env'
+
+/** Timeout for fetching settings from the local kc-agent */
+const AGENT_FETCH_TIMEOUT_MS = 5000
+
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {
   const { t } = useTranslation()
   const [githubToken, setGithubToken] = useState('')
   const [hasGithubToken, setHasGithubToken] = useState(false)
+  const [tokenSource, setTokenSource] = useState<string | null>(null)
   const [githubTokenSaved, setGithubTokenSaved] = useState(false)
   const [githubTokenTesting, setGithubTokenTesting] = useState(false)
   const [githubTokenError, setGithubTokenError] = useState<string | null>(null)
   const [githubRateLimit, setGithubRateLimit] = useState<{ limit: number; remaining: number; reset: Date } | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
 
-  // Load GitHub token status on mount and test existing token
+  // Load GitHub token status on mount — check localStorage first, then backend
   useEffect(() => {
     const loadToken = async () => {
       const encodedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
-      setHasGithubToken(!!encodedToken)
+      const storedSource = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
+
       if (encodedToken) {
+        // Token exists in localStorage
+        setHasGithubToken(true)
+        setTokenSource(storedSource)
         const token = decodeToken(encodedToken)
         await testGithubToken(token)
+        setIsInitializing(false)
+        return
       }
+
+      // No localStorage token — check if backend has one (e.g. from FEEDBACK_GITHUB_TOKEN)
+      try {
+        const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings`, {
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(AGENT_FETCH_TIMEOUT_MS),
+        })
+        if (response.ok) {
+          const data: AllSettings = await response.json()
+          if (data?.githubToken) {
+            // Backend has a token — store in localStorage and use it
+            localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(data.githubToken))
+            const source = data.githubTokenSource || TOKEN_SOURCE_SETTINGS
+            localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, source)
+            window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
+            setHasGithubToken(true)
+            setTokenSource(source)
+            await testGithubToken(data.githubToken)
+          }
+        }
+      } catch {
+        // Agent unavailable — no token available
+      }
+
       setIsInitializing(false)
     }
     loadToken()
@@ -130,8 +169,11 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     if (isValid) {
       // Store base64 encoded (obfuscation)
       localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(githubToken.trim()))
+      // User-entered tokens always have "settings" source
+      localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
       window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
       setHasGithubToken(true)
+      setTokenSource(TOKEN_SOURCE_SETTINGS)
       setGithubToken('')
       setGithubTokenSaved(true)
       setTimeout(() => setGithubTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
@@ -147,11 +189,15 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 
   const handleClearGithubToken = () => {
     localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN)
+    localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
     setHasGithubToken(false)
+    setTokenSource(null)
     setGithubRateLimit(null)
     setGithubTokenError(null)
     emitGitHubTokenRemoved()
   }
+
+  const isEnvToken = tokenSource === TOKEN_SOURCE_ENV
 
   return (
     <div id="github-token-settings" className="glass rounded-xl p-6">
@@ -178,7 +224,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         hasGithubToken ? 'bg-green-500/10 border border-green-500/20' :
         'bg-yellow-500/10 border border-yellow-500/20'
       }`}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {githubTokenTesting ? (
             <>
               <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
@@ -197,12 +243,14 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
               <span className="text-muted-foreground">
                 - {githubRateLimit.remaining.toLocaleString()}/{githubRateLimit.limit.toLocaleString()} {t('settings.github.requestsRemaining')}
               </span>
+              {isEnvToken && <EnvBadge />}
             </>
           ) : hasGithubToken ? (
             <>
               <Check className="w-5 h-5 text-green-400" />
               <span className="font-medium text-green-400">{t('settings.github.tokenConfigured')}</span>
               <span className="text-muted-foreground">- 5,000 {t('settings.github.requestsPerHour')}</span>
+              {isEnvToken && <EnvBadge />}
             </>
           ) : (
             <>
@@ -309,5 +357,16 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         </>
       )}
     </div>
+  )
+}
+
+/** Badge shown when the token was auto-detected from FEEDBACK_GITHUB_TOKEN in .env */
+function EnvBadge() {
+  const { t } = useTranslation()
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/25">
+      <Server className="w-3 h-3" />
+      {t('settings.github.envBadge')}
+    </span>
   )
 }

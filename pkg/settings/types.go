@@ -1,6 +1,9 @@
 package settings
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"os"
+)
 
 // SettingsFile is the top-level structure for ~/.kc/settings.json
 type SettingsFile struct {
@@ -103,6 +106,25 @@ type AllSettings struct {
 	APIKeys       map[string]APIKeyEntry `json:"apiKeys"`
 	GitHubToken   string                 `json:"githubToken"`
 	Notifications NotificationSecrets    `json:"notifications"`
+
+	// GitHubTokenSource indicates where the GitHub token came from:
+	// "settings" = user-configured via UI (encrypted in settings file),
+	// "env" = auto-detected from FEEDBACK_GITHUB_TOKEN environment variable,
+	// "" = no token available.
+	GitHubTokenSource string `json:"githubTokenSource,omitempty"`
+}
+
+// GitHubTokenSource constants
+const (
+	// GitHubTokenSourceSettings means the token was saved by the user via UI.
+	GitHubTokenSourceSettings = "settings"
+	// GitHubTokenSourceEnv means the token was auto-detected from FEEDBACK_GITHUB_TOKEN.
+	GitHubTokenSourceEnv = "env"
+)
+
+// FeedbackGitHubToken returns the FEEDBACK_GITHUB_TOKEN env var if set.
+func FeedbackGitHubToken() string {
+	return os.Getenv("FEEDBACK_GITHUB_TOKEN")
 }
 
 // APIKeyEntry holds a provider's API key and optional model override

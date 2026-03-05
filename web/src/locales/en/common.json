@@ -280,7 +280,8 @@
       "createClassic": "Create Classic Token",
       "fineGrainedInstructions": "Set expiration, select 'Public repositories (read-only)'. No additional permissions needed for public repos.",
       "classicInstructions": "No scopes needed for public repos. For private repos, check the 'repo' scope.",
-      "securityWarning": "Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date."
+      "securityWarning": "Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date.",
+      "envBadge": "from .env"
     },
     "predictions": {
       "title": "Predictive Failure Detection",

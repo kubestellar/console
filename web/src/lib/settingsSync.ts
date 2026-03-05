@@ -12,6 +12,7 @@ import {
   STORAGE_KEY_CUSTOM_THEMES,
   STORAGE_KEY_ACCESSIBILITY,
   STORAGE_KEY_GITHUB_TOKEN,
+  STORAGE_KEY_GITHUB_TOKEN_SOURCE,
   STORAGE_KEY_NOTIFICATION_CONFIG,
   STORAGE_KEY_TOUR_COMPLETED,
 } from './constants'
@@ -134,6 +135,11 @@ export function restoreToLocalStorage(settings: AllSettings): void {
 
   if (settings.githubToken) {
     localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, btoa(settings.githubToken))
+  }
+
+  // Persist token source so the UI can show a badge for env-sourced tokens
+  if (settings.githubTokenSource) {
+    localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, settings.githubTokenSource)
   }
 
   if (settings.notifications) {

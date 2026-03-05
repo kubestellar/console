@@ -76,4 +76,7 @@ export interface AllSettings {
   apiKeys: Record<string, APIKeyEntry>
   githubToken: string
   notifications: NotificationSecrets
+
+  /** Where the GitHub token came from: "settings" (user UI), "env" (.env file), or undefined */
+  githubTokenSource?: 'settings' | 'env'
 }

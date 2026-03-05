@@ -116,7 +116,7 @@ export function UpdateSettings() {
   const [triggerState, setTriggerState] = useState<'idle' | 'triggered' | 'error'>('idle')
   const [triggerError, setTriggerError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState(ESTIMATED_UPDATE_SECS)
-  const hasGithubToken = Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN))
+  const [hasGithubToken, setHasGithubToken] = useState(() => Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)))
   const triggerGuardRef = useRef(false) // prevents rapid double-clicks from firing multiple triggers
 
   // Track visual spinning for Check Now button (ensures 1 full rotation like cards)
@@ -171,6 +171,13 @@ export function UpdateSettings() {
     }
     check()
     return () => clearTimeout(retryTimer)
+  }, [])
+
+  // Re-check GitHub token when settings change (e.g. env token auto-detected by GitHubTokenSection)
+  useEffect(() => {
+    const handler = () => setHasGithubToken(Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)))
+    window.addEventListener('kubestellar-settings-changed', handler)
+    return () => window.removeEventListener('kubestellar-settings-changed', handler)
   }, [])
 
   useEffect(() => {
