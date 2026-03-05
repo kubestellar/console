@@ -58,6 +58,14 @@ func GetConfigManager() *ConfigManager {
 		// Load existing config if present
 		globalConfigManager.Load()
 	})
+	// Guard satisfies nilaway: sync.Once guarantees init but static analysis
+	// cannot prove the global is non-nil after Do().
+	if globalConfigManager == nil {
+		globalConfigManager = &ConfigManager{
+			config:      &AgentConfig{Agents: make(map[string]AgentKeyConfig)},
+			keyValidity: make(map[string]bool),
+		}
+	}
 	return globalConfigManager
 }
 

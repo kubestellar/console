@@ -58,6 +58,13 @@ func GetSettingsManager() *SettingsManager {
 			globalSettingsManager.settings = DefaultSettings()
 		}
 	})
+	// Guard satisfies nilaway: sync.Once guarantees init but static analysis
+	// cannot prove the global is non-nil after Do().
+	if globalSettingsManager == nil {
+		globalSettingsManager = &SettingsManager{
+			settings: DefaultSettings(),
+		}
+	}
 	return globalSettingsManager
 }
 
@@ -167,6 +174,11 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		Widget:        sm.settings.Settings.Widget,
 		APIKeys:       make(map[string]APIKeyEntry),
 		Notifications: NotificationSecrets{},
+	}
+
+	// Cannot decrypt without an encryption key (init may have failed)
+	if sm.key == nil {
+		return all, nil
 	}
 
 	// Decrypt API keys
@@ -367,11 +379,17 @@ func (sm *SettingsManager) ImportEncrypted(data []byte) error {
 
 // GetSettingsPath returns the path to the settings file
 func (m *SettingsManager) GetSettingsPath() string {
+	if m == nil {
+		return ""
+	}
 	return m.settingsPath
 }
 
 // SetSettingsPath sets the path to the settings file (for testing)
 func (m *SettingsManager) SetSettingsPath(path string) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.settingsPath = path
@@ -379,6 +397,9 @@ func (m *SettingsManager) SetSettingsPath(path string) {
 
 // SetKeyPath sets the path to the encryption key file (for testing)
 func (m *SettingsManager) SetKeyPath(path string) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.keyPath = path
