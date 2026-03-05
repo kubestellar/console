@@ -408,7 +408,9 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
 // Uses the same cache as usePods but returns all pods without limiting
 // ---------------------------------------------------------------------------
 
-export function useAllPods(cluster?: string, namespace?: string) {
+// When forceLive is true, skip demo mode fallback and always query the real API.
+// Used by GPU cards when running in-cluster with OAuth.
+export function useAllPods(cluster?: string, namespace?: string, forceLive = false) {
   const cacheKey = `pods:${cluster || 'all'}:${namespace || 'all'}`
 
   // Initialize from cache if available
@@ -427,8 +429,8 @@ export function useAllPods(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
-    // If demo mode is enabled, use demo data
-    if (isDemoMode()) {
+    // If demo mode is enabled (and not overridden by forceLive), use demo data
+    if (!forceLive && isDemoMode()) {
       const demoPods = getDemoAllPods().filter(p =>
         (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
       )
@@ -480,7 +482,7 @@ export function useAllPods(cluster?: string, namespace?: string) {
       }
       setIsRefreshing(false)
     }
-  }, [cluster, namespace, cacheKey])
+  }, [cluster, namespace, cacheKey, forceLive])
 
   useEffect(() => {
     const hasCachedData = podsCache && podsCache.key === cacheKey

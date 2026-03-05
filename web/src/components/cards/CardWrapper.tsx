@@ -16,7 +16,7 @@ import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 // isInClusterMode removed — cards render immediately without offline skeleton
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
-import { CardDataReportContext, type CardDataState } from './CardDataContext'
+import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 import { isCardExportable } from '../../lib/widgets/widgetRegistry'
@@ -1058,8 +1058,10 @@ export function CardWrapper({
       : (childDataState?.isLoading ? false : true)
   )
 
-  // Merge isDemoData from child-reported state with prop
-  const effectiveIsDemoData = isDemoData || childDataState?.isDemoData || false
+  // Merge isDemoData from child-reported state with prop.
+  // When forceLive is true, ignore child-reported isDemoData — the child checks global
+  // demo mode independently but we know the data is real (in-cluster with OAuth).
+  const effectiveIsDemoData = forceLive ? false : (isDemoData || childDataState?.isDemoData || false)
 
   // Child can explicitly opt-out of demo indicator by reporting isDemoData: false
   // This is used by stack-dependent cards that use stack data even in global demo mode
@@ -1246,6 +1248,7 @@ export function CardWrapper({
 
   return (
     <CardExpandedContext.Provider value={{ isExpanded }}>
+      <ForceLiveContext.Provider value={!!forceLive}>
       <CardDataReportContext.Provider value={reportCtx}>
         <>
           {/* Main card */}
@@ -1637,6 +1640,7 @@ export function CardWrapper({
           />
         </>
       </CardDataReportContext.Provider>
+      </ForceLiveContext.Provider>
     </CardExpandedContext.Provider>
   )
 }

@@ -71,6 +71,18 @@ const NOOP_REPORT: CardDataReportContextValue = { report: () => {} }
 export const CardDataReportContext = createContext<CardDataReportContextValue>(NOOP_REPORT)
 
 /**
+ * Context to propagate forceLive from CardWrapper to child card components.
+ * When true, child cards should bypass demo mode and use live API data.
+ * Used by GPU Reservations when running in-cluster with OAuth authentication.
+ */
+export const ForceLiveContext = createContext<boolean>(false)
+
+/** Hook for card components to check if they should bypass demo mode */
+export function useForceLive(): boolean {
+  return useContext(ForceLiveContext)
+}
+
+/**
  * Hook for card components to report their data/cache state to the parent
  * CardWrapper. Call this with the isFailed/consecutiveFailures values from
  * your cached data hook (e.g. useCachedPodIssues, useCachedDeployments).

@@ -21,6 +21,7 @@ import {
   User,
   LayoutDashboard,
   GripVertical,
+  X,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -964,6 +965,22 @@ export function GPUReservations() {
       {/* Reservations Tab */}
       {activeTab === 'quotas' && (
         <div className="space-y-6">
+          {/* Filter banner when showing only user's reservations */}
+          {showOnlyMine && (
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30">
+              <div className="flex items-center gap-2 text-sm text-purple-300">
+                <Filter className="w-4 h-4" />
+                <span>{t('gpuReservations.filteringByUser', `Showing reservations for {{user}}`, { user: user?.github_login || 'you' })}</span>
+              </div>
+              <button
+                onClick={() => setShowOnlyMine(false)}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 transition-colors"
+              >
+                <X className="w-3 h-3" />
+                {t('common:common.clearFilter', 'Clear filter')}
+              </button>
+            </div>
+          )}
           {filteredReservations.length === 0 && !reservationsLoading && (
             <div className={'glass p-8 rounded-lg text-center'}>
               <Settings2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
@@ -1123,6 +1140,12 @@ export function GPUReservations() {
       {/* Inventory Tab */}
       {activeTab === 'inventory' && (
         <div className="space-y-6">
+          {nodesLoading && gpuClusters.length === 0 && (
+            <div className="glass p-8 rounded-lg text-center">
+              <Loader2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground animate-spin" />
+              <div className="text-muted-foreground">{t('gpuReservations.inventory.loading', 'Loading GPU inventory...')}</div>
+            </div>
+          )}
           {gpuClusters.length === 0 && !nodesLoading && (
             <div className={'glass p-8 rounded-lg text-center'}>
               <Server className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />

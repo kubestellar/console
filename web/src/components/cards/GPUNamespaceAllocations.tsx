@@ -8,7 +8,7 @@ import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useForceLive } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
 interface GPUNamespaceAllocationsProps {
@@ -51,8 +51,9 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const forceLive = useForceLive()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
-  const { pods: allPods, isLoading: podsLoading } = useAllPods()
+  const { pods: allPods, isLoading: podsLoading } = useAllPods(undefined, undefined, forceLive)
   const { drillToGPUNamespace } = useDrillDownActions()
 
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
