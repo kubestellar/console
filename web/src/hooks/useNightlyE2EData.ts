@@ -121,6 +121,8 @@ export function useNightlyE2EData() {
                   model: g.model ?? 'Unknown',
                   gpuType: g.gpuType ?? 'Unknown',
                   gpuCount: g.gpuCount ?? 0,
+                  llmdImages: g.llmdImages,
+                  otherImages: g.otherImages,
                 }))
                 const result = { guides, isDemo: false }
                 saveCachedData(result)
