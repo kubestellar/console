@@ -470,6 +470,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const [showRaw, setShowRaw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [isMissionLoading, setIsMissionLoading] = useState(false)
+  const [missionContentError, setMissionContentError] = useState<string | null>(null)
 
   // Recommendations
   const [recommendations, setRecommendations] = useState<MissionMatch[]>([])
@@ -659,6 +660,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     // Show index metadata immediately for instant feedback
     setSelectedMission(mission)
     setIsMissionLoading(true)
+    setMissionContentError(null)
     setRawContent(JSON.stringify(mission, null, 2))
     setShowRaw(false)
 
@@ -669,7 +671,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       setSelectedMission((current) => current?.title === mission.title ? fullMission : current)
       setRawContent((current) => current === JSON.stringify(mission, null, 2) ? raw : current)
     } catch {
-      // Silently keep the index metadata — steps will show as empty
+      // Keep the index metadata so basic info is still visible, but surface the error
+      setMissionContentError('Failed to load full mission content. Steps may be incomplete.')
     } finally {
       setIsMissionLoading(false)
     }
@@ -1717,12 +1720,15 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                   rawContent={rawContent}
                   showRaw={showRaw}
                   loading={isMissionLoading}
+                  error={missionContentError}
+                  onRetry={() => selectCardMission(selectedMission)}
                   onToggleRaw={() => setShowRaw(!showRaw)}
                   onImport={() => handleImport(selectedMission, rawContent ?? undefined)}
                   onBack={() => {
                     setSelectedMission(null)
                     setRawContent(null)
                     setShowRaw(false)
+                    setMissionContentError(null)
                   }}
                   onImprove={selectedMission.missionClass === 'install' ? () => setShowImproveDialog(true) : undefined}
                   matchScore={recommendations.find(

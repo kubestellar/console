@@ -61,6 +61,10 @@ interface MissionDetailViewProps {
   shareUrl?: string
   /** Show shimmer skeleton while full mission content is being fetched */
   loading?: boolean
+  /** Error message when fetching full mission content failed */
+  error?: string | null
+  /** Retry callback for re-fetching failed mission content */
+  onRetry?: () => void
 }
 
 // Extract code blocks from markdown-style description
@@ -192,6 +196,8 @@ export function MissionDetailView({
   hideBackButton = false,
   shareUrl,
   loading = false,
+  error = null,
+  onRetry,
 }: MissionDetailViewProps) {
   const [linkCopied, setLinkCopied] = useState(false)
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -501,6 +507,22 @@ export function MissionDetailView({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Error banner — shown when full mission content could not be fetched */}
+          {error && (
+            <div role="alert" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <span className="text-red-400 flex-1">{error}</span>
+              {onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="flex-shrink-0 px-3 py-1 text-xs rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors"
+                >
+                  Retry
+                </button>
+              )}
             </div>
           )}
 
