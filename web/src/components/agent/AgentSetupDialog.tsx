@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Download } from 'lucide-react'
+import { Download, ChevronDown, ChevronRight } from 'lucide-react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { BaseModal } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
@@ -16,13 +16,19 @@ export function AgentSetupDialog() {
   const { t } = useTranslation('common')
   const { status, isConnected } = useLocalAgent()
   const [show, setShow] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copiedMacOS, setCopiedMacOS] = useState(false)
+  const [copiedLinux, setCopiedLinux] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedLinuxTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
-  const installCommand = 'brew install kubestellar/tap/kc-agent && kc-agent'
+  const macOSInstallCommand = 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent'
+  const linuxBuildCommand = 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
 
   useEffect(() => {
-    return () => clearTimeout(copiedTimerRef.current)
+    return () => {
+      clearTimeout(copiedTimerRef.current)
+      clearTimeout(copiedLinuxTimerRef.current)
+    }
   }, [])
 
   useEffect(() => {
@@ -44,11 +50,20 @@ export function AgentSetupDialog() {
     setShow(true)
   }, [status, isConnected])
 
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(installCommand)
-    setCopied(true)
+  const [showLinux, setShowLinux] = useState(false)
+
+  const copyMacOS = async () => {
+    await navigator.clipboard.writeText(macOSInstallCommand)
+    setCopiedMacOS(true)
     clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+    copiedTimerRef.current = setTimeout(() => setCopiedMacOS(false), UI_FEEDBACK_TIMEOUT_MS)
+  }
+
+  const copyLinux = async () => {
+    await navigator.clipboard.writeText(linuxBuildCommand)
+    setCopiedLinux(true)
+    clearTimeout(copiedLinuxTimerRef.current)
+    copiedLinuxTimerRef.current = setTimeout(() => setCopiedLinux(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const handleSnooze = () => {
@@ -74,21 +89,21 @@ export function AgentSetupDialog() {
       />
 
       <BaseModal.Content>
-        {/* Install Option */}
+        {/* macOS Install Option */}
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-          <div className="font-medium">{t('agentSetup.quickInstall')}</div>
+          <div className="font-medium">{t('agentSetup.quickInstallMacOS')}</div>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('agentSetup.copyAndRun')}
           </p>
           <div className="mt-3 flex items-center gap-2">
             <code className="flex-1 rounded bg-muted px-3 py-2 text-sm font-mono select-all overflow-x-auto">
-              {installCommand}
+              {macOSInstallCommand}
             </code>
             <button
-              onClick={copyToClipboard}
+              onClick={copyMacOS}
               className="shrink-0 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              {copied ? t('agentSetup.copied') : t('agentSetup.copy')}
+              {copiedMacOS ? t('agentSetup.copied') : t('agentSetup.copy')}
             </button>
           </div>
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -96,6 +111,34 @@ export function AgentSetupDialog() {
             <span>✓ {t('agentSetup.realtimeTokenUsage')}</span>
             <span>✓ {t('agentSetup.localAndSecure')}</span>
           </div>
+        </div>
+
+        {/* Linux Install Option (collapsible) */}
+        <div className="mt-3">
+          <button
+            onClick={() => setShowLinux(!showLinux)}
+            className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            {showLinux ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {t('agentSetup.linuxInstructions')}
+          </button>
+          {showLinux && (
+            <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
+              <p className="text-xs text-muted-foreground">{t('agentSetup.linuxBuildDesc')}</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
+                  {linuxBuildCommand}
+                </code>
+                <button
+                  onClick={copyLinux}
+                  className="shrink-0 rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  {copiedLinux ? t('agentSetup.copied') : t('agentSetup.copy')}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t('agentSetup.linuxBrewAlternative')}</p>
+            </div>
+          )}
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">

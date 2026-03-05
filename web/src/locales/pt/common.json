@@ -1491,7 +1491,9 @@
     "envVariableNote": "Key is set via environment variable. Modify the environment to change it.",
     "keysSavedTo": "Keys saved to",
     "securityNote": "API keys are stored securely on your local machine and never sent to our servers.",
-    "selectAgent": "Select AI agent"
+    "selectAgent": "Select AI agent",
+    "installViaHomebrewMacOS": "# Install via Homebrew (macOS)",
+    "installLinuxBuildFromSource": "# Linux: build from source (requires Go 1.24+)"
   },
   "navbar": {
     "closeMenu": "Close menu",
@@ -2769,7 +2771,11 @@
     "installFromSettings": "You can install the agent anytime from Settings.",
     "dontShowAgain": "Don't show again",
     "continueWithDemoData": "Continue with Demo Data",
-    "remindMeLater": "Remind Me Later"
+    "remindMeLater": "Remind Me Later",
+    "quickInstallMacOS": "Quick Install — macOS (Homebrew)",
+    "linuxInstructions": "Linux installation instructions",
+    "linuxBuildDesc": "Build from source (recommended for Linux). Requires Go 1.24+:",
+    "linuxBrewAlternative": "Alternatively, use Linuxbrew: brew tap kubestellar/tap && brew install --head kc-agent"
   },
   "agentStatus": {
     "connectingToAgent": "Connecting to local agent...",

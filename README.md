@@ -62,7 +62,48 @@ The **kc-agent** is a local agent that runs on your machine and bridges the brow
 
 ### Installation
 
+#### macOS (Homebrew)
+
 ```bash
+brew tap kubestellar/tap
+brew install --head kc-agent
+```
+
+#### Linux (Build from Source — recommended)
+
+The simplest method on Linux requires only Go 1.24+:
+
+```bash
+git clone https://github.com/kubestellar/console.git
+cd console
+go build -o bin/kc-agent ./cmd/kc-agent
+./bin/kc-agent
+```
+
+> Requires Go 1.24+. Run `go version` to check.
+
+Alternatively, `make build` compiles both the kc-agent binary and the full frontend, but also requires Node.js 20+:
+
+```bash
+# Requires Go 1.24+ AND Node.js 20+
+git clone https://github.com/kubestellar/console.git
+cd console
+make build
+./bin/kc-agent
+```
+
+#### Linux (Linuxbrew — alternative)
+
+If you prefer a Homebrew-based workflow on Linux, you can use [Linuxbrew](https://docs.brew.sh/Homebrew-on-Linux):
+
+```bash
+# Install Homebrew on Linux (if not already installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Add brew to your PATH (follow the instructions printed by the installer, or run:)
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# Install kc-agent
 brew tap kubestellar/tap
 brew install --head kc-agent
 ```
@@ -73,8 +114,11 @@ brew install --head kc-agent
 # Start the agent (runs on localhost:8585)
 kc-agent
 
-# Or run as a background service
+# macOS only: run as a background service
 brew services start kubestellar/tap/kc-agent
+
+# Linux (build from source): run in the background
+nohup ./bin/kc-agent &
 ```
 
 ### Configuration
@@ -117,7 +161,7 @@ Wildcard subdomains are supported: `https://*.example.com`
 
 #### Running as a Service with Custom Origins
 
-To persist the configuration when running as a brew service, add to your shell profile (`~/.zshrc` or `~/.bashrc`):
+**macOS (Homebrew service):** Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
 
 ```bash
 export KC_ALLOWED_ORIGINS="https://my-console.example.com"
@@ -127,6 +171,12 @@ Then restart the service:
 
 ```bash
 brew services restart kubestellar/tap/kc-agent
+```
+
+**Linux (build from source):** Pass the flag directly or export before running:
+
+```bash
+KC_ALLOWED_ORIGINS="https://my-console.example.com" ./bin/kc-agent
 ```
 
 ### Security

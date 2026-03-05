@@ -448,11 +448,15 @@ export function useLocalAgent() {
     steps: [
       {
         title: 'Install via Homebrew (macOS)',
-        command: 'brew install kubestellar/tap/kc-agent && kc-agent',
+        command: 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
       },
       {
-        title: 'Or build from source',
-        command: 'go install github.com/kubestellar/console/cmd/kc-agent@latest && kc-agent',
+        title: 'Build from source (Linux — recommended)',
+        command: 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent',
+      },
+      {
+        title: 'Install via Linuxbrew (Linux — alternative)',
+        command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
       },
     ],
     benefits: [
