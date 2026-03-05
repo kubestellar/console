@@ -182,6 +182,8 @@ const ContourStatus = lazy(() => import('./contour-status').then(m => ({ default
 const CrioStatus = lazy(() => import('./crio_status').then(m => ({ default: m.CrioStatus })))
 // CoreDNS card
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
+// Fluentd log collector card
+const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default: m.FluentdStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -430,6 +432,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   crio_status: CrioStatus,
   // CoreDNS
   coredns_status: CoreDNSStatus,
+  // Fluentd log collector
+  fluentd_status: FluentdStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
