@@ -3,6 +3,8 @@
  * Each theme defines colors, fonts, and UI styles
  */
 
+import { STORAGE_KEY_CUSTOM_THEMES } from './constants/storage'
+
 export interface ThemeColors {
   // Core colors (HSL format without hsl())
   background: string
@@ -1478,11 +1480,10 @@ export const themeGroups = [
 ]
 
 // Custom themes from marketplace (localStorage)
-const CUSTOM_THEMES_KEY = 'kc-custom-themes'
 
 export function getCustomThemes(): Theme[] {
   try {
-    return JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY) || '[]')
+    return JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_THEMES) || '[]')
   } catch {
     return []
   }
@@ -1491,12 +1492,12 @@ export function getCustomThemes(): Theme[] {
 export function addCustomTheme(theme: Theme): void {
   const customs = getCustomThemes().filter(t => t.id !== theme.id)
   customs.push(theme)
-  localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(customs))
+  localStorage.setItem(STORAGE_KEY_CUSTOM_THEMES, JSON.stringify(customs))
 }
 
 export function removeCustomTheme(themeId: string): void {
   const customs = getCustomThemes().filter(t => t.id !== themeId)
-  localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(customs))
+  localStorage.setItem(STORAGE_KEY_CUSTOM_THEMES, JSON.stringify(customs))
 }
 
 export function getAllThemes(): Theme[] {

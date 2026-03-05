@@ -28,6 +28,7 @@ const LS_KEYS = {
   [STORAGE_KEY_PREDICTION_SETTINGS]: 'predictions',
   [STORAGE_KEY_TOKEN_SETTINGS]: 'tokenUsage',
   [STORAGE_KEY_THEME]: 'theme',
+  [STORAGE_KEY_CUSTOM_THEMES]: 'customThemes',
   [STORAGE_KEY_ACCESSIBILITY]: 'accessibility',
   [STORAGE_KEY_GITHUB_TOKEN]: 'githubToken',
   [STORAGE_KEY_NOTIFICATION_CONFIG]: 'notifications',
@@ -120,7 +121,7 @@ export function restoreToLocalStorage(settings: AllSettings): void {
   // Restore custom marketplace themes and notify theme-aware components.
   // If the write fails (e.g. localStorage full), themes remain unavailable until the
   // next successful sync — the same state as before the restore attempt.
-  if (settings.customThemes && settings.customThemes.length > 0) {
+  if (Array.isArray(settings.customThemes) && settings.customThemes.length > 0) {
     try {
       localStorage.setItem(STORAGE_KEY_CUSTOM_THEMES, JSON.stringify(settings.customThemes))
       window.dispatchEvent(new Event('kc-custom-themes-changed'))

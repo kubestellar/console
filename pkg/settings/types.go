@@ -164,6 +164,7 @@ func DefaultAllSettings() *AllSettings {
 		Predictions:   d.Settings.Predictions,
 		TokenUsage:    d.Settings.TokenUsage,
 		Theme:         d.Settings.Theme,
+		CustomThemes:  nil,
 		Accessibility: d.Settings.Accessibility,
 		Profile:       d.Settings.Profile,
 		Widget:        d.Settings.Widget,
