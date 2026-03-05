@@ -1,0 +1,45 @@
+name: Label Console-Created Issues
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    if: >-
+      contains(github.event.issue.body, 'automatically created from the KubeStellar Console') ||
+      contains(github.event.issue.body, 'Submitted via KubeStellar Console')
+    steps:
+      - name: Apply labels to console-submitted issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const existingLabels = issue.labels.map(l => l.name);
+
+            // Determine issue type from body
+            const isBug = body.includes('**Type:** bug') || body.includes('## Bug Report');
+            const typeLabel = isBug ? 'kind/bug' : 'enhancement';
+
+            // Labels that should be present on all console-created issues
+            const requiredLabels = [typeLabel, 'ai-fix-requested', 'help wanted', 'triage/accepted'];
+
+            const labelsToAdd = requiredLabels.filter(l => !existingLabels.includes(l));
+
+            if (labelsToAdd.length === 0) {
+              core.info('All required labels already present');
+              return;
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: labelsToAdd
+            });
+            core.info(`Added labels: ${labelsToAdd.join(', ')}`);
