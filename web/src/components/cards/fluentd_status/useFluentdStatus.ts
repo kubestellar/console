@@ -94,6 +94,7 @@ async function fetchFluentdStatus(): Promise<FluentdStatus> {
 export interface UseFluentdStatusResult {
   data: FluentdStatus
   loading: boolean
+  isRefreshing: boolean
   error: boolean
   consecutiveFailures: number
   showSkeleton: boolean
@@ -101,7 +102,7 @@ export interface UseFluentdStatusResult {
 }
 
 export function useFluentdStatus(): UseFluentdStatusResult {
-  const { data, isLoading, isFailed, consecutiveFailures, isDemoFallback } =
+  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
     useCache<FluentdStatus>({
       key: CACHE_KEY,
       category: 'default',
@@ -111,6 +112,10 @@ export function useFluentdStatus(): UseFluentdStatusResult {
       fetcher: fetchFluentdStatus,
     })
 
+  // Never show demo data during initial loading — this ensures CardWrapper
+  // shows a loading skeleton instead of demo data + Demo badge on first visit.
+  const effectiveIsDemoData = isDemoFallback && !isLoading
+
   const hasAnyData = data.pods.total > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -118,12 +123,13 @@ export function useFluentdStatus(): UseFluentdStatusResult {
     hasAnyData,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoFallback,
+    isDemoData: effectiveIsDemoData,
   })
 
   return {
     data,
     loading: isLoading,
+    isRefreshing,
     error: isFailed && !hasAnyData,
     consecutiveFailures,
     showSkeleton,
