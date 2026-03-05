@@ -4231,7 +4231,12 @@ jobs:
                 });
                 core.info(`Assigned Copilot to #${issue.number}`);
               } catch (e) {
-                core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
+                const hint = e.status === 401
+                  ? ' — CONSOLE_AUTO PAT may be expired (check repo secrets)'
+                  : e.status === 403
+                  ? ' — token may lack repo scope or Copilot agent is not enabled'
+                  : '';
+                core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}${hint}`);
               }
               created++;
 
