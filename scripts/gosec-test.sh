@@ -65,9 +65,14 @@ REPORT_MD="/tmp/gosec-summary.md"
 echo -e "${BOLD}Running gosec security scanner...${NC}"
 echo ""
 
+# Taint-analysis rules (G702-G704) produce false positives in admin CLI tools
+# that intentionally operate on user-specified paths/URLs/commands.
+# G101 flags k8s type constants like "kubernetes.io/service-account-token" as hardcoded creds.
+GOSEC_EXCLUDE="G101,G702,G703,G704"
+
 # Run gosec with JSON output; gosec exits non-zero on findings, so we capture the exit code
 GOSEC_EXIT=0
-gosec -fmt=json -out="$REPORT_JSON" -exclude-dir=vendor -exclude-dir=node_modules ./... 2>/dev/null || GOSEC_EXIT=$?
+gosec -fmt=json -out="$REPORT_JSON" -exclude="${GOSEC_EXCLUDE}" -exclude-dir=vendor -exclude-dir=node_modules ./... 2>/dev/null || GOSEC_EXIT=$?
 
 # ============================================================================
 # Parse results

@@ -145,9 +145,10 @@ if command -v go &>/dev/null; then
     fi
 
     # Count vulnerabilities from text output
-    GO_VULNS=$(grep -c "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null || echo "0")
+    GO_VULNS=$(grep -c "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null | head -1 | tr -d '[:space:]' || true)
+    GO_VULNS="${GO_VULNS:-0}"
 
-    if [ "$GO_VULNS" -eq 0 ]; then
+    if [ "$GO_VULNS" -eq 0 ] 2>/dev/null; then
       echo -e "  ${GREEN}✓ No vulnerabilities found${NC}"
     else
       echo -e "  ${RED}❌ ${GO_VULNS} vulnerability/ies found${NC}"

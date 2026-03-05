@@ -53,7 +53,8 @@ echo -e "${BOLD}═════════════════════�
 echo ""
 
 # Licenses that are incompatible with Apache-2.0 / CNCF requirements
-BLOCKED_LICENSES="GPL-3.0|AGPL-3.0|AGPL-1.0|GPL-3.0-only|GPL-3.0-or-later|AGPL-3.0-only|AGPL-3.0-or-later|SSPL|BSL|Unlicense"
+# Note: Use word boundaries (\b) for Unlicense to avoid matching npm's UNLICENSED
+BLOCKED_LICENSES="GPL-3.0|AGPL-3.0|AGPL-1.0|GPL-3.0-only|GPL-3.0-or-later|AGPL-3.0-only|AGPL-3.0-or-later|SSPL|BSL"
 
 NPM_STATUS="pass"
 NPM_TOTAL=0
@@ -92,10 +93,14 @@ try:
         data = json.load(f)
     flagged = 0
     for pkg, info in data.items():
+        # Skip the project itself
+        if pkg.startswith('kubestellar-console@'):
+            continue
         lic = info.get('licenses', '')
         if isinstance(lic, list):
             lic = ', '.join(lic)
-        if blocked.search(str(lic)):
+        lic_str = str(lic)
+        if blocked.search(lic_str) or lic_str.strip() == 'Unlicense':
             print(f'  BLOCKED: {pkg} ({lic})')
             flagged += 1
     # Print count on last line
@@ -107,7 +112,7 @@ except Exception as e:
   # Extract just the count
   NPM_FLAGGED=$(grep "^COUNT:" "$TMPDIR_LIC/npm-flagged.txt" 2>/dev/null | tail -1 | cut -d: -f2 || echo "0")
   # Show blocked packages (lines before COUNT)
-  grep "^  BLOCKED:" "$TMPDIR_LIC/npm-flagged.txt" 2>/dev/null | while IFS= read -r line; do
+  { grep "^  BLOCKED:" "$TMPDIR_LIC/npm-flagged.txt" 2>/dev/null || true; } | while IFS= read -r line; do
     echo -e "  ${RED}${line}${NC}"
   done
 

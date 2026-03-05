@@ -375,7 +375,7 @@ func (mh *MetricsHistory) GetTrendContext() string {
 }
 
 func formatPercent(v float64) string {
-	return string([]byte{byte(int(v)/10 + '0'), byte(int(v)%10 + '0'), '%'})
+	return strconv.Itoa(int(v)) + "%"
 }
 
 func joinStrings(ss []string, sep string) string {
