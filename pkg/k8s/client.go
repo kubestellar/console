@@ -148,16 +148,17 @@ func (m *MultiClusterClient) Reload() error {
 
 // ClusterInfo represents basic cluster information
 type ClusterInfo struct {
-	Name      string `json:"name"`
-	Context   string `json:"context"`
-	Server    string `json:"server,omitempty"`
-	User      string `json:"user,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Healthy   bool   `json:"healthy"`
-	Source    string `json:"source,omitempty"`
-	NodeCount int    `json:"nodeCount,omitempty"`
-	PodCount  int    `json:"podCount,omitempty"`
-	IsCurrent bool   `json:"isCurrent,omitempty"`
+	Name       string `json:"name"`
+	Context    string `json:"context"`
+	Server     string `json:"server,omitempty"`
+	User       string `json:"user,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	AuthMethod string `json:"authMethod,omitempty"` // exec, token, certificate, auth-provider, unknown
+	Healthy    bool   `json:"healthy"`
+	Source     string `json:"source,omitempty"`
+	NodeCount  int    `json:"nodeCount,omitempty"`
+	PodCount   int    `json:"podCount,omitempty"`
+	IsCurrent  bool   `json:"isCurrent,omitempty"`
 }
 
 // ClusterHealth represents cluster health status
@@ -929,13 +930,29 @@ func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, e
 			// Get the user name from the AuthInfo reference
 			user := contextInfo.AuthInfo
 
+			// Detect auth method from kubeconfig AuthInfo
+			authMethod := "unknown"
+			if ai, ok := rawConfig.AuthInfos[contextInfo.AuthInfo]; ok && ai != nil {
+				switch {
+				case ai.Exec != nil:
+					authMethod = "exec"
+				case ai.Token != "" || ai.TokenFile != "":
+					authMethod = "token"
+				case len(ai.ClientCertificateData) > 0 || ai.ClientCertificate != "":
+					authMethod = "certificate"
+				case ai.AuthProvider != nil:
+					authMethod = "auth-provider"
+				}
+			}
+
 			clusters = append(clusters, ClusterInfo{
-				Name:      contextName,
-				Context:   contextName,
-				Server:    server,
-				User:      user,
-				Source:    "kubeconfig",
-				IsCurrent: contextName == currentContext,
+				Name:       contextName,
+				Context:    contextName,
+				Server:     server,
+				User:       user,
+				AuthMethod: authMethod,
+				Source:     "kubeconfig",
+				IsCurrent:  contextName == currentContext,
 			})
 		}
 	}
@@ -1262,14 +1279,17 @@ func classifyError(errMsg string) string {
 		return "timeout"
 	}
 
-	// Auth errors
+	// Auth errors (includes exec-plugin / IAM failures)
 	if strings.Contains(lowerMsg, "401") ||
 		strings.Contains(lowerMsg, "403") ||
 		strings.Contains(lowerMsg, "unauthorized") ||
 		strings.Contains(lowerMsg, "forbidden") ||
 		strings.Contains(lowerMsg, "authentication") ||
 		strings.Contains(lowerMsg, "invalid token") ||
-		strings.Contains(lowerMsg, "token expired") {
+		strings.Contains(lowerMsg, "token expired") ||
+		strings.Contains(lowerMsg, "exec plugin") ||
+		strings.Contains(lowerMsg, "getting credentials") ||
+		(strings.Contains(lowerMsg, "executable") && strings.Contains(lowerMsg, "not found")) {
 		return "auth"
 	}
 

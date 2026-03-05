@@ -52,9 +52,11 @@ func (k *KubectlProxy) ListContexts() ([]protocol.ClusterInfo, string) {
 		if cluster != nil {
 			server = cluster.Server
 		}
+		authMethod := detectAuthMethod(k.config.AuthInfos[ctx.AuthInfo])
 		clusters = append(clusters, protocol.ClusterInfo{
 			Name: name, Context: name, Server: server,
-			User: ctx.AuthInfo, Namespace: ctx.Namespace, IsCurrent: name == current,
+			User: ctx.AuthInfo, Namespace: ctx.Namespace,
+			AuthMethod: authMethod, IsCurrent: name == current,
 		})
 	}
 	return clusters, current
@@ -583,4 +585,26 @@ func (k *KubectlProxy) TestClusterConnection(req TestConnectionRequest) (*TestCo
 		Reachable:     true,
 		ServerVersion: version.GitVersion,
 	}, nil
+}
+
+// detectAuthMethod examines a kubeconfig AuthInfo entry and returns the auth
+// method in use: "exec" (IAM/cloud CLI), "token", "certificate",
+// "auth-provider", or "unknown".
+func detectAuthMethod(ai *api.AuthInfo) string {
+	if ai == nil {
+		return "unknown"
+	}
+	if ai.Exec != nil {
+		return "exec"
+	}
+	if ai.Token != "" || ai.TokenFile != "" {
+		return "token"
+	}
+	if len(ai.ClientCertificateData) > 0 || ai.ClientCertificate != "" {
+		return "certificate"
+	}
+	if ai.AuthProvider != nil {
+		return "auth-provider"
+	}
+	return "unknown"
 }

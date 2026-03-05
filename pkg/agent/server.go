@@ -323,6 +323,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/kagenti/tools", s.handleKagentiTools)
 	mux.HandleFunc("/kagenti/summary", s.handleKagentiSummary)
 
+	// Cloud CLI status (detects installed cloud CLIs for IAM auth guidance)
+	mux.HandleFunc("/cloud-cli-status", s.handleCloudCLIStatus)
+
 	// Local cluster management endpoints
 	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
 	mux.HandleFunc("/local-clusters", s.handleLocalClusters)
@@ -3821,6 +3824,49 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 			log.Printf("[DeviceTracker] Failed to send notification: %v", err)
 		}
 	}()
+}
+
+// cloudCLI describes a cloud provider CLI binary and its purpose.
+type cloudCLI struct {
+	Name     string `json:"name"`     // Binary name (e.g. "aws")
+	Provider string `json:"provider"` // Cloud provider label
+	Found    bool   `json:"found"`    // Whether the binary is on PATH
+	Path     string `json:"path,omitempty"`
+}
+
+// handleCloudCLIStatus detects installed cloud CLIs (aws, gcloud, az, oc)
+// so the frontend can show provider-specific IAM auth guidance.
+func (s *Server) handleCloudCLIStatus(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	clis := []cloudCLI{
+		{Name: "aws", Provider: "AWS EKS"},
+		{Name: "gcloud", Provider: "Google GKE"},
+		{Name: "az", Provider: "Azure AKS"},
+		{Name: "oc", Provider: "OpenShift"},
+	}
+
+	for i := range clis {
+		if p, err := exec.LookPath(clis[i].Name); err == nil {
+			clis[i].Found = true
+			clis[i].Path = p
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"clis": clis,
+	})
 }
 
 // handleLocalClusterTools returns detected local cluster tools

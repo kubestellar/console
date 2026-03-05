@@ -70,12 +70,13 @@ type ClustersPayload struct {
 
 // ClusterInfo represents a kubeconfig context
 type ClusterInfo struct {
-	Name      string `json:"name"`
-	Context   string `json:"context"`
-	Server    string `json:"server"`
-	User      string `json:"user,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	IsCurrent bool   `json:"isCurrent"`
+	Name       string `json:"name"`
+	Context    string `json:"context"`
+	Server     string `json:"server"`
+	User       string `json:"user,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	AuthMethod string `json:"authMethod,omitempty"` // exec, token, certificate, auth-provider, unknown
+	IsCurrent  bool   `json:"isCurrent"`
 }
 
 // KubectlRequest is the payload for kubectl commands
