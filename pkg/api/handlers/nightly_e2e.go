@@ -2,10 +2,12 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -14,8 +16,9 @@ import (
 )
 
 const (
-	nightlyCacheIdleTTL   = 5 * time.Minute // cache when no jobs running
-	nightlyCacheActiveTTL = 2 * time.Minute // cache when jobs are in progress
+	nightlyCacheIdleTTL   = 5 * time.Minute  // cache when no jobs running
+	nightlyCacheActiveTTL = 2 * time.Minute  // cache when jobs are in progress
+	imageCacheTTL         = 30 * time.Minute // image tags change less frequently
 	nightlyRunsPerPage    = 7
 	githubAPIBase         = "https://api.github.com"
 
@@ -25,7 +28,18 @@ const (
 	maxLogBytes     = 200_000          // 200KB tail per job log
 	logCacheTTL     = 10 * time.Minute // immutable once run completes
 	maxLogFetchJobs = 5                // limit concurrent job log fetches
+
+	// imageRepo is the GitHub repo whose guide directories contain image references
+	imageRepo = "llm-d/llm-d"
 )
+
+// imageRe matches direct image references: ghcr.io/llm-d/<name>:<tag>
+var imageRe = regexp.MustCompile(`ghcr\.io/llm-d/([\w][\w.-]*?):([\w][\w.+-]*)`)
+
+// hubRe matches the hub/name/tag EPP pattern (hub: ghcr.io/llm-d)
+var hubRe = regexp.MustCompile(`(?i)hub:\s*ghcr\.io/llm-d\b`)
+var nameRe = regexp.MustCompile(`(?i)name:\s*([\w][\w.-]*)`)
+var tagRe = regexp.MustCompile(`(?i)tag:\s*([\w][\w.+-]*)`)
 
 // NightlyWorkflow defines a GitHub Actions workflow to monitor.
 type NightlyWorkflow struct {
@@ -37,7 +51,8 @@ type NightlyWorkflow struct {
 	Model        string            `json:"model"`
 	GPUType      string            `json:"gpuType"`
 	GPUCount     int               `json:"gpuCount"`
-	LLMDImages   map[string]string `json:"llmdImages"`   // llm-d component → tag
+	GuidePath    string            `json:"-"`            // directory under guides/ in llm-d/llm-d repo
+	LLMDImages   map[string]string `json:"llmdImages"`   // llm-d component → tag (populated dynamically)
 	OtherImages  map[string]string `json:"otherImages"`  // non-llm-d containers → tag
 }
 
@@ -108,59 +123,36 @@ type NightlyE2EHandler struct {
 	logMu       sync.RWMutex
 	logCache    map[string]*RunLogsResponse // key: "repo/runId"
 	logCacheExp map[string]time.Time
+
+	imgMu       sync.RWMutex
+	imgCache    map[string]map[string]string // guidePath → image name → tag
+	imgCacheExp time.Time
 }
 
-// Component image tags used by each guide type (shared across platforms).
-// The main vLLM image (llm-d-cuda-dev:latest) is overridden nightly via image_override.
-var (
-	// imgCudaDev is the nightly-built dev image used by most guides
-	imgCudaDev = map[string]string{"llm-d-cuda-dev": "latest"}
-
-	// imgPD adds the routing sidecar to the base image set
-	imgPD = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0"}
-
-	// imgPPC adds the UDS tokenizer to the base image set
-	imgPPC = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-uds-tokenizer": "v0.5.1-rc1"}
-
-	// imgSA uses the inference simulator instead of cuda-dev
-	imgSA = map[string]string{"llm-d-inference-sim": "v0.7.1", "llm-d-routing-sidecar": "v0.5.0"}
-
-	// imgWEP adds the routing sidecar for wide EP
-	imgWEP = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0"}
-
-	// imgWVA adds the workload variant autoscaler (tag is dynamic, rebuilt nightly)
-	imgWVA = map[string]string{"llm-d-cuda-dev": "latest", "llm-d-workload-variant-autoscaler": "nightly"}
-
-	// imgTPC uses only the base cuda-dev image
-	imgTPC = map[string]string{"llm-d-cuda-dev": "latest"}
-
-	// imgBM uses the base image for benchmarking
-	imgBM = map[string]string{"llm-d-cuda-dev": "latest"}
-)
-
 // nightlyWorkflows is the canonical list of nightly E2E workflows to monitor.
-// Model/GPU metadata is sourced from each workflow's YAML in GitHub Actions.
+// GuidePath maps to the directory under guides/ in llm-d/llm-d whose YAML files
+// contain the image references. LLMDImages is populated dynamically at runtime.
 var nightlyWorkflows = []NightlyWorkflow{
 	// OCP — all OCP guides run on H100 except WVA (A100) and SA (CPU)
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, LLMDImages: imgCudaDev},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgPD},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", Guide: "Precise Prefix Cache", Acronym: "PPC", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, LLMDImages: imgPPC},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-simulated-accelerators.yaml", Guide: "Simulated Accelerators", Acronym: "SA", Platform: "OCP", Model: "Simulated", GPUType: "CPU", GPUCount: 0, LLMDImages: imgSA},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", Guide: "Tiered Prefix Cache", Acronym: "TPC", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 1, LLMDImages: imgTPC},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgWEP},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-ocp.yaml", Guide: "WVA", Acronym: "WVA", Platform: "OCP", Model: "Llama-3.1-8B", GPUType: "A100", GPUCount: 2, LLMDImages: imgWVA},
-	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-ocp.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "OCP", Model: "opt-125m", GPUType: "A100", GPUCount: 1, LLMDImages: imgBM},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, GuidePath: "inference-scheduling"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, GuidePath: "pd-disaggregation"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", Guide: "Precise Prefix Cache", Acronym: "PPC", Platform: "OCP", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, GuidePath: "precise-prefix-cache-aware"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-simulated-accelerators.yaml", Guide: "Simulated Accelerators", Acronym: "SA", Platform: "OCP", Model: "Simulated", GPUType: "CPU", GPUCount: 0, GuidePath: "simulated-accelerators"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", Guide: "Tiered Prefix Cache", Acronym: "TPC", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 1, GuidePath: "tiered-prefix-cache"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "OCP", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, GuidePath: "wide-ep-lws"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-ocp.yaml", Guide: "WVA", Acronym: "WVA", Platform: "OCP", Model: "Llama-3.1-8B", GPUType: "A100", GPUCount: 2, GuidePath: "workload-autoscaling"},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-ocp.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "OCP", Model: "opt-125m", GPUType: "A100", GPUCount: 1},
 	// GKE — all GKE guides run on L4
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-gke.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "GKE", Model: "Qwen3-32B", GPUType: "L4", GPUCount: 2, LLMDImages: imgCudaDev},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2, LLMDImages: imgPD},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2, LLMDImages: imgWEP},
-	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-gke.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "GKE", Model: "opt-125m", GPUType: "L4", GPUCount: 1, LLMDImages: imgBM},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-gke.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "GKE", Model: "Qwen3-32B", GPUType: "L4", GPUCount: 2, GuidePath: "inference-scheduling"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2, GuidePath: "pd-disaggregation"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "GKE", Model: "Qwen3-0.6B", GPUType: "L4", GPUCount: 2, GuidePath: "wide-ep-lws"},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nighly-benchmark-gke.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "GKE", Model: "opt-125m", GPUType: "L4", GPUCount: 1},
 	// CKS — all CKS guides run on H100
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-cks.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "CKS", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, LLMDImages: imgCudaDev},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgPD},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, LLMDImages: imgWEP},
-	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-cks.yaml", Guide: "WVA", Acronym: "WVA", Platform: "CKS", Model: "Llama-3.1-8B", GPUType: "H100", GPUCount: 2, LLMDImages: imgWVA},
-	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nightly-benchmark-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS", Model: "opt-125m", GPUType: "H100", GPUCount: 1, LLMDImages: imgBM},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-cks.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "CKS", Model: "Qwen3-32B", GPUType: "H100", GPUCount: 2, GuidePath: "inference-scheduling"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, GuidePath: "pd-disaggregation"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "CKS", Model: "Qwen3-0.6B", GPUType: "H100", GPUCount: 2, GuidePath: "wide-ep-lws"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wva-cks.yaml", Guide: "WVA", Acronym: "WVA", Platform: "CKS", Model: "Llama-3.1-8B", GPUType: "H100", GPUCount: 2, GuidePath: "workload-autoscaling"},
+	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nightly-benchmark-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS", Model: "opt-125m", GPUType: "H100", GPUCount: 1},
 }
 
 // NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
@@ -171,6 +163,7 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 		httpClient:  &http.Client{Timeout: 30 * time.Second},
 		logCache:    make(map[string]*RunLogsResponse),
 		logCacheExp: make(map[string]time.Time),
+		imgCache:    make(map[string]map[string]string),
 	}
 	go h.prewarm()
 	return h
@@ -234,6 +227,7 @@ func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
 		err  error
 	}
 
+	// Fetch workflow runs and guide images concurrently
 	ch := make(chan result, len(nightlyWorkflows))
 	for i, wf := range nightlyWorkflows {
 		go func(idx int, wf NightlyWorkflow) {
@@ -242,6 +236,9 @@ func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
 		}(i, wf)
 	}
 
+	// Fetch dynamic image tags (cached separately with longer TTL)
+	guideImages := h.getGuideImages()
+
 	// Collect results
 	runsByIdx := make(map[int][]NightlyRun, len(nightlyWorkflows))
 	for range nightlyWorkflows {
@@ -249,7 +246,6 @@ func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
 		if r.err == nil {
 			runsByIdx[r.idx] = r.runs
 		}
-		// Workflows that 404 (not yet created) just get empty runs
 	}
 
 	guides := make([]NightlyGuideStatus, len(nightlyWorkflows))
@@ -267,6 +263,13 @@ func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
 				latest = &s
 			}
 		}
+
+		// Use dynamically fetched images for this guide
+		images := guideImages[wf.GuidePath]
+		if images == nil {
+			images = map[string]string{}
+		}
+
 		guides[i] = NightlyGuideStatus{
 			Guide:            wf.Guide,
 			Acronym:          wf.Acronym,
@@ -280,7 +283,7 @@ func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
 			Model:            wf.Model,
 			GPUType:          wf.GPUType,
 			GPUCount:         wf.GPUCount,
-			LLMDImages:       wf.LLMDImages,
+			LLMDImages:       images,
 			OtherImages:      wf.OtherImages,
 		}
 	}
@@ -425,6 +428,249 @@ func (h *NightlyE2EHandler) detectGPUFailure(repo string, runID int64) string {
 		}
 	}
 	return failureReasonTest
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic image tag fetching from guide YAML files
+// ---------------------------------------------------------------------------
+
+// getGuideImages returns cached image maps or fetches fresh ones from GitHub.
+func (h *NightlyE2EHandler) getGuideImages() map[string]map[string]string {
+	h.imgMu.RLock()
+	if h.imgCache != nil && time.Now().Before(h.imgCacheExp) {
+		result := h.imgCache
+		h.imgMu.RUnlock()
+		return result
+	}
+	h.imgMu.RUnlock()
+
+	images := h.fetchAllGuideImages()
+
+	h.imgMu.Lock()
+	h.imgCache = images
+	h.imgCacheExp = time.Now().Add(imageCacheTTL)
+	h.imgMu.Unlock()
+
+	return images
+}
+
+// fetchAllGuideImages fetches image tags for all unique guide paths by scanning
+// YAML files in the llm-d/llm-d repo's guides/ directory via the Git Trees API.
+func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
+	result := make(map[string]map[string]string)
+
+	// Collect unique guide paths
+	seen := make(map[string]bool)
+	var guidePaths []string
+	for _, wf := range nightlyWorkflows {
+		if wf.GuidePath != "" && !seen[wf.GuidePath] {
+			seen[wf.GuidePath] = true
+			guidePaths = append(guidePaths, wf.GuidePath)
+		}
+	}
+
+	// Fetch the repo tree once (single API call for all file paths)
+	yamlFiles := h.fetchGuideYAMLFiles()
+
+	// For each guide, find relevant files and fetch their contents in parallel
+	type guideResult struct {
+		path   string
+		images map[string]string
+	}
+	ch := make(chan guideResult, len(guidePaths))
+
+	for _, gp := range guidePaths {
+		go func(guidePath string) {
+			prefix := "guides/" + guidePath + "/"
+			images := make(map[string]string)
+
+			// Find YAML files under this guide's directory
+			var files []treeEntry
+			for _, f := range yamlFiles {
+				if strings.HasPrefix(f.Path, prefix) {
+					files = append(files, f)
+				}
+			}
+
+			// Fetch each file and parse images (sequentially per guide to limit API calls)
+			for _, f := range files {
+				content := h.fetchBlob(f.SHA)
+				if content == "" {
+					continue
+				}
+				for k, v := range parseImagesFromYAML(content) {
+					images[k] = v
+				}
+			}
+
+			ch <- guideResult{path: guidePath, images: images}
+		}(gp)
+	}
+
+	for range guidePaths {
+		gr := <-ch
+		if len(gr.images) > 0 {
+			result[gr.path] = gr.images
+		}
+	}
+
+	return result
+}
+
+// treeEntry holds a file path and its blob SHA from the Git Trees API.
+type treeEntry struct {
+	Path string
+	SHA  string
+}
+
+// fetchGuideYAMLFiles fetches the repo tree and returns YAML files under guides/
+// that are likely to contain image references (values.yaml, decode.yaml, etc.).
+func (h *NightlyE2EHandler) fetchGuideYAMLFiles() []treeEntry {
+	url := fmt.Sprintf("%s/repos/%s/git/trees/main?recursive=1", githubAPIBase, imageRepo)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	var tree struct {
+		Tree []struct {
+			Path string `json:"path"`
+			Type string `json:"type"`
+			SHA  string `json:"sha"`
+		} `json:"tree"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tree); err != nil {
+		return nil
+	}
+
+	var results []treeEntry
+	for _, entry := range tree.Tree {
+		if entry.Type != "blob" {
+			continue
+		}
+		if !strings.HasPrefix(entry.Path, "guides/") {
+			continue
+		}
+		if !strings.HasSuffix(entry.Path, ".yaml") {
+			continue
+		}
+		// Only scan files likely to contain image references
+		name := entry.Path[strings.LastIndex(entry.Path, "/")+1:]
+		if name == "values.yaml" || name == "decode.yaml" || name == "prefill.yaml" ||
+			strings.Contains(name, "inferencepool") {
+			results = append(results, treeEntry{Path: entry.Path, SHA: entry.SHA})
+		}
+	}
+
+	return results
+}
+
+// fetchBlob fetches a git blob's content by SHA and returns it decoded.
+func (h *NightlyE2EHandler) fetchBlob(sha string) string {
+	url := fmt.Sprintf("%s/repos/%s/git/blobs/%s", githubAPIBase, imageRepo, sha)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var blob struct {
+		Content  string `json:"content"`
+		Encoding string `json:"encoding"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&blob); err != nil {
+		return ""
+	}
+
+	if blob.Encoding == "base64" {
+		decoded, err := base64.StdEncoding.DecodeString(blob.Content)
+		if err != nil {
+			return ""
+		}
+		return string(decoded)
+	}
+
+	return blob.Content
+}
+
+// parseImagesFromYAML extracts ghcr.io/llm-d image references from YAML content.
+// Handles two patterns:
+//  1. Direct: image: ghcr.io/llm-d/<name>:<tag>
+//  2. Hub/name/tag (EPP): hub: ghcr.io/llm-d + name: <name> + tag: <tag>
+func parseImagesFromYAML(content string) map[string]string {
+	images := make(map[string]string)
+
+	// Pattern 1: direct image references
+	for _, match := range imageRe.FindAllStringSubmatch(content, -1) {
+		images[match[1]] = match[2]
+	}
+
+	// Pattern 2: hub/name/tag (EPP images)
+	// Scan lines for "hub: ghcr.io/llm-d" and look for nearby name/tag
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		if !hubRe.MatchString(line) {
+			continue
+		}
+		// Search nearby lines (±5) for name and tag
+		const searchRadius = 5
+		var name, tag string
+		start := i - searchRadius
+		if start < 0 {
+			start = 0
+		}
+		end := i + searchRadius
+		if end >= len(lines) {
+			end = len(lines) - 1
+		}
+		for j := start; j <= end; j++ {
+			trimmed := strings.TrimSpace(lines[j])
+			// Skip commented-out lines
+			if strings.HasPrefix(trimmed, "#") {
+				continue
+			}
+			if m := nameRe.FindStringSubmatch(lines[j]); m != nil && name == "" {
+				name = m[1]
+			}
+			if m := tagRe.FindStringSubmatch(lines[j]); m != nil && tag == "" {
+				tag = m[1]
+			}
+		}
+		if name != "" && tag != "" {
+			images[name] = tag
+		}
+	}
+
+	return images
 }
 
 // isGPUStep returns true if the step name indicates a GPU availability check.

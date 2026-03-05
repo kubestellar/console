@@ -12,10 +12,14 @@ import { getStore } from "@netlify/blobs";
 
 const CACHE_STORE = "nightly-e2e";
 const CACHE_KEY = "runs";
+const IMAGE_CACHE_KEY = "guide-images";
 const CACHE_IDLE_TTL_MS = 5 * 60 * 1000;   // 5 minutes
 const CACHE_ACTIVE_TTL_MS = 2 * 60 * 1000; // 2 minutes when jobs running
+const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes for image tags
 const RUNS_PER_PAGE = 7;
 const GITHUB_API = "https://api.github.com";
+const IMAGE_REPO = "llm-d/llm-d";
+const SEARCH_RADIUS = 5; // lines to search around hub: for name/tag
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,8 +34,13 @@ interface NightlyWorkflow {
   model: string;
   gpuType: string;
   gpuCount: number;
-  llmdImages: Record<string, string>;
+  guidePath?: string;  // directory under guides/ in llm-d/llm-d repo
   otherImages?: Record<string, string>;
+}
+
+interface ImageCacheEntry {
+  images: Record<string, Record<string, string>>; // guidePath → imageName → tag
+  expiresAt: number;
 }
 
 interface NightlyRun {
@@ -73,58 +82,30 @@ interface CacheEntry {
 }
 
 // ---------------------------------------------------------------------------
-// Component image tags — must match Go handler (pkg/api/handlers/nightly_e2e.go)
-// ---------------------------------------------------------------------------
-
-/** Nightly-built dev image used by most guides */
-const IMG_CUDA_DEV: Record<string, string> = { "llm-d-cuda-dev": "latest" };
-
-/** PD adds the routing sidecar */
-const IMG_PD: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0" };
-
-/** PPC adds the UDS tokenizer */
-const IMG_PPC: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-uds-tokenizer": "v0.5.1-rc1" };
-
-/** SA uses the inference simulator instead of cuda-dev */
-const IMG_SA: Record<string, string> = { "llm-d-inference-sim": "v0.7.1", "llm-d-routing-sidecar": "v0.5.0" };
-
-/** Wide EP adds the routing sidecar */
-const IMG_WEP: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-routing-sidecar": "v0.5.0" };
-
-/** WVA adds the workload variant autoscaler (tag is dynamic, rebuilt nightly) */
-const IMG_WVA: Record<string, string> = { "llm-d-cuda-dev": "latest", "llm-d-workload-variant-autoscaler": "nightly" };
-
-/** TPC uses only the base cuda-dev image */
-const IMG_TPC: Record<string, string> = { "llm-d-cuda-dev": "latest" };
-
-/** Benchmarking uses the base image */
-const IMG_BM: Record<string, string> = { "llm-d-cuda-dev": "latest" };
-
-// ---------------------------------------------------------------------------
-// Workflow definitions — must match Go handler and frontend demo data
+// Workflow definitions — image tags are fetched dynamically from guide YAML files
 // ---------------------------------------------------------------------------
 
 const NIGHTLY_WORKFLOWS: NightlyWorkflow[] = [
   // OCP
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_CUDA_DEV },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_PD },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", guide: "Precise Prefix Cache", acronym: "PPC", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_PPC },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-simulated-accelerators.yaml", guide: "Simulated Accelerators", acronym: "SA", platform: "OCP", model: "Simulated", gpuType: "CPU", gpuCount: 0, llmdImages: IMG_SA },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", guide: "Tiered Prefix Cache", acronym: "TPC", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 1, llmdImages: IMG_TPC },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_WEP },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-ocp.yaml", guide: "WVA", acronym: "WVA", platform: "OCP", model: "Llama-3.1-8B", gpuType: "A100", gpuCount: 2, llmdImages: IMG_WVA },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-ocp.yaml", guide: "Benchmarking", acronym: "BM", platform: "OCP", model: "opt-125m", gpuType: "A100", gpuCount: 1, llmdImages: IMG_BM },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "inference-scheduling" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "pd-disaggregation" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", guide: "Precise Prefix Cache", acronym: "PPC", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "precise-prefix-cache-aware" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-simulated-accelerators.yaml", guide: "Simulated Accelerators", acronym: "SA", platform: "OCP", model: "Simulated", gpuType: "CPU", gpuCount: 0, guidePath: "simulated-accelerators" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", guide: "Tiered Prefix Cache", acronym: "TPC", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 1, guidePath: "tiered-prefix-cache" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "wide-ep-lws" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-ocp.yaml", guide: "WVA", acronym: "WVA", platform: "OCP", model: "Llama-3.1-8B", gpuType: "A100", gpuCount: 2, guidePath: "workload-autoscaling" },
+  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-ocp.yaml", guide: "Benchmarking", acronym: "BM", platform: "OCP", model: "opt-125m", gpuType: "A100", gpuCount: 1 },
   // GKE
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-gke.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "GKE", model: "Qwen3-32B", gpuType: "L4", gpuCount: 2, llmdImages: IMG_CUDA_DEV },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, llmdImages: IMG_PD },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, llmdImages: IMG_WEP },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-gke.yaml", guide: "Benchmarking", acronym: "BM", platform: "GKE", model: "opt-125m", gpuType: "L4", gpuCount: 1, llmdImages: IMG_BM },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-gke.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "GKE", model: "Qwen3-32B", gpuType: "L4", gpuCount: 2, guidePath: "inference-scheduling" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, guidePath: "pd-disaggregation" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, guidePath: "wide-ep-lws" },
+  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-gke.yaml", guide: "Benchmarking", acronym: "BM", platform: "GKE", model: "opt-125m", gpuType: "L4", gpuCount: 1 },
   // CKS
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-cks.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "CKS", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_CUDA_DEV },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_PD },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_WEP },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-cks.yaml", guide: "WVA", acronym: "WVA", platform: "CKS", model: "Llama-3.1-8B", gpuType: "H100", gpuCount: 2, llmdImages: IMG_WVA },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nightly-benchmark-cks.yaml", guide: "Benchmarking", acronym: "BM", platform: "CKS", model: "opt-125m", gpuType: "H100", gpuCount: 1, llmdImages: IMG_BM },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-cks.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "CKS", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "inference-scheduling" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "pd-disaggregation" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "wide-ep-lws" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-cks.yaml", guide: "WVA", acronym: "WVA", platform: "CKS", model: "Llama-3.1-8B", gpuType: "H100", gpuCount: 2, guidePath: "workload-autoscaling" },
+  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nightly-benchmark-cks.yaml", guide: "Benchmarking", acronym: "BM", platform: "CKS", model: "opt-125m", gpuType: "H100", gpuCount: 1 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -168,6 +149,163 @@ function hasInProgressRuns(guides: NightlyGuideStatus[]): boolean {
 function isGPUStep(name: string): boolean {
   const lower = name.toLowerCase();
   return lower.includes("gpu") && lower.includes("availab");
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic image tag fetching from guide YAML files
+// ---------------------------------------------------------------------------
+
+/** Regex for direct image refs: ghcr.io/llm-d/<name>:<tag> */
+const IMAGE_RE = /ghcr\.io\/llm-d\/([\w][\w.-]*?):([\w][\w.+-]*)/g;
+/** Regex for hub: ghcr.io/llm-d pattern (EPP images) */
+const HUB_RE = /hub:\s*ghcr\.io\/llm-d\b/i;
+const NAME_RE = /name:\s*([\w][\w.-]*)/i;
+const TAG_RE = /tag:\s*([\w][\w.+-]*)/i;
+
+/** Parse ghcr.io/llm-d image references from YAML content */
+function parseImagesFromYAML(content: string): Record<string, string> {
+  const images: Record<string, string> = {};
+
+  // Pattern 1: direct image references
+  for (const match of content.matchAll(IMAGE_RE)) {
+    images[match[1]] = match[2];
+  }
+
+  // Pattern 2: hub/name/tag (EPP images)
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (!HUB_RE.test(lines[i])) continue;
+
+    let name = "";
+    let tag = "";
+    const start = Math.max(0, i - SEARCH_RADIUS);
+    const end = Math.min(lines.length - 1, i + SEARCH_RADIUS);
+
+    for (let j = start; j <= end; j++) {
+      const trimmed = lines[j].trim();
+      if (trimmed.startsWith("#")) continue;
+      if (!name) {
+        const nm = NAME_RE.exec(lines[j]);
+        if (nm) name = nm[1];
+      }
+      if (!tag) {
+        const tg = TAG_RE.exec(lines[j]);
+        if (tg) tag = tg[1];
+      }
+    }
+    if (name && tag) images[name] = tag;
+  }
+
+  return images;
+}
+
+interface TreeEntry {
+  path: string;
+  sha: string;
+}
+
+/** Fetch the repo tree and return YAML files under guides/ likely to contain image refs */
+async function fetchGuideYAMLFiles(token: string): Promise<TreeEntry[]> {
+  const url = `${GITHUB_API}/repos/${IMAGE_REPO}/git/trees/main?recursive=1`;
+  const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  const results: TreeEntry[] = [];
+
+  for (const entry of data.tree ?? []) {
+    if (entry.type !== "blob") continue;
+    if (!entry.path.startsWith("guides/")) continue;
+    if (!entry.path.endsWith(".yaml")) continue;
+
+    const name = entry.path.substring(entry.path.lastIndexOf("/") + 1);
+    if (name === "values.yaml" || name === "decode.yaml" || name === "prefill.yaml" ||
+        name.includes("inferencepool")) {
+      results.push({ path: entry.path, sha: entry.sha });
+    }
+  }
+
+  return results;
+}
+
+/** Fetch a git blob's content by SHA */
+async function fetchBlob(sha: string, token: string): Promise<string> {
+  const url = `${GITHUB_API}/repos/${IMAGE_REPO}/git/blobs/${sha}`;
+  const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) return "";
+
+  const blob = await res.json();
+  if (blob.encoding === "base64") {
+    return atob(blob.content);
+  }
+  return blob.content ?? "";
+}
+
+/** Fetch image tags for all guide paths, with Netlify Blob caching */
+async function fetchGuideImages(
+  token: string,
+  store: ReturnType<typeof getStore>,
+): Promise<Record<string, Record<string, string>>> {
+  // Check image cache
+  try {
+    const cached = await store.get(IMAGE_CACHE_KEY, { type: "text" });
+    if (cached) {
+      const entry: ImageCacheEntry = JSON.parse(cached);
+      if (Date.now() < entry.expiresAt) {
+        return entry.images;
+      }
+    }
+  } catch {
+    // Cache miss — proceed to fetch
+  }
+
+  // Collect unique guide paths
+  const guidePaths = [...new Set(
+    NIGHTLY_WORKFLOWS.map((wf) => wf.guidePath).filter(Boolean) as string[]
+  )];
+
+  // Fetch the repo tree (single API call)
+  const yamlFiles = await fetchGuideYAMLFiles(token);
+
+  // For each guide, find relevant files and fetch their contents
+  const result: Record<string, Record<string, string>> = {};
+
+  await Promise.all(
+    guidePaths.map(async (guidePath) => {
+      const prefix = `guides/${guidePath}/`;
+      const files = yamlFiles.filter((f) => f.path.startsWith(prefix));
+      const images: Record<string, string> = {};
+
+      // Fetch blobs in parallel for this guide
+      const contents = await Promise.all(
+        files.map((f) => fetchBlob(f.sha, token))
+      );
+
+      for (const content of contents) {
+        if (!content) continue;
+        Object.assign(images, parseImagesFromYAML(content));
+      }
+
+      if (Object.keys(images).length > 0) {
+        result[guidePath] = images;
+      }
+    })
+  );
+
+  // Cache result (best-effort)
+  const cacheEntry: ImageCacheEntry = {
+    images: result,
+    expiresAt: Date.now() + IMAGE_CACHE_TTL_MS,
+  };
+  store.set(IMAGE_CACHE_KEY, JSON.stringify(cacheEntry)).catch(() => {});
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -271,11 +409,16 @@ async function detectGPUFailure(
 }
 
 async function fetchAll(
-  token: string
+  token: string,
+  store: ReturnType<typeof getStore>,
 ): Promise<NightlyGuideStatus[]> {
-  const results = await Promise.allSettled(
-    NIGHTLY_WORKFLOWS.map((wf) => fetchWorkflowRuns(wf, token))
-  );
+  // Fetch workflow runs and guide images concurrently
+  const [results, guideImages] = await Promise.all([
+    Promise.allSettled(
+      NIGHTLY_WORKFLOWS.map((wf) => fetchWorkflowRuns(wf, token))
+    ),
+    fetchGuideImages(token, store),
+  ]);
 
   return NIGHTLY_WORKFLOWS.map((wf, i) => {
     const result = results[i];
@@ -286,6 +429,9 @@ async function fetchAll(
     if (runs.length > 0) {
       latestConclusion = runs[0].conclusion ?? runs[0].status;
     }
+
+    // Use dynamically fetched images for this guide
+    const llmdImages = wf.guidePath ? (guideImages[wf.guidePath] ?? {}) : {};
 
     return {
       guide: wf.guide,
@@ -300,7 +446,7 @@ async function fetchAll(
       model: wf.model,
       gpuType: wf.gpuType,
       gpuCount: wf.gpuCount,
-      llmdImages: wf.llmdImages,
+      llmdImages,
       otherImages: wf.otherImages,
     };
   });
@@ -356,7 +502,7 @@ export default async (req: Request) => {
 
   // Fetch fresh data from GitHub
   try {
-    const guides = await fetchAll(token);
+    const guides = await fetchAll(token, store);
     const now = new Date().toISOString();
     const ttl = hasInProgressRuns(guides)
       ? CACHE_ACTIVE_TTL_MS
