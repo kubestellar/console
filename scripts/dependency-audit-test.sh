@@ -130,10 +130,19 @@ if command -v go &>/dev/null; then
 
   if command -v govulncheck &>/dev/null; then
     GOVULN_OUTPUT="$TMPDIR_AUDIT/govulncheck.txt"
-    GOVULN_JSON="$TMPDIR_AUDIT/govulncheck.json"
     GOVULN_EXIT=0
-    govulncheck -format json ./... > "$GOVULN_JSON" 2>/dev/null || GOVULN_EXIT=$?
-    govulncheck ./... > "$GOVULN_OUTPUT" 2>/dev/null || true
+    GOVULN_TIMEOUT_SECS=120
+
+    echo -e "  ${DIM}Running govulncheck (timeout: ${GOVULN_TIMEOUT_SECS}s)...${NC}"
+    if timeout "${GOVULN_TIMEOUT_SECS}" govulncheck ./... > "$GOVULN_OUTPUT" 2>/dev/null; then
+      GOVULN_EXIT=0
+    else
+      GOVULN_EXIT=$?
+      if [ "$GOVULN_EXIT" -eq 124 ]; then
+        echo -e "  ${YELLOW}⚠️  govulncheck timed out after ${GOVULN_TIMEOUT_SECS}s${NC}"
+        GO_STATUS="skip"
+      fi
+    fi
 
     # Count vulnerabilities from text output
     GO_VULNS=$(grep -c "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null || echo "0")

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -338,7 +339,7 @@ func (mh *MetricsHistory) GetTrendContext() string {
 		recent = recent[len(recent)-6:]
 	}
 
-	result := "Historical metrics (last " + string(rune('0'+len(recent))) + " snapshots):\n\n"
+	result := "Historical metrics (last " + strconv.Itoa(len(recent)) + " snapshots):\n\n"
 
 	// Get unique clusters
 	clusterNames := make(map[string]bool)

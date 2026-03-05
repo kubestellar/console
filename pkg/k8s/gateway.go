@@ -285,9 +285,9 @@ func parseListeners(listeners []interface{}) []v1alpha1.Listener {
 				listener.Protocol = protocol
 			}
 			if port, ok := lMap["port"].(int64); ok {
-				listener.Port = int32(port)
+				listener.Port = safeInt32(port)
 			} else if port, ok := lMap["port"].(float64); ok {
-				listener.Port = int32(port)
+				listener.Port = safeFloat64ToInt32(port)
 			}
 			if hostname, ok := lMap["hostname"].(string); ok {
 				listener.Hostname = hostname

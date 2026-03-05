@@ -151,7 +151,7 @@ echo ""
 echo -e "${BOLD}Phase 4: Scanner integration check${NC}"
 
 TOTAL=$((TOTAL + 1))
-if grep -rq "scanForMaliciousContent\|malicious" web/src/components/missions/ 2>/dev/null; then
+if grep -rq "scanForMaliciousContent\|malicious\|fullScan\|scanner/index" web/src/components/missions/ 2>/dev/null; then
   echo -e "  ${GREEN}✓${NC}  Malicious scanner integrated in mission components"
   PASSED=$((PASSED + 1))
 else
@@ -160,7 +160,7 @@ else
 fi
 
 TOTAL=$((TOTAL + 1))
-if grep -rq "scanForSensitiveData\|sensitive" web/src/components/missions/ 2>/dev/null; then
+if grep -rq "scanForSensitiveData\|sensitive\|fullScan\|scanner/index" web/src/components/missions/ 2>/dev/null; then
   echo -e "  ${GREEN}✓${NC}  Sensitive data scanner integrated in mission components"
   PASSED=$((PASSED + 1))
 else

@@ -318,9 +318,9 @@ func parsePorts(ports []interface{}) []v1alpha1.ServicePort {
 				port.Protocol = protocol
 			}
 			if portNum, ok := portMap["port"].(int64); ok {
-				port.Port = int32(portNum)
+				port.Port = safeInt32(portNum)
 			} else if portNum, ok := portMap["port"].(float64); ok {
-				port.Port = int32(portNum)
+				port.Port = safeFloat64ToInt32(portNum)
 			}
 			if appProtocol, ok := portMap["appProtocol"].(string); ok {
 				port.AppProtocol = appProtocol

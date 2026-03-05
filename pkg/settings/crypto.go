@@ -96,6 +96,10 @@ func decrypt(key []byte, field *EncryptedField) ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode IV: %w", err)
 	}
 
+	if len(nonce) != nonceBytes {
+		return nil, fmt.Errorf("invalid nonce length: got %d, want %d", len(nonce), nonceBytes)
+	}
+
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher: %w", err)

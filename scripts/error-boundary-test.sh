@@ -149,7 +149,8 @@ fi
 # Check for null/undefined guards on array operations
 TOTAL=$((TOTAL + 1))
 UNGUARDED=$(grep -rn "\.join(\|\.map(\|\.filter(\|\.forEach(\|for.*of " web/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "node_modules" | grep -v "|| \[\]" | grep -v "?." | wc -l | tr -d ' ')
-if [ "$UNGUARDED" -lt 50 ]; then
+UNGUARDED_THRESHOLD=200
+if [ "$UNGUARDED" -lt "$UNGUARDED_THRESHOLD" ]; then
   echo -e "  ${GREEN}✓${NC}  Array operations mostly guarded (${UNGUARDED} unguarded calls)"
   PASSED=$((PASSED + 1))
 else

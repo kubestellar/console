@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,29 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
+
+// safeInt32 converts an int64 to int32, clamping to [math.MinInt32, math.MaxInt32]
+// to prevent integer overflow.
+func safeInt32(v int64) int32 {
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
+
+// safeFloat64ToInt32 converts a float64 to int32, clamping to [math.MinInt32, math.MaxInt32].
+func safeFloat64ToInt32(v float64) int32 {
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
 
 // GVRs for workload resources
 var (
@@ -173,7 +197,7 @@ func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, conte
 		// Parse spec.replicas
 		if spec, ok := content["spec"].(map[string]interface{}); ok {
 			if replicas, ok := spec["replicas"].(int64); ok {
-				w.Replicas = int32(replicas)
+				w.Replicas = safeInt32(replicas)
 			}
 			// Parse image from first container
 			if template, ok := spec["template"].(map[string]interface{}); ok {
@@ -192,10 +216,10 @@ func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, conte
 		// Parse status
 		if status, ok := content["status"].(map[string]interface{}); ok {
 			if readyReplicas, ok := status["readyReplicas"].(int64); ok {
-				w.ReadyReplicas = int32(readyReplicas)
+				w.ReadyReplicas = safeInt32(readyReplicas)
 			}
 			if availableReplicas, ok := status["availableReplicas"].(int64); ok {
-				if int32(availableReplicas) == w.Replicas {
+				if safeInt32(availableReplicas) == w.Replicas {
 					w.Status = v1alpha1.WorkloadStatusRunning
 				} else if availableReplicas > 0 {
 					w.Status = v1alpha1.WorkloadStatusDegraded
@@ -248,14 +272,14 @@ func (m *MultiClusterClient) parseStatefulSetsAsWorkloads(list interface{}, cont
 		// Parse spec.replicas
 		if spec, ok := content["spec"].(map[string]interface{}); ok {
 			if replicas, ok := spec["replicas"].(int64); ok {
-				w.Replicas = int32(replicas)
+				w.Replicas = safeInt32(replicas)
 			}
 		}
 
 		// Parse status
 		if status, ok := content["status"].(map[string]interface{}); ok {
 			if readyReplicas, ok := status["readyReplicas"].(int64); ok {
-				w.ReadyReplicas = int32(readyReplicas)
+				w.ReadyReplicas = safeInt32(readyReplicas)
 			}
 			if w.ReadyReplicas == w.Replicas && w.Replicas > 0 {
 				w.Status = v1alpha1.WorkloadStatusRunning
@@ -306,10 +330,10 @@ func (m *MultiClusterClient) parseDaemonSetsAsWorkloads(list interface{}, contex
 		// Parse status
 		if status, ok := content["status"].(map[string]interface{}); ok {
 			if desiredNumber, ok := status["desiredNumberScheduled"].(int64); ok {
-				w.Replicas = int32(desiredNumber)
+				w.Replicas = safeInt32(desiredNumber)
 			}
 			if readyNumber, ok := status["numberReady"].(int64); ok {
-				w.ReadyReplicas = int32(readyNumber)
+				w.ReadyReplicas = safeInt32(readyNumber)
 			}
 			if w.ReadyReplicas == w.Replicas && w.Replicas > 0 {
 				w.Status = v1alpha1.WorkloadStatusRunning
