@@ -63,7 +63,8 @@ export const ROUTES = {
   // Marketplace
   MARKETPLACE: '/marketplace',
 
-  // Mission deep-link (opens MissionBrowser to specific mission)
+  // Mission deep-links
+  MISSIONS: '/missions',
   MISSION: '/missions/:missionId',
 
   // Widget

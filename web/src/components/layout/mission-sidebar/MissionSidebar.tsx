@@ -54,19 +54,21 @@ export function MissionSidebar() {
   // Cluster selection for install missions
   const [pendingRunMissionId, setPendingRunMissionId] = useState<string | null>(null)
 
-  // Deep-link: open MissionBrowser to specific mission via ?mission= URL param
+  // Deep-link: open MissionBrowser via ?mission= (specific) or ?browse=missions (explorer)
   const [searchParams, setSearchParams] = useSearchParams()
   const deepLinkMission = searchParams.get('mission')
+  const browseParam = searchParams.get('browse')
 
   useEffect(() => {
-    if (deepLinkMission) {
+    if (deepLinkMission || browseParam === 'missions') {
       setShowBrowser(true)
-      // Clear the param from URL after opening
+      // Clear the params from URL after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('mission')
+      newParams.delete('browse')
       setSearchParams(newParams, { replace: true })
     }
-  }, [deepLinkMission, searchParams, setSearchParams])
+  }, [deepLinkMission, browseParam, searchParams, setSearchParams])
 
   // Split missions into saved (library) and active
   const savedMissions = missions.filter(m => m.status === 'saved')

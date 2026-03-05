@@ -243,8 +243,16 @@ function SettingsSyncInit() {
   return null
 }
 
-/** Redirect /missions/:missionId → /?mission=:missionId to open MissionBrowser via deep-link.
+/** Redirect /missions → /?browse=missions to open MissionBrowser.
+ *  Redirect /missions/:missionId → /?mission=:missionId to open a specific mission.
  *  Preserves UTM and other query params so GA4 campaign attribution survives the redirect. */
+function MissionBrowseLink() {
+  const [searchParams] = useSearchParams()
+  const params = new URLSearchParams(searchParams)
+  params.set('browse', 'missions')
+  return <Navigate to={`/?${params.toString()}`} replace />
+}
+
 function MissionDeepLink() {
   const { missionId } = useParams()
   const [searchParams] = useSearchParams()
@@ -412,6 +420,7 @@ function App() {
           {/* Mission deep-link: /missions/install-prometheus → opens MissionBrowser.
               Must be inside ProtectedRoute so auth is verified before redirect,
               and the ?mission= param survives the OAuth round-trip. */}
+          <Route path="/missions" element={<MissionBrowseLink />} />
           <Route path="/missions/:missionId" element={<MissionDeepLink />} />
         </Route>
 
