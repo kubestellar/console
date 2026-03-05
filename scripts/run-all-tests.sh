@@ -135,7 +135,7 @@ done
 echo ""
 
 # ============================================================================
-# Also run Playwright-based scripts if they exist and frontend is running
+# Playwright-based tests: build once, share a single preview server
 # ============================================================================
 
 declare -a PLAYWRIGHT_SCRIPTS=(
@@ -146,50 +146,121 @@ declare -a PLAYWRIGHT_SCRIPTS=(
   "scripts/cache-test.sh"
 )
 
-FRONTEND_UP=""
-if curl -sf "http://localhost:5174" --max-time 3 > /dev/null 2>&1; then
-  FRONTEND_UP="1"
-fi
+PREVIEW_PORT=4174
+PREVIEW_PID=""
 
-if [ -n "$FRONTEND_UP" ] && [ -z "$FAST_MODE" ]; then
-  echo -e "${BOLD}Playwright-based tests (frontend detected):${NC}"
-  echo ""
+stop_preview_server() {
+  if [ -n "$PREVIEW_PID" ]; then
+    kill "$PREVIEW_PID" 2>/dev/null
+    wait "$PREVIEW_PID" 2>/dev/null
+    PREVIEW_PID=""
+  fi
+}
 
-  for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
-    SUITE_NAME=$(basename "$script" .sh)
-    TOTAL=$((TOTAL + 1))
-
-    if [ ! -f "$script" ]; then
-      echo -e "  ${DIM}⊘  ${SUITE_NAME}${NC} — script not found"
+if [ -z "$FAST_MODE" ]; then
+  # Check if npm/node are available (required for Playwright)
+  if ! command -v npx &>/dev/null; then
+    echo -e "${DIM}Playwright tests skipped (npx not found)${NC}"
+    for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
+      SUITE_NAME=$(basename "$script" .sh)
+      TOTAL=$((TOTAL + 1))
       SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
       RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
-      continue
-    fi
+    done
+  else
+    echo -e "${BOLD}Building frontend for Playwright tests...${NC}"
+    BUILD_EXIT=0
+    cd web
+    npm run build > /tmp/suite-playwright-build.log 2>&1 || BUILD_EXIT=$?
+    cd ..
 
-    echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
-    SUITE_START=$(date +%s)
-    SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
-    SUITE_EXIT=0
-    bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
-    SUITE_END=$(date +%s)
-    SUITE_DURATION=$((SUITE_END - SUITE_START))
-
-    if [ "$SUITE_EXIT" -eq 0 ]; then
-      echo -e "    ${GREEN}✓ PASS${NC}  (${SUITE_DURATION}s)"
-      PASSED_SUITES=$((PASSED_SUITES + 1))
-      RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
-    else
-      echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
-      tail -3 "$SUITE_OUTPUT" 2>/dev/null | while IFS= read -r line; do
-        echo -e "      ${DIM}${line}${NC}"
+    if [ "$BUILD_EXIT" -ne 0 ]; then
+      echo -e "  ${RED}❌ Frontend build failed — skipping Playwright tests${NC}"
+      echo -e "  ${DIM}See /tmp/suite-playwright-build.log${NC}"
+      for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
+        SUITE_NAME=$(basename "$script" .sh)
+        TOTAL=$((TOTAL + 1))
+        SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+        RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
       done
-      FAILED_SUITES=$((FAILED_SUITES + 1))
-      FAILED_NAMES+=("$SUITE_NAME")
-      RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION}},"
+    else
+      # Start a single vite preview server for all Playwright scripts
+      cd web
+      npx vite preview --port "$PREVIEW_PORT" --host > /tmp/suite-vite-preview.log 2>&1 &
+      PREVIEW_PID=$!
+      cd ..
+      trap 'stop_preview_server' EXIT
+
+      # Wait for the preview server to be ready (up to 15s)
+      WAIT_SECS=15
+      READY=""
+      for i in $(seq 1 "$WAIT_SECS"); do
+        if curl -sf "http://127.0.0.1:${PREVIEW_PORT}" --max-time 2 > /dev/null 2>&1; then
+          READY="1"
+          break
+        fi
+        sleep 1
+      done
+
+      if [ -z "$READY" ]; then
+        echo -e "  ${RED}❌ Vite preview server failed to start — skipping Playwright tests${NC}"
+        stop_preview_server
+        for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
+          SUITE_NAME=$(basename "$script" .sh)
+          TOTAL=$((TOTAL + 1))
+          SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+          RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
+        done
+      else
+        echo -e "  ${GREEN}✓${NC} Preview server running on port ${PREVIEW_PORT}"
+        echo ""
+        echo -e "${BOLD}Playwright-based tests:${NC}"
+        echo ""
+
+        # Export PLAYWRIGHT_BASE_URL so Playwright configs skip their own webServer
+        export PLAYWRIGHT_BASE_URL="http://127.0.0.1:${PREVIEW_PORT}"
+
+        for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
+          SUITE_NAME=$(basename "$script" .sh)
+          TOTAL=$((TOTAL + 1))
+
+          if [ ! -f "$script" ]; then
+            echo -e "  ${DIM}⊘  ${SUITE_NAME}${NC} — script not found"
+            SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+            RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
+            continue
+          fi
+
+          echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
+          SUITE_START=$(date +%s)
+          SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
+          SUITE_EXIT=0
+          bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+          SUITE_END=$(date +%s)
+          SUITE_DURATION=$((SUITE_END - SUITE_START))
+
+          if [ "$SUITE_EXIT" -eq 0 ]; then
+            echo -e "    ${GREEN}✓ PASS${NC}  (${SUITE_DURATION}s)"
+            PASSED_SUITES=$((PASSED_SUITES + 1))
+            RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
+          else
+            echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
+            tail -3 "$SUITE_OUTPUT" 2>/dev/null | while IFS= read -r line; do
+              echo -e "      ${DIM}${line}${NC}"
+            done
+            FAILED_SUITES=$((FAILED_SUITES + 1))
+            FAILED_NAMES+=("$SUITE_NAME")
+            RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION}},"
+          fi
+        done
+
+        unset PLAYWRIGHT_BASE_URL
+        stop_preview_server
+      fi
     fi
-  done
+  fi
 else
-  echo -e "${DIM}Playwright tests skipped (frontend not running or --fast mode)${NC}"
+  echo -e "${DIM}Playwright tests skipped (--fast mode)${NC}"
   for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
     SUITE_NAME=$(basename "$script" .sh)
     TOTAL=$((TOTAL + 1))

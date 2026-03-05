@@ -34,7 +34,7 @@ function getWebServer() {
     command: `npm run build && npx vite preview --port ${PREVIEW_PORT} --host`,
     url: `http://127.0.0.1:${PREVIEW_PORT}`,
     reuseExistingServer: true,
-    timeout: 120_000,
+    timeout: 180_000,
   }
 }
 
