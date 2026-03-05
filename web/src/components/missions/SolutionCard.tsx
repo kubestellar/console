@@ -3,7 +3,7 @@
  * Shows type badge, category, tags, description, and import button.
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
@@ -29,6 +29,13 @@ interface SolutionCardProps {
 export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact }: SolutionCardProps) {
   const [linkCopied, setLinkCopied] = useState(false)
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
+  const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+    }
+  }, [])
 
   if (compact) {
     return (
@@ -74,7 +81,8 @@ export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact 
                 e.stopPropagation()
                 onCopyLink(e)
                 setLinkCopied(true)
-                setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+                linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
               title="Copy shareable link"
@@ -134,7 +142,8 @@ export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact 
                 e.stopPropagation()
                 onCopyLink(e)
                 setLinkCopied(true)
-                setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+                linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
               title="Copy shareable link"

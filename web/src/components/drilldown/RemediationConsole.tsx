@@ -106,6 +106,11 @@ export function RemediationConsole({
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [logs])
 
+  // Abort any running remediation on unmount
+  useEffect(() => {
+    return () => { abortRef.current = true }
+  }, [])
+
   const addLog = (entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
     setLogs(prev => [...prev, {
       ...entry,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -13,6 +13,13 @@ export function LogsDrillDown({ data }: Props) {
   const [tailLines, setTailLines] = useState(100)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current !== null) clearTimeout(refreshTimeoutRef.current)
+    }
+  }, [])
 
   // In a real implementation, this would fetch logs from the API
   // For now, show a placeholder with the log fetch parameters
@@ -41,7 +48,8 @@ Connect to kubestellar-ops MCP server to fetch real logs.`
     // Placeholder for future API refresh
     setIsLoading(true)
     setError(null)
-    setTimeout(() => {
+    if (refreshTimeoutRef.current !== null) clearTimeout(refreshTimeoutRef.current)
+    refreshTimeoutRef.current = setTimeout(() => {
       setIsLoading(false)
     }, 500)
   }

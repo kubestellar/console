@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -42,6 +42,11 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
     config: Record<string, unknown>
     explanation: string
   } | null>(null)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => { isMountedRef.current = false }
+  }, [])
 
   // Build card type list from CARD_CONFIGS, excluding current card
   const cardTypes = useMemo(() => {
@@ -90,6 +95,8 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
 
     // Simulate AI processing
     await new Promise((resolve) => setTimeout(resolve, NAV_AFTER_ANIMATION_MS))
+
+    if (!isMountedRef.current) return
 
     // Parse the natural language and suggest a card type
     const prompt = nlPrompt.toLowerCase()

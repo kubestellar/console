@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, startTransition, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, startTransition, useRef, type ReactNode } from 'react'
 import { Sparkles, Loader2, CheckCircle, AlertTriangle, RotateCw, Save } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
@@ -33,6 +33,13 @@ export function AiGenerationPanel<T>({
   const [streamingText, setStreamingText] = useState('')
   const [parsedResult, setParsedResult] = useState<T | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
+  const closeSidebarTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (closeSidebarTimeoutRef.current !== null) clearTimeout(closeSidebarTimeoutRef.current)
+    }
+  }, [])
 
   const { startMission, missions, closeSidebar } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -99,7 +106,8 @@ export function AiGenerationPanel<T>({
       setParsedResult(null)
       setParseError(null)
       // Close sidebar so modal stays focused
-      setTimeout(() => closeSidebar(), CLOSE_ANIMATION_MS)
+      if (closeSidebarTimeoutRef.current !== null) clearTimeout(closeSidebarTimeoutRef.current)
+      closeSidebarTimeoutRef.current = setTimeout(() => closeSidebar(), CLOSE_ANIMATION_MS)
     })
   }, [userPrompt, systemPrompt, missionTitle, startMission, closeSidebar, checkKeyAndRun])
 

@@ -4,7 +4,7 @@
  * install methods, and import button.
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ExternalLink, Download, Wrench, Trash2, ArrowUpCircle, AlertTriangle, Link, Check } from 'lucide-react'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { cn } from '../../lib/cn'
@@ -166,6 +166,13 @@ interface InstallerCardProps {
 
 export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact }: InstallerCardProps) {
   const [linkCopied, setLinkCopied] = useState(false)
+  const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+    }
+  }, [])
   const category = mission.category ?? 'Orchestration'
   const gradient = CNCF_CATEGORY_GRADIENTS[category] ?? ['#6366f1', '#8b5cf6']
   const iconPath = CNCF_CATEGORY_ICONS[category] ?? CNCF_CATEGORY_ICONS['Orchestration']
@@ -235,7 +242,8 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
               e.stopPropagation()
               onCopyLink(e)
               setLinkCopied(true)
-              setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+              if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+              linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
             }}
             className="absolute top-1.5 right-1.5 p-1 rounded bg-black/30 hover:bg-black/50 text-white/70 hover:text-white transition-colors"
             title="Copy shareable link"
@@ -333,7 +341,8 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
                   e.stopPropagation()
                   onCopyLink(e)
                   setLinkCopied(true)
-                  setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                  if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+                  linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
                 }}
                 className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
                 title="Copy shareable link"

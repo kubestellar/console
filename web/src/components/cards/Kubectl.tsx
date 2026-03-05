@@ -54,6 +54,13 @@ export function Kubectl() {
   const [showFormatMenu, setShowFormatMenu] = useState(false)
   const outputRef = useRef<HTMLDivElement>(null)
   const commandInputRef = useRef<HTMLInputElement>(null)
+  const formatMenuBlurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (formatMenuBlurTimeoutRef.current !== null) clearTimeout(formatMenuBlurTimeoutRef.current)
+    }
+  }, [])
 
   // Set default context when clusters are loaded
   useEffect(() => {
@@ -771,7 +778,10 @@ data:
             <div className="relative">
               <button
                 onClick={() => setShowFormatMenu(!showFormatMenu)}
-                onBlur={() => setTimeout(() => setShowFormatMenu(false), TRANSITION_DELAY_MS)}
+                onBlur={() => {
+                  if (formatMenuBlurTimeoutRef.current !== null) clearTimeout(formatMenuBlurTimeoutRef.current)
+                  formatMenuBlurTimeoutRef.current = setTimeout(() => setShowFormatMenu(false), TRANSITION_DELAY_MS)
+                }}
                 className="p-1 rounded text-muted-foreground hover:text-foreground"
                 title={`Output format: ${outputFormat}`}
               >

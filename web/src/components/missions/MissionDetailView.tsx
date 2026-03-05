@@ -6,7 +6,7 @@
  * Replaces raw JSON with structured, copy-pasteable content.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   ArrowLeft,
   Download,
@@ -91,11 +91,19 @@ function extractCodeBlocks(text: string): { before: string; code: string; after:
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current !== null) clearTimeout(copiedTimeoutRef.current)
+    }
+  }, [])
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
-      setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+      if (copiedTimeoutRef.current !== null) clearTimeout(copiedTimeoutRef.current)
+      copiedTimeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
     })
   }, [text])
 
@@ -186,6 +194,13 @@ export function MissionDetailView({
   loading = false,
 }: MissionDetailViewProps) {
   const [linkCopied, setLinkCopied] = useState(false)
+  const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+    }
+  }, [])
   const tabs: TabDef[] = [
     {
       id: 'install',
@@ -269,7 +284,8 @@ export function MissionDetailView({
               onClick={() => {
                 navigator.clipboard.writeText(shareUrl)
                 setLinkCopied(true)
-                setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+                linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors',

@@ -5,7 +5,7 @@
  * Runs security scanning before export to detect sensitive data.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   X,
   Download,
@@ -94,6 +94,13 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
   const [scanResult, setScanResult] = useState<FileScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
   const [exported, setExported] = useState<ExportChannel | null>(null)
+  const exportedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (exportedTimeoutRef.current !== null) clearTimeout(exportedTimeoutRef.current)
+    }
+  }, [])
 
   const mission = resolutionToMissionExport(resolution)
 
@@ -137,7 +144,8 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
     }
 
     setExported(channel)
-    setTimeout(() => setExported(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (exportedTimeoutRef.current !== null) clearTimeout(exportedTimeoutRef.current)
+    exportedTimeoutRef.current = setTimeout(() => setExported(null), UI_FEEDBACK_TIMEOUT_MS)
   }, [mission, scanResult, scanning, runScan])
 
   if (!isOpen) return null

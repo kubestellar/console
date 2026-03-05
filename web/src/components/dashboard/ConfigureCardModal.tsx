@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, Settings, ToggleLeft } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
@@ -524,6 +524,15 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   const [aiError, setAiError] = useState<string | null>(null)
   const { clusters } = useClusters()
   const { addTokens } = useTokenUsage()
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      if (closeTimeoutRef.current !== null) clearTimeout(closeTimeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (card) {
@@ -642,6 +651,8 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
     // Small delay for UX feedback
     await new Promise((resolve) => setTimeout(resolve, PROGRESS_SIMULATION_MS))
 
+    if (!isMountedRef.current) return
+
     const prompt = nlPrompt.trim()
     const detectedCardType = detectCardType(prompt)
     const { config: extractedConfig, behaviors: extractedBehaviors, title: extractedTitle } = extractConfigFromPrompt(prompt)
@@ -666,7 +677,8 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
       setIsProcessing(false)
 
       // Close modal after showing success briefly
-      setTimeout(() => {
+      if (closeTimeoutRef.current !== null) clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = setTimeout(() => {
         onClose()
       }, 1500)
       return
