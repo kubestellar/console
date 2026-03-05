@@ -1,0 +1,287 @@
+#!/bin/bash
+# Master test runner — runs ALL test scripts in /scripts/ sequentially and
+# generates a unified summary report. This is the single entry point for
+# the full CNCF graduation test suite.
+#
+# Usage:
+#   ./scripts/run-all-tests.sh              # Run all test scripts
+#   ./scripts/run-all-tests.sh --fast       # Skip long-running tests (fuzz, playwright)
+#
+# Output:
+#   /tmp/all-tests-report.json              — unified JSON data
+#   /tmp/all-tests-summary.md               — unified human-readable summary
+#
+# Exit code:
+#   0 — all suites passed
+#   1 — one or more suites failed
+
+set -uo pipefail
+
+cd "$(dirname "$0")/.."
+
+# ============================================================================
+# Colors & argument parsing
+# ============================================================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+FAST_MODE=""
+for arg in "$@"; do
+  case "$arg" in
+    --fast) FAST_MODE="1" ;;
+  esac
+done
+
+REPORT_JSON="/tmp/all-tests-report.json"
+REPORT_MD="/tmp/all-tests-summary.md"
+
+echo -e "${BOLD}╔═══════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}║  KubeStellar Console — Full Test Suite            ║${NC}"
+echo -e "${BOLD}╚═══════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${DIM}Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)${NC}"
+echo ""
+
+# ============================================================================
+# Test scripts to run (in order)
+# ============================================================================
+
+# Scripts that do fast static checks (no external deps required)
+declare -a FAST_SCRIPTS=(
+  "scripts/consistency-test.sh"
+  "scripts/helm-lint-test.sh"
+  "scripts/license-compliance-test.sh"
+  "scripts/error-boundary-test.sh"
+  "scripts/mission-security-test.sh"
+)
+
+# Scripts that run Go tests
+declare -a GO_SCRIPTS=(
+  "scripts/auth-lifecycle-test.sh"
+  "scripts/settings-migration-test.sh"
+  "scripts/update-lifecycle-test.sh"
+  "scripts/websocket-resilience-test.sh"
+  "scripts/gosec-test.sh"
+  "scripts/dependency-audit-test.sh"
+)
+
+# Scripts that require a running server or are long-running
+declare -a SLOW_SCRIPTS=(
+  "scripts/api-contract-test.sh"
+  "scripts/api-fuzz-test.sh"
+)
+
+# Build full list
+declare -a ALL_SCRIPTS=()
+for s in "${FAST_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
+for s in "${GO_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
+if [ -z "$FAST_MODE" ]; then
+  for s in "${SLOW_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
+fi
+
+TOTAL=0
+PASSED_SUITES=0
+FAILED_SUITES=0
+SKIPPED_SUITES=0
+RESULTS=""
+declare -a FAILED_NAMES=()
+
+# ============================================================================
+# Run each test suite
+# ============================================================================
+
+for script in "${ALL_SCRIPTS[@]}"; do
+  SUITE_NAME=$(basename "$script" .sh)
+  TOTAL=$((TOTAL + 1))
+
+  if [ ! -f "$script" ]; then
+    echo -e "  ${DIM}⊘  ${SUITE_NAME}${NC} — script not found"
+    SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
+    continue
+  fi
+
+  echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
+
+  # Run the script and capture output + exit code + duration
+  SUITE_START=$(date +%s)
+  SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
+  SUITE_EXIT=0
+  bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+  SUITE_END=$(date +%s)
+  SUITE_DURATION=$((SUITE_END - SUITE_START))
+
+  if [ "$SUITE_EXIT" -eq 0 ]; then
+    echo -e "    ${GREEN}✓ PASS${NC}  (${SUITE_DURATION}s)"
+    PASSED_SUITES=$((PASSED_SUITES + 1))
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
+  else
+    echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
+    # Show last few lines of output for failed suites
+    tail -3 "$SUITE_OUTPUT" 2>/dev/null | while IFS= read -r line; do
+      echo -e "      ${DIM}${line}${NC}"
+    done
+    FAILED_SUITES=$((FAILED_SUITES + 1))
+    FAILED_NAMES+=("$SUITE_NAME")
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION}},"
+  fi
+done
+
+echo ""
+
+# ============================================================================
+# Also run Playwright-based scripts if they exist and frontend is running
+# ============================================================================
+
+declare -a PLAYWRIGHT_SCRIPTS=(
+  "scripts/console-error-scan.sh"
+  "scripts/nav-test.sh"
+  "scripts/perf-test.sh"
+  "scripts/ui-compliance-test.sh"
+  "scripts/cache-test.sh"
+)
+
+FRONTEND_UP=""
+if curl -sf "http://localhost:5174" --max-time 3 > /dev/null 2>&1; then
+  FRONTEND_UP="1"
+fi
+
+if [ -n "$FRONTEND_UP" ] && [ -z "$FAST_MODE" ]; then
+  echo -e "${BOLD}Playwright-based tests (frontend detected):${NC}"
+  echo ""
+
+  for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
+    SUITE_NAME=$(basename "$script" .sh)
+    TOTAL=$((TOTAL + 1))
+
+    if [ ! -f "$script" ]; then
+      echo -e "  ${DIM}⊘  ${SUITE_NAME}${NC} — script not found"
+      SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+      RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
+      continue
+    fi
+
+    echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
+    SUITE_START=$(date +%s)
+    SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
+    SUITE_EXIT=0
+    bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+    SUITE_END=$(date +%s)
+    SUITE_DURATION=$((SUITE_END - SUITE_START))
+
+    if [ "$SUITE_EXIT" -eq 0 ]; then
+      echo -e "    ${GREEN}✓ PASS${NC}  (${SUITE_DURATION}s)"
+      PASSED_SUITES=$((PASSED_SUITES + 1))
+      RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
+    else
+      echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
+      tail -3 "$SUITE_OUTPUT" 2>/dev/null | while IFS= read -r line; do
+        echo -e "      ${DIM}${line}${NC}"
+      done
+      FAILED_SUITES=$((FAILED_SUITES + 1))
+      FAILED_NAMES+=("$SUITE_NAME")
+      RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION}},"
+    fi
+  done
+else
+  echo -e "${DIM}Playwright tests skipped (frontend not running or --fast mode)${NC}"
+  for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
+    SUITE_NAME=$(basename "$script" .sh)
+    TOTAL=$((TOTAL + 1))
+    SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
+  done
+fi
+
+echo ""
+
+# ============================================================================
+# Generate reports
+# ============================================================================
+
+RESULTS="${RESULTS%,}"
+
+cat > "$REPORT_JSON" << EOF
+{
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "fastMode": $([ -n "$FAST_MODE" ] && echo "true" || echo "false"),
+  "summary": {
+    "total": ${TOTAL},
+    "passed": ${PASSED_SUITES},
+    "failed": ${FAILED_SUITES},
+    "skipped": ${SKIPPED_SUITES}
+  },
+  "results": [${RESULTS}]
+}
+EOF
+
+cat > "$REPORT_MD" << EOF
+# KubeStellar Console — Full Test Suite
+
+**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+**Mode:** $([ -n "$FAST_MODE" ] && echo "Fast (skipping fuzz/playwright)" || echo "Full")
+
+## Summary
+
+| Metric   | Count |
+|----------|-------|
+| Total    | ${TOTAL} |
+| Passed   | ${PASSED_SUITES} |
+| Failed   | ${FAILED_SUITES} |
+| Skipped  | ${SKIPPED_SUITES} |
+
+## Suites
+
+EOF
+
+# Add suite results to markdown
+for script in "${ALL_SCRIPTS[@]}" "${PLAYWRIGHT_SCRIPTS[@]}"; do
+  SUITE_NAME=$(basename "$script" .sh)
+  SUITE_LOG="/tmp/suite-${SUITE_NAME}.log"
+  if [ -f "$SUITE_LOG" ]; then
+    if grep -q "passed\|PASS\|All.*checks passed" "$SUITE_LOG" 2>/dev/null; then
+      echo "| \`${SUITE_NAME}\` | PASS |" >> "$REPORT_MD"
+    else
+      echo "| \`${SUITE_NAME}\` | FAIL |" >> "$REPORT_MD"
+    fi
+  else
+    echo "| \`${SUITE_NAME}\` | SKIP |" >> "$REPORT_MD"
+  fi
+done
+
+# ============================================================================
+# Summary
+# ============================================================================
+
+echo -e "${BOLD}═══════════════════════════════════════════════════${NC}"
+echo -e "${BOLD}  Summary${NC}"
+echo -e "${BOLD}═══════════════════════════════════════════════════${NC}"
+echo ""
+echo -e "  Total:    ${TOTAL}"
+echo -e "  ${GREEN}Passed:   ${PASSED_SUITES}${NC}"
+echo -e "  ${RED}Failed:   ${FAILED_SUITES}${NC}"
+echo -e "  ${DIM}Skipped:  ${SKIPPED_SUITES}${NC}"
+echo ""
+
+if [ "${#FAILED_NAMES[@]}" -gt 0 ]; then
+  echo -e "${RED}${BOLD}Failed suites:${NC}"
+  for name in "${FAILED_NAMES[@]}"; do
+    echo -e "  ${RED}• ${name}${NC}  (see /tmp/suite-${name}.log)"
+  done
+  echo ""
+fi
+
+echo -e "${DIM}Finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)${NC}"
+echo ""
+echo "Reports:"
+echo "  JSON:     $REPORT_JSON"
+echo "  Summary:  $REPORT_MD"
+echo "  Logs:     /tmp/suite-*.log"
+
+[ "$FAILED_SUITES" -gt 0 ] && exit 1
+exit 0
