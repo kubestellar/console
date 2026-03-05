@@ -311,6 +311,117 @@ jobs:
             echo "No lazy loading gaps detected"
           fi
 
+      - name: "Focus: Bundle chunk analysis"
+        id: focus_bundle_analysis
+        if: steps.focus.outputs.area == 'performance' && steps.build_check.outcome == 'success'
+        continue-on-error: true
+        run: |
+          echo "Analyzing bundle chunks for large assets..."
+          ISSUES=""
+
+          if [ -d "web/dist/assets" ]; then
+            # Find JS chunks over 300KB
+            LARGE_CHUNKS=$(find web/dist/assets -name "*.js" -size +300k 2>/dev/null | while IFS= read -r f; do
+              SIZE=$(du -sh "$f" | cut -f1)
+              echo "  - $(basename "$f") (${SIZE})"
+            done | sort | head -20 || true)
+
+            if [ -n "$LARGE_CHUNKS" ]; then
+              ISSUES="${ISSUES}### JS chunks over 300KB\nLarge chunks increase initial load time — consider code splitting:\n${LARGE_CHUNKS}\n\n"
+            fi
+
+            # Top 10 largest assets
+            TOP_ASSETS=$(du -sh web/dist/assets/* 2>/dev/null | sort -rh | head -10 | \
+              awk '{gsub(/web\/dist\/assets\//, "", $2); print "  - " $2 " (" $1 ")"}' || true)
+            if [ -n "$TOP_ASSETS" ]; then
+              ISSUES="${ISSUES}### Top 10 largest bundle assets\n${TOP_ASSETS}\n\n"
+            fi
+
+            CHUNK_COUNT=$(find web/dist/assets -name "*.js" 2>/dev/null | wc -l | tr -d ' ')
+            TOTAL_KB=$(du -sk web/dist 2>/dev/null | cut -f1)
+            ISSUES="${ISSUES}### Bundle summary\n  - Total size: ${TOTAL_KB}KB\n  - JS chunk count: ${CHUNK_COUNT}\n"
+          else
+            echo "No dist directory found — skipping bundle analysis"
+          fi
+
+          if echo "$ISSUES" | grep -q "JS chunks over"; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "$ISSUES" ]; then
+            printf "%b" "$ISSUES" > /tmp/focus-bundle-analysis.txt
+            cat /tmp/focus-bundle-analysis.txt
+          fi
+
+      - name: "Focus: Large source files"
+        id: focus_large_files
+        if: steps.focus.outputs.area == 'performance'
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for oversized source files..."
+          ISSUES=""
+
+          # Find TypeScript/TSX files over 500 lines
+          LARGE=$(find src -name "*.ts" -o -name "*.tsx" 2>/dev/null | while IFS= read -r f; do
+            LINES=$(wc -l < "$f" 2>/dev/null || echo "0")
+            if [ "$LINES" -gt 500 ]; then
+              echo "${LINES} ${f}"
+            fi
+          done | sort -rn | head -20 || true)
+
+          if [ -n "$LARGE" ]; then
+            COUNT=$(echo "$LARGE" | wc -l | tr -d ' ')
+            FORMATTED=$(echo "$LARGE" | awk '{print "  - `" $2 "` (" $1 " lines)"}')
+            ISSUES="${ISSUES}### Source files over 500 lines (${COUNT} found)\nLarge files are harder to maintain and may impact compile performance:\n${FORMATTED}\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-large-files.txt
+            cat /tmp/focus-large-files.txt
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No oversized source files detected"
+          fi
+
+      - name: "Focus: Import cost and tree-shaking"
+        id: focus_import_cost
+        if: steps.focus.outputs.area == 'performance'
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for import patterns that prevent tree-shaking..."
+          ISSUES=""
+
+          # Namespace imports prevent tree-shaking
+          STAR_IMPORTS=$(grep -rn "import \* as" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|\.test\." | head -15 || true)
+          if [ -n "$STAR_IMPORTS" ]; then
+            COUNT=$(echo "$STAR_IMPORTS" | wc -l | tr -d ' ')
+            ISSUES="${ISSUES}### Namespace imports (\`import * as\`) that prevent tree-shaking (${COUNT} found)\nUse named imports instead — e.g. \`import { specific } from 'lib'\`:\n\`\`\`\n${STAR_IMPORTS}\n\`\`\`\n\n"
+          fi
+
+          # Full lodash imports pull in the entire library
+          LODASH_FULL=$(grep -rn "from 'lodash'" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|\.test\." | head -10 || true)
+          if [ -n "$LODASH_FULL" ]; then
+            ISSUES="${ISSUES}### Full lodash import (imports entire library)\nUse per-method imports instead — e.g. \`import debounce from 'lodash/debounce'\`:\n\`\`\`\n${LODASH_FULL}\n\`\`\`\n\n"
+          fi
+
+          if echo "$ISSUES" | grep -q "Namespace imports\|Full lodash"; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "$ISSUES" ]; then
+            printf "%b" "$ISSUES" > /tmp/focus-import-cost.txt
+            cat /tmp/focus-import-cost.txt
+          else
+            echo "No import cost issues detected"
+          fi
+
       # === SECURITY (Tuesday) ===
       - name: "Focus: Hardcoded URLs and tokens"
         id: focus_hardcoded
@@ -466,6 +577,49 @@ jobs:
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
             echo "No keyboard navigation gaps detected"
+          fi
+
+      - name: "Focus: Color contrast risk patterns"
+        id: focus_color_contrast
+        if: steps.focus.outputs.area == 'a11y'
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for potential color contrast issues..."
+          ISSUES=""
+
+          # Light gray text on potentially light backgrounds (likely below WCAG AA 4.5:1)
+          LOW_CONTRAST=$(grep -rn "text-gray-[23]00\b\|text-slate-[23]00\b\|text-zinc-[23]00\b\|text-neutral-[23]00\b" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "dark:\|node_modules\|\.test\." | head -20 || true)
+          if [ -n "$LOW_CONTRAST" ]; then
+            COUNT=$(echo "$LOW_CONTRAST" | wc -l | tr -d ' ')
+            ISSUES="${ISSUES}### Light gray text classes (${COUNT} found) — may fail WCAG AA on white/light backgrounds\nGray-200/300 text on light backgrounds often falls below the 4.5:1 contrast ratio:\n\`\`\`\n${LOW_CONTRAST}\n\`\`\`\n\n"
+          fi
+
+          # Text with opacity that could reduce contrast below threshold
+          OPACITY_TEXT=$(grep -rn "text-opacity-[1-5][0-9]\b\|text-[a-z]\+-[0-9]\+\/[1-5][0-9]\b" src/ --include="*.tsx" 2>/dev/null | \
+            grep "text-" | grep -v "node_modules\|\.test\." | head -15 || true)
+          if [ -n "$OPACITY_TEXT" ]; then
+            ISSUES="${ISSUES}### Text with reduced opacity — may fall below WCAG AA contrast\nOpacity below 60% on colored text can cause contrast failures:\n\`\`\`\n${OPACITY_TEXT}\n\`\`\`\n\n"
+          fi
+
+          # Inline color styles that bypass design tokens and may not have been contrast-checked
+          INLINE_COLOR=$(grep -rn "color:\s*['\"]#\|color:\s*rgb" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|\.test\.\|var(--\|backgroundColor" | head -15 || true)
+          if [ -n "$INLINE_COLOR" ]; then
+            COUNT=$(echo "$INLINE_COLOR" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 3 ]; then
+              ISSUES="${ISSUES}### Inline color styles (${COUNT} found) — contrast not validated by design system\nUse Tailwind classes or CSS variables so contrast can be centrally verified:\n\`\`\`\n${INLINE_COLOR}\n\`\`\`\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-color-contrast.txt
+            echo "Color contrast risks found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No color contrast issues detected"
           fi
 
       # === OPERATOR USEFULNESS (Thursday) ===
@@ -1092,13 +1246,13 @@ jobs:
             RECOMMENDATIONS="${RECOMMENDATIONS}- **Security**: Add checks for exposed secrets, unsafe innerHTML, eval usage\n"
           fi
           if [ "$NFR_A11Y" -lt 2 ]; then
-            RECOMMENDATIONS="${RECOMMENDATIONS}- **Accessibility**: Enhance ARIA checks, add color contrast validation\n"
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Accessibility**: Consider adding automated axe-core scan, focus-trap validation, semantic heading order checks\n"
           fi
           if [ "$NFR_I18N" -eq 0 ]; then
-            RECOMMENDATIONS="${RECOMMENDATIONS}- **Localization**: Add checks for hardcoded user-facing strings\n"
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Localization**: Consider adding missing-translation-key detection, pluralization pattern checks, date/number format audits\n"
           fi
           if [ "$NFR_PERF" -lt 2 ]; then
-            RECOMMENDATIONS="${RECOMMENDATIONS}- **Performance**: Add bundle analysis, large file detection, import cost checks\n"
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Performance**: Consider adding render-count profiling, Web Vitals regression detection, memoization gap analysis\n"
           fi
           if [ "$NFR_STORAGE" -lt 2 ]; then
             RECOMMENDATIONS="${RECOMMENDATIONS}- **Storage**: Add checks for localStorage usage patterns, state persistence\n"
@@ -3118,6 +3272,10 @@ jobs:
             "auto-qa:modal-safety:F44336:Modal patterns that risk data loss"
             "auto-qa:event-parity:607D8B:onClick without keyboard equivalent"
             "auto-qa:nil-safety:E53935:Nil pointer safety issues detected by nilaway"
+            "auto-qa:color-contrast:FF9800:Color contrast accessibility issues"
+            "auto-qa:bundle-size:3B82F6:Bundle chunk size issues"
+            "auto-qa:large-files:6B7280:Oversized source files"
+            "auto-qa:import-cost:F59E0B:Import patterns that hurt tree-shaking"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -3208,6 +3366,12 @@ jobs:
           FOCUS_ARIA_GAPS: ${{ steps.focus_aria_gaps.outputs.found }}
           FOCUS_MODAL_SAFETY: ${{ steps.focus_modal_safety.outputs.found }}
           FOCUS_EVENT_PARITY: ${{ steps.focus_event_parity.outputs.found }}
+          # A11y focus
+          FOCUS_COLOR_CONTRAST: ${{ steps.focus_color_contrast.outputs.found }}
+          # Performance focus (additional)
+          FOCUS_BUNDLE_ANALYSIS: ${{ steps.focus_bundle_analysis.outputs.found }}
+          FOCUS_LARGE_FILES: ${{ steps.focus_large_files.outputs.found }}
+          FOCUS_IMPORT_COST: ${{ steps.focus_import_cost.outputs.found }}
           # Tuning (from auto-qa-tuner feedback loop)
           BLOCKED_CATEGORIES: ${{ steps.tuning.outputs.blocked }}
           BOOSTED_CATEGORIES: ${{ steps.tuning.outputs.boosted }}
@@ -3398,6 +3562,42 @@ jobs:
                   labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
                 });
               }
+              if (process.env.FOCUS_BUNDLE_ANALYSIS === 'true') {
+                checks.push({
+                  title: `${prefix} Bundle has JS chunks over 300KB`,
+                  body: buildFocusBody('Performance', 'Bundle Chunk Size',
+                    readOutput('/tmp/focus-bundle-analysis.txt'),
+                    ['Split large chunks using `React.lazy` and dynamic imports at route level',
+                     'Use `vite-bundle-visualizer` or `rollup-plugin-visualizer` to identify what is large',
+                     'Move large third-party libs to a separate manual chunk in vite.config.ts',
+                     'Consider loading non-critical libraries on demand (e.g., chart libs)'], true),
+                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:bundle-size'],
+                });
+              }
+              if (process.env.FOCUS_LARGE_FILES === 'true') {
+                checks.push({
+                  title: `${prefix} Oversized source files detected`,
+                  body: buildFocusBody('Performance', 'Large Source Files',
+                    readOutput('/tmp/focus-large-files.txt'),
+                    ['Split files over 500 lines into multiple focused modules',
+                     'Extract reusable hooks into `hooks/` directory',
+                     'Move co-located sub-components into their own files under a component directory',
+                     'Large files slow TypeScript type-checking and IDE responsiveness'], true),
+                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:large-files'],
+                });
+              }
+              if (process.env.FOCUS_IMPORT_COST === 'true') {
+                checks.push({
+                  title: `${prefix} Import patterns preventing tree-shaking`,
+                  body: buildFocusBody('Performance', 'Import Cost',
+                    readOutput('/tmp/focus-import-cost.txt'),
+                    ['Replace `import * as X from "lib"` with named imports: `import { fn } from "lib"`',
+                     'Use per-method lodash imports: `import debounce from "lodash/debounce"`',
+                     'Verify bundle size before and after with `npm run build` and `du -sh web/dist`',
+                     'Consider alternatives to lodash for simple utilities (native Array/Object methods)'], true),
+                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:import-cost'],
+                });
+              }
             }
 
             // Security (Tuesday)
@@ -3450,6 +3650,19 @@ jobs:
                      'Add `onKeyDown` handlers alongside `onClick` for non-button elements',
                      'Ensure all interactive elements are focusable via Tab'], true),
                   labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
+                });
+              }
+              if (process.env.FOCUS_COLOR_CONTRAST === 'true') {
+                checks.push({
+                  title: `${prefix} Color contrast risks detected — WCAG AA compliance`,
+                  body: buildFocusBody('Accessibility', 'Color Contrast',
+                    readOutput('/tmp/focus-color-contrast.txt'),
+                    ['Ensure text color / background combinations meet WCAG AA 4.5:1 ratio',
+                     'Replace `text-gray-200/300` on light backgrounds with `text-gray-600` or darker',
+                     'Avoid opacity-reduced text below 60% — it drops effective contrast sharply',
+                     'Use inline color styles only when paired with a verified-contrast background',
+                     'Validate with the WebAIM Contrast Checker: https://webaim.org/resources/contrastchecker/'], true),
+                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:color-contrast'],
                 });
               }
             }
