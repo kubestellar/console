@@ -104,15 +104,17 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
 
-      - name: Configure kubeconfig
+      - name: Configure kubeconfig from SA token
         run: |
           export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
-          kubectl config set-cluster vllm-d \
+          SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          kubectl config set-cluster in-cluster \
             --server=https://kubernetes.default.svc \
-            --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+            --certificate-authority="$CA_CERT" \
             --embed-certs=true
-          kubectl config set-credentials deployer --token="${{ secrets.VLLM_D_DEPLOY_TOKEN }}"
-          kubectl config set-context deploy --cluster=vllm-d --user=deployer
+          kubectl config set-credentials sa-user --token="$SA_TOKEN"
+          kubectl config set-context deploy --cluster=in-cluster --user=sa-user
           kubectl config use-context deploy
           echo "KUBECONFIG=$KUBECONFIG" >> "$GITHUB_ENV"
           echo "Verifying cluster access..."
@@ -120,8 +122,7 @@ jobs:
 
       - name: Create namespace if not exists
         run: |
-          kubectl get namespace kc >/dev/null 2>&1 || kubectl create namespace kc
-        continue-on-error: true
+          kubectl create namespace kc --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create or update secrets
         run: |
@@ -133,11 +134,10 @@ jobs:
             --from-literal=github-token=${{ secrets.KSC_GITHUB_TOKEN }} \
             --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
-        continue-on-error: true
 
       - name: Deploy with Helm
         run: |
-          helm template kc ./deploy/helm/kubestellar-console \
+          helm upgrade --install kc ./deploy/helm/kubestellar-console \
             --namespace kc \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
@@ -150,7 +150,8 @@ jobs:
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --set clusterName=vllm-d \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
-            | kubectl apply -n kc -f -
+            --wait \
+            --timeout 5m
 
       - name: Verify deployment
         run: |
