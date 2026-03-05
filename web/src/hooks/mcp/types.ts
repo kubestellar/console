@@ -28,6 +28,8 @@ export interface ClusterInfo {
   pvcCount?: number
   pvcBoundCount?: number
   isCurrent?: boolean
+  // Auth method detected from kubeconfig (exec = IAM/cloud CLI, token, certificate, auth-provider)
+  authMethod?: 'exec' | 'token' | 'certificate' | 'auth-provider' | 'unknown'
   // Reachability fields (from health check)
   reachable?: boolean
   lastSeen?: string

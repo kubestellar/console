@@ -294,6 +294,7 @@ type KubeconfigPreviewEntry struct {
 	ClusterName string `json:"clusterName"`
 	ServerURL   string `json:"serverUrl"`
 	UserName    string `json:"userName"`
+	AuthMethod  string `json:"authMethod,omitempty"` // exec, token, certificate, auth-provider, unknown
 	IsNew       bool   `json:"isNew"`
 }
 
@@ -314,6 +315,7 @@ func (k *KubectlProxy) PreviewKubeconfig(yamlContent string) ([]KubeconfigPrevie
 			ContextName: name,
 			ClusterName: ctx.Cluster,
 			UserName:    ctx.AuthInfo,
+			AuthMethod:  detectAuthMethod(incoming.AuthInfos[ctx.AuthInfo]),
 		}
 		if cluster, ok := incoming.Clusters[ctx.Cluster]; ok {
 			entry.ServerURL = cluster.Server

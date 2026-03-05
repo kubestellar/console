@@ -63,6 +63,41 @@ function isTokenExpired(cluster: ClusterInfo): boolean {
   return cluster.errorType === 'auth'
 }
 
+// Auth method badge labels
+const AUTH_BADGE_MAP: Record<string, { label: string; color: string }> = {
+  exec: { label: 'IAM', color: 'bg-blue-500/20 text-blue-400' },
+  token: { label: 'Token', color: 'bg-yellow-500/20 text-yellow-400' },
+  certificate: { label: 'Cert', color: 'bg-green-500/20 text-green-400' },
+  'auth-provider': { label: 'IAM', color: 'bg-blue-500/20 text-blue-400' },
+}
+
+// Session refresh commands per exec-plugin CLI name
+const IAM_REFRESH_COMMANDS: Record<string, string> = {
+  aws: 'aws sso login',
+  'aws-iam-authenticator': 'aws sso login',
+  gcloud: 'gcloud auth login',
+  gke: 'gcloud auth login',
+  az: 'az login',
+  kubelogin: 'az login',
+  oc: 'oc login <api-server-url>',
+}
+
+// Get a session refresh hint for IAM auth failures based on cluster user/name
+function getIAMRefreshHint(cluster: ClusterInfo): string | null {
+  if (cluster.authMethod !== 'exec') return null
+  const userLower = (cluster.user || '').toLowerCase()
+  const nameLower = (cluster.name || '').toLowerCase()
+  for (const [key, cmd] of Object.entries(IAM_REFRESH_COMMANDS)) {
+    if (userLower.includes(key) || nameLower.includes(key)) return cmd
+  }
+  // Guess from name patterns
+  if (nameLower.includes('eks') || nameLower.includes('aws')) return 'aws sso login'
+  if (nameLower.includes('gke') || nameLower.includes('gcp')) return 'gcloud auth login'
+  if (nameLower.includes('aks') || nameLower.includes('azure')) return 'az login'
+  if (nameLower.includes('openshift') || nameLower.includes('ocp')) return 'oc login <api-server-url>'
+  return null
+}
+
 interface GPUInfo {
   total: number
   allocated: number
@@ -191,6 +226,14 @@ const FullClusterCard = memo(function FullClusterCard({
                 >
                   {cluster.context || cluster.name.split('/').pop()}
                 </h3>
+                {cluster.authMethod && AUTH_BADGE_MAP[cluster.authMethod] && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
+                    title={`Auth: ${cluster.authMethod}`}
+                  >
+                    {AUTH_BADGE_MAP[cluster.authMethod].label}
+                  </span>
+                )}
                 {cluster.aliases && cluster.aliases.length > 0 && (
                   <span
                     className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
@@ -226,6 +269,20 @@ const FullClusterCard = memo(function FullClusterCard({
                   >
                     <User className="w-3 h-3 flex-shrink-0" />
                     <span className="truncate">{cluster.user}</span>
+                  </span>
+                )}
+                {/* Actionable error hint for IAM auth failures */}
+                {isTokenExpired(cluster) && cluster.authMethod === 'exec' && (() => {
+                  const hint = getIAMRefreshHint(cluster)
+                  return hint ? (
+                    <span className="text-[10px] text-red-400/80 mt-0.5">
+                      {t('cluster.authErrorIAMHint')} <code className="bg-red-500/10 px-1 rounded">{hint}</code>
+                    </span>
+                  ) : null
+                })()}
+                {isTokenExpired(cluster) && cluster.authMethod !== 'exec' && (
+                  <span className="text-[10px] text-red-400/80 mt-0.5">
+                    {t('cluster.authErrorTokenHint')}
                   </span>
                 )}
               </div>
@@ -374,6 +431,14 @@ const ListClusterCard = memo(function ListClusterCard({
             >
               {cluster.context || cluster.name.split('/').pop()}
             </span>
+            {cluster.authMethod && AUTH_BADGE_MAP[cluster.authMethod] && (
+              <span
+                className={`text-[9px] px-1 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
+                title={`Auth: ${cluster.authMethod}`}
+              >
+                {AUTH_BADGE_MAP[cluster.authMethod].label}
+              </span>
+            )}
             {cluster.aliases && cluster.aliases.length > 0 && (
               <span
                 className="text-[10px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
