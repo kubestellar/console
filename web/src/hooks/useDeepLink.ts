@@ -83,7 +83,10 @@ export function sendNotificationWithDeepLink(
     ...options,
   })
 
-  notification.onclick = () => {
+  notification.onclick = (event: Event) => {
+    // Prevent default OS behavior (e.g., macOS opening Finder instead of the browser)
+    event.preventDefault()
+
     // Focus existing window or open new one
     window.focus()
 

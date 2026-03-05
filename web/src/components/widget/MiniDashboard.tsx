@@ -174,7 +174,9 @@ export function MiniDashboard() {
         })
 
         // Deep link to node drilldown when notification is clicked
-        notification.onclick = () => {
+        notification.onclick = (event: Event) => {
+          // Prevent default OS behavior (e.g., macOS opening Finder instead of the browser)
+          event.preventDefault()
           window.focus()
           if (firstOfflineNode) {
             // Build deep link URL to node drilldown with widget campaign attribution
