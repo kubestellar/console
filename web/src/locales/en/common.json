@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "GitOps Restart",
+      "gitopsRestartTitle": "Declarative GitOps Deployment Restart",
+      "argocdDocs": "Argo CD Docs",
+      "triggerSyncTitle": "Trigger Argo CD Sync",
+      "triggerSyncDesc": "Reconcile the live cluster state with the desired state in Git.",
+      "outOfSyncWarning": "This application is currently out of sync.",
+      "syncing": "Syncing…",
+      "syncNow": "Sync Now",
+      "declarativeRestartTitle": "Declarative Restart via Annotation",
+      "declarativeRestartDesc": "To trigger a rolling restart declaratively, update the ",
+      "declarativeRestartDescSuffix": " annotation in your deployment manifest and commit to Git. Argo CD will detect the change and apply it to the cluster.",
+      "restartSnippetComment": "# In your Git repository — update this annotation to trigger a restart",
+      "copyButton": "Copy",
+      "afterCommitHint": "After committing, either wait for Argo CD auto-sync or click ",
+      "afterCommitHintSuffix": " above to apply immediately.",
+      "whyDeclarativeTitle": "Why Declarative Restart?",
+      "benefit1": "All changes are version-controlled and auditable via Git history.",
+      "benefit2": "Rollouts, restarts, and configuration changes are triggered by Git commits — not manual commands.",
+      "benefit3": "Works across multi-cluster workloads managed by KubeStellar and Argo CD.",
+      "benefit4": "Enterprise-grade compliance — no imperative commands scattered across clusters.",
+      "argocdDeclarativeSetup": "Argo CD Declarative Setup",
+      "gitopsBestPractices": "GitOps Best Practices",
+      "defaultDeploymentName": "<deployment-name>"
     }
   },
   "pagination": {

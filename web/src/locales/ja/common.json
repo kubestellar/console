@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "GitOps 再起動",
+      "gitopsRestartTitle": "宣言的GitOpsデプロイメント再起動",
+      "argocdDocs": "Argo CDドキュメント",
+      "triggerSyncTitle": "Argo CD同期をトリガー",
+      "triggerSyncDesc": "ライブクラスターの状態をGitの望ましい状態に合わせます。",
+      "outOfSyncWarning": "このアプリケーションは現在同期されていません。",
+      "syncing": "同期中…",
+      "syncNow": "今すぐ同期",
+      "declarativeRestartTitle": "アノテーションによる宣言的再起動",
+      "declarativeRestartDesc": "ローリング再起動を宣言的にトリガーするには、デプロイメントマニフェストの ",
+      "declarativeRestartDescSuffix": " アノテーションを更新してGitにコミットします。Argo CDが変更を検出してクラスターに適用します。",
+      "restartSnippetComment": "# Gitリポジトリ内 — このアノテーションを更新して再起動をトリガー",
+      "copyButton": "コピー",
+      "afterCommitHint": "コミット後、Argo CDの自動同期を待つか、すぐに適用するには上の ",
+      "afterCommitHintSuffix": " をクリックしてください。",
+      "whyDeclarativeTitle": "なぜ宣言的再起動？",
+      "benefit1": "すべての変更はバージョン管理され、Git履歴で監査可能です。",
+      "benefit2": "ロールアウト、再起動、設定変更はGitコミットによってトリガーされます — 手動コマンドではありません。",
+      "benefit3": "KubeStellarとArgo CDで管理されるマルチクラスターワークロードで機能します。",
+      "benefit4": "エンタープライズグレードのコンプライアンス — クラスター間に命令型コマンドが散在しません。",
+      "argocdDeclarativeSetup": "Argo CD宣言的セットアップ",
+      "gitopsBestPractices": "GitOpsベストプラクティス",
+      "defaultDeploymentName": "<deployment-name>"
     }
   },
   "pagination": {

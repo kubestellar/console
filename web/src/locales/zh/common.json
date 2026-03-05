@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "GitOps 重启",
+      "gitopsRestartTitle": "声明式 GitOps 部署重启",
+      "argocdDocs": "Argo CD 文档",
+      "triggerSyncTitle": "触发 Argo CD 同步",
+      "triggerSyncDesc": "将实时集群状态与 Git 中的期望状态进行协调。",
+      "outOfSyncWarning": "此应用程序当前未同步。",
+      "syncing": "同步中…",
+      "syncNow": "立即同步",
+      "declarativeRestartTitle": "通过注解声明式重启",
+      "declarativeRestartDesc": "要以声明式方式触发滚动重启，请更新部署清单中的 ",
+      "declarativeRestartDescSuffix": " 注解并提交到 Git。Argo CD 将检测到更改并将其应用到集群。",
+      "restartSnippetComment": "# 在您的 Git 仓库中 — 更新此注解以触发重启",
+      "copyButton": "复制",
+      "afterCommitHint": "提交后，等待 Argo CD 自动同步，或点击上方的 ",
+      "afterCommitHintSuffix": " 立即应用。",
+      "whyDeclarativeTitle": "为什么选择声明式重启？",
+      "benefit1": "所有更改都通过 Git 历史记录进行版本控制和审计。",
+      "benefit2": "滚动更新、重启和配置更改通过 Git 提交触发，而非手动命令。",
+      "benefit3": "适用于由 KubeStellar 和 Argo CD 管理的多集群工作负载。",
+      "benefit4": "企业级合规 — 不再有分散在各集群的命令式命令。",
+      "argocdDeclarativeSetup": "Argo CD 声明式设置",
+      "gitopsBestPractices": "GitOps 最佳实践",
+      "defaultDeploymentName": "<deployment-name>"
     }
   },
   "pagination": {

@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "GitOps-Neustart",
+      "gitopsRestartTitle": "Deklarativer GitOps-Deployment-Neustart",
+      "argocdDocs": "Argo CD Dokumentation",
+      "triggerSyncTitle": "Argo CD-Synchronisierung auslösen",
+      "triggerSyncDesc": "Live-Clusterzustand mit dem gewünschten Zustand in Git abgleichen.",
+      "outOfSyncWarning": "Diese Anwendung ist derzeit nicht synchronisiert.",
+      "syncing": "Synchronisieren…",
+      "syncNow": "Jetzt synchronisieren",
+      "declarativeRestartTitle": "Deklarativer Neustart per Annotation",
+      "declarativeRestartDesc": "Um einen Rolling-Restart deklarativ auszulösen, aktualisieren Sie die ",
+      "declarativeRestartDescSuffix": " Annotation in Ihrem Deployment-Manifest und committen Sie nach Git. Argo CD erkennt die Änderung und wendet sie auf den Cluster an.",
+      "restartSnippetComment": "# In Ihrem Git-Repository — aktualisieren Sie diese Annotation, um einen Neustart auszulösen",
+      "copyButton": "Kopieren",
+      "afterCommitHint": "Warten Sie nach dem Commit auf die Auto-Synchronisierung von Argo CD oder klicken Sie auf ",
+      "afterCommitHintSuffix": " oben, um sofort anzuwenden.",
+      "whyDeclarativeTitle": "Warum deklarativer Neustart?",
+      "benefit1": "Alle Änderungen sind versioniert und über die Git-Historie nachvollziehbar.",
+      "benefit2": "Rollouts, Neustarts und Konfigurationsänderungen werden durch Git-Commits ausgelöst — nicht durch manuelle Befehle.",
+      "benefit3": "Funktioniert über Multi-Cluster-Workloads, die von KubeStellar und Argo CD verwaltet werden.",
+      "benefit4": "Enterprise-Compliance — keine imperativen Befehle über Cluster verteilt.",
+      "argocdDeclarativeSetup": "Argo CD Deklaratives Setup",
+      "gitopsBestPractices": "GitOps Best Practices",
+      "defaultDeploymentName": "<deployment-name>"
     }
   },
   "pagination": {

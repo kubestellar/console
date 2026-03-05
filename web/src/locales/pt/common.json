@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "Reinicialização GitOps",
+      "gitopsRestartTitle": "Reinicialização declarativa de deployment GitOps",
+      "argocdDocs": "Documentação do Argo CD",
+      "triggerSyncTitle": "Acionar sincronização do Argo CD",
+      "triggerSyncDesc": "Reconciliar o estado do cluster ao vivo com o estado desejado no Git.",
+      "outOfSyncWarning": "Este aplicativo está atualmente fora de sincronização.",
+      "syncing": "Sincronizando…",
+      "syncNow": "Sincronizar agora",
+      "declarativeRestartTitle": "Reinicialização declarativa via anotação",
+      "declarativeRestartDesc": "Para acionar uma reinicialização progressiva de forma declarativa, atualize a anotação ",
+      "declarativeRestartDescSuffix": " no manifesto de deployment e faça commit no Git. O Argo CD detectará a mudança e a aplicará ao cluster.",
+      "restartSnippetComment": "# No seu repositório Git — atualize esta anotação para acionar uma reinicialização",
+      "copyButton": "Copiar",
+      "afterCommitHint": "Após o commit, aguarde a sincronização automática do Argo CD ou clique em ",
+      "afterCommitHintSuffix": " acima para aplicar imediatamente.",
+      "whyDeclarativeTitle": "Por que reinicialização declarativa?",
+      "benefit1": "Todas as alterações são controladas por versão e auditáveis via histórico do Git.",
+      "benefit2": "Rollouts, reinicializações e atualizações de configuração são acionados por commits do Git — não por comandos manuais.",
+      "benefit3": "Funciona em cargas de trabalho multi-cluster gerenciadas pelo KubeStellar e Argo CD.",
+      "benefit4": "Conformidade empresarial — sem comandos imperativos espalhados pelos clusters.",
+      "argocdDeclarativeSetup": "Configuração declarativa do Argo CD",
+      "gitopsBestPractices": "Melhores práticas GitOps",
+      "defaultDeploymentName": "<nome-do-deployment>"
     }
   },
   "pagination": {

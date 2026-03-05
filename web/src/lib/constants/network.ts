@@ -110,6 +110,9 @@ export const PROGRESS_SIMULATION_MS = 800
 /** Delay for navigation after marketplace install animation */
 export const NAV_AFTER_ANIMATION_MS = 1_500
 
+/** Simulated delay for mock Argo CD sync operations (UI demonstration only) */
+export const MOCK_SYNC_DELAY_MS = 1_200
+
 // ============================================================================
 // Polling & Refresh Intervals
 // ============================================================================

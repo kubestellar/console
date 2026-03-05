@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "GitOps रीस्टार्ट",
+      "gitopsRestartTitle": "डिक्लेरेटिव GitOps डिप्लॉयमेंट रीस्टार्ट",
+      "argocdDocs": "Argo CD दस्तावेज़",
+      "triggerSyncTitle": "Argo CD सिंक ट्रिगर करें",
+      "triggerSyncDesc": "लाइव क्लस्टर स्थिति को Git में वांछित स्थिति के साथ सुलझाएं।",
+      "outOfSyncWarning": "यह एप्लिकेशन वर्तमान में आउट ऑफ सिंक है।",
+      "syncing": "सिंक हो रहा है…",
+      "syncNow": "अभी सिंक करें",
+      "declarativeRestartTitle": "एनोटेशन के माध्यम से डिक्लेरेटिव रीस्टार्ट",
+      "declarativeRestartDesc": "रोलिंग रीस्टार्ट को डिक्लेरेटिव रूप से ट्रिगर करने के लिए, ",
+      "declarativeRestartDescSuffix": " एनोटेशन को अपने डिप्लॉयमेंट मैनिफेस्ट में अपडेट करें और Git में कमिट करें। Argo CD परिवर्तन का पता लगाएगा और इसे क्लस्टर पर लागू करेगा।",
+      "restartSnippetComment": "# अपने Git रिपॉजिटरी में — रीस्टार्ट ट्रिगर करने के लिए इस एनोटेशन को अपडेट करें",
+      "copyButton": "कॉपी करें",
+      "afterCommitHint": "कमिट करने के बाद, Argo CD ऑटो-सिंक की प्रतीक्षा करें या तुरंत लागू करने के लिए ऊपर ",
+      "afterCommitHintSuffix": " पर क्लिक करें।",
+      "whyDeclarativeTitle": "डिक्लेरेटिव रीस्टार्ट क्यों?",
+      "benefit1": "सभी परिवर्तन Git इतिहास के माध्यम से वर्शन-नियंत्रित और ऑडिटेबल हैं।",
+      "benefit2": "रोलआउट, रीस्टार्ट और कॉन्फ़िगरेशन परिवर्तन Git कमिट द्वारा ट्रिगर होते हैं — मैनुअल कमांड से नहीं।",
+      "benefit3": "KubeStellar और Argo CD द्वारा प्रबंधित मल्टी-क्लस्टर वर्कलोड में काम करता है।",
+      "benefit4": "एंटरप्राइज़-ग्रेड अनुपालन — क्लस्टर में कोई अनिवार्य कमांड नहीं।",
+      "argocdDeclarativeSetup": "Argo CD डिक्लेरेटिव सेटअप",
+      "gitopsBestPractices": "GitOps सर्वोत्तम प्रथाएं",
+      "defaultDeploymentName": "<deployment-name>"
     }
   },
   "pagination": {

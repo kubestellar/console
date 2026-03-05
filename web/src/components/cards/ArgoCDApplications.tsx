@@ -68,8 +68,11 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
     consecutiveFailures,
   } = useArgoCDApplications()
   const { drillToArgoApp } = useDrillDownActions()
-  const { triggerSync, isSyncing } = useArgoCDTriggerSync()
-  const [syncingApp, setSyncingApp] = useState<string | null>(null)
+  const { triggerSync } = useArgoCDTriggerSync()
+  // Track per-app sync state with a Set to avoid shared-boolean race conditions
+  const [syncingApps, setSyncingApps] = useState<Set<string>>(new Set())
+  const addSyncingApp = (key: string) => setSyncingApps(prev => new Set(prev).add(key))
+  const removeSyncingApp = (key: string) => setSyncingApps(prev => { const next = new Set(prev); next.delete(key); return next })
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -292,7 +295,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
             const SyncIcon = syncConfig.icon
             const HealthIcon = healthConfig.icon
             const appKey = `${app.cluster}/${app.namespace}/${app.name}`
-            const isThisAppSyncing = isSyncing && syncingApp === appKey
+            const isThisAppSyncing = syncingApps.has(appKey)
 
             return (
               <div
@@ -320,8 +323,8 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          setSyncingApp(appKey)
-                          triggerSync(app.name, app.namespace).finally(() => setSyncingApp(null))
+                          addSyncingApp(appKey)
+                          triggerSync(app.name, app.namespace).finally(() => removeSyncingApp(appKey))
                         }}
                         disabled={isThisAppSyncing}
                         className="flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

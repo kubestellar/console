@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "Riavvio GitOps",
+      "gitopsRestartTitle": "Riavvio dichiarativo del deployment GitOps",
+      "argocdDocs": "Documentazione Argo CD",
+      "triggerSyncTitle": "Avvia sincronizzazione Argo CD",
+      "triggerSyncDesc": "Riconcilia lo stato del cluster live con lo stato desiderato in Git.",
+      "outOfSyncWarning": "Questa applicazione è attualmente fuori sincronizzazione.",
+      "syncing": "Sincronizzazione…",
+      "syncNow": "Sincronizza ora",
+      "declarativeRestartTitle": "Riavvio dichiarativo tramite annotazione",
+      "declarativeRestartDesc": "Per avviare un riavvio progressivo in modo dichiarativo, aggiorna l'annotazione ",
+      "declarativeRestartDescSuffix": " nel manifesto del deployment e committa su Git. Argo CD rileverà la modifica e la applicherà al cluster.",
+      "restartSnippetComment": "# Nel tuo repository Git — aggiorna questa annotazione per avviare un riavvio",
+      "copyButton": "Copia",
+      "afterCommitHint": "Dopo il commit, attendi la sincronizzazione automatica di Argo CD o fai clic su ",
+      "afterCommitHintSuffix": " per applicare immediatamente.",
+      "whyDeclarativeTitle": "Perché riavvio dichiarativo?",
+      "benefit1": "Tutte le modifiche sono versionizzate e verificabili tramite la cronologia Git.",
+      "benefit2": "Rollout, riavvii e aggiornamenti della configurazione vengono attivati da commit Git, non da comandi manuali.",
+      "benefit3": "Funziona su workload multi-cluster gestiti da KubeStellar e Argo CD.",
+      "benefit4": "Conformità enterprise — nessun comando imperativo disperso sui cluster.",
+      "argocdDeclarativeSetup": "Configurazione dichiarativa Argo CD",
+      "gitopsBestPractices": "Best practice GitOps",
+      "defaultDeploymentName": "<nome-deployment>"
     }
   },
   "pagination": {

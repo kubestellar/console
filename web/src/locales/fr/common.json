@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "Redémarrage GitOps",
+      "gitopsRestartTitle": "Redémarrage de déploiement GitOps déclaratif",
+      "argocdDocs": "Documentation Argo CD",
+      "triggerSyncTitle": "Déclencher la synchronisation Argo CD",
+      "triggerSyncDesc": "Réconcilier l'état du cluster en direct avec l'état souhaité dans Git.",
+      "outOfSyncWarning": "Cette application est actuellement hors synchronisation.",
+      "syncing": "Synchronisation…",
+      "syncNow": "Synchroniser maintenant",
+      "declarativeRestartTitle": "Redémarrage déclaratif via annotation",
+      "declarativeRestartDesc": "Pour déclencher un redémarrage progressif de manière déclarative, mettez à jour l'annotation ",
+      "declarativeRestartDescSuffix": " dans votre manifeste de déploiement et committez vers Git. Argo CD détectera le changement et l'appliquera au cluster.",
+      "restartSnippetComment": "# Dans votre dépôt Git — mettez à jour cette annotation pour déclencher un redémarrage",
+      "copyButton": "Copier",
+      "afterCommitHint": "Après le commit, attendez la synchronisation automatique d'Argo CD ou cliquez sur ",
+      "afterCommitHintSuffix": " ci-dessus pour appliquer immédiatement.",
+      "whyDeclarativeTitle": "Pourquoi un redémarrage déclaratif ?",
+      "benefit1": "Tous les changements sont versionnés et auditables via l'historique Git.",
+      "benefit2": "Les rollouts, redémarrages et mises à jour de configuration sont déclenchés par des commits Git — pas des commandes manuelles.",
+      "benefit3": "Fonctionne sur des charges de travail multi-cluster gérées par KubeStellar et Argo CD.",
+      "benefit4": "Conformité entreprise — pas de commandes impératives éparpillées sur les clusters.",
+      "argocdDeclarativeSetup": "Configuration déclarative Argo CD",
+      "gitopsBestPractices": "Meilleures pratiques GitOps",
+      "defaultDeploymentName": "<nom-du-déploiement>"
     }
   },
   "pagination": {

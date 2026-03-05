@@ -1879,6 +1879,31 @@
       "schedulable": "Schedulable",
       "notSchedulable": "No (Cordoned)",
       "worker": "worker"
+    },
+    "argoApp": {
+      "gitopsRestartTab": "Reinicio GitOps",
+      "gitopsRestartTitle": "Reinicio declarativo de despliegue GitOps",
+      "argocdDocs": "Documentación de Argo CD",
+      "triggerSyncTitle": "Activar sincronización de Argo CD",
+      "triggerSyncDesc": "Reconciliar el estado del clúster en vivo con el estado deseado en Git.",
+      "outOfSyncWarning": "Esta aplicación está actualmente fuera de sincronización.",
+      "syncing": "Sincronizando…",
+      "syncNow": "Sincronizar ahora",
+      "declarativeRestartTitle": "Reinicio declarativo mediante anotación",
+      "declarativeRestartDesc": "Para activar un reinicio progresivo de forma declarativa, actualice la anotación ",
+      "declarativeRestartDescSuffix": " en el manifiesto de su despliegue y haga un commit en Git. Argo CD detectará el cambio y lo aplicará al clúster.",
+      "restartSnippetComment": "# En su repositorio Git — actualice esta anotación para activar un reinicio",
+      "copyButton": "Copiar",
+      "afterCommitHint": "Tras hacer el commit, espere la sincronización automática de Argo CD o haga clic en ",
+      "afterCommitHintSuffix": " arriba para aplicar de inmediato.",
+      "whyDeclarativeTitle": "¿Por qué reinicio declarativo?",
+      "benefit1": "Todos los cambios están controlados por versiones y son auditables a través del historial de Git.",
+      "benefit2": "Los rollouts, reinicios y actualizaciones de configuración se activan mediante commits en Git, no mediante comandos manuales.",
+      "benefit3": "Funciona en cargas de trabajo multi-clúster gestionadas por KubeStellar y Argo CD.",
+      "benefit4": "Cumplimiento empresarial — sin comandos imperativos dispersos por los clústeres.",
+      "argocdDeclarativeSetup": "Configuración declarativa de Argo CD",
+      "gitopsBestPractices": "Mejores prácticas de GitOps",
+      "defaultDeploymentName": "<nombre-del-despliegue>"
     }
   },
   "pagination": {

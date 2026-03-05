@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
+import { MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
 
 // Cache expiry time (5 minutes)
 const CACHE_EXPIRY_MS = 300000
@@ -433,7 +434,12 @@ export function useArgoCDTriggerSync() {
       // In a real implementation, call the ArgoCD API:
       //   POST /api/v1/applications/{name}/sync
       // or run: argocd app sync <name> -n <namespace>
-      await new Promise(resolve => setTimeout(resolve, 1200))
+      //
+      // NOTE: The Promise below never rejects — this is intentional for the
+      // mock/demo path. The catch block is kept so that the real API call
+      // (which can fail with network or permission errors) is handled correctly
+      // once the stub is replaced.
+      await new Promise(resolve => setTimeout(resolve, MOCK_SYNC_DELAY_MS))
       const result: TriggerSyncResult = {
         success: true,
         message: `Sync triggered for application "${appName}" in namespace "${namespace}". Argo CD will reconcile the desired state from Git.`,
