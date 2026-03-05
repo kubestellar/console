@@ -91,6 +91,13 @@ type Store interface {
 	DeleteGPUReservation(id uuid.UUID) error
 	GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error)
 
+	// GPU Utilization Snapshots
+	InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error
+	GetUtilizationSnapshots(reservationID string) ([]models.GPUUtilizationSnapshot, error)
+	GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error)
+	DeleteOldUtilizationSnapshots(before time.Time) (int64, error)
+	ListActiveGPUReservations() ([]models.GPUReservation, error)
+
 	// Lifecycle
 	Close() error
 }

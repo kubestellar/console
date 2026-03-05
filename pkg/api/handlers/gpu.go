@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -242,4 +243,51 @@ func (h *GPUHandler) DeleteReservation(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"status": "ok"})
+}
+
+// GetReservationUtilization returns utilization snapshots for a single reservation
+func (h *GPUHandler) GetReservationUtilization(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if _, err := uuid.Parse(id); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid reservation ID")
+	}
+
+	snapshots, err := h.store.GetUtilizationSnapshots(id)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get utilization data")
+	}
+	if snapshots == nil {
+		snapshots = []models.GPUUtilizationSnapshot{}
+	}
+
+	return c.JSON(snapshots)
+}
+
+// GetBulkUtilizations returns utilization snapshots for multiple reservations
+func (h *GPUHandler) GetBulkUtilizations(c *fiber.Ctx) error {
+	idsParam := c.Query("ids")
+	if idsParam == "" {
+		return c.JSON(map[string][]models.GPUUtilizationSnapshot{})
+	}
+
+	ids := strings.Split(idsParam, ",")
+	// Validate all IDs
+	for _, id := range ids {
+		if _, err := uuid.Parse(strings.TrimSpace(id)); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Invalid reservation ID: %s", id))
+		}
+	}
+
+	// Trim spaces
+	trimmedIDs := make([]string, len(ids))
+	for i, id := range ids {
+		trimmedIDs[i] = strings.TrimSpace(id)
+	}
+
+	result, err := h.store.GetBulkUtilizationSnapshots(trimmedIDs)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get utilization data")
+	}
+
+	return c.JSON(result)
 }

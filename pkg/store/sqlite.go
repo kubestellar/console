@@ -182,6 +182,19 @@ func (s *SQLiteStore) migrate() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_gpu_reservations_user ON gpu_reservations(user_id);
 	CREATE INDEX IF NOT EXISTS idx_gpu_reservations_status ON gpu_reservations(status);
+
+	-- GPU utilization snapshots (hourly measurements per reservation)
+	CREATE TABLE IF NOT EXISTS gpu_utilization_snapshots (
+		id TEXT PRIMARY KEY,
+		reservation_id TEXT NOT NULL,
+		timestamp DATETIME NOT NULL,
+		gpu_utilization_pct REAL NOT NULL,
+		memory_utilization_pct REAL NOT NULL,
+		active_gpu_count INTEGER NOT NULL,
+		total_gpu_count INTEGER NOT NULL,
+		FOREIGN KEY (reservation_id) REFERENCES gpu_reservations(id) ON DELETE CASCADE
+	);
+	CREATE INDEX IF NOT EXISTS idx_utilization_reservation ON gpu_utilization_snapshots(reservation_id, timestamp);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -1357,6 +1370,107 @@ func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservat
 		r.UpdatedAt = &updatedAt.Time
 	}
 	return &r, nil
+}
+
+// --- GPU Utilization Snapshots ---
+
+func (s *SQLiteStore) InsertUtilizationSnapshot(snapshot *models.GPUUtilizationSnapshot) error {
+	_, err := s.db.Exec(
+		`INSERT INTO gpu_utilization_snapshots (id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		snapshot.ID, snapshot.ReservationID, snapshot.Timestamp,
+		snapshot.GPUUtilizationPct, snapshot.MemoryUtilizationPct,
+		snapshot.ActiveGPUCount, snapshot.TotalGPUCount,
+	)
+	return err
+}
+
+func (s *SQLiteStore) GetUtilizationSnapshots(reservationID string) ([]models.GPUUtilizationSnapshot, error) {
+	rows, err := s.db.Query(
+		`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id = ? ORDER BY timestamp ASC`,
+		reservationID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var snapshots []models.GPUUtilizationSnapshot
+	for rows.Next() {
+		var snap models.GPUUtilizationSnapshot
+		if err := rows.Scan(&snap.ID, &snap.ReservationID, &snap.Timestamp,
+			&snap.GPUUtilizationPct, &snap.MemoryUtilizationPct,
+			&snap.ActiveGPUCount, &snap.TotalGPUCount); err != nil {
+			return nil, err
+		}
+		snapshots = append(snapshots, snap)
+	}
+	return snapshots, rows.Err()
+}
+
+func (s *SQLiteStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error) {
+	result := make(map[string][]models.GPUUtilizationSnapshot)
+	if len(reservationIDs) == 0 {
+		return result, nil
+	}
+
+	// Build parameterized query with placeholders
+	placeholders := ""
+	args := make([]interface{}, len(reservationIDs))
+	for i, id := range reservationIDs {
+		if i > 0 {
+			placeholders += ", "
+		}
+		placeholders += "?"
+		args[i] = id
+	}
+
+	rows, err := s.db.Query(
+		fmt.Sprintf(`SELECT id, reservation_id, timestamp, gpu_utilization_pct, memory_utilization_pct, active_gpu_count, total_gpu_count FROM gpu_utilization_snapshots WHERE reservation_id IN (%s) ORDER BY timestamp ASC`, placeholders),
+		args...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var snap models.GPUUtilizationSnapshot
+		if err := rows.Scan(&snap.ID, &snap.ReservationID, &snap.Timestamp,
+			&snap.GPUUtilizationPct, &snap.MemoryUtilizationPct,
+			&snap.ActiveGPUCount, &snap.TotalGPUCount); err != nil {
+			return nil, err
+		}
+		result[snap.ReservationID] = append(result[snap.ReservationID], snap)
+	}
+	return result, rows.Err()
+}
+
+func (s *SQLiteStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, error) {
+	res, err := s.db.Exec(`DELETE FROM gpu_utilization_snapshots WHERE timestamp < ?`, before)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func (s *SQLiteStore) ListActiveGPUReservations() ([]models.GPUReservation, error) {
+	rows, err := s.db.Query(
+		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status IN ('active', 'pending') ORDER BY start_date DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reservations []models.GPUReservation
+	for rows.Next() {
+		r, err := s.scanGPUReservationRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		reservations = append(reservations, *r)
+	}
+	return reservations, rows.Err()
 }
 
 // Helper functions

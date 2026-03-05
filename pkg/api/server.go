@@ -87,6 +87,7 @@ type Server struct {
 	persistenceStore    *store.PersistenceStore
 	loadingSrv          *http.Server // temporary loading screen server
 	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
+	gpuUtilWorker       *GPUUtilizationWorker
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -226,6 +227,12 @@ func NewServer(cfg Config) (*Server, error) {
 
 	server.setupMiddleware()
 	server.setupRoutes()
+
+	// Start GPU utilization background worker (collects hourly snapshots)
+	if k8sClient != nil {
+		server.gpuUtilWorker = NewGPUUtilizationWorker(db, k8sClient)
+		server.gpuUtilWorker.Start()
+	}
 
 	log.Println("Server initialization complete")
 
@@ -681,6 +688,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)
 	api.Put("/gpu/reservations/:id", gpuHandler.UpdateReservation)
 	api.Delete("/gpu/reservations/:id", gpuHandler.DeleteReservation)
+	api.Get("/gpu/reservations/:id/utilization", gpuHandler.GetReservationUtilization)
+	api.Get("/gpu/utilizations", gpuHandler.GetBulkUtilizations)
 
 	// Alert notification routes
 	notificationHandler := handlers.NewNotificationHandler(s.store, s.notificationService)
@@ -846,6 +855,9 @@ func (s *Server) Start() error {
 // before services are torn down, giving the frontend time to notice.
 func (s *Server) Shutdown() error {
 	atomic.StoreInt32(&s.shuttingDown, 1)
+	if s.gpuUtilWorker != nil {
+		s.gpuUtilWorker.Stop()
+	}
 	s.hub.Close()
 	if s.k8sClient != nil {
 		s.k8sClient.StopWatching()

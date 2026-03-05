@@ -45,6 +45,9 @@ import { cn } from '../../lib/cn'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { getChartColor, getChartColorByName } from '../../lib/chartColors'
 import { useGPUReservations } from '../../hooks/useGPUReservations'
+import { useGPUUtilizations } from '../../hooks/useGPUUtilizations'
+import type { GPUUtilizationSnapshot } from '../../hooks/useGPUUtilizations'
+import { Sparkline } from '../charts/Sparkline'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import { CARD_COMPONENTS, getDefaultCardWidth } from '../cards/cardRegistry'
 import { CardWrapper, CARD_TITLES } from '../cards/CardWrapper'
@@ -73,6 +76,11 @@ import { CSS } from '@dnd-kit/utilities'
 const UTILIZATION_HIGH_THRESHOLD = 80
 const UTILIZATION_MEDIUM_THRESHOLD = 50
 
+// Sparkline utilization color thresholds
+const SPARKLINE_HIGH_UTIL_PCT = 70    // Green: well-utilized
+const SPARKLINE_LOW_UTIL_PCT = 30     // Red: underutilized
+const SPARKLINE_HEIGHT_PX = 28        // Height of sparkline chart
+
 // Display settings
 const MAX_NAME_DISPLAY_LENGTH = 12 // Maximum characters to display before truncating cluster names
 
@@ -80,6 +88,31 @@ type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory' | 'dashboard'
 
 // GPU resource keys used to identify GPU quotas
 const GPU_KEYS = ['nvidia.com/gpu', 'amd.com/gpu', 'gpu.intel.com/i915']
+
+/** Get sparkline color based on average utilization */
+function getUtilizationColor(avgPct: number): string {
+  if (avgPct >= SPARKLINE_HIGH_UTIL_PCT) return '#22c55e' // green-500
+  if (avgPct >= SPARKLINE_LOW_UTIL_PCT) return '#eab308'  // yellow-500
+  return '#ef4444' // red-500
+}
+
+/** Count unique days where GPUs were actively used */
+function countActiveDays(snapshots: GPUUtilizationSnapshot[]): number {
+  const activeDates = new Set<string>()
+  for (const snap of snapshots) {
+    if (snap.active_gpu_count > 0) {
+      activeDates.add(snap.timestamp.split('T')[0])
+    }
+  }
+  return activeDates.size
+}
+
+/** Compute average GPU utilization across all snapshots */
+function computeAvgUtilization(snapshots: GPUUtilizationSnapshot[]): number {
+  if (snapshots.length === 0) return 0
+  const sum = snapshots.reduce((acc, s) => acc + s.gpu_utilization_pct, 0)
+  return Math.round(sum / snapshots.length)
+}
 
 // GPU cluster info for dropdown
 interface GPUClusterInfo {
@@ -308,6 +341,13 @@ export function GPUReservations() {
     }
     return filtered
   }, [allReservations, showOnlyMine, user, selectedClusters, isAllClustersSelected])
+
+  // Fetch utilization data for visible reservations
+  const visibleReservationIds = useMemo(
+    () => (filteredReservations || []).map(r => r.id),
+    [filteredReservations]
+  )
+  const { utilizations } = useGPUUtilizations(visibleReservationIds)
 
   // Clusters with GPU info for the dropdown
   const gpuClusters = useMemo((): GPUClusterInfo[] => {
@@ -783,33 +823,66 @@ export function GPUReservations() {
               {showOnlyMine ? t('gpuReservations.overview.myGpuReservations') : t('gpuReservations.overview.activeGpuReservations')}
             </h3>
             <div className="space-y-3">
-              {filteredReservations.slice(0, 5).map(r => (
+              {filteredReservations.slice(0, 5).map(r => {
+                const snapshots = (utilizations || {})[r.id] || []
+                const avgUtil = computeAvgUtilization(snapshots)
+                const activeDays = countActiveDays(snapshots)
+                const sparkColor = snapshots.length > 0 ? getUtilizationColor(avgUtil) : '#9333ea'
+                return (
                 <div key={r.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10 border border-purple-500/20"
+                  className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-purple-500/20">
-                      <Zap className="w-4 h-4 text-purple-400" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-foreground">{r.title}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {r.namespace} · {r.user_name}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 rounded-lg bg-purple-500/20">
+                        <Zap className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-foreground">{r.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {r.namespace} · {r.user_name}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-medium text-foreground">{r.gpu_count} <TechnicalAcronym term="GPU">{t('common:common.gpus')}</TechnicalAcronym></div>
-                      <div className="text-sm text-muted-foreground">{t('gpuReservations.overview.durationHours', { hours: r.duration_hours })}</div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-medium text-foreground">{r.gpu_count} <TechnicalAcronym term="GPU">{t('common:common.gpus')}</TechnicalAcronym></div>
+                        <div className="text-sm text-muted-foreground">{t('gpuReservations.overview.durationHours', { hours: r.duration_hours })}</div>
+                      </div>
+                      <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.pending)}>
+                        {r.status}
+                      </span>
+                      <ClusterBadge cluster={r.cluster} size="sm" />
                     </div>
-                    <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.pending)}>
-                      {r.status}
-                    </span>
-                    <ClusterBadge cluster={r.cluster} size="sm" />
                   </div>
+                  {/* GPU Utilization Sparkline */}
+                  {snapshots.length > 0 ? (
+                    <div className="mt-2 pt-2 border-t border-purple-500/10">
+                      <Sparkline
+                        data={snapshots.map(s => s.gpu_utilization_pct)}
+                        color={sparkColor}
+                        height={SPARKLINE_HEIGHT_PX}
+                        fill
+                      />
+                      <div className="flex items-center justify-between text-xs mt-1">
+                        <span style={{ color: sparkColor }}>
+                          {t('gpuReservations.utilization.avgGpu', `Avg {{pct}}% GPU`, { pct: avgUtil })}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {t('gpuReservations.utilization.activeDays', `{{count}} active days`, { count: activeDays })}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-2 pt-2 border-t border-purple-500/10">
+                      <div className="text-xs text-muted-foreground text-center py-1">
+                        {t('gpuReservations.utilization.noData', 'No usage data yet')}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+                )
+              })}
               {filteredReservations.length === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
                   {showOnlyMine ? t('gpuReservations.overview.noReservationsUser') : t('gpuReservations.overview.noReservationsYet')}
@@ -1061,6 +1134,39 @@ export function GPUReservations() {
                       <div className="text-sm font-medium text-foreground">{r.duration_hours}h</div>
                     </div>
                   </div>
+
+                  {/* GPU Utilization Sparkline */}
+                  {(() => {
+                    const snaps = (utilizations || {})[r.id] || []
+                    if (snaps.length === 0) return (
+                      <div className="mt-3 pt-3 border-t border-border/50">
+                        <div className="text-xs text-muted-foreground text-center py-1">
+                          {t('gpuReservations.utilization.noData', 'No usage data yet')}
+                        </div>
+                      </div>
+                    )
+                    const avg = computeAvgUtilization(snaps)
+                    const days = countActiveDays(snaps)
+                    const color = getUtilizationColor(avg)
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border/50">
+                        <Sparkline
+                          data={snaps.map(s => s.gpu_utilization_pct)}
+                          color={color}
+                          height={SPARKLINE_HEIGHT_PX}
+                          fill
+                        />
+                        <div className="flex items-center justify-between text-xs mt-1">
+                          <span style={{ color }}>
+                            {t('gpuReservations.utilization.avgGpu', `Avg {{pct}}% GPU`, { pct: avg })}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {t('gpuReservations.utilization.activeDays', `{{count}} active days`, { count: days })}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* Description and notes */}
                   {(r.description || r.notes) && (

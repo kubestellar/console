@@ -53,6 +53,17 @@ type CreateGPUReservationInput struct {
 	MaxClusterGPUs int    `json:"max_cluster_gpus"`
 }
 
+// GPUUtilizationSnapshot records a point-in-time GPU usage measurement for a reservation
+type GPUUtilizationSnapshot struct {
+	ID                   string    `json:"id"`
+	ReservationID        string    `json:"reservation_id"`
+	Timestamp            time.Time `json:"timestamp"`
+	GPUUtilizationPct    float64   `json:"gpu_utilization_pct"`
+	MemoryUtilizationPct float64   `json:"memory_utilization_pct"`
+	ActiveGPUCount       int       `json:"active_gpu_count"`
+	TotalGPUCount        int       `json:"total_gpu_count"`
+}
+
 // UpdateGPUReservationInput is the input for updating a GPU reservation
 type UpdateGPUReservationInput struct {
 	Title          *string            `json:"title,omitempty"`
