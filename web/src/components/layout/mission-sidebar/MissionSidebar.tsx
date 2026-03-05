@@ -716,7 +716,7 @@ export function MissionSidebarToggle() {
   return (
     <button
       onClick={openSidebar}
-      data-tour="ai-missions"
+      data-tour="ai-missions-toggle"
       className={cn(
         'fixed flex items-center gap-2 rounded-full shadow-lg transition-all z-50',
         // Mobile: smaller padding, bottom right

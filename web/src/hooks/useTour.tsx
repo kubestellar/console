@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 import { emitTourStarted, emitTourCompleted, emitTourSkipped } from '../lib/analytics'
+import { STORAGE_KEY_TOUR_COMPLETED } from '../lib/constants/storage'
 
 export interface TourStep {
   id: string
@@ -13,21 +14,25 @@ export interface TourStep {
 }
 
 /**
- * Onboarding tour steps — kept short (4 steps) for high completion rates.
+ * Onboarding tour steps — kept short (5 steps) for high completion rates.
  *
  * The original 13-step tour had very low completion; most users skipped
- * after step 2-3. These 4 steps cover the essential "aha moments":
+ * after step 2-3. These 5 steps cover the essential "aha moments":
  *   1. Welcome — what this product is
- *   2. Sidebar — how to navigate
+ *   2. Sidebar — how to navigate 30+ dashboards
  *   3. Dashboard cards — the core interaction model
- *   4. AI features — the key differentiator (search + recommendations)
+ *   4. Search — command palette (Cmd+K)
+ *   5. AI Missions — guided multi-step operations
+ *
+ * All text must be accurate on both console.kubestellar.io (demo mode)
+ * and localhost with a live backend.
  */
 const TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
     target: '[data-tour="navbar"]',
     title: 'Welcome to KubeStellar Console',
-    content: 'Your AI-powered multi-cluster Kubernetes dashboard. Claude AI helps you monitor, troubleshoot, and manage clusters — let\'s take a quick look around.',
+    content: 'Your multi-cluster Kubernetes dashboard. Monitor, troubleshoot, and manage clusters across any infrastructure \u2014 let\u2019s take a quick look around.',
     placement: 'bottom',
     highlight: true,
   },
@@ -35,7 +40,7 @@ const TOUR_STEPS: TourStep[] = [
     id: 'sidebar',
     target: '[data-tour="sidebar"]',
     title: 'Navigation',
-    content: 'Switch between dashboards (Clusters, Deploy, Security, GitOps) in the top section. Each view is fully customizable — add or remove cards to fit your workflow. The bottom section has Settings, Marketplace, and snoozed AI suggestions.',
+    content: 'Browse 30+ dashboards organized by topic \u2014 Clusters, Deploy, AI/ML, Security, GitOps, Cost, and more. Drag items to reorder or hide ones you don\u2019t need. Settings and Marketplace are at the bottom.',
     placement: 'right',
     highlight: true,
   },
@@ -43,21 +48,27 @@ const TOUR_STEPS: TourStep[] = [
     id: 'dashboard-cards',
     target: '[data-tour="card-header"]',
     title: 'Dashboard Cards',
-    content: 'Cards show real-time cluster data. Drag to reorder, click the menu (⋮) to configure with natural language, or click "+" at the bottom to add more cards from the catalog.',
+    content: 'Cards show cluster data at a glance. Drag to reorder, click the \u22ee menu to configure or resize, and expand any card for detailed drill-downs. Use the floating + button (bottom-right) or the sidebar to add cards from the catalog.',
     placement: 'bottom',
     highlight: true,
   },
   {
-    id: 'ai-features',
+    id: 'search',
     target: '[data-tour="search"]',
-    title: 'AI-Powered Features',
-    content: 'Press ⌘K to search across all clusters with natural language. Above the cards, AI recommendations suggest useful cards and Actions offer one-click fixes for detected issues. Try the AI Missions panel for complex multi-step operations.',
+    title: 'Search & Commands',
+    content: 'Press \u2318K (or Ctrl+K) to open the command palette. Search across dashboards, cards, clusters, and missions \u2014 or type a question to get AI-powered answers.',
     placement: 'bottom',
     highlight: true,
   },
+  {
+    id: 'ai-missions',
+    target: '[data-tour="ai-missions-toggle"]',
+    title: 'AI Missions',
+    content: 'Open the Missions panel to launch guided multi-step operations \u2014 install platforms, troubleshoot issues, and more. Choose your preferred AI provider in the navbar. In demo mode, missions run with sample data.',
+    placement: 'left',
+    highlight: true,
+  },
 ]
-
-const TOUR_STORAGE_KEY = 'kubestellar-console-tour-completed'
 
 interface TourContextValue {
   isActive: boolean
@@ -84,7 +95,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // Check localStorage on mount and when settings are restored from file
   useEffect(() => {
     const readFromStorage = () => {
-      const completed = localStorage.getItem(TOUR_STORAGE_KEY)
+      const completed = localStorage.getItem(STORAGE_KEY_TOUR_COMPLETED)
       setHasCompletedTour(completed === 'true')
     }
     readFromStorage()
@@ -116,7 +127,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       // Tour complete
       setIsActive(false)
       setHasCompletedTour(true)
-      localStorage.setItem(TOUR_STORAGE_KEY, 'true')
+      localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
       emitTourCompleted(TOUR_STEPS.length)
     }
@@ -132,12 +143,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
     emitTourSkipped(currentStepIndex)
     setIsActive(false)
     setHasCompletedTour(true)
-    localStorage.setItem(TOUR_STORAGE_KEY, 'true')
+    localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
   }, [currentStepIndex])
 
   const resetTour = useCallback(() => {
-    localStorage.removeItem(TOUR_STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY_TOUR_COMPLETED)
     setHasCompletedTour(false)
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
   }, [])

@@ -1,10 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTour, TourStep } from '../../hooks/useTour'
-import { useMissions } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
-import { TOOLTIP_POSITION_DELAY_MS, SHORT_DELAY_MS } from '../../lib/constants/network'
+import { TOOLTIP_POSITION_DELAY_MS } from '../../lib/constants/network'
 
 // KubeStellar logo — clean, no decorative overlays
 function KubeStellarAIIcon({ className }: { className?: string }) {
@@ -239,8 +238,6 @@ export function TourOverlay() {
     prevStep,
     skipTour,
   } = useTour()
-  const { openSidebar: openMissionSidebar, closeSidebar: closeMissionSidebar } = useMissions()
-
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({})
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -293,12 +290,6 @@ export function TourOverlay() {
       }
     }, 100))
 
-    // For steps that may have layout shifts (e.g., after sidebar closes),
-    // reposition after a longer delay to catch the final layout
-    if (currentStep.id === 'add-card' || currentStep.id === 'templates') {
-      timeoutIds.push(setTimeout(positionTooltip, SHORT_DELAY_MS))
-    }
-
     // Reposition on window resize
     const handleResize = () => positionTooltip()
     window.addEventListener('resize', handleResize)
@@ -327,22 +318,6 @@ export function TourOverlay() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isActive, nextStep, prevStep, skipTour])
-
-  // Open mission sidebar when on the AI Missions step
-  useEffect(() => {
-    if (!isActive || !currentStep) return
-
-    if (currentStep.id === 'ai-missions') {
-      openMissionSidebar()
-    }
-
-    return () => {
-      // Close sidebar when leaving the AI Missions step
-      if (currentStep.id === 'ai-missions') {
-        closeMissionSidebar()
-      }
-    }
-  }, [isActive, currentStep, openMissionSidebar, closeMissionSidebar])
 
   if (!isActive || !currentStep) return null
 
@@ -513,7 +488,7 @@ export function TourPrompt() {
         <div className="flex-1">
           <h3 className="font-semibold text-foreground mb-1">Welcome!</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            Would you like a quick tour of the console? Learn about AI features, drill-down navigation, and more.
+            New here? Take a quick tour to learn about dashboards, cards, search, and AI missions.
           </p>
           <div className="flex gap-2">
             <button
