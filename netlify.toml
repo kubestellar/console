@@ -12,6 +12,20 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Edge Functions — inject SEO meta tags, serve robots.txt + sitemap.xml
+# These only run on Netlify, not on localhost or cluster deployments
+[[edge_functions]]
+  path = "/*"
+  function = "seo-meta"
+
+[[edge_functions]]
+  path = "/robots.txt"
+  function = "robots"
+
+[[edge_functions]]
+  path = "/sitemap.xml"
+  function = "sitemap"
+
 [build.environment]
   # Enable demo mode with mock data for Netlify previews
   VITE_DEMO_MODE = "true"

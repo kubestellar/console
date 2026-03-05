@@ -1,0 +1,5 @@
+# KubeStellar Console - Self-hosted / localhost deployment
+# Block all crawlers by default for cluster deployments.
+# The public site (console.kubestellar.io) overrides this via Netlify Edge Function.
+User-agent: *
+Disallow: /
