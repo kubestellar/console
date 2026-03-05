@@ -182,6 +182,14 @@ const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ d
 // CoreDNS card
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
 
+// Fluentd log collector card
+const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default: m.FluentdStatus })))
+// Lima VM card
+const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
+
+// KEDA autoscaler card
+const KedaStatus = lazy(() => import('./keda_status').then(m => ({ default: m.KedaStatus })))
+
 // Multi-cluster insights cards — share one chunk via barrel import
 const _insightsBundle = import('./insights').catch((err) => { throw err })
 const CrossClusterEventCorrelation = lazy(() => _insightsBundle.then(m => ({ default: m.CrossClusterEventCorrelation })))
@@ -437,6 +445,13 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   buildpacks_status: BuildpacksStatus,
   // CoreDNS
   coredns_status: CoreDNSStatus,
+  // Fluentd log collector
+  fluentd_status: FluentdStatus,
+
+  // Lima VM
+  lima_status: LimaStatus,
+  // KEDA autoscaler
+  keda_status: KedaStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -899,6 +914,17 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   upgrade_status: 4,
   crossplane_managed_resources: 4,
   buildpacks_status: 6,
+
+  flatcar_status: 6,
+  thanos_status: 6,
+  contour_status: 6,
+  crio_status: 6,
+
+  fluentd_status: 6,
+
+  lima_status: 6,
+
+  keda_status: 6,
 
   // MCS cards
   service_exports: 6,
