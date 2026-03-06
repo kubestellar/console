@@ -1,6 +1,7 @@
 import { lazy, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { getCardConfig } from '../../config/cards'
+import { UnifiedCard } from '../../lib/unified/card/UnifiedCard'
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -473,11 +474,6 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   wasmcloud_status: WasmCloudStatus,
 }
 
-// Lazy-load UnifiedCard for card types that have a unified config but no legacy component
-const LazyUnifiedCard = lazy(() =>
-  import('../../lib/unified/card/UnifiedCard').then(m => ({ default: m.UnifiedCard })),
-)
-
 /** Cache of adapter components for unified-ready card types */
 const _unifiedCache = new Map<string, CardComponent>()
 
@@ -490,7 +486,7 @@ function _unifiedAdapter(cardType: string): CardComponent | undefined {
   const config = getCardConfig(cardType)
   if (!config?.dataSource || !config?.content) return undefined
   if (!_UNIFIED_CONTENT_TYPES.includes(config.content.type)) return undefined
-  const Adapter: CardComponent = () => createElement(LazyUnifiedCard, { config, className: 'h-full' })
+  const Adapter: CardComponent = () => createElement(UnifiedCard, { config, className: 'h-full' })
   Adapter.displayName = `Unified(${cardType})`
   _unifiedCache.set(cardType, Adapter)
   return Adapter
