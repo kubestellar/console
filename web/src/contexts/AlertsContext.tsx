@@ -10,7 +10,7 @@ import type {
 } from '../types/alerts'
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
-import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
+import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
@@ -167,7 +167,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       const currentClusters = clustersRef.current
       if (!currentClusters.length) return
 
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
       const results: Record<string, GPUHealthCheckResult[]> = {}
 
       await Promise.allSettled(
@@ -206,7 +206,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchNightlyE2E = async () => {
       try {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
         const resp = await fetch(`${API_BASE}/api/public/nightly-e2e/runs`, {
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
@@ -463,7 +463,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       // Skip notification if not authenticated - notifications require login
       if (!token) return
 
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
       const response = await fetch(`${API_BASE}/api/notifications/send`, {
         method: 'POST',

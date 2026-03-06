@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { UpdateProgress, UpdateStepEntry } from '../types/updates'
 import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { isNetlifyDeployment } from '../lib/demoMode'
 
 const WS_RECONNECT_MS = 5000  // Reconnect interval after WebSocket disconnect
 const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
@@ -165,6 +166,9 @@ export function useUpdateProgress() {
         reconnectTimer = setTimeout(connect, WS_RECONNECT_MS)
       }
     }
+
+    // Skip agent WebSocket on Netlify deployments (no local agent available)
+    if (isNetlifyDeployment) return
 
     connect()
 

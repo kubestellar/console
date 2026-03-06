@@ -9,6 +9,7 @@ import {
 } from '../lib/settingsSync'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { isNetlifyDeployment } from '../lib/demoMode'
 
 const DEBOUNCE_MS = 1000
 
@@ -131,8 +132,10 @@ export function usePersistedSettings() {
   useEffect(() => {
     mountedRef.current = true
 
-    if (!isAuthenticated) {
-      // Not logged in yet — wait for auth to complete
+    if (!isAuthenticated || isNetlifyDeployment) {
+      // Not logged in yet or on Netlify (no local agent) — skip agent sync
+      setSyncStatus(isNetlifyDeployment ? 'offline' : 'idle')
+      setLoaded(true)
       return () => { mountedRef.current = false }
     }
 
