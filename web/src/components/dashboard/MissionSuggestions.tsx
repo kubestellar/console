@@ -219,7 +219,7 @@ export function MissionSuggestions() {
   }
 
   return (
-    <div data-tour="mission-suggestions" className="mb-4 glass rounded-xl border border-border/50 overflow-hidden">
+    <div data-tour="mission-suggestions" className="mb-4 glass rounded-xl border border-border/50">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-2">
