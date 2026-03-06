@@ -73,8 +73,8 @@ const getViewIcon = (type: string) => {
     case 'argoapp': return <GitBranch className="w-4 h-4 text-orange-400" />
     case 'operator': return <Settings className="w-4 h-4 text-purple-400" />
     case 'policy': return <Shield className="w-4 h-4 text-blue-400" />
-    case 'kustomization': return <Layers className="w-4 h-4 text-indigo-400" />
-    case 'buildpack': return <Package className="w-4 h-4 text-indigo-400" />
+    case 'kustomization': return <Layers className="w-4 h-4 text-blue-400" />
+    case 'buildpack': return <Package className="w-4 h-4 text-blue-400" />
     case 'crd': return <Package className="w-4 h-4 text-purple-400" />
     case 'drift': return <GitBranch className="w-4 h-4 text-orange-400" />
     // Multi-cluster summary views
@@ -82,7 +82,7 @@ const getViewIcon = (type: string) => {
     case 'all-namespaces': return <Layers className="w-4 h-4 text-purple-400" />
     case 'all-deployments': return <Rocket className="w-4 h-4 text-green-400" />
     case 'all-pods': return <Box className="w-4 h-4 text-cyan-400" />
-    case 'all-services': return <Layers className="w-4 h-4 text-indigo-400" />
+    case 'all-services': return <Layers className="w-4 h-4 text-blue-400" />
     case 'all-nodes': return <Server className="w-4 h-4 text-orange-400" />
     case 'all-events': return <Zap className="w-4 h-4 text-yellow-400" />
     case 'all-alerts': return <Bell className="w-4 h-4 text-red-400" />

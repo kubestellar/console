@@ -379,7 +379,7 @@ Please:
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Operator Info Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20">
+            <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
               <div className="flex items-start gap-3">
                 <Settings className="w-8 h-8 text-purple-400 mt-1" />
                 <div className="flex-1 min-w-0">

@@ -190,11 +190,11 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
             {localClusterFilter.length === 1 ? (
               <ClusterBadge cluster={localClusterFilter[0]} />
             ) : localClusterFilter.length > 1 ? (
-              <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400">
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
                 {t('operatorSubscriptions.nClustersSelected', { count: localClusterFilter.length })}
               </span>
             ) : (
-              <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400">
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
                 {t('operatorSubscriptions.allClusters', { count: availableClusters.length })}
               </span>
             )}

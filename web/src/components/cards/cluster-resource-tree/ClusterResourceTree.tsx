@@ -778,7 +778,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:replicasets`}
                                 label={t('resourceTree.replicaSets')}
                                 icon={ResourceIcon.replicaset}
-                                iconColor="text-indigo-400"
+                                iconColor="text-blue-400"
                                 count={nsData.replicasets.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}

@@ -75,7 +75,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
           <p className="text-xs text-green-400 mb-1">Monthly Cost</p>
           <p className="text-xl font-bold text-foreground">${DEMO_COST_SUMMARY.totalMonthly.toLocaleString()}</p>
         </div>
-        <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30">
+        <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-500/20 border border-purple-500/30">
           <div className="flex items-center gap-1 mb-1">
             <p className="text-xs text-purple-400">Efficiency</p>
             <PieChart className="w-3 h-3 text-purple-400" />

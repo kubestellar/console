@@ -68,8 +68,8 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Cursor icon - stylized cursor/pointer */}
-          <path d="M5 3l14 9-6 2-4 8-4-19z" className="fill-indigo-500" />
-          <path d="M13 14l4-2-8-5 4 11 2-4h2z" className="fill-indigo-400" />
+          <path d="M5 3l14 9-6 2-4 8-4-19z" className="fill-blue-500" />
+          <path d="M13 14l4-2-8-5 4 11 2-4h2z" className="fill-blue-400" />
         </svg>
       )
     case 'microsoft':
@@ -141,19 +141,19 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
         <svg className={className} viewBox="0 0 100 100" fill="none">
           {/* Bob icon - robot with hard hat and code brackets */}
           {/* Hard hat */}
-          <ellipse cx="50" cy="22" rx="32" ry="18" className="fill-indigo-600" />
-          <rect x="18" y="20" width="64" height="8" rx="2" className="fill-indigo-800" />
+          <ellipse cx="50" cy="22" rx="32" ry="18" className="fill-blue-600" />
+          <rect x="18" y="20" width="64" height="8" rx="2" className="fill-blue-800" />
           {/* Robot head/body */}
           <rect x="20" y="28" width="60" height="55" rx="12" className="fill-gray-50 stroke-gray-200" strokeWidth="2" />
           {/* Eyes */}
           <circle cx="38" cy="48" r="8" className="fill-gray-800" />
-          <circle cx="62" cy="48" r="8" className="fill-indigo-600" />
+          <circle cx="62" cy="48" r="8" className="fill-blue-600" />
           <circle cx="40" cy="46" r="2" fill="white" />
           <circle cx="64" cy="46" r="2" fill="white" />
           {/* Code brackets </> */}
-          <path d="M35 62 L25 70 L35 78" className="stroke-indigo-600" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <path d="M65 62 L75 70 L65 78" className="stroke-indigo-600" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <path d="M45 60 L55 80" className="stroke-indigo-600" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <path d="M35 62 L25 70 L35 78" className="stroke-blue-600" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M65 62 L75 70 L65 78" className="stroke-blue-600" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M45 60 L55 80" className="stroke-blue-600" strokeWidth="4" strokeLinecap="round" fill="none" />
           {/* Side panels (ears) */}
           <rect x="8" y="40" width="12" height="20" rx="3" className="fill-gray-400" />
           <rect x="80" y="40" width="12" height="20" rx="3" className="fill-gray-400" />

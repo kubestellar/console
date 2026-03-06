@@ -73,7 +73,7 @@ function getProviderInfo(provider: CloudProvider): { color: string; bgColor: str
     case 'alibaba': return { color: 'text-orange-300', bgColor: 'bg-orange-500/20' }
     case 'digitalocean': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
     case 'rancher': return { color: 'text-green-400', bgColor: 'bg-green-500/20' }
-    case 'coreweave': return { color: 'text-indigo-400', bgColor: 'bg-indigo-500/20' }
+    case 'coreweave': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
     case 'kind': return { color: 'text-blue-300', bgColor: 'bg-blue-500/20' }
     case 'minikube': return { color: 'text-purple-400', bgColor: 'bg-purple-500/20' }
     case 'k3s': return { color: 'text-green-300', bgColor: 'bg-green-500/20' }
@@ -426,13 +426,13 @@ After I approve, help me execute the repairs step by step.`,
             onClick={() => !isUnreachable && !isLoading && setShowPodsByNamespace(!showPodsByNamespace)}
             disabled={isUnreachable || isLoading}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading ? 'border-border hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:shadow-lg hover:shadow-indigo-500/10 cursor-pointer' : 'border-border cursor-default'
-            } ${showPodsByNamespace ? 'border-indigo-500/50 bg-indigo-500/10 shadow-lg shadow-indigo-500/10' : ''}`}
+              !isUnreachable && !isLoading ? 'border-border hover:border-blue-500/50 hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer' : 'border-border cursor-default'
+            } ${showPodsByNamespace ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/10' : ''}`}
             title={!isUnreachable && !isLoading ? t('clusterDetail.clickToViewWorkloads') : undefined}
           >
             <div className="text-sm text-muted-foreground flex items-center gap-1 mb-1">
               {t('clusterDetail.workloads')}
-              {!isUnreachable && !isLoading && <ChevronDown className={`w-4 h-4 transition-transform text-indigo-400 ${showPodsByNamespace ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />}
+              {!isUnreachable && !isLoading && <ChevronDown className={`w-4 h-4 transition-transform text-blue-400 ${showPodsByNamespace ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />}
             </div>
             {isLoading ? (
               <div className="space-y-1.5">
@@ -463,7 +463,7 @@ After I approve, help me execute the repairs step by step.`,
                   )}
                 </div>
                 {!isUnreachable && !showPodsByNamespace && (
-                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-indigo-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
+                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-blue-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
                 )}
               </>
             )}
@@ -588,7 +588,7 @@ After I approve, help me execute the repairs step by step.`,
         {!isUnreachable && showPodsByNamespace && namespaceStats.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-indigo-400" />
+              <Layers className="w-4 h-4 text-blue-400" />
               {t('clusterDetail.workloadsCount', { count: namespaceStats.length })}
             </h3>
             <div className="rounded-lg bg-card/50 border border-border overflow-hidden">
@@ -603,7 +603,7 @@ After I approve, help me execute the repairs step by step.`,
                       >
                         <div className="flex items-center gap-2">
                           {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                          <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-medium"><FolderOpen className="w-3 h-3" />{t('clusterDetail.ns')}</span>
+                          <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><FolderOpen className="w-3 h-3" />{t('clusterDetail.ns')}</span>
                           <span className="font-mono text-sm text-foreground">{ns.name}</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">

@@ -39,7 +39,7 @@ interface StatBlockFactoryModalProps {
 type Tab = 'builder' | 'ai' | 'manage'
 
 const AVAILABLE_COLORS: StatBlockColor[] = [
-  'purple', 'blue', 'green', 'yellow', 'orange', 'red', 'cyan', 'gray', 'indigo',
+  'purple', 'blue', 'green', 'yellow', 'orange', 'red', 'cyan', 'gray',
 ]
 
 const POPULAR_ICONS = [
@@ -111,14 +111,14 @@ const SMART_DEFAULTS: { pattern: RegExp; defaults: SmartDefault }[] = [
   { pattern: /^cpu/i, defaults: { icon: 'Cpu', color: 'blue' } },
   { pattern: /^mem/i, defaults: { icon: 'MemoryStick', color: 'cyan' } },
   { pattern: /^(disk|storage)/i, defaults: { icon: 'HardDrive', color: 'orange' } },
-  { pattern: /^(network|traffic|bandwidth)/i, defaults: { icon: 'Wifi', color: 'indigo' } },
+  { pattern: /^(network|traffic|bandwidth)/i, defaults: { icon: 'Wifi', color: 'blue' } },
   { pattern: /^(latency|response|time)/i, defaults: { icon: 'Clock', color: 'yellow' } },
   { pattern: /^(user|session)/i, defaults: { icon: 'Users', color: 'blue' } },
   { pattern: /^(security|auth|permission)/i, defaults: { icon: 'Shield', color: 'red' } },
   { pattern: /^(deploy|release|version)/i, defaults: { icon: 'GitBranch', color: 'purple' } },
   { pattern: /^(node|cluster|server)/i, defaults: { icon: 'Server', color: 'blue' } },
   { pattern: /^(pod|container)/i, defaults: { icon: 'Box', color: 'cyan' } },
-  { pattern: /^(namespace|scope)/i, defaults: { icon: 'Layers', color: 'indigo' } },
+  { pattern: /^(namespace|scope)/i, defaults: { icon: 'Layers', color: 'blue' } },
 ]
 
 function getSmartDefault(label: string): SmartDefault | null {

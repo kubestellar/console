@@ -27,7 +27,7 @@ const STATUS_BADGE: Record<ResourceHealthStatus, string> = {
 const CATEGORY_BADGE: Record<string, string> = {
   rbac: 'bg-blue-500/20 text-blue-400',
   config: 'bg-cyan-500/20 text-cyan-400',
-  networking: 'bg-indigo-500/20 text-indigo-400',
+  networking: 'bg-blue-500/20 text-blue-400',
   scaling: 'bg-orange-500/20 text-orange-400',
   storage: 'bg-yellow-500/20 text-yellow-400',
   crd: 'bg-purple-500/20 text-purple-400',

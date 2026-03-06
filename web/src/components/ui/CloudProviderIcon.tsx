@@ -395,7 +395,7 @@ export function getProviderColor(provider: CloudProvider): string {
 // Get Tailwind border class for provider (for use in className)
 export function getProviderBorderClass(provider: CloudProvider): string {
   switch (provider) {
-    case 'eks': return 'border-indigo-500/40'
+    case 'eks': return 'border-blue-500/40'
     case 'gke': return 'border-blue-500/40'
     case 'aks': return 'border-purple-500/40'
     case 'openshift': return 'border-red-500/40'
@@ -403,7 +403,7 @@ export function getProviderBorderClass(provider: CloudProvider): string {
     case 'alibaba': return 'border-orange-500/40'
     case 'digitalocean': return 'border-blue-400/40'
     case 'rancher': return 'border-blue-600/40'
-    case 'coreweave': return 'border-indigo-600/40'
+    case 'coreweave': return 'border-blue-600/40'
     case 'kind': return 'border-blue-400/40'
     case 'minikube': return 'border-blue-500/40'
     case 'k3s': return 'border-yellow-500/40'

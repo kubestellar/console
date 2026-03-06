@@ -19,8 +19,8 @@ function getResourceIcon(kind: string) {
   if (k.includes('secret')) return <Shield className="w-4 h-4 text-red-400" />
   if (k.includes('serviceaccount')) return <Server className="w-4 h-4 text-orange-400" />
   if (k.includes('role') || k.includes('clusterrole')) return <Shield className="w-4 h-4 text-yellow-400" />
-  if (k.includes('customresourcedefinition') || k.includes('crd')) return <Puzzle className="w-4 h-4 text-pink-400" />
-  if (k.includes('namespace')) return <Layers className="w-4 h-4 text-indigo-400" />
+  if (k.includes('customresourcedefinition') || k.includes('crd')) return <Puzzle className="w-4 h-4 text-purple-400" />
+  if (k.includes('namespace')) return <Layers className="w-4 h-4 text-blue-400" />
   if (k.includes('persistentvolume') || k.includes('pvc')) return <Database className="w-4 h-4 text-cyan-400" />
   if (k.includes('ingress')) return <Network className="w-4 h-4 text-green-400" />
   if (k.includes('statefulset') || k.includes('daemonset') || k.includes('replicaset')) return <Layers className="w-4 h-4 text-blue-400" />

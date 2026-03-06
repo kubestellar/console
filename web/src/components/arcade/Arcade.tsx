@@ -257,7 +257,7 @@ export function Arcade() {
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Gamepad2 className="w-6 h-6 text-pink-400" />
+                <Gamepad2 className="w-6 h-6 text-purple-400" />
                 {t('arcade.title')}
               </h1>
               <p className="text-muted-foreground">{t('arcade.subtitle')}</p>
@@ -284,12 +284,12 @@ export function Arcade() {
       </div>
 
       {/* Fun Stats Banner */}
-      <div className="mb-6 glass rounded-lg p-4 border border-pink-500/20 bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-blue-500/10">
+      <div className="mb-6 glass rounded-lg p-4 border border-purple-500/20 bg-gradient-to-r from-purple-500/10 via-purple-500/10 to-blue-500/10">
         <div className="flex items-center justify-center gap-8 flex-wrap">
           <div className="flex items-center gap-2 text-sm">
-            <Gamepad2 className="w-5 h-5 text-pink-400" />
+            <Gamepad2 className="w-5 h-5 text-purple-400" />
             <span className="text-muted-foreground">{t('arcade.gamesAvailable')}</span>
-            <span className="font-bold text-pink-400">{cards.length}</span>
+            <span className="font-bold text-purple-400">{cards.length}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Trophy className="w-5 h-5 text-yellow-400" />
@@ -322,9 +322,9 @@ export function Arcade() {
         {showCards && (
           <>
             {cards.length === 0 ? (
-              <div className="glass p-8 rounded-lg border-2 border-dashed border-pink-500/30 text-center">
+              <div className="glass p-8 rounded-lg border-2 border-dashed border-purple-500/30 text-center">
                 <div className="flex justify-center mb-4">
-                  <Gamepad2 className="w-12 h-12 text-pink-400" />
+                  <Gamepad2 className="w-12 h-12 text-purple-400" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">{t('arcade.emptyStateTitle')}</h3>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
@@ -332,7 +332,7 @@ export function Arcade() {
                 </p>
                 <button
                   onClick={() => setShowAddCard(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   {t('arcade.addGames')}

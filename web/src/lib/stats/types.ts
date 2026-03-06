@@ -103,7 +103,6 @@ export type StatBlockColor =
   | 'red'
   | 'cyan'
   | 'gray'
-  | 'indigo'
 
 export interface StatBlockValueSource {
   /** Field in data object */
@@ -229,7 +228,6 @@ export const COLOR_CLASSES: Record<StatBlockColor, string> = {
   red: 'text-red-400',
   cyan: 'text-cyan-400',
   gray: 'text-muted-foreground',
-  indigo: 'text-indigo-400',
 }
 
 export const VALUE_COLORS: Record<string, string> = {

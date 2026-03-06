@@ -39,8 +39,8 @@ const ICON_COLORS: Record<string, string> = {
   blue: 'text-blue-400',
   red: 'text-red-400',
   gray: 'text-muted-foreground',
-  indigo: 'text-indigo-400',
-  pink: 'text-pink-400',
+  indigo: 'text-blue-400',
+  pink: 'text-purple-400',
   teal: 'text-cyan-400',
   emerald: 'text-green-400',
 }
@@ -54,8 +54,8 @@ const BG_COLORS: Record<string, string> = {
   blue: 'bg-blue-500/10',
   red: 'bg-red-500/10',
   gray: 'bg-gray-500/10',
-  indigo: 'bg-indigo-500/10',
-  pink: 'bg-pink-500/10',
+  indigo: 'bg-blue-500/10',
+  pink: 'bg-purple-500/10',
   teal: 'bg-cyan-500/10',
   emerald: 'bg-green-500/10',
 }

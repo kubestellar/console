@@ -254,7 +254,7 @@ export const OPERATORS_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'installing', name: 'Installing', icon: 'RefreshCw', visible: true, color: 'blue' },
   { id: 'failing', name: 'Failing', icon: 'XCircle', visible: true, color: 'red' },
   { id: 'upgrades', name: 'Upgrades', icon: 'ArrowUpCircle', visible: true, color: 'orange' },
-  { id: 'subscriptions', name: 'Subscriptions', icon: 'Newspaper', visible: true, color: 'indigo' },
+  { id: 'subscriptions', name: 'Subscriptions', icon: 'Newspaper', visible: true, color: 'blue' },
   { id: 'crds', name: 'CRDs', icon: 'FileCode', visible: true, color: 'cyan' },
   { id: 'clusters', name: 'Clusters', icon: 'Server', visible: true, color: 'blue' },
 ]

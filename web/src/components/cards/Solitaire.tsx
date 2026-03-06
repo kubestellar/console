@@ -162,7 +162,7 @@ function Card({
       <div
         onClick={onClick}
         style={{ width: w, height: h }}
-        className="rounded border border-border bg-gradient-to-br from-indigo-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-sm flex items-center justify-center"
+        className="rounded border border-border bg-gradient-to-br from-blue-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-sm flex items-center justify-center"
       >
         <div className={`${size === 'small' ? 'w-4 h-4' : size === 'medium' ? 'w-6 h-6' : 'w-8 h-8'} rounded-full bg-white/10 flex items-center justify-center`}>
           <span className={`text-white/50 font-bold ${size === 'small' ? 'text-[6px]' : size === 'medium' ? 'text-xs' : 'text-sm'}`}>K8s</span>

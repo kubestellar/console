@@ -14,7 +14,7 @@ export const replicaSetStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'Copy',
-  iconColor: 'text-indigo-400',
+  iconColor: 'text-blue-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

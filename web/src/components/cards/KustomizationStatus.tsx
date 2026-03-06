@@ -340,8 +340,8 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
 
           {/* Summary */}
           <div className="flex gap-2 mb-4">
-            <div className="flex-1 p-2 rounded-lg bg-pink-500/10 text-center">
-              <span className="text-lg font-bold text-pink-400">{totalItems}</span>
+            <div className="flex-1 p-2 rounded-lg bg-purple-500/10 text-center">
+              <span className="text-lg font-bold text-purple-400">{totalItems}</span>
               <p className="text-xs text-muted-foreground">{t('common.total')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center">

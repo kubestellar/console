@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 // WMO Weather interpretation codes to condition mapping
 export function getWeatherCondition(code: number): WeatherCondition {
   // Clear
-  if (code === 0) return { type: 'sunny', icon: Sun, label: 'Clear', dayGradient: 'from-blue-400 via-blue-300 to-blue-200', nightGradient: 'from-indigo-900 via-purple-900 to-indigo-800' }
+  if (code === 0) return { type: 'sunny', icon: Sun, label: 'Clear', dayGradient: 'from-blue-400 via-blue-300 to-blue-200', nightGradient: 'from-blue-900 via-purple-900 to-blue-800' }
   // Mainly clear, partly cloudy
   if (code === 1 || code === 2) return { type: 'partly_cloudy', icon: Cloud, label: 'Partly Cloudy', dayGradient: 'from-blue-300 via-gray-300 to-blue-200', nightGradient: 'from-gray-800 via-gray-700 to-gray-600' }
   // Overcast

@@ -9,7 +9,7 @@ const GlobeLoader = () => {
           <div className="absolute -top-1 left-1/2 w-2 h-2 bg-cyan-400 rounded-full transform -translate-x-1/2"></div>
           <div className="absolute top-1/2 -right-1 w-2 h-2 bg-yellow-400 rounded-full transform -translate-y-1/2"></div>
           <div className="absolute -bottom-1 left-1/2 w-2 h-2 bg-green-400 rounded-full transform -translate-x-1/2"></div>
-          <div className="absolute top-1/2 -left-1 w-2 h-2 bg-pink-400 rounded-full transform -translate-y-1/2"></div>
+          <div className="absolute top-1/2 -left-1 w-2 h-2 bg-purple-400 rounded-full transform -translate-y-1/2"></div>
         </div>
       </div>
       <div className="text-center">

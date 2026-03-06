@@ -364,9 +364,9 @@ Please:
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Kustomization Info Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
               <div className="flex items-start gap-3">
-                <Layers className="w-8 h-8 text-indigo-400 mt-1" />
+                <Layers className="w-8 h-8 text-blue-400 mt-1" />
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-foreground">{kustomizationName}</h3>
                   <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
@@ -459,7 +459,7 @@ Please:
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <Package className="w-4 h-4 text-indigo-400" />
+                      <Package className="w-4 h-4 text-blue-400" />
                       <div>
                         <span className="text-sm font-medium text-foreground">{resource.name}</span>
                         {resource.namespace && (

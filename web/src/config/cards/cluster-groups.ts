@@ -9,7 +9,7 @@ export const clusterGroupsConfig: UnifiedCardConfig = {
   category: 'cluster-health',
   description: 'Manage cluster groupings',
   icon: 'Layers',
-  iconColor: 'text-indigo-400',
+  iconColor: 'text-blue-400',
   defaultWidth: 4,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useClusterGroups' },

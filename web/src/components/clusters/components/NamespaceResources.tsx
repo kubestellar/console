@@ -165,7 +165,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       name: secret.name,
       namespace: secret.namespace,
       status: secret.type,
-      statusColor: 'pink',
+      statusColor: 'purple',
       detail: `${secret.dataCount} keys`,
       data: { type: secret.type, dataCount: secret.dataCount, age: secret.age }
     }))
@@ -201,7 +201,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       case 'Job': return <Briefcase className="w-3.5 h-3.5 text-yellow-400" />
       case 'HPA': return <Activity className="w-3.5 h-3.5 text-purple-400" />
       case 'ConfigMap': return <Settings className="w-3.5 h-3.5 text-orange-400" />
-      case 'Secret': return <Lock className="w-3.5 h-3.5 text-pink-400" />
+      case 'Secret': return <Lock className="w-3.5 h-3.5 text-purple-400" />
       case 'ServiceAccount': return <User className="w-3.5 h-3.5 text-cyan-400" />
       case 'PVC': return <HardDrive className="w-3.5 h-3.5 text-green-400" />
     }
@@ -216,7 +216,6 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       case 'cyan': return 'bg-cyan-500/20 text-cyan-400'
       case 'purple': return 'bg-purple-500/20 text-purple-400'
       case 'orange': return 'bg-orange-500/20 text-orange-400'
-      case 'pink': return 'bg-pink-500/20 text-pink-400'
       default: return 'bg-gray-500/20 text-muted-foreground'
     }
   }
@@ -582,7 +581,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('secrets')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('secrets') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-400 font-medium"><Lock className="w-3 h-3" />Secret</span>
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium"><Lock className="w-3 h-3" />Secret</span>
                   <span className="text-muted-foreground">({secrets.length})</span>
                 </button>
                 {expandedTypes.has('secrets') && (
@@ -593,9 +592,9 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                         className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('Secret', secret.name, secret.namespace, { type: secret.type, dataCount: secret.dataCount })}
                       >
-                        <Lock className="w-3 h-3 text-pink-400" />
+                        <Lock className="w-3 h-3 text-purple-400" />
                         <span className="text-foreground truncate max-w-[200px]" title={secret.name}>{secret.name}</span>
-                        <span className="text-pink-400">{secret.type}</span>
+                        <span className="text-purple-400">{secret.type}</span>
                         <span className="text-muted-foreground">{secret.dataCount} keys</span>
                         <ChevronRight className="w-3 h-3 text-primary ml-auto" />
                       </div>

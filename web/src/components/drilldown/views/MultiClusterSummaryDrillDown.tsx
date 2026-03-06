@@ -54,8 +54,8 @@ function getViewConfig(viewType: DrillDownViewType) {
     case 'all-services':
       return {
         icon: Activity,
-        color: 'text-indigo-400',
-        bgColor: 'bg-indigo-500/20',
+        color: 'text-blue-400',
+        bgColor: 'bg-blue-500/20',
         dataKey: 'services',
         nameKey: 'name',
         getStatus: () => 'active',

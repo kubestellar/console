@@ -154,7 +154,7 @@ The user will describe what stat blocks they want. Respond with a JSON object:
     {
       "label": "string",
       "icon": "PascalCase lucide icon name",
-      "color": "purple" | "blue" | "green" | "yellow" | "orange" | "red" | "cyan" | "gray" | "indigo",
+      "color": "purple" | "blue" | "green" | "yellow" | "orange" | "red" | "cyan" | "gray",
       "field": "camelCase field name",
       "format": "" | "number" | "percent" | "bytes",
       "tooltip": "string"
@@ -179,7 +179,7 @@ The user will describe the stat blocks they want. You must generate a valid JSON
       "id": "string - unique block ID (lowercase_underscores)",
       "label": "string - display label",
       "icon": "string - lucide-react icon name (PascalCase)",
-      "color": "purple" | "blue" | "green" | "yellow" | "orange" | "red" | "cyan" | "gray" | "indigo",
+      "color": "purple" | "blue" | "green" | "yellow" | "orange" | "red" | "cyan" | "gray",
       "field": "string - data field name (camelCase)",
       "format": "" | "number" | "percent" | "bytes" | "currency" | "duration",
       "tooltip": "string - tooltip text"
@@ -193,7 +193,7 @@ AlertTriangle, Activity, BarChart3, Layers, Box, Shield, Lock, Globe, Cloud,
 GitBranch, Terminal, Code, Wifi, WifiOff, Clock, Users, Gauge, TrendingUp,
 TrendingDown, ArrowUpRight, Flame, Heart, Eye, FileText, Settings, Package
 
-AVAILABLE COLORS: purple, blue, green, yellow, orange, red, cyan, gray, indigo
+AVAILABLE COLORS: purple, blue, green, yellow, orange, red, cyan, gray
 
 FORMAT OPTIONS:
 - "" (empty string): raw value, no formatting

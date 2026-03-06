@@ -208,7 +208,7 @@ export interface StatBlockDefinition {
   /** Icon name from lucide-react */
   icon: string
   /** Color variant */
-  color: 'purple' | 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'cyan' | 'gray' | 'indigo'
+  color: 'purple' | 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'cyan' | 'gray'
   /** Click action configuration */
   onClick?: StatBlockAction
   /** Tooltip text */

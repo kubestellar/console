@@ -9,7 +9,7 @@ export const llmModelsConfig: UnifiedCardConfig = {
   category: 'ai-ml',
   description: 'Deployed LLM models',
   icon: 'Brain',
-  iconColor: 'text-pink-400',
+  iconColor: 'text-purple-400',
   defaultWidth: 6,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useLLMModels' },

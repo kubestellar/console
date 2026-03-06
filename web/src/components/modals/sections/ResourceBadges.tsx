@@ -79,7 +79,7 @@ const RESOURCE_COLORS: Partial<Record<ResourceKind, { bg: string; text: string; 
   Deployment: { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30' },
   Service: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
   Node: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
-  Namespace: { bg: 'bg-indigo-500/20', text: 'text-indigo-400', border: 'border-indigo-500/30' },
+  Namespace: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
   ConfigMap: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
   Secret: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' },
   HelmRelease: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
@@ -220,7 +220,7 @@ export function NamespaceBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded border font-medium bg-indigo-500/20 text-indigo-400 border-indigo-500/30 ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
+      className={`inline-flex items-center gap-1 rounded border font-medium bg-blue-500/20 text-blue-400 border-blue-500/30 ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
       title={`Namespace: ${namespace}`}
       onClick={onClick}
       {...(onClick ? {

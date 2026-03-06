@@ -2155,13 +2155,13 @@ Please proceed step by step and ask for confirmation before making any changes.`
           {/* AI Analysis Results - visible on all tabs */}
           {(aiAnalysis || aiAnalysisLoading) && (
             <div className="p-4 pb-0">
-              <div className="rounded-lg bg-gradient-to-br from-purple-500/10 via-indigo-500/10 to-cyan-500/10 border border-purple-500/30 overflow-hidden">
+              <div className="rounded-lg bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/30 overflow-hidden">
                 {aiAnalysisLoading ? (
                   <div className="p-4">
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       <div className="flex gap-1">
                         <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                         <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
                       <span className="font-mono text-xs">Analyzing pod status, events, logs, owner resources...</span>

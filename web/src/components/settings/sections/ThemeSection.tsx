@@ -321,7 +321,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
             </span>
           )}
           {currentTheme.gradientAccents && (
-            <span className="px-2 py-1 text-xs rounded bg-pink-500/20 text-pink-400">
+            <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400">
               🌈 Gradients
             </span>
           )}

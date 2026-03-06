@@ -57,7 +57,7 @@ const colorClasses: Record<string, string> = {
   blue: 'text-blue-400',
   red: 'text-red-400',
   gray: 'text-muted-foreground',
-  indigo: 'text-indigo-400',
+  indigo: 'text-blue-400',
   teal: 'text-cyan-400',
 }
 
