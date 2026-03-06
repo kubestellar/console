@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, Check, Loader2, Settings, Sparkles } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
@@ -7,6 +7,7 @@ import { AgentIcon } from './AgentIcon'
 import { APIKeySettings } from './APIKeySettings'
 import type { AgentInfo } from '../../types/agent'
 import { cn } from '../../lib/cn'
+import { useModalState } from '../../lib/modals'
 
 interface AgentSelectorProps {
   compact?: boolean
@@ -19,8 +20,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const { isDemoMode: isDemoModeHook } = useDemoMode()
   // Synchronous fallback prevents flash during React transitions
   const isDemoMode = isDemoModeHook || getDemoMode()
-  const [isOpen, setIsOpen] = useState(false)
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState()
+  const { isOpen: isSettingsOpen, open: openSettings, close: closeSettings } = useModalState()
   const PREV_AGENT_KEY = 'kc_previous_agent'
   const previousAgentRef = useRef<string | null>(
     typeof window !== 'undefined' ? localStorage.getItem(PREV_AGENT_KEY) : null
@@ -69,32 +70,32 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        closeDropdown()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [closeDropdown])
 
   // Close on escape
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsOpen(false)
+        closeDropdown()
       }
     }
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
       return () => document.removeEventListener('keydown', handleEscape)
     }
-  }, [isOpen])
+  }, [isOpen, closeDropdown])
 
   // Close dropdown when entering demo mode
   useEffect(() => {
     if (isDemoMode) {
-      setIsOpen(false)
+      closeDropdown()
     }
-  }, [isDemoMode])
+  }, [isDemoMode, closeDropdown])
 
   // Loading state — only show spinner if we already had agents (reconnecting).
   // When no agents have loaded yet (e.g. cluster mode with no kc-agent), render nothing
@@ -121,7 +122,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
 
   const handleSelect = (agentName: string) => {
     selectAgent(agentName)
-    setIsOpen(false)
+    closeDropdown()
   }
 
   // Always show the dropdown trigger — never a standalone gear.
@@ -131,7 +132,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     <>
     <div ref={dropdownRef} className={cn('relative flex items-center gap-1', className, isGreyedOut && 'opacity-40 pointer-events-none')}>
       <button
-        onClick={() => !isDemoMode && setIsOpen(!isOpen)}
+        onClick={() => !isDemoMode && toggleDropdown()}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={cn(
@@ -277,8 +278,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           <div className="border-t border-border">
             <button
               onClick={() => {
-                setIsSettingsOpen(true)
-                setIsOpen(false)
+                openSettings()
+                closeDropdown()
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
             >
@@ -289,7 +290,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         </div>
       )}
     </div>
-    {!isDemoMode && <APIKeySettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />}
+    {!isDemoMode && <APIKeySettings isOpen={isSettingsOpen} onClose={closeSettings} />}
     </>
   )
 }

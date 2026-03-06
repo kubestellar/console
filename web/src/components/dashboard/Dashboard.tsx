@@ -61,6 +61,7 @@ import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { DeployConfirmDialog } from '../deploy/DeployConfirmDialog'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
+import { useModalState } from '../../lib/modals'
 
 // Module-level cache for dashboard data (survives navigation)
 interface CachedDashboard {
@@ -84,7 +85,7 @@ export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false) // Cards are pre-populated from localStorage/defaults — never block
   const location = useLocation()
   const navigate = useNavigate()
-  const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
+  const { isOpen: isConfigureCardOpen, open: openConfigureCard, close: closeConfigureCard } = useModalState()
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>(() => {
     // Priority: cache > localStorage > default cards
@@ -98,8 +99,8 @@ export function Dashboard() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
-  const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false)
-  const [isWidgetExportOpen, setIsWidgetExportOpen] = useState(false)
+  const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
+  const { isOpen: isWidgetExportOpen, open: openWidgetExport, close: closeWidgetExport } = useModalState()
 
   // Get context for modals that can be triggered from sidebar
   const {
@@ -400,7 +401,7 @@ export function Dashboard() {
   }, [pendingDeploy, publishCardEvent, deployWorkload, showToast])
 
   const handleCreateDashboard = () => {
-    setIsCreateDashboardOpen(true)
+    openCreateDashboard()
   }
 
   const handleCreateDashboardConfirm = async (name: string, template?: DashboardTemplate) => {
@@ -633,8 +634,8 @@ export function Dashboard() {
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
-    setIsConfigureCardOpen(true)
-  }, [])
+    openConfigureCard()
+  }, [openConfigureCard])
 
   const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
     setLocalCards((prev) =>
@@ -681,7 +682,7 @@ export function Dashboard() {
           : c
       )
     )
-    setIsConfigureCardOpen(false)
+    closeConfigureCard()
     setSelectedCard(null)
 
     // Persist configuration to backend
@@ -693,7 +694,7 @@ export function Dashboard() {
         showToast('Failed to update card configuration', 'error')
       }
     }
-  }, [localCards, dashboard, recordCardConfigured])
+  }, [localCards, dashboard, recordCardConfigured, closeConfigureCard])
 
   const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
     setLocalCards((prev) => {
@@ -734,9 +735,9 @@ export function Dashboard() {
     recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
     // Add at TOP and close the configure modal
     setLocalCards((prev) => [newCard, ...prev])
-    setIsConfigureCardOpen(false)
+    closeConfigureCard()
     setSelectedCard(null)
-  }, [dashboard, recordCardAdded])
+  }, [dashboard, recordCardAdded, closeConfigureCard])
 
   // Apply template - add all template cards to dashboard
   const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
@@ -793,7 +794,7 @@ export function Dashboard() {
     if (activeNudge === 'customize') {
       openAddCardModal()
     } else if (activeNudge === 'pwa-install') {
-      setIsWidgetExportOpen(true)
+      openWidgetExport()
     }
     actionNudge()
   }, [activeNudge, actionNudge, openAddCardModal])
@@ -1014,7 +1015,7 @@ export function Dashboard() {
         isOpen={isConfigureCardOpen}
         card={selectedCard}
         onClose={() => {
-          setIsConfigureCardOpen(false)
+          closeConfigureCard()
           setSelectedCard(null)
         }}
         onSave={handleCardConfigured}
@@ -1031,7 +1032,7 @@ export function Dashboard() {
       {/* Create Dashboard Modal */}
       <CreateDashboardModal
         isOpen={isCreateDashboardOpen}
-        onClose={() => setIsCreateDashboardOpen(false)}
+        onClose={closeCreateDashboard}
         onCreate={handleCreateDashboardConfirm}
         existingNames={dashboards.map(d => d.name)}
       />
@@ -1039,7 +1040,7 @@ export function Dashboard() {
       {/* Widget Export Modal — opened from nudge banner */}
       <WidgetExportModal
         isOpen={isWidgetExportOpen}
-        onClose={() => setIsWidgetExportOpen(false)}
+        onClose={closeWidgetExport}
       />
 
       {/* Pre-deploy Confirmation Dialog */}

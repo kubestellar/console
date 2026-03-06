@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { useModalState } from '../../lib/modals'
 import { CardFactoryModal } from './CardFactoryModal'
 import { StatBlockFactoryModal } from './StatBlockFactoryModal'
 import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
@@ -934,8 +935,8 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   const tCard = t as (key: string, defaultValue?: string) => string
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<'ai' | 'browse'>('browse')
-  const [isCardFactoryOpen, setIsCardFactoryOpen] = useState(false)
-  const [isStatFactoryOpen, setIsStatFactoryOpen] = useState(false)
+  const { isOpen: isCardFactoryOpen, open: openCardFactory, close: closeCardFactory } = useModalState()
+  const { isOpen: isStatFactoryOpen, open: openStatFactory, close: closeStatFactory } = useModalState()
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<CardSuggestion[]>([])
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())
@@ -1154,14 +1155,14 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     />
                   </div>
                   <button
-                    onClick={() => setIsCardFactoryOpen(true)}
+                    onClick={() => openCardFactory()}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium whitespace-nowrap shrink-0"
                   >
                     <Wand2 className="w-4 h-4" />
                     {t('dashboard.addCard.createCustom')}
                   </button>
                   <button
-                    onClick={() => setIsStatFactoryOpen(true)}
+                    onClick={() => openStatFactory()}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors text-sm font-medium whitespace-nowrap shrink-0"
                   >
                     <Activity className="w-4 h-4" />
@@ -1456,7 +1457,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       {/* Card Factory Modal */}
       <CardFactoryModal
         isOpen={isCardFactoryOpen}
-        onClose={() => setIsCardFactoryOpen(false)}
+        onClose={closeCardFactory}
         onCardCreated={(cardId) => {
           // Add the newly created dynamic card to the dashboard
           onAddCards([{
@@ -1472,7 +1473,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       {/* Stat Block Factory Modal */}
       <StatBlockFactoryModal
         isOpen={isStatFactoryOpen}
-        onClose={() => setIsStatFactoryOpen(false)}
+        onClose={closeStatFactory}
       />
     </>
   )
