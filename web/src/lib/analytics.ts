@@ -781,6 +781,30 @@ export function emitGettingStartedActioned(action: string) {
   send('ksc_getting_started_actioned', { action })
 }
 
+// ── Post-Connect Activation ──────────────────────────────────────────
+
+/** Fired when the post-agent-connect activation banner renders */
+export function emitPostConnectShown() {
+  send('ksc_post_connect_shown')
+}
+
+/** Fired when user clicks a CTA on the post-connect activation banner */
+export function emitPostConnectActioned(action: string) {
+  send('ksc_post_connect_actioned', { action })
+}
+
+// ── Demo-to-Local CTA ──────────────────────────────────────────────
+
+/** Fired when the "Try it locally" CTA renders for demo-site visitors */
+export function emitDemoToLocalShown() {
+  send('ksc_demo_to_local_shown')
+}
+
+/** Fired when a demo-site visitor clicks the install CTA */
+export function emitDemoToLocalActioned(action: string) {
+  send('ksc_demo_to_local_actioned', { action })
+}
+
 // ── UTM Tracking ───────────────────────────────────────────────────
 
 /** Maximum length for UTM parameter values to avoid oversized beacon URLs */

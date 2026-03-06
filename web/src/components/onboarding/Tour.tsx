@@ -4,8 +4,6 @@ import { useTour, TourStep } from '../../hooks/useTour'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { TOOLTIP_POSITION_DELAY_MS } from '../../lib/constants/network'
-import { STORAGE_KEY_HINTS_SUPPRESSED } from '../../lib/constants/storage'
-import { safeGetItem } from '../../lib/utils/localStorage'
 
 // KubeStellar logo — clean, no decorative overlays
 function KubeStellarAIIcon({ className }: { className?: string }) {
@@ -460,59 +458,9 @@ export function TourTrigger() {
   )
 }
 
-// Delay (in ms) before auto-starting the tour for first-time users.
-// Gives the welcome card time to be visible as a cue before the tour begins.
-const TOUR_AUTO_START_DELAY_MS = 3000
-
-// Auto-start tour prompt for new users
+// Tour prompt removed — auto-starting the tour had a 2.5% completion rate
+// and annoyed 97.5% of users. The tour is now opt-in only via TourTrigger
+// button in the navbar. Feature hints + Getting Started banner handle onboarding.
 export function TourPrompt() {
-  const { hasCompletedTour, isActive, startTour, skipTour } = useTour()
-  const [dismissed, setDismissed] = useState(false)
-
-  // Auto-start the tour after a short delay for users who haven't seen it yet.
-  // If the user clicks "Skip" before the timer fires, hasCompletedTour or
-  // dismissed will flip and the effect cleans up.
-  // Suppressed when user disables hints in settings (manual restart via TourTrigger still works).
-  const hintsSuppressed = safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true'
-  useEffect(() => {
-    if (hasCompletedTour || isActive || dismissed || hintsSuppressed) return
-    const timer = setTimeout(() => startTour(), TOUR_AUTO_START_DELAY_MS)
-    return () => clearTimeout(timer)
-  }, [hasCompletedTour, isActive, dismissed, hintsSuppressed, startTour])
-
-  // Don't show if tour completed, dismissed, already active, or hints suppressed
-  if (hasCompletedTour || dismissed || isActive || hintsSuppressed) return null
-
-  return (
-    <div className="fixed bottom-4 left-4 z-50 w-80 p-4 glass rounded-lg border border-purple-500/30 shadow-xl animate-fade-in-up">
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-purple-500/20 flex-shrink-0">
-          <KubeStellarAIIcon className="w-6 h-6" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-foreground mb-1">Welcome!</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            New here? Take a quick tour to learn about dashboards, cards, search, and AI missions. Just 6 steps!
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={startTour}
-              className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground text-sm font-medium transition-colors"
-            >
-              Start Tour
-            </button>
-            <button
-              onClick={() => {
-                setDismissed(true)
-                skipTour()
-              }}
-              className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              Skip
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  return null
 }

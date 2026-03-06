@@ -51,6 +51,8 @@ export const STORAGE_KEY_VISIT_COUNT = 'kc-visit-count'
 export const STORAGE_KEY_FEATURE_HINTS_DISMISSED = 'kc-feature-hints-dismissed'
 export const STORAGE_KEY_GETTING_STARTED_DISMISSED = 'kc-getting-started-dismissed'
 export const STORAGE_KEY_HINTS_SUPPRESSED = 'kc-hints-suppressed'
+export const STORAGE_KEY_POST_CONNECT_DISMISSED = 'kc-post-connect-dismissed'
+export const STORAGE_KEY_DEMO_CTA_DISMISSED = 'kc-demo-cta-dismissed'
 
 // ── Component-specific cache ───────────────────────────────────────────
 export const STORAGE_KEY_OPA_CACHE = 'opa-statuses-cache'

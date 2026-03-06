@@ -48,6 +48,8 @@ import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { WelcomeCard } from './WelcomeCard'
 import { SmartCardSuggestions } from './SmartCardSuggestions'
+import { PostConnectBanner } from './PostConnectBanner'
+import { DemoToLocalCTA } from './DemoToLocalCTA'
 import { ContextualNudgeBanner } from './ContextualNudgeBanner'
 import { DiscoverCardsPlaceholder } from './DiscoverCardsPlaceholder'
 import { WidgetExportModal } from '../widgets/WidgetExportModal'
@@ -119,7 +121,7 @@ export function Dashboard() {
   } = useDashboardContext()
 
   // Missions context for Getting Started banner
-  const { openSidebar: openMissionSidebar } = useMissions()
+  const { openSidebar: openMissionSidebar, startMission } = useMissions()
 
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
@@ -889,6 +891,9 @@ export function Dashboard() {
         }}
       />
 
+      {/* Demo-to-local CTA — shown on console.kubestellar.io for demo visitors */}
+      <DemoToLocalCTA />
+
       {/* Getting Started guide when no clusters are connected */}
       {clusters.length === 0 && !isClustersLoading && !getDemoMode() && (
         <WelcomeCard />
@@ -899,6 +904,20 @@ export function Dashboard() {
         existingCardTypes={currentCardTypes}
         onAddCard={handleAddSingleCard}
         onAddMultipleCards={handleAddMultipleCards}
+      />
+
+      {/* Post-connect activation — bridges the 90% drop between agent connect and first mission */}
+      <PostConnectBanner
+        onRunHealthCheck={() => {
+          startMission({
+            title: 'Cluster Health Check',
+            description: 'AI-powered audit of your connected clusters',
+            type: 'custom',
+            initialPrompt: 'Run a comprehensive health check on all my connected clusters. Check for pod issues, resource constraints, and security concerns.',
+          })
+        }}
+        onExploreClusters={() => navigate(ROUTES.CLUSTERS)}
+        onSetupAlerts={() => navigate(ROUTES.ALERTS)}
       />
 
       {/* Contextual nudge banner — replaces traditional tour */}

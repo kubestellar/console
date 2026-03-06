@@ -70,8 +70,8 @@ const SUGGESTION_RULES: SuggestionRule[] = [
   ['cluster_metrics', 'Performance metrics over time', (ctx) => ctx.hasMultipleClusters],
 ]
 
-/** Maximum number of suggestions to show at once */
-const MAX_SUGGESTIONS = 4
+/** Maximum number of suggestions to show — kept low to reduce decision fatigue */
+const MAX_SUGGESTIONS = 2
 
 export function SmartCardSuggestions({
   existingCardTypes,
