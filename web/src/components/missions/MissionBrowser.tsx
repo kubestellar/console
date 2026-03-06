@@ -720,45 +720,50 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     const FILLER_WORDS = new Set(['and', 'on', 'for', 'the', 'in', 'with', 'a', 'an', 'to', 'of', 'kubernetes', 'k8s'])
     const MIN_WORD_OVERLAP_RATIO = 0.6
 
-    /** Extract meaningful lowercase words, stripping filler and short fragments */
-    const toWords = (s: string): string[] =>
-      s.toLowerCase()
-        .replace(/[^a-z0-9]+/g, ' ')
-        .split(' ')
-        .filter((w) => w.length > 1 && !FILLER_WORDS.has(w))
+    /** Extract unique meaningful lowercase words, stripping filler and short fragments */
+    const toWordSet = (s: string): Set<string> =>
+      new Set(
+        s.toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .split(' ')
+          .filter((w) => w.length > 1 && !FILLER_WORDS.has(w))
+      )
 
-    const slugWords = toWords(slug)
+    const slugWordSet = toWordSet(slug)
 
     /** Score how well a mission matches the deep-link slug (0–1) */
-    const scoreMission = (m: MissionExport): number => {
+    const scoreMission = (m: MissionExport, isInstaller: boolean): number => {
       // Exact slug match
       if (getMissionSlug(m) === slug) return 1
 
-      // cncfProject match
-      const project = (m.cncfProject || '').toLowerCase()
-      const slugProject = slug.replace(/^install-/, '')
-      if (project && (project === slugProject || project === slug)) return 0.95
+      // cncfProject match (installers only — solutions use slug/title matching)
+      if (isInstaller) {
+        const project = (m.cncfProject || '').toLowerCase()
+        const slugProject = slug.replace(/^install-/, '')
+        if (project && (project === slugProject || project === slug)) return 0.95
+      }
 
-      // Fuzzy word-overlap on title + cncfProject
-      const missionWords = toWords(`${m.title || ''} ${m.cncfProject || ''}`)
-      if (slugWords.length === 0 || missionWords.length === 0) return 0
-      const matched = slugWords.filter((w) => missionWords.includes(w)).length
-      return matched / slugWords.length
+      // Fuzzy word-overlap (set intersection) on title + cncfProject
+      const missionWordSet = toWordSet(`${m.title || ''} ${m.cncfProject || ''}`)
+      if (slugWordSet.size === 0 || missionWordSet.size === 0) return 0
+      let matched = 0
+      for (const w of slugWordSet) { if (missionWordSet.has(w)) matched++ }
+      return matched / slugWordSet.size
     }
 
-    /** Find best-scoring mission above threshold in a list */
-    const findBest = (list: MissionExport[]): MissionExport | undefined => {
+    /** Find best-scoring mission at or above threshold in a list */
+    const findBest = (list: MissionExport[], isInstaller: boolean): MissionExport | undefined => {
       let best: MissionExport | undefined
       let bestScore = MIN_WORD_OVERLAP_RATIO
       for (const m of list) {
-        const score = scoreMission(m)
-        if (score > bestScore) { best = m; bestScore = score }
+        const score = scoreMission(m, isInstaller)
+        if (score >= bestScore) { best = m; bestScore = score }
       }
       return best
     }
 
     // Search installers first, then solutions
-    const installerMatch = findBest(installerMissions)
+    const installerMatch = findBest(installerMissions, true)
     if (installerMatch) {
       setActiveTab('installers')
       selectCardMission(installerMatch)
@@ -766,7 +771,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       return
     }
 
-    const solutionMatch = findBest(solutionMissions)
+    const solutionMatch = findBest(solutionMissions, false)
     if (solutionMatch) {
       setActiveTab('solutions')
       selectCardMission(solutionMatch)
