@@ -70,6 +70,14 @@ declare -a GO_SCRIPTS=(
   "scripts/dependency-audit-test.sh"
 )
 
+# Security scanning scripts
+declare -a SECURITY_SCRIPTS=(
+  "scripts/secret-scan-test.sh"
+  "scripts/ts-sast-test.sh"
+  "scripts/container-scan-test.sh"
+  "scripts/security-headers-test.sh"
+)
+
 # Scripts that require a running server or are long-running
 declare -a SLOW_SCRIPTS=(
   "scripts/api-contract-test.sh"
@@ -80,6 +88,7 @@ declare -a SLOW_SCRIPTS=(
 declare -a ALL_SCRIPTS=()
 for s in "${FAST_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
 for s in "${GO_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
+for s in "${SECURITY_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
 if [ -z "$FAST_MODE" ]; then
   for s in "${SLOW_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
 fi
