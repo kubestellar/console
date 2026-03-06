@@ -8,6 +8,7 @@ import { APIKeySettings } from './APIKeySettings'
 import type { AgentInfo } from '../../types/agent'
 import { cn } from '../../lib/cn'
 import { useModalState } from '../../lib/modals'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 interface AgentSelectorProps {
   compact?: boolean
@@ -24,7 +25,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const { isOpen: isSettingsOpen, open: openSettings, close: closeSettings } = useModalState()
   const PREV_AGENT_KEY = 'kc_previous_agent'
   const previousAgentRef = useRef<string | null>(
-    typeof window !== 'undefined' ? localStorage.getItem(PREV_AGENT_KEY) : null
+    typeof window !== 'undefined' ? safeGetItem(PREV_AGENT_KEY) : null
   )
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -197,7 +198,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                   } else {
                     // Save current agent before turning AI off
                     previousAgentRef.current = selectedAgent || null
-                    if (selectedAgent) localStorage.setItem(PREV_AGENT_KEY, selectedAgent)
+                    if (selectedAgent) safeSetItem(PREV_AGENT_KEY, selectedAgent)
                     handleSelect('none')
                   }
                 }}
