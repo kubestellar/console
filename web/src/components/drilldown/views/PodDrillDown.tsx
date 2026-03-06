@@ -10,101 +10,14 @@ import { cn } from '../../../lib/cn'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import {
+  getIssueSeverity,
+  UNHEALTHY_STATUSES, RAPID_REOPEN_THRESHOLD_MS,
+  getPodCache, setPodCache, cleanupPodCache,
+} from './pod-drilldown'
+import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 
-// Helper to determine issue severity for styling
-const getIssueSeverity = (issue: string): 'critical' | 'warning' | 'info' => {
-  const lowerIssue = issue.toLowerCase()
-
-  if (lowerIssue.includes('crashloopbackoff') ||
-      lowerIssue.includes('oomkilled') ||
-      lowerIssue.includes('oom') ||
-      lowerIssue.includes('imagepullbackoff') ||
-      lowerIssue.includes('errimagepull') ||
-      lowerIssue.includes('failed') ||
-      lowerIssue.includes('error') ||
-      lowerIssue.includes('evicted')) {
-    return 'critical'
-  }
-  if (lowerIssue.includes('pending') || lowerIssue.includes('waiting')) {
-    return 'warning'
-  }
-  if (lowerIssue.includes('creating') || lowerIssue.includes('running')) {
-    return 'info'
-  }
-
-  return 'warning'
-}
-
-interface Props {
-  data: Record<string, unknown>
-}
-
-type TabType = 'overview' | 'labels' | 'related' | 'describe' | 'logs' | 'events' | 'yaml'
-
-interface RelatedResource {
-  kind: string
-  name: string
-  namespace?: string
-}
-
-// Cache structure stored in view data
-interface CachedData {
-  describeOutput?: string
-  logsOutput?: string
-  eventsOutput?: string
-  yamlOutput?: string
-  podStatusOutput?: string
-  aiAnalysis?: string
-  labels?: Record<string, string>
-  annotations?: Record<string, string>
-  configMaps?: string[]
-  secrets?: string[]
-  pvcs?: string[]
-  serviceAccount?: string
-  ownerChain?: RelatedResource[]
-  fetchedAt?: number
-}
-
-// ============================================================================
-// Module-level pod data cache - persists when dialog is closed/reopened
-// ============================================================================
-interface PodCacheEntry extends CachedData {
-  lastOpened: number
-  openCount: number
-}
-
-// Cache key format: cluster/namespace/podName
-const podDataCache = new Map<string, PodCacheEntry>()
-
-// Consider opening again within this window as "looking for something new" (triggers auto-refresh)
-const RAPID_REOPEN_THRESHOLD_MS = 10000 // 10 seconds
-
-function getPodCacheKey(cluster: string, namespace: string, pod: string): string {
-  return `${cluster}/${namespace}/${pod}`
-}
-
-function getPodCache(cluster: string, namespace: string, pod: string): PodCacheEntry | undefined {
-  return podDataCache.get(getPodCacheKey(cluster, namespace, pod))
-}
-
-function setPodCache(cluster: string, namespace: string, pod: string, data: Partial<PodCacheEntry>) {
-  const key = getPodCacheKey(cluster, namespace, pod)
-  const existing = podDataCache.get(key) || { lastOpened: Date.now(), openCount: 0 }
-  podDataCache.set(key, { ...existing, ...data })
-}
-
-// Clean up old cache entries (older than 5 minutes)
-function cleanupPodCache() {
-  const maxAge = 5 * 60 * 1000 // 5 minutes
-  const now = Date.now()
-  for (const [key, entry] of podDataCache.entries()) {
-    if (now - entry.lastOpened > maxAge) {
-      podDataCache.delete(key)
-    }
-  }
-}
-
-export function PodDrillDown({ data }: Props) {
+export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
@@ -189,14 +102,6 @@ export function PodDrillDown({ data }: Props) {
   const passedIssues = (data.issues as string[]) || []
   const passedLabels = data.labels as Record<string, string> | undefined
   const passedAnnotations = data.annotations as Record<string, string> | undefined
-
-  // Unhealthy statuses that should be flagged as issues
-  const UNHEALTHY_STATUSES = [
-    'Evicted', 'Failed', 'Error', 'CrashLoopBackOff', 'ImagePullBackOff',
-    'ErrImagePull', 'CreateContainerConfigError', 'InvalidImageName',
-    'OOMKilled', 'Terminating', 'Unknown', 'ContainerStatusUnknown',
-    'Pending', 'Init:Error', 'Init:CrashLoopBackOff', 'PodInitializing'
-  ]
 
   // Compute all issues including status-based ones
   const issues = useMemo(() => {
