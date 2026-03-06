@@ -54,7 +54,7 @@ export function ProwStatus({ config: _config }: ProwStatusProps) {
         </div>
         <div className="p-3 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2">
-            <div className="text-lg font-bold text-blue-400">{status.runningJobs}</div>
+            <div className="text-lg font-bold text-green-400">{status.runningJobs}</div>
             <span className="text-xs text-muted-foreground">running</span>
           </div>
           <div className="flex items-center gap-2">
