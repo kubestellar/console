@@ -154,6 +154,8 @@ declare -a PLAYWRIGHT_SCRIPTS=(
   "scripts/ui-compliance-test.sh"
   "scripts/deploy-test.sh"
   "scripts/cache-test.sh"
+  "scripts/benchmark-test.sh"
+  "scripts/ai-ml-test.sh"
 )
 
 PREVIEW_PORT=4174
