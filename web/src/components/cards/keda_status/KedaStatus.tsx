@@ -58,16 +58,19 @@ const TRIGGER_LABELS: Record<KedaTriggerType, string> = {
   external: 'External',
 }
 
-function formatRelativeTime(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime()
-  if (isNaN(diff) || diff < 0) return 'just now'
-  const minute = 60_000
-  const hour = 60 * minute
-  const day = 24 * hour
-  if (diff < minute) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / minute)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
-  return `${Math.floor(diff / day)}d ago`
+function useFormatRelativeTime() {
+  const { t } = useTranslation('cards')
+  return (isoString: string): string => {
+    const diff = Date.now() - new Date(isoString).getTime()
+    if (isNaN(diff) || diff < 0) return t('keda.syncedJustNow', 'just now')
+    const minute = 60_000
+    const hour = 60 * minute
+    const day = 24 * hour
+    if (diff < minute) return t('keda.syncedJustNow', 'just now')
+    if (diff < hour) return t('keda.syncedMinutesAgo', { count: Math.floor(diff / minute), defaultValue: '{{count}}m ago' })
+    if (diff < day) return t('keda.syncedHoursAgo', { count: Math.floor(diff / hour), defaultValue: '{{count}}h ago' })
+    return t('keda.syncedDaysAgo', { count: Math.floor(diff / day), defaultValue: '{{count}}d ago' })
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -192,7 +195,8 @@ function ScaledObjectRow({ obj }: { obj: KedaScaledObject }) {
 
 export function KedaStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, showSkeleton, showEmptyState } = useKedaStatus()
+  const formatRelativeTime = useFormatRelativeTime()
+  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useKedaStatus()
   const [search, setSearch] = useState('')
 
   // Derived stats
@@ -293,7 +297,7 @@ export function KedaStatus() {
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>
