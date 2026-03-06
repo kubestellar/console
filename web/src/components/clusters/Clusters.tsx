@@ -42,6 +42,7 @@ const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 const DEFAULT_CLUSTERS_CARDS = getDefaultCards('clusters')
 
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { emitClusterStatsDrillDown } from '../../lib/analytics'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -413,15 +414,16 @@ export function Clusters() {
             <StatsOverview
               stats={stats}
               onFilterByStatus={(status) => {
+                emitClusterStatsDrillDown('cluster_health_status')
                 setFilter(status)
                 setShowClusterGrid(true) // Ensure cluster grid is visible
               }}
-              onCPUClick={() => window.location.href = '/compute'}
-              onMemoryClick={() => window.location.href = '/compute'}
-              onStorageClick={() => window.location.href = '/storage'}
-              onGPUClick={() => setShowGPUModal(true)}
-              onNodesClick={() => window.location.href = '/compute'}
-              onPodsClick={() => window.location.href = '/workloads'}
+              onCPUClick={() => { emitClusterStatsDrillDown('cpu'); window.location.href = '/compute' }}
+              onMemoryClick={() => { emitClusterStatsDrillDown('memory'); window.location.href = '/compute' }}
+              onStorageClick={() => { emitClusterStatsDrillDown('storage'); window.location.href = '/storage' }}
+              onGPUClick={() => { emitClusterStatsDrillDown('gpu'); setShowGPUModal(true) }}
+              onNodesClick={() => { emitClusterStatsDrillDown('nodes'); window.location.href = '/compute' }}
+              onPodsClick={() => { emitClusterStatsDrillDown('pods'); window.location.href = '/workloads' }}
             />
           )
         )}

@@ -4,6 +4,7 @@ import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
+import { emitClusterAction } from '../../lib/analytics'
 import { Gauge } from '../charts/Gauge'
 import { NodeListItem } from './NodeListItem'
 import { NodeDetailPanel } from './NodeDetailPanel'
@@ -161,6 +162,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
 
   // AI diagnose/repair handlers
   const handleDiagnose = () => {
+    emitClusterAction('diagnose', clusterName)
     const issuesSummary = [
       ...podIssues.map(p => `Pod ${p.name} in ${p.namespace}: ${p.status}`),
       ...clusterDeploymentIssues.map(d => `Deployment ${d.name} in ${d.namespace}: ${d.readyReplicas}/${d.replicas} ready`)
@@ -199,6 +201,7 @@ Please analyze this cluster and provide:
   }
 
   const handleRepair = () => {
+    emitClusterAction('repair', clusterName)
     const issuesList = [
       ...podIssues.slice(0, 5).map(p => `- Pod "${p.name}" in namespace "${p.namespace}": ${p.status} (${p.restarts} restarts)`),
       ...clusterDeploymentIssues.slice(0, 5).map(d => `- Deployment "${d.name}" in namespace "${d.namespace}": ${d.readyReplicas}/${d.replicas} ready - ${d.reason || 'Unknown reason'}`)
@@ -368,6 +371,7 @@ After I approve, help me execute the repairs step by step.`,
             </button>
             <button
               onClick={() => {
+                emitClusterAction('ask', clusterName)
                 startMission({
                   title: `Ask about ${clusterName.split('/').pop()}`,
                   description: 'Custom question about the cluster',

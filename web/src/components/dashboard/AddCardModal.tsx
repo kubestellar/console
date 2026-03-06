@@ -956,21 +956,28 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
 
   // Track whether cards were added during this modal session
   const didAddCards = useRef(false)
+  // Guard: only fire "abandoned" after the modal has actually been opened
+  const wasOpened = useRef(false)
 
   useEffect(() => {
     if (isOpen) {
       didAddCards.current = false
+      wasOpened.current = true
       emitAddCardModalOpened()
-      if (activeTab === 'browse') {
-        // Delay slightly to ensure modal is rendered
-        const timer = setTimeout(() => searchInputRef.current?.focus(), FOCUS_DELAY_MS)
-        return () => clearTimeout(timer)
-      }
-    } else {
+    } else if (wasOpened.current) {
       // Modal just closed — if no cards were added, it was abandoned
+      wasOpened.current = false
       if (!didAddCards.current) {
         emitAddCardModalAbandoned()
       }
+    }
+  }, [isOpen])
+
+  // Auto-focus search input when browse tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === 'browse') {
+      const timer = setTimeout(() => searchInputRef.current?.focus(), FOCUS_DELAY_MS)
+      return () => clearTimeout(timer)
     }
   }, [isOpen, activeTab])
 
