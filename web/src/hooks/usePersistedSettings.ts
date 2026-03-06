@@ -180,7 +180,7 @@ export function usePersistedSettings() {
 
   // Listen for settings changes from individual hooks
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || isNetlifyDeployment) return
     const handleChange = () => {
       saveToBackend()
     }
