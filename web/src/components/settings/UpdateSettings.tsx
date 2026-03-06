@@ -29,6 +29,7 @@ import { checkOAuthConfigured } from '../../lib/api'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import type { UpdateChannel } from '../../types/updates'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { emitUpdateChecked, emitUpdateTriggered } from '../../lib/analytics'
 
 /** Minimum spin duration to guarantee one full rotation (matches cards) */
 const MIN_SPIN_DURATION = 1000
@@ -260,7 +261,7 @@ export function UpdateSettings() {
             </span>
           )}
           <button
-            onClick={forceCheck}
+            onClick={() => { emitUpdateChecked(); forceCheck() }}
             disabled={isChecking || isVisuallySpinning}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
           >
@@ -659,6 +660,7 @@ export function UpdateSettings() {
           <button
             onClick={async () => {
               if (triggerGuardRef.current) return
+              emitUpdateTriggered()
               triggerGuardRef.current = true
               setTriggerState('triggered')
               setTriggerError(null)

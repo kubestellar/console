@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Container, RefreshCw, Plus, Trash2, Check, AlertCircle, AlertTriangle, Loader2, X } from 'lucide-react'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
 import { CLUSTER_PROGRESS_AUTO_DISMISS_MS } from '../../../hooks/useClusterProgress'
+import { emitLocalClusterCreated } from '../../../lib/analytics'
 import type { ClusterProgress } from '../../../hooks/useClusterProgress'
 
 // ------------------------------------------------------------------
@@ -108,6 +109,7 @@ export function LocalClustersSection() {
     if (!selectedTool || !clusterName.trim()) return
 
     const result = await createCluster(selectedTool, clusterName.trim())
+    emitLocalClusterCreated(selectedTool)
 
     if (result.status === 'creating') {
       setClusterName('')

@@ -684,6 +684,52 @@ export function emitPwaPromptDismissed() {
   send('ksc_pwa_prompt_dismissed')
 }
 
+// ── LinkedIn Share ─────────────────────────────────────────────────
+
+/** Fired when user clicks a LinkedIn share button */
+export function emitLinkedInShare(source: string) {
+  send('ksc_linkedin_share', { source })
+}
+
+// ── Settings: Update ──────────────────────────────────────────────
+
+/** Fired when user clicks "Check for Updates" in settings */
+export function emitUpdateChecked() {
+  send('ksc_update_checked')
+}
+
+/** Fired when user clicks "Update Now" to trigger an update */
+export function emitUpdateTriggered() {
+  send('ksc_update_triggered')
+}
+
+// ── Local Cluster ─────────────────────────────────────────────────
+
+/** Fired when user creates a local cluster (kind, k3d, minikube) */
+export function emitLocalClusterCreated(tool: string) {
+  send('ksc_local_cluster_created', { tool })
+}
+
+// ── Developer Session ──────────────────────────────────────────────
+
+/** Storage key to ensure we only fire developer session once per client */
+const DEV_SESSION_KEY = 'ksc-dev-session-sent'
+
+/**
+ * Fired once per client when the user is running on localhost with the
+ * Go backend (cloned the repo + startup-oauth.sh). This distinguishes
+ * developers / contributors from regular console.kubestellar.io visitors.
+ */
+export function emitDeveloperSession() {
+  if (localStorage.getItem(DEV_SESSION_KEY)) return
+  const dep = getDeploymentType()
+  if (dep !== 'localhost') return
+  // Don't fire in forced demo mode (e.g. VITE_DEMO_MODE=true on localhost)
+  if (isDemoMode() && !localStorage.getItem('ksc-token')) return
+  localStorage.setItem(DEV_SESSION_KEY, '1')
+  send('ksc_developer_session', { deployment_type: dep })
+}
+
 // ── UTM Tracking ───────────────────────────────────────────────────
 
 /** Maximum length for UTM parameter values to avoid oversized beacon URLs */

@@ -9,6 +9,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Download, Monitor, Smartphone, Copy, Check, ExternalLink, Info, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BACKEND_DEFAULT_URL } from '../../lib/constants'
+import { emitWidgetDownloaded } from '../../lib/analytics'
 import { BaseModal } from '../../lib/modals'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import {
@@ -113,6 +114,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     setIsLoading(false)
+    emitWidgetDownloaded('uebersicht')
   }
 
   // Copy to clipboard

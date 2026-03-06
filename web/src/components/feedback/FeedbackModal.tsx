@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
-import { emitFeedbackSubmitted } from '../../lib/analytics'
+import { emitFeedbackSubmitted, emitLinkedInShare } from '../../lib/analytics'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -280,6 +280,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
   const handleShare = () => {
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
     window.open(linkedInUrl, '_blank', 'width=600,height=600')
+    emitLinkedInShare('feedback_modal')
     onShare?.()
   }
 

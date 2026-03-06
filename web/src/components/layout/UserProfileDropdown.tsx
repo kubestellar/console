@@ -6,6 +6,7 @@ import { getContributorLevel } from '../../types/rewards'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
+import { emitLinkedInShare } from '../../lib/analytics'
 import { checkOAuthConfigured } from '../../lib/api'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
@@ -51,6 +52,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   const handleLinkedInShare = () => {
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
     window.open(linkedInUrl, '_blank', 'width=600,height=600')
+    emitLinkedInShare('profile_dropdown')
     awardCoins('linkedin_share')
     setIsOpen(false)
   }

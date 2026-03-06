@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { api, checkBackendAvailability, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
-import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep } from './analytics'
+import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
 
 interface User {
   id: string
@@ -206,6 +206,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set anonymous analytics ID (SHA-256 hash — no PII)
       setAnalyticsUserId(response.data.id)
       setAnalyticsUserProperties({ auth_mode: 'github-oauth' })
+      // Detect developer running cloned repo with startup-oauth.sh
+      emitDeveloperSession()
     } catch (error) {
       // If the backend is temporarily unreachable but we have a real token,
       // keep the token and use cached user data instead of destroying the

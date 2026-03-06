@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
 import { useRewards } from '../../hooks/useRewards'
 import { useTranslation } from 'react-i18next'
+import { emitLinkedInShare } from '../../lib/analytics'
 
 const LINKEDIN_SHARE_URL = 'https://www.linkedin.com/sharing/share-offsite/'
 const KUBESTELLAR_URL = 'https://kubestellar.io'
@@ -21,6 +22,7 @@ export function LinkedInShareButton() {
     // Open LinkedIn share dialog
     const shareUrl = `${LINKEDIN_SHARE_URL}?url=${encodeURIComponent(KUBESTELLAR_URL)}`
     window.open(shareUrl, '_blank', 'width=600,height=600')
+    emitLinkedInShare('rewards_panel')
 
     // Show confirmation dialog
     setShowConfirm(true)

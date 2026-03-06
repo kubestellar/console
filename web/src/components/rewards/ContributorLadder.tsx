@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useRewards } from '../../hooks/useRewards'
 import { getContributorLevel, CONTRIBUTOR_LEVELS } from '../../types/rewards'
+import { emitLinkedInShare } from '../../lib/analytics'
 import type { ContributorLevel } from '../../types/rewards'
 
 const LEVEL_ICONS: Record<string, React.FC<{ className?: string }>> = {
@@ -37,6 +38,7 @@ export function ContributorBanner() {
     const text = `I'm a Level ${current.rank} "${current.name}" contributor on the KubeStellar Console with ${totalCoins.toLocaleString()} coins! Join the open-source KubeStellar project and start your contributor journey.`
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}&summary=${encodeURIComponent(text)}`
     window.open(linkedInUrl, '_blank', 'width=600,height=600')
+    emitLinkedInShare('contributor_ladder')
   }
 
   return (
