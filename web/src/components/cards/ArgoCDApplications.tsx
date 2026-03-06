@@ -247,22 +247,30 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 mb-3">
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
-             onClick={() => setSelectedFilter('all')}>
+             role="button" tabIndex={0}
+             onClick={() => setSelectedFilter('all')}
+             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('all') } }}>
           <p className="text-lg font-bold text-green-400">{stats.synced}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.synced')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-yellow-500/10 cursor-pointer hover:bg-yellow-500/20"
-             onClick={() => setSelectedFilter('outOfSync')}>
+             role="button" tabIndex={0}
+             onClick={() => setSelectedFilter('outOfSync')}
+             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('outOfSync') } }}>
           <p className="text-lg font-bold text-yellow-400">{stats.outOfSync}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.outOfSync')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
-             onClick={() => setSelectedFilter('all')}>
+             role="button" tabIndex={0}
+             onClick={() => setSelectedFilter('all')}
+             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('all') } }}>
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.healthy')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-red-500/10 cursor-pointer hover:bg-red-500/20"
-             onClick={() => setSelectedFilter('unhealthy')}>
+             role="button" tabIndex={0}
+             onClick={() => setSelectedFilter('unhealthy')}
+             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('unhealthy') } }}>
           <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.unhealthy')}</p>
         </div>

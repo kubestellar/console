@@ -12,7 +12,7 @@ export const gpuNodeHealthConfig: UnifiedCardConfig = {
   category: 'cluster-health',
   description: 'Proactive health monitoring for GPU nodes — checks node readiness, GPU operator pods, stuck pods, and GPU reset events',
   icon: 'Activity',
-  iconColor: 'text-emerald-400',
+  iconColor: 'text-green-400',
   defaultWidth: 6,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useGPUNodeHealth' },

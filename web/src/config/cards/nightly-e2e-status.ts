@@ -9,7 +9,7 @@ export const nightlyE2eStatusConfig: UnifiedCardConfig = {
   category: 'ci-cd',
   description: 'llm-d nightly E2E workflow status across OCP and GKE platforms',
   icon: 'TestTube2',
-  iconColor: 'text-emerald-400',
+  iconColor: 'text-green-400',
   defaultWidth: 12,
   defaultHeight: 5,
   dataSource: { type: 'hook', hook: 'useNightlyE2EData' },

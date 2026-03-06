@@ -1307,7 +1307,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 {item.thumbnail && item.thumbnail.startsWith('http') && (
                   <img
                     src={item.thumbnail}
-                    alt=""
+                    alt={item.title || 'Feed thumbnail'}
                     className="w-16 h-16 object-cover rounded flex-shrink-0"
                     onError={(e) => (e.currentTarget.style.display = 'none')}
                   />

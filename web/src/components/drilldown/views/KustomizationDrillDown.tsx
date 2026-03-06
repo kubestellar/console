@@ -39,7 +39,7 @@ const getStatusStyle = (status: string) => {
   if (lower === 'stalled' || lower === 'suspended') {
     return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', icon: AlertTriangle }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', icon: AlertTriangle }
+  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertTriangle }
 }
 
 interface AppliedResource {

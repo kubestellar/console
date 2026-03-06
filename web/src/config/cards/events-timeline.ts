@@ -14,7 +14,7 @@ export const eventsTimelineConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'Clock',
-  iconColor: 'text-amber-400',
+  iconColor: 'text-yellow-400',
   defaultWidth: 6,
   defaultHeight: 3,
 
@@ -29,8 +29,8 @@ export const eventsTimelineConfig: UnifiedCardConfig = {
     {
       id: 'totalEvents',
       icon: 'Bell',
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
+      color: 'text-yellow-400',
+      bgColor: 'bg-yellow-500/10',
       label: 'Total',
       valueSource: { type: 'computed', expression: 'sum:count' },
     },

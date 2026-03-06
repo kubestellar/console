@@ -9,7 +9,7 @@ export const namespaceQuotasConfig: UnifiedCardConfig = {
   category: 'namespaces',
   description: 'Resource quota usage by namespace',
   icon: 'Gauge',
-  iconColor: 'text-amber-400',
+  iconColor: 'text-yellow-400',
   defaultWidth: 5,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useNamespaceQuotas' },

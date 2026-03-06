@@ -39,7 +39,7 @@ const getDriftSeverityStyle = (severity: string) => {
   if (lower === 'high' || lower === 'critical' || lower === 'drifted') {
     return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', icon: XCircle }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', icon: AlertTriangle }
+  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertTriangle }
 }
 
 // Change type styles
@@ -54,7 +54,7 @@ const getChangeTypeStyle = (changeType: string) => {
   if (lower === 'deleted' || lower === 'remove') {
     return { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Deleted' }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400', label: changeType }
+  return { bg: 'bg-secondary', text: 'text-muted-foreground', label: changeType }
 }
 
 interface DriftChange {

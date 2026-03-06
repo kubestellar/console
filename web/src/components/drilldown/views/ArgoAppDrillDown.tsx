@@ -37,7 +37,7 @@ const getSyncStatusStyle = (status: string) => {
     return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', icon: AlertTriangle }
   }
   if (lower === 'unknown') {
-    return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', icon: AlertTriangle }
+    return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertTriangle }
   }
   return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', icon: RefreshCw }
 }
@@ -60,7 +60,7 @@ const getHealthStatusStyle = (status: string) => {
   if (lower === 'missing') {
     return { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30' }
+  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border' }
 }
 
 interface ArgoResource {

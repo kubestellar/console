@@ -14,7 +14,7 @@ export const pvStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'HardDrive',
-  iconColor: 'text-amber-400',
+  iconColor: 'text-yellow-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

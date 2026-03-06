@@ -14,7 +14,7 @@ export const roleStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'Key',
-  iconColor: 'text-amber-400',
+  iconColor: 'text-yellow-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

@@ -16,7 +16,7 @@ export const prowStatusConfig: UnifiedCardConfig = {
   content: {
     type: 'stats-grid',
     stats: [
-      { field: 'running', label: 'Running', color: 'blue' },
+      { field: 'running', label: 'Running', color: 'green' },
       { field: 'passed', label: 'Passed', color: 'green' },
       { field: 'failed', label: 'Failed', color: 'red' },
       { field: 'pending', label: 'Pending', color: 'yellow' },

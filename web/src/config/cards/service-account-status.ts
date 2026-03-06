@@ -14,7 +14,7 @@ export const serviceAccountStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'UserCircle',
-  iconColor: 'text-emerald-400',
+  iconColor: 'text-green-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

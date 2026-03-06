@@ -731,9 +731,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                       id={`${nsId}:job:${job.name}`}
                                       label={job.name}
                                       icon={ResourceIcon.job}
-                                      iconColor={isComplete ? 'text-green-400' : isRunning ? 'text-amber-400' : 'text-red-400'}
+                                      iconColor={isComplete ? 'text-green-400' : isRunning ? 'text-green-400' : 'text-red-400'}
                                       badge={`${job.status} (${job.completions})`}
-                                      badgeColor={isComplete ? 'bg-green-500/20 text-green-400' : isRunning ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}
+                                      badgeColor={isComplete ? 'bg-green-500/20 text-green-400' : isRunning ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}
                                       indent={5}
                                       expandedNodes={expandedNodes}
                                       toggleNode={toggleNode}

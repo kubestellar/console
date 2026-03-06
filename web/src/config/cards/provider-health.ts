@@ -9,7 +9,7 @@ export const providerHealthConfig: UnifiedCardConfig = {
   category: 'cluster-health',
   description: 'Cloud and AI provider status',
   icon: 'Cloud',
-  iconColor: 'text-sky-400',
+  iconColor: 'text-blue-400',
   defaultWidth: 6,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useProviderHealth' },

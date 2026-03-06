@@ -3,6 +3,11 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import type { TreeNodeProps } from './types'
 import { useTranslation } from 'react-i18next'
 
+/** Pixels of horizontal indent per tree nesting level */
+const INDENT_PER_LEVEL_PX = 16
+/** Base left padding for tree nodes */
+const BASE_PADDING_LEFT_PX = 8
+
 interface TreeNodeInternalProps extends TreeNodeProps {
   expandedNodes: Set<string>
   toggleNode: (nodeId: string) => void
@@ -32,7 +37,7 @@ export function TreeNode({
     <div className="select-none">
       <div
         className={`flex items-center gap-1.5 py-1.5 px-2 rounded-md hover:bg-secondary/50 transition-colors group`}
-        style={{ paddingLeft: `${indent * 16 + 8}px` }}
+        style={{ paddingLeft: `${indent * INDENT_PER_LEVEL_PX + BASE_PADDING_LEFT_PX}px` }}
       >
         {/* Chevron + Icon - handles expand/collapse */}
         {hasChildren ? (
@@ -60,6 +65,11 @@ export function TreeNode({
             e.stopPropagation()
             onClick?.()
           }}
+          {...(onClick ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
+          } : {})}
           className={`text-sm text-foreground truncate ${onClick ? 'cursor-pointer hover:text-purple-400' : ''}`}
         >
           {label}
@@ -75,7 +85,7 @@ export function TreeNode({
         )}
       </div>
       {hasChildren && isExpanded && (
-        <div className="border-l border-border/50 ml-3" style={{ marginLeft: `${indent * 16 + 16}px` }}>
+        <div className="border-l border-border/50 ml-3" style={{ marginLeft: `${indent * INDENT_PER_LEVEL_PX + INDENT_PER_LEVEL_PX}px` }}>
           {children}
         </div>
       )}

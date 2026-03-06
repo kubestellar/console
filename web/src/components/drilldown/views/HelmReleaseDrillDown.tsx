@@ -478,7 +478,7 @@ Please:
                           ? 'bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20'
                           : resource.kind === 'Service'
                           ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
-                          : 'bg-gray-500/10 border border-gray-500/30 text-gray-400'
+                          : 'bg-secondary border border-border text-muted-foreground'
                       )}
                     >
                       <span>{resource.kind}:</span>

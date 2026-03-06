@@ -441,14 +441,14 @@ Labels:       app=${resourceName.split('-')[0]}
                           <span className="text-red-400">❌</span>
                         )}
                         {log.type === 'info' && (
-                          <span className="text-gray-400">ℹ️</span>
+                          <span className="text-muted-foreground">ℹ️</span>
                         )}
                         <span className={cn(
                           log.type === 'thinking' && 'text-purple-300',
                           log.type === 'action' && 'text-blue-300',
                           log.type === 'result' && 'text-green-300',
                           log.type === 'error' && 'text-red-300',
-                          log.type === 'info' && 'text-gray-300',
+                          log.type === 'info' && 'text-muted-foreground',
                         )}>
                           {log.message}
                         </span>
@@ -503,7 +503,7 @@ Labels:       app=${resourceName.split('-')[0]}
                     ) : log.type === 'error' ? (
                       <pre className="text-red-400 whitespace-pre-wrap">{log.message}</pre>
                     ) : (
-                      <pre className="text-gray-300 whitespace-pre-wrap">{log.message}</pre>
+                      <pre className="text-muted-foreground whitespace-pre-wrap">{log.message}</pre>
                     )}
                   </div>
                 ))

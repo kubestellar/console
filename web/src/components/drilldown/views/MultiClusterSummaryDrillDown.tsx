@@ -145,8 +145,8 @@ function getViewConfig(viewType: DrillDownViewType) {
     default:
       return {
         icon: Layers,
-        color: 'text-gray-400',
-        bgColor: 'bg-gray-500/20',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-secondary',
         dataKey: 'items',
         nameKey: 'name',
         getStatus: () => 'unknown',
@@ -166,7 +166,7 @@ function getStatusBadge(status: string) {
   if (['failed', 'error', 'unhealthy', 'notready', 'critical', 'crashloopbackoff', 'imagepullbackoff'].includes(lower)) {
     return { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20' }
   }
-  return { icon: AlertCircle, color: 'text-gray-400', bg: 'bg-gray-500/20' }
+  return { icon: AlertCircle, color: 'text-muted-foreground', bg: 'bg-secondary' }
 }
 
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {

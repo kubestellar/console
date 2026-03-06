@@ -37,7 +37,7 @@ const getStatusStyle = (status: string) => {
   if (lower === 'failed' || lower === 'error' || lower === 'inactive') {
     return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', icon: XCircle }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', icon: AlertCircle }
+  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertCircle }
 }
 
 interface Violation {

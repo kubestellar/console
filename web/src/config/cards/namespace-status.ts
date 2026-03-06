@@ -14,7 +14,7 @@ export const namespaceStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'FolderOpen',
-  iconColor: 'text-sky-400',
+  iconColor: 'text-blue-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

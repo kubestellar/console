@@ -400,42 +400,12 @@ export const RESOURCE_KIND_ICONS: Record<ResourceKind, string> = {
 }
 
 // ============================================================================
-// Status colors
+// Status colors — delegates to canonical statusColors.ts
 // ============================================================================
 
-export const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  // Success states
-  Running: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-  Succeeded: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-  Healthy: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-  Ready: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-  Active: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-  Synced: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-  Deployed: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-  Bound: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-
-  // Warning states
-  Pending: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' },
-  Progressing: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' },
-  Waiting: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' },
-  Unknown: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' },
-  OutOfSync: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' },
-
-  // Error states
-  Failed: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-  Error: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-  CrashLoopBackOff: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-  ImagePullBackOff: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-  Unhealthy: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-  Degraded: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-  Firing: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-
-  // Info states
-  Terminated: { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20' },
-  Completed: { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20' },
-  Offline: { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20' },
-}
+import { getStatusColors as getCanonicalStatusColors } from '../../../lib/cards/statusColors'
 
 export function getStatusColors(status: string): { bg: string; text: string; border: string } {
-  return STATUS_COLORS[status] || { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20' }
+  const c = getCanonicalStatusColors(status)
+  return { bg: c.bg, text: c.text, border: c.border }
 }

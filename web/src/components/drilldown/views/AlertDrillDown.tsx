@@ -52,7 +52,7 @@ const getStateStyle = (state: string) => {
   if (lower === 'resolved' || lower === 'inactive') {
     return { bg: 'bg-green-500/20', text: 'text-green-400' }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400' }
+  return { bg: 'bg-secondary', text: 'text-muted-foreground' }
 }
 
 export function AlertDrillDown({ data }: Props) {

@@ -9,7 +9,7 @@ export const weatherConfig: UnifiedCardConfig = {
   category: 'utility',
   description: 'Current weather conditions',
   icon: 'Cloud',
-  iconColor: 'text-sky-400',
+  iconColor: 'text-blue-400',
   defaultWidth: 6,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useWeather' },

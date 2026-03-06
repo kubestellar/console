@@ -223,6 +223,11 @@ export function NamespaceBadge({
       className={`inline-flex items-center gap-1 rounded border font-medium bg-indigo-500/20 text-indigo-400 border-indigo-500/30 ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
       title={`Namespace: ${namespace}`}
       onClick={onClick}
+      {...(onClick ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
+      } : {})}
     >
       {showIcon && <FolderTree className={iconSizes[size]} />}
       {namespace}
@@ -265,6 +270,11 @@ export function ResourceKindBadge({
       className={`inline-flex items-center gap-1 rounded border font-medium ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
       title={`Resource: ${kind}`}
       onClick={onClick}
+      {...(onClick ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
+      } : {})}
     >
       {showIcon && <Icon className={iconSizes[size]} />}
       {kind}

@@ -40,7 +40,7 @@ const getPhaseStyle = (phase: string) => {
   if (lower === 'upgrading' || lower === 'replacing') {
     return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', icon: RefreshCw }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', icon: AlertTriangle }
+  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertTriangle }
 }
 
 interface CSVInfo {

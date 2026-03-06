@@ -479,6 +479,11 @@ export function CardListItem({
       className={`p-3 rounded-lg ${bg} border ${border} ${onClick ? 'cursor-pointer hover:opacity-80' : ''
         } transition-all group`}
       onClick={onClick}
+      {...(onClick ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
+      } : {})}
       title={title}
     >
       <div className="flex items-start gap-3">

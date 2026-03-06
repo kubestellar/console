@@ -9,7 +9,7 @@ export const namespaceOverviewConfig: UnifiedCardConfig = {
   category: 'namespaces',
   description: 'Namespace resource summary',
   icon: 'FolderOpen',
-  iconColor: 'text-sky-400',
+  iconColor: 'text-blue-400',
   defaultWidth: 6,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useNamespaceOverview' },

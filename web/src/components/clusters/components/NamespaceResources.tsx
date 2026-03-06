@@ -136,7 +136,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       name: job.name,
       namespace: job.namespace,
       status: job.status,
-      statusColor: job.status === 'Complete' ? 'green' : job.status === 'Running' ? 'blue' : 'red',
+      statusColor: job.status === 'Complete' ? 'green' : job.status === 'Running' ? 'green' : 'red',
       detail: job.completions,
       data: { status: job.status, completions: job.completions, duration: job.duration, age: job.age }
     }))
@@ -461,7 +461,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                       >
                         <Briefcase className="w-3 h-3 text-amber-400" />
                         <span className="text-foreground truncate max-w-[200px]" title={job.name}>{job.name}</span>
-                        <span className={job.status === 'Complete' ? 'text-green-400' : job.status === 'Running' ? 'text-blue-400' : 'text-red-400'}>{job.status}</span>
+                        <span className={job.status === 'Complete' ? 'text-green-400' : job.status === 'Running' ? 'text-green-400' : 'text-red-400'}>{job.status}</span>
                         <span className="text-muted-foreground">{job.completions}</span>
                         <ChevronRight className="w-3 h-3 text-primary ml-auto" />
                       </div>

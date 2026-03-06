@@ -289,6 +289,10 @@ export function TableSection<T extends Record<string, unknown>>({
                 onRowClick ? 'cursor-pointer hover:bg-secondary/50' : ''
               }`}
               onClick={() => onRowClick?.(row)}
+              {...(onRowClick ? {
+                tabIndex: 0,
+                onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row) } },
+              } : {})}
             >
               {columns.map((column) => (
                 <td
@@ -487,6 +491,11 @@ export function BadgesSection({ badges, className = '' }: BadgesSectionProps) {
         <span
           key={index}
           onClick={badge.onClick}
+          {...(badge.onClick ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); badge.onClick!() } },
+          } : {})}
           className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
             badge.color || 'bg-secondary text-muted-foreground'
           } ${badge.onClick ? 'cursor-pointer hover:opacity-80' : ''}`}
