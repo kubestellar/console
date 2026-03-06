@@ -102,12 +102,12 @@ export function WorkloadMonitorDiagnose({
           <Stethoscope className="w-3.5 h-3.5 text-purple-400" />
           <span>AI Diagnose{repairable ? ' & Repair' : ''}</span>
           {state.phase !== 'idle' && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-secondary ${phaseConfig.color}`}>
+            <span className={`text-2xs px-1.5 py-0.5 rounded bg-secondary ${phaseConfig.color}`}>
               {phaseConfig.label}
             </span>
           )}
           {state.loopCount > 0 && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-2xs text-muted-foreground">
               Loop {state.loopCount}/{state.maxLoops}
             </span>
           )}
@@ -189,7 +189,7 @@ export function WorkloadMonitorDiagnose({
                 {!allApproved && (
                   <button
                     onClick={approveAllRepairs}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
                   >
                     Approve All
                   </button>
@@ -212,11 +212,11 @@ export function WorkloadMonitorDiagnose({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-foreground">{repair.action}</span>
-                      <span className={`text-[10px] px-1 py-0.5 rounded ${RISK_BADGE[repair.risk]}`}>
+                      <span className={`text-2xs px-1 py-0.5 rounded ${RISK_BADGE[repair.risk]}`}>
                         {repair.risk} risk
                       </span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{repair.description}</p>
+                    <p className="text-2xs text-muted-foreground mt-0.5">{repair.description}</p>
                   </div>
                 </div>
               ))}

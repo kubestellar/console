@@ -203,7 +203,7 @@ export function UnifiedDashboard({
           <div>
             <h1 className="text-2xl font-bold text-white">{config.name}</h1>
             {config.subtitle && (
-              <p className="text-sm text-gray-400 mt-1">{config.subtitle}</p>
+              <p className="text-sm text-muted-foreground mt-1">{config.subtitle}</p>
             )}
           </div>
           {/* Health indicator */}
@@ -227,7 +227,7 @@ export function UnifiedDashboard({
               title="Refresh"
             >
               <RefreshCw
-                className={`w-4 h-4 text-gray-400 ${isLoading ? 'animate-spin' : ''}`}
+                className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`}
               />
             </button>
           )}
@@ -239,7 +239,7 @@ export function UnifiedDashboard({
               className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
               title="Add card"
             >
-              <Plus className="w-4 h-4 text-gray-400" />
+              <Plus className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
 
@@ -247,7 +247,7 @@ export function UnifiedDashboard({
           {isCustomized && (
             <button
               onClick={handleReset}
-              className="px-3 py-1.5 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 transition-colors"
+              className="px-3 py-1.5 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-muted-foreground transition-colors"
               title="Reset to default layout"
             >
               Reset

@@ -1262,7 +1262,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400" />
+                  <Zap className="w-4 h-4 text-yellow-400" />
                   {t('drilldown.tabs.recentEvents')}
                 </h3>
                 <button
@@ -1785,7 +1785,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                     children.push({
                       type: 'PVCs',
                       items: pvcs,
-                      color: 'emerald',
+                      color: 'green',
                       icon: (
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />

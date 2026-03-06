@@ -313,7 +313,7 @@ export function PodSweeper(_props: CardComponentProps) {
                     bgClass = 'bg-red-900'
                     content = <Bomb className="w-3 h-3 text-red-400" />
                   } else {
-                    bgClass = 'bg-zinc-800'
+                    bgClass = 'bg-gray-800'
                     if (cell.adjacentMines > 0) {
                       content = (
                         <span className={`font-bold ${NUMBER_COLORS[cell.adjacentMines]}`}>

@@ -66,9 +66,9 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
     triage_accepted: { color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' },
     feasibility_study: { color: 'text-purple-400', bgColor: 'bg-purple-500/20' },
     fix_ready: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
-    fix_complete: { color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' },
+    fix_complete: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
     unable_to_fix: { color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
-    closed: { color: 'text-gray-500 dark:text-gray-400', bgColor: 'bg-gray-500/20' },
+    closed: { color: 'text-muted-foreground', bgColor: 'bg-gray-500/20' },
   }
   // Show different label for closed status based on who closed it
   let label = STATUS_LABELS[status]
@@ -406,7 +406,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
             </p>
           </div>
           {!canPerformActions && (
-            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/20 text-amber-400 uppercase tracking-wider">
+            <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-yellow-500/20 text-yellow-400 uppercase tracking-wider">
               {t('feedback.demo')}
             </span>
           )}
@@ -453,14 +453,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
       {!canPerformActions && (
         <button
           onClick={() => setShowLoginPrompt(true)}
-          className="w-full px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between hover:bg-amber-500/20 transition-colors cursor-pointer flex-shrink-0"
+          className="w-full px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center justify-between hover:bg-yellow-500/20 transition-colors cursor-pointer flex-shrink-0"
         >
-              <span className="text-xs text-amber-400">
+              <span className="text-xs text-yellow-400">
                 {isDemoModeForced
                   ? t('feedback.loginBannerDemo')
                   : t('feedback.loginBannerLocal')}
               </span>
-          <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400">
+          <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400">
             {isDemoModeForced ? t('feedback.loginWithGitHub') : t('feedback.setupOAuth')}
           </span>
         </button>
@@ -513,7 +513,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
               <div className="flex-1 min-h-0 overflow-y-auto">
                   {/* ── Your Requests section ── */}
                   <div className="p-2 border-b border-border/50 flex-shrink-0">
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
                       Your Requests ({requests.length})
                     </span>
                   </div>
@@ -551,7 +551,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
+                                <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${
                                   request.request_type === 'bug' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400'
                                 }`}>
                                   {request.request_type === 'bug' ? 'Bug' : 'Feature'}
@@ -562,7 +562,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                   </span>
                                 )}
                                 {isOwnedByUser && (
-                                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-500/20 text-blue-400">
+                                  <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-blue-500/20 text-blue-400">
                                     Yours
                                   </span>
                                 )}
@@ -573,7 +573,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                       e.stopPropagation()
                                       markRequestNotificationsAsRead(request.id)
                                     }}
-                                    className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+                                    className="flex items-center gap-1 px-1.5 py-0.5 text-2xs font-medium rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
                                     title="Click to clear updates"
                                   >
                                     <Bell className="w-3 h-3" />
@@ -591,7 +591,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                         {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
                                       </p>
                                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                        <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
+                                        <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
                                           {statusInfo.label}
                                         </span>
                                         {request.github_issue_url && (
@@ -613,7 +613,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                     </>
                                   ) : (
                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                      <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
+                                      <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
                                         {statusInfo.label}
                                       </span>
                                       <span className="text-xs text-muted-foreground italic">
@@ -646,11 +646,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                     {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
                                   </p>
                                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
+                                    <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
                                       {statusInfo.label}
                                     </span>
                                     {request.status === 'fix_complete' && (
-                                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-500/20 text-gray-500 dark:text-gray-400">
+                                      <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-gray-500/20 text-muted-foreground">
                                         Closed
                                       </span>
                                     )}
@@ -690,14 +690,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                               )}
                               {/* Show merged celebration for fix_complete */}
                               {request.status === 'fix_complete' && (
-                                <div className="mt-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                                <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                                   <div className="flex items-center gap-2 mb-1">
                                     <div className="flex items-center gap-1.5">
-                                      <Check className="w-4 h-4 text-emerald-400" />
-                                      <span className="text-xs font-semibold text-emerald-400">Merged</span>
+                                      <Check className="w-4 h-4 text-green-400" />
+                                      <span className="text-xs font-semibold text-green-400">Merged</span>
                                     </div>
                                   </div>
-                                  <p className="text-xs text-emerald-300/80 mb-2">
+                                  <p className="text-xs text-green-300/80 mb-2">
                                     Thank you for your feedback! Your {request.request_type === 'bug' ? 'bug fix' : 'feature'} has been merged and will be available in the next nightly build and weekly release.
                                   </p>
                                   <div className="flex items-center gap-3 flex-wrap">
@@ -705,7 +705,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                       href="https://github.com/kubestellar/console/releases"
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-xs flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
+                                      className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
                                       onClick={e => e.stopPropagation()}
                                     >
                                       <ExternalLink className="w-3 h-3" />
@@ -716,7 +716,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                         href={request.pr_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-xs flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
+                                        className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
                                         onClick={e => e.stopPropagation()}
                                       >
                                         <GitPullRequest className="w-3 h-3" />
@@ -728,7 +728,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                         href={request.github_issue_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-xs flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
+                                        className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
                                         onClick={e => e.stopPropagation()}
                                       >
                                         <ExternalLink className="w-3 h-3" />
@@ -825,7 +825,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                         Check Preview
                                       </button>
                                       {checkedPreview && checkedPreview.status !== 'ready' && (
-                                        <span className="text-[10px] text-muted-foreground">
+                                        <span className="text-2xs text-muted-foreground">
                                           {checkedPreview.status === 'pending' ? 'Building...' : checkedPreview.message || checkedPreview.status}
                                         </span>
                                       )}
@@ -920,7 +920,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
 
                   {/* ── GitHub Contributions section ── */}
                       <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
-                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                           <Github className="w-3 h-3" />
                           {currentGitHubLogin ? `${currentGitHubLogin}'s` : ''} GitHub Contributions
                           {githubRewards && (
@@ -959,31 +959,31 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                         <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
                           <div className="flex flex-wrap gap-1.5">
                             {githubRewards.breakdown.prs_merged > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-[10px]">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-2xs">
                                 <GitMerge className="w-2.5 h-2.5" />
                                 {githubRewards.breakdown.prs_merged} Merged
                               </span>
                             )}
                             {githubRewards.breakdown.prs_opened > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px]">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-2xs">
                                 <GitPullRequest className="w-2.5 h-2.5" />
                                 {githubRewards.breakdown.prs_opened} PRs
                               </span>
                             )}
                             {githubRewards.breakdown.bug_issues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
                                 <Bug className="w-2.5 h-2.5" />
                                 {githubRewards.breakdown.bug_issues} Bugs
                               </span>
                             )}
                             {githubRewards.breakdown.feature_issues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px]">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-2xs">
                                 <Lightbulb className="w-2.5 h-2.5" />
                                 {githubRewards.breakdown.feature_issues} Features
                               </span>
                             )}
                             {githubRewards.breakdown.other_issues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-500/20 text-gray-500 dark:text-gray-400 text-[10px]">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-500/20 text-muted-foreground text-2xs">
                                 <AlertCircle className="w-2.5 h-2.5" />
                                 {githubRewards.breakdown.other_issues} Issues
                               </span>
@@ -1049,7 +1049,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
 
                     {githubRewards?.from_cache && (
                       <div className="p-2 border-t border-border/50">
-                        <p className="text-[10px] text-muted-foreground text-center">
+                        <p className="text-2xs text-muted-foreground text-center">
                           Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
                         </p>
                       </div>
@@ -1112,7 +1112,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                   >
                     <Bug className="w-4 h-4" />
                     {t('feedback.bugReport')}
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-2xs text-muted-foreground">
                       +{REWARD_ACTIONS.bug_report.coins}
                     </span>
                   </button>
@@ -1127,7 +1127,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                   >
                     <Sparkles className="w-4 h-4" />
                     {t('feedback.featureRequest')}
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-2xs text-muted-foreground">
                       +{REWARD_ACTIONS.feature_suggestion.coins}
                     </span>
                   </button>
@@ -1146,7 +1146,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                     className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm"
                     disabled={isSubmitting}
                   />
-                  <p className="text-[10px] text-muted-foreground mt-1">
+                  <p className="text-2xs text-muted-foreground mt-1">
                     First line becomes the title. Add details below.
                   </p>
                 </div>
@@ -1194,7 +1194,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
 
       {/* Footer - always visible */}
       <div className="p-4 border-t border-border flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground/50">
+        <div className="flex items-center gap-3 text-2xs text-muted-foreground/50">
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>
         </div>
@@ -1265,8 +1265,8 @@ function GitHubContributionIcon({ type }: { type: string }) {
     case 'issue_bug':
       return <Bug className="w-4 h-4 text-red-400 flex-shrink-0" />
     case 'issue_feature':
-      return <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0" />
+      return <Lightbulb className="w-4 h-4 text-yellow-400 flex-shrink-0" />
     default:
-      return <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      return <AlertCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
   }
 }

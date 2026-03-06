@@ -393,7 +393,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
                           <div className="flex items-center gap-2 mb-2">
                             <CloudProviderIcon provider={providerKey} size={16} />
                             <span className="text-sm font-medium text-foreground">{cli.provider}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">detected</span>
+                            <span className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">detected</span>
                           </div>
                           <div className="flex items-start justify-between gap-2">
                             <code className="text-xs text-muted-foreground font-mono break-all">{cmds.register || cmds.auth}</code>
@@ -511,7 +511,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
                             </div>
                             <div className="flex items-center gap-2 ml-3 shrink-0">
                               {ctx.authMethod && ctx.authMethod !== 'unknown' && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                <span className={`text-2xs px-1.5 py-0.5 rounded ${
                                   ctx.authMethod === 'exec' ? 'bg-blue-500/20 text-blue-400' :
                                   ctx.authMethod === 'token' ? 'bg-yellow-500/20 text-yellow-400' :
                                   ctx.authMethod === 'certificate' ? 'bg-green-500/20 text-green-400' :

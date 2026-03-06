@@ -305,10 +305,10 @@ export function Kubedle(_props: CardComponentProps) {
                   } else if (results[colIdx] === 'present') {
                     bgColor = 'bg-yellow-600 border-yellow-600'
                   } else {
-                    bgColor = 'bg-zinc-700 border-zinc-700'
+                    bgColor = 'bg-gray-700 border-gray-700'
                   }
                 } else if (letter !== ' ') {
-                  bgColor = 'bg-secondary border-zinc-500'
+                  bgColor = 'bg-secondary border-gray-500'
                 }
 
                 return (
@@ -330,13 +330,13 @@ export function Kubedle(_props: CardComponentProps) {
         {KEYBOARD_ROWS.map((row, rowIdx) => (
           <div key={rowIdx} className="flex gap-1">
             {row.map(key => {
-              let bgColor = 'bg-zinc-600 hover:bg-zinc-500'
+              let bgColor = 'bg-gray-600 hover:bg-gray-500'
               if (states[key] === 'correct') {
                 bgColor = 'bg-green-600'
               } else if (states[key] === 'present') {
                 bgColor = 'bg-yellow-600'
               } else if (states[key] === 'absent') {
-                bgColor = 'bg-zinc-800'
+                bgColor = 'bg-gray-800'
               }
 
               const isSpecial = key === 'ENTER' || key === '⌫'
@@ -378,7 +378,7 @@ export function Kubedle(_props: CardComponentProps) {
                   <span>{t('kubedle.wrongSpot')}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-zinc-700 rounded flex items-center justify-center text-white text-xs font-bold">D</div>
+                  <div className="w-6 h-6 bg-gray-700 rounded flex items-center justify-center text-white text-xs font-bold">D</div>
                   <span>{t('kubedle.notInWord')}</span>
                 </div>
               </div>

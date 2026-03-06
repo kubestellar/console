@@ -13,9 +13,9 @@ import { useTranslation } from 'react-i18next'
 
 const STATUS_COLORS = {
   healthy: 'bg-green-500',
-  degraded: 'bg-amber-500',
+  degraded: 'bg-yellow-500',
   unhealthy: 'bg-red-500',
-  unknown: 'bg-slate-500',
+  unknown: 'bg-gray-500',
 }
 
 type SortField = 'name' | 'accelerators' | 'status' | 'replicas'
@@ -102,8 +102,8 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
   return (
     <button
       onClick={handleClick}
-      className={`w-full px-3 py-2.5 text-left hover:bg-slate-700/50 transition-colors border-b border-slate-700/50 last:border-0 ${
-        isSelected ? 'bg-slate-700/70' : ''
+      className={`w-full px-3 py-2.5 text-left hover:bg-gray-700/50 transition-colors border-b border-gray-700/50 last:border-0 ${
+        isSelected ? 'bg-gray-700/70' : ''
       }`}
     >
       {/* Row 1: Name and replica counts */}
@@ -137,7 +137,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
             </span>
           )}
           {prefillCount === 0 && decodeCount === 0 && unifiedCount === 0 && (
-            <span className="text-slate-500 italic" title="No running pods - scaled to 0">
+            <span className="text-gray-500 italic" title="No running pods - scaled to 0">
               0 pods
             </span>
           )}
@@ -145,14 +145,14 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
       </div>
 
       {/* Row 2: Namespace and metadata */}
-      <div className="flex items-center gap-2 text-[10px]">
+      <div className="flex items-center gap-2 text-2xs">
         {/* Namespace (primary context) */}
-        <span className="px-1.5 py-0.5 rounded bg-slate-700/80 text-slate-300 font-medium">
+        <span className="px-1.5 py-0.5 rounded bg-gray-700/80 text-gray-300 font-medium">
           ns:{stack.namespace}
         </span>
 
         {/* Cluster */}
-        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">
+        <span className="px-1.5 py-0.5 rounded bg-gray-800 text-gray-500">
           {stack.cluster}
         </span>
 
@@ -190,7 +190,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
 
         {/* Model name */}
         {stack.model && (
-          <span className="text-slate-500 truncate max-w-[120px] ml-auto" title={`model: ${stack.model}`}>
+          <span className="text-gray-500 truncate max-w-[120px] ml-auto" title={`model: ${stack.model}`}>
             {stack.model}
           </span>
         )}
@@ -231,7 +231,7 @@ export function StackSelector() {
   // If no context, show placeholder
   if (!stackContext) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-slate-800/50 text-slate-500 text-sm">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-gray-800/50 text-gray-500 text-sm">
         <Layers className="w-4 h-4" />
         <span>{t('common.noStackData')}</span>
       </div>
@@ -337,8 +337,8 @@ export function StackSelector() {
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${
           isOpen
-            ? 'bg-slate-700 border-slate-600'
-            : 'bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'
+            ? 'bg-gray-700 border-gray-600'
+            : 'bg-gray-800/50 border-gray-700 hover:bg-gray-800 hover:border-gray-600'
         }`}
       >
         {selectedStack ? (
@@ -347,7 +347,7 @@ export function StackSelector() {
             <span className="text-sm font-medium text-white max-w-[140px] truncate">
               {selectedStack.name}
             </span>
-            <span className="text-[10px] text-slate-500">ns:{selectedStack.namespace}</span>
+            <span className="text-2xs text-gray-500">ns:{selectedStack.namespace}</span>
 
             {/* P/D replica counts */}
             {(() => {
@@ -355,7 +355,7 @@ export function StackSelector() {
               const dCount = selectedStack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
               const hasDisagg = pCount > 0 || dCount > 0
               return hasDisagg ? (
-                <span className="flex items-center gap-1 text-[10px]">
+                <span className="flex items-center gap-1 text-2xs">
                   <span className="text-purple-400">P:{pCount}</span>
                   <span className="text-green-400">D:{dCount}</span>
                 </span>
@@ -365,7 +365,7 @@ export function StackSelector() {
             {/* Autoscaler indicator */}
             {selectedStack.autoscaler && (
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                className={`text-2xs px-1.5 py-0.5 rounded font-medium ${
                   selectedStack.autoscaler.type === 'WVA' ? 'bg-purple-500/20 text-purple-400' :
                   selectedStack.autoscaler.type === 'HPA' ? 'bg-blue-500/20 text-blue-400' :
                   'bg-green-500/20 text-green-400'
@@ -377,37 +377,37 @@ export function StackSelector() {
             )}
 
             {isDemoMode && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">{t('common.demo')}</span>
+              <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{t('common.demo')}</span>
             )}
           </>
         ) : (
           <>
-            <Layers className="w-4 h-4 text-slate-400" />
-            <span className="text-sm text-slate-400">Select stack</span>
+            <Layers className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Select stack</span>
           </>
         )}
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown menu - use CSS transitions instead of framer-motion for better scroll performance */}
       {isOpen && (
         <div
-          className="absolute top-full left-0 mt-1 w-[36rem] bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute top-full left-0 mt-1 w-[36rem] bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
         >
             {/* Header with search */}
-            <div className="border-b border-slate-700">
+            <div className="border-b border-gray-700">
               {/* Title */}
               <div className="px-3 pt-2 pb-1">
                 <span className="text-sm font-medium text-white">
                   🎯 Focus on a Stack
                 </span>
-                <p className="text-[10px] text-slate-500 mt-0.5">
+                <p className="text-2xs text-gray-500 mt-0.5">
                   Select an inference stack to visualize its metrics
                 </p>
               </div>
 
               <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-xs font-medium text-slate-400">
+                <span className="text-xs font-medium text-muted-foreground">
                   {filteredAndSortedStacks.length} stack{filteredAndSortedStacks.length !== 1 ? 's' : ''}{searchQuery ? ` of ${stacks.length}` : ''}
                 </span>
                 <button
@@ -415,7 +415,7 @@ export function StackSelector() {
                     e.stopPropagation()
                     handleRefetch()
                   }}
-                  className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                  className="p-1 rounded hover:bg-gray-700 text-muted-foreground hover:text-white transition-colors"
                   title="Refresh stacks"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -440,19 +440,19 @@ export function StackSelector() {
               {/* Search input */}
               <div className="px-3 pb-2">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
                   <input
                     ref={searchInputRef}
                     type="text"
                     placeholder={t('common.searchStacks')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-900/50 border border-slate-700 rounded focus:outline-none focus:border-slate-600 text-white placeholder-slate-500"
+                    className="w-full pl-8 pr-8 py-1.5 text-sm bg-gray-900/50 border border-gray-700 rounded focus:outline-none focus:border-gray-600 text-white placeholder-gray-500"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-700 text-slate-500 hover:text-white"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-700 text-gray-500 hover:text-white"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -462,15 +462,15 @@ export function StackSelector() {
 
               {/* Sort options */}
               <div className="px-3 pb-2 flex items-center gap-1">
-                <span className="text-[10px] text-slate-500 mr-1">Sort:</span>
+                <span className="text-2xs text-gray-500 mr-1">Sort:</span>
                 {(['status', 'name', 'accelerators', 'replicas'] as SortField[]).map(field => (
                   <button
                     key={field}
                     onClick={() => toggleSort(field)}
-                    className={`px-2 py-0.5 text-[10px] rounded flex items-center gap-0.5 transition-colors ${
+                    className={`px-2 py-0.5 text-2xs rounded flex items-center gap-0.5 transition-colors ${
                       sortField === field
-                        ? 'bg-slate-600 text-white'
-                        : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white'
+                        ? 'bg-gray-600 text-white'
+                        : 'bg-gray-700/50 text-muted-foreground hover:bg-gray-700 hover:text-white'
                     }`}
                   >
                     {field === 'status' ? 'Health' : field === 'accelerators' ? 'GPUs/TPUs' : field.charAt(0).toUpperCase() + field.slice(1)}
@@ -488,8 +488,8 @@ export function StackSelector() {
                 Object.entries(stacksByCluster).sort(([a], [b]) => a.localeCompare(b)).map(([cluster, clusterStacks]) => (
                   <div key={cluster}>
                     {/* Cluster header */}
-                    <div className="px-3 py-1.5 bg-slate-800 border-b border-slate-700">
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700">
+                      <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {cluster}
                       </span>
                     </div>
@@ -506,28 +506,28 @@ export function StackSelector() {
                   </div>
                 ))
               ) : isLoading ? (
-                <div className="px-3 py-4 text-center text-slate-500 text-sm">
+                <div className="px-3 py-4 text-center text-gray-500 text-sm">
                   Loading stacks...
                 </div>
               ) : (
-                <div className="px-3 py-4 text-center text-slate-500 text-sm">
+                <div className="px-3 py-4 text-center text-gray-500 text-sm">
                   {searchQuery ? 'No stacks match your search' : 'No llm-d stacks found'}
                 </div>
               )}
             </div>
 
             {/* Footer stats */}
-            <div className="px-3 py-2 border-t border-slate-700 bg-slate-900/50 flex items-center justify-between text-[10px]">
+            <div className="px-3 py-2 border-t border-gray-700 bg-gray-900/50 flex items-center justify-between text-2xs">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  <span className="text-slate-400">
+                  <span className="text-muted-foreground">
                     {stacks.filter(s => s.status === 'healthy').length} healthy
                   </span>
                 </span>
                 <span className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                  <span className="text-slate-400">
+                  <span className="text-muted-foreground">
                     {stacks.filter(s => s.hasDisaggregation).length} disaggregated
                   </span>
                 </span>

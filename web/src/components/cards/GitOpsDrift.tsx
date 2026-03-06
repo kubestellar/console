@@ -341,7 +341,7 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
 
       <div className="flex items-center gap-2 mt-2 text-xs">
         <span className="text-muted-foreground">{t('gitOpsDrift.gitLabel')}</span>
-        <code className="px-1.5 py-0.5 rounded bg-secondary text-purple-400 font-mono text-[10px]">
+        <code className="px-1.5 py-0.5 rounded bg-secondary text-purple-400 font-mono text-2xs">
           {drift.gitVersion}
         </code>
       </div>

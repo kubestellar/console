@@ -38,7 +38,7 @@ const ACTION_STYLES = {
     badge: 'bg-purple-500/30',
   },
   custom: {
-    base: 'bg-gray-500/20 text-gray-500 dark:text-gray-400',
+    base: 'bg-gray-500/20 text-muted-foreground',
     hover: 'hover:bg-gray-500/30',
     badge: 'bg-gray-500/30',
   },
@@ -203,7 +203,7 @@ export function AIActionButton({
   const isDisabled = disabled || action.disabled
 
   const sizeClasses = size === 'sm'
-    ? 'px-1.5 py-1 text-[10px] gap-1'
+    ? 'px-1.5 py-1 text-2xs gap-1'
     : 'px-2 py-1.5 text-xs gap-1.5'
 
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5'

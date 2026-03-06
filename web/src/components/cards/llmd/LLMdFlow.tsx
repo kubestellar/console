@@ -961,13 +961,13 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
+    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm">
-          <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-purple-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">{t('llmd.selectStackVisualize')}</span>
-          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm">
+          <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-purple-500 animate-spin mb-4" />
+          <span className="text-muted-foreground text-sm">{t('llmd.selectStackVisualize')}</span>
+          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -977,14 +977,14 @@ export function LLMdFlow() {
           {selectedStack && (
             <div className="flex items-center gap-1.5 text-xs">
               <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[100px] ${
-                isDemoMode ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
+                isDemoMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
               }`}>
                 {selectedStack.name}
               </span>
-              <span className="text-slate-500">{selectedStack.cluster}</span>
+              <span className="text-gray-500">{selectedStack.cluster}</span>
               {/* Autoscaler indicator */}
               {selectedStack.autoscaler && (
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${
                   selectedStack.autoscaler.type === 'WVA' ? 'bg-purple-500/20 text-purple-400' :
                   selectedStack.autoscaler.type === 'HPA' ? 'bg-blue-500/20 text-blue-400' :
                   'bg-green-500/20 text-green-400'
@@ -994,12 +994,12 @@ export function LLMdFlow() {
               )}
               {/* Scaled to 0 indicator */}
               {selectedStack.autoscaler && selectedStack.totalReplicas === 0 && (
-                <span className="px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400 text-[10px] italic">
+                <span className="px-1.5 py-0.5 rounded bg-gray-700/50 text-muted-foreground text-2xs italic">
                   ⏸ Scaled to 0
                 </span>
               )}
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common:common.demo')}</span>
+                <span className="px-1 py-0.5 rounded bg-yellow-500/10 text-yellow-400 text-2xs">{t('common:common.demo')}</span>
               )}
             </div>
           )}
@@ -1009,7 +1009,7 @@ export function LLMdFlow() {
           </div>
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">{t('llmd.avgLoad')}:</span>
-            <span className={`font-mono font-medium ${avgLoad > 70 ? 'text-amber-400' : 'text-green-400'}`}>
+            <span className={`font-mono font-medium ${avgLoad > 70 ? 'text-yellow-400' : 'text-green-400'}`}>
               {avgLoad}%
             </span>
           </div>
@@ -1021,7 +1021,7 @@ export function LLMdFlow() {
             className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
               viewMode === 'horseshoe'
                 ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                : 'bg-slate-700/50 text-slate-400'
+                : 'bg-gray-700/50 text-muted-foreground'
             }`}
             title={t('llmd.toggleHorseshoe')}
           >
@@ -1032,7 +1032,7 @@ export function LLMdFlow() {
             className={`px-3 py-1 rounded text-xs font-medium transition-all ${
               isAnimating
                 ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 shadow-lg shadow-purple-500/20'
-                : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+                : 'bg-gray-700/50 text-muted-foreground hover:bg-gray-700'
             }`}
           >
             {isAnimating ? t('common:common.pause') : t('common:common.play')}
@@ -1117,15 +1117,15 @@ export function LLMdFlow() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute top-10 left-3 w-56 bg-slate-900/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700 shadow-xl"
+            className="absolute top-10 left-3 w-56 bg-gray-900/95 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl"
           >
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-white font-semibold text-sm">
                 {selectedMetrics.name}
               </h4>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+              <span className={`px-2 py-0.5 rounded-full text-2xs font-medium ${
                 selectedMetrics.status === 'healthy' ? 'bg-green-500/20 text-green-400' :
-                selectedMetrics.status === 'degraded' ? 'bg-amber-500/20 text-amber-400' :
+                selectedMetrics.status === 'degraded' ? 'bg-yellow-500/20 text-yellow-400' :
                 'bg-red-500/20 text-red-400'
               }`}>
                 {selectedMetrics.status.charAt(0).toUpperCase() + selectedMetrics.status.slice(1)}
@@ -1138,14 +1138,14 @@ export function LLMdFlow() {
                 <button
                   key={metric}
                   onClick={() => toggleMetric(metric)}
-                  className={`flex-1 px-2 py-1.5 rounded text-[10px] font-medium transition-all ${
+                  className={`flex-1 px-2 py-1.5 rounded text-2xs font-medium transition-all ${
                     selectedMetricTypes.includes(metric)
-                      ? 'bg-slate-700 text-white ring-1 ring-slate-500'
-                      : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'
+                      ? 'bg-gray-700 text-white ring-1 ring-gray-500'
+                      : 'bg-gray-800/50 text-muted-foreground hover:bg-gray-800'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-[9px] text-slate-500 uppercase">{t(`llmd.${metric}`)}</div>
+                    <div className="text-[9px] text-gray-500 uppercase">{t(`llmd.${metric}`)}</div>
                     <div className="font-mono" style={{ color: selectedMetricTypes.includes(metric) ? metricConfig[metric].color : undefined }}>
                       {metric === 'load' ? `${selectedMetrics.load}%` :
                        metric === 'queue' ? selectedMetrics.queueDepth :
@@ -1163,7 +1163,7 @@ export function LLMdFlow() {
               'grid-cols-3'
             }`}>
               {selectedMetricTypes.map(metric => (
-                <div key={metric} className="bg-slate-800/50 rounded-lg p-2">
+                <div key={metric} className="bg-gray-800/50 rounded-lg p-2">
                   <div className="text-[9px] text-muted-foreground mb-1 flex items-center gap-1">
                     <div
                       className="w-1.5 h-1.5 rounded-full"
@@ -1182,7 +1182,7 @@ export function LLMdFlow() {
             </div>
 
             {/* Hint text */}
-            <div className="text-[9px] text-slate-500 mt-2 text-center">
+            <div className="text-[9px] text-gray-500 mt-2 text-center">
               Click metrics above to compare
             </div>
           </motion.div>

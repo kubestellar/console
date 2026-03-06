@@ -157,7 +157,7 @@ export function ClusterStatusBadge({
   const config = STATE_CONFIGS[state]
   const Icon = config.icon
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
-  const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs'
+  const textSize = size === 'sm' ? 'text-2xs' : 'text-xs'
 
   // Build tooltip
   const tooltipParts: string[] = [config.label]

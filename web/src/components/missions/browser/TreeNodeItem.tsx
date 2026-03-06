@@ -29,7 +29,7 @@ export function TreeNodeItem({
       case 'community':
         return <Globe className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
       case 'github':
-        return <Github className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        return <Github className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
       case 'local':
         return <HardDrive className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
     }

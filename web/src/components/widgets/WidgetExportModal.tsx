@@ -395,17 +395,17 @@ function TemplateCard({
       <p className="text-xs text-muted-foreground mb-2">{template.description}</p>
       <div className="flex flex-wrap gap-1">
         {template.cards.map((c) => (
-          <span key={c} className="px-1.5 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] rounded">
+          <span key={c} className="px-1.5 py-0.5 bg-purple-500/20 text-purple-300 text-2xs rounded">
             {c.replace(/_/g, ' ')}
           </span>
         ))}
         {template.stats?.map((s) => (
-          <span key={s} className="px-1.5 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] rounded">
+          <span key={s} className="px-1.5 py-0.5 bg-blue-500/20 text-blue-300 text-2xs rounded">
             {s.replace(/_/g, ' ')}
           </span>
         ))}
       </div>
-      <div className="mt-2 text-[10px] text-muted-foreground">
+      <div className="mt-2 text-2xs text-muted-foreground">
         {template.size.width}×{template.size.height}px • {template.layout} layout
       </div>
     </button>
@@ -433,7 +433,7 @@ function CardItem({
     >
       <div className="font-medium text-sm">{card.displayName}</div>
       <p className="text-xs text-muted-foreground">{card.description}</p>
-      <div className="mt-1 text-[10px] text-muted-foreground">
+      <div className="mt-1 text-2xs text-muted-foreground">
         {card.defaultSize.width}×{card.defaultSize.height}px • {card.category}
       </div>
     </button>
@@ -467,7 +467,7 @@ function StatItem({
       </div>
       <div>
         <div className="font-medium text-sm">{stat.displayName}</div>
-        <div className="text-[10px] text-muted-foreground">
+        <div className="text-2xs text-muted-foreground">
           {stat.format} • {stat.size.width}×{stat.size.height}px
         </div>
       </div>

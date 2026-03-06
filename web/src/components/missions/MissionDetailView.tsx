@@ -320,7 +320,7 @@ export function MissionDetailView({
           {onImprove && (
             <button
               onClick={onImprove}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors"
               title="Suggest improvements to this AI mission"
             >
               <MessageSquarePlus className="w-3.5 h-3.5" />
@@ -588,7 +588,7 @@ export function MissionDetailView({
                 {onImprove && (
                   <button
                     onClick={onImprove}
-                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors"
+                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors"
                   >
                     <MessageSquarePlus className="w-3.5 h-3.5" />
                     Help improve this section

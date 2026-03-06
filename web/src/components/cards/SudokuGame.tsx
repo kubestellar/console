@@ -225,10 +225,10 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
 
   // Use large cells when expanded for playability (70px cells = 630px grid)
   const isMaximized = isExpanded
-  const cellSize = isMaximized ? 'w-[70px] h-[70px] text-3xl' : 'w-6 h-6 text-[10px]'
+  const cellSize = isMaximized ? 'w-[70px] h-[70px] text-3xl' : 'w-6 h-6 text-2xs'
   const noteSize = isMaximized ? 'text-sm' : 'text-[5px]'
-  const numberPadSize = isMaximized ? 'h-12 text-xl' : 'h-6 text-[10px]'
-  const controlButtonSize = isMaximized ? 'px-5 py-3 text-base' : 'px-1 py-1 text-[10px]'
+  const numberPadSize = isMaximized ? 'h-12 text-xl' : 'h-6 text-2xs'
+  const controlButtonSize = isMaximized ? 'px-5 py-3 text-base' : 'px-1 py-1 text-2xs'
   const iconSize = isMaximized ? 'w-5 h-5' : 'w-2.5 h-2.5'
 
   // Load saved state and best times
@@ -453,7 +453,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
       </div>
 
       {/* Game info */}
-      <div className={`flex items-center justify-between ${isMaximized ? 'mb-4 text-sm' : 'mb-1.5 text-[10px]'}`}>
+      <div className={`flex items-center justify-between ${isMaximized ? 'mb-4 text-sm' : 'mb-1.5 text-2xs'}`}>
         <div className={`flex items-center ${isMaximized ? 'gap-4' : 'gap-2'}`}>
           <span className={`${isMaximized ? 'px-3 py-1' : 'px-1.5 py-0.5'} rounded bg-purple-500/20 text-purple-400 font-medium`}>
             {DIFFICULTIES[gameState.difficulty].label}

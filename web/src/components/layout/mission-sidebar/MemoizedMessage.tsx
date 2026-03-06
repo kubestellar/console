@@ -162,12 +162,12 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
           <p className={cn("text-foreground whitespace-pre-wrap", FONT_SIZE_CLASSES[fontSize].split(' ')[0])}>{msg.content}</p>
         )}
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {msg.timestamp.toLocaleTimeString()}
           </span>
           {/* Show working indicator if this is the last assistant message, mission is running, and content indicates work */}
           {isLastAssistantMessage && missionStatus === 'running' && msg.role === 'assistant' && detectWorkingIndicator(msg.content) && (
-            <span className="flex items-center gap-1 text-[10px] text-blue-400 animate-pulse">
+            <span className="flex items-center gap-1 text-2xs text-blue-400 animate-pulse">
               <Loader2 className="w-3 h-3 animate-spin" />
               {detectWorkingIndicator(msg.content)}...
             </span>

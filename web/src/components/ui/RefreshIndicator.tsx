@@ -62,7 +62,7 @@ export function RefreshIndicator({
     (Date.now() - lastUpdated.getTime()) > staleThresholdMinutes * 60 * 1000
 
   const iconSize = size === 'xs' ? 'w-2.5 h-2.5' : size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
-  const textSize = size === 'xs' ? 'text-[9px]' : size === 'sm' ? 'text-[10px]' : 'text-xs'
+  const textSize = size === 'xs' ? 'text-[9px]' : size === 'sm' ? 'text-2xs' : 'text-xs'
 
   const tooltip = lastUpdated
     ? `Last updated: ${lastUpdated.toLocaleTimeString()}`
@@ -91,7 +91,7 @@ export function RefreshIndicator({
     <span
       className={cn(
         'inline-flex items-center gap-0.5',
-        isStale ? 'text-amber-400' : 'text-muted-foreground',
+        isStale ? 'text-yellow-400' : 'text-muted-foreground',
         textSize,
         className
       )}

@@ -331,7 +331,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
               <lens.icon className="w-3.5 h-3.5" />
               {lens.label}
               {lens.count !== undefined && lens.count > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-400">
+                <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-2xs bg-red-500/20 text-red-400">
                   {lens.count}
                 </span>
               )}
@@ -539,7 +539,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:pods`}
                                 label={t('resourceTree.pods')}
                                 icon={ResourceIcon.pod}
-                                iconColor="text-teal-400"
+                                iconColor="text-cyan-400"
                                 count={nsData.pods.length}
                                 badge={nsPodIssues > 0 ? nsPodIssues : undefined}
                                 badgeColor="bg-red-500/20 text-red-400"
@@ -601,7 +601,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:pvcs`}
                                 label={t('resourceTree.pvcs')}
                                 icon={ResourceIcon.pvc}
-                                iconColor="text-emerald-400"
+                                iconColor="text-green-400"
                                 count={nsData.pvcs.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}
@@ -716,7 +716,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:jobs`}
                                 label={t('resourceTree.jobs')}
                                 icon={ResourceIcon.job}
-                                iconColor="text-amber-400"
+                                iconColor="text-yellow-400"
                                 count={nsData.jobs.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}
@@ -749,7 +749,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:hpas`}
                                 label={t('resourceTree.hpas')}
                                 icon={ResourceIcon.hpa}
-                                iconColor="text-violet-400"
+                                iconColor="text-purple-400"
                                 count={nsData.hpas.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}
@@ -761,9 +761,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     id={`${nsId}:hpa:${hpa.name}`}
                                     label={hpa.name}
                                     icon={ResourceIcon.hpa}
-                                    iconColor="text-violet-400"
+                                    iconColor="text-purple-400"
                                     badge={`${hpa.currentReplicas} (${hpa.minReplicas}-${hpa.maxReplicas})`}
-                                    badgeColor="bg-violet-500/20 text-violet-400"
+                                    badgeColor="bg-purple-500/20 text-purple-400"
                                     indent={5}
                                     expandedNodes={expandedNodes}
                                     toggleNode={toggleNode}
@@ -842,7 +842,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:daemonsets`}
                                 label={t('resourceTree.daemonSets')}
                                 icon={ResourceIcon.daemonset}
-                                iconColor="text-teal-400"
+                                iconColor="text-cyan-400"
                                 count={nsData.daemonsets.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}
@@ -874,7 +874,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:cronjobs`}
                                 label={t('resourceTree.cronJobs')}
                                 icon={ResourceIcon.cronjob}
-                                iconColor="text-amber-400"
+                                iconColor="text-yellow-400"
                                 count={nsData.cronjobs.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}
@@ -886,9 +886,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     id={`${nsId}:cj:${cj.name}`}
                                     label={cj.name}
                                     icon={ResourceIcon.cronjob}
-                                    iconColor={cj.suspend ? 'text-gray-400' : 'text-amber-400'}
+                                    iconColor={cj.suspend ? 'text-muted-foreground' : 'text-yellow-400'}
                                     badge={cj.suspend ? t('resourceTree.suspended') : cj.schedule}
-                                    badgeColor={cj.suspend ? 'bg-gray-500/20 text-gray-400' : 'bg-amber-500/20 text-amber-400'}
+                                    badgeColor={cj.suspend ? 'bg-gray-500/20 text-muted-foreground' : 'bg-yellow-500/20 text-yellow-400'}
                                     indent={5}
                                     expandedNodes={expandedNodes}
                                     toggleNode={toggleNode}
@@ -903,7 +903,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:ingresses`}
                                 label={t('resourceTree.ingresses')}
                                 icon={ResourceIcon.ingress}
-                                iconColor="text-sky-400"
+                                iconColor="text-blue-400"
                                 count={nsData.ingresses.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}
@@ -915,9 +915,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     id={`${nsId}:ing:${ing.name}`}
                                     label={ing.name}
                                     icon={ResourceIcon.ingress}
-                                    iconColor="text-sky-400"
+                                    iconColor="text-blue-400"
                                     badge={ing.hosts.length > 0 ? ing.hosts.join(', ') : ing.class || t('resourceTree.noHost')}
-                                    badgeColor="bg-sky-500/20 text-sky-400"
+                                    badgeColor="bg-blue-500/20 text-blue-400"
                                     indent={5}
                                     expandedNodes={expandedNodes}
                                     toggleNode={toggleNode}
@@ -932,7 +932,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                 id={`${nsId}:networkpolicies`}
                                 label={t('resourceTree.networkPolicies')}
                                 icon={ResourceIcon.networkpolicy}
-                                iconColor="text-rose-400"
+                                iconColor="text-red-400"
                                 count={nsData.networkpolicies.length}
                                 indent={4}
                                 expandedNodes={expandedNodes}
@@ -944,9 +944,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     id={`${nsId}:np:${np.name}`}
                                     label={np.name}
                                     icon={ResourceIcon.networkpolicy}
-                                    iconColor="text-rose-400"
+                                    iconColor="text-red-400"
                                     badge={(np.policyTypes || []).join(', ') || t('resourceTree.noTypes')}
-                                    badgeColor="bg-rose-500/20 text-rose-400"
+                                    badgeColor="bg-red-500/20 text-red-400"
                                     indent={5}
                                     expandedNodes={expandedNodes}
                                     toggleNode={toggleNode}

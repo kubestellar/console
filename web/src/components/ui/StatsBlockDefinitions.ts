@@ -277,7 +277,7 @@ export const DEPLOY_STAT_BLOCKS: StatBlockConfig[] = [
  * Default stat blocks for the Kagenti AI Agents dashboard
  */
 export const KAGENTI_STAT_BLOCKS: StatBlockConfig[] = [
-  { id: 'agents', name: 'Agents', icon: 'Bot', visible: true, color: 'violet' },
+  { id: 'agents', name: 'Agents', icon: 'Bot', visible: true, color: 'purple' },
   { id: 'ready_agents', name: 'Ready', icon: 'CheckCircle2', visible: true, color: 'green' },
   { id: 'active_builds', name: 'Building', icon: 'Hammer', visible: true, color: 'blue' },
   { id: 'tools', name: 'MCP Tools', icon: 'Wrench', visible: true, color: 'cyan' },

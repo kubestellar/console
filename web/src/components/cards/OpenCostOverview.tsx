@@ -196,7 +196,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
                 style={{ width: `${(ns.totalCost / maxCost) * 100}%` }}
               />
             </div>
-            <div className="flex gap-3 text-[10px] text-muted-foreground">
+            <div className="flex gap-3 text-2xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Server className="w-2.5 h-2.5" />
                 CPU: ${ns.cpuCost}

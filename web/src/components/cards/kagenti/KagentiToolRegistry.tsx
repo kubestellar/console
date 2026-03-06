@@ -98,9 +98,9 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
               </span>
             )}
             {tool.hasCredential ? (
-              <Shield className="w-3 h-3 text-emerald-400" />
+              <Shield className="w-3 h-3 text-green-400" />
             ) : (
-              <ShieldOff className="w-3 h-3 text-zinc-500" />
+              <ShieldOff className="w-3 h-3 text-gray-500" />
             )}
           </div>
         ))}

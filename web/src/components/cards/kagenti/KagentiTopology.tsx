@@ -163,7 +163,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
                 <>
                   <rect x={node.x - 12} y={node.y - 12} width={24} height={24} rx={4} fill={node.color} opacity={0.15} />
                   <rect x={node.x - 9} y={node.y - 9} width={18} height={18} rx={3} fill="none" stroke={node.color} strokeWidth={1.5} />
-                  <Wrench x={node.x - 5} y={node.y - 5} width={10} height={10} className="text-gray-400" />
+                  <Wrench x={node.x - 5} y={node.y - 5} width={10} height={10} className="text-muted-foreground" />
                 </>
               )}
               <text

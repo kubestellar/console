@@ -75,13 +75,13 @@ const ResourceIcons: Record<ResourceType, typeof Container> = {
 
 // Colors for resource types
 const ResourceColors: Record<ResourceType, string> = {
-  pods: 'text-teal-400',
+  pods: 'text-cyan-400',
   deployments: 'text-green-400',
   services: 'text-blue-400',
   configmaps: 'text-orange-400',
   secrets: 'text-red-400',
-  pvcs: 'text-emerald-400',
-  jobs: 'text-amber-400',
+  pvcs: 'text-green-400',
+  jobs: 'text-yellow-400',
 }
 
 // Animation classes for changes
@@ -577,7 +577,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                   })()}
                   <span className="text-xs font-medium text-foreground truncate">{change.name}</span>
                 </div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-2xs text-muted-foreground">
                   {change.namespace} • {new Date(change.timestamp).toLocaleTimeString()}
                 </div>
               </div>
@@ -928,7 +928,7 @@ function ResourceSection({
               >
                 {item.name}
               </span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+              <span className={`text-2xs px-1.5 py-0.5 rounded ${
                 item.healthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
               }`}>
                 {item.status}
@@ -946,7 +946,7 @@ function ResourceSection({
           )
         })}
         {items.length > 10 && (
-          <div className="text-[10px] text-muted-foreground px-2 py-1">
+          <div className="text-2xs text-muted-foreground px-2 py-1">
             +{items.length - 10} more
           </div>
         )}

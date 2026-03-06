@@ -663,7 +663,7 @@ data:
                   >
                     <div className="flex items-center justify-between">
                       <span>{manifest.name}</span>
-                      <span className="text-[10px]">{manifest.timestamp.toLocaleTimeString()}</span>
+                      <span className="text-2xs">{manifest.timestamp.toLocaleTimeString()}</span>
                     </div>
                   </button>
                 ))}
@@ -711,11 +711,11 @@ data:
                     )}
                     <span className="text-muted-foreground truncate">{item.command}</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground ml-2 flex-shrink-0">
+                  <span className="text-2xs text-muted-foreground ml-2 flex-shrink-0">
                     {item.timestamp.toLocaleTimeString()}
                   </span>
                 </div>
-                <div className="text-[10px] text-muted-foreground/60 mt-0.5 truncate">
+                <div className="text-2xs text-muted-foreground/60 mt-0.5 truncate">
                   {item.context}
                 </div>
               </button>
@@ -810,7 +810,7 @@ data:
             <button
               onClick={() => setIsDryRun(!isDryRun)}
               className={cn(
-                'px-2 py-1 text-[10px] rounded',
+                'px-2 py-1 text-2xs rounded',
                 isDryRun ? 'bg-yellow-500/20 text-yellow-400' : 'text-muted-foreground hover:bg-secondary'
               )}
               title="Toggle dry-run mode"
@@ -844,32 +844,32 @@ data:
         <span className="text-xs text-muted-foreground">{t('cards:kubectl.quickCommands')}:</span>
         <button
           onClick={() => setCommand('get pods --all-namespaces')}
-          className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
+          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
           {t('cards:kubectl.listPods')}
         </button>
         <button
           onClick={() => setCommand('get deployments')}
-          className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
+          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
           {t('common:common.deployments')}
         </button>
         <button
           onClick={() => setCommand('get services')}
-          className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
+          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
           {t('common:common.services')}
         </button>
         <button
           onClick={() => setCommand('get nodes')}
-          className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
+          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
         >
           {t('common:common.nodes')}
         </button>
         <button
           onClick={copyOutput}
           disabled={output.length === 0}
-          className="px-2 py-1 text-[10px] rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
+          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
         >
           <Copy className="w-3 h-3 inline mr-1" />
           {t('cards:kubectl.copyOutput')}

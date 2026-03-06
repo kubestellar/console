@@ -365,7 +365,7 @@ export function CardClusterFilter({
                   <ClusterStatusDot state={clusterState} size="sm" />
                   <span className="flex-1 truncate">{cluster.name}</span>
                   {stateLabel && (
-                    <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
+                    <span className="text-2xs text-muted-foreground shrink-0">{stateLabel}</span>
                   )}
                 </button>
               )
@@ -620,7 +620,7 @@ export function CardFilterChips({ chips, activeChip, onChipClick }: CardFilterCh
             <span className="capitalize">{chip.label}</span>
             {chip.count !== undefined && (
               <span
-                className={`px-1 rounded text-[10px] ${isActive ? 'bg-purple-500/30' : 'bg-secondary'
+                className={`px-1 rounded text-2xs ${isActive ? 'bg-purple-500/30' : 'bg-secondary'
                   }`}
               >
                 {chip.count}

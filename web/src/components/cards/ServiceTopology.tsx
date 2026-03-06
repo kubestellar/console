@@ -154,7 +154,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center gap-3 mb-2 text-[10px]">
+      <div className="flex items-center gap-3 mb-2 text-2xs">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-purple-500" />
           <span className="text-muted-foreground">{t('serviceTopology.nClusters', { count: DEMO_STATS.clusters })}</span>
@@ -191,7 +191,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
               refY="3"
               orient="auto"
             >
-              <polygon points="0 0, 6 3, 0 6" className="fill-current text-gray-400" />
+              <polygon points="0 0, 6 3, 0 6" className="fill-current text-muted-foreground" />
             </marker>
 
             {/* Animated dash pattern for traffic */}
@@ -358,7 +358,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
             <ClusterBadge cluster={selectedNodeData.cluster} />
           </div>
           {selectedNodeData.namespace && (
-            <p className="text-muted-foreground text-[10px]">{t('common:common.namespace')}: {selectedNodeData.namespace}</p>
+            <p className="text-muted-foreground text-2xs">{t('common:common.namespace')}: {selectedNodeData.namespace}</p>
           )}
           {selectedNodeData.metadata && (
             <div className="flex flex-wrap gap-1 mt-1">

@@ -14,7 +14,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   cluster_focus: { icon: Server, color: 'text-purple-400' },
   cluster_network: { icon: Network, color: 'text-cyan-400' },
   cluster_comparison: { icon: Layers, color: 'text-blue-400' },
-  cluster_costs: { icon: TrendingUp, color: 'text-emerald-400' },
+  cluster_costs: { icon: TrendingUp, color: 'text-green-400' },
   cluster_metrics: { icon: Activity, color: 'text-purple-400' },
   cluster_locations: { icon: Globe, color: 'text-blue-400' },
   cluster_resource_tree: { icon: GitBranch, color: 'text-purple-400' },
@@ -62,7 +62,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   operator_status: { icon: Package, color: 'text-purple-400' },
   operator_subscriptions: { icon: Package, color: 'text-purple-400' },
   operator_subscription_status: { icon: Package, color: 'text-blue-400' },
-  crd_health: { icon: Database, color: 'text-teal-400' },
+  crd_health: { icon: Database, color: 'text-cyan-400' },
   configmap_status: { icon: FileCode, color: 'text-blue-400' },
 
   // Helm/GitOps cards
@@ -74,7 +74,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   kustomization_status: { icon: Layers, color: 'text-purple-400' },
   buildpacks_status: { icon: Package, color: 'text-purple-400' },
   overlay_comparison: { icon: Layers, color: 'text-blue-400' },
-  chart_versions: { icon: Package, color: 'text-emerald-400' },
+  chart_versions: { icon: Package, color: 'text-green-400' },
 
   // ArgoCD cards
   argocd_applications: { icon: GitBranch, color: 'text-orange-400' },
@@ -134,11 +134,11 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   console_ai_issues: { icon: Wand2, color: 'text-purple-400' },
   console_ai_kubeconfig_audit: { icon: Wand2, color: 'text-purple-400' },
   console_ai_health_check: { icon: Wand2, color: 'text-purple-400' },
-  console_ai_offline_detection: { icon: Stethoscope, color: 'text-emerald-400' },
+  console_ai_offline_detection: { icon: Stethoscope, color: 'text-green-400' },
 
   // Cost cards
-  opencost_overview: { icon: TrendingUp, color: 'text-emerald-400' },
-  kubecost_overview: { icon: TrendingUp, color: 'text-emerald-400' },
+  opencost_overview: { icon: TrendingUp, color: 'text-green-400' },
+  kubecost_overview: { icon: TrendingUp, color: 'text-green-400' },
 
   // Compliance and security tools
   falco_alerts: { icon: AlertTriangle, color: 'text-red-400' },
@@ -182,7 +182,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   wasmcloud_status: { icon: Box, color: 'text-purple-400' },
 
   // Provider health
-  provider_health: { icon: Activity, color: 'text-emerald-400' },
+  provider_health: { icon: Activity, color: 'text-green-400' },
   // CoreDNS
   coredns_status: { icon: Network, color: 'text-cyan-400' },
 
@@ -190,7 +190,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   sudoku_game: { icon: Puzzle, color: 'text-purple-400' },
   match_game: { icon: Puzzle, color: 'text-purple-400' },
   solitaire: { icon: Gamepad2, color: 'text-red-400' },
-  checkers: { icon: Crown, color: 'text-amber-400' },
+  checkers: { icon: Crown, color: 'text-yellow-400' },
   game_2048: { icon: Gamepad2, color: 'text-orange-400' },
   kubedle: { icon: Target, color: 'text-green-400' },
   pod_sweeper: { icon: Zap, color: 'text-red-400' },
@@ -208,6 +208,6 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   kube_galaga: { icon: Rocket, color: 'text-blue-400' },
   kube_doom: { icon: Gamepad2, color: 'text-red-400' },
   kube_craft: { icon: Puzzle, color: 'text-brown-400' },
-  kube_chess: { icon: Crown, color: 'text-amber-400' },
+  kube_chess: { icon: Crown, color: 'text-yellow-400' },
   kube_craft_3d: { icon: Puzzle, color: 'text-green-400' },
 }

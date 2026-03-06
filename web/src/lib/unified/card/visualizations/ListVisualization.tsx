@@ -200,7 +200,7 @@ export function ListVisualization({
 
       {/* Pagination footer */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 text-xs text-gray-400">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 text-xs text-muted-foreground">
           <span>
             {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, data.length)} of {data.length}
           </span>
@@ -328,7 +328,7 @@ function ListItem({
               ${column.width ? '' : 'flex-1'}
               ${column.align === 'center' ? 'text-center' : ''}
               ${column.align === 'right' ? 'text-right' : ''}
-              ${isPrimary ? 'font-medium text-gray-200' : 'text-gray-400'}
+              ${isPrimary ? 'font-medium text-gray-200' : 'text-muted-foreground'}
               ${colIndex === 0 && !rowNumber ? 'flex-1' : ''}
               truncate
             `}

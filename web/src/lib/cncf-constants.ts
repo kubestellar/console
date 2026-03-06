@@ -29,9 +29,9 @@ export const CNCF_CATEGORY_ICONS: Record<string, string> = {
 }
 
 export const MATURITY_CONFIG: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  graduated: { color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30', label: 'Graduated' },
+  graduated: { color: 'text-green-400', bg: 'bg-green-500/15', border: 'border-green-500/30', label: 'Graduated' },
   incubating: { color: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/30', label: 'Incubating' },
-  sandbox: { color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/30', label: 'Sandbox' },
+  sandbox: { color: 'text-yellow-400', bg: 'bg-yellow-500/15', border: 'border-yellow-500/30', label: 'Sandbox' },
 }
 
 export const DIFFICULTY_CONFIG: Record<string, { color: string; bg: string }> = {

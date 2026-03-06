@@ -78,7 +78,7 @@ export function QuotaHeatmap() {
               title={`${ns.namespace} (${ns.cluster}): ${ns.podCount} pods`}
             >
               <div className="truncate font-medium">{ns.namespace}</div>
-              <div className="text-[10px] opacity-75">{t('quotaHeatmap.podsCount', { count: ns.podCount })}</div>
+              <div className="text-2xs opacity-75">{t('quotaHeatmap.podsCount', { count: ns.podCount })}</div>
             </button>
           )
         })}

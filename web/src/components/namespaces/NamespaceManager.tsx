@@ -367,7 +367,7 @@ export function NamespaceManager() {
   if (targetClusters.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6">
-        <AlertTriangle className="w-16 h-16 text-amber-400 mb-4" />
+        <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">No Clusters Selected</h2>
         <p className="text-muted-foreground text-center max-w-md">
           Select one or more clusters using the filter in the navigation bar to manage namespaces.
@@ -734,7 +734,7 @@ function NamespaceCard({ namespace, isSelected, onSelect, onDelete, isSystem, sh
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
         isSystem ? 'bg-gray-500/20' : 'bg-blue-500/20'
       }`}>
-        <Folder className={`w-5 h-5 ${isSystem ? 'text-gray-400' : 'text-blue-400'}`} />
+        <Folder className={`w-5 h-5 ${isSystem ? 'text-muted-foreground' : 'text-blue-400'}`} />
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2">

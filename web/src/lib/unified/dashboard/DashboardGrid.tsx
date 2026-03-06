@@ -252,7 +252,7 @@ function DashboardCardWrapper({
             title="Drag to reorder"
           >
             <svg
-              className="w-4 h-4 text-gray-400"
+              className="w-4 h-4 text-muted-foreground"
               fill="currentColor"
               viewBox="0 0 24 24"
             >
@@ -267,7 +267,7 @@ function DashboardCardWrapper({
             {onConfigure && (
               <button
                 onClick={onConfigure}
-                className="p-1 rounded bg-gray-800/50 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                className="p-1 rounded bg-gray-800/50 hover:bg-gray-700 text-muted-foreground hover:text-white transition-colors"
                 title="Configure card"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,7 +279,7 @@ function DashboardCardWrapper({
             {onRemove && (
               <button
                 onClick={onRemove}
-                className="p-1 rounded bg-gray-800/50 hover:bg-red-900/50 text-gray-400 hover:text-red-400 transition-colors"
+                className="p-1 rounded bg-gray-800/50 hover:bg-red-900/50 text-muted-foreground hover:text-red-400 transition-colors"
                 title="Remove card"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

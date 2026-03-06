@@ -274,7 +274,7 @@ export function TopPods({ config }: TopPodsProps) {
                       <span className="text-xs font-medium text-blue-400">
                         {formatCpu(getEffectiveCpu(pod))}
                       </span>
-                      {pod.metricsAvailable && <span className="text-[10px] text-blue-400/60">▲</span>}
+                      {pod.metricsAvailable && <span className="text-2xs text-blue-400/60">▲</span>}
                     </>
                   )}
                   {sortBy === 'memory' && (
@@ -283,7 +283,7 @@ export function TopPods({ config }: TopPodsProps) {
                       <span className="text-xs font-medium text-purple-400">
                         {formatMemory(getEffectiveMemory(pod))}
                       </span>
-                      {pod.metricsAvailable && <span className="text-[10px] text-purple-400/60">▲</span>}
+                      {pod.metricsAvailable && <span className="text-2xs text-purple-400/60">▲</span>}
                     </>
                   )}
                   {sortBy === 'gpu' && (
@@ -362,7 +362,7 @@ export function TopPods({ config }: TopPodsProps) {
                     >
                       <Cpu className="w-3 h-3" />
                       {formatCpu(getEffectiveCpu(pod))}
-                      {pod.metricsAvailable && <span className="text-[10px] opacity-60">▲</span>}
+                      {pod.metricsAvailable && <span className="text-2xs opacity-60">▲</span>}
                     </span>
                   ) : null}
                   {getEffectiveMemory(pod) > 0 ? (
@@ -374,7 +374,7 @@ export function TopPods({ config }: TopPodsProps) {
                     >
                       <MemoryStick className="w-3 h-3" />
                       {formatMemory(getEffectiveMemory(pod))}
-                      {pod.metricsAvailable && <span className="text-[10px] opacity-60">▲</span>}
+                      {pod.metricsAvailable && <span className="text-2xs opacity-60">▲</span>}
                     </span>
                   ) : null}
                   {pod.gpuRequest ? (

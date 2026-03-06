@@ -9,7 +9,7 @@ export const podSweeperConfig: UnifiedCardConfig = {
   category: 'games',
   description: 'Kubernetes-themed minesweeper',
   icon: 'Bomb',
-  iconColor: 'text-gray-400',
+  iconColor: 'text-muted-foreground',
   defaultWidth: 6,
   defaultHeight: 4,
   dataSource: { type: 'static' },

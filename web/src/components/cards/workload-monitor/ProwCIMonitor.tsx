@@ -47,7 +47,7 @@ const STATE_BADGE: Record<string, string> = {
   running: 'bg-blue-500/20 text-blue-400',
   pending: 'bg-yellow-500/20 text-yellow-400',
   triggered: 'bg-purple-500/20 text-purple-400',
-  aborted: 'bg-gray-500/20 text-gray-400',
+  aborted: 'bg-gray-500/20 text-muted-foreground',
 }
 
 const STATE_ICON: Record<string, typeof CheckCircle> = {
@@ -230,19 +230,19 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
       <div className="grid grid-cols-4 gap-2 mb-3">
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-green-400">{stats.successRate}%</p>
-          <p className="text-[10px] text-muted-foreground">Success Rate</p>
+          <p className="text-2xs text-muted-foreground">Success Rate</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-red-400">{stats.failed}</p>
-          <p className="text-[10px] text-muted-foreground">{t('common.failed')}</p>
+          <p className="text-2xs text-muted-foreground">{t('common.failed')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-blue-400">{stats.running}</p>
-          <p className="text-[10px] text-muted-foreground">{t('common.running')}</p>
+          <p className="text-2xs text-muted-foreground">{t('common.running')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-yellow-400">{stats.pending}</p>
-          <p className="text-[10px] text-muted-foreground">{t('common.pending')}</p>
+          <p className="text-2xs text-muted-foreground">{t('common.pending')}</p>
         </div>
       </div>
 
@@ -283,18 +283,18 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
                 job.state === 'running' ? 'text-blue-400' : 'text-muted-foreground',
               )} />
               <span className="text-xs text-foreground truncate flex-1">{job.name}</span>
-              <span className={cn('text-[10px] px-1 py-0.5 rounded shrink-0', TYPE_BADGE[job.type] || 'bg-gray-500/20 text-gray-400')}>
+              <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', TYPE_BADGE[job.type] || 'bg-gray-500/20 text-muted-foreground')}>
                 {job.type}
               </span>
-              <span className={cn('text-[10px] px-1 py-0.5 rounded shrink-0', STATE_BADGE[job.state] || 'bg-gray-500/20 text-gray-400')}>
+              <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', STATE_BADGE[job.state] || 'bg-gray-500/20 text-muted-foreground')}>
                 {job.state}
               </span>
               {job.pr && (
-                <span className="text-[10px] text-muted-foreground shrink-0">
+                <span className="text-2xs text-muted-foreground shrink-0">
                   #{job.pr}
                 </span>
               )}
-              <span className="text-[10px] text-muted-foreground shrink-0">
+              <span className="text-2xs text-muted-foreground shrink-0">
                 {job.duration}
               </span>
             </div>

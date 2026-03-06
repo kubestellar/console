@@ -164,7 +164,7 @@ export function WarningEvents() {
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">Error loading events</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Failed to fetch event data ({consecutiveFailures} attempts)</p>
+            <p className="text-2xs text-muted-foreground mt-0.5">Failed to fetch event data ({consecutiveFailures} attempts)</p>
           </div>
         </div>
       )}

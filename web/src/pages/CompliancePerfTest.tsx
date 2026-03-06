@@ -139,7 +139,7 @@ export function CompliancePerfTest() {
                   {CardComponent ? (
                     <CardComponent config={{ perfMode: true }} />
                   ) : (
-                    <div data-testid={`compliance-missing-${item.cardType}`} className="text-xs text-amber-300">
+                    <div data-testid={`compliance-missing-${item.cardType}`} className="text-xs text-yellow-300">
                       Missing card component: {item.cardType}
                     </div>
                   )}

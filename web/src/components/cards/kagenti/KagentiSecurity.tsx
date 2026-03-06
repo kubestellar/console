@@ -42,25 +42,25 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
       {/* SPIFFE Coverage */}
       <div className="rounded-lg border border-border bg-secondary p-3">
         <div className="flex items-center gap-2 mb-2">
-          <Shield className="w-4 h-4 text-violet-400" />
+          <Shield className="w-4 h-4 text-purple-400" />
           <span className="text-sm text-foreground font-medium">SPIFFE Identity Coverage</span>
         </div>
         <div className="flex items-center gap-3 mb-2">
           <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${stats.pct >= 80 ? 'bg-emerald-500' : stats.pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+              className={`h-full rounded-full transition-all ${stats.pct >= 80 ? 'bg-green-500' : stats.pct >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
               style={{ width: `${stats.pct}%` }}
             />
           </div>
           <span className="text-lg font-bold text-white">{stats.pct}%</span>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded bg-emerald-400/10 py-1.5">
-            <div className="text-sm font-bold text-emerald-400">{stats.strict}</div>
+          <div className="rounded bg-green-400/10 py-1.5">
+            <div className="text-sm font-bold text-green-400">{stats.strict}</div>
             <div className="text-xs text-muted-foreground">Strict</div>
           </div>
-          <div className="rounded bg-amber-400/10 py-1.5">
-            <div className="text-sm font-bold text-amber-400">{stats.permissive}</div>
+          <div className="rounded bg-yellow-400/10 py-1.5">
+            <div className="text-sm font-bold text-yellow-400">{stats.permissive}</div>
             <div className="text-xs text-muted-foreground">Permissive</div>
           </div>
           <div className="rounded bg-red-400/10 py-1.5">
@@ -93,7 +93,7 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
 
       {/* All bound */}
       {unboundAgents.length === 0 && stats.total > 0 && (
-        <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-400/5 rounded-lg p-3 border border-emerald-400/10">
+        <div className="flex items-center gap-2 text-xs text-green-400 bg-green-400/5 rounded-lg p-3 border border-green-400/10">
           <ShieldCheck className="w-4 h-4" />
           <span>All {stats.total} agents have SPIFFE identity binding</span>
         </div>

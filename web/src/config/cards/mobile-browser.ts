@@ -9,7 +9,7 @@ export const mobileBrowserConfig: UnifiedCardConfig = {
   category: 'utility',
   description: 'Mobile web browser emulator',
   icon: 'Smartphone',
-  iconColor: 'text-gray-400',
+  iconColor: 'text-muted-foreground',
   defaultWidth: 5,
   defaultHeight: 4,
   dataSource: { type: 'static' },

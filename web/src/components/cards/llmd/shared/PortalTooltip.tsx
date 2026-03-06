@@ -50,7 +50,7 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
     <>
       <span
         ref={triggerRef}
-        className={`cursor-help border-b border-dotted border-slate-500 ${className}`}
+        className={`cursor-help border-b border-dotted border-gray-500 ${className}`}
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
       >
@@ -72,7 +72,7 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
                 transform: 'translate(-50%, -100%)',
               }}
             >
-              <div className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs whitespace-nowrap shadow-xl backdrop-blur-sm">
+              <div className="px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-xs whitespace-nowrap shadow-xl backdrop-blur-sm">
                 {content}
               </div>
             </motion.div>
@@ -122,7 +122,7 @@ export function Acronym({ term, className = '' }: AcronymProps) {
         <>
           <span className="font-semibold text-white">{def.full}</span>
           <br />
-          <span className="text-slate-400">{def.desc}</span>
+          <span className="text-muted-foreground">{def.desc}</span>
         </>
       }
     >

@@ -66,7 +66,7 @@ const getViewIcon = (type: string) => {
     case 'gpu-node': return <Cpu className="w-4 h-4 text-purple-400" />
     case 'gpu-namespace': return <Box className="w-4 h-4 text-purple-400" />
     case 'logs': return <FileText className="w-4 h-4 text-yellow-400" />
-    case 'events': return <Zap className="w-4 h-4 text-amber-400" />
+    case 'events': return <Zap className="w-4 h-4 text-yellow-400" />
     // Phase 2 view types
     case 'alert': return <Bell className="w-4 h-4 text-red-400" />
     case 'helm': return <Ship className="w-4 h-4 text-blue-400" />
@@ -84,13 +84,13 @@ const getViewIcon = (type: string) => {
     case 'all-pods': return <Box className="w-4 h-4 text-cyan-400" />
     case 'all-services': return <Layers className="w-4 h-4 text-indigo-400" />
     case 'all-nodes': return <Server className="w-4 h-4 text-orange-400" />
-    case 'all-events': return <Zap className="w-4 h-4 text-amber-400" />
+    case 'all-events': return <Zap className="w-4 h-4 text-yellow-400" />
     case 'all-alerts': return <Bell className="w-4 h-4 text-red-400" />
     case 'all-helm': return <Ship className="w-4 h-4 text-blue-400" />
     case 'all-operators': return <Settings className="w-4 h-4 text-purple-400" />
     case 'all-security': return <Shield className="w-4 h-4 text-red-400" />
     case 'all-gpu': return <Cpu className="w-4 h-4 text-purple-400" />
-    case 'all-storage': return <Package className="w-4 h-4 text-emerald-400" />
+    case 'all-storage': return <Package className="w-4 h-4 text-green-400" />
     case 'all-jobs': return <Rocket className="w-4 h-4 text-yellow-400" />
     default: return null
   }

@@ -96,7 +96,7 @@ export function ClusterDropZone({
               Deploy Workload
               {isDemo && <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">(Demo)</span>}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="text-xs text-muted-foreground">
               {draggedWorkload.name} ({draggedWorkload.type})
             </div>
           </div>
@@ -108,8 +108,8 @@ export function ClusterDropZone({
           </div>
         ) : availableClusters.length === 0 ? (
           <div className="text-center py-4">
-            <Layers className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <Layers className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
               Already deployed to all available clusters
             </p>
           </div>
@@ -127,7 +127,7 @@ export function ClusterDropZone({
         )}
 
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+          <p className="text-xs text-muted-foreground text-center">
             {isDemo ? 'Connect clusters to enable real deployments' : 'Drop workload on a cluster to deploy'}
           </p>
         </div>
@@ -181,7 +181,7 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
           {isOver && <Check className="w-4 h-4 text-green-500" />}
         </div>
 
-        <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Server className="w-3 h-3" />
             {cluster.nodeCount} nodes

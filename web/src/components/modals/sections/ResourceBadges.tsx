@@ -87,7 +87,7 @@ const RESOURCE_COLORS: Partial<Record<ResourceKind, { bg: string; text: string; 
   Policy: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
 }
 
-const DEFAULT_COLORS = { bg: 'bg-gray-500/20', text: 'text-gray-500 dark:text-gray-400', border: 'border-gray-500/30' }
+const DEFAULT_COLORS = { bg: 'bg-gray-500/20', text: 'text-muted-foreground', border: 'border-gray-500/30' }
 
 interface ResourceBadgesProps {
   /** Resource context to display badges for */
@@ -207,7 +207,7 @@ export function NamespaceBadge({
   onClick,
 }: NamespaceBadgeProps) {
   const sizeClasses = {
-    sm: onClick ? 'text-[10px] px-2 py-1.5 min-h-11 min-w-11' : 'text-[10px] px-1.5 py-0.5',
+    sm: onClick ? 'text-2xs px-2 py-1.5 min-h-11 min-w-11' : 'text-2xs px-1.5 py-0.5',
     md: onClick ? 'text-xs px-2.5 py-2 min-h-11 min-w-11' : 'text-xs px-2 py-0.5',
     lg: onClick ? 'text-sm px-3 py-2 min-h-11 min-w-11' : 'text-sm px-2.5 py-1',
   }
@@ -254,7 +254,7 @@ export function ResourceKindBadge({
   const colors = RESOURCE_COLORS[kind] || DEFAULT_COLORS
 
   const sizeClasses = {
-    sm: onClick ? 'text-[10px] px-2 py-1.5 min-h-11 min-w-11' : 'text-[10px] px-1.5 py-0.5',
+    sm: onClick ? 'text-2xs px-2 py-1.5 min-h-11 min-w-11' : 'text-2xs px-1.5 py-0.5',
     md: onClick ? 'text-xs px-2.5 py-2 min-h-11 min-w-11' : 'text-xs px-2 py-0.5',
     lg: onClick ? 'text-sm px-3 py-2 min-h-11 min-w-11' : 'text-sm px-2.5 py-1',
   }

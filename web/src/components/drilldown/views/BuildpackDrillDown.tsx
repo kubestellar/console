@@ -466,9 +466,9 @@ Check:
             ) : (
               <>
                 {/* Main Info Card */}
-                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                   <div className="flex items-start gap-3">
-                    <Package className="w-8 h-8 text-emerald-400 mt-1" />
+                    <Package className="w-8 h-8 text-green-400 mt-1" />
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-foreground">{name}</h3>
                       <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">

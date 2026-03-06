@@ -22,7 +22,7 @@ const healthConfig: Record<string, HealthConfigEntry> = {
   degraded: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', labelKey: 'argoCDHealth.degraded' },
   progressing: { icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10', labelKey: 'argoCDHealth.progressing' },
   missing: { icon: AlertTriangle, color: 'text-orange-400', bg: 'bg-orange-500/10', labelKey: 'argoCDHealth.missing' },
-  unknown: { icon: AlertTriangle, color: 'text-gray-400', bg: 'bg-secondary/30', labelKey: 'argoCDHealth.unknown' },
+  unknown: { icon: AlertTriangle, color: 'text-muted-foreground', bg: 'bg-secondary/30', labelKey: 'argoCDHealth.unknown' },
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {

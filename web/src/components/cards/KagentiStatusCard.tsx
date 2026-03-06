@@ -14,9 +14,9 @@ interface KagentiStatusCardProps {
 // Status badge component
 function StatusDot({ status }: { status: string }) {
   const color =
-    status === 'Running' || status === 'Ready' || status === 'Succeeded' ? 'bg-emerald-400' :
-    status === 'Building' || status === 'Pending' ? 'bg-amber-400' :
-    status === 'Failed' ? 'bg-red-400' : 'bg-zinc-400'
+    status === 'Running' || status === 'Ready' || status === 'Succeeded' ? 'bg-green-400' :
+    status === 'Building' || status === 'Pending' ? 'bg-yellow-400' :
+    status === 'Failed' ? 'bg-red-400' : 'bg-gray-400'
   return <span className={`inline-block w-1.5 h-1.5 rounded-full ${color}`} />
 }
 
@@ -142,7 +142,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
           label="Agents"
           value={agents.length}
           sub={`${stats.readyAgents} ready`}
-          accent="bg-violet-500/20 text-violet-400"
+          accent="bg-purple-500/20 text-purple-400"
         />
         <MetricTile
           icon={Wrench}
@@ -169,7 +169,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
                 <div className="text-sm text-muted-foreground w-20 truncate">{fw}</div>
                 <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-violet-500/60"
+                    className="h-full rounded-full bg-purple-500/60"
                     style={{ width: `${(count / agents.length) * 100}%` }}
                   />
                 </div>
@@ -189,7 +189,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
               <div key={cluster} className="flex items-center gap-2 text-sm">
                 <Server className="w-3.5 h-3.5 text-muted-foreground/40" />
                 <span className="text-muted-foreground truncate flex-1">{cluster}</span>
-                <span className="text-violet-400">{counts.agents} agents</span>
+                <span className="text-purple-400">{counts.agents} agents</span>
                 <span className="text-cyan-400">{counts.tools} tools</span>
               </div>
             ))}

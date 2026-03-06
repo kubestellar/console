@@ -151,7 +151,7 @@ export function EventSummary() {
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">{t('eventSummary.errorLoading')}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{t('eventSummary.fetchFailed', { count: consecutiveFailures })}</p>
+            <p className="text-2xs text-muted-foreground mt-0.5">{t('eventSummary.fetchFailed', { count: consecutiveFailures })}</p>
           </div>
         </div>
       )}

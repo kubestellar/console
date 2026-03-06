@@ -45,7 +45,7 @@ export function RecommendationCard({
           )}
         </div>
         <span className={cn(
-          'flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full flex-shrink-0 font-medium tabular-nums',
+          'flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded-full flex-shrink-0 font-medium tabular-nums',
           matchPercent >= 80
             ? 'bg-green-500/15 text-green-400 border border-green-500/20'
             : matchPercent >= 50
@@ -63,7 +63,7 @@ export function RecommendationCard({
         <div className="flex flex-wrap gap-1 mb-2">
           {matchReasons.slice(0, 2).map((reason, i) => (
             <span key={i} className={cn(
-              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium',
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium',
               isClusterMatch
                 ? 'bg-green-500/15 text-green-400 border border-green-500/20'
                 : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -76,17 +76,17 @@ export function RecommendationCard({
 
       <div className="flex items-center justify-between mt-auto pt-2 border-t border-border">
         <div className="flex items-center gap-1 flex-wrap">
-          <span className="px-1.5 py-0.5 text-[10px] rounded bg-secondary text-muted-foreground">
+          <span className="px-1.5 py-0.5 text-2xs rounded bg-secondary text-muted-foreground">
             {mission.type}
           </span>
           {mission.metadata?.projectVersion && (
-            <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+            <span className="px-1.5 py-0.5 text-2xs rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
               v{mission.metadata.projectVersion}
             </span>
           )}
           {mission.metadata?.maturity && (
             <span className={cn(
-              'px-1.5 py-0.5 text-[10px] rounded border font-medium',
+              'px-1.5 py-0.5 text-2xs rounded border font-medium',
               mission.metadata.maturity === 'graduated'
                 ? 'bg-green-500/10 text-green-400 border-green-500/20'
                 : mission.metadata.maturity === 'incubating'
@@ -97,7 +97,7 @@ export function RecommendationCard({
             </span>
           )}
           {mission.tags.slice(0, 2).map((tag) => (
-            <span key={tag} className="px-1.5 py-0.5 text-[10px] rounded bg-secondary text-muted-foreground">
+            <span key={tag} className="px-1.5 py-0.5 text-2xs rounded bg-secondary text-muted-foreground">
               {tag}
             </span>
           ))}
@@ -107,7 +107,7 @@ export function RecommendationCard({
             e.stopPropagation()
             onImport()
           }}
-          className="px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+          className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
         >
           Import
         </button>

@@ -230,7 +230,7 @@ export function SearchDropdown() {
                                 <p className="text-xs text-muted-foreground truncate">{item.description}</p>
                               )}
                             </div>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                            <span className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
                               {config.label.toLowerCase()}
                             </span>
                           </button>
@@ -262,7 +262,7 @@ export function SearchDropdown() {
                       <p className="text-sm font-medium">Ask AI about this</p>
                       <p className="text-xs text-muted-foreground truncate">&quot;{searchQuery}&quot;</p>
                     </div>
-                    <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                    <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
                       ↵
                     </kbd>
                   </button>
@@ -289,7 +289,7 @@ export function SearchDropdown() {
                       <p className="text-sm font-medium">Ask AI instead</p>
                       <p className="text-xs text-muted-foreground truncate">Start a mission: &quot;{searchQuery}&quot;</p>
                     </div>
-                    <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                    <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
                       ↵
                     </kbd>
                   </button>

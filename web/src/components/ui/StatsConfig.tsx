@@ -56,9 +56,9 @@ const colorClasses: Record<string, string> = {
   cyan: 'text-cyan-400',
   blue: 'text-blue-400',
   red: 'text-red-400',
-  gray: 'text-gray-400',
+  gray: 'text-muted-foreground',
   indigo: 'text-indigo-400',
-  teal: 'text-teal-400',
+  teal: 'text-cyan-400',
 }
 
 // Icon emoji mapping for the config modal

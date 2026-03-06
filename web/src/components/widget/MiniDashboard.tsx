@@ -54,8 +54,8 @@ function StatCard({
       )}
     >
       <span className={cn('text-2xl font-bold', color)}>{value}</span>
-      <span className="text-xs text-gray-400 mt-1">{label}</span>
-      {subValue && <span className="text-[10px] text-gray-500">{subValue}</span>}
+      <span className="text-xs text-muted-foreground mt-1">{label}</span>
+      {subValue && <span className="text-2xs text-gray-500">{subValue}</span>}
     </button>
   )
 }
@@ -318,14 +318,14 @@ export function MiniDashboard() {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-muted-foreground hover:text-white transition-colors disabled:opacity-50"
             title={t('common.refresh')}
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
           <button
             onClick={openFullDashboard}
-            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-gray-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-muted-foreground hover:text-white transition-colors"
             title="Open full dashboard"
           >
             <Maximize2 className="w-4 h-4" />
@@ -359,7 +359,7 @@ export function MiniDashboard() {
         <StatCard
           label="Pod Issues"
           value={totalIssues}
-          color={totalIssues > 0 ? 'text-orange-400' : 'text-gray-400'}
+          color={totalIssues > 0 ? 'text-orange-400' : 'text-muted-foreground'}
           subValue={criticalIssues > 0 ? `${criticalIssues} critical` : undefined}
           onClick={() => openInBrowser('/pods?card=pod_issues')}
         />
@@ -387,7 +387,7 @@ export function MiniDashboard() {
       {/* Issues List (if any) */}
       {totalIssues > 0 && (
         <div className="mb-4">
-          <h2 className="text-xs font-medium text-gray-400 mb-2">Recent Issues</h2>
+          <h2 className="text-xs font-medium text-muted-foreground mb-2">Recent Issues</h2>
           <div className="space-y-1 max-h-32 overflow-y-auto">
             {podIssues?.slice(0, 5).map((issue, i) => {
               const isCritical = issue.status === 'CrashLoopBackOff' || issue.status === 'OOMKilled' || issue.status === 'Error'
@@ -440,7 +440,7 @@ export function MiniDashboard() {
             <span>Nodes Widget</span>
             <button
               onClick={openFullDashboard}
-              className="flex items-center gap-1 hover:text-gray-400 transition-colors"
+              className="flex items-center gap-1 hover:text-muted-foreground transition-colors"
             >
               <Maximize2 className="w-3 h-3" />
               Open Full Dashboard

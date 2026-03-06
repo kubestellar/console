@@ -39,7 +39,7 @@ const DIFFICULTY_CONFIG = {
 } as const
 
 const MATURITY_CONFIG = {
-  graduated: { label: 'Graduated', color: 'text-emerald-400 bg-emerald-950 border-emerald-800' },
+  graduated: { label: 'Graduated', color: 'text-green-400 bg-green-950 border-green-800' },
   incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-950 border-blue-800' },
 } as const
 
@@ -87,7 +87,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
           {/* Progress bar */}
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-green-500 to-cyan-500 rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -95,7 +95,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
           {/* Stats row */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="w-2 h-2 rounded-full bg-green-500" />
               {stats.graduatedTotal} Graduated
             </span>
             <span className="flex items-center gap-1.5">
@@ -103,7 +103,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
               {stats.incubatingTotal} Incubating
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="w-2 h-2 rounded-full bg-yellow-500" />
               {stats.helpWanted} Help Wanted
             </span>
           </div>
@@ -114,7 +114,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
               href={ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded-md transition-colors"
             >
               <HandHelping className="w-3 h-3" />
               Browse Issues
@@ -170,7 +170,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
   return (
     <div className={`group bg-card border rounded-lg overflow-hidden transition-all hover:shadow-lg ${
       isHelpWanted
-        ? 'border-dashed border-amber-500/20 hover:border-amber-500/40'
+        ? 'border-dashed border-yellow-500/20 hover:border-yellow-500/40'
         : 'border-border hover:border-primary/30'
     }`}>
       {/* Thumbnail */}
@@ -194,7 +194,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         )}
         {/* Help Wanted badge */}
         {isHelpWanted && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 text-[10px] font-semibold bg-amber-950 text-amber-300 border border-amber-800 rounded-md">
+          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 text-2xs font-semibold bg-yellow-950 text-yellow-300 border border-yellow-800 rounded-md">
             <HandHelping className="w-3 h-3" />
             Help Wanted
           </div>
@@ -212,11 +212,11 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <h3 className="text-sm font-semibold text-foreground line-clamp-1">{item.name}</h3>
           <div className="flex items-center gap-1 shrink-0">
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            <span className="flex items-center gap-0.5 text-2xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
               <typeInfo.icon className="w-2.5 h-2.5" />
               {typeInfo.label.replace(/s$/, '')}
             </span>
-            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            <span className="text-2xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
               v{item.version}
             </span>
           </div>
@@ -225,10 +225,10 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         {/* Maturity pill */}
         {item.cncfProject && (
           <div className="flex items-center gap-1.5 mb-2">
-            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${MATURITY_CONFIG[item.cncfProject.maturity].color}`}>
+            <span className={`text-2xs font-medium px-1.5 py-0.5 rounded border ${MATURITY_CONFIG[item.cncfProject.maturity].color}`}>
               {MATURITY_CONFIG[item.cncfProject.maturity].label}
             </span>
-            <span className="text-[10px] text-muted-foreground">{item.cncfProject.category}</span>
+            <span className="text-2xs text-muted-foreground">{item.cncfProject.category}</span>
           </div>
         )}
 
@@ -238,13 +238,13 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         <div className="flex flex-wrap gap-1 mb-3">
           {isHelpWanted && item.skills ? (
             item.skills.slice(0, 3).map(skill => (
-              <span key={skill} className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
+              <span key={skill} className="text-2xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
                 {skill}
               </span>
             ))
           ) : (
             item.tags.slice(0, 3).map(tag => (
-              <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-primary/80 text-primary-foreground rounded">
+              <span key={tag} className="text-2xs px-1.5 py-0.5 bg-primary/80 text-primary-foreground rounded">
                 {tag}
               </span>
             ))
@@ -284,21 +284,21 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               href={item.issueUrl || ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded-md transition-colors"
             >
               <Sparkles className="w-3 h-3" />
               Contribute
             </a>
           ) : isInstalled ? (
             <div className="flex items-center gap-1.5">
-              <span className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-green-400 bg-green-950 rounded">
+              <span className="flex items-center gap-1 px-2 py-1 text-2xs font-medium text-green-400 bg-green-950 rounded">
                 <Check className="w-3 h-3" />
                 Installed
               </span>
               <button
                 onClick={handleRemove}
                 disabled={removing}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] text-red-400 hover:bg-red-950 rounded transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1 text-2xs text-red-400 hover:bg-red-950 rounded transition-colors disabled:opacity-50"
                 title={t('common.remove')}
               >
                 {removing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
@@ -377,30 +377,30 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
               className="fixed z-[9999] pointer-events-none"
               style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
             >
-              <div className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">
+              <div className="px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">
                 <div className="flex items-center gap-3 mb-2">
                   <img
                     src={`https://github.com/${github}.png?size=80`}
                     alt={github}
-                    className="w-10 h-10 rounded-full border border-slate-600"
+                    className="w-10 h-10 rounded-full border border-gray-600"
                   />
                   <div>
                     <div className="text-sm font-semibold text-white">@{github}</div>
-                    <div className="text-[10px] text-slate-400">Contributor</div>
+                    <div className="text-2xs text-muted-foreground">Contributor</div>
                   </div>
                 </div>
                 {profile.loading ? (
-                  <div className="text-[11px] text-slate-400">Loading stats...</div>
+                  <div className="text-[11px] text-muted-foreground">Loading stats...</div>
                 ) : (
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-[11px]">
-                      <Coins className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="text-amber-300 font-medium">{profile.coins.toLocaleString()} coins</span>
+                      <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                      <span className="text-yellow-300 font-medium">{profile.coins.toLocaleString()} coins</span>
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-muted-foreground">
                       {profile.consolePRs} PR{profile.consolePRs !== 1 ? 's' : ''} to console
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-muted-foreground">
                       {profile.marketplacePRs} PR{profile.marketplacePRs !== 1 ? 's' : ''} to marketplace
                     </div>
                   </div>
@@ -418,7 +418,7 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
 function DifficultyBadge({ difficulty }: { difficulty: 'beginner' | 'intermediate' | 'advanced' }) {
   const config = DIFFICULTY_CONFIG[difficulty]
   return (
-    <span className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${config.color}`}>
+    <span className={`flex items-center gap-1 text-2xs font-medium px-1.5 py-0.5 rounded ${config.color}`}>
       {Array.from({ length: config.stars }).map((_, i) => (
         <Star key={i} className="w-2.5 h-2.5 fill-current" />
       ))}
@@ -450,7 +450,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
 
   return (
     <div className={`flex items-center gap-4 px-4 py-2.5 bg-card border rounded-md transition-colors hover:bg-muted/30 ${
-      isHelpWanted ? 'border-dashed border-amber-500/20' : 'border-border'
+      isHelpWanted ? 'border-dashed border-yellow-500/20' : 'border-border'
     }`}>
       {/* Type icon */}
       <typeInfo.icon className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -465,7 +465,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             </span>
           )}
           {isHelpWanted && (
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-amber-950 text-amber-300 border border-amber-800 rounded">
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-yellow-950 text-yellow-300 border border-yellow-800 rounded">
               Help Wanted
             </span>
           )}
@@ -479,7 +479,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
       </span>
 
       {/* Type label */}
-      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 hidden md:block">
+      <span className="text-2xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 hidden md:block">
         {typeInfo.label.replace(/s$/, '')}
       </span>
 
@@ -489,7 +489,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
           <DifficultyBadge difficulty={item.difficulty} />
         </div>
       ) : (
-        <span className="text-[10px] text-muted-foreground shrink-0 w-10 text-right hidden lg:block">v{item.version}</span>
+        <span className="text-2xs text-muted-foreground shrink-0 w-10 text-right hidden lg:block">v{item.version}</span>
       )}
 
       {/* Action */}
@@ -499,20 +499,20 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             href={item.issueUrl || ISSUES_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded transition-colors"
           >
             <Sparkles className="w-3 h-3" />
             Contribute
           </a>
         ) : isInstalled ? (
           <div className="flex items-center gap-1">
-            <span className="flex items-center gap-0.5 px-2 py-1 text-[10px] font-medium text-green-400 bg-green-500/10 rounded">
+            <span className="flex items-center gap-0.5 px-2 py-1 text-2xs font-medium text-green-400 bg-green-500/10 rounded">
               <Check className="w-3 h-3" />
             </span>
             <button
               onClick={handleRemove}
               disabled={removing}
-              className="flex items-center px-1.5 py-1 text-[10px] text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+              className="flex items-center px-1.5 py-1 text-2xs text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
             >
               {removing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
             </button>
@@ -703,7 +703,7 @@ export function Marketplace() {
         <div className="flex items-center gap-1.5">
           <button onClick={() => { setSelectedType(null); setShowHelpWanted(false) }} className={filterBtnClass(!selectedType && !showHelpWanted)}>
             All
-            <span className="text-[10px] ml-0.5 opacity-60">{typeCounts.all}</span>
+            <span className="text-2xs ml-0.5 opacity-60">{typeCounts.all}</span>
           </button>
           {(Object.entries(TYPE_LABELS) as [MarketplaceItemType, typeof TYPE_LABELS[MarketplaceItemType]][]).map(([type, { label, icon: Icon }]) => (
             <button
@@ -713,7 +713,7 @@ export function Marketplace() {
             >
               <Icon className="w-3 h-3" />
               {label}
-              <span className="text-[10px] ml-0.5 opacity-60">{typeCounts[type]}</span>
+              <span className="text-2xs ml-0.5 opacity-60">{typeCounts[type]}</span>
             </button>
           ))}
 
@@ -731,13 +731,13 @@ export function Marketplace() {
                 }}
                 className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
                   showHelpWanted
-                    ? 'bg-amber-500/15 text-amber-400 font-medium'
+                    ? 'bg-yellow-500/15 text-yellow-400 font-medium'
                     : 'bg-card border border-border text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <HandHelping className="w-3 h-3" />
                 Help Wanted
-                <span className={`text-[10px] ml-0.5 ${showHelpWanted ? 'text-amber-400/70' : 'text-muted-foreground/60'}`}>
+                <span className={`text-2xs ml-0.5 ${showHelpWanted ? 'text-yellow-400/70' : 'text-muted-foreground/60'}`}>
                   ({cncfStats.helpWanted})
                 </span>
               </button>
@@ -768,9 +768,9 @@ export function Marketplace() {
               <button
                 key={cat}
                 onClick={() => setSelectedTag(selectedTag === cat ? null : cat)}
-                className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded transition-colors ${
+                className={`flex items-center gap-1 px-2 py-1 text-2xs rounded transition-colors ${
                   selectedTag === cat
-                    ? 'bg-amber-500/15 text-amber-400 font-medium'
+                    ? 'bg-yellow-500/15 text-yellow-400 font-medium'
                     : 'bg-card border border-border text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -786,12 +786,12 @@ export function Marketplace() {
         <div className="flex items-center justify-between">
           {/* Sort */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground mr-1">Sort:</span>
+            <span className="text-2xs text-muted-foreground mr-1">Sort:</span>
             {(['name', 'type', 'author', ...(showHelpWanted ? ['difficulty' as SortField] : [])] as SortField[]).map(field => (
               <button
                 key={field}
                 onClick={() => toggleSort(field)}
-                className={`flex items-center gap-0.5 px-2 py-1 text-[10px] rounded transition-colors ${
+                className={`flex items-center gap-0.5 px-2 py-1 text-2xs rounded transition-colors ${
                   sortField === field
                     ? 'bg-primary/15 text-primary font-medium'
                     : 'text-muted-foreground hover:text-foreground'
@@ -864,7 +864,7 @@ export function Marketplace() {
             <div key={category}>
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{category}</h3>
-                <span className="text-[10px] text-muted-foreground/60">{categoryItems.length} {categoryItems.length === 1 ? 'project' : 'projects'}</span>
+                <span className="text-2xs text-muted-foreground/60">{categoryItems.length} {categoryItems.length === 1 ? 'project' : 'projects'}</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
               {viewMode === 'list' ? (
@@ -944,7 +944,7 @@ export function Marketplace() {
               href={ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-950 hover:bg-amber-900 text-amber-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded-md transition-colors"
             >
               <HandHelping className="w-3 h-3" />
               Browse Issues

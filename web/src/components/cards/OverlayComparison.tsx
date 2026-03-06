@@ -133,7 +133,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {diffs.length > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-400">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
               {diffs.length} changes
             </span>
           )}

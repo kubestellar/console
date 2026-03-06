@@ -398,7 +398,7 @@ export function Sidebar() {
               title={t('sidebar.activeViewers', { count: viewerCount })}
             >
               <User className={cn('w-3 h-3', viewersError && 'text-red-400')} />
-              <span className="text-[10px] tabular-nums">
+              <span className="text-2xs tabular-nums">
                 {viewersError ? '!' : viewerCount}
               </span>
             </div>

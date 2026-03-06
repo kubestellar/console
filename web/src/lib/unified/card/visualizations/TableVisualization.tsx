@@ -129,7 +129,7 @@ export function TableVisualization({
                 <th
                   key={column.field}
                   className={`
-                    px-3 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider
+                    px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider
                     ${column.align === 'center' ? 'text-center' : ''}
                     ${column.align === 'right' ? 'text-right' : 'text-left'}
                     ${sortable && column.sortable !== false ? 'cursor-pointer hover:text-gray-200 select-none' : ''}
@@ -196,7 +196,7 @@ export function TableVisualization({
                           px-3 py-2
                           ${column.align === 'center' ? 'text-center' : ''}
                           ${column.align === 'right' ? 'text-right' : ''}
-                          ${column.primary ? 'font-medium text-gray-200' : 'text-gray-400'}
+                          ${column.primary ? 'font-medium text-gray-200' : 'text-muted-foreground'}
                         `}
                       >
                         {renderCell(value, item as Record<string, unknown>, column)}
@@ -212,7 +212,7 @@ export function TableVisualization({
 
       {/* Pagination footer */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 text-xs text-gray-400">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 text-xs text-muted-foreground">
           <span>
             {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, sortedData.length)} of {sortedData.length}
           </span>

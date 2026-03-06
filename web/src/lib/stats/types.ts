@@ -228,7 +228,7 @@ export const COLOR_CLASSES: Record<StatBlockColor, string> = {
   orange: 'text-orange-400',
   red: 'text-red-400',
   cyan: 'text-cyan-400',
-  gray: 'text-gray-400',
+  gray: 'text-muted-foreground',
   indigo: 'text-indigo-400',
 }
 

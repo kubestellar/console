@@ -402,7 +402,7 @@ function renderProgressBar(
     ),
     createElement(
       'span',
-      { className: 'text-xs font-mono tabular-nums text-gray-400 w-10 text-right' },
+      { className: 'text-xs font-mono tabular-nums text-muted-foreground w-10 text-right' },
       `${Math.round(percent)}%`
     )
   )
@@ -442,7 +442,7 @@ function renderIcon(
   // For now, just render the value - icon lookup can be added later
   return createElement(
     'span',
-    { className: 'text-gray-400' },
+    { className: 'text-muted-foreground' },
     String(value)
   )
 }

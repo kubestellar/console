@@ -1212,10 +1212,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             <span>{tab.icon}</span>
             {tab.label}
             {tab.id === 'installers' && (
-              <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{installerMissions.length || '–'}</span>
+              <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{installerMissions.length || '–'}</span>
             )}
             {tab.id === 'solutions' && (
-              <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{solutionMissions.length || '–'}</span>
+              <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{solutionMissions.length || '–'}</span>
             )}
           </button>
         ))}
@@ -1471,11 +1471,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {!selectedMission && activeTab === 'recommended' && (<>
             {/* Token / rate-limit guidance banner */}
             {tokenError && (
-              <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+              <div className="mb-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
                 <div className="flex items-start gap-3">
-                  <span className="text-amber-400 text-lg mt-0.5">⚠️</span>
+                  <span className="text-yellow-400 text-lg mt-0.5">⚠️</span>
                   <div className="text-sm space-y-2">
-                    <p className="font-medium text-amber-300">
+                    <p className="font-medium text-yellow-300">
                       {tokenError === 'rate_limited'
                         ? 'GitHub API rate limit reached'
                         : 'GitHub token is invalid or expired'}

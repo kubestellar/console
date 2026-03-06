@@ -271,7 +271,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
               {t('helmHistory.nRevisions', { count: totalItems })}
             </span>
           )}

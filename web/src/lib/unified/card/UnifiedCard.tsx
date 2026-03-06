@@ -230,7 +230,7 @@ function renderContent(
 
     default:
       return (
-        <div className="text-gray-400 text-sm p-4">
+        <div className="text-muted-foreground text-sm p-4">
           Unknown content type: {(content as { type: string }).type}
         </div>
       )
@@ -344,7 +344,7 @@ function EmptyState({
     success: 'text-green-400',
     info: 'text-blue-400',
     warning: 'text-yellow-400',
-    neutral: 'text-gray-400',
+    neutral: 'text-muted-foreground',
   }
 
   return (
@@ -406,7 +406,7 @@ function InlineStats({
       {stats.map((stat) => (
         <div key={stat.id} className="flex items-center gap-1.5 text-xs">
           <div className={`w-2 h-2 rounded-full ${stat.bgColor ?? 'bg-gray-600'}`} />
-          <span className="text-gray-400">{stat.label}:</span>
+          <span className="text-muted-foreground">{stat.label}:</span>
           <span className="font-medium text-gray-200">--</span>
         </div>
       ))}

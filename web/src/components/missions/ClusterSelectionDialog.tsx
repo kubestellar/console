@@ -83,7 +83,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{cluster.name}</p>
                   {cluster.context !== cluster.name && cluster.context && (
-                    <p className="text-[10px] text-muted-foreground truncate">{cluster.context}</p>
+                    <p className="text-2xs text-muted-foreground truncate">{cluster.context}</p>
                   )}
                 </div>
                 {isSelected && <Check className="w-4 h-4 text-purple-400 flex-shrink-0" />}
@@ -105,7 +105,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-muted-foreground truncate">{cluster.name}</p>
-                  <p className="text-[10px] text-red-400">Offline</p>
+                  <p className="text-2xs text-red-400">Offline</p>
                 </div>
               </div>
             )

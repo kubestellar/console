@@ -241,7 +241,7 @@ export function MobileBrowser() {
         >
           {/* Screen */}
           <div
-            className={`relative bg-white dark:bg-zinc-900 overflow-hidden ${isIPad ? 'rounded-[16px]' : 'rounded-[32px]'}`}
+            className={`relative bg-white dark:bg-gray-900 overflow-hidden ${isIPad ? 'rounded-[16px]' : 'rounded-[32px]'}`}
             style={{ width: DEVICE_WIDTH, height: DEVICE_HEIGHT }}
           >
             {/* Dynamic Island / Notch - only for iPhone */}
@@ -249,7 +249,7 @@ export function MobileBrowser() {
               <div className="absolute top-0 left-0 right-0 z-20">
                 <div className="flex justify-center pt-2">
                   <div className="bg-black rounded-full px-6 py-1 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-zinc-700" /> {/* Camera */}
+                    <div className="w-2 h-2 rounded-full bg-gray-700" /> {/* Camera */}
                   </div>
                 </div>
               </div>
@@ -267,7 +267,7 @@ export function MobileBrowser() {
 
             {/* Safari-style Address Bar */}
             <div className={`absolute left-0 right-0 z-10 px-2 pt-2 ${isIPad ? 'top-6' : 'top-8'}`}>
-              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
                 {activeTab.url && (
                   <Lock className="w-3 h-3 text-green-500 flex-shrink-0" />
                 )}
@@ -277,12 +277,12 @@ export function MobileBrowser() {
                   onChange={(e) => setUrlInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search or enter website name"
-                  className="flex-1 bg-transparent text-xs text-center text-zinc-700 dark:text-zinc-300 focus:outline-none min-w-0"
+                  className="flex-1 bg-transparent text-xs text-center text-gray-700 dark:text-gray-300 focus:outline-none min-w-0"
                 />
                 {urlInput && (
                   <button
                     onClick={() => setUrlInput('')}
-                    className="text-zinc-400 hover:text-zinc-600"
+                    className="text-muted-foreground hover:text-gray-600"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -291,11 +291,11 @@ export function MobileBrowser() {
             </div>
 
             {/* Content Area */}
-            <div className={`absolute left-0 right-0 bottom-12 overflow-hidden bg-white dark:bg-zinc-900 ${isIPad ? 'top-[56px]' : 'top-[72px]'}`}>
+            <div className={`absolute left-0 right-0 bottom-12 overflow-hidden bg-white dark:bg-gray-900 ${isIPad ? 'top-[56px]' : 'top-[72px]'}`}>
               {activeTab.url ? (
                 <>
                   {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 z-10">
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 z-10">
                       <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
@@ -319,18 +319,18 @@ export function MobileBrowser() {
                   {/* Bookmarks */}
                   {bookmarks.length > 0 && (
                     <div className="mb-4">
-                      <h3 className="text-xs font-semibold text-zinc-500 mb-2">Favorites</h3>
+                      <h3 className="text-xs font-semibold text-gray-500 mb-2">Favorites</h3>
                       <div className="grid grid-cols-4 gap-2">
                         {bookmarks.slice(0, 8).map((bookmark, i) => (
                           <button
                             key={i}
                             onClick={() => navigateTo(bookmark.url)}
-                            className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                           >
                             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg">
                               {bookmark.title.charAt(0).toUpperCase()}
                             </div>
-                            <span className="text-[10px] text-zinc-600 dark:text-zinc-400 truncate max-w-full">
+                            <span className="text-2xs text-gray-600 dark:text-muted-foreground truncate max-w-full">
                               {bookmark.title}
                             </span>
                           </button>
@@ -341,18 +341,18 @@ export function MobileBrowser() {
 
                   {/* Quick Links */}
                   <div>
-                    <h3 className="text-xs font-semibold text-zinc-500 mb-2">Quick Links</h3>
+                    <h3 className="text-xs font-semibold text-gray-500 mb-2">Quick Links</h3>
                     <div className="grid grid-cols-4 gap-2">
                       {QUICK_LINKS.map((link) => (
                         <button
                           key={link.url}
                           onClick={() => navigateTo(link.url)}
-                          className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                          className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
-                          <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xl">
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xl">
                             {link.icon}
                           </div>
-                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 truncate max-w-full">
+                          <span className="text-2xs text-gray-600 dark:text-muted-foreground truncate max-w-full">
                             {link.title}
                           </span>
                         </button>
@@ -365,9 +365,9 @@ export function MobileBrowser() {
 
             {/* Tab Switcher Overlay */}
             {showTabs && (
-              <div className="absolute inset-0 bg-zinc-100 dark:bg-zinc-900 z-30 p-4 overflow-auto">
+              <div className="absolute inset-0 bg-gray-100 dark:bg-gray-900 z-30 p-4 overflow-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                     {tabs.length} Tab{tabs.length !== 1 ? 's' : ''}
                   </span>
                   <button
@@ -388,23 +388,23 @@ export function MobileBrowser() {
                       className={`relative rounded-xl overflow-hidden border-2 transition-colors ${
                         tab.id === activeTabId
                           ? 'border-blue-500'
-                          : 'border-zinc-200 dark:border-zinc-700'
+                          : 'border-gray-200 dark:border-gray-700'
                       }`}
                     >
-                      <div className="bg-white dark:bg-zinc-800 p-3">
+                      <div className="bg-white dark:bg-gray-800 p-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
                             {tab.title || 'New Tab'}
                           </span>
                           <button
                             onClick={(e) => closeTab(tab.id, e)}
-                            className="text-zinc-400 hover:text-zinc-600 p-1"
+                            className="text-muted-foreground hover:text-gray-600 p-1"
                           >
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                         {tab.url && (
-                          <span className="text-[10px] text-zinc-500 truncate block">
+                          <span className="text-2xs text-gray-500 truncate block">
                             {tab.url}
                           </span>
                         )}
@@ -414,7 +414,7 @@ export function MobileBrowser() {
                 </div>
                 <button
                   onClick={newTab}
-                  className="mt-4 w-full py-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 flex items-center justify-center gap-2"
+                  className="mt-4 w-full py-2 bg-gray-200 dark:bg-gray-800 rounded-lg text-sm text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   New Tab
@@ -424,9 +424,9 @@ export function MobileBrowser() {
 
             {/* Settings Overlay */}
             {showSettings && (
-              <div className="absolute inset-0 bg-zinc-100 dark:bg-zinc-900 z-30 p-4 overflow-auto">
+              <div className="absolute inset-0 bg-gray-100 dark:bg-gray-900 z-30 p-4 overflow-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Bookmarks
                   </span>
                   <button
@@ -437,7 +437,7 @@ export function MobileBrowser() {
                   </button>
                 </div>
                 {bookmarks.length === 0 ? (
-                  <p className="text-xs text-zinc-500 text-center py-8">
+                  <p className="text-xs text-gray-500 text-center py-8">
                     No bookmarks yet. Tap the star icon to add one.
                   </p>
                 ) : (
@@ -445,7 +445,7 @@ export function MobileBrowser() {
                     {bookmarks.map((bookmark, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-3 p-2 bg-white dark:bg-zinc-800 rounded-lg"
+                        className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg"
                       >
                         <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm">
                           {bookmark.title.charAt(0).toUpperCase()}
@@ -458,10 +458,10 @@ export function MobileBrowser() {
                             }}
                             className="text-left"
                           >
-                            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block truncate">
+                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 block truncate">
                               {bookmark.title}
                             </span>
-                            <span className="text-[10px] text-zinc-500 truncate block">
+                            <span className="text-2xs text-gray-500 truncate block">
                               {bookmark.url}
                             </span>
                           </button>
@@ -480,18 +480,18 @@ export function MobileBrowser() {
             )}
 
             {/* Bottom Navigation Bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-around px-4">
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex items-center justify-around px-4">
               <button
                 onClick={goBack}
                 disabled={historyIndex <= 0}
-                className={`p-2 ${historyIndex <= 0 ? 'text-zinc-300 dark:text-zinc-700' : 'text-blue-500'}`}
+                className={`p-2 ${historyIndex <= 0 ? 'text-gray-300 dark:text-gray-700' : 'text-blue-500'}`}
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={goForward}
                 disabled={historyIndex >= history.length - 1}
-                className={`p-2 ${historyIndex >= history.length - 1 ? 'text-zinc-300 dark:text-zinc-700' : 'text-blue-500'}`}
+                className={`p-2 ${historyIndex >= history.length - 1 ? 'text-gray-300 dark:text-gray-700' : 'text-blue-500'}`}
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -504,7 +504,7 @@ export function MobileBrowser() {
               <button
                 onClick={addBookmark}
                 disabled={!activeTab.url}
-                className={`p-2 ${!activeTab.url ? 'text-zinc-300 dark:text-zinc-700' : isBookmarked ? 'text-yellow-500' : 'text-blue-500'}`}
+                className={`p-2 ${!activeTab.url ? 'text-gray-300 dark:text-gray-700' : isBookmarked ? 'text-yellow-500' : 'text-blue-500'}`}
               >
                 <Star className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
               </button>
@@ -522,7 +522,7 @@ export function MobileBrowser() {
             </div>
 
             {/* Home Indicator */}
-            <div className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full ${isIPad ? 'w-32' : 'w-24'}`} />
+            <div className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-1 bg-gray-300 dark:bg-gray-700 rounded-full ${isIPad ? 'w-32' : 'w-24'}`} />
           </div>
         </div>
 

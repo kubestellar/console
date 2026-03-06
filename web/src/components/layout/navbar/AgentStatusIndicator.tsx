@@ -274,7 +274,7 @@ export function AgentStatusIndicator() {
                     )} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-foreground">{event.message}</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-2xs text-muted-foreground">
                         {event.timestamp.toLocaleTimeString()}
                       </p>
                     </div>
@@ -304,7 +304,7 @@ export function AgentStatusIndicator() {
               <code className="block">cd console &amp;&amp; go build -o bin/kc-agent ./cmd/kc-agent</code>
               <code className="block">./bin/kc-agent</code>
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               {t('agent.visitGithub')}{' '}
               <a
                 href="https://github.com/kubestellar/homebrew-tap"

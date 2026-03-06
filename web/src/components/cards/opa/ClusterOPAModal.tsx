@@ -61,7 +61,7 @@ export function ClusterOPAModal({
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'text-red-400 bg-red-500/20'
-      case 'warning': return 'text-amber-400 bg-amber-500/20'
+      case 'warning': return 'text-yellow-400 bg-yellow-500/20'
       default: return 'text-blue-400 bg-blue-500/20'
     }
   }
@@ -71,7 +71,7 @@ export function ClusterOPAModal({
       case 'enforce':
       case 'deny':
         return 'text-red-400 bg-red-500/20'
-      case 'warn': return 'text-amber-400 bg-amber-500/20'
+      case 'warn': return 'text-yellow-400 bg-yellow-500/20'
       default: return 'text-blue-400 bg-blue-500/20'
     }
   }
@@ -337,7 +337,7 @@ Please proceed with applying this policy.`,
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-xs">
                         {policy.violations > 0 ? (
-                          <span className="flex items-center gap-1 text-amber-400">
+                          <span className="flex items-center gap-1 text-yellow-400">
                             <AlertTriangle className="w-3 h-3" />
                             {policy.violations} violations
                           </span>
@@ -387,8 +387,8 @@ Please proceed with applying this policy.`,
                   <p className="text-2xl font-bold text-red-400">{severityCounts.critical}</p>
                   <p className="text-xs text-muted-foreground">{t('common:common.critical')}</p>
                 </div>
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-                  <p className="text-2xl font-bold text-amber-400">{severityCounts.warning}</p>
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
+                  <p className="text-2xl font-bold text-yellow-400">{severityCounts.warning}</p>
                   <p className="text-xs text-muted-foreground">{t('common:common.warning')}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
@@ -549,8 +549,8 @@ Please proceed with applying this policy.`,
               Are you sure you want to delete the policy <span className="text-foreground font-medium">{deleteConfirm?.name}</span>?
             </p>
             {deleteConfirm && deleteConfirm.violations > 0 && (
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">
-                <div className="flex items-center gap-2 text-amber-400 mb-1">
+              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm">
+                <div className="flex items-center gap-2 text-yellow-400 mb-1">
                   <AlertTriangle className="w-4 h-4" />
                   <span className="font-medium">{t('common:common.warning')}</span>
                 </div>

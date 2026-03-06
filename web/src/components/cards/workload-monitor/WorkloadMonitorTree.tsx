@@ -13,7 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
   healthy: 'text-green-400',
   degraded: 'text-yellow-400',
   unhealthy: 'text-red-400',
-  unknown: 'text-gray-400',
+  unknown: 'text-muted-foreground',
   missing: 'text-red-400',
 }
 
@@ -106,12 +106,12 @@ export function WorkloadMonitorTree({ resources, onResourceClick }: TreeProps) {
                       <span className="text-xs text-muted-foreground w-24 truncate shrink-0">{resource.kind}</span>
                       <span className="text-xs text-foreground truncate flex-1">{resource.name}</span>
                       {resource.message && (
-                        <span className={`text-[10px] shrink-0 ${STATUS_COLORS[resource.status] || 'text-gray-400'}`}>
+                        <span className={`text-2xs shrink-0 ${STATUS_COLORS[resource.status] || 'text-muted-foreground'}`}>
                           {resource.message}
                         </span>
                       )}
                       {resource.optional && (
-                        <span className="text-[10px] text-muted-foreground/50 shrink-0">opt</span>
+                        <span className="text-2xs text-muted-foreground/50 shrink-0">opt</span>
                       )}
                     </div>
                   )

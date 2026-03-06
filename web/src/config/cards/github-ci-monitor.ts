@@ -9,7 +9,7 @@ export const githubCiMonitorConfig: UnifiedCardConfig = {
   category: 'ci-cd',
   description: 'GitHub Actions monitoring',
   icon: 'Github',
-  iconColor: 'text-gray-400',
+  iconColor: 'text-muted-foreground',
   defaultWidth: 8,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useGitHubCIMonitor' },

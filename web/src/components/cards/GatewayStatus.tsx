@@ -138,7 +138,7 @@ const getStatusColors = (status: GatewayStatusType) => {
     case 'NotAccepted':
       return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/20' }
     default:
-      return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/20' }
+      return { bg: 'bg-gray-500/20', text: 'text-muted-foreground', border: 'border-gray-500/20' }
   }
 }
 
@@ -327,15 +327,15 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center">
-          <p className="text-[10px] text-purple-400">{t('gatewayStatus.gateways')}</p>
+          <p className="text-2xs text-purple-400">{t('gatewayStatus.gateways')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalGateways}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">{t('gatewayStatus.programmed')}</p>
+          <p className="text-2xs text-green-400">{t('gatewayStatus.programmed')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.programmedCount}</p>
         </div>
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-          <p className="text-[10px] text-blue-400">{t('gatewayStatus.routes')}</p>
+          <p className="text-2xs text-blue-400">{t('gatewayStatus.routes')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalRoutes}</p>
         </div>
       </div>
@@ -354,7 +354,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                   <span className="text-sm font-medium text-foreground truncate">{gw.name}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${colors.bg} ${colors.text}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-2xs ${colors.bg} ${colors.text}`}>
                     {gw.status}
                   </span>
                 </div>
@@ -367,7 +367,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
                   <ClusterBadge cluster={gw.cluster} />
                   <span className="text-muted-foreground">{gw.namespace}</span>
                 </div>
-                <span className="text-muted-foreground/60 text-[10px]">{gw.gatewayClass}</span>
+                <span className="text-muted-foreground/60 text-2xs">{gw.gatewayClass}</span>
               </div>
               {gw.addresses.length > 0 && (
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
@@ -376,7 +376,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
                 </div>
               )}
               {gw.listeners.length > 0 && (
-                <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                <div className="flex items-center gap-2 mt-1 text-2xs text-muted-foreground">
                   <ArrowRight className="w-3 h-3" />
                   {gw.listeners.map((l, i) => (
                     <span key={i} className="px-1.5 py-0.5 rounded bg-secondary">
@@ -409,14 +409,14 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
 
       {/* Quick install command */}
       <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-[10px] text-muted-foreground font-medium mb-2">{t('gatewayStatus.quickInstall')}</p>
-        <code className="block p-2 rounded bg-secondary text-[10px] text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
+        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('gatewayStatus.quickInstall')}</p>
+        <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
           {K8S_DOCS.gatewayApiInstallCommand}
         </code>
       </div>
 
       {/* Footer links */}
-      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
+      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
         <a
           href={K8S_DOCS.gatewayApi}
           target="_blank"

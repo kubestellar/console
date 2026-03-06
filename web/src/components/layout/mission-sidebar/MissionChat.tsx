@@ -270,7 +270,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               Related
               {relatedResolutions.length > 0 && (
                 <span className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded-full",
+                  "px-1.5 py-0.5 text-2xs rounded-full",
                   resolutionPanelView === 'related'
                     ? "bg-green-500/20 text-green-400"
                     : "bg-muted text-muted-foreground"
@@ -291,7 +291,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               All Saved
               {allResolutions.length > 0 && (
                 <span className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded-full",
+                  "px-1.5 py-0.5 text-2xs rounded-full",
                   resolutionPanelView === 'history'
                     ? "bg-primary/20 text-primary"
                     : "bg-muted text-muted-foreground"
@@ -388,7 +388,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             {onToggleFullScreen && (
               <button
                 onClick={onToggleFullScreen}
-                className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                className="text-2xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
               >
                 {t('missionChat.viewInFullscreen')}
                 <Maximize2 className="w-3 h-3" />
@@ -446,7 +446,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <span className="text-xs text-muted-foreground">{mission.currentStep}</span>
               )}
               {mission.tokenUsage && mission.tokenUsage.total > 0 && (
-                <span className="text-[10px] text-muted-foreground/70 font-mono">
+                <span className="text-2xs text-muted-foreground/70 font-mono">
                   {mission.tokenUsage.total.toLocaleString()} tokens
                 </span>
               )}
@@ -679,7 +679,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               )}
 
               {/* Last Update */}
-              <div className="text-[10px] text-muted-foreground/70 pt-2 border-t border-border/50">
+              <div className="text-2xs text-muted-foreground/70 pt-2 border-t border-border/50">
                 Last updated: {conversationSummary.lastUpdate.toLocaleTimeString()}
               </div>
             </div>

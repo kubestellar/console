@@ -284,7 +284,7 @@ export function ResourceMarshall() {
                           <span className="text-muted-foreground w-24 truncate shrink-0">{dep.kind}</span>
                           <span className="text-foreground truncate flex-1">{dep.name}</span>
                           {dep.optional && (
-                            <span className="text-[10px] text-yellow-500 shrink-0">optional</span>
+                            <span className="text-2xs text-yellow-500 shrink-0">optional</span>
                           )}
                         </div>
                       )

@@ -149,7 +149,7 @@ export function AiGenerationPanel<T>({
               rows={4}
               className="w-full text-sm px-3 py-2 rounded-md bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             />
-            <p className="text-[10px] text-muted-foreground/50 mt-1">
+            <p className="text-2xs text-muted-foreground/50 mt-1">
               Press Cmd+Enter to generate
             </p>
           </div>
@@ -165,7 +165,7 @@ export function AiGenerationPanel<T>({
                     <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
                       View raw AI output
                     </summary>
-                    <pre className="mt-1 p-2 bg-secondary rounded text-[10px] text-muted-foreground overflow-x-auto max-h-40 whitespace-pre-wrap">
+                    <pre className="mt-1 p-2 bg-secondary rounded text-2xs text-muted-foreground overflow-x-auto max-h-40 whitespace-pre-wrap">
                       {streamingText}
                     </pre>
                   </details>
@@ -206,7 +206,7 @@ export function AiGenerationPanel<T>({
             rows={12}
             className="w-full text-xs px-3 py-2 rounded-md bg-secondary border border-border text-foreground font-mono focus:outline-none leading-relaxed"
           />
-          <p className="text-[10px] text-muted-foreground/50 text-center">
+          <p className="text-2xs text-muted-foreground/50 text-center">
             The AI is generating your definition. This may take a moment.
           </p>
         </div>

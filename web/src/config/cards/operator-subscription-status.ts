@@ -14,7 +14,7 @@ export const operatorSubscriptionStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'RefreshCw',
-  iconColor: 'text-violet-400',
+  iconColor: 'text-purple-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

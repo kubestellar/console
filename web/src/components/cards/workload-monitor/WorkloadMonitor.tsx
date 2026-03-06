@@ -160,7 +160,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     healthy: 'bg-green-500/20 text-green-400',
     degraded: 'bg-yellow-500/20 text-yellow-400',
     unhealthy: 'bg-red-500/20 text-red-400',
-    unknown: 'bg-gray-500/20 text-gray-400',
+    unknown: 'bg-gray-500/20 text-muted-foreground',
   }
 
   return (

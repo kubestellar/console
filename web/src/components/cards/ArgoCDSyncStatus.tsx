@@ -186,10 +186,10 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-gray-400" />
+            <AlertTriangle className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm text-foreground">{t('argoCDSyncStatus.unknown')}</span>
           </div>
-          <span className="text-sm font-bold text-gray-400">{stats.unknown}</span>
+          <span className="text-sm font-bold text-muted-foreground">{stats.unknown}</span>
         </div>
       </div>
     </div>

@@ -190,10 +190,10 @@ function HeatCell({ stat, delay }: HeatCellProps) {
       }}
     >
       {/* Tooltip */}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-sm rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-slate-700 shadow-xl">
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900/95 backdrop-blur-sm rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-700 shadow-xl">
         <div className="text-white font-medium">{stat.podName}</div>
         <div className="text-muted-foreground">{stat.utilizationPercent}% used</div>
-        <div className="text-cyan-400 text-[10px]">{stat.usedGB}/{stat.totalCapacityGB} GB</div>
+        <div className="text-cyan-400 text-2xs">{stat.usedGB}/{stat.totalCapacityGB} GB</div>
       </div>
     </motion.div>
   )
@@ -206,7 +206,7 @@ type AggregationMode = 'aggregated' | 'disaggregated'
 function InfoSparkline({ data, color, width = 100, height = 30 }: { data: number[]; color: string; width?: number; height?: number }) {
   // Filter out NaN/undefined values and ensure we have enough data points
   const validData = data.filter(v => Number.isFinite(v))
-  if (validData.length < 2) return <div style={{ width, height }} className="bg-slate-800/30 rounded" />
+  if (validData.length < 2) return <div style={{ width, height }} className="bg-gray-800/30 rounded" />
 
   const max = Math.max(...validData, 1)
   const min = Math.min(...validData, 0)
@@ -548,13 +548,13 @@ export function KVCacheMonitor() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30 relative ${isExpanded ? 'min-h-[500px]' : ''}`}>
+    <div className={`p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-gray-900/50 to-gray-800/30 relative ${isExpanded ? 'min-h-[500px]' : ''}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm rounded-lg">
-          <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-cyan-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">{t('llmd.selectStackMonitor')}</span>
-          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm rounded-lg">
+          <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-cyan-500 animate-spin mb-4" />
+          <span className="text-muted-foreground text-sm">{t('llmd.selectStackMonitor')}</span>
+          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -571,18 +571,18 @@ export function KVCacheMonitor() {
           {selectedStack && (
             <div className="flex items-center gap-1 text-xs">
               <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[80px] ${
-                isDemoMode ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
+                isDemoMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
               }`}>
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common:common.demo')}</span>
+                <span className="px-1 py-0.5 rounded bg-yellow-500/10 text-yellow-400 text-2xs">{t('common:common.demo')}</span>
               )}
             </div>
           )}
 
           {/* Aggregation toggle */}
-          <div className="flex bg-slate-800/80 rounded-lg p-0.5 backdrop-blur-sm">
+          <div className="flex bg-gray-800/80 rounded-lg p-0.5 backdrop-blur-sm">
             <button
               onClick={() => setAggregationMode('aggregated')}
               className={`px-2 py-1 text-xs rounded transition-all ${
@@ -616,7 +616,7 @@ export function KVCacheMonitor() {
                 className={`px-2 py-1 text-xs rounded font-medium transition-all flex items-center gap-1 ${
                   viewMode === 'horseshoe'
                     ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                    : 'bg-slate-700/50 text-slate-400'
+                    : 'bg-gray-700/50 text-muted-foreground'
                 }`}
                 title={t('llmd.toggleHorseshoe')}
               >
@@ -630,7 +630,7 @@ export function KVCacheMonitor() {
               className={`px-2 py-1 text-xs rounded font-medium transition-all flex items-center gap-1 ${
                 viewMode === 'heatmap'
                   ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                  : 'bg-slate-700/50 text-slate-400'
+                  : 'bg-gray-700/50 text-muted-foreground'
               }`}
               title={t('llmd.toggleHeatmap')}
             >
@@ -642,7 +642,7 @@ export function KVCacheMonitor() {
 
       {/* Summary stats with glow */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
+        <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-700/50">
           <div className="text-lg font-bold text-white flex items-center justify-center gap-1">
             {aggregateMetrics.avgUtil}%
             {trend > 2 && <TrendingUp size={14} className="text-red-400" />}
@@ -650,20 +650,20 @@ export function KVCacheMonitor() {
           </div>
           <div className="text-xs text-muted-foreground">{t('llmd.avgUtil')}</div>
         </div>
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
+        <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-700/50">
           <div className="text-lg font-bold text-white">
             {aggregateMetrics.totalUsed.toFixed(0)}
             <span className="text-xs text-muted-foreground">/{aggregateMetrics.totalCapacity}GB</span>
           </div>
           <div className="text-xs text-muted-foreground">{t('common:common.used')}</div>
         </div>
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
+        <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-700/50">
           <div className="text-lg font-bold text-green-400" style={{ textShadow: '0 0 10px rgba(34,197,94,0.5)' }}>
             {aggregateMetrics.avgHitRate}%
           </div>
           <div className="text-xs text-muted-foreground">{t('llmd.hitRate')}</div>
         </div>
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
+        <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-gray-700/50">
           <div className="text-lg font-bold text-cyan-400" style={{ textShadow: '0 0 10px rgba(6,182,212,0.5)' }}>
             {stats.length}
           </div>
@@ -682,7 +682,7 @@ export function KVCacheMonitor() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="fixed bg-slate-900/95 backdrop-blur-sm rounded-lg border border-slate-700 p-3 shadow-2xl w-[200px] z-[9999]"
+                className="fixed bg-gray-900/95 backdrop-blur-sm rounded-lg border border-gray-700 p-3 shadow-2xl w-[200px] z-[9999]"
                 style={{ left: panelPosition.x, top: panelPosition.y }}
               >
                 {(() => {
@@ -696,13 +696,13 @@ export function KVCacheMonitor() {
                         <span className="text-white font-medium text-sm">{stat.podName.replace('vllm-', '').slice(0, 14)}</span>
                         <button
                           onClick={() => { setSelectedPod(null); setPanelPosition(null) }}
-                          className="text-slate-400 hover:text-white text-xs p-1"
+                          className="text-muted-foreground hover:text-white text-xs p-1"
                         >
                           ✕
                         </button>
                       </div>
 
-                      <div className="text-xs text-slate-400 mb-2">
+                      <div className="text-xs text-muted-foreground mb-2">
                         {stat.usedGB.toFixed(1)} / {stat.totalCapacityGB} GB
                       </div>
 
@@ -715,9 +715,9 @@ export function KVCacheMonitor() {
                             className={`px-2 py-0.5 text-xs rounded transition-all ${
                               selectedMetrics.includes(metric)
                                 ? metric === 'util'
-                                  ? 'bg-amber-500/20 text-amber-400'
+                                  ? 'bg-yellow-500/20 text-yellow-400'
                                   : 'bg-green-500/20 text-green-400'
-                                : 'bg-slate-700/50 text-slate-500 hover:text-slate-300'
+                                : 'bg-gray-700/50 text-gray-500 hover:text-gray-300'
                             }`}
                           >
                             {metric === 'util' ? t('llmd.util') : t('llmd.hitRate')}
@@ -729,13 +729,13 @@ export function KVCacheMonitor() {
                       <div className="flex gap-3 text-xs mb-2">
                         {selectedMetrics.includes('util') && (
                           <div>
-                            <span className="text-slate-500">{t('llmd.util')}:</span>{' '}
-                            <span className="text-amber-400 font-mono">{stat.utilizationPercent}%</span>
+                            <span className="text-gray-500">{t('llmd.util')}:</span>{' '}
+                            <span className="text-yellow-400 font-mono">{stat.utilizationPercent}%</span>
                           </div>
                         )}
                         {selectedMetrics.includes('hitRate') && (
                           <div>
-                            <span className="text-slate-500">{t('llmd.hit')}:</span>{' '}
+                            <span className="text-gray-500">{t('llmd.hit')}:</span>{' '}
                             <span className="text-green-400 font-mono">{Math.round(stat.hitRate * 100)}%</span>
                           </div>
                         )}
@@ -746,7 +746,7 @@ export function KVCacheMonitor() {
                         <div className={`grid gap-2 ${selectedMetrics.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                           {selectedMetrics.includes('util') && (
                             <div>
-                              <div className="text-[10px] text-amber-400/70 mb-1">{t('llmd.utilPercent')}</div>
+                              <div className="text-2xs text-yellow-400/70 mb-1">{t('llmd.utilPercent')}</div>
                               <InfoSparkline
                                 data={podHist.util}
                                 color="#f59e0b"
@@ -757,7 +757,7 @@ export function KVCacheMonitor() {
                           )}
                           {selectedMetrics.includes('hitRate') && (
                             <div>
-                              <div className="text-[10px] text-green-400/70 mb-1">{t('llmd.hitRate')}</div>
+                              <div className="text-2xs text-green-400/70 mb-1">{t('llmd.hitRate')}</div>
                               <InfoSparkline
                                 data={podHist.hitRate}
                                 color="#22c55e"

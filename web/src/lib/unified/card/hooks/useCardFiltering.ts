@@ -181,7 +181,7 @@ function FilterControl({
     case 'toggle':
       return createElement(
         'label',
-        { className: 'flex items-center gap-2 text-sm text-gray-400 cursor-pointer' },
+        { className: 'flex items-center gap-2 text-sm text-muted-foreground cursor-pointer' },
         createElement('input', {
           type: 'checkbox',
           checked: (value as boolean) ?? false,
@@ -197,7 +197,7 @@ function FilterControl({
       return createElement(
         'div',
         { className: 'flex items-center gap-1 text-xs' },
-        createElement('span', { className: 'text-gray-400' }, config.label ?? config.field),
+        createElement('span', { className: 'text-muted-foreground' }, config.label ?? config.field),
         createElement('span', { className: 'text-gray-500' }, '(multi-select)')
       )
 

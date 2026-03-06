@@ -280,7 +280,7 @@ export function DeploymentStatus() {
               >
                 {statusStyle && <statusStyle.icon className={`w-3 h-3 ${isActive ? statusStyle.color : ''}`} />}
                 <span className="capitalize">{status}</span>
-                <span className={`px-1 rounded text-[10px] ${isActive ? 'bg-purple-500/30' : 'bg-secondary'}`}>
+                <span className={`px-1 rounded text-2xs ${isActive ? 'bg-purple-500/30' : 'bg-secondary'}`}>
                   {count}
                 </span>
               </button>

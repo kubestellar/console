@@ -185,7 +185,7 @@ export function CreateDashboardModal({
                     >
                       <span className="text-sm">{category.icon}</span>
                       <span className="text-xs font-medium text-foreground flex-1 text-left">{category.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{categoryTemplates.length}</span>
+                      <span className="text-2xs text-muted-foreground">{categoryTemplates.length}</span>
                       <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                     </button>
 

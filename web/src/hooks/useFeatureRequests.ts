@@ -96,7 +96,7 @@ export const STATUS_COLORS: Record<RequestStatus, string> = {
   triage_accepted: 'bg-cyan-500',
   feasibility_study: 'bg-purple-500',
   fix_ready: 'bg-green-500',
-  fix_complete: 'bg-emerald-500',
+  fix_complete: 'bg-green-500',
   unable_to_fix: 'bg-orange-500',
   closed: 'bg-gray-400',
 }

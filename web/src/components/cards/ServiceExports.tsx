@@ -93,7 +93,7 @@ const getStatusColors = (status: ServiceExportStatus) => {
     case 'Failed':
       return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/20', iconBg: 'bg-red-500/20' }
     default:
-      return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/20', iconBg: 'bg-gray-500/20' }
+      return { bg: 'bg-gray-500/20', text: 'text-muted-foreground', border: 'border-gray-500/20', iconBg: 'bg-gray-500/20' }
   }
 }
 
@@ -276,15 +276,15 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-          <p className="text-[10px] text-blue-400">{t('serviceExports.exports')}</p>
+          <p className="text-2xs text-blue-400">{t('serviceExports.exports')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalExports}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">{t('common:common.ready')}</p>
+          <p className="text-2xs text-green-400">{t('common:common.ready')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.readyCount}</p>
         </div>
-        <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-          <p className="text-[10px] text-amber-400">{t('common:common.pending')}</p>
+        <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
+          <p className="text-2xs text-yellow-400">{t('common:common.pending')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.pendingCount}</p>
         </div>
       </div>
@@ -311,7 +311,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                   <span className="text-sm font-medium text-foreground truncate">{exp.name}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${colors.bg} ${colors.text}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-2xs ${colors.bg} ${colors.text}`}>
                     {exp.status}
                   </span>
                 </div>
@@ -356,14 +356,14 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
 
       {/* Quick install command */}
       <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-[10px] text-muted-foreground font-medium mb-2">{t('serviceExports.quickInstall')}</p>
-        <code className="block p-2 rounded bg-secondary text-[10px] text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
+        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('serviceExports.quickInstall')}</p>
+        <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
           {K8S_DOCS.mcsApiInstallCommand}
         </code>
       </div>
 
       {/* Footer links */}
-      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
+      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
         <a
           href={K8S_DOCS.mcsApi}
           target="_blank"

@@ -79,7 +79,7 @@ export function TreeNode({
           <span className="text-xs text-muted-foreground ml-1">({count})</span>
         )}
         {badge !== undefined && (
-          <span className={`px-1.5 py-0.5 text-[10px] rounded-full ml-auto ${badgeColor}`}>
+          <span className={`px-1.5 py-0.5 text-2xs rounded-full ml-auto ${badgeColor}`}>
             {badge}
           </span>
         )}

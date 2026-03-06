@@ -12,7 +12,7 @@ const STATUS_ICON: Record<ResourceHealthStatus, JSX.Element> = {
   healthy: <CheckCircle className="w-3.5 h-3.5 text-green-400" />,
   degraded: <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />,
   unhealthy: <XCircle className="w-3.5 h-3.5 text-red-400" />,
-  unknown: <HelpCircle className="w-3.5 h-3.5 text-gray-400" />,
+  unknown: <HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />,
   missing: <MinusCircle className="w-3.5 h-3.5 text-red-400" />,
 }
 
@@ -20,7 +20,7 @@ const STATUS_BADGE: Record<ResourceHealthStatus, string> = {
   healthy: 'bg-green-500/20 text-green-400',
   degraded: 'bg-yellow-500/20 text-yellow-400',
   unhealthy: 'bg-red-500/20 text-red-400',
-  unknown: 'bg-gray-500/20 text-gray-400',
+  unknown: 'bg-gray-500/20 text-muted-foreground',
   missing: 'bg-red-500/20 text-red-400',
 }
 
@@ -29,11 +29,11 @@ const CATEGORY_BADGE: Record<string, string> = {
   config: 'bg-cyan-500/20 text-cyan-400',
   networking: 'bg-indigo-500/20 text-indigo-400',
   scaling: 'bg-orange-500/20 text-orange-400',
-  storage: 'bg-amber-500/20 text-amber-400',
-  crd: 'bg-violet-500/20 text-violet-400',
-  admission: 'bg-rose-500/20 text-rose-400',
+  storage: 'bg-yellow-500/20 text-yellow-400',
+  crd: 'bg-purple-500/20 text-purple-400',
+  admission: 'bg-red-500/20 text-red-400',
   workload: 'bg-purple-500/20 text-purple-400',
-  other: 'bg-gray-500/20 text-gray-400',
+  other: 'bg-gray-500/20 text-muted-foreground',
 }
 
 export function WorkloadMonitorList({ resources, onResourceClick }: ListProps) {
@@ -61,14 +61,14 @@ export function WorkloadMonitorList({ resources, onResourceClick }: ListProps) {
             <span className="text-xs font-medium text-foreground truncate min-w-0 flex-1">
               {resource.name}
             </span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${CATEGORY_BADGE[resource.category] || CATEGORY_BADGE.other}`}>
+            <span className={`text-2xs px-1.5 py-0.5 rounded shrink-0 ${CATEGORY_BADGE[resource.category] || CATEGORY_BADGE.other}`}>
               {resource.kind}
             </span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${STATUS_BADGE[resource.status]}`}>
+            <span className={`text-2xs px-1.5 py-0.5 rounded shrink-0 ${STATUS_BADGE[resource.status]}`}>
               {resource.status}
             </span>
             {resource.message && (
-              <span className="text-[10px] text-muted-foreground truncate max-w-[120px] shrink-0">
+              <span className="text-2xs text-muted-foreground truncate max-w-[120px] shrink-0">
                 {resource.message}
               </span>
             )}

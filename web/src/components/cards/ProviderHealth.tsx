@@ -51,7 +51,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <span className="text-xs text-muted-foreground">{String(t(STATUS_LABEL_KEYS[provider.status] as any))}</span>
         {!provider.configured && (
-          <span className="text-[10px] text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full font-medium">
+          <span className="text-2xs text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full font-medium">
             {t('providerHealth.noKey')}
           </span>
         )}

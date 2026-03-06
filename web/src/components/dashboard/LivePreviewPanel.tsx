@@ -55,7 +55,7 @@ export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }:
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
         <div className="flex items-center gap-1.5">
           <Eye className="w-3 h-3 text-muted-foreground" />
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
+          <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
           <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400/70">
             {t('dashboard.preview.sampleData')}
           </span>
@@ -229,7 +229,7 @@ function T2Preview({ source }: { source?: string }) {
     return (
       <div className="flex flex-col items-center justify-center py-4 px-2 text-center">
         <AlertTriangle className="w-5 h-5 text-red-400 mb-1.5" />
-        <p className="text-[10px] text-red-400 font-mono break-all max-h-20 overflow-y-auto">{error}</p>
+        <p className="text-2xs text-red-400 font-mono break-all max-h-20 overflow-y-auto">{error}</p>
       </div>
     )
   }

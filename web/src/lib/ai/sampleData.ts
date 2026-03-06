@@ -107,7 +107,7 @@ export function detectFieldFormat(
         critical: 'bg-red-500/20 text-red-400',
         error: 'bg-red-500/20 text-red-400',
         false: 'bg-red-500/20 text-red-400',
-        unknown: 'bg-gray-500/20 text-gray-400',
+        unknown: 'bg-gray-500/20 text-muted-foreground',
       }
       const badgeColors: Record<string, string> = {}
       for (const v of uniqueVals) {

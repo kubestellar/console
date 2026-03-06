@@ -14,7 +14,7 @@ export const resourceQuotaStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'Gauge',
-  iconColor: 'text-rose-400',
+  iconColor: 'text-red-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

@@ -47,7 +47,7 @@ const COLUMNS: { key: SortKey; label: string; width: string }[] = [
 ]
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDirection }) {
-  if (!active) return <ArrowUpDown size={11} className="text-slate-600" />
+  if (!active) return <ArrowUpDown size={11} className="text-gray-600" />
   return dir === 'desc'
     ? <ChevronDown size={12} className="text-blue-400" />
     : <ChevronUp size={12} className="text-blue-400" />
@@ -109,9 +109,9 @@ export function HardwareLeaderboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Trophy size={16} className="text-amber-400" />
+          <Trophy size={16} className="text-yellow-400" />
           <span className="text-sm font-medium text-white">Hardware Leaderboard</span>
-          <span className="text-xs text-slate-500">{totalItems} configs</span>
+          <span className="text-xs text-gray-500">{totalItems} configs</span>
         </div>
         <div className="flex items-center gap-2">
           <CardSearch
@@ -130,7 +130,7 @@ export function HardwareLeaderboard() {
           <select
             value={modelFilter}
             onChange={e => setModelFilter(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white"
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white"
           >
             <option value="all">{t('selectors.allModels')}</option>
             {models.map(m => <option key={m} value={m}>{m}</option>)}
@@ -141,17 +141,17 @@ export function HardwareLeaderboard() {
       {/* Table */}
       <div className="flex-1 min-h-0 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-slate-900 backdrop-blur-sm z-10">
-            <tr className="border-b border-slate-700/50">
-              <th className="text-left py-2 px-2 text-slate-500 font-medium w-[36px]">#</th>
-              <th className="text-left py-2 px-2 text-slate-500 font-medium w-[70px]">Hardware</th>
-              <th className="text-left py-2 px-2 text-slate-500 font-medium w-[100px]">Model</th>
-              <th className="text-left py-2 px-2 text-slate-500 font-medium w-[90px]">Config</th>
+          <thead className="sticky top-0 bg-gray-900 backdrop-blur-sm z-10">
+            <tr className="border-b border-gray-700/50">
+              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[36px]">#</th>
+              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[70px]">Hardware</th>
+              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[100px]">Model</th>
+              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[90px]">Config</th>
               {COLUMNS.map(col => (
                 <th
                   key={col.key}
                   onClick={() => toggleSort(col.key)}
-                  className={`text-right py-2 px-2 text-slate-500 font-medium cursor-pointer hover:text-white transition-colors ${col.width}`}
+                  className={`text-right py-2 px-2 text-gray-500 font-medium cursor-pointer hover:text-white transition-colors ${col.width}`}
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>{col.label}</span>
@@ -165,11 +165,11 @@ export function HardwareLeaderboard() {
             {rows.map(row => (
               <tr
                 key={row.rank}
-                className={`border-b border-slate-800/50 transition-colors hover:bg-slate-800/30 ${
+                className={`border-b border-gray-800/50 transition-colors hover:bg-gray-800/30 ${
                   row.config !== 'standalone' ? 'bg-blue-500/[0.03]' : ''
                 }`}
               >
-                <td className="py-2 px-2 font-mono text-slate-400">
+                <td className="py-2 px-2 font-mono text-muted-foreground">
                   {row.rank <= 3 ? (
                     <span className="text-sm">{MEDAL[row.rank]}</span>
                   ) : (
@@ -177,33 +177,33 @@ export function HardwareLeaderboard() {
                   )}
                 </td>
                 <td className="py-2 px-2 text-white font-medium">{row.hardware}</td>
-                <td className="py-2 px-2 text-slate-300 truncate max-w-[100px]">{row.model}</td>
+                <td className="py-2 px-2 text-gray-300 truncate max-w-[100px]">{row.model}</td>
                 <td className="py-2 px-2">
                   <span
-                    className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                    className="px-1.5 py-0.5 rounded text-2xs font-medium"
                     style={{ background: `${CONFIG_COLORS[row.config]}20`, color: CONFIG_COLORS[row.config] }}
                   >
                     {row.config}
                   </span>
                 </td>
                 <td className="py-2 px-2 text-right font-mono text-white">{row.throughputPerGpu.toLocaleString()}</td>
-                <td className="py-2 px-2 text-right font-mono text-slate-300">{row.ttftP50Ms.toFixed(1)}</td>
-                <td className="py-2 px-2 text-right font-mono text-slate-300">{row.tpotP50Ms.toFixed(2)}</td>
-                <td className="py-2 px-2 text-right font-mono text-slate-300">{row.p99LatencyMs.toLocaleString()}</td>
+                <td className="py-2 px-2 text-right font-mono text-gray-300">{row.ttftP50Ms.toFixed(1)}</td>
+                <td className="py-2 px-2 text-right font-mono text-gray-300">{row.tpotP50Ms.toFixed(2)}</td>
+                <td className="py-2 px-2 text-right font-mono text-gray-300">{row.p99LatencyMs.toLocaleString()}</td>
                 <td className="py-2 px-2 text-right">
                   <span className={`font-mono font-bold ${
-                    row.score >= 70 ? 'text-emerald-400' : row.score >= 50 ? 'text-amber-400' : 'text-slate-400'
+                    row.score >= 70 ? 'text-green-400' : row.score >= 50 ? 'text-yellow-400' : 'text-muted-foreground'
                   }`}>
                     {row.score.toFixed(1)}
                   </span>
                 </td>
                 <td className="py-2 px-2 text-right">
                   {row.llmdAdvantage != null ? (
-                    <span className={`font-mono font-medium ${row.llmdAdvantage > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <span className={`font-mono font-medium ${row.llmdAdvantage > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {row.llmdAdvantage > 0 ? '+' : ''}{row.llmdAdvantage}%
                     </span>
                   ) : (
-                    <span className="text-slate-600">—</span>
+                    <span className="text-gray-600">—</span>
                   )}
                 </td>
               </tr>
@@ -222,7 +222,7 @@ export function HardwareLeaderboard() {
           onPageChange={goToPage}
           onItemsPerPageChange={setPerPage}
           itemsPerPageOptions={[10, 20, 50]}
-          className="mt-2 pt-2 border-t border-slate-700/50 text-xs"
+          className="mt-2 pt-2 border-t border-gray-700/50 text-xs"
         />
       )}
     </div>

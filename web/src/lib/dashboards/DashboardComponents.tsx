@@ -184,7 +184,7 @@ export function DashboardHeader({
           </div>
           {/* Reserve fixed width to prevent layout shift */}
           <span
-            className={`flex items-center gap-1 text-xs w-[72px] ${isRefreshing ? 'text-amber-400 animate-pulse' : 'invisible'}`}
+            className={`flex items-center gap-1 text-xs w-[72px] ${isRefreshing ? 'text-yellow-400 animate-pulse' : 'invisible'}`}
             title="Updating..."
           >
             <Hourglass className="w-3 h-3" />

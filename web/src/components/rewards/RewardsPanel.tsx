@@ -29,7 +29,7 @@ export function RewardsPanel() {
   return (
     <div className="space-y-6">
       {/* Coin Balance */}
-      <div className="p-6 rounded-xl bg-gradient-to-br from-yellow-500/10 via-amber-500/5 to-orange-500/10 border border-yellow-500/20">
+      <div className="p-6 rounded-xl bg-gradient-to-br from-yellow-500/10 via-yellow-500/5 to-orange-500/10 border border-yellow-500/20">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Your Balance</p>
@@ -169,13 +169,13 @@ export function RewardsPanel() {
                 </span>
               )}
               {githubRewards.breakdown.feature_issues > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-xs">
                   <Lightbulb className="w-3 h-3" />
                   {githubRewards.breakdown.feature_issues} Features
                 </span>
               )}
               {githubRewards.breakdown.other_issues > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-500/20 text-muted-foreground text-xs">
                   <AlertCircle className="w-3 h-3" />
                   {githubRewards.breakdown.other_issues} Issues
                 </span>
@@ -225,7 +225,7 @@ export function RewardsPanel() {
       {/* Achievements */}
       <div>
         <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4">
-          <Trophy className="w-5 h-5 text-amber-400" />
+          <Trophy className="w-5 h-5 text-yellow-400" />
           Achievements
         </h3>
 
@@ -237,14 +237,14 @@ export function RewardsPanel() {
                 key={achievement.id}
                 className={`p-3 rounded-lg border text-center transition-all ${
                   isEarned
-                    ? 'bg-amber-500/10 border-amber-500/30'
+                    ? 'bg-yellow-500/10 border-yellow-500/30'
                     : 'bg-secondary/30 border-border opacity-50'
                 }`}
               >
                 <div className={`w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center ${
-                  isEarned ? 'bg-amber-500/20' : 'bg-secondary'
+                  isEarned ? 'bg-yellow-500/20' : 'bg-secondary'
                 }`}>
-                  <Star className={`w-5 h-5 ${isEarned ? 'text-amber-400' : 'text-muted-foreground'}`} />
+                  <Star className={`w-5 h-5 ${isEarned ? 'text-yellow-400' : 'text-muted-foreground'}`} />
                 </div>
                 <p className={`text-sm font-medium ${isEarned ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {achievement.name}
@@ -305,8 +305,8 @@ function ContributionIcon({ type }: { type: string }) {
     case 'issue_bug':
       return <Bug className="w-4 h-4 text-red-400 flex-shrink-0" />
     case 'issue_feature':
-      return <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0" />
+      return <Lightbulb className="w-4 h-4 text-yellow-400 flex-shrink-0" />
     default:
-      return <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      return <AlertCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
   }
 }

@@ -955,7 +955,7 @@ export function GPUReservations() {
                             <div className="flex items-center justify-between">
                               <span className={cn('text-sm font-medium', isToday ? 'text-purple-400' : 'text-foreground')}>{day}</span>
                               {gpuCount > 0 && (
-                                <span className="text-[10px] font-medium text-muted-foreground">{t('gpuReservations.calendar.gpusCount', { count: gpuCount })}</span>
+                                <span className="text-2xs font-medium text-muted-foreground">{t('gpuReservations.calendar.gpusCount', { count: gpuCount })}</span>
                               )}
                             </div>
                           </div>

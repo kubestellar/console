@@ -38,11 +38,11 @@ const ICON_COLORS: Record<string, string> = {
   cyan: 'text-cyan-400',
   blue: 'text-blue-400',
   red: 'text-red-400',
-  gray: 'text-gray-400',
+  gray: 'text-muted-foreground',
   indigo: 'text-indigo-400',
   pink: 'text-pink-400',
-  teal: 'text-teal-400',
-  emerald: 'text-emerald-400',
+  teal: 'text-cyan-400',
+  emerald: 'text-green-400',
 }
 
 const BG_COLORS: Record<string, string> = {
@@ -56,8 +56,8 @@ const BG_COLORS: Record<string, string> = {
   gray: 'bg-gray-500/10',
   indigo: 'bg-indigo-500/10',
   pink: 'bg-pink-500/10',
-  teal: 'bg-teal-500/10',
-  emerald: 'bg-emerald-500/10',
+  teal: 'bg-cyan-500/10',
+  emerald: 'bg-green-500/10',
 }
 
 export interface StatusGridVisualizationProps {
@@ -183,7 +183,7 @@ function StatusGridItem({
         <IconComponent className="w-5 h-5" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-xs text-gray-400 truncate">{item.label}</div>
+        <div className="text-xs text-muted-foreground truncate">{item.label}</div>
         {showValue && (
           <div className="text-lg font-semibold text-gray-200 truncate">
             {value}

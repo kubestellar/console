@@ -52,13 +52,13 @@ export function WorkloadMonitorAlerts({ issues, monitorType: _monitorType, expan
           <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
           <span>Issues ({issues.length})</span>
           {criticalCount > 0 && (
-            <span className="text-[10px] px-1 py-0.5 rounded bg-red-500/20 text-red-400">{criticalCount} critical</span>
+            <span className="text-2xs px-1 py-0.5 rounded bg-red-500/20 text-red-400">{criticalCount} critical</span>
           )}
           {warningCount > 0 && (
-            <span className="text-[10px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{warningCount} warning</span>
+            <span className="text-2xs px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{warningCount} warning</span>
           )}
           {infoCount > 0 && (
-            <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">{infoCount} info</span>
+            <span className="text-2xs px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">{infoCount} info</span>
           )}
         </button>
       )}
@@ -92,10 +92,10 @@ export function WorkloadMonitorAlerts({ issues, monitorType: _monitorType, expan
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-medium ${config.text}`}>{issue.title}</span>
-                    <span className={`text-[10px] px-1 py-0.5 rounded ${config.badge}`}>{issue.severity}</span>
+                    <span className={`text-2xs px-1 py-0.5 rounded ${config.badge}`}>{issue.severity}</span>
                   </div>
                   {issue.description && (
-                    <p className={`text-[10px] ${config.text} opacity-70 mt-0.5`}>{issue.description}</p>
+                    <p className={`text-2xs ${config.text} opacity-70 mt-0.5`}>{issue.description}</p>
                   )}
                 </div>
                 <CardAIActions

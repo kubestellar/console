@@ -1130,7 +1130,7 @@ function PRItem({ pr }: { pr: GitHubPR }) {
               {statusText}
             </span>
             {pr.draft && (
-              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 shrink-0">{t('cards:github.draft')}</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-muted-foreground shrink-0">{t('cards:github.draft')}</span>
             )}
             {isStaleItem && (
               <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">{t('cards:github.stale')}</span>

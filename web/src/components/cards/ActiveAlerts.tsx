@@ -260,7 +260,7 @@ export function ActiveAlerts() {
             {showAcknowledged ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
             <span>{t('activeAlerts.ackd')}</span>
             {acknowledgedAlerts.length > 0 && (
-              <span className="ml-0.5 px-1 py-0 text-[10px] rounded-full bg-green-500/30">
+              <span className="ml-0.5 px-1 py-0 text-2xs rounded-full bg-green-500/30">
                 {acknowledgedAlerts.length}
               </span>
             )}

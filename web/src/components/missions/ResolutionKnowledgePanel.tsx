@@ -169,7 +169,7 @@ function ResolutionCard({
           <div className="flex items-center gap-2 mt-0.5">
             {successRate !== null && (
               <span className={cn(
-                "text-[10px]",
+                "text-2xs",
                 successRate >= 80 ? "text-green-400" :
                 successRate >= 50 ? "text-yellow-400" : "text-muted-foreground"
               )}>
@@ -177,7 +177,7 @@ function ResolutionCard({
               </span>
             )}
             {showSharedBy && resolution.sharedBy && (
-              <span className="text-[10px] text-blue-400">
+              <span className="text-2xs text-blue-400">
                 by @{resolution.sharedBy}
               </span>
             )}
@@ -190,7 +190,7 @@ function ResolutionCard({
         <div className="px-2.5 pb-2.5 border-t border-border/50">
           <div className="mt-2 space-y-2">
             {/* Issue Type */}
-            <div className="text-[10px]">
+            <div className="text-2xs">
               <span className="text-muted-foreground">Issue: </span>
               <span className="text-foreground">
                 {resolution.issueSignature.type}
@@ -205,7 +205,7 @@ function ResolutionCard({
 
             {/* Steps Preview */}
             {resolution.resolution.steps.length > 0 && (
-              <div className="text-[10px] space-y-1">
+              <div className="text-2xs space-y-1">
                 <span className="text-muted-foreground">Steps:</span>
                 <ol className="list-decimal list-inside space-y-0.5 text-foreground">
                   {resolution.resolution.steps.slice(0, 3).map((step, i) => (
@@ -227,7 +227,7 @@ function ResolutionCard({
                   e.stopPropagation()
                   onApply()
                 }}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-medium bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded transition-colors"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-2xs font-medium bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded transition-colors"
               >
                 <CheckCircle className="w-3 h-3" />
                 Apply
@@ -237,7 +237,7 @@ function ResolutionCard({
                   e.stopPropagation()
                   copyResolutionToClipboard(resolution.resolution)
                 }}
-                className="flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] bg-secondary hover:bg-secondary/80 border border-border rounded transition-colors"
+                className="flex items-center justify-center gap-1.5 px-2 py-1.5 text-2xs bg-secondary hover:bg-secondary/80 border border-border rounded transition-colors"
                 title="Copy to clipboard"
               >
                 <Clipboard className="w-3 h-3" />

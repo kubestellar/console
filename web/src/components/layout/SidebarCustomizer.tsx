@@ -519,7 +519,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                                 setSelectedKnownRoutes(newSelected)
                               }}
                               className={cn(
-                                'text-[10px] px-1.5 py-0.5 rounded transition-colors',
+                                'text-2xs px-1.5 py-0.5 rounded transition-colors',
                                 allCategorySelected
                                   ? 'bg-purple-500/30 text-purple-300 hover:bg-purple-500/40'
                                   : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'

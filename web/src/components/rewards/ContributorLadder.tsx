@@ -55,7 +55,7 @@ export function ContributorBanner() {
             </div>
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${current.bgClass} ${current.borderClass}`}>
               <LevelIcon level={current} className={`w-3 h-3 ${current.textClass}`} />
-              <span className={`text-[10px] font-semibold uppercase tracking-wider ${current.textClass}`}>
+              <span className={`text-2xs font-semibold uppercase tracking-wider ${current.textClass}`}>
                 {current.name}
               </span>
             </div>
@@ -72,7 +72,7 @@ export function ContributorBanner() {
             )}
             <button
               onClick={() => setShowLadder(!showLadder)}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-2xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {showLadder ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               Levels
@@ -83,7 +83,7 @@ export function ContributorBanner() {
         {/* Progress bar to next level */}
         {next ? (
           <div>
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+            <div className="flex items-center justify-between text-2xs text-muted-foreground mb-1">
               <span className={current.textClass}>{current.name}</span>
               <span>{coinsToNext.toLocaleString()} coins to {next.name}</span>
             </div>
@@ -95,7 +95,7 @@ export function ContributorBanner() {
                   current.color === 'cyan' ? 'bg-cyan-400' :
                   current.color === 'green' ? 'bg-green-400' :
                   current.color === 'purple' ? 'bg-purple-400' :
-                  current.color === 'amber' ? 'bg-amber-400' :
+                  current.color === 'yellow' ? 'bg-yellow-400' :
                   current.color === 'orange' ? 'bg-orange-400' :
                   'bg-yellow-400'
                 }`}
@@ -104,13 +104,13 @@ export function ContributorBanner() {
             </div>
           </div>
         ) : (
-          <div className="text-[10px] text-yellow-400 text-center">
+          <div className="text-2xs text-yellow-400 text-center">
             Max level reached!
           </div>
         )}
 
         {githubPoints > 0 && (
-          <p className="text-[10px] text-muted-foreground mt-1">
+          <p className="text-2xs text-muted-foreground mt-1">
             Includes {githubPoints.toLocaleString()} from GitHub contributions
           </p>
         )}
@@ -154,7 +154,7 @@ export function ContributorBanner() {
                       )}
                     </div>
                   </div>
-                  <span className={`text-[10px] font-mono ${isUnlocked ? level.textClass : 'text-muted-foreground'}`}>
+                  <span className={`text-2xs font-mono ${isUnlocked ? level.textClass : 'text-muted-foreground'}`}>
                     {level.minCoins.toLocaleString()}
                   </span>
                 </div>

@@ -818,7 +818,7 @@ function CardPreview({ card }: { card: HoveredCard }) {
                 <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-secondary" />
                 <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-purple-400" strokeDasharray="70 30" strokeLinecap="round" />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium">70%</span>
+              <span className="absolute inset-0 flex items-center justify-center text-2xs font-medium">70%</span>
             </div>
           </div>
         )
@@ -1314,7 +1314,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               <div className="w-64 border-l border-border pl-4 flex-shrink-0">
                 {hoveredCard ? (
                   <div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">{t('dashboard.addCard.preview')}</div>
+                    <div className="text-2xs text-muted-foreground uppercase tracking-wide mb-2">{t('dashboard.addCard.preview')}</div>
 
                     {/* Card preview - looks like actual card */}
                     <CardPreview card={hoveredCard} />

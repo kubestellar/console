@@ -73,8 +73,8 @@ function getViewConfig(viewType: DrillDownViewType) {
     case 'all-events':
       return {
         icon: Zap,
-        color: 'text-amber-400',
-        bgColor: 'bg-amber-500/20',
+        color: 'text-yellow-400',
+        bgColor: 'bg-yellow-500/20',
         dataKey: 'events',
         nameKey: 'reason',
         getStatus: (item: { type?: string }) => item.type || 'Normal',
@@ -127,8 +127,8 @@ function getViewConfig(viewType: DrillDownViewType) {
     case 'all-storage':
       return {
         icon: HardDrive,
-        color: 'text-emerald-400',
-        bgColor: 'bg-emerald-500/20',
+        color: 'text-green-400',
+        bgColor: 'bg-green-500/20',
         dataKey: 'pvcs',
         nameKey: 'name',
         getStatus: (item: { status?: string; phase?: string }) => item.status || item.phase || 'unknown',
@@ -447,10 +447,10 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
         </div>
         <div className="glass rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
             <span className="text-sm text-muted-foreground">Issues</span>
           </div>
-          <div className="text-2xl font-bold text-amber-400">{stats.issues}</div>
+          <div className="text-2xl font-bold text-yellow-400">{stats.issues}</div>
         </div>
       </div>
 

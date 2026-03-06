@@ -157,7 +157,7 @@ Please provide:
               healthScore >= 60 ? 'text-yellow-400' :
               'text-red-400'
             )}>{healthScore}%</div>
-            <div className="text-[10px] text-muted-foreground">{t('healthCheck.health')}</div>
+            <div className="text-2xs text-muted-foreground">{t('healthCheck.health')}</div>
           </div>
         </div>
       </div>
@@ -176,7 +176,7 @@ Please provide:
           title={t('healthCheck.healthyClusterTooltip', { count: healthyClusters })}
         >
           <div className="text-lg font-bold text-green-400">{healthyClusters}</div>
-          <div className="text-[10px] text-muted-foreground">{t('common.healthy')}</div>
+          <div className="text-2xs text-muted-foreground">{t('common.healthy')}</div>
         </div>
         <div
           className={cn(
@@ -190,7 +190,7 @@ Please provide:
           title={t('healthCheck.unhealthyClusterTooltip', { count: unhealthyClusters })}
         >
           <div className="text-lg font-bold text-red-400">{unhealthyClusters}</div>
-          <div className="text-[10px] text-muted-foreground">{t('common.unhealthy')}</div>
+          <div className="text-2xs text-muted-foreground">{t('common.unhealthy')}</div>
         </div>
         <div
           className={cn(
@@ -204,7 +204,7 @@ Please provide:
           title={t('healthCheck.offlineClusterTooltip', { count: unreachableClusters })}
         >
           <div className="text-lg font-bold text-yellow-400">{unreachableClusters}</div>
-          <div className="text-[10px] text-muted-foreground">{t('common.offline')}</div>
+          <div className="text-2xs text-muted-foreground">{t('common.offline')}</div>
         </div>
       </div>
 

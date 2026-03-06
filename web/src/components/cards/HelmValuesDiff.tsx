@@ -408,7 +408,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
         </div>
       ) : (valuesLoading || valuesRefreshing) && values === null ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-amber-400">
+          <div className="flex items-center gap-2 text-sm text-yellow-400">
             <RotateCcw className="w-4 h-4 animate-spin" />
             <span>Loading values for {selectedRelease}...</span>
           </div>
@@ -430,7 +430,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           >
             <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-sm text-foreground group-hover:text-amber-400 truncate min-w-0">{selectedRelease}</span>
+            <span className="text-sm text-foreground group-hover:text-yellow-400 truncate min-w-0">{selectedRelease}</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
 

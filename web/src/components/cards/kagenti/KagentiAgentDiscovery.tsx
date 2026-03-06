@@ -92,11 +92,11 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
             {skillSummary.map(([skill, count]) => (
               <span
                 key={skill}
-                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded bg-violet-500/10 text-violet-400 border border-violet-500/20"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-2xs rounded bg-purple-500/10 text-purple-400 border border-purple-500/20"
               >
                 <Tag className="w-2.5 h-2.5" />
                 {skill}
-                {count > 1 && <span className="text-violet-400/60">({count})</span>}
+                {count > 1 && <span className="text-purple-400/60">({count})</span>}
               </span>
             ))}
           </div>
@@ -115,7 +115,7 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
             key={`${card.cluster}-${card.namespace}-${card.name}`}
             className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary transition-colors"
           >
-            <Radar className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            <Radar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium truncate">{card.name}</div>
               <div className="text-xs text-muted-foreground/60 flex items-center gap-1">
@@ -125,9 +125,9 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
               </div>
             </div>
             {card.identityBinding ? (
-              <Shield className="w-3 h-3 text-emerald-400" />
+              <Shield className="w-3 h-3 text-green-400" />
             ) : (
-              <span className="text-xs text-zinc-500">No ID</span>
+              <span className="text-xs text-gray-500">No ID</span>
             )}
             {(card.skills || []).length > 0 && (
               <span className="text-xs text-muted-foreground/40">

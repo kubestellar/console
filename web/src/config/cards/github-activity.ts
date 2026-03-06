@@ -9,7 +9,7 @@ export const githubActivityConfig: UnifiedCardConfig = {
   category: 'ci-cd',
   description: 'Recent GitHub repository activity',
   icon: 'Github',
-  iconColor: 'text-gray-400',
+  iconColor: 'text-muted-foreground',
   defaultWidth: 8,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useGithubActivity' },

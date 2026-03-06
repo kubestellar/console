@@ -315,7 +315,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       case 'editor':
         return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
       default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+        return 'bg-gray-500/20 text-muted-foreground border-gray-500/30'
     }
   }
 

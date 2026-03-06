@@ -46,14 +46,14 @@ function CustomTooltip({ active, payload }: {
   if (!active || !payload?.[0]) return null
   const p = payload[0].payload
   return (
-    <div className="bg-slate-900 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-xl text-xs">
+    <div className="bg-gray-900 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl text-xs">
       <div className="text-white font-medium mb-1">{p.fullVariant}</div>
       <div className="flex items-center gap-2">
-        <span className="text-slate-300">Value:</span>
+        <span className="text-gray-300">Value:</span>
         <span className="font-mono text-white">{p.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-        {p.isBest && <Trophy size={12} className="text-amber-400" />}
+        {p.isBest && <Trophy size={12} className="text-yellow-400" />}
       </div>
-      <div className="mt-1 text-slate-400">
+      <div className="mt-1 text-muted-foreground">
         Type: <span style={{ color: CONFIG_TYPE_COLORS[p.config as keyof typeof CONFIG_TYPE_COLORS] }}>{p.config}</span>
       </div>
     </div>
@@ -132,10 +132,10 @@ export function ResourceUtilization() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <BarChart3 size={14} className="text-emerald-400" />
+          <BarChart3 size={14} className="text-green-400" />
           <span className="text-sm font-medium text-white">Experiment Comparison</span>
           {bestVariant && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-400">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-green-500/15 text-green-400">
               <Trophy size={10} />
               Best: {bestVariant} ({bestValue.toLocaleString(undefined, { maximumFractionDigits: 1 })} {modeInfo.unit})
             </span>
@@ -145,7 +145,7 @@ export function ResourceUtilization() {
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-white"
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-[11px] text-white"
           >
             <option value="all">{t('selectors.allCategories')}</option>
             {filterOpts.categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -153,7 +153,7 @@ export function ResourceUtilization() {
           <select
             value={qpsFilter}
             onChange={e => setQpsFilter(Number(e.target.value))}
-            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-white"
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-[11px] text-white"
           >
             <option value={0}>Peak QPS ({effectiveQps})</option>
             {qpsValues.map(q => <option key={q} value={q}>QPS {q}</option>)}
@@ -162,13 +162,13 @@ export function ResourceUtilization() {
       </div>
 
       {/* Mode tabs */}
-      <div className="flex gap-1 mb-3 bg-slate-800/80 rounded-lg p-0.5 w-fit">
+      <div className="flex gap-1 mb-3 bg-gray-800/80 rounded-lg p-0.5 w-fit">
         {MODES.map(m => (
           <button
             key={m.key}
             onClick={() => setMode(m.key)}
             className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-              mode === m.key ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'
+              mode === m.key ? 'bg-green-500/20 text-green-400' : 'text-muted-foreground hover:text-white'
             }`}
           >
             {m.label}
@@ -223,18 +223,18 @@ export function ResourceUtilization() {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+          <div className="h-full flex items-center justify-center text-gray-500 text-sm">
             No data for QPS {effectiveQps}
           </div>
         )}
       </div>
 
       {/* Config type legend */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-[10px]">
+      <div className="flex items-center justify-center gap-4 mt-2 text-2xs">
         {Object.entries(CONFIG_TYPE_COLORS).map(([cfg, color]) => (
           <div key={cfg} className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: color }} />
-            <span className="text-slate-400">{cfg}</span>
+            <span className="text-muted-foreground">{cfg}</span>
           </div>
         ))}
       </div>

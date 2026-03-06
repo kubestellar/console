@@ -865,7 +865,7 @@ Please:
           title={offlineNodes.length > 0 ? `${offlineNodes.length} offline node${offlineNodes.length !== 1 ? 's' : ''} - Click to view` : 'All nodes online'}
         >
           <div className="text-xl font-bold text-foreground">{offlineNodes.length}</div>
-          <div className={cn('text-[10px]', offlineNodes.length > 0 ? 'text-red-400' : 'text-green-400')}>
+          <div className={cn('text-2xs', offlineNodes.length > 0 ? 'text-red-400' : 'text-green-400')}>
             {t('cards:consoleOfflineDetection.offline')}
           </div>
         </div>
@@ -884,7 +884,7 @@ Please:
           title={gpuIssues.length > 0 ? `${gpuIssues.length} GPU issue${gpuIssues.length !== 1 ? 's' : ''} - Click to view` : 'All GPUs available'}
         >
           <div className="text-xl font-bold text-foreground">{gpuIssues.length}</div>
-          <div className={cn('text-[10px]', gpuIssues.length > 0 ? 'text-yellow-400' : 'text-green-400')}>
+          <div className={cn('text-2xs', gpuIssues.length > 0 ? 'text-yellow-400' : 'text-green-400')}>
             {t('cards:consoleOfflineDetection.gpuIssues')}
           </div>
         </div>
@@ -922,7 +922,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
             )}
           </div>
           <div className={cn(
-            'text-[10px] flex items-center gap-1',
+            'text-2xs flex items-center gap-1',
             totalPredicted > 0 ? 'text-blue-400' : 'text-green-400'
           )}>
             {t('cards:consoleOfflineDetection.predicted')}
@@ -1030,7 +1030,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-foreground">{group.cause}</span>
                           <span
-                            className="px-1.5 py-0.5 text-[10px] font-bold rounded"
+                            className="px-1.5 py-0.5 text-2xs font-bold rounded"
                             style={{
                               backgroundColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.2)`,
                               color: `rgb(${severityColor === 'red' ? '248,113,113' : severityColor === 'yellow' ? '250,204,21' : '96,165,250'})`,
@@ -1039,7 +1039,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                             {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                           </span>
                           {group.items.length > 1 && (
-                            <span className="text-[10px] text-green-400 font-medium">
+                            <span className="text-2xs text-green-400 font-medium">
                               ✓ Fix once, solve {group.items.length}
                             </span>
                           )}
@@ -1049,7 +1049,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                     </div>
                     <button
                       className={cn(
-                        'px-2 py-1 text-[10px] rounded font-medium transition-colors flex-shrink-0 ml-2',
+                        'px-2 py-1 text-2xs rounded font-medium transition-colors flex-shrink-0 ml-2',
                         'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                       )}
                       onClick={(e) => {
@@ -1250,7 +1250,7 @@ TASK:
                         {risk.trend && <TrendIcon trend={risk.trend} />}
                         {/* Namespace Badge */}
                         {risk.namespace && (
-                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-slate-500/20 text-slate-400 rounded truncate max-w-[80px]" title={`namespace: ${risk.namespace}`}>
+                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-gray-500/20 text-muted-foreground rounded truncate max-w-[80px]" title={`namespace: ${risk.namespace}`}>
                             {risk.namespace}
                           </span>
                         )}

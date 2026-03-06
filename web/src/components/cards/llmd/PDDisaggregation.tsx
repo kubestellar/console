@@ -129,7 +129,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
         <div>
           <span className="text-muted-foreground">{t('llmd.load')}</span>
           <div className="flex items-center gap-1 mt-0.5">
-            <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full"
                 style={{ backgroundColor: server.load > 70 ? '#f59e0b' : color }}
@@ -163,7 +163,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
           <span className="text-muted-foreground"><Acronym term="GPU" /> Mem</span>
           <span className="text-white font-mono">{server.gpuMemory}%</span>
         </div>
-        <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
+        <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
             style={{
@@ -345,13 +345,13 @@ export function PDDisaggregation() {
         <div className="flex items-center gap-2">
           {selectedStack && (
             <span className={`px-1.5 py-0.5 rounded text-xs font-medium truncate max-w-[80px] ${
-              isDemoMode ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
+              isDemoMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
             }`}>
               {selectedStack.name}
             </span>
           )}
           {isDemoMode && (
-            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
+            <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
               {t('common:common.demo')}
             </span>
           )}
@@ -361,12 +361,12 @@ export function PDDisaggregation() {
       {/* Empty state for non-disaggregated stacks */}
       {selectedStack && !hasDisaggregation && !isDemoMode && (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-          <AlertCircle size={32} className="text-slate-500 mb-3" />
-          <span className="text-slate-400 text-sm font-medium">{t('llmd.unifiedServingMode')}</span>
-          <span className="text-slate-500 text-xs mt-1">
+          <AlertCircle size={32} className="text-gray-500 mb-3" />
+          <span className="text-muted-foreground text-sm font-medium">{t('llmd.unifiedServingMode')}</span>
+          <span className="text-gray-500 text-xs mt-1">
             {t('llmd.stackUsesUnified')}
           </span>
-          <span className="text-slate-500 text-xs">
+          <span className="text-gray-500 text-xs">
             {t('llmd.disaggregationAvailable')}
           </span>
         </div>
@@ -375,9 +375,9 @@ export function PDDisaggregation() {
       {/* Empty state when no stack selected in live mode */}
       {!selectedStack && !isDemoMode && (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-          <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-cyan-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">{t('llmd.selectStackDisaggregation')}</span>
-          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+          <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-cyan-500 animate-spin mb-4" />
+          <span className="text-muted-foreground text-sm">{t('llmd.selectStackDisaggregation')}</span>
+          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
 
@@ -472,7 +472,7 @@ export function PDDisaggregation() {
                 ))}
               </AnimatePresence>
 
-              <div className="z-10 bg-slate-900 px-2 py-1 rounded text-xs text-cyan-400">
+              <div className="z-10 bg-gray-900 px-2 py-1 rounded text-xs text-cyan-400">
                 <Acronym term="KV" /> Cache
               </div>
             </div>

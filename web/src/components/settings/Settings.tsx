@@ -243,7 +243,7 @@ export function Settings() {
           </div>
           {SETTINGS_NAV.map((group) => (
             <div key={group.groupKey}>
-              <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 px-2">
+              <h3 className="text-2xs uppercase tracking-wider text-muted-foreground font-semibold mb-1 px-2">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {t(group.groupKey as any)}
               </h3>

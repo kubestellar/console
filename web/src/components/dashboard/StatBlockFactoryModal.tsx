@@ -615,7 +615,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                           <div className="mt-1.5 ml-7">
                             <button
                               onClick={() => applySmartDefault(idx, smartDefault)}
-                              className="text-[10px] text-purple-400/60 hover:text-purple-400 transition-colors"
+                              className="text-2xs text-purple-400/60 hover:text-purple-400 transition-colors"
                             >
                               Suggested: {(() => { const SugIcon = getIcon(smartDefault.icon); return <SugIcon className="w-3 h-3 inline mr-0.5" /> })()}
                               {smartDefault.icon} · {smartDefault.color}
@@ -661,7 +661,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
                   <div className="flex items-center gap-1.5">
                     <Eye className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
+                    <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
                     <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400/70">
                       {t('dashboard.preview.sampleValues')}
                     </span>
@@ -773,7 +773,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                     <div className="flex items-center gap-2">
                       <Activity className="w-4 h-4 text-purple-400 shrink-0" />
                       <span className="text-sm font-medium text-foreground">{stats.title || stats.type}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                      <span className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
                         {t('dashboard.statFactory.blocksCount', { count: stats.blocks.length })}
                       </span>
                     </div>
@@ -786,7 +786,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                         return (
                           <span
                             key={block.id}
-                            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground"
+                            className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground"
                           >
                             <BlockIcon className={cn('w-3 h-3', COLOR_CLASSES[block.color])} />
                             {block.label}
@@ -794,7 +794,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                         )
                       })}
                       {stats.blocks.length > 8 && (
-                        <span className="text-[10px] px-1.5 py-0.5 text-muted-foreground">
+                        <span className="text-2xs px-1.5 py-0.5 text-muted-foreground">
                           +{stats.blocks.length - 8} more
                         </span>
                       )}

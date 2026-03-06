@@ -76,7 +76,7 @@ export function DirectoryListing({
           )}
           <p className="text-xs text-foreground truncate w-full">{entry.name}</p>
           {entry.size !== undefined && (
-            <span className="text-[10px] text-muted-foreground">{formatBytes(entry.size)}</span>
+            <span className="text-2xs text-muted-foreground">{formatBytes(entry.size)}</span>
           )}
         </button>
       ))}

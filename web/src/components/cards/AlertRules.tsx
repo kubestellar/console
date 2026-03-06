@@ -223,7 +223,7 @@ export function AlertRulesCard() {
                       {rule.name}
                     </span>
                     {rule.aiDiagnose && (
-                      <span className="px-1 py-0.5 text-[10px] rounded bg-purple-500/20 text-purple-400">
+                      <span className="px-1 py-0.5 text-2xs rounded bg-purple-500/20 text-purple-400">
                         AI
                       </span>
                     )}
@@ -237,7 +237,7 @@ export function AlertRulesCard() {
                     {rule.channels.map((channel, idx) => (
                       <span
                         key={idx}
-                        className={`px-1.5 py-0.5 text-[10px] rounded ${
+                        className={`px-1.5 py-0.5 text-2xs rounded ${
                           channel.enabled
                             ? 'bg-secondary text-foreground'
                             : 'bg-secondary/50 text-muted-foreground'

@@ -221,7 +221,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                       <span className="font-medium text-foreground text-sm truncate">{cardType.name}</span>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{cardType.description}</p>
-                    <span className="inline-block mt-1 text-[10px] text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">{cardType.category}</span>
+                    <span className="inline-block mt-1 text-2xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">{cardType.category}</span>
                   </button>
                 ))}
                 {filteredCards.length === 0 && (

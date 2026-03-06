@@ -33,7 +33,7 @@ function fmtNum(n: number, decimals = 0): string {
 
 function Delta({ value, invert = false }: { value: number; invert?: boolean }) {
   const positive = invert ? value < 0 : value > 0
-  const color = positive ? 'text-emerald-400' : 'text-red-400'
+  const color = positive ? 'text-green-400' : 'text-red-400'
   const Icon = positive ? TrendingUp : TrendingDown
   return (
     <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${color}`}>
@@ -67,7 +67,7 @@ function HeroMetric({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
-      className="flex-1 bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 relative overflow-hidden group"
+      className="flex-1 bg-gray-800/60 border border-gray-700/50 rounded-xl p-4 relative overflow-hidden group"
     >
       <div
         className="absolute inset-0 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity"
@@ -76,11 +76,11 @@ function HeroMetric({
       <div className="relative">
         <div className="flex items-center gap-1.5 mb-2">
           <Icon size={13} style={{ color }} />
-          <span className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">{label}</span>
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-bold text-white tracking-tight">{value}</span>
-          <span className="text-xs text-slate-400">{unit}</span>
+          <span className="text-xs text-muted-foreground">{unit}</span>
         </div>
         <div className="mt-1.5">
           <Delta value={delta} invert={invertDelta} />
@@ -145,7 +145,7 @@ export function BenchmarkHero() {
     return { latest: best, prev: baseline, engine: eng, gpuMetrics: gpuM }
   }, [effectiveReports])
 
-  if (!latest) return <div className="p-5 h-full flex items-center justify-center text-slate-400 text-sm">No benchmark data available</div>
+  if (!latest) return <div className="p-5 h-full flex items-center justify-center text-muted-foreground text-sm">No benchmark data available</div>
 
   const agg = latest.results.request_performance.aggregate
   const prevAgg = prev?.results.request_performance.aggregate
@@ -191,14 +191,14 @@ export function BenchmarkHero() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-white font-semibold text-lg">{model}</span>
-              <ArrowRight size={14} className="text-slate-500" />
-              <span className="text-slate-300 font-medium">{hw}</span>
+              <ArrowRight size={14} className="text-gray-500" />
+              <span className="text-gray-300 font-medium">{hw}</span>
               <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{ background: `${CONFIG_COLORS[config]}20`, color: CONFIG_COLORS[config] }}>
                 {config}
               </span>
             </div>
-            <div className="text-xs text-slate-400 mt-0.5">
+            <div className="text-xs text-muted-foreground mt-0.5">
               {engine?.standardized.tool} {engine?.standardized.tool_version?.split(':').pop()} &middot;{' '}
               {new Date(latest.run.time.start).toLocaleDateString()} &middot;{' '}
               {latest.run.time.duration.replace('PT', '').replace('S', 's')}
@@ -207,11 +207,11 @@ export function BenchmarkHero() {
         </div>
         {/* Time range filter */}
         <div className="flex items-center gap-2">
-          <CalendarDays size={13} className="text-slate-500" />
+          <CalendarDays size={13} className="text-gray-500" />
           <select
             value={TIME_RANGE_OPTIONS.some(o => o.value === currentSince) ? currentSince : 'custom'}
             onChange={e => handleTimeRangeChange(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white appearance-none cursor-pointer hover:border-slate-600 transition-colors"
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1 text-xs text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors"
           >
             {TIME_RANGE_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -228,7 +228,7 @@ export function BenchmarkHero() {
                 value={customDays}
                 onChange={e => setCustomDays(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCustomSubmit()}
-                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white w-16"
+                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white w-16"
                 autoFocus
               />
               <button
@@ -286,29 +286,29 @@ export function BenchmarkHero() {
       </div>
 
       {/* Bottom strip */}
-      <div className="flex items-center gap-6 px-1 text-xs text-slate-400">
+      <div className="flex items-center gap-6 px-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500">Requests:</span>
+          <span className="text-gray-500">Requests:</span>
           <span className="text-white font-mono">{agg.requests.total.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500">Failures:</span>
-          <span className={`font-mono ${agg.requests.failures > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+          <span className="text-gray-500">Failures:</span>
+          <span className={`font-mono ${agg.requests.failures > 0 ? 'text-red-400' : 'text-green-400'}`}>
             {agg.requests.failures === 0 ? '0' : agg.requests.failures}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Cpu size={11} className="text-slate-500" />
-          <span className="text-slate-500">GPU Util:</span>
+          <Cpu size={11} className="text-gray-500" />
+          <span className="text-gray-500">GPU Util:</span>
           <span className="text-white font-mono">{gpuUtil.toFixed(0)}%</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Zap size={11} className="text-slate-500" />
-          <span className="text-slate-500">Power:</span>
+          <Zap size={11} className="text-gray-500" />
+          <span className="text-gray-500">Power:</span>
           <span className="text-white font-mono">{gpuPower.toFixed(0)}W</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500">GPUs:</span>
+          <span className="text-gray-500">GPUs:</span>
           <span className="text-white font-mono">{engine?.standardized.accelerator?.count ?? 1}x {hw}</span>
         </div>
       </div>

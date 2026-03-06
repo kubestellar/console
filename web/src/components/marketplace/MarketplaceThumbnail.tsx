@@ -178,7 +178,7 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
         style={{ background: `linear-gradient(135deg, ${cncfGradient[0]}, ${cncfGradient[1]})` }}
       >
         <ProjectLogo projectName={projectName} iconPath={iconPath} />
-        <span className="absolute bottom-1.5 right-2 text-[10px] font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
+        <span className="absolute bottom-1.5 right-2 text-2xs font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
           {cncfCategory}
         </span>
       </div>

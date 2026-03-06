@@ -417,7 +417,7 @@ After I approve, help me execute the repairs step by step.`,
                 </div>
                 <div className="text-xs text-green-400">{!isUnreachable ? `${health?.readyNodes || 0} ${t('clusterDetail.ready')}` : t('clusterDetail.offline')}</div>
                 {!isUnreachable && !showNodeDetails && (
-                  <div className="text-[10px] text-muted-foreground/50 mt-2 group-hover:text-cyan-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
+                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-cyan-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
                 )}
               </>
             )}
@@ -463,7 +463,7 @@ After I approve, help me execute the repairs step by step.`,
                   )}
                 </div>
                 {!isUnreachable && !showPodsByNamespace && (
-                  <div className="text-[10px] text-muted-foreground/50 mt-2 group-hover:text-indigo-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
+                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-indigo-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
                 )}
               </>
             )}
@@ -488,7 +488,7 @@ After I approve, help me execute the repairs step by step.`,
                 <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
                 <div className="text-xs text-yellow-400">{!isUnreachable ? `${clusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} ${t('clusterDetail.allocated')}` : ''}</div>
                 {!isUnreachable && clusterGPUs.length > 0 && (
-                  <div className="text-[10px] text-muted-foreground/50 mt-2 group-hover:text-yellow-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
+                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-yellow-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
                 )}
               </>
             )}
@@ -519,7 +519,7 @@ After I approve, help me execute the repairs step by step.`,
                 <div className="text-2xl font-bold text-foreground">{!isUnreachable ? (health?.cpuCores || 0) : '-'}</div>
                 <div className="text-xs text-muted-foreground">{t('clusterDetail.coresAllocatable')}</div>
                 {!isUnreachable && (
-                  <div className="text-[10px] text-muted-foreground/50 mt-2 group-hover:text-blue-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
+                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-blue-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
                 )}
               </>
             )}
@@ -548,7 +548,7 @@ After I approve, help me execute the repairs step by step.`,
                 </div>
                 <div className="text-xs text-muted-foreground">{t('clusterDetail.allocatable')}</div>
                 {!isUnreachable && (
-                  <div className="text-[10px] text-muted-foreground/50 mt-2 group-hover:text-green-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
+                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-green-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
                 )}
               </>
             )}
@@ -577,7 +577,7 @@ After I approve, help me execute the repairs step by step.`,
                 </div>
                 <div className="text-xs text-muted-foreground">{t('clusterDetail.ephemeral')}</div>
                 {!isUnreachable && (
-                  <div className="text-[10px] text-muted-foreground/50 mt-2 group-hover:text-purple-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
+                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-purple-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
                 )}
               </>
             )}

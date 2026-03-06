@@ -14,7 +14,7 @@ export const limitRangeStatusConfig: UnifiedCardConfig = {
 
   // Appearance
   icon: 'Sliders',
-  iconColor: 'text-teal-400',
+  iconColor: 'text-cyan-400',
   defaultWidth: 6,
   defaultHeight: 3,
 

@@ -131,7 +131,7 @@ export function InlineAIAssist<T>({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Sparkles className="w-3 h-3 text-purple-400" />
-          <span className="text-[10px] font-medium text-purple-400 uppercase tracking-wide">{t('dashboard.aiAssist.header')}</span>
+          <span className="text-2xs font-medium text-purple-400 uppercase tracking-wide">{t('dashboard.aiAssist.header')}</span>
         </div>
         <button
           onClick={() => { setPhase('collapsed'); setError(null) }}
@@ -171,7 +171,7 @@ export function InlineAIAssist<T>({
 
       {/* Error */}
       {phase === 'error' && error && (
-        <div className="flex items-center gap-1.5 text-[10px] text-red-400">
+        <div className="flex items-center gap-1.5 text-2xs text-red-400">
           <AlertTriangle className="w-3 h-3 shrink-0" />
           <span className="truncate">{error}</span>
         </div>

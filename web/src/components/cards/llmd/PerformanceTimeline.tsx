@@ -136,13 +136,13 @@ export function PerformanceTimeline() {
         <div className="flex items-center gap-2">
           <LayoutGrid size={14} className="text-purple-400" />
           <span className="text-sm font-medium text-white">Sequence Length Impact</span>
-          <span className="text-[10px] text-slate-500">ISL × OSL → {modeInfo.label}</span>
+          <span className="text-2xs text-gray-500">ISL × OSL → {modeInfo.label}</span>
         </div>
         <div className="flex items-center gap-2">
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-white"
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-[11px] text-white"
           >
             <option value="all">{t('selectors.allCategories')}</option>
             {filterOpts.categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -150,7 +150,7 @@ export function PerformanceTimeline() {
           <select
             value={qpsFilter}
             onChange={e => setQpsFilter(Number(e.target.value))}
-            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-white"
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-[11px] text-white"
           >
             <option value={0}>All QPS</option>
             {qpsValues.map(q => <option key={q} value={q}>QPS {q}</option>)}
@@ -159,13 +159,13 @@ export function PerformanceTimeline() {
       </div>
 
       {/* Mode tabs */}
-      <div className="flex gap-1 mb-3 bg-slate-800/80 rounded-lg p-0.5 w-fit">
+      <div className="flex gap-1 mb-3 bg-gray-800/80 rounded-lg p-0.5 w-fit">
         {MODES.map(m => (
           <button
             key={m.key}
             onClick={() => setMode(m.key)}
             className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-              mode === m.key ? 'bg-purple-500/20 text-purple-400' : 'text-slate-400 hover:text-white'
+              mode === m.key ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-white'
             }`}
           >
             {m.label}
@@ -178,7 +178,7 @@ export function PerformanceTimeline() {
         {cells.length > 0 ? (
           <div className="relative">
             {/* Y-axis label */}
-            <div className="absolute -left-8 top-1/2 -translate-y-1/2 -rotate-90 text-[10px] text-slate-500 flex items-center gap-1 whitespace-nowrap">
+            <div className="absolute -left-8 top-1/2 -translate-y-1/2 -rotate-90 text-2xs text-gray-500 flex items-center gap-1 whitespace-nowrap">
               <ArrowDown size={10} className="rotate-90" />
               OSL (Output Seq Len)
             </div>
@@ -187,13 +187,13 @@ export function PerformanceTimeline() {
               {/* X-axis header */}
               <div className="flex items-center gap-1 mb-1 pl-16">
                 {islValues.map(isl => (
-                  <div key={isl} className="flex-1 text-center text-[10px] text-slate-400 font-mono">
+                  <div key={isl} className="flex-1 text-center text-2xs text-muted-foreground font-mono">
                     {isl}
                   </div>
                 ))}
               </div>
               <div className="flex items-center gap-1 mb-2 pl-16">
-                <div className="flex-1 text-center text-[10px] text-slate-500 flex items-center justify-center gap-1">
+                <div className="flex-1 text-center text-2xs text-gray-500 flex items-center justify-center gap-1">
                   <ArrowRight size={10} />
                   ISL (Input Seq Len)
                 </div>
@@ -202,12 +202,12 @@ export function PerformanceTimeline() {
               {/* Grid */}
               {oslValues.map(osl => (
                 <div key={osl} className="flex items-center gap-1 mb-1">
-                  <div className="w-14 text-right text-[10px] text-slate-400 font-mono pr-2">{osl}</div>
+                  <div className="w-14 text-right text-2xs text-muted-foreground font-mono pr-2">{osl}</div>
                   {islValues.map(isl => {
                     const cell = getCell(isl, osl)
                     if (!cell) return (
-                      <div key={isl} className="flex-1 aspect-[2/1] min-h-[48px] rounded-lg bg-slate-800/30 border border-slate-700/30 flex items-center justify-center">
-                        <span className="text-[10px] text-slate-600">—</span>
+                      <div key={isl} className="flex-1 aspect-[2/1] min-h-[48px] rounded-lg bg-gray-800/30 border border-gray-700/30 flex items-center justify-center">
+                        <span className="text-2xs text-gray-600">—</span>
                       </div>
                     )
                     const isHovered = hoveredCell?.isl === isl && hoveredCell?.osl === osl
@@ -215,7 +215,7 @@ export function PerformanceTimeline() {
                       <div
                         key={isl}
                         className={`flex-1 aspect-[2/1] min-h-[48px] rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all ${
-                          isHovered ? 'border-white/40 scale-105 z-10' : 'border-slate-700/30'
+                          isHovered ? 'border-white/40 scale-105 z-10' : 'border-gray-700/30'
                         }`}
                         style={{ backgroundColor: getColor(cell.value, minVal, maxVal, modeInfo.higherBetter) }}
                         onMouseEnter={() => setHoveredCell(cell)}
@@ -234,20 +234,20 @@ export function PerformanceTimeline() {
 
             {/* Hover detail */}
             {hoveredCell && (
-              <div className="absolute -right-4 top-0 translate-x-full bg-slate-900 border border-slate-700 rounded-lg p-3 shadow-xl text-xs min-w-[160px] z-20">
+              <div className="absolute -right-4 top-0 translate-x-full bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl text-xs min-w-[160px] z-20">
                 <div className="text-white font-medium mb-1">ISL {hoveredCell.isl} × OSL {hoveredCell.osl}</div>
-                <div className="text-slate-300">{modeInfo.label}: <span className="font-mono text-white">{hoveredCell.value.toFixed(1)} {modeInfo.unit}</span></div>
-                <div className="text-slate-400 mt-1">{hoveredCell.count} reports averaged</div>
+                <div className="text-gray-300">{modeInfo.label}: <span className="font-mono text-white">{hoveredCell.value.toFixed(1)} {modeInfo.unit}</span></div>
+                <div className="text-muted-foreground mt-1">{hoveredCell.count} reports averaged</div>
               </div>
             )}
           </div>
         ) : (
-          <div className="text-slate-500 text-sm">No data for selected filters</div>
+          <div className="text-gray-500 text-sm">No data for selected filters</div>
         )}
       </div>
 
       {/* Color scale legend */}
-      <div className="flex items-center justify-center gap-2 mt-2 text-[10px] text-slate-400">
+      <div className="flex items-center justify-center gap-2 mt-2 text-2xs text-muted-foreground">
         <span>{modeInfo.higherBetter ? 'Low' : 'Best'}</span>
         <div className="flex h-2 rounded overflow-hidden">
           <div className="w-8 bg-red-500/50" />

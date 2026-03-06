@@ -266,7 +266,7 @@ function InfoTooltip({ text }: { text: string }) {
       {isVisible && position && createPortal(
         <div
           ref={tooltipRef}
-          className="fixed z-[100] max-w-[280px] px-3 py-2 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-300 shadow-xl animate-fade-in"
+          className="fixed z-[100] max-w-[280px] px-3 py-2 text-xs rounded-lg bg-gray-900 border border-gray-700 text-gray-300 shadow-xl animate-fade-in"
           style={{ top: position.top, left: position.left }}
           onMouseEnter={() => setIsVisible(true)}
           onMouseLeave={() => setIsVisible(false)}
@@ -717,7 +717,7 @@ export function CardWrapper({
                     data-testid="demo-badge"
                     role="status"
                     aria-live="polite"
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
                     title={effectiveIsDemoData ? t('cardWrapper.demoBadgeTitle') : t('cardWrapper.demoModeTitle')}
                   >
                     {t('cardWrapper.demo')}
@@ -728,7 +728,7 @@ export function CardWrapper({
                   <span
                     role="status"
                     aria-live="polite"
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
                     title={t('cardWrapper.liveBadgeTitle')}
                   >
                     {t('cardWrapper.live')}
@@ -739,7 +739,7 @@ export function CardWrapper({
                   <span
                     role="alert"
                     aria-live="assertive"
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"
                     title={t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
                   >
                     {t('cardWrapper.refreshFailed')}
@@ -751,7 +751,7 @@ export function CardWrapper({
                 )}
                 {/* Last updated indicator */}
                 {!isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && lastUpdated && (
-                  <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
+                  <span className="text-2xs text-muted-foreground" title={lastUpdated.toLocaleString()}>
                     {formatTimeAgo(lastUpdated)}
                   </span>
                 )}

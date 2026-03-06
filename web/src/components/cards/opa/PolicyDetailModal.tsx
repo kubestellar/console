@@ -25,7 +25,7 @@ export function PolicyDetailModal({
       case 'enforce':
       case 'deny':
         return 'text-red-400 bg-red-500/20'
-      case 'warn': return 'text-amber-400 bg-amber-500/20'
+      case 'warn': return 'text-yellow-400 bg-yellow-500/20'
       default: return 'text-blue-400 bg-blue-500/20'
     }
   }
@@ -52,7 +52,7 @@ export function PolicyDetailModal({
             </div>
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-1">Violations</p>
-              <p className={`text-2xl font-bold ${policy.violations > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+              <p className={`text-2xl font-bold ${policy.violations > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                 {policy.violations}
               </p>
             </div>

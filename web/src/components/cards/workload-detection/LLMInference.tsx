@@ -116,9 +116,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       case 'scaling':
         return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Scaling</span>
       case 'stopped':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 flex items-center gap-1"><Pause className="w-2.5 h-2.5" /> Stopped</span>
+        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground flex items-center gap-1"><Pause className="w-2.5 h-2.5" /> Stopped</span>
       default:
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400">{status}</span>
+        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">{status}</span>
     }
   }
 
@@ -128,9 +128,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       'tgi': 'bg-blue-500/20 text-blue-400',
       'llm-d': 'bg-cyan-500/20 text-cyan-400',
       'triton': 'bg-green-500/20 text-green-400',
-      'unknown': 'bg-gray-500/20 text-gray-400',
+      'unknown': 'bg-gray-500/20 text-muted-foreground',
     }
-    return colors[type] || 'bg-gray-500/20 text-gray-400'
+    return colors[type] || 'bg-gray-500/20 text-muted-foreground'
   }
 
   const getTypeLabel = (type: LLMdServer['type']) => {
@@ -151,7 +151,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       'gateway': { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Gateway' },
       'prometheus': { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'Prometheus' },
       'autoscaler': { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Autoscaler' },
-      'other': { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Other' },
+      'other': { bg: 'bg-gray-500/20', text: 'text-muted-foreground', label: 'Other' },
     }
     return config[componentType] || config['other']
   }
@@ -327,7 +327,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                     className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
                       server.gatewayStatus === 'running'
                         ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-gray-500/20 text-gray-400'
+                        : 'bg-gray-500/20 text-muted-foreground'
                     }`}
                     title={`Gateway (${server.gatewayType || 'envoy'}): ${server.gatewayStatus}`}
                   >
@@ -341,7 +341,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                     className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
                       server.prometheusStatus === 'running'
                         ? 'bg-orange-500/20 text-orange-400'
-                        : 'bg-gray-500/20 text-gray-400'
+                        : 'bg-gray-500/20 text-muted-foreground'
                     }`}
                     title={`Prometheus: ${server.prometheusStatus}`}
                   >

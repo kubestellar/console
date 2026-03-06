@@ -91,7 +91,7 @@ const getTypeColor = (type: ServiceImportType) => {
     case 'Headless':
       return 'bg-purple-500/20 text-purple-400'
     default:
-      return 'bg-gray-500/20 text-gray-400'
+      return 'bg-gray-500/20 text-muted-foreground'
   }
 }
 
@@ -256,15 +256,15 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-center">
-          <p className="text-[10px] text-cyan-400">{t('serviceImports.imports')}</p>
+          <p className="text-2xs text-cyan-400">{t('serviceImports.imports')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalImports}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">{t('common:common.healthy')}</p>
+          <p className="text-2xs text-green-400">{t('common:common.healthy')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.withEndpoints}</p>
         </div>
         <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
-          <p className="text-[10px] text-red-400">{t('serviceImports.noEndpoints')}</p>
+          <p className="text-2xs text-red-400">{t('serviceImports.noEndpoints')}</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.noEndpoints}</p>
         </div>
       </div>
@@ -291,7 +291,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
                 <div className="flex items-center gap-2">
                   <EndpointIcon className={`w-4 h-4 ${endpointStatus.color}`} />
                   <span className="text-sm font-medium text-foreground truncate">{imp.name}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${getTypeColor(imp.type)}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-2xs ${getTypeColor(imp.type)}`}>
                     {imp.type}
                   </span>
                 </div>
@@ -327,14 +327,14 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
 
       {/* Usage example */}
       <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-[10px] text-muted-foreground font-medium mb-2">{t('serviceImports.usageExample')}</p>
-        <code className="block p-2 rounded bg-secondary text-[10px] text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
+        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('serviceImports.usageExample')}</p>
+        <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
           curl http://&lt;service&gt;.&lt;ns&gt;.svc.clusterset.local
         </code>
       </div>
 
       {/* Footer links */}
-      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
+      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
         <a
           href={K8S_DOCS.mcsApi}
           target="_blank"

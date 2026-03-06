@@ -104,7 +104,7 @@ export function TechnicalAcronym({ term, className = '', children }: TechnicalAc
         <>
           <span className="font-semibold text-white">{def.full}</span>
           <br />
-          <span className="text-slate-400">{def.desc}</span>
+          <span className="text-muted-foreground">{def.desc}</span>
         </>
       }
     >

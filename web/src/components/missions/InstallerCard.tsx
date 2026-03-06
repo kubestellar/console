@@ -202,19 +202,19 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
           </h4>
         </div>
         <div className="flex items-center gap-1">
-          <span className={cn('text-[10px]', mission.steps?.length ? 'text-green-400' : 'text-muted-foreground/30')} title="Install"><Download className="w-3 h-3" /></span>
-          <span className={cn('text-[10px]', mission.uninstall?.length ? 'text-red-400' : 'text-muted-foreground/30')} title="Uninstall"><Trash2 className="w-3 h-3" /></span>
-          <span className={cn('text-[10px]', mission.upgrade?.length ? 'text-blue-400' : 'text-muted-foreground/30')} title="Upgrade"><ArrowUpCircle className="w-3 h-3" /></span>
-          <span className={cn('text-[10px]', mission.troubleshooting?.length ? 'text-yellow-400' : 'text-muted-foreground/30')} title="Troubleshoot"><AlertTriangle className="w-3 h-3" /></span>
+          <span className={cn('text-2xs', mission.steps?.length ? 'text-green-400' : 'text-muted-foreground/30')} title="Install"><Download className="w-3 h-3" /></span>
+          <span className={cn('text-2xs', mission.uninstall?.length ? 'text-red-400' : 'text-muted-foreground/30')} title="Uninstall"><Trash2 className="w-3 h-3" /></span>
+          <span className={cn('text-2xs', mission.upgrade?.length ? 'text-blue-400' : 'text-muted-foreground/30')} title="Upgrade"><ArrowUpCircle className="w-3 h-3" /></span>
+          <span className={cn('text-2xs', mission.troubleshooting?.length ? 'text-yellow-400' : 'text-muted-foreground/30')} title="Troubleshoot"><AlertTriangle className="w-3 h-3" /></span>
         </div>
         {maturity && (
-          <span className={cn('px-1.5 py-0.5 text-[10px] font-medium rounded-full border flex-shrink-0', maturity.bg, maturity.color, maturity.border)}>
+          <span className={cn('px-1.5 py-0.5 text-2xs font-medium rounded-full border flex-shrink-0', maturity.bg, maturity.color, maturity.border)}>
             {maturity.label}
           </span>
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onImport() }}
-          className="px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
+          className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors flex-shrink-0"
         >
           <Download className="w-3 h-3" />
         </button>
@@ -252,7 +252,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
           </button>
         )}
         {/* Category label */}
-        <span className="absolute bottom-1.5 right-2 text-[10px] font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
+        <span className="absolute bottom-1.5 right-2 text-2xs font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
           {category}
         </span>
       </div>
@@ -268,17 +268,17 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
         {/* Badges row */}
         <div className="flex flex-wrap gap-1 mt-auto">
           {maturity && (
-            <span className={cn('inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full border', maturity.bg, maturity.color, maturity.border)}>
+            <span className={cn('inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded-full border', maturity.bg, maturity.color, maturity.border)}>
               {maturity.label}
             </span>
           )}
           {difficulty && (
-            <span className={cn('inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full', difficulty.bg, difficulty.color)}>
+            <span className={cn('inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded-full', difficulty.bg, difficulty.color)}>
               {mission.difficulty}
             </span>
           )}
           {mission.installMethods?.map(method => (
-            <span key={method} className="px-1.5 py-0.5 text-[10px] rounded bg-secondary text-muted-foreground">
+            <span key={method} className="px-1.5 py-0.5 text-2xs rounded bg-secondary text-muted-foreground">
               {method}
             </span>
           ))}
@@ -286,16 +286,16 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
 
         {/* Section coverage icons */}
         <div className="flex items-center gap-1.5">
-          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.steps?.length ? 'text-green-400' : 'text-muted-foreground/30')} title={mission.steps?.length ? `Install: ${mission.steps.length} steps` : 'No install steps'}>
+          <span className={cn('inline-flex items-center gap-0.5 text-2xs', mission.steps?.length ? 'text-green-400' : 'text-muted-foreground/30')} title={mission.steps?.length ? `Install: ${mission.steps.length} steps` : 'No install steps'}>
             <Download className="w-3 h-3" />
           </span>
-          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.uninstall?.length ? 'text-red-400' : 'text-muted-foreground/30')} title={mission.uninstall?.length ? `Uninstall: ${mission.uninstall.length} steps` : 'No uninstall steps'}>
+          <span className={cn('inline-flex items-center gap-0.5 text-2xs', mission.uninstall?.length ? 'text-red-400' : 'text-muted-foreground/30')} title={mission.uninstall?.length ? `Uninstall: ${mission.uninstall.length} steps` : 'No uninstall steps'}>
             <Trash2 className="w-3 h-3" />
           </span>
-          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.upgrade?.length ? 'text-blue-400' : 'text-muted-foreground/30')} title={mission.upgrade?.length ? `Upgrade: ${mission.upgrade.length} steps` : 'No upgrade steps'}>
+          <span className={cn('inline-flex items-center gap-0.5 text-2xs', mission.upgrade?.length ? 'text-blue-400' : 'text-muted-foreground/30')} title={mission.upgrade?.length ? `Upgrade: ${mission.upgrade.length} steps` : 'No upgrade steps'}>
             <ArrowUpCircle className="w-3 h-3" />
           </span>
-          <span className={cn('inline-flex items-center gap-0.5 text-[10px]', mission.troubleshooting?.length ? 'text-yellow-400' : 'text-muted-foreground/30')} title={mission.troubleshooting?.length ? `Troubleshooting: ${mission.troubleshooting.length} steps` : 'No troubleshooting steps'}>
+          <span className={cn('inline-flex items-center gap-0.5 text-2xs', mission.troubleshooting?.length ? 'text-yellow-400' : 'text-muted-foreground/30')} title={mission.troubleshooting?.length ? `Troubleshooting: ${mission.troubleshooting.length} steps` : 'No troubleshooting steps'}>
             <AlertTriangle className="w-3 h-3" />
           </span>
         </div>
@@ -309,7 +309,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
-                className="inline-flex items-center gap-1 text-[10px] hover:text-purple-400 transition-colors group/author"
+                className="inline-flex items-center gap-1 text-2xs hover:text-purple-400 transition-colors group/author"
                 title={mission.author ?? mission.authorGithub}
               >
                 <img
@@ -326,7 +326,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
-                className="inline-flex items-center gap-0.5 text-[10px] hover:text-purple-400 transition-colors"
+                className="inline-flex items-center gap-0.5 text-2xs hover:text-purple-400 transition-colors"
                 title="View on CNCF"
               >
                 <ExternalLink className="w-3 h-3" />
@@ -344,7 +344,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
                   if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
                   linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
                 }}
-                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
+                className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
                 title="Copy shareable link"
               >
                 {linkCopied ? <Check className="w-3 h-3 text-green-400" /> : <Link className="w-3 h-3" />}
@@ -356,7 +356,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
                 e.stopPropagation()
                 onImport()
               }}
-              className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+              className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
             >
               <Download className="w-3 h-3" />
               Import

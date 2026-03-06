@@ -21,7 +21,7 @@ const CATEGORY_ICONS = {
 }
 
 const CATEGORY_COLORS = {
-  scheduling: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400' },
+  scheduling: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400' },
   disaggregation: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-400' },
   parallelism: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400' },
   autoscaling: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400' },
@@ -92,7 +92,7 @@ interface ParameterSliderProps {
 function ParameterSlider({ param, onChange }: ParameterSliderProps) {
   if (typeof param.value === 'boolean') {
     return (
-      <div className="flex items-center justify-between py-2 border-b border-slate-700/50">
+      <div className="flex items-center justify-between py-2 border-b border-gray-700/50">
         <div>
           <div className="text-sm text-white">{param.name}</div>
           <div className="text-xs text-muted-foreground">{param.description}</div>
@@ -100,7 +100,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
         <button
           onClick={() => onChange(!param.value)}
           className={`w-10 h-5 rounded-full relative transition-colors ${
-            param.value ? 'bg-green-500' : 'bg-slate-600'
+            param.value ? 'bg-green-500' : 'bg-gray-600'
           }`}
         >
           <motion.div
@@ -114,7 +114,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 
   if (typeof param.value === 'string') {
     return (
-      <div className="py-2 border-b border-slate-700/50">
+      <div className="py-2 border-b border-gray-700/50">
         <div className="flex items-center justify-between mb-1">
           <div className="text-sm text-white">{param.name}</div>
           <div className="text-sm font-mono text-purple-400">{param.value}</div>
@@ -126,7 +126,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 
   // Numeric slider
   return (
-    <div className="py-2 border-b border-slate-700/50">
+    <div className="py-2 border-b border-gray-700/50">
       <div className="flex items-center justify-between mb-1">
         <div className="text-sm text-white">{param.name}</div>
         <div className="text-sm font-mono text-purple-400">
@@ -141,7 +141,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
           max={param.max}
           value={param.value as number}
           onChange={e => onChange(Number(e.target.value))}
-          className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+          className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
         />
       )}
     </div>
@@ -252,7 +252,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
               Parameters
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-800/30 rounded-lg p-3 mb-4">
+            <div className="flex-1 overflow-auto bg-gray-800/30 rounded-lg p-3 mb-4">
               {currentParams.map(param => (
                 <ParameterSlider
                   key={param.name}
@@ -278,12 +278,12 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
               </div>
               <div className={`border rounded-lg p-2 text-center ${
                 selectedPreset.expectedImpact.costChange > 0
-                  ? 'bg-amber-500/10 border-amber-500/20'
+                  ? 'bg-yellow-500/10 border-yellow-500/20'
                   : 'bg-green-500/10 border-green-500/20'
               }`}>
                 <div className="text-xs text-muted-foreground">Cost Impact</div>
                 <div className={`text-lg font-bold ${
-                  selectedPreset.expectedImpact.costChange > 0 ? 'text-amber-400' : 'text-green-400'
+                  selectedPreset.expectedImpact.costChange > 0 ? 'text-yellow-400' : 'text-green-400'
                 }`}>
                   {selectedPreset.expectedImpact.costChange > 0 ? '+' : ''}
                   {selectedPreset.expectedImpact.costChange}%
@@ -292,12 +292,12 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
             </div>
 
             {/* Config export */}
-            <div className="bg-slate-900 rounded-lg p-3 border border-slate-700">
+            <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Generated Config</span>
                 <button
                   onClick={copyConfig}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded transition-colors"
                 >
                   {copied ? (
                     <>

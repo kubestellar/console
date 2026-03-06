@@ -170,7 +170,7 @@ export function ClusterFilterDropdown({
                     <ClusterStatusDot state={clusterState} size="sm" />
                     <span className="flex-1 truncate">{cluster.name}</span>
                     {stateLabel && (
-                      <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
+                      <span className="text-2xs text-muted-foreground shrink-0">{stateLabel}</span>
                     )}
                   </button>
                 )

@@ -110,7 +110,7 @@ function SortableClusterRow({
       {/* Cluster name */}
       <div className="w-[160px] flex-shrink-0">
         <div className="font-medium text-foreground text-sm truncate">{cluster.name.split('/').pop()}</div>
-        <div className="text-[10px] text-muted-foreground truncate">
+        <div className="text-2xs text-muted-foreground truncate">
           {cluster.reachable !== false ? `${cluster.nodeCount ?? '-'} nodes • ${cluster.podCount ?? '-'} pods` : 'Offline'}
         </div>
       </div>
@@ -128,7 +128,7 @@ function SortableClusterRow({
           <div className={`text-xs font-medium ${cpuPercent > 100 ? 'text-red-400' : 'text-foreground'}`}>
             {cpuPercent}%
           </div>
-          <div className="text-[10px] text-muted-foreground">{cluster.cpuCores || 0}</div>
+          <div className="text-2xs text-muted-foreground">{cluster.cpuCores || 0}</div>
         </div>
       </div>
 
@@ -144,7 +144,7 @@ function SortableClusterRow({
           <div className={`text-xs font-medium ${memoryPercent > 100 ? 'text-red-400' : 'text-foreground'}`}>
             {memoryPercent}%
           </div>
-          <div className="text-[10px] text-muted-foreground">{formatMemory(memoryGB)}</div>
+          <div className="text-2xs text-muted-foreground">{formatMemory(memoryGB)}</div>
         </div>
       </div>
 
@@ -165,11 +165,11 @@ function SortableClusterRow({
                   <div className={`text-xs font-medium ${pct > 100 ? 'text-red-400' : 'text-foreground'}`}>
                     {pct}%
                   </div>
-                  <div className={`text-[10px] ${accel.color}`}>{accel.data.allocated}/{accel.data.total}</div>
+                  <div className={`text-2xs ${accel.color}`}>{accel.data.allocated}/{accel.data.total}</div>
                 </div>
               </>
             ) : (
-              <span className="text-[10px] text-muted-foreground/50">No {accel.label}</span>
+              <span className="text-2xs text-muted-foreground/50">No {accel.label}</span>
             )}
           </div>
         )
@@ -383,7 +383,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
         </h3>
 
         {/* Column headers - matching data row structure exactly */}
-        <div className="flex items-center gap-3 px-2.5 py-1.5 text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+        <div className="flex items-center gap-3 px-2.5 py-1.5 text-2xs text-muted-foreground uppercase tracking-wider mb-1">
           <div className="p-1 flex-shrink-0"><div className="w-4 h-4" /></div> {/* Drag handle spacer */}
           <div className="w-[90px] flex-shrink-0" /> {/* Health + label spacer (icon w-4 + gap-2 + ~60px label) */}
           <div className="w-[160px] flex-shrink-0">{t('common.cluster')}</div>

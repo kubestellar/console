@@ -96,7 +96,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       case 'triggered': return <Clock className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
       case 'running': return <Play className="w-3.5 h-3.5 text-blue-400" />
       case 'aborted': return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
-      default: return <Clock className="w-3.5 h-3.5 text-gray-400" />
+      default: return <Clock className="w-3.5 h-3.5 text-muted-foreground" />
     }
   }
 
@@ -107,7 +107,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       periodic: 'bg-purple-500/20 text-purple-400',
       batch: 'bg-cyan-500/20 text-cyan-400',
     }
-    return colors[type] || 'bg-gray-500/20 text-gray-400'
+    return colors[type] || 'bg-gray-500/20 text-muted-foreground'
   }
 
   if (isLoading) {

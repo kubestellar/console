@@ -83,7 +83,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'enforcing': return 'bg-green-500/20 text-green-400'
-      case 'audit': return 'bg-amber-500/20 text-amber-400'
+      case 'audit': return 'bg-yellow-500/20 text-yellow-400'
       default: return 'bg-blue-500/20 text-blue-400'
     }
   }
@@ -136,15 +136,15 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-center">
-          <p className="text-[10px] text-cyan-400">Policies</p>
+          <p className="text-2xs text-cyan-400">Policies</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalPolicies}</p>
         </div>
         <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-[10px] text-green-400">Enforcing</p>
+          <p className="text-2xs text-green-400">Enforcing</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.enforcingCount}</p>
         </div>
-        <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-          <p className="text-[10px] text-amber-400">Violations</p>
+        <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
+          <p className="text-2xs text-yellow-400">Violations</p>
           <p className="text-lg font-bold text-foreground">{DEMO_STATS.totalViolations}</p>
         </div>
       </div>
@@ -170,12 +170,12 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground truncate">{policy.name}</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] ${getStatusColor(policy.status)}`}>
+                <span className={`px-1.5 py-0.5 rounded text-2xs ${getStatusColor(policy.status)}`}>
                   {policy.status}
                 </span>
               </div>
               {policy.violations > 0 && (
-                <span className="flex items-center gap-1 text-xs text-amber-400">
+                <span className="flex items-center gap-1 text-xs text-yellow-400">
                   <AlertTriangle className="w-3 h-3" />
                   {policy.violations}
                 </span>
@@ -191,8 +191,8 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
 
       {/* Features highlight */}
       <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-[10px] text-muted-foreground font-medium mb-2">Kyverno Features</p>
-        <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+        <p className="text-2xs text-muted-foreground font-medium mb-2">Kyverno Features</p>
+        <div className="grid grid-cols-2 gap-1.5 text-2xs">
           <div className="flex items-center gap-1 text-muted-foreground">
             <CheckCircle className="w-3 h-3 text-green-400" />
             Validate Resources
@@ -213,7 +213,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
       </div>
 
       {/* Footer links */}
-      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
+      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
         <a
           href="https://kyverno.io/docs/"
           target="_blank"

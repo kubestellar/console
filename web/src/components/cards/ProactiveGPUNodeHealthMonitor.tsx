@@ -47,10 +47,10 @@ const CHECK_LABELS: Record<string, string> = {
 
 function StatusBadge({ status }: { status: string }) {
   const config = {
-    healthy: { icon: CheckCircle, bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Healthy' },
-    degraded: { icon: AlertTriangle, bg: 'bg-amber-500/15', text: 'text-amber-400', label: 'Degraded' },
+    healthy: { icon: CheckCircle, bg: 'bg-green-500/15', text: 'text-green-400', label: 'Healthy' },
+    degraded: { icon: AlertTriangle, bg: 'bg-yellow-500/15', text: 'text-yellow-400', label: 'Degraded' },
     unhealthy: { icon: XCircle, bg: 'bg-red-500/15', text: 'text-red-400', label: 'Unhealthy' },
-  }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/15', text: 'text-gray-400', label: status }
+  }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/15', text: 'text-muted-foreground', label: status }
 
   const Icon = config.icon
   return (
@@ -68,7 +68,7 @@ function CheckRow({ check }: { check: GPUNodeHealthCheck }) {
       <span className="text-white/60">{label}</span>
       <div className="flex items-center gap-1.5">
         {check.passed ? (
-          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+          <CheckCircle className="w-3.5 h-3.5 text-green-400" />
         ) : (
           <>
             <XCircle className="w-3.5 h-3.5 text-red-400" />
@@ -128,20 +128,20 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
         <div className="flex-1 min-w-0">
           {status?.installed ? (
             <div className="flex items-center gap-2 flex-wrap">
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="text-xs text-emerald-300">Installed</span>
+              <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+              <span className="text-xs text-green-300">Installed</span>
               {status.schedule && (
-                <span className="text-[10px] text-white/40 flex items-center gap-1">
+                <span className="text-2xs text-white/40 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   {status.schedule}
                 </span>
               )}
-              <span className="text-[10px] text-white/30 flex items-center gap-1">
+              <span className="text-2xs text-white/30 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 Tier {status.tier || 1}
               </span>
               {status.version > 0 && (
-                <span className="text-[10px] text-white/20">v{status.version}</span>
+                <span className="text-2xs text-white/20">v{status.version}</span>
               )}
             </div>
           ) : (
@@ -159,8 +159,8 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
               {/* Status info */}
               {status.lastResult && (
                 <span className={cn(
-                  'text-[10px] px-1.5 py-0.5 rounded',
-                  status.lastResult === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
+                  'text-2xs px-1.5 py-0.5 rounded',
+                  status.lastResult === 'success' ? 'bg-green-500/10 text-green-400' :
                   status.lastResult === 'failed' ? 'bg-red-500/10 text-red-400' :
                   'bg-secondary text-white/40'
                 )}>
@@ -195,7 +195,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
                   <button
                     onClick={handleUninstall}
                     disabled={!!actionInProgress}
-                    className="px-2 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                    className="px-2 py-0.5 text-2xs rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
                   >
                     {actionInProgress === 'uninstall' ? (
                       <Loader2 className="w-3 h-3 animate-spin inline" />
@@ -203,7 +203,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
                   </button>
                   <button
                     onClick={() => setShowConfirmUninstall(false)}
-                    className="px-2 py-0.5 text-[10px] rounded bg-secondary text-white/40 hover:text-white/60 transition-colors"
+                    className="px-2 py-0.5 text-2xs rounded bg-secondary text-white/40 hover:text-white/60 transition-colors"
                   >
                     Cancel
                   </button>
@@ -215,14 +215,14 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
               <button
                 onClick={() => setShowInstallDialog(true)}
                 disabled={!!actionInProgress}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition-colors disabled:opacity-50"
               >
                 <Play className="w-3 h-3" />
                 Install
               </button>
             ) : null
           ) : (
-            <span className="text-[10px] text-white/30 italic">No permissions</span>
+            <span className="text-2xs text-white/30 italic">No permissions</span>
           )}
         </div>
       </div>
@@ -230,10 +230,10 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
       {/* Install dialog */}
       {showInstallDialog && (
         <div className="border-t border-border px-3 py-2 bg-white/[0.01] space-y-2">
-          <div className="text-[10px] text-white/50 uppercase tracking-wider">Install GPU Health CronJob</div>
+          <div className="text-2xs text-white/50 uppercase tracking-wider">Install GPU Health CronJob</div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-white/40 block mb-0.5">Namespace</label>
+              <label className="text-2xs text-white/40 block mb-0.5">Namespace</label>
               <input
                 type="text"
                 value={namespace}
@@ -242,7 +242,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
               />
             </div>
             <div>
-              <label className="text-[10px] text-white/40 block mb-0.5">Schedule (cron)</label>
+              <label className="text-2xs text-white/40 block mb-0.5">Schedule (cron)</label>
               <input
                 type="text"
                 value={schedule}
@@ -253,7 +253,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
           </div>
           {/* Tier selector */}
           <div>
-            <label className="text-[10px] text-white/40 block mb-0.5">Check Tier</label>
+            <label className="text-2xs text-white/40 block mb-0.5">Check Tier</label>
             <select
               value={tier}
               onChange={e => setTier(Number(e.target.value))}
@@ -263,11 +263,11 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
-            <p className="text-[10px] text-white/30 mt-0.5">
+            <p className="text-2xs text-white/30 mt-0.5">
               {TIER_OPTIONS.find(t => t.value === tier)?.description}
             </p>
             {tier === 4 && (
-              <p className="text-[10px] text-amber-400/80 mt-0.5 flex items-center gap-1">
+              <p className="text-2xs text-yellow-400/80 mt-0.5 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
                 Tier 4 creates debug pods on GPU nodes for hardware inspection
               </p>
@@ -276,14 +276,14 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
           <div className="flex items-center gap-2 justify-end">
             <button
               onClick={() => setShowInstallDialog(false)}
-              className="px-2 py-1 text-[10px] rounded bg-secondary text-white/40 hover:text-white/60 transition-colors"
+              className="px-2 py-1 text-2xs rounded bg-secondary text-white/40 hover:text-white/60 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleInstall}
               disabled={!!actionInProgress}
-              className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
             >
               {actionInProgress === 'install' ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -299,11 +299,11 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
       {/* Tier selector + update (when installed) */}
       {status?.installed && status.canInstall && (
         <div className="border-t border-border px-3 py-1.5 flex items-center gap-2">
-          <span className="text-[10px] text-white/40">Tier:</span>
+          <span className="text-2xs text-white/40">Tier:</span>
           <select
             value={tier}
             onChange={e => setTier(Number(e.target.value))}
-            className="px-1.5 py-0.5 text-[10px] rounded border border-white/10 bg-secondary text-white/60 focus:outline-none focus:border-white/20"
+            className="px-1.5 py-0.5 text-2xs rounded border border-white/10 bg-secondary text-white/60 focus:outline-none focus:border-white/20"
           >
             {TIER_OPTIONS.map(t => (
               <option key={t.value} value={t.value}>{t.label}</option>
@@ -313,7 +313,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
             <button
               onClick={handleUpdateTier}
               disabled={!!actionInProgress}
-              className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-2 py-0.5 text-2xs rounded bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 transition-colors disabled:opacity-50"
             >
               {actionInProgress === 'install' ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -328,10 +328,10 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
 
       {/* Job stats (when installed) */}
       {status?.installed && (status.activeJobs > 0 || status.failedJobs > 0 || status.successJobs > 0) && (
-        <div className="border-t border-border px-3 py-1.5 flex items-center gap-3 text-[10px]">
+        <div className="border-t border-border px-3 py-1.5 flex items-center gap-3 text-2xs">
           <span className="text-white/40">Jobs:</span>
           {status.activeJobs > 0 && <span className="text-blue-400">{status.activeJobs} active</span>}
-          {status.successJobs > 0 && <span className="text-emerald-400">{status.successJobs} succeeded</span>}
+          {status.successJobs > 0 && <span className="text-green-400">{status.successJobs} succeeded</span>}
           {status.failedJobs > 0 && <span className="text-red-400">{status.failedJobs} failed</span>}
           {status.lastRun && (
             <span className="text-white/30 ml-auto">Last: {new Date(status.lastRun).toLocaleTimeString()}</span>
@@ -342,14 +342,14 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
       {/* CronJob Results (expandable) */}
       {showResults && status?.lastResults && status.lastResults.length > 0 && (
         <div className="border-t border-border px-3 py-2 bg-white/[0.01] space-y-1.5">
-          <div className="text-[10px] text-white/50 uppercase tracking-wider">Latest CronJob Results</div>
+          <div className="text-2xs text-white/50 uppercase tracking-wider">Latest CronJob Results</div>
           {status.lastResults.map(result => (
             <div key={result.nodeName} className="rounded border border-border bg-secondary p-2">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-mono text-white/80">{result.nodeName}</span>
                 <StatusBadge status={result.status} />
                 {result.gpuCount != null && (
-                  <span className="text-[10px] text-white/30">{result.gpuCount} GPUs</span>
+                  <span className="text-2xs text-white/30">{result.gpuCount} GPUs</span>
                 )}
               </div>
               <div className="space-y-0.5">
@@ -360,7 +360,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
               {result.issues && result.issues.length > 0 && (
                 <div className="mt-1 pt-1 border-t border-white/[0.04]">
                   {result.issues.map((issue, i) => (
-                    <div key={i} className="flex items-start gap-1 text-[10px] text-red-300/80">
+                    <div key={i} className="flex items-start gap-1 text-2xs text-red-300/80">
                       <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-red-400/60" />
                       {issue}
                     </div>
@@ -377,7 +377,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
         <div className="border-t border-border px-3 py-1.5 text-xs text-red-400/80 flex items-center gap-1.5">
           <AlertTriangle className="w-3 h-3 shrink-0" />
           {error}
-          <button onClick={refetch} className="ml-auto text-[10px] text-white/40 hover:text-white/60 underline">
+          <button onClick={refetch} className="ml-auto text-2xs text-white/40 hover:text-white/60 underline">
             Retry
           </button>
         </div>
@@ -523,15 +523,15 @@ export function ProactiveGPUNodeHealthMonitor() {
       <div className="flex gap-2">
         <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.unhealthy > 0 ? 'bg-red-500/15 ring-1 ring-red-500/30' : 'bg-secondary')}>
           <div className={cn('text-lg font-bold', summary.unhealthy > 0 ? 'text-red-400' : 'text-white/30')}>{summary.unhealthy}</div>
-          <div className="text-[10px] text-white/40 uppercase tracking-wider">Unhealthy</div>
+          <div className="text-2xs text-white/40 uppercase tracking-wider">Unhealthy</div>
         </div>
-        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.degraded > 0 ? 'bg-amber-500/15 ring-1 ring-amber-500/30' : 'bg-secondary')}>
-          <div className={cn('text-lg font-bold', summary.degraded > 0 ? 'text-amber-400' : 'text-white/30')}>{summary.degraded}</div>
-          <div className="text-[10px] text-white/40 uppercase tracking-wider">Degraded</div>
+        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.degraded > 0 ? 'bg-yellow-500/15 ring-1 ring-yellow-500/30' : 'bg-secondary')}>
+          <div className={cn('text-lg font-bold', summary.degraded > 0 ? 'text-yellow-400' : 'text-white/30')}>{summary.degraded}</div>
+          <div className="text-2xs text-white/40 uppercase tracking-wider">Degraded</div>
         </div>
-        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.healthy > 0 ? 'bg-emerald-500/10' : 'bg-secondary')}>
-          <div className={cn('text-lg font-bold', summary.healthy > 0 ? 'text-emerald-400' : 'text-white/30')}>{summary.healthy}</div>
-          <div className="text-[10px] text-white/40 uppercase tracking-wider">Healthy</div>
+        <div className={cn('flex-1 rounded-lg px-3 py-2 text-center', summary.healthy > 0 ? 'bg-green-500/10' : 'bg-secondary')}>
+          <div className={cn('text-lg font-bold', summary.healthy > 0 ? 'text-green-400' : 'text-white/30')}>{summary.healthy}</div>
+          <div className="text-2xs text-white/40 uppercase tracking-wider">Healthy</div>
         </div>
       </div>
 
@@ -600,7 +600,7 @@ export function ProactiveGPUNodeHealthMonitor() {
           <div className="flex items-center gap-2">
             <Clock className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-xs font-medium text-blue-300">GPU Health CronJob</span>
-            <span className="text-[10px] text-white/30">Automated health checks per cluster</span>
+            <span className="text-2xs text-white/30">Automated health checks per cluster</span>
           </div>
           <div className="space-y-1">
             {availableClusters.map(cluster => (
@@ -635,7 +635,7 @@ export function ProactiveGPUNodeHealthMonitor() {
                 <StatusBadge status={node.status} />
                 <span className="text-xs text-white/90 font-mono truncate flex-1">{node.nodeName}</span>
                 <ClusterBadge cluster={node.cluster} size="sm" />
-                <span className="text-[10px] text-white/40 whitespace-nowrap">
+                <span className="text-2xs text-white/40 whitespace-nowrap">
                   {node.gpuCount} GPU{node.gpuCount !== 1 ? 's' : ''}
                 </span>
                 <CardAIActions
@@ -674,7 +674,7 @@ export function ProactiveGPUNodeHealthMonitor() {
                   {/* Issues summary */}
                   {(node.issues || []).length > 0 && (
                     <div className="mt-2 pt-2 border-t border-border">
-                      <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Issues</div>
+                      <div className="text-2xs text-white/40 uppercase tracking-wider mb-1">Issues</div>
                       {(node.issues || []).map((issue: string, i: number) => (
                         <div key={i} className="flex items-start gap-1.5 text-xs text-red-300/80 py-0.5">
                           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-red-400/60" />

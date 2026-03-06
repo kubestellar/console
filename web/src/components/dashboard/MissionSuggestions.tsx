@@ -209,7 +209,7 @@ export function MissionSuggestions() {
             )
           })}
           {stats.critical > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
               {t('dashboard.missions.critical', { count: stats.critical })}
             </span>
           )}
@@ -228,17 +228,17 @@ export function MissionSuggestions() {
             {t('dashboard.missions.actions')}
           </span>
           {stats.critical > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px]">
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
               {t('dashboard.missions.critical', { count: stats.critical })}
             </span>
           )}
           {stats.high > 0 && stats.critical === 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[10px]">
+            <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-2xs">
               {t('dashboard.missions.high', { count: stats.high })}
             </span>
           )}
           {suggestions.length > 6 && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-2xs text-muted-foreground">
               {t('dashboard.missions.moreDetails', { count: suggestions.length - 6 })}
             </span>
           )}

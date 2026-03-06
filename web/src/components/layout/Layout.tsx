@@ -435,7 +435,7 @@ export function Layout({ children }: LayoutProps) {
           <div className={cn(
             "flex items-center gap-2 px-4 py-3 rounded-lg border shadow-lg text-sm",
             backendDown
-              ? "bg-zinc-800 border-zinc-700 text-zinc-200"
+              ? "bg-gray-800 border-gray-700 text-gray-200"
               : "bg-green-900/80 border-green-700/50 text-green-200"
           )}>
             {backendDown ? (
@@ -443,12 +443,12 @@ export function Layout({ children }: LayoutProps) {
                 <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
                 <span>Connection lost</span>
                 {restartState === 'restarting' ? (
-                  <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-zinc-700 text-zinc-400 rounded text-xs cursor-wait">
+                  <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 text-muted-foreground rounded text-xs cursor-wait">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     Restarting&hellip;
                   </button>
                 ) : restartState === 'waiting' ? (
-                  <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-zinc-700 text-zinc-400 rounded text-xs">
+                  <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 text-muted-foreground rounded text-xs">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     Restarted, waiting for connection&hellip;
                   </span>
@@ -460,7 +460,7 @@ export function Layout({ children }: LayoutProps) {
                 ) : (
                   <button
                     onClick={handleRestartBackend}
-                    className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded text-xs transition-colors"
+                    className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-xs transition-colors"
                     title={restartError ?? 'Restart the backend server'}
                   >
                     <RotateCcw className="w-3 h-3" />

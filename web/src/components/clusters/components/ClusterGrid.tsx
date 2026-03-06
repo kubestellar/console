@@ -249,7 +249,7 @@ const FullClusterCard = memo(function FullClusterCard({
                 </h3>
                 {cluster.authMethod && AUTH_BADGE_MAP[cluster.authMethod] && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
+                    className={`text-2xs px-1.5 py-0.5 rounded flex-shrink-0 ${AUTH_BADGE_MAP[cluster.authMethod].color}`}
                     title={cluster.authMethod === 'exec'
                       ? `Auth: IAM (exec plugin)${getIAMRefreshHint(cluster) ? `\nLogin: ${getIAMRefreshHint(cluster)}` : ''}`
                       : `Auth: ${cluster.authMethod}`}
@@ -259,7 +259,7 @@ const FullClusterCard = memo(function FullClusterCard({
                 )}
                 {cluster.aliases && cluster.aliases.length > 0 && (
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
                     title={`Also known as: ${cluster.aliases.join(', ')}`}
                   >
                     +{cluster.aliases.length} alias{cluster.aliases.length > 1 ? 'es' : ''}
@@ -298,14 +298,14 @@ const FullClusterCard = memo(function FullClusterCard({
                 {cluster.authMethod === 'exec' && (isTokenExpired(cluster) || cluster.reachable === false) && (() => {
                   const hint = getIAMRefreshHint(cluster)
                   return hint ? (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+                    <span className="flex items-center gap-1 text-2xs text-muted-foreground mt-0.5">
                       Login: <code className="bg-white/5 px-1 rounded">{hint}</code>
                       <CopyCmd text={hint} />
                     </span>
                   ) : null
                 })()}
                 {isTokenExpired(cluster) && cluster.authMethod !== 'exec' && (
-                  <span className="text-[10px] text-muted-foreground mt-0.5">
+                  <span className="text-2xs text-muted-foreground mt-0.5">
                     {t('cluster.authErrorTokenHint')}
                   </span>
                 )}
@@ -319,7 +319,7 @@ const FullClusterCard = memo(function FullClusterCard({
               </span>
             )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (
-              <span className="flex items-center px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400" title="You have limited permissions on this cluster">
+              <span className="flex items-center px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400" title="You have limited permissions on this cluster">
                 <ShieldAlert className="w-3.5 h-3.5" />
               </span>
             )}
@@ -467,7 +467,7 @@ const ListClusterCard = memo(function ListClusterCard({
             )}
             {cluster.aliases && cluster.aliases.length > 0 && (
               <span
-                className="text-[10px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
+                className="text-2xs px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
                 title={`Also known as: ${cluster.aliases.join(', ')}`}
               >
                 +{cluster.aliases.length}
@@ -488,7 +488,7 @@ const ListClusterCard = memo(function ListClusterCard({
           {cluster.authMethod === 'exec' && (isTokenExpired(cluster) || cluster.reachable === false) && (() => {
             const hint = getIAMRefreshHint(cluster)
             return hint ? (
-              <span className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground flex-shrink-0">
+              <span className="hidden md:flex items-center gap-1 text-2xs text-muted-foreground flex-shrink-0">
                 <code className="bg-white/5 px-1 rounded">{hint}</code>
                 <CopyCmd text={hint} />
               </span>
@@ -547,7 +547,7 @@ const ListClusterCard = memo(function ListClusterCard({
             )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (
               <span title="Limited permissions">
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                <ShieldAlert className="w-3.5 h-3.5 text-yellow-400" />
               </span>
             )}
             <ChevronRight className="w-4 h-4 text-primary" />
@@ -623,25 +623,25 @@ const CompactClusterCard = memo(function CompactClusterCard({
             <div className={`text-sm font-bold ${refreshing ? 'text-muted-foreground' : 'text-foreground'}`}>
               <FlashingValue value={hasCachedData ? cluster.nodeCount : '-'} />
             </div>
-            <div className="text-[10px] text-muted-foreground">{t('common.nodes')}</div>
+            <div className="text-2xs text-muted-foreground">{t('common.nodes')}</div>
           </div>
           <div className="p-1 rounded bg-secondary/30" title={unreachable ? 'CPU: Cluster offline' : hasCachedData ? `CPU: ${cluster.cpuCores} cores` : 'CPU: Loading...'}>
             <div className={`text-sm font-bold ${refreshing ? 'text-muted-foreground' : 'text-foreground'}`}>
               <FlashingValue value={hasCachedData ? cluster.cpuCores : '-'} />
             </div>
-            <div className="text-[10px] text-muted-foreground">{t('common.cpus')}</div>
+            <div className="text-2xs text-muted-foreground">{t('common.cpus')}</div>
           </div>
           <div className="p-1 rounded bg-secondary/30" title={unreachable ? 'Pods: Cluster offline' : hasCachedData ? `Pods: ${cluster.podCount} running` : 'Pods: Loading...'}>
             <div className={`text-sm font-bold ${refreshing ? 'text-muted-foreground' : 'text-foreground'}`}>
               <FlashingValue value={hasCachedData ? cluster.podCount : '-'} />
             </div>
-            <div className="text-[10px] text-muted-foreground">{t('common.pods')}</div>
+            <div className="text-2xs text-muted-foreground">{t('common.pods')}</div>
           </div>
           <div className="p-1 rounded bg-secondary/30" title={unreachable ? 'GPU: Cluster offline' : gpuInfo ? `GPU: ${gpuInfo.allocated}/${gpuInfo.total} allocated` : 'GPU: None detected'}>
             <div className={`text-sm font-bold ${refreshing ? 'text-muted-foreground' : 'text-foreground'}`}>
               <FlashingValue value={hasCachedData && !unreachable ? (gpuInfo?.total || 0) : '-'} />
             </div>
-            <div className="text-[10px] text-muted-foreground">{t('common.gpus')}</div>
+            <div className="text-2xs text-muted-foreground">{t('common.gpus')}</div>
           </div>
         </div>
       </div>

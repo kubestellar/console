@@ -13,15 +13,15 @@ interface KagentiBuildPipelineProps {
 function BuildStatusIcon({ status }: { status: string }) {
   switch (status) {
     case 'Succeeded':
-      return <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+      return <CheckCircle className="w-3.5 h-3.5 text-green-400" />
     case 'Failed':
       return <XCircle className="w-3.5 h-3.5 text-red-400" />
     case 'Building':
       return <Hammer className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
     case 'Pending':
-      return <Clock className="w-3.5 h-3.5 text-amber-400" />
+      return <Clock className="w-3.5 h-3.5 text-yellow-400" />
     default:
-      return <Clock className="w-3.5 h-3.5 text-zinc-400" />
+      return <Clock className="w-3.5 h-3.5 text-muted-foreground" />
   }
 }
 
@@ -116,7 +116,7 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
             <Hammer className="w-3 h-3 animate-pulse" /> {stats.active} active
           </div>
         )}
-        <div className="flex items-center gap-1 text-emerald-400">
+        <div className="flex items-center gap-1 text-green-400">
           <CheckCircle className="w-3 h-3" /> {stats.succeeded}
         </div>
         {stats.failed > 0 && (

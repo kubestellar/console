@@ -169,7 +169,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
         {/* Mission preview */}
         <div className="p-4 border-b border-border">
           <p className="text-xs font-medium text-foreground truncate">{resolution.title}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">
+          <p className="text-2xs text-muted-foreground mt-1">
             {resolution.issueSignature.type} · {resolution.resolution.steps.length} steps
           </p>
         </div>
@@ -248,7 +248,7 @@ function ExportButton({ icon, label, description, active, onClick }: {
       <div className="flex-shrink-0">{active ? <CheckCircle className="w-4 h-4 text-green-400" /> : icon}</div>
       <div>
         <p className="text-xs font-medium">{active ? 'Done!' : label}</p>
-        <p className="text-[10px] text-muted-foreground">{description}</p>
+        <p className="text-2xs text-muted-foreground">{description}</p>
       </div>
     </button>
   )

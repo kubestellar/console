@@ -20,9 +20,9 @@ const CARD_ICONS = [
   { id: 'storage', Icon: HardDrive, color: 'text-orange-400' },
   { id: 'cpu', Icon: Cpu, color: 'text-red-400' },
   { id: 'security', Icon: Lock, color: 'text-indigo-400' },
-  { id: 'shield', Icon: Shield, color: 'text-teal-400' },
-  { id: 'globe', Icon: Globe, color: 'text-lime-400' },
-  { id: 'git', Icon: GitBranch, color: 'text-fuchsia-400' },
+  { id: 'shield', Icon: Shield, color: 'text-cyan-400' },
+  { id: 'globe', Icon: Globe, color: 'text-green-400' },
+  { id: 'git', Icon: GitBranch, color: 'text-purple-400' },
 ]
 
 type Difficulty = 'easy' | 'medium' | 'hard'
@@ -297,7 +297,7 @@ export function MatchGame(_props: CardComponentProps) {
               className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                 difficulty === d
                   ? 'bg-purple-500 text-white'
-                  : 'bg-white/5 hover:bg-white/10 text-gray-400'
+                  : 'bg-white/5 hover:bg-white/10 text-muted-foreground'
               }`}
             >
               {d.charAt(0).toUpperCase() + d.slice(1)}
@@ -362,13 +362,13 @@ export function MatchGame(_props: CardComponentProps) {
         <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[120px]">
           <div className="text-2xl">🎉</div>
           <div className="text-base font-bold text-center">Congratulations!</div>
-          <div className="text-center text-xs text-gray-400">
+          <div className="text-center text-xs text-muted-foreground">
             <div>Completed in <span className="font-bold text-white">{moves}</span> moves</div>
             <div>Time: <span className="font-bold text-white">{formatTime(time)}</span></div>
           </div>
           <button
             onClick={resetGame}
-            className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg text-sm font-semibold hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 flex items-center gap-2"
+            className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-500 rounded-lg text-sm font-semibold hover:from-green-600 hover:to-green-600 transition-all transform hover:scale-105 flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Play Again

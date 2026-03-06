@@ -53,10 +53,10 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 
 // Cloud provider icons (simple text badges for now, could be SVG logos)
 const PROVIDER_ICONS: Record<CloudProvider, { color: string; bg: string; short: string }> = {
-  estimate: { color: 'text-gray-400', bg: 'bg-gray-500/20', short: 'EST' },
+  estimate: { color: 'text-muted-foreground', bg: 'bg-gray-500/20', short: 'EST' },
   aws: { color: 'text-orange-400', bg: 'bg-orange-500/20', short: 'AWS' },
   gcp: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'GCP' },
-  azure: { color: 'text-sky-400', bg: 'bg-sky-500/20', short: 'AZR' },
+  azure: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'AZR' },
   oci: { color: 'text-red-400', bg: 'bg-red-500/20', short: 'OCI' },
   openshift: { color: 'text-red-500', bg: 'bg-red-600/20', short: 'OCP' },
 }
@@ -438,7 +438,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             </button>
             {showSettingsMenu && (
               <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2">
-                <div className="px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('cards:clusterCosts.pricingMode')}
                 </div>
                 <button
@@ -452,7 +452,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 >
                   <div>
                     <div className="font-medium">{t('cards:clusterCosts.perCluster')}</div>
-                    <div className="text-[10px] text-muted-foreground">{t('cards:clusterCosts.perClusterDesc')}</div>
+                    <div className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perClusterDesc')}</div>
                   </div>
                   {pricingMode === 'per-cluster' && <Sparkles className="w-3.5 h-3.5 text-yellow-400" />}
                 </button>
@@ -467,7 +467,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 >
                   <div>
                     <div className="font-medium">{t('cards:clusterCosts.uniform')}</div>
-                    <div className="text-[10px] text-muted-foreground">{t('cards:clusterCosts.uniformDesc')}</div>
+                    <div className="text-2xs text-muted-foreground">{t('cards:clusterCosts.uniformDesc')}</div>
                   </div>
                 </button>
               </div>
@@ -569,17 +569,17 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 <div className="p-2 rounded bg-secondary/50">
                   <p className="text-muted-foreground mb-0.5">{t('common:common.cpu')}</p>
                   <p className="text-foreground font-medium">${cpuCost.toFixed(3)}/hr</p>
-                  <p className="text-[10px] text-muted-foreground">{t('cards:clusterCosts.perVCPU')}</p>
+                  <p className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perVCPU')}</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/50">
                   <p className="text-muted-foreground mb-0.5">{t('common:common.memory')}</p>
                   <p className="text-foreground font-medium">${memoryCost.toFixed(4)}/hr</p>
-                  <p className="text-[10px] text-muted-foreground">{t('cards:clusterCosts.perGB')}</p>
+                  <p className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perGB')}</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/50">
                   <p className="text-muted-foreground mb-0.5">{t('cards:clusterCosts.gpu')}</p>
                   <p className="text-foreground font-medium">${gpuCost.toFixed(2)}/hr</p>
-                  <p className="text-[10px] text-muted-foreground">{t('cards:clusterCosts.perGPU')}</p>
+                  <p className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perGPU')}</p>
                 </div>
               </div>
               <p className="text-muted-foreground italic">{t(`cards:clusterCosts.notes.${selectedProvider}`, { defaultValue: pricing.notes })}</p>
@@ -639,7 +639,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       />
 
       {/* Total costs */}
-      <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 mb-4">
+      <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-green-400 mb-1">{t('cards:clusterCosts.estimatedMonthly')}</p>
@@ -732,7 +732,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               {/* Cost bar */}
               <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all"
+                  className="h-full bg-gradient-to-r from-green-500 to-green-500 rounded-full transition-all"
                   style={{ width: `${percent}%` }}
                 />
               </div>
@@ -814,7 +814,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           </span>
         </div>
         {/* Estimation methodology links */}
-        <div className="flex items-center justify-center gap-3 pt-1 text-[10px]">
+        <div className="flex items-center justify-center gap-3 pt-1 text-2xs">
           <a
             href="https://www.finops.org/introduction/what-is-finops/"
             target="_blank"

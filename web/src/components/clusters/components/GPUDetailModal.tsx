@@ -334,7 +334,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                       mfg === 'NVIDIA' ? 'bg-green-500/20 text-green-400' :
                       mfg === 'AMD' ? 'bg-red-500/20 text-red-400' :
                       mfg === 'Intel' ? 'bg-blue-500/20 text-blue-400' :
-                      'bg-gray-500/20 text-gray-400'
+                      'bg-gray-500/20 text-muted-foreground'
                     }`}
                   >
                     {mfg}: {count} GPUs
@@ -453,7 +453,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                             <div className="flex items-center gap-1">
                               {node.name}
                               {node.migCapable && (
-                                <span className="px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 text-[10px]">MIG</span>
+                                <span className="px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 text-2xs">MIG</span>
                               )}
                             </div>
                           </td>

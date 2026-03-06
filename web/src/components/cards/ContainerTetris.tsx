@@ -395,13 +395,13 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
       {/* Game area - relative container for overlays */}
       <div className="flex-1 flex items-center justify-center gap-4 relative">
         {/* Main board */}
-        <div className="border border-border rounded overflow-hidden bg-zinc-900">
+        <div className="border border-border rounded overflow-hidden bg-gray-900">
           {displayBoard.map((row, rowIdx) => (
             <div key={rowIdx} className="flex">
               {row.map((cell, colIdx) => (
                 <div
                   key={colIdx}
-                  className={`${cellSize} border border-zinc-800 ${cell || 'bg-zinc-900'}`}
+                  className={`${cellSize} border border-gray-800 ${cell || 'bg-gray-900'}`}
                 />
               ))}
             </div>
@@ -413,13 +413,13 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
           {/* Next piece preview */}
           <div>
             <div className="text-xs text-muted-foreground mb-1">Next</div>
-            <div className="border border-border rounded p-1 bg-zinc-900">
+            <div className="border border-border rounded p-1 bg-gray-900">
               {nextPiece.shape.map((row, r) => (
                 <div key={r} className="flex">
                   {row.map((cell, c) => (
                     <div
                       key={c}
-                      className={`${previewCellSize} ${cell ? TETROMINOES[nextPiece.type].color : 'bg-zinc-900'}`}
+                      className={`${previewCellSize} ${cell ? TETROMINOES[nextPiece.type].color : 'bg-gray-900'}`}
                     />
                   ))}
                 </div>

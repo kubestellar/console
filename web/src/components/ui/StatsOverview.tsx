@@ -33,7 +33,7 @@ const COLOR_CLASSES: Record<string, string> = {
   cyan: 'text-cyan-400',
   blue: 'text-blue-400',
   red: 'text-red-400',
-  gray: 'text-gray-400',
+  gray: 'text-muted-foreground',
 }
 
 // Value color mapping for specific stat types
@@ -220,7 +220,7 @@ export function StatsOverview({
             </div>
           )}
           {isDemoData && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+            <span className="flex items-center gap-1 px-1.5 py-0.5 text-2xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
               <FlaskConical className="w-2.5 h-2.5" />
               {t('statsOverview.demo')}
             </span>

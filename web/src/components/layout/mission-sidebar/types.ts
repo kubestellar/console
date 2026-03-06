@@ -32,7 +32,7 @@ export const STATUS_CONFIG: Record<MissionStatus, { icon: typeof Loader2; color:
   waiting_input: { icon: MessageSquare, color: 'text-purple-400', label: 'Waiting for input' },
   completed: { icon: CheckCircle, color: 'text-green-400', label: 'Completed' },
   failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
-  saved: { icon: Bookmark, color: 'text-amber-400', label: 'Saved' },
+  saved: { icon: Bookmark, color: 'text-yellow-400', label: 'Saved' },
 }
 
 export const TYPE_ICONS: Record<Mission['type'], typeof ArrowUpCircle> = {

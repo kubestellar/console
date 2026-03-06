@@ -406,7 +406,7 @@ export function HardwareHealthCard() {
             : 'bg-green-500/10 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{criticalCount}</div>
-          <div className={cn('text-[10px]', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>
+          <div className={cn('text-2xs', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>
             Critical
           </div>
         </div>
@@ -417,7 +417,7 @@ export function HardwareHealthCard() {
             : 'bg-green-500/10 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{warningCount}</div>
-          <div className={cn('text-[10px]', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>
+          <div className={cn('text-2xs', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>
             Warning
           </div>
         </div>
@@ -426,7 +426,7 @@ export function HardwareHealthCard() {
           className="p-2 rounded-lg border bg-muted/20 border-muted/30 hover:bg-muted/40 transition-colors cursor-pointer text-left"
         >
           <div className="text-xl font-bold text-foreground">{deduplicatedNodeCount}</div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-2xs text-muted-foreground">
             Nodes Tracked
           </div>
         </button>
@@ -448,7 +448,7 @@ export function HardwareHealthCard() {
             Alerts
             {activeAlertCount > 0 && (
               <span className={cn(
-                'ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
+                'ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full',
                 criticalCount > 0
                   ? 'bg-red-500/20 text-red-400'
                   : 'bg-yellow-500/20 text-yellow-400'
@@ -469,7 +469,7 @@ export function HardwareHealthCard() {
             <List className="w-3.5 h-3.5" />
             Inventory
             {deduplicatedInventory.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-muted text-muted-foreground">
+              <span className="ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full bg-muted text-muted-foreground">
                 {deduplicatedInventory.length}
               </span>
             )}
@@ -486,7 +486,7 @@ export function HardwareHealthCard() {
                 className={cn(
                   'flex items-center gap-1 px-2 py-1.5 text-xs rounded-md transition-colors',
                   showSnoozed
-                    ? 'bg-amber-500/20 text-amber-400'
+                    ? 'bg-yellow-500/20 text-yellow-400'
                     : 'bg-muted/30 text-muted-foreground hover:text-foreground'
                 )}
                 title={showSnoozed ? 'Hide snoozed alerts' : 'Show snoozed alerts'}
@@ -532,7 +532,7 @@ export function HardwareHealthCard() {
                             clearAllSnoozed()
                             setSnoozeAllMenuOpen(false)
                           }}
-                          className="w-full px-3 py-1.5 text-xs text-left text-amber-400 hover:bg-muted/50 transition-colors"
+                          className="w-full px-3 py-1.5 text-xs text-left text-yellow-400 hover:bg-muted/50 transition-colors"
                         >
                           Clear all snoozes
                         </button>
@@ -663,11 +663,11 @@ export function HardwareHealthCard() {
                           e.stopPropagation()
                           unsnoozeAlert(alert.id)
                         }}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-amber-400 bg-amber-500/20 hover:bg-amber-500/30 transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-yellow-400 bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors"
                         title="Click to unsnooze"
                       >
                         <BellOff className="w-3 h-3" />
-                        <span className="text-[10px] font-medium">
+                        <span className="text-2xs font-medium">
                           {formatSnoozeRemaining(getSnoozeRemaining(alert.id) || 0)}
                         </span>
                       </button>
@@ -750,25 +750,25 @@ export function HardwareHealthCard() {
                       {/* Device counts row */}
                       <div className="flex flex-wrap gap-2 mt-1">
                         {node.devices.gpuCount > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1 text-2xs text-muted-foreground">
                             <Cpu className="w-3 h-3 text-green-400" />
                             {node.devices.gpuCount} GPU
                           </span>
                         )}
                         {node.devices.nicCount > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1 text-2xs text-muted-foreground">
                             <Wifi className="w-3 h-3 text-blue-400" />
                             {node.devices.nicCount} NIC
                           </span>
                         )}
                         {node.devices.nvmeCount > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1 text-2xs text-muted-foreground">
                             <HardDrive className="w-3 h-3 text-purple-400" />
                             {node.devices.nvmeCount} NVMe
                           </span>
                         )}
                         {node.devices.infinibandCount > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1 text-2xs text-muted-foreground">
                             <Wifi className="w-3 h-3 text-orange-400" />
                             {node.devices.infinibandCount} IB
                           </span>
@@ -790,7 +790,7 @@ export function HardwareHealthCard() {
                           <span className="px-1 py-0.5 text-[9px] bg-green-500/20 text-green-400 rounded">GPU Driver</span>
                         )}
                         {getTotalDevices(node.devices) === 0 && (
-                          <span className="text-[10px] text-muted-foreground italic">No devices detected</span>
+                          <span className="text-2xs text-muted-foreground italic">No devices detected</span>
                         )}
                       </div>
                     </div>
@@ -826,7 +826,7 @@ export function HardwareHealthCard() {
 
       {/* Last update */}
       {lastUpdate && (
-        <div className="text-[10px] text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
+        <div className="text-2xs text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
           <RefreshCw className="w-3 h-3" />
           Updated {lastUpdate.toLocaleTimeString()}
         </div>

@@ -68,7 +68,7 @@ const getLoadColors = (load: number) => {
 function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
   // Filter out NaN/undefined values and ensure we have enough data points
   const validData = data.filter(v => Number.isFinite(v))
-  if (validData.length < 2) return <div style={{ width, height }} className="bg-slate-800/30 rounded" />
+  if (validData.length < 2) return <div style={{ width, height }} className="bg-gray-800/30 rounded" />
 
   const max = Math.max(...validData, 1)
   const min = Math.min(...validData, 0)
@@ -880,20 +880,20 @@ export function EPPRouting() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className="p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30 relative">
+    <div className="p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-gray-900/50 to-gray-800/30 relative">
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm rounded-lg">
-          <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-amber-500 animate-spin mb-4" />
-          <span className="text-slate-400 text-sm">{t('llmd.selectStackRouting')}</span>
-          <span className="text-slate-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm rounded-lg">
+          <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-yellow-500 animate-spin mb-4" />
+          <span className="text-muted-foreground text-sm">{t('llmd.selectStackRouting')}</span>
+          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-amber-500/20">
-            <Zap size={14} className="text-amber-400" />
+          <div className="p-1.5 rounded-lg bg-yellow-500/20">
+            <Zap size={14} className="text-yellow-400" />
           </div>
           <span className="font-medium text-white text-sm"><Acronym term="EPP" /> Routing</span>
         </div>
@@ -903,12 +903,12 @@ export function EPPRouting() {
           {selectedStack && (
             <div className="flex items-center gap-1 text-xs">
               <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[80px] ${
-                isDemoMode ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
+                isDemoMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
               }`}>
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">{t('common:common.demo')}</span>
+                <span className="px-1 py-0.5 rounded bg-yellow-500/10 text-yellow-400 text-2xs">{t('common:common.demo')}</span>
               )}
             </div>
           )}
@@ -918,7 +918,7 @@ export function EPPRouting() {
             className={`px-2 py-1 text-xs rounded font-medium transition-all flex items-center gap-1 ${
               viewMode === 'horseshoe'
                 ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                : 'bg-slate-700/50 text-slate-400'
+                : 'bg-gray-700/50 text-muted-foreground'
             }`}
             title={t('llmd.toggleHorseshoe')}
           >
@@ -928,8 +928,8 @@ export function EPPRouting() {
             onClick={() => setShowParticles(!showParticles)}
             className={`px-3 py-1 text-xs rounded font-medium transition-all ${
               showParticles
-                ? 'bg-amber-500/20 text-amber-400 shadow-lg shadow-amber-500/20'
-                : 'bg-slate-700/50 text-slate-400'
+                ? 'bg-yellow-500/20 text-yellow-400 shadow-lg shadow-yellow-500/20'
+                : 'bg-gray-700/50 text-muted-foreground'
             }`}
           >
             {showParticles ? t('common:common.pause') : t('common:common.play')}
@@ -1068,7 +1068,7 @@ export function EPPRouting() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
-              className="absolute left-2 top-2 bg-slate-900/95 backdrop-blur-sm rounded-lg border border-slate-700 p-3 shadow-xl max-w-[180px]"
+              className="absolute left-2 top-2 bg-gray-900/95 backdrop-blur-sm rounded-lg border border-gray-700 p-3 shadow-xl max-w-[180px]"
             >
               {(() => {
                 const node = dynamicNodes.find(n => n.id === selectedNode)
@@ -1082,13 +1082,13 @@ export function EPPRouting() {
                       <span className="text-white font-medium text-sm">{node.label}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedNode(null) }}
-                        className="text-slate-400 hover:text-white text-xs"
+                        className="text-muted-foreground hover:text-white text-xs"
                       >
                         ✕
                       </button>
                     </div>
 
-                    <div className="text-xs text-slate-400 mb-2 capitalize">
+                    <div className="text-xs text-muted-foreground mb-2 capitalize">
                       {node.type === 'router' ? t('llmd.endpointPickerPod') :
                        node.type === 'prefill' ? t('llmd.prefillServer') :
                        node.type === 'decode' ? t('llmd.decodeServer') : t('llmd.source')}
@@ -1105,9 +1105,9 @@ export function EPPRouting() {
                               className={`px-2 py-0.5 text-xs rounded transition-all ${
                                 selectedMetricTypes.includes(metric)
                                   ? metric === 'load'
-                                    ? 'bg-amber-500/20 text-amber-400 shadow-sm shadow-amber-500/20'
+                                    ? 'bg-yellow-500/20 text-yellow-400 shadow-sm shadow-yellow-500/20'
                                     : 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
-                                  : 'bg-slate-700/50 text-slate-500 hover:text-slate-300'
+                                  : 'bg-gray-700/50 text-gray-500 hover:text-gray-300'
                               }`}
                             >
                               {metric === 'load' ? t('llmd.load') : t('llmd.rps')}
@@ -1119,13 +1119,13 @@ export function EPPRouting() {
                         <div className="flex gap-3 text-xs">
                           {selectedMetricTypes.includes('load') && (
                             <div>
-                              <span className="text-slate-500">{t('llmd.load')}:</span>{' '}
-                              <span className="text-amber-400 font-mono">{metrics.load}%</span>
+                              <span className="text-gray-500">{t('llmd.load')}:</span>{' '}
+                              <span className="text-yellow-400 font-mono">{metrics.load}%</span>
                             </div>
                           )}
                           {selectedMetricTypes.includes('rps') && (
                             <div>
-                              <span className="text-slate-500">{t('llmd.rps')}:</span>{' '}
+                              <span className="text-gray-500">{t('llmd.rps')}:</span>{' '}
                               <span className="text-cyan-400 font-mono">{metrics.rps}</span>
                             </div>
                           )}
@@ -1136,7 +1136,7 @@ export function EPPRouting() {
                           <div className={`grid gap-2 ${selectedMetricTypes.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {selectedMetricTypes.includes('load') && (
                               <div>
-                                <div className="text-[10px] text-amber-400/70 mb-1">{t('llmd.loadPercent')}</div>
+                                <div className="text-2xs text-yellow-400/70 mb-1">{t('llmd.loadPercent')}</div>
                                 <Sparkline
                                   data={history.load}
                                   color="#f59e0b"
@@ -1147,7 +1147,7 @@ export function EPPRouting() {
                             )}
                             {selectedMetricTypes.includes('rps') && (
                               <div>
-                                <div className="text-[10px] text-cyan-400/70 mb-1">{t('llmd.rps')}</div>
+                                <div className="text-2xs text-cyan-400/70 mb-1">{t('llmd.rps')}</div>
                                 <Sparkline
                                   data={history.rps}
                                   color="#06b6d4"
@@ -1162,7 +1162,7 @@ export function EPPRouting() {
                     )}
 
                     {node.type === 'source' && (
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-gray-500">
                         {t('llmd.incomingRequests')}
                       </div>
                     )}
@@ -1179,7 +1179,7 @@ export function EPPRouting() {
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900/95 backdrop-blur-sm rounded-lg p-3 border border-slate-700 text-xs shadow-xl"
+          className="bg-gray-900/95 backdrop-blur-sm rounded-lg p-3 border border-gray-700 text-xs shadow-xl"
         >
           {(() => {
             const link = links.find(l => `${l.source}-${l.target}` === hoveredLink)
@@ -1211,11 +1211,11 @@ export function EPPRouting() {
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 mt-3 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-gradient-to-r from-amber-500/60 to-purple-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(147,51,234,0.4)' }} />
+          <div className="w-6 h-1 bg-gradient-to-r from-yellow-500/60 to-purple-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(147,51,234,0.4)' }} />
           <span className="text-muted-foreground">{t('llmd.prefill')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-gradient-to-r from-amber-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
+          <div className="w-6 h-1 bg-gradient-to-r from-yellow-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
           <span className="text-muted-foreground">{t('llmd.decode')}</span>
         </div>
         <div className="flex items-center gap-1.5">

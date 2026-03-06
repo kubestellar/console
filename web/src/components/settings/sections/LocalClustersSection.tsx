@@ -330,7 +330,7 @@ export function LocalClustersSection() {
                               }`} />
                               <span className={
                                 isRunning ? 'text-green-400' : 
-                                isStopped ? 'text-gray-400' : 
+                                isStopped ? 'text-muted-foreground' : 
                                 'text-orange-400'
                               }>
                                 {cluster.status}

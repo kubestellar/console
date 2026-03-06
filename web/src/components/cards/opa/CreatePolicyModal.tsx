@@ -343,7 +343,7 @@ Please proceed with applying this policy.`,
                   className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 border border-transparent hover:border-border transition-all text-left group disabled:opacity-50"
                 >
                   <div className="flex items-start gap-3">
-                    <FileCode className="w-5 h-5 text-amber-400 mt-0.5" />
+                    <FileCode className="w-5 h-5 text-yellow-400 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-foreground group-hover:text-purple-400 transition-colors">
                         Custom YAML

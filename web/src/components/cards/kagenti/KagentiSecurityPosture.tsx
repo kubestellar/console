@@ -98,8 +98,8 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
     )
   }
 
-  const scoreColor = security.score >= 80 ? 'text-emerald-400' : security.score >= 50 ? 'text-amber-400' : 'text-red-400'
-  const scoreBg = security.score >= 80 ? 'bg-emerald-500/10 border-emerald-500/20' : security.score >= 50 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'
+  const scoreColor = security.score >= 80 ? 'text-green-400' : security.score >= 50 ? 'text-yellow-400' : 'text-red-400'
+  const scoreBg = security.score >= 80 ? 'bg-green-500/10 border-green-500/20' : security.score >= 50 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-red-500/10 border-red-500/20'
 
   return (
     <div className="space-y-3 p-1">
@@ -117,19 +117,19 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
         <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">SPIFFE Identity Binding</div>
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
             <span className="flex-1 text-muted-foreground">Bound agents</span>
-            <span className="text-emerald-400 font-medium">{security.boundCards}</span>
+            <span className="text-green-400 font-medium">{security.boundCards}</span>
           </div>
           {security.unboundCards > 0 && (
             <div className="flex items-center gap-2 text-xs">
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+              <ShieldAlert className="w-3.5 h-3.5 text-yellow-400" />
               <span className="flex-1 text-muted-foreground">Unbound agents</span>
-              <span className="text-amber-400 font-medium">{security.unboundCards}</span>
+              <span className="text-yellow-400 font-medium">{security.unboundCards}</span>
             </div>
           )}
           <div className="flex items-center gap-2 text-xs">
-            <Bot className="w-3.5 h-3.5 text-violet-400" />
+            <Bot className="w-3.5 h-3.5 text-purple-400" />
             <span className="flex-1 text-muted-foreground">Agents with identity</span>
             <span className="text-muted-foreground">{security.agentsWithIdentity}/{security.totalAgents}</span>
           </div>
@@ -141,15 +141,15 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
         <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Tool Credentials</div>
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-xs">
-            <Lock className="w-3.5 h-3.5 text-emerald-400" />
+            <Lock className="w-3.5 h-3.5 text-green-400" />
             <span className="flex-1 text-muted-foreground">With credentials</span>
-            <span className="text-emerald-400 font-medium">{security.credentialedTools}</span>
+            <span className="text-green-400 font-medium">{security.credentialedTools}</span>
           </div>
           {security.uncredentialedTools > 0 && (
             <div className="flex items-center gap-2 text-xs">
-              <Unlock className="w-3.5 h-3.5 text-zinc-400" />
+              <Unlock className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="flex-1 text-muted-foreground">Without credentials</span>
-              <span className="text-zinc-400">{security.uncredentialedTools}</span>
+              <span className="text-muted-foreground">{security.uncredentialedTools}</span>
             </div>
           )}
         </div>

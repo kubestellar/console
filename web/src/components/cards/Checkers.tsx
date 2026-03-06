@@ -765,7 +765,7 @@ export function Checkers(_props: CardComponentProps) {
                     onClick={() => handleCellClick(rowIdx, colIdx)}
                     className={`
                       ${cellSize} flex items-center justify-center cursor-pointer transition-colors relative
-                      ${isDark ? 'bg-emerald-800' : 'bg-emerald-200'}
+                      ${isDark ? 'bg-green-800' : 'bg-green-200'}
                       ${isValidMove && !isCapture ? 'ring-2 ring-inset ring-green-400' : ''}
                       ${isCapture ? 'ring-2 ring-inset ring-red-400 bg-red-500/30' : ''}
                       ${isSelected ? 'bg-yellow-500/30' : ''}

@@ -757,7 +757,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 }
               }}
               className={cn(
-                'flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full whitespace-nowrap transition-colors flex-shrink-0',
+                'flex items-center gap-1 px-2 py-0.5 text-2xs rounded-full whitespace-nowrap transition-colors flex-shrink-0',
                 idx === activeFeedIndex
                   ? 'bg-primary/20 text-primary border border-primary/30'
                   : 'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent'
@@ -794,7 +794,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           <button
             onClick={openFilterEditor}
             className={cn(
-              'flex items-center gap-1 px-2 py-0.5 text-[10px] rounded border transition-colors',
+              'flex items-center gap-1 px-2 py-0.5 text-2xs rounded border transition-colors',
               activeFeed?.filter
                 ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
                 : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground'
@@ -810,7 +810,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               <button
                 onClick={() => setShowSourceFilter(!showSourceFilter)}
                 className={cn(
-                  'flex items-center gap-1 px-2 py-0.5 text-[10px] rounded border transition-colors',
+                  'flex items-center gap-1 px-2 py-0.5 text-2xs rounded border transition-colors',
                   sourceFilter.length > 0
                     ? 'bg-blue-500/20 border-blue-500/30 text-blue-400'
                     : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground'
@@ -876,7 +876,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           </div>
           <div className="space-y-2">
             <div>
-              <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.includeDesc')}</label>
+              <label className="text-2xs text-muted-foreground">{t('cards:rssFeed.includeDesc')}</label>
               <input
                 type="text"
                 value={tempIncludeTerms}
@@ -886,7 +886,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.excludeDesc')}</label>
+              <label className="text-2xs text-muted-foreground">{t('cards:rssFeed.excludeDesc')}</label>
               <input
                 type="text"
                 value={tempExcludeTerms}
@@ -978,7 +978,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 {t('common:common.add')}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Examples: r/kubernetes, r/devops, hnrss.org/frontpage, techcrunch.com/feed
             </p>
           </div>
@@ -1045,13 +1045,13 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {/* Reddit */}
               <div>
-                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.reddit')}</span>
+                <span className="text-2xs text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.reddit')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {PRESET_FEEDS.filter(p => p.url.includes('reddit.com') && !feeds.some(f => f.url === p.url)).slice(0, 8).map(preset => (
                     <button
                       key={preset.url}
                       onClick={() => addFeed(preset)}
-                      className="px-2 py-0.5 text-[10px] rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 hover:bg-orange-500/20 transition-colors"
+                      className="px-2 py-0.5 text-2xs rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 hover:bg-orange-500/20 transition-colors"
                     >
                       {preset.icon} {preset.name.replace('r/', '')}
                     </button>
@@ -1060,13 +1060,13 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               </div>
               {/* Tech News */}
               <div>
-                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.techNews')}</span>
+                <span className="text-2xs text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.techNews')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {PRESET_FEEDS.filter(p => !p.url.includes('reddit.com') && !p.url.includes('kubernetes') && !p.url.includes('cncf') && !p.url.includes('docker') && !p.url.includes('hashicorp') && !p.url.includes('istio') && !p.url.includes('prometheus') && !p.url.includes('netflix') && !p.url.includes('cloudflare') && !p.url.includes('github.blog') && !p.url.includes('infoq') && !p.url.includes('dev.to') && !p.url.includes('css-tricks') && !p.url.includes('smashing') && !feeds.some(f => f.url === p.url)).slice(0, 10).map(preset => (
                     <button
                       key={preset.url}
                       onClick={() => addFeed(preset)}
-                      className="px-2 py-0.5 text-[10px] rounded-full bg-secondary/50 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                      className="px-2 py-0.5 text-2xs rounded-full bg-secondary/50 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                     >
                       {preset.icon} {preset.name}
                     </button>
@@ -1075,13 +1075,13 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               </div>
               {/* Cloud Native */}
               <div>
-                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.cloudNative')}</span>
+                <span className="text-2xs text-muted-foreground/70 uppercase tracking-wide">{t('cards:rssFeed.cloudNative')}</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {PRESET_FEEDS.filter(p => (p.url.includes('kubernetes') || p.url.includes('cncf') || p.url.includes('docker') || p.url.includes('hashicorp') || p.url.includes('istio') || p.url.includes('prometheus')) && !feeds.some(f => f.url === p.url)).map(preset => (
                     <button
                       key={preset.url}
                       onClick={() => addFeed(preset)}
-                      className="px-2 py-0.5 text-[10px] rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 hover:bg-blue-500/20 transition-colors"
+                      className="px-2 py-0.5 text-2xs rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 hover:bg-blue-500/20 transition-colors"
                     >
                       {preset.icon} {preset.name}
                     </button>
@@ -1089,7 +1089,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 </div>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/60 mt-2">
+            <p className="text-2xs text-muted-foreground/60 mt-2">
               {t('cards:rssFeed.redditTip')}
             </p>
           </div>
@@ -1133,7 +1133,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 {/* Source feed selector */}
                 <div className="mb-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.selectSourceFeeds')}:</label>
+                    <label className="text-2xs text-muted-foreground">{t('cards:rssFeed.selectSourceFeeds')}:</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -1144,7 +1144,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                           setSelectedSourceUrls(nonAggregateUrls)
                         }
                       }}
-                      className="text-[10px] text-purple-400 hover:text-purple-300"
+                      className="text-2xs text-purple-400 hover:text-purple-300"
                     >
                       {selectedSourceUrls.length === feeds.filter(f => !f.isAggregate).length ? t('cards:rssFeed.deselectAll') : t('common:common.selectAll')}
                     </button>
@@ -1172,7 +1172,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                       </label>
                     ))}
                     {feeds.filter(f => !f.isAggregate).length === 0 && (
-                      <span className="text-[10px] text-muted-foreground">{t('cards:rssFeed.addFeedsFirst')}</span>
+                      <span className="text-2xs text-muted-foreground">{t('cards:rssFeed.addFeedsFirst')}</span>
                     )}
                   </div>
                 </div>
@@ -1180,7 +1180,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 {/* Include/Exclude terms */}
                 <div className="space-y-2 mb-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.includeTerms')}</label>
+                    <label className="text-2xs text-muted-foreground">{t('cards:rssFeed.includeTerms')}</label>
                     <input
                       type="text"
                       value={aggregateIncludeTerms}
@@ -1190,7 +1190,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground">{t('cards:rssFeed.excludeTerms')}</label>
+                    <label className="text-2xs text-muted-foreground">{t('cards:rssFeed.excludeTerms')}</label>
                     <input
                       type="text"
                       value={aggregateExcludeTerms}
@@ -1234,12 +1234,12 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       {/* Status area - fixed height to prevent layout shifts */}
       <div className="h-5 mb-1 flex-shrink-0 flex items-center">
         {(isLoading || isRefreshing) && !error ? (
-          <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+          <span className="text-2xs text-muted-foreground/60 flex items-center gap-1">
             <RefreshCw className="w-3 h-3 animate-spin" />
             Loading {activeFeed?.name || 'feed'}...
           </span>
         ) : error ? (
-          <div className="flex items-center justify-between gap-2 w-full px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-[10px] text-amber-400">
+          <div className="flex items-center justify-between gap-2 w-full px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded text-2xs text-yellow-400">
             <span className="truncate">
               ⚠ {error === 'Failed to fetch' || error.includes('failed')
                 ? `Could not load ${activeFeed?.name || 'feed'}`
@@ -1247,15 +1247,15 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             </span>
             <button
               onClick={() => fetchFeed(true)}
-              className="flex-shrink-0 px-1.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 rounded text-amber-300 transition-colors"
+              className="flex-shrink-0 px-1.5 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 rounded text-yellow-300 transition-colors"
             >
               {t('common:common.retry')}
             </button>
           </div>
         ) : fetchSuccess ? (
-          <span className="text-[10px] text-muted-foreground/60">✓ {fetchSuccess}</span>
+          <span className="text-2xs text-muted-foreground/60">✓ {fetchSuccess}</span>
         ) : (filters.search || activeFeed?.filter) ? (
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {totalItems} of {items.length} items
             {filters.search && ` matching "${filters.search}"`}
             {activeFeed?.filter && ' (filtered)'}

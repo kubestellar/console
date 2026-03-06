@@ -80,7 +80,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
             <p className="text-xs text-muted-foreground mb-1">
               No saved resolutions yet
             </p>
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-2xs text-muted-foreground/70">
               Complete a mission and save the resolution to build your knowledge base
             </p>
           </div>
@@ -231,17 +231,17 @@ function ResolutionCard({
             </span>
           </div>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <span className="text-2xs text-muted-foreground flex items-center gap-1">
               <Tag className="w-2.5 h-2.5" />
               {resolution.issueSignature.type}
             </span>
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <span className="text-2xs text-muted-foreground flex items-center gap-1">
               <Clock className="w-2.5 h-2.5" />
               {formattedDate}
             </span>
             {successRate !== null && (
               <span className={cn(
-                "text-[10px]",
+                "text-2xs",
                 successRate >= 80 ? "text-green-400" :
                 successRate >= 50 ? "text-yellow-400" : "text-muted-foreground"
               )}>
@@ -249,7 +249,7 @@ function ResolutionCard({
               </span>
             )}
             {showSharedBy && resolution.sharedBy && (
-              <span className="text-[10px] text-blue-400">
+              <span className="text-2xs text-blue-400">
                 @{resolution.sharedBy}
               </span>
             )}
@@ -268,7 +268,7 @@ function ResolutionCard({
 
             {/* Steps Preview */}
             {resolution.resolution.steps.length > 0 && (
-              <div className="text-[10px] space-y-1">
+              <div className="text-2xs space-y-1">
                 <span className="text-muted-foreground">Steps:</span>
                 <ol className="list-decimal list-inside space-y-0.5 text-foreground">
                   {resolution.resolution.steps.slice(0, 3).map((step, i) => (
@@ -291,7 +291,7 @@ function ResolutionCard({
                     e.stopPropagation()
                     onApply()
                   }}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-2xs font-medium bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded transition-colors"
                 >
                   <CheckCircle className="w-3 h-3" />
                   Apply
@@ -303,7 +303,7 @@ function ResolutionCard({
                     e.stopPropagation()
                     onShare()
                   }}
-                  className="flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded transition-colors"
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 text-2xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded transition-colors"
                   title="Share to team"
                 >
                   <Share2 className="w-3 h-3" />
@@ -315,7 +315,7 @@ function ResolutionCard({
                     e.stopPropagation()
                     onExport()
                   }}
-                  className="flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded transition-colors"
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 text-2xs bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded transition-colors"
                   title="Export mission"
                 >
                   <Download className="w-3 h-3" />
@@ -327,7 +327,7 @@ function ResolutionCard({
                   onDelete()
                 }}
                 className={cn(
-                  "flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] rounded transition-colors",
+                  "flex items-center justify-center gap-1 px-2 py-1.5 text-2xs rounded transition-colors",
                   isDeleteConfirm
                     ? "bg-red-500 text-white"
                     : "bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"

@@ -395,7 +395,7 @@ Please:
                 {alertRuleName && (
                   <button
                     onClick={() => drillToAlertRule(cluster, namespace || 'monitoring', alertRuleName)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 transition-colors text-sm"
                   >
                     <Bell className="w-3 h-3" />
                     <span>Alert Rule</span>

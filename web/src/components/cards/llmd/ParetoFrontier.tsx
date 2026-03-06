@@ -528,7 +528,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       <div className="flex items-start justify-between mb-1 flex-shrink-0">
         <div className="min-w-0">
           <h3 className="text-[13px] font-bold text-foreground leading-tight truncate">{preset.title}</h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
+          <p className="text-2xs text-muted-foreground mt-0.5 truncate">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ml-3">
           <button
@@ -551,11 +551,11 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       {/* Info pills (power or cost, depending on chart preset) */}
       {infoPills && (
         <div className="flex items-center gap-2 mb-1.5 flex-shrink-0 flex-wrap">
-          <span className="text-[10px] text-muted-foreground font-medium">{infoPills.label}</span>
+          <span className="text-2xs text-muted-foreground font-medium">{infoPills.label}</span>
           {infoPills.items.map(({ hw, value }) => (
             <span
               key={hw}
-              className="text-[10px] px-2 py-0.5 rounded border border-border bg-secondary/50 text-foreground font-medium"
+              className="text-2xs px-2 py-0.5 rounded border border-border bg-secondary/50 text-foreground font-medium"
             >
               {hw}: {value}
             </span>
@@ -597,7 +597,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
               )
             })}
             {frontier.length > 1 && !hideNonOptimal && (
-              <div className="flex items-center gap-1.5 px-1 py-0.5 text-[10px]">
+              <div className="flex items-center gap-1.5 px-1 py-0.5 text-2xs">
                 <span className="text-red-400">- -</span>
                 <span className="text-muted-foreground/60">{t('paretoFrontier.paretoFrontier')}</span>
               </div>
@@ -607,7 +607,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
           {/* Reset filter link */}
           <button
             onClick={resetFilters}
-            className="text-[10px] text-muted-foreground hover:text-foreground px-1 py-0.5 text-left transition-colors"
+            className="text-2xs text-muted-foreground hover:text-foreground px-1 py-0.5 text-left transition-colors"
           >
             {t('paretoFrontier.resetFilter')} &rarr;|
           </button>
@@ -651,7 +651,7 @@ function FilterDropdown({
   const { t } = useTranslation(['cards', 'common'])
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] text-muted-foreground font-medium">{label}</span>
+      <span className="text-2xs text-muted-foreground font-medium">{label}</span>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -673,7 +673,7 @@ function FilterDropdown({
 function Toggle({ label, active, onChange }: { label: string; active: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!active)} className="flex items-center justify-between w-full group">
-      <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
+      <span className="text-2xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
       <span
         className={`relative inline-flex rounded-full transition-colors ${
           active ? 'bg-foreground/30' : 'bg-muted'

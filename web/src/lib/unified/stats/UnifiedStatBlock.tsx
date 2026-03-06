@@ -39,7 +39,7 @@ const ICON_COLORS: Record<string, string> = {
   cyan: 'text-cyan-400',
   blue: 'text-blue-400',
   red: 'text-red-400',
-  gray: 'text-gray-400',
+  gray: 'text-muted-foreground',
   indigo: 'text-indigo-400',
 }
 

@@ -480,7 +480,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       {/* World Map */}
       <div
         ref={mapRef}
-        className="flex-1 relative min-h-[180px] bg-gradient-to-b from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
+        className="flex-1 relative min-h-[180px] bg-gradient-to-b from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -518,7 +518,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
           >
             {/* SVG Map Background */}
             <div
-              className="absolute inset-0 [&_svg]:w-full [&_svg]:h-full [&_rect]:fill-transparent [&_path]:fill-emerald-800/40 [&_path]:stroke-emerald-600/20 [&_path]:stroke-[0.3]"
+              className="absolute inset-0 [&_svg]:w-full [&_svg]:h-full [&_rect]:fill-transparent [&_path]:fill-green-800/40 [&_path]:stroke-green-600/20 [&_path]:stroke-[0.3]"
               dangerouslySetInnerHTML={{ __html: mapSvg }}
             />
 
@@ -584,7 +584,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                             <CloudProviderIcon provider={provider} size={14} />
                             <span className="text-xs font-medium text-foreground">{cluster.name}</span>
                           </div>
-                          <div className="text-[10px] text-muted-foreground space-y-0.5">
+                          <div className="text-2xs text-muted-foreground space-y-0.5">
                             <div>{t('cards:clusterLocations.region')}: {group.displayName}</div>
                             <div>{t('common:common.status')}: <span className={cluster.healthy ? 'text-green-400' : 'text-red-400'}>{cluster.healthy ? t('common:common.healthy') : t('common:common.unhealthy')}</span></div>
                             {cluster.context && <div className="truncate">{t('cards:clusterLocations.context')}: {cluster.context}</div>}
@@ -626,7 +626,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
 
         {/* Zoom indicator */}
         {zoom !== 1 && (
-          <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded">
+          <div className="absolute bottom-2 right-2 text-2xs text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded">
             {Math.round(zoom * 100)}%
           </div>
         )}
@@ -635,7 +635,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       {/* Footer - Provider Legend */}
       {regionGroups.length > 0 && (
         <div className="mt-2 pt-2 border-t border-border/50">
-          <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
             {Array.from(new Set(regionGroups.flatMap(r => r.clusters.map(c => detectCloudProvider(c.name, c.server, c.namespaces))))).slice(0, 5).map(provider => (
               <div key={provider} className="flex items-center gap-1">
                 <CloudProviderIcon provider={provider} size={10} />

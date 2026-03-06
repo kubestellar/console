@@ -290,7 +290,7 @@ export function CertManager({ config: _config }: CardConfig) {
                 <span className="text-xs text-foreground truncate max-w-[120px]">{issuer.name}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground">{issuer.kind}</span>
+                <span className="text-2xs text-muted-foreground">{issuer.kind}</span>
                 <span className="text-xs font-medium text-foreground">{issuer.certificateCount}</span>
               </div>
             </div>

@@ -618,7 +618,7 @@ Let's start by discussing what kind of policy I need.`,
       {/* Controls */}
       <div className="flex items-center justify-between mb-3">
         {installedCount > 0 ? (
-          <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-500/20 text-green-400">
+          <span className="px-1.5 py-0.5 text-2xs rounded bg-green-500/20 text-green-400">
             {installedCount} cluster{installedCount !== 1 ? 's' : ''}
           </span>
         ) : <div />}
@@ -676,13 +676,13 @@ Let's start by discussing what kind of policy I need.`,
       {installedCount > 0 && (
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
-            <p className="text-[10px] text-orange-400">Policies Active</p>
+            <p className="text-2xs text-orange-400">Policies Active</p>
             <p className="text-lg font-bold text-foreground">
               {Object.values(statuses).filter(s => s.installed).reduce((sum, s) => sum + (s.policyCount || 0), 0)}
             </p>
           </div>
           <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-            <p className="text-[10px] text-red-400">Violations</p>
+            <p className="text-2xs text-red-400">Violations</p>
             <p className="text-lg font-bold text-foreground">{totalViolations}</p>
           </div>
         </div>
@@ -757,15 +757,15 @@ Let's start by discussing what kind of policy I need.`,
                             {status.policyCount ?? 0} {status.policyCount === 1 ? 'policy' : 'policies'}
                           </span>
                           {(status.violationCount ?? 0) > 0 && (
-                            <span className="flex items-center gap-1 text-amber-400">
+                            <span className="flex items-center gap-1 text-yellow-400">
                               <AlertTriangle className="w-3 h-3" />
                               {status.violationCount} {status.violationCount === 1 ? 'violation' : 'violations'}
                             </span>
                           )}
                           {(status.modes && status.modes.length > 1 ? status.modes : [status.mode]).map((mode, idx) => (
-                            <span key={idx} className={`px-1.5 py-0.5 rounded text-[10px] ${
+                            <span key={idx} className={`px-1.5 py-0.5 rounded text-2xs ${
                               mode === 'enforce' ? 'bg-red-500/20 text-red-400' :
-                              mode === 'warn' ? 'bg-amber-500/20 text-amber-400' :
+                              mode === 'warn' ? 'bg-yellow-500/20 text-yellow-400' :
                               'bg-blue-500/20 text-blue-400'
                             }`}>
                               {mode}
@@ -813,7 +813,7 @@ Let's start by discussing what kind of policy I need.`,
 
         return (
           <div className="mt-3 pt-3 border-t border-border/50">
-            <p className="text-[10px] text-muted-foreground font-medium mb-2 flex items-center gap-1">
+            <p className="text-2xs text-muted-foreground font-medium mb-2 flex items-center gap-1">
               <Info className="w-3 h-3" />
               Active Policies
             </p>
@@ -830,11 +830,11 @@ Let's start by discussing what kind of policy I need.`,
                   <span className="text-foreground truncate group-hover:text-purple-400">{policy.name}</span>
                   <div className="flex items-center gap-2">
                     {policy.violations > 0 && (
-                      <span className="text-amber-400">{policy.violations.toLocaleString()}</span>
+                      <span className="text-yellow-400">{policy.violations.toLocaleString()}</span>
                     )}
                     <span className={`px-1 py-0.5 rounded text-[9px] ${
                       policy.mode === 'enforce' || policy.mode === 'deny' ? 'bg-red-500/20 text-red-400' :
-                      policy.mode === 'warn' ? 'bg-amber-500/20 text-amber-400' :
+                      policy.mode === 'warn' ? 'bg-yellow-500/20 text-yellow-400' :
                       'bg-blue-500/20 text-blue-400'
                     }`}>
                       {policy.mode}
@@ -849,7 +849,7 @@ Let's start by discussing what kind of policy I need.`,
       })()}
 
       {/* Footer links */}
-      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
+      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
         <button
           onClick={() => setShowCreatePolicyModal(true)}
           className="text-purple-400 hover:text-purple-300 transition-colors"

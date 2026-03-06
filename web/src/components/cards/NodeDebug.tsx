@@ -51,7 +51,7 @@ const EXEC_COMMANDS: { label: string; shellCmd: string; category: 'system' | 'ku
 const CATEGORY_COLORS: Record<string, { bg: string; hover: string; text: string }> = {
   system: { bg: 'bg-orange-500/10', hover: 'hover:bg-orange-500/20', text: 'text-orange-400' },
   kubernetes: { bg: 'bg-blue-500/10', hover: 'hover:bg-blue-500/20', text: 'text-blue-400' },
-  network: { bg: 'bg-emerald-500/10', hover: 'hover:bg-emerald-500/20', text: 'text-emerald-400' },
+  network: { bg: 'bg-green-500/10', hover: 'hover:bg-green-500/20', text: 'text-green-400' },
   storage: { bg: 'bg-purple-500/10', hover: 'hover:bg-purple-500/20', text: 'text-purple-400' },
 }
 
@@ -213,14 +213,14 @@ export function NodeDebug() {
                 <option key={img.value} value={img.value}>{img.label}</option>
               ))}
             </select>
-            <span className="text-[10px] text-muted-foreground">{t('nodeDebug.debugImage')}</span>
+            <span className="text-2xs text-muted-foreground">{t('nodeDebug.debugImage')}</span>
           </div>
           {(['system', 'kubernetes', 'network', 'storage'] as const).map(cat => {
             const cmds = EXEC_COMMANDS.filter(c => c.category === cat)
             const colors = CATEGORY_COLORS[cat]
             return (
               <div key={cat} className="flex gap-1 items-center flex-wrap">
-                <span className={`text-[10px] ${colors.text} opacity-60 w-12 shrink-0`}>{t(CATEGORY_KEYS[cat])}</span>
+                <span className={`text-2xs ${colors.text} opacity-60 w-12 shrink-0`}>{t(CATEGORY_KEYS[cat])}</span>
                 {cmds.map(cmd => (
                   <button
                     key={cmd.label}

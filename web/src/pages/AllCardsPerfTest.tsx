@@ -126,7 +126,7 @@ export function AllCardsPerfTest() {
                   {CardComponent ? (
                     <CardComponent config={{ perfMode: true }} />
                   ) : (
-                    <div data-testid={`ttfi-missing-${item.cardType}`} className="text-xs text-amber-300">
+                    <div data-testid={`ttfi-missing-${item.cardType}`} className="text-xs text-yellow-300">
                       Missing card component: {item.cardType}
                     </div>
                   )}

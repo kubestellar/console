@@ -195,7 +195,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               <Coins className="w-4 h-4 text-yellow-500" />
               <span className="text-muted-foreground">{t('profile.coins')}</span>
               <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${getContributorLevel(totalCoins).current.bgClass} ${getContributorLevel(totalCoins).current.textClass}`}>
+              <span className={`text-2xs px-1.5 py-0.5 rounded-full ${getContributorLevel(totalCoins).current.bgClass} ${getContributorLevel(totalCoins).current.textClass}`}>
                 {getContributorLevel(totalCoins).current.name}
               </span>
               <ChevronDown className="w-3 h-3 ml-auto text-muted-foreground -rotate-90" />
@@ -253,7 +253,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 <div className="px-5 pb-3 space-y-2">
                   {/* Version info */}
                   <div className="flex items-center gap-2 text-xs">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${__DEV_MODE__ ? 'bg-yellow-900 text-yellow-400' : 'bg-green-900 text-green-400'}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-2xs uppercase font-bold ${__DEV_MODE__ ? 'bg-yellow-900 text-yellow-400' : 'bg-green-900 text-green-400'}`}>
                       {__DEV_MODE__ ? 'dev' : 'prod'}
                     </span>
                     <span className="text-muted-foreground font-mono">

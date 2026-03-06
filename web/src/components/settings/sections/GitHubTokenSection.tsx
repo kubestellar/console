@@ -375,7 +375,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 function EnvBadge() {
   const { t } = useTranslation()
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/25">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/25">
       <Server className="w-3 h-3" />
       {t('settings.github.envBadge')}
     </span>
