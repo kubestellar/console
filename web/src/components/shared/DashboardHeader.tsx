@@ -59,11 +59,18 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const { t } = useTranslation()
   const location = useLocation()
-  const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
+  // Capture this dashboard's path on mount — KeepAlive keeps us mounted even
+  // when the user navigates to a different dashboard, so location.pathname
+  // changes to other dashboards' paths. Only sync pin state for our own path.
+  const ownPathRef = useRef(location.pathname)
+  const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(ownPathRef.current))
 
-  // Re-sync pin state whenever the path changes (e.g. navigating between dashboards)
+  // Re-sync pin state only when returning to THIS dashboard's path
   useEffect(() => {
-    setRememberPositionState(getRememberPosition(location.pathname))
+    const ownPath = ownPathRef.current
+    if (location.pathname === ownPath) {
+      setRememberPositionState(getRememberPosition(ownPath))
+    }
   }, [location.pathname])
 
   // Self-managed timestamp: updates when isFetching goes true → false
@@ -126,7 +133,7 @@ export function DashboardHeader({
               checked={rememberPosition}
               onChange={(e) => {
                 setRememberPositionState(e.target.checked)
-                setRememberPosition(location.pathname, e.target.checked)
+                setRememberPosition(ownPathRef.current, e.target.checked)
               }}
               className="rounded border-border w-3.5 h-3.5"
             />
