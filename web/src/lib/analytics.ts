@@ -686,26 +686,37 @@ export function emitPwaPromptDismissed() {
 
 // ── UTM Tracking ───────────────────────────────────────────────────
 
-let utmParams: Record<string, string> = {}
+/** Maximum length for UTM parameter values to avoid oversized beacon URLs */
+const UTM_PARAM_MAX_LEN = 100
+
+interface UtmParams {
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  utm_term?: string
+  utm_content?: string
+}
+
+let utmParams: UtmParams = {}
 
 export function captureUtmParams() {
   const params = new URLSearchParams(window.location.search)
   const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
   for (const key of utmKeys) {
     const val = params.get(key)
-    if (val) utmParams[key] = val
+    if (val) utmParams[key as keyof UtmParams] = val.slice(0, UTM_PARAM_MAX_LEN)
   }
   if (Object.keys(utmParams).length > 0) {
     sessionStorage.setItem('_ksc_utm', JSON.stringify(utmParams))
-    send('ksc_utm_landing', utmParams)
+    send('ksc_utm_landing', utmParams as Record<string, string>)
   } else {
     const stored = sessionStorage.getItem('_ksc_utm')
     if (stored) {
-      try { utmParams = JSON.parse(stored) } catch { /* ignore */ }
+      try { utmParams = JSON.parse(stored) as UtmParams } catch { /* ignore */ }
     }
   }
 }
 
-export function getUtmParams(): Record<string, string> {
+export function getUtmParams(): UtmParams {
   return { ...utmParams }
 }
