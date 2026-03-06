@@ -79,7 +79,7 @@ export function HardwareHealthCard() {
   const nodeCount = hwData.nodeCount
   const lastUpdate = hwData.lastUpdate ? new Date(hwData.lastUpdate) : null
 
-  const [viewMode, setViewMode] = useState<ViewMode>('alerts')
+  const [viewMode, setViewMode] = useState<ViewMode>('inventory')
   const [showSnoozed, setShowSnoozed] = useState(false)
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState<string | null>(null)
   const [snoozeAllMenuOpen, setSnoozeAllMenuOpen] = useState(false)
@@ -235,6 +235,13 @@ export function HardwareHealthCard() {
   const activeAlertCount = useMemo(() => {
     return deduplicatedAlerts.filter(alert => !isSnoozed(alert.id)).length
   }, [deduplicatedAlerts, isSnoozed])
+
+  // Auto-switch to alerts tab when active alerts exist
+  useEffect(() => {
+    if (activeAlertCount > 0) {
+      setViewMode('alerts')
+    }
+  }, [activeAlertCount])
 
   // Get IDs of visible alerts for "Snooze All"
   const visibleAlertIds = useMemo(() => {
