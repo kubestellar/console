@@ -11,6 +11,8 @@
  * - Trigger: the event source (Kafka, Prometheus, SQS, RabbitMQ, etc.)
  */
 
+const DEMO_LAST_CHECK_OFFSET_MS = 45_000 // Demo data shows as checked 45 seconds ago
+
 export type KedaTriggerType =
   | 'kafka'
   | 'prometheus'
@@ -155,5 +157,5 @@ export const KEDA_DEMO_DATA: KedaDemoData = {
     },
   ],
   totalScaledJobs: 3,
-  lastCheckTime: new Date(Date.now() - 45 * 1000).toISOString(),
+  lastCheckTime: new Date(Date.now() - DEMO_LAST_CHECK_OFFSET_MS).toISOString(),
 }
