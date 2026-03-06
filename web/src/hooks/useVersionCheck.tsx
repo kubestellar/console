@@ -34,7 +34,7 @@ const DEV_SHA_CACHE_KEY = 'kc-dev-latest-sha'
  * - v0.0.1-weekly.20250124 -> { type: 'weekly', date: '20250124' }
  * - v1.2.3 -> { type: 'stable', date: null }
  */
-function parseReleaseTag(tag: string): { type: ReleaseType; date: string | null } {
+export function parseReleaseTag(tag: string): { type: ReleaseType; date: string | null } {
   const nightlyMatch = tag.match(/^v[\d.]+.*-nightly\.(\d{8})$/)
   if (nightlyMatch) {
     return { type: 'nightly', date: nightlyMatch[1] }
@@ -57,7 +57,7 @@ function parseReleaseTag(tag: string): { type: ReleaseType; date: string | null 
 /**
  * Parse a GitHub release into our normalized format.
  */
-function parseRelease(release: GitHubRelease): ParsedRelease {
+export function parseRelease(release: GitHubRelease): ParsedRelease {
   const { type, date } = parseReleaseTag(release.tag_name)
   return {
     tag: release.tag_name,
@@ -77,7 +77,7 @@ function parseRelease(release: GitHubRelease): ParsedRelease {
  * - unstable channel: nightly releases
  * - developer channel: returns null (uses SHA-based tracking instead)
  */
-function getLatestForChannel(
+export function getLatestForChannel(
   releases: ParsedRelease[],
   channel: UpdateChannel
 ): ParsedRelease | null {
