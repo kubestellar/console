@@ -5,6 +5,6 @@
   "description": "Lima virtual machine instances and resource usage.",
   "category": "Runtime",
   "project": "lima",
-  "cncf_status": "incubating",
+  "cncf_status": "sandbox",
   "config": {}
 }

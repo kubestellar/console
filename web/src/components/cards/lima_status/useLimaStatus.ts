@@ -32,17 +32,15 @@ const CACHE_KEY = 'lima-status'
 /**
  * NodeInfo shape returned by the console backend at GET /api/mcp/nodes.
  * Only the fields we need for Lima detection are typed here.
+ * Backend returns flat cpuCapacity/memoryCapacity fields, not nested capacity object.
  */
 interface BackendNodeInfo {
   name?: string
   osImage?: string
   labels?: Record<string, string>
-  annotations?: Record<string, string>
   conditions?: Array<{ type?: string; status?: string }>
-  capacity?: {
-    cpu?: string
-    memory?: string
-  }
+  cpuCapacity?: string
+  memoryCapacity?: string
 }
 
 /**
@@ -70,11 +68,11 @@ async function fetchLimaStatus(): Promise<LimaStatus> {
   const allNodes = Array.isArray(body?.nodes) ? body.nodes : []
 
   // Detect Lima nodes by name prefix, label, or OS image
+  // Note: Backend only exposes labels, not annotations
   const limaNodes = allNodes.filter(
     (n) =>
       n.name?.startsWith('lima-') ||
       n.labels?.['lima.sh/instance'] !== undefined ||
-      n.annotations?.['lima.sh/instance'] !== undefined ||
       n.osImage?.toLowerCase().includes('lima'),
   )
 
@@ -128,17 +126,14 @@ async function fetchLimaStatus(): Promise<LimaStatus> {
         ? 'running'
         : 'stopped'
 
-    // Try to extract Lima version from annotation (best effort)
-    const limaVersion =
-      n.annotations?.['lima.sh/version'] ??
-      n.labels?.['lima.sh/version'] ??
-      'unknown'
+    // Try to extract Lima version from label (best effort)
+    const limaVersion = n.labels?.['lima.sh/version'] ?? 'unknown'
 
     return {
       name: n.name ?? 'unknown',
       status: nodeStatus,
-      cpuCores: parseCpuCores(n.capacity?.cpu),
-      memoryGB: parseMemoryGB(n.capacity?.memory),
+      cpuCores: parseCpuCores(n.cpuCapacity),
+      memoryGB: parseMemoryGB(n.memoryCapacity),
       diskGB: 0, // disk info not in standard node capacity
       arch:
         n.labels?.['kubernetes.io/arch'] ??

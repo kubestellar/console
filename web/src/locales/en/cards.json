@@ -275,11 +275,8 @@
     "contour_status": "Contour",
     "crio_status": "CRI-O",
     "coredns_status": "CoreDNS",
-<<<<<<< HEAD
-    "fluentd_status": "Fluentd"
-=======
+    "fluentd_status": "Fluentd",
     "lima_status": "Lima"
->>>>>>> ae466d94 (Added lima card)
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -444,11 +441,8 @@
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
     "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
-<<<<<<< HEAD
-    "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health."
-=======
+    "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health.",
     "lima_status": "Lima virtual machine instances and resource usage."
->>>>>>> ae466d94 (Added lima card)
   },
   "categories": {
     "core": "Core",
@@ -2675,7 +2669,6 @@
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
   },
-<<<<<<< HEAD
   "fluentd": {
     "healthy": "Healthy",
     "degraded": "Degraded",
@@ -2687,7 +2680,7 @@
     "retries": "Retries",
     "bufferUtilization": "Buffer utilization",
     "outputPlugins": "Output plugins"
-=======
+  },
   "lima": {
     "healthy": "Healthy",
     "degraded": "Degraded",
@@ -2706,6 +2699,5 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
->>>>>>> ae466d94 (Added lima card)
   }
 }
