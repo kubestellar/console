@@ -34,7 +34,7 @@ export function CardConfigModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+      className="fixed inset-0 bg-black/60 backdrop-blur-2xl flex items-center justify-center z-50" 
       onClick={onClose}
     >
       <div role="dialog" aria-modal="true" className="glass p-6 rounded-lg w-[500px] max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>

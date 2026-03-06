@@ -262,7 +262,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
       {showLoginPrompt && (
         <>
           <div
-            className="fixed inset-0 bg-black/70 z-[10001]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-[10001]"
             onClick={() => setShowLoginPrompt(false)}
           />
           <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 pointer-events-none">

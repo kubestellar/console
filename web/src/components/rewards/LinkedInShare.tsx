@@ -45,7 +45,7 @@ export function LinkedInShareButton() {
 
       {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl">
           <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
             <div className="text-center">
               <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">

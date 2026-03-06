@@ -282,7 +282,7 @@ export function Sidebar() {
       {/* Mobile backdrop */}
       {isMobile && config.isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-30 md:hidden"
           onClick={closeMobileSidebar}
         />
       )}
