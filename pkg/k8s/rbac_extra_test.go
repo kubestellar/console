@@ -306,7 +306,7 @@ func TestListNamespacesWithDetails(t *testing.T) {
 		t.Fatalf("ListNamespacesWithDetails failed: %v", err)
 	}
 	if len(ns) != 1 {
-		t.Errorf("Expected 1 namespace, got %d", len(ns))
+		t.Fatalf("Expected 1 namespace, got %d", len(ns))
 	}
 	if ns[0].Name != "ns1" {
 		t.Errorf("Expected ns1, got %s", ns[0].Name)
@@ -362,7 +362,7 @@ func TestGrantNamespaceAccess(t *testing.T) {
 	// Verify creation
 	rb, err := fakeCS.RbacV1().RoleBindings("default").Get(context.Background(), bindingName, metav1.GetOptions{})
 	if err != nil {
-		t.Errorf("RoleBinding not created: %v", err)
+		t.Fatalf("RoleBinding not created: %v", err)
 	}
 	if rb.RoleRef.Name != "admin" {
 		t.Errorf("Expected role admin, got %s", rb.RoleRef.Name)
@@ -380,7 +380,10 @@ func TestGrantNamespaceAccess(t *testing.T) {
 		t.Fatalf("GrantNamespaceAccess 2 failed: %v", err)
 	}
 
-	rb2, _ := fakeCS.RbacV1().RoleBindings("default").Get(context.Background(), bindingName2, metav1.GetOptions{})
+	rb2, err := fakeCS.RbacV1().RoleBindings("default").Get(context.Background(), bindingName2, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("RoleBinding2 not created: %v", err)
+	}
 	if rb2.Subjects[0].Kind != "ServiceAccount" {
 		t.Errorf("Expected ServiceAccount, got %s", rb2.Subjects[0].Kind)
 	}
@@ -516,7 +519,7 @@ func TestListOpenShiftUsers(t *testing.T) {
 		t.Fatalf("ListOpenShiftUsers failed: %v", err)
 	}
 	if len(users) != 1 {
-		t.Errorf("Expected 1 user, got %d", len(users))
+		t.Fatalf("Expected 1 user, got %d", len(users))
 	}
 	if users[0].Name != "user1" {
 		t.Errorf("Expected user1, got %s", users[0].Name)

@@ -829,6 +829,9 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 	if err != nil {
 		return nil, err
 	}
+	if resp == nil {
+		return nil, fmt.Errorf("driveGetWithRetry returned nil response without error (should not happen)")
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {

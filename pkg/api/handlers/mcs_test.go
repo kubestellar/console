@@ -177,7 +177,8 @@ func TestCreateServiceExport(t *testing.T) {
 		"serviceName": "my-svc",
 	}
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -201,7 +202,8 @@ func TestCreateServiceExport(t *testing.T) {
 		"namespace": "default",
 	}
 	bodyInvalid, _ := json.Marshal(payloadInvalid)
-	reqInvalid, _ := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(bodyInvalid))
+	reqInvalid, err := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(bodyInvalid))
+	require.NoError(t, err)
 	reqInvalid.Header.Set("Content-Type", "application/json")
 
 	respInvalid, err := env.App.Test(reqInvalid, 5000)
@@ -213,7 +215,8 @@ func TestCreateServiceExport(t *testing.T) {
 	dynClient.PrependReactor("create", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("create failed")
 	})
-	reqFail, _ := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(body))
+	reqFail, err := http.NewRequest("POST", "/api/mcs/exports", bytes.NewReader(body))
+	require.NoError(t, err)
 	reqFail.Header.Set("Content-Type", "application/json")
 
 	respFail, err := env.App.Test(reqFail)
