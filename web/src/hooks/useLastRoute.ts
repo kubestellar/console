@@ -54,6 +54,9 @@ export function useLastRoute() {
   const hasRestoredRef = useRef(false)
   const isRestoringRef = useRef(false) // true while iterative restore is running
   const pathnameRef = useRef(location.pathname)
+  // Track scroll position per path in a ref — updated immediately on scroll
+  // so the cleanup effect can read it even after KeepAlive hides the content.
+  const scrollTopByPathRef = useRef<Record<string, number>>({})
 
   // Keep pathnameRef in sync for use in cleanup functions
   pathnameRef.current = location.pathname
@@ -221,11 +224,24 @@ export function useLastRoute() {
       // Ignore localStorage errors
     }
 
-    // On cleanup (path change), save scroll position of the page being left
+    // On cleanup (path change), save scroll position of the page being left.
+    // Use the ref value — KeepAlive sets display:none on old content before
+    // cleanup runs, which clamps container.scrollTop. The ref has the real value.
     return () => {
-      saveScrollPositionNow(location.pathname)
+      const refScroll = scrollTopByPathRef.current[location.pathname]
+      if (refScroll !== undefined && refScroll > 0) {
+        try {
+          const positions = getScrollPositions()
+          positions[location.pathname] = { position: refScroll }
+          localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
+        } catch {
+          // Ignore localStorage errors
+        }
+      } else {
+        saveScrollPositionNow(location.pathname)
+      }
     }
-  }, [location.pathname, saveScrollPositionNow])
+  }, [location.pathname, saveScrollPositionNow, getScrollPositions])
 
   // Restore last route on initial mount
   useEffect(() => {
@@ -269,6 +285,12 @@ export function useLastRoute() {
 
     let timeoutId: ReturnType<typeof setTimeout>
     const handleScroll = () => {
+      // Capture scrollTop immediately in a ref — this is cheap (no reflow).
+      // KeepAlive sets display:none on old content before cleanup effects run,
+      // which clamps the container's scrollTop. The ref preserves the real value.
+      if (!isRestoringRef.current) {
+        scrollTopByPathRef.current[pathnameRef.current] = container.scrollTop
+      }
       clearTimeout(timeoutId)
       // Longer debounce (2s) to reduce forced reflows from getBoundingClientRect
       // This is only for scroll persistence, so longer delay is acceptable
