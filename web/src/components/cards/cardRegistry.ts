@@ -1,7 +1,6 @@
 import { lazy, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { getCardConfig } from '../../config/cards'
-import { UnifiedCard } from '../../lib/unified/card/UnifiedCard'
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -474,36 +473,43 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   wasmcloud_status: WasmCloudStatus,
 }
 
-/** Cache of adapter components for unified-ready card types */
-const _unifiedCache = new Map<string, CardComponent>()
+// Lazy-load UnifiedCard — keeps it out of the main bundle for fast page load
+const LazyUnifiedCard = lazy(() =>
+  import('../../lib/unified/card/UnifiedCard').then(m => ({ default: m.UnifiedCard })),
+)
 
-/** Supported unified content types */
+/** Supported unified content types that the adapter can render */
 const _UNIFIED_CONTENT_TYPES = ['list', 'table', 'chart', 'status-grid']
 
-function _unifiedAdapter(cardType: string): CardComponent | undefined {
-  const cached = _unifiedCache.get(cardType)
-  if (cached) return cached
+/** Build a lazy adapter component for a unified card type */
+function _makeUnifiedEntry(cardType: string): CardComponent | undefined {
   const config = getCardConfig(cardType)
   if (!config?.dataSource || !config?.content) return undefined
   if (!_UNIFIED_CONTENT_TYPES.includes(config.content.type)) return undefined
-  const Adapter: CardComponent = () => createElement(UnifiedCard, { config, className: 'h-full' })
+  const Adapter: CardComponent = () => createElement(LazyUnifiedCard, { config, className: 'h-full' })
   Adapter.displayName = `Unified(${cardType})`
-  _unifiedCache.set(cardType, Adapter)
   return Adapter
 }
 
-// Proxy falls back to UnifiedCard for card types with a valid unified config
-export const CARD_COMPONENTS: Record<string, CardComponent> = new Proxy(RAW_CARD_COMPONENTS, {
-  get(target, prop, receiver) {
-    if (typeof prop === 'string') {
-      return Reflect.get(target, prop, receiver) || _unifiedAdapter(prop)
-    }
-    return Reflect.get(target, prop, receiver)
-  },
-  has(target, prop) {
-    return Reflect.has(target, prop) || (typeof prop === 'string' && !!_unifiedAdapter(prop))
-  },
-})
+// Statically register unified-only cards (no legacy component) so they render
+// without a Proxy and participate in normal lazy-loading like every other card.
+const _UNIFIED_ONLY_TYPES = [
+  'node_status', 'statefulset_status', 'daemonset_status', 'job_status',
+  'cronjob_status', 'replicaset_status', 'hpa_status', 'configmap_status',
+  'secret_status', 'pv_status', 'ingress_status', 'network_policy_status',
+  'namespace_status', 'resource_quota_status', 'limit_range_status',
+  'service_account_status', 'role_status', 'role_binding_status',
+  'operator_subscription_status',
+] as const
+
+for (const cardType of _UNIFIED_ONLY_TYPES) {
+  const adapter = _makeUnifiedEntry(cardType)
+  if (adapter) {
+    RAW_CARD_COMPONENTS[cardType] = adapter
+  }
+}
+
+export const CARD_COMPONENTS = RAW_CARD_COMPONENTS
 
 /**
  * Cards that ALWAYS use demo/mock data (no live data source exists).

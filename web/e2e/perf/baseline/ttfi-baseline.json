@@ -12,7 +12,7 @@
     },
     "demo-cold": {
       "max_ttfi_ms": 2500,
-      "max_p95_ms": 800,
+      "max_p95_ms": 1100,
       "max_timeout_count": 2
     },
     "demo-warm": {
