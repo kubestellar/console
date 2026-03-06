@@ -81,6 +81,7 @@ interface GapAnalysisEntry {
 
 const BATCH_SIZE = 24
 const BATCH_LOAD_TIMEOUT_MS = 30_000
+const BATCH_NAV_TIMEOUT_MS = 45_000 // navigateToBatch timeout — generous for cold Vite compiles
 const MONITOR_POLL_INTERVAL_MS = 50
 const WARM_RETURN_WAIT_MS = 3_000
 
@@ -157,20 +158,38 @@ async function startComplianceMonitor(page: Page, cardIds: string[]) {
 }
 
 async function stopComplianceMonitor(page: Page): Promise<Record<string, CardStateSnapshot[]>> {
-  return await page.evaluate(() => {
-    const win = window as Window & {
-      __COMPLIANCE_MONITOR__?: {
-        cardHistory: Record<string, unknown[]>
-        running: boolean
-        intervalId: number
+  const MAX_RETRIES = 3
+  const RETRY_DELAY_MS = 500
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      return await page.evaluate(() => {
+        const win = window as Window & {
+          __COMPLIANCE_MONITOR__?: {
+            cardHistory: Record<string, unknown[]>
+            running: boolean
+            intervalId: number
+          }
+        }
+        const monitor = win.__COMPLIANCE_MONITOR__
+        if (!monitor) return {}
+        clearInterval(monitor.intervalId)
+        monitor.running = false
+        return monitor.cardHistory as Record<string, CardStateSnapshot[]>
+      })
+    } catch (err) {
+      // Execution context can be destroyed if a navigation is still settling
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('Execution context') && attempt < MAX_RETRIES - 1) {
+        console.log(`  [stopComplianceMonitor] context destroyed, retrying (${attempt + 1}/${MAX_RETRIES})...`)
+        await page.waitForLoadState('domcontentloaded')
+        await page.waitForTimeout(RETRY_DELAY_MS)
+        continue
       }
+      console.log(`  [stopComplianceMonitor] failed: ${msg}`)
+      return {}
     }
-    const monitor = win.__COMPLIANCE_MONITOR__
-    if (!monitor) return {}
-    clearInterval(monitor.intervalId)
-    monitor.running = false
-    return monitor.cardHistory as Record<string, CardStateSnapshot[]>
-  })
+  }
+  return {}
 }
 
 // ---------------------------------------------------------------------------
@@ -760,7 +779,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
 
     mockControl.sseRequestLog.length = 0
 
-    const manifest = await navigateToBatch(page, batch)
+    const manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
     const selected = manifest.selected || []
     if (selected.length === 0) continue
 
@@ -818,7 +837,7 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
 
   for (let batch = 0; batch < totalBatches; batch++) {
     // Do NOT re-apply cold mode — we want warm/cached data
-    const manifest = await navigateToBatch(page, batch)
+    const manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
     const selected = manifest.selected || []
     if (selected.length === 0) continue
 

@@ -152,6 +152,7 @@ declare -a PLAYWRIGHT_SCRIPTS=(
   "scripts/nav-test.sh"
   "scripts/perf-test.sh"
   "scripts/ui-compliance-test.sh"
+  "scripts/deploy-test.sh"
   "scripts/cache-test.sh"
 )
 

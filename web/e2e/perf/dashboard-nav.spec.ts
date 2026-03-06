@@ -144,9 +144,24 @@ async function measureNavigation(
     delete (window as Window & { __navPerf?: unknown }).__navPerf
   })
 
+  // Re-locate the link right before clicking to avoid stale element references
+  // (React re-renders can detach the DOM node between waitFor and click)
+  const freshLink = page.locator(linkSelector).first()
+
   // Record click time and click
   const clickTime = Date.now()
-  await link.click()
+  try {
+    await freshLink.click({ timeout: 5_000 })
+  } catch {
+    // Element may have been detached by a re-render — retry with force
+    console.log(`  RETRY ${target.name}: click failed, retrying with force`)
+    try {
+      await page.locator(linkSelector).first().click({ force: true, timeout: 5_000 })
+    } catch {
+      console.log(`  SKIP ${target.name}: click failed after retry`)
+      return null
+    }
+  }
 
   // Phase 1: Wait for URL to change
   let urlChangeTime: number
