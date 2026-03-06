@@ -250,6 +250,15 @@ function send(
     p.set('uid', userId)
   }
 
+  // Campaign attribution — GA4 MP v2 requires explicit campaign params.
+  // gtag.js extracts these from the URL automatically, but when using the
+  // Measurement Protocol directly we must set cs/cm/cn/ck/cc ourselves.
+  if (utmParams.utm_source) p.set('cs', utmParams.utm_source)
+  if (utmParams.utm_medium) p.set('cm', utmParams.utm_medium)
+  if (utmParams.utm_campaign) p.set('cn', utmParams.utm_campaign)
+  if (utmParams.utm_term) p.set('ck', utmParams.utm_term)
+  if (utmParams.utm_content) p.set('cc', utmParams.utm_content)
+
   // Encode the entire payload as base64 so network-level filters
   // can't match on GA4 parameter patterns (tid=G-*, en=, cid=, etc.)
   const encoded = btoa(p.toString())
