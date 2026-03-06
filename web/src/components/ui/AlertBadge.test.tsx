@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import * as AlertBadgeModule from './AlertBadge'
+import { AlertBadge, AnimatedCounter } from './AlertBadge'
 
 describe('AlertBadge Component', () => {
   it('exports AlertBadge component', () => {
-    expect(AlertBadgeModule.AlertBadge).toBeDefined()
-    expect(typeof AlertBadgeModule.AlertBadge).toBe('function')
+    expect(AlertBadge).toBeDefined()
+    expect(typeof AlertBadge).toBe('function')
   })
 
   it('exports AnimatedCounter component', () => {
-    expect(AlertBadgeModule.AnimatedCounter).toBeDefined()
-    expect(typeof AlertBadgeModule.AnimatedCounter).toBe('function')
+    expect(AnimatedCounter).toBeDefined()
+    expect(typeof AnimatedCounter).toBe('function')
   })
 })

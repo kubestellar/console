@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import * as StatsOverviewModule from './StatsOverview'
+import { StatsOverview } from './StatsOverview'
 
 describe('StatsOverview Component', () => {
   it('exports StatsOverview component', () => {
-    expect(StatsOverviewModule.StatsOverview).toBeDefined()
-    expect(typeof StatsOverviewModule.StatsOverview).toBe('function')
+    expect(StatsOverview).toBeDefined()
+    expect(typeof StatsOverview).toBe('function')
   })
 })
