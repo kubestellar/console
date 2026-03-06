@@ -9,11 +9,29 @@
 // URLs
 // ============================================================================
 
-/** WebSocket URL for the local kc-agent */
-export const LOCAL_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+/**
+ * Whether the app is running on a Netlify deployment (console.kubestellar.io, preview deploys).
+ * On Netlify, agent URLs are disabled — there is no local kc-agent.
+ * Duplicated from demoMode.ts to avoid circular imports (demoMode → constants → network).
+ */
+const _isNetlify = typeof window !== 'undefined' && (
+  import.meta.env.VITE_DEMO_MODE === 'true' ||
+  window.location.hostname.includes('netlify.app') ||
+  window.location.hostname.includes('deploy-preview-') ||
+  window.location.hostname === 'console.kubestellar.io'
+)
 
-/** HTTP URL for the local kc-agent */
-export const LOCAL_AGENT_HTTP_URL = 'http://127.0.0.1:8585'
+/**
+ * WebSocket URL for the local kc-agent.
+ * Empty on Netlify — all WebSocket consumers have try/catch so empty URL throws immediately.
+ */
+export const LOCAL_AGENT_WS_URL = _isNetlify ? '' : 'ws://127.0.0.1:8585/ws'
+
+/**
+ * HTTP URL for the local kc-agent.
+ * Empty on Netlify — fetch calls become relative URLs (e.g. '/settings'), which 404 silently.
+ */
+export const LOCAL_AGENT_HTTP_URL = _isNetlify ? '' : 'http://127.0.0.1:8585'
 
 /** Default backend URL (used as fallback when not configured) */
 export const BACKEND_DEFAULT_URL = 'http://localhost:8080'
