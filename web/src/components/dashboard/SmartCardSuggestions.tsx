@@ -173,7 +173,7 @@ export function SmartCardSuggestions({
         <div className="flex items-center gap-2">
           <Lightbulb className="w-4 h-4 text-primary" />
           <span className="text-sm font-medium text-foreground">
-            {t('dashboard.smartSuggestions.title', 'Recommended Cards for your clusters')}
+            {t('dashboard.smartSuggestions.title', 'Smart Suggestions')}
           </span>
           <span className="text-xs text-muted-foreground">
             {health?.clusters ?? 0} {t('dashboard.smartSuggestions.clustersConnected', 'clusters connected')}

@@ -845,7 +845,7 @@
       "exampleKustomizeGitOps": "Kustomize and GitOps status"
     },
     "smartSuggestions": {
-      "title": "Recommended Cards for your clusters",
+      "title": "Smart Suggestions",
       "clustersConnected": "clusters connected",
       "addAll": "Add all"
     },
