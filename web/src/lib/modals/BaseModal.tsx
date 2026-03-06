@@ -37,7 +37,7 @@
 import { ReactNode, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronLeft } from 'lucide-react'
-import { useModalNavigation } from './useModalNavigation'
+import { useModalNavigation, useModalFocusTrap } from './useModalNavigation'
 import {
   BaseModalProps,
   ModalHeaderProps,
@@ -81,6 +81,7 @@ export function BaseModal({
   closeOnEscape = true,
 }: BaseModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
 
   // Set up keyboard navigation (ESC and Space/Backspace to close)
   useModalNavigation({
@@ -90,6 +91,9 @@ export function BaseModal({
     enableBackspace: true,
     disableBodyScroll: true,
   })
+
+  // Trap focus within modal so Tab cannot escape to background content
+  useModalFocusTrap(modalRef, isOpen)
 
   if (!isOpen) return null
 
@@ -113,6 +117,7 @@ export function BaseModal({
         onClick={handleBackdropClick}
       >
         <div
+          ref={modalRef}
           role="dialog"
           aria-modal="true"
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
@@ -152,8 +157,9 @@ function ModalHeader({
               onClick={onBack}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
               title="Go back (Backspace)"
+              aria-label="Go back"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5" aria-hidden="true" />
             </button>
           )}
 
@@ -194,8 +200,9 @@ function ModalHeader({
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
               title="Close (Esc)"
+              aria-label="Close modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           )}
         </div>

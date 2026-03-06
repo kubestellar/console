@@ -15,6 +15,7 @@ import { AlertsProvider } from './contexts/AlertsContext'
 import { RewardsProvider } from './hooks/useRewards'
 import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
+import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { prefetchCardData } from './lib/prefetchCardData'
@@ -361,6 +362,7 @@ function App() {
       <DashboardProvider>
       <DrillDownProvider>
       <DrillDownModal />
+      <AppErrorBoundary>
       <ChunkErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
       <Routes>
@@ -428,6 +430,7 @@ function App() {
       </Routes>
       </Suspense>
       </ChunkErrorBoundary>
+      </AppErrorBoundary>
       </DrillDownProvider>
       </DashboardProvider>
       </AlertsProvider>

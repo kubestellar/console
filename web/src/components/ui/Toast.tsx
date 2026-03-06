@@ -79,7 +79,12 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center space-y-2">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center space-y-2"
+    >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={() => onRemove(toast.id)} />
       ))}
@@ -126,8 +131,9 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       <button
         onClick={onRemove}
         className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground"
+        aria-label="Dismiss notification"
       >
-        <X className="w-3 h-3" />
+        <X className="w-3 h-3" aria-hidden="true" />
       </button>
     </div>
   )
