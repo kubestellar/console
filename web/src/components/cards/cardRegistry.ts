@@ -1,5 +1,6 @@
-import { lazy, ComponentType } from 'react'
+import { lazy, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
+import { getCardConfig } from '../../config/cards'
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -472,8 +473,41 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   wasmcloud_status: WasmCloudStatus,
 }
 
-// Export cards directly — CardWrapper.tsx provides the Suspense boundary with a visible skeleton
-export const CARD_COMPONENTS: Record<string, CardComponent> = RAW_CARD_COMPONENTS
+// Lazy-load UnifiedCard for card types that have a unified config but no legacy component
+const LazyUnifiedCard = lazy(() =>
+  import('../../lib/unified/card/UnifiedCard').then(m => ({ default: m.UnifiedCard })),
+)
+
+/** Cache of adapter components for unified-ready card types */
+const _unifiedCache = new Map<string, CardComponent>()
+
+/** Supported unified content types */
+const _UNIFIED_CONTENT_TYPES = ['list', 'table', 'chart', 'status-grid']
+
+function _unifiedAdapter(cardType: string): CardComponent | undefined {
+  const cached = _unifiedCache.get(cardType)
+  if (cached) return cached
+  const config = getCardConfig(cardType)
+  if (!config?.dataSource || !config?.content) return undefined
+  if (!_UNIFIED_CONTENT_TYPES.includes(config.content.type)) return undefined
+  const Adapter: CardComponent = () => createElement(LazyUnifiedCard, { config, className: 'h-full' })
+  Adapter.displayName = `Unified(${cardType})`
+  _unifiedCache.set(cardType, Adapter)
+  return Adapter
+}
+
+// Proxy falls back to UnifiedCard for card types with a valid unified config
+export const CARD_COMPONENTS: Record<string, CardComponent> = new Proxy(RAW_CARD_COMPONENTS, {
+  get(target, prop, receiver) {
+    if (typeof prop === 'string') {
+      return Reflect.get(target, prop, receiver) || _unifiedAdapter(prop)
+    }
+    return Reflect.get(target, prop, receiver)
+  },
+  has(target, prop) {
+    return Reflect.has(target, prop) || (typeof prop === 'string' && !!_unifiedAdapter(prop))
+  },
+})
 
 /**
  * Cards that ALWAYS use demo/mock data (no live data source exists).
@@ -851,6 +885,8 @@ export const LIVE_DATA_CARDS = new Set([
   'cluster_health_monitor',
   // GPU node health monitoring
   'gpu_node_health',
+  // Node status - live data from useNodes with demo fallback
+  'node_status',
   // Nightly E2E status card
   'nightly_e2e_status',
   // Cluster admin cards with live data
@@ -1023,6 +1059,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   console_ai_offline_detection: 6,
   hardware_health: 6,
   gpu_node_health: 6,
+  node_status: 6,
   user_management: 6,
   // Weather card
   weather: 6,

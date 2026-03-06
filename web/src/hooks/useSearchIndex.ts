@@ -290,10 +290,21 @@ const SETTING_ITEMS: SearchItem[] = [
   { id: 'setting-permissions', name: 'Permissions', description: 'Settings · Permission validation and access control', category: 'setting', href: '/settings', keywords: ['permission', 'access', 'rbac'] },
 ]
 
+// All known card types from metadata (makes every card searchable even if not placed)
+const CATALOG_CARD_ITEMS: SearchItem[] = Object.entries(CARD_TITLES).map(([type, title]) => ({
+  id: `catalog-card-${type}`,
+  name: title,
+  description: CARD_DESCRIPTIONS[type] || 'Available card',
+  category: 'card' as SearchCategory,
+  keywords: [type, type.replace(/_/g, ' ')],
+  meta: 'add card',
+}))
+
 // Static items that don't need localStorage scanning (stats are scanned dynamically now)
 const STATIC_ITEMS: SearchItem[] = [
   ...PAGE_ITEMS,
   ...SETTING_ITEMS,
+  ...CATALOG_CARD_ITEMS,
 ]
 
 // --- Matching ---
