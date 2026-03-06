@@ -1,11 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { FOCUS_DELAY_MS } from '../lib/constants/network'
+import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { FOCUS_DELAY_MS } from "../lib/constants/network";
 
-const LAST_ROUTE_KEY = 'kubestellar-last-route'
-const SCROLL_POSITIONS_KEY = 'kubestellar-scroll-positions'
-const REMEMBER_POSITION_KEY = 'kubestellar-remember-position'
-const SIDEBAR_CONFIG_KEY = 'kubestellar-sidebar-config-v5'
+const LAST_ROUTE_KEY = "kubestellar-last-route";
+const SCROLL_POSITIONS_KEY = "kubestellar-scroll-positions";
+const REMEMBER_POSITION_KEY = "kubestellar-remember-position";
+const SIDEBAR_CONFIG_KEY = "kubestellar-sidebar-config-v5";
 
 /**
  * Get the first dashboard route from sidebar configuration.
@@ -13,26 +13,26 @@ const SIDEBAR_CONFIG_KEY = 'kubestellar-sidebar-config-v5'
  */
 function getFirstDashboardRoute(): string {
   try {
-    const sidebarConfig = localStorage.getItem(SIDEBAR_CONFIG_KEY)
+    const sidebarConfig = localStorage.getItem(SIDEBAR_CONFIG_KEY);
     if (sidebarConfig) {
-      const config = JSON.parse(sidebarConfig)
+      const config = JSON.parse(sidebarConfig);
       if (config.primaryNav && config.primaryNav.length > 0) {
-        return config.primaryNav[0].href || '/'
+        return config.primaryNav[0].href || "/";
       }
     }
   } catch {
     // Fall through to default
   }
-  return '/'
+  return "/";
 }
 
 interface ScrollEntry {
-  position: number
-  cardTitle?: string // title of card at viewport top, for robust restore
+  position: number;
+  cardTitle?: string; // title of card at viewport top, for robust restore
 }
 
 interface ScrollPositions {
-  [path: string]: ScrollEntry | number // number for backward compat
+  [path: string]: ScrollEntry | number; // number for backward compat
 }
 
 /**
@@ -40,7 +40,7 @@ interface ScrollPositions {
  * The layout uses a <main> with overflow-y-auto, not window scroll.
  */
 function getScrollContainer(): Element | null {
-  return document.querySelector('main')
+  return document.querySelector("main");
 }
 
 /**
@@ -49,274 +49,346 @@ function getScrollContainer(): Element | null {
  * On initial app load, redirects to the last route and restores scroll.
  */
 export function useLastRoute() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const hasRestoredRef = useRef(false)
-  const isRestoringRef = useRef(false) // true while iterative restore is running
-  const pathnameRef = useRef(location.pathname)
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hasRestoredRef = useRef(false);
+  const isRestoringRef = useRef(false); // true while iterative restore is running
+  const isNavigatingRef = useRef(false); // true during KeepAlive navigation transition
+  const pathnameRef = useRef(location.pathname);
 
-  // Keep pathnameRef in sync for use in cleanup functions
-  pathnameRef.current = location.pathname
+  // NOTE: pathnameRef is updated via an effect at the bottom of this hook, NOT
+  // here in the render body.  Updating synchronously would cause scroll events
+  // during the KeepAlive DOM flip to capture the NEW path while <main> still
+  // shows the OLD page's content, saving the wrong scroll position.
 
   // Get stored scroll positions
   const getScrollPositions = useCallback((): ScrollPositions => {
     try {
-      return JSON.parse(localStorage.getItem(SCROLL_POSITIONS_KEY) || '{}')
+      return JSON.parse(localStorage.getItem(SCROLL_POSITIONS_KEY) || "{}");
     } catch {
-      return {}
+      return {};
     }
-  }, [])
+  }, []);
 
   // Save scroll position for a given path immediately (no debounce).
   // Snaps to the nearest card top boundary so restoration shows full cards.
   // Also saves the card title for robust restore across layout shifts.
-  const saveScrollPositionNow = useCallback((path: string) => {
-    try {
-      if (isRestoringRef.current) return
-      const container = getScrollContainer()
-      if (!container) return
-      const scrollTop = container.scrollTop
+  const saveScrollPositionNow = useCallback(
+    (path: string) => {
+      try {
+        if (isRestoringRef.current) return;
+        const container = getScrollContainer();
+        if (!container) return;
+        const scrollTop = container.scrollTop;
 
-      const positions = getScrollPositions()
+        const positions = getScrollPositions();
 
-      // At the top — clear saved position so next visit starts at top.
-      // This ensures scrolling to top is "sticky" when Pin is on.
-      if (scrollTop <= 0) {
-        delete positions[path]
-        localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
-        return
-      }
+        // At the top — clear saved position so next visit starts at top.
+        // This ensures scrolling to top is "sticky" when Pin is on.
+        if (scrollTop <= 0) {
+          delete positions[path];
+          localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions));
+          return;
+        }
 
-      // Find the first card visible at the viewport top.
-      // Cards are in a grid so multiple cards can share the same row.
-      // We want the first card (left-most in DOM) on the row nearest
-      // the viewport top, using a 20px tolerance for breathing room.
-      //
-      // OPTIMIZATION: Only check the first few cards to avoid forced reflow
-      // on every card. Most users don't scroll past the first ~10 cards.
-      let snapped = scrollTop
-      let cardTitle: string | undefined
-      const cards = container.querySelectorAll('[data-tour="card"]')
-      const maxCardsToCheck = Math.min(cards.length, 12) // Only check first 12 cards
-      if (maxCardsToCheck > 0) {
-        const containerRect = container.getBoundingClientRect()
-        // Find the last row whose top is at or above the viewport top + tolerance.
-        // Then pick the FIRST card on that row (first in DOM order).
-        let bestRowTop = -1
-        let bestCard: Element | null = null
-        for (let i = 0; i < maxCardsToCheck; i++) {
-          const cardRect = cards[i].getBoundingClientRect()
-          const cardAbsTop = cardRect.top - containerRect.top + scrollTop
-          if (cardAbsTop <= scrollTop + 20) {
-            // New row detected (position differs by more than 2px from last row)
-            if (Math.abs(cardAbsTop - bestRowTop) > 2) {
-              bestRowTop = cardAbsTop
-              bestCard = cards[i] // first card on this new row
+        // Find the first card visible at the viewport top.
+        // Cards are in a grid so multiple cards can share the same row.
+        // We want the first card (left-most in DOM) on the row nearest
+        // the viewport top, using a 20px tolerance for breathing room.
+        //
+        // OPTIMIZATION: Only check the first few cards to avoid forced reflow
+        // on every card. Most users don't scroll past the first ~10 cards.
+        let snapped = scrollTop;
+        let cardTitle: string | undefined;
+        const cards = container.querySelectorAll('[data-tour="card"]');
+        const maxCardsToCheck = Math.min(cards.length, 12); // Only check first 12 cards
+        if (maxCardsToCheck > 0) {
+          const containerRect = container.getBoundingClientRect();
+          // Find the last row whose top is at or above the viewport top + tolerance.
+          // Then pick the FIRST card on that row (first in DOM order).
+          let bestRowTop = -1;
+          let bestCard: Element | null = null;
+          for (let i = 0; i < maxCardsToCheck; i++) {
+            const cardRect = cards[i].getBoundingClientRect();
+            const cardAbsTop = cardRect.top - containerRect.top + scrollTop;
+            if (cardAbsTop <= scrollTop + 20) {
+              // New row detected (position differs by more than 2px from last row)
+              if (Math.abs(cardAbsTop - bestRowTop) > 2) {
+                bestRowTop = cardAbsTop;
+                bestCard = cards[i]; // first card on this new row
+              }
+              // Same row — keep the first card (don't update bestCard)
+            } else {
+              break;
             }
-            // Same row — keep the first card (don't update bestCard)
-          } else {
-            break
+          }
+          if (bestCard && bestRowTop >= 0) {
+            snapped = Math.max(0, bestRowTop - 12); // 12px breathing room above card
+            const titleEl = bestCard.querySelector("h3");
+            if (titleEl) cardTitle = titleEl.textContent?.trim();
           }
         }
-        if (bestCard && bestRowTop >= 0) {
-          snapped = Math.max(0, bestRowTop - 12) // 12px breathing room above card
-          const titleEl = bestCard.querySelector('h3')
-          if (titleEl) cardTitle = titleEl.textContent?.trim()
-        }
-      }
 
-      positions[path] = { position: snapped, cardTitle }
-      localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [getScrollPositions])
+        positions[path] = { position: snapped, cardTitle };
+        localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions));
+      } catch {
+        // Ignore localStorage errors
+      }
+    },
+    [getScrollPositions],
+  );
 
   // Restore scroll position for a path, iterating as lazy content loads.
   // Uses card title for identity-based restore (robust across layout shifts),
   // falling back to pixel position. Retries to let lazy content stabilize.
-  const restoreScrollPosition = useCallback((path: string) => {
-    const positions = getScrollPositions()
-    const entry = positions[path]
-    if (entry === undefined) return
+  const restoreScrollPosition = useCallback(
+    (path: string) => {
+      const positions = getScrollPositions();
+      const entry = positions[path];
+      if (entry === undefined) return;
 
-    // Handle backward compat (old format was just a number)
-    const savedPosition = typeof entry === 'number' ? entry : entry.position
-    const cardTitle = typeof entry === 'number' ? undefined : entry.cardTitle
-    if (savedPosition <= 0) return
+      // Handle backward compat (old format was just a number)
+      const savedPosition = typeof entry === "number" ? entry : entry.position;
+      const cardTitle = typeof entry === "number" ? undefined : entry.cardTitle;
+      if (savedPosition <= 0) return;
 
-    const container = getScrollContainer()
-    if (!container) return
+      const container = getScrollContainer();
+      if (!container) return;
 
-    let attempts = 0
-    const maxAttempts = 10 // 10 × 100ms = 1s max (reduced from 6s)
-    const minAttempts = 3  // min attempts to let content stabilize
-    let lastTarget = -1
-    isRestoringRef.current = true
+      let attempts = 0;
+      const maxAttempts = 10; // 10 × 100ms = 1s max (reduced from 6s)
+      const minAttempts = 3; // min attempts to let content stabilize
+      let lastTarget = -1;
+      isRestoringRef.current = true;
 
-    const tryRestore = () => {
-      let target = savedPosition
+      const tryRestore = () => {
+        let target = savedPosition;
 
-      // Prefer card-based restore for robustness across layout shifts
-      // Only do expensive DOM queries if we have a card title to find
-      // OPTIMIZATION: Check title text FIRST (cheap) before calling getBoundingClientRect (expensive)
-      if (cardTitle) {
-        const cards = container.querySelectorAll('[data-tour="card"]')
-        // Find the card by title first without measuring
-        let targetCard: Element | null = null
-        for (let i = 0; i < cards.length; i++) {
-          const titleEl = cards[i].querySelector('h3')
-          if (titleEl?.textContent?.trim() === cardTitle) {
-            targetCard = cards[i]
-            break
+        // Prefer card-based restore for robustness across layout shifts
+        // Only do expensive DOM queries if we have a card title to find
+        // OPTIMIZATION: Check title text FIRST (cheap) before calling getBoundingClientRect (expensive)
+        if (cardTitle) {
+          const cards = container.querySelectorAll('[data-tour="card"]');
+          // Find the card by title first without measuring
+          let targetCard: Element | null = null;
+          for (let i = 0; i < cards.length; i++) {
+            const titleEl = cards[i].querySelector("h3");
+            if (titleEl?.textContent?.trim() === cardTitle) {
+              targetCard = cards[i];
+              break;
+            }
+          }
+          // Only measure if we found the card
+          if (targetCard) {
+            const containerRect = container.getBoundingClientRect();
+            const scrollTop = container.scrollTop;
+            const cardRect = targetCard.getBoundingClientRect();
+            target = Math.max(
+              0,
+              cardRect.top - containerRect.top + scrollTop - 12,
+            );
           }
         }
-        // Only measure if we found the card
-        if (targetCard) {
-          const containerRect = container.getBoundingClientRect()
-          const scrollTop = container.scrollTop
-          const cardRect = targetCard.getBoundingClientRect()
-          target = Math.max(0, cardRect.top - containerRect.top + scrollTop - 12)
+
+        container.scrollTo({ top: target, behavior: "instant" });
+        attempts++;
+
+        if (attempts >= maxAttempts) {
+          isRestoringRef.current = false;
+          return;
         }
-      }
 
-      container.scrollTo({ top: target, behavior: 'instant' })
-      attempts++
+        // Stop early when position stabilizes (within 5px tolerance)
+        if (attempts >= minAttempts && Math.abs(target - lastTarget) < 5) {
+          isRestoringRef.current = false;
+          return;
+        }
+        lastTarget = target;
 
-      if (attempts >= maxAttempts) {
-        isRestoringRef.current = false
-        return
-      }
+        // Use shorter delay for faster convergence
+        requestAnimationFrame(() => {
+          setTimeout(tryRestore, FOCUS_DELAY_MS);
+        });
+      };
 
-      // Stop early when position stabilizes (within 5px tolerance)
-      if (attempts >= minAttempts && Math.abs(target - lastTarget) < 5) {
-        isRestoringRef.current = false
-        return
-      }
-      lastTarget = target
+      tryRestore();
+    },
+    [getScrollPositions],
+  );
 
-      // Use shorter delay for faster convergence
-      requestAnimationFrame(() => {
-        setTimeout(tryRestore, FOCUS_DELAY_MS)
-      })
-    }
-
-    tryRestore()
-  }, [getScrollPositions])
-
-  // Save last route and scroll position on path change
+  // Save last route on path change
   useEffect(() => {
     // Don't track auth-related pages
-    if (location.pathname.startsWith('/auth') ||
-        location.pathname === '/login') {
-      return
+    if (
+      location.pathname.startsWith("/auth") ||
+      location.pathname === "/login"
+    ) {
+      return;
     }
 
     try {
-      // Save the current path + query string (including '/' for Dashboard)
-      // so refresh returns to the current page, not a stale saved route.
-      // Query params like ?mission= must survive the OAuth round-trip.
-      localStorage.setItem(LAST_ROUTE_KEY, location.pathname + location.search)
+      localStorage.setItem(LAST_ROUTE_KEY, location.pathname + location.search);
     } catch {
       // Ignore localStorage errors
     }
 
-    // On cleanup (path change), save scroll position of the page being left
-    return () => {
-      saveScrollPositionNow(location.pathname)
-    }
-  }, [location.pathname, saveScrollPositionNow])
+    // NOTE: scroll position is NOT saved in the cleanup here.  With KeepAlive,
+    // cleanup runs AFTER the DOM visibility flip, so container.scrollTop
+    // reflects the NEW page, not the page being left.  Scroll positions are
+    // persisted by the scroll event handler instead.
+  }, [location.pathname, location.search]);
 
   // Restore last route on initial mount
   useEffect(() => {
-    if (hasRestoredRef.current) return
-    hasRestoredRef.current = true
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
 
-    if (location.pathname !== '/') return
+    if (location.pathname !== "/") return;
 
     // Don't redirect away from '/' when deep link params are present —
     // let useDeepLink handle them on the current route.
-    const params = new URLSearchParams(location.search)
-    if (params.has('card') || params.has('drilldown') || params.has('action') || params.has('mission')) return
+    const params = new URLSearchParams(location.search);
+    if (
+      params.has("card") ||
+      params.has("drilldown") ||
+      params.has("action") ||
+      params.has("mission")
+    )
+      return;
 
     try {
-      const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
-      const firstSidebarRoute = getFirstDashboardRoute()
+      const lastRoute = localStorage.getItem(LAST_ROUTE_KEY);
+      const firstSidebarRoute = getFirstDashboardRoute();
 
       // If lastRoute is '/' or same as current, no redirect needed
-      if (lastRoute && lastRoute !== '/' && lastRoute !== location.pathname) {
-        navigate(lastRoute, { replace: true })
+      if (lastRoute && lastRoute !== "/" && lastRoute !== location.pathname) {
+        navigate(lastRoute, { replace: true });
         setTimeout(() => {
-          restoreScrollPosition(lastRoute)
-        }, 150)
-      } else if (!lastRoute && firstSidebarRoute && firstSidebarRoute !== '/') {
+          restoreScrollPosition(lastRoute);
+        }, 150);
+      } else if (!lastRoute && firstSidebarRoute && firstSidebarRoute !== "/") {
         // Only use firstSidebarRoute if no lastRoute was saved
-        navigate(firstSidebarRoute, { replace: true })
+        navigate(firstSidebarRoute, { replace: true });
       }
       // If lastRoute is '/', stay on '/' (Dashboard) - no action needed
     } catch {
       // Ignore localStorage errors
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Block the scroll handler the instant a navigation commits to the DOM.
+  // useLayoutEffect fires synchronously after the DOM update, BEFORE the
+  // browser processes layout/paint, so scroll events from the KeepAlive
+  // visibility flip see isNavigatingRef=true and bail out.
+  useLayoutEffect(() => {
+    if (hasRestoredRef.current) {
+      isNavigatingRef.current = true;
+    }
+  }, [location.pathname]);
 
   // Continuously save scroll position on scroll (debounced).
-  // This ensures the latest position is in localStorage even if the component
-  // unmounts abruptly (e.g. sign-out clears auth before cleanup runs).
-  // The isRestoringRef guard prevents overwriting when navigation resets scroll.
+  // Captures BOTH path and scrollTop at scroll-event time so the deferred
+  // save writes the correct values even after the user has navigated away.
+  // (With KeepAlive the <main> container is shared across dashboards, so
+  // reading scrollTop after a navigation would return the NEW page's position.)
   useEffect(() => {
-    const container = getScrollContainer()
-    if (!container) return
+    const container = getScrollContainer();
+    if (!container) return;
 
-    let timeoutId: ReturnType<typeof setTimeout>
+    let timeoutId: ReturnType<typeof setTimeout>;
     const handleScroll = () => {
-      clearTimeout(timeoutId)
-      // Longer debounce (2s) to reduce forced reflows from getBoundingClientRect
-      // This is only for scroll persistence, so longer delay is acceptable
-      timeoutId = setTimeout(() => {
-        saveScrollPositionNow(pathnameRef.current)
-      }, 2000)
-    }
+      // During navigation or restoration the scroll events are synthetic
+      // (KeepAlive DOM flip / programmatic scrollTo).  Don't cancel a pending
+      // real save and don't record the transitional position.
+      if (isNavigatingRef.current || isRestoringRef.current) return;
 
-    container.addEventListener('scroll', handleScroll, { passive: true })
+      clearTimeout(timeoutId);
+
+      // Capture BOTH path and position NOW (at scroll time, not timer-fire time).
+      const capturedPath = pathnameRef.current;
+      const capturedScrollTop = container.scrollTop;
+
+      timeoutId = setTimeout(() => {
+        try {
+          if (isRestoringRef.current) return;
+          const positions = getScrollPositions();
+          if (capturedScrollTop <= 0) {
+            delete positions[capturedPath];
+          } else {
+            positions[capturedPath] = { position: capturedScrollTop };
+          }
+          localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions));
+        } catch {
+          // Ignore localStorage errors
+        }
+      }, 2000);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
-      clearTimeout(timeoutId)
-      container.removeEventListener('scroll', handleScroll)
-    }
-  }, [saveScrollPositionNow])
+      clearTimeout(timeoutId);
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [getScrollPositions]);
 
   // Save scroll position on beforeunload
   useEffect(() => {
     const handleBeforeUnload = () => {
-      saveScrollPositionNow(pathnameRef.current)
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [saveScrollPositionNow])
+      saveScrollPositionNow(pathnameRef.current);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [saveScrollPositionNow]);
 
-  // On navigation: restore scroll if "remember position" is on, otherwise scroll to top
+  // On navigation: always reset scroll, then restore if "remember position" is on.
+  // With KeepAlive, <main> retains the previous dashboard's scroll offset after
+  // the DOM visibility flip.  Scrolling to top FIRST prevents the new dashboard
+  // from appearing at the old dashboard's scroll position.
   useEffect(() => {
-    if (!hasRestoredRef.current) return
+    if (!hasRestoredRef.current) return;
 
-    const container = getScrollContainer()
-    if (!container) return
+    const container = getScrollContainer();
+    if (!container) return;
+
+    // isNavigatingRef was already set true by the useLayoutEffect above.
+    // ALWAYS scroll to top immediately — clears stale position from KeepAlive.
+    container.scrollTo({ top: 0, behavior: "instant" });
 
     if (getRememberPosition(location.pathname)) {
-      const timeoutId = setTimeout(() => {
-        restoreScrollPosition(location.pathname)
-      }, 50)
-      return () => clearTimeout(timeoutId)
+      const restoreTimeout = setTimeout(() => {
+        restoreScrollPosition(location.pathname);
+        // Re-enable the scroll handler after restoration settles
+        setTimeout(() => {
+          isNavigatingRef.current = false;
+        }, 200);
+      }, 50);
+      return () => {
+        clearTimeout(restoreTimeout);
+        isNavigatingRef.current = false;
+      };
     } else {
-      // Pin is off - just scroll to top immediately with no delay.
-      // We don't need to protect against scroll save since Pin is off
-      // and we won't restore the position anyway.
-      container.scrollTo({ top: 0, behavior: 'instant' })
+      // Pin is off — stay at top.  Re-enable scroll handler after settle.
+      const settleTimeout = setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 100);
+      return () => {
+        clearTimeout(settleTimeout);
+        isNavigatingRef.current = false;
+      };
     }
-  }, [location.pathname, restoreScrollPosition])
+  }, [location.pathname, restoreScrollPosition]);
+
+  // Sync pathnameRef AFTER all other effects so that scroll events during
+  // the KeepAlive DOM flip (between DOM commit and effect phase) still see
+  // the OLD path in pathnameRef.  This is the last effect in the hook.
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+  }, [location.pathname]);
 
   return {
     lastRoute: localStorage.getItem(LAST_ROUTE_KEY),
     scrollPositions: getScrollPositions(),
-  }
+  };
 }
 
 /**
@@ -325,9 +397,9 @@ export function useLastRoute() {
  */
 export function getLastRoute(): string | null {
   try {
-    return localStorage.getItem(LAST_ROUTE_KEY)
+    return localStorage.getItem(LAST_ROUTE_KEY);
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -337,8 +409,8 @@ export function getLastRoute(): string | null {
  */
 export function clearLastRoute(): void {
   try {
-    localStorage.removeItem(LAST_ROUTE_KEY)
-    localStorage.removeItem(SCROLL_POSITIONS_KEY)
+    localStorage.removeItem(LAST_ROUTE_KEY);
+    localStorage.removeItem(SCROLL_POSITIONS_KEY);
   } catch {
     // Ignore localStorage errors
   }
@@ -351,15 +423,15 @@ export function clearLastRoute(): void {
  */
 export function getRememberPosition(path: string): boolean {
   try {
-    const stored = localStorage.getItem(REMEMBER_POSITION_KEY)
+    const stored = localStorage.getItem(REMEMBER_POSITION_KEY);
     if (stored) {
-      const prefs = JSON.parse(stored)
-      if (path in prefs) return prefs[path]
+      const prefs = JSON.parse(stored);
+      if (path in prefs) return prefs[path];
     }
   } catch {
     // Ignore
   }
-  return false // Default: off — scroll to top on navigation
+  return false; // Default: off — scroll to top on navigation
 }
 
 /**
@@ -367,10 +439,10 @@ export function getRememberPosition(path: string): boolean {
  */
 export function setRememberPosition(path: string, enabled: boolean): void {
   try {
-    const stored = localStorage.getItem(REMEMBER_POSITION_KEY)
-    const prefs = stored ? JSON.parse(stored) : {}
-    prefs[path] = enabled
-    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify(prefs))
+    const stored = localStorage.getItem(REMEMBER_POSITION_KEY);
+    const prefs = stored ? JSON.parse(stored) : {};
+    prefs[path] = enabled;
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify(prefs));
   } catch {
     // Ignore localStorage errors
   }

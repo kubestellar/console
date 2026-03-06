@@ -1,35 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
-import { RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
-import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
-import { useTranslation } from 'react-i18next'
+import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import { RefreshCw, Hourglass, AlertTriangle } from "lucide-react";
+import {
+  getRememberPosition,
+  setRememberPosition,
+} from "../../hooks/useLastRoute";
+import { useTranslation } from "react-i18next";
 
 interface DashboardHeaderProps {
   /** Dashboard title text or ReactNode */
-  title: React.ReactNode
+  title: React.ReactNode;
   /** Subtitle text below the title */
-  subtitle: React.ReactNode
+  subtitle: React.ReactNode;
   /** Optional icon rendered before the title */
-  icon?: React.ReactNode
+  icon?: React.ReactNode;
   /** Whether the dashboard is currently fetching/refreshing data */
-  isFetching: boolean
+  isFetching: boolean;
   /** Called when the refresh button is clicked */
-  onRefresh: () => void
+  onRefresh: () => void;
   /** Auto-refresh checkbox state */
-  autoRefresh?: boolean
+  autoRefresh?: boolean;
   /** Called when auto-refresh checkbox changes */
-  onAutoRefreshChange?: (checked: boolean) => void
+  onAutoRefreshChange?: (checked: boolean) => void;
   /** Unique ID for the auto-refresh checkbox (accessibility) */
-  autoRefreshId?: string
+  autoRefreshId?: string;
   /** Override: external lastUpdated timestamp. If omitted, the header
    *  automatically tracks when isFetching transitions false → true → false. */
-  lastUpdated?: Date | null
+  lastUpdated?: Date | null;
   /** Extra content rendered after the hourglass (e.g., alert badges) */
-  afterTitle?: React.ReactNode
+  afterTitle?: React.ReactNode;
   /** Extra content rendered on the right side before auto-refresh (e.g., delete button) */
-  rightExtra?: React.ReactNode
+  rightExtra?: React.ReactNode;
   /** Error message to display (optional) */
-  error?: string | null
+  error?: string | null;
 }
 
 /**
@@ -57,43 +60,64 @@ export function DashboardHeader({
   rightExtra,
   error,
 }: DashboardHeaderProps) {
-  const { t } = useTranslation()
-  const location = useLocation()
-  const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
+  const { t } = useTranslation();
+  const location = useLocation();
 
-  // Re-sync pin state whenever the path changes (e.g. navigating between dashboards)
+  // Capture this dashboard's own path once on mount.
+  // KeepAlive keeps this component alive while OTHER routes are active, which
+  // means location.pathname temporarily reflects a DIFFERENT dashboard's path.
+  // Using a stable ownPath prevents cross-dashboard pin state contamination.
+  const ownPathRef = useRef(location.pathname);
+  const ownPath = ownPathRef.current;
+
+  const [rememberPosition, setRememberPositionState] = useState(() =>
+    getRememberPosition(ownPath),
+  );
+
+  // Re-sync pin state only when THIS dashboard becomes the active route.
+  // Ignoring path changes caused by KeepAlive showing a different dashboard.
   useEffect(() => {
-    setRememberPositionState(getRememberPosition(location.pathname))
-  }, [location.pathname])
+    if (location.pathname === ownPath) {
+      setRememberPositionState(getRememberPosition(ownPath));
+    }
+  }, [location.pathname, ownPath]);
 
   // Self-managed timestamp: updates when isFetching goes true → false
-  const [internalLastUpdated, setInternalLastUpdated] = useState<Date>(() => new Date())
+  const [internalLastUpdated, setInternalLastUpdated] = useState<Date>(
+    () => new Date(),
+  );
   // Spin the refresh icon — starts on fetch, completes at least one full turn
-  const [spinning, setSpinning] = useState(false)
-  const wasFetchingRef = useRef(isFetching)
+  const [spinning, setSpinning] = useState(false);
+  const wasFetchingRef = useRef(isFetching);
 
   useEffect(() => {
     if (wasFetchingRef.current && !isFetching) {
-      setInternalLastUpdated(new Date())
+      setInternalLastUpdated(new Date());
     }
     // Start spinning when fetch begins
     if (!wasFetchingRef.current && isFetching) {
-      setSpinning(true)
+      setSpinning(true);
     }
-    wasFetchingRef.current = isFetching
-  }, [isFetching])
+    wasFetchingRef.current = isFetching;
+  }, [isFetching]);
 
   // Use external override if it has a value, otherwise use self-managed
-  const displayTimestamp = externalLastUpdated ?? internalLastUpdated
+  const displayTimestamp = externalLastUpdated ?? internalLastUpdated;
   // Alias isFetching as isLoading for consistent loading state semantics
-  const isLoading = isFetching
+  const isLoading = isFetching;
 
   return (
-    <div data-testid="dashboard-header" className="flex items-center justify-between mb-6">
+    <div
+      data-testid="dashboard-header"
+      className="flex items-center justify-between mb-6"
+    >
       {/* Left side: title + hourglass */}
       <div className="flex items-center gap-3">
         <div>
-          <h1 data-testid="dashboard-title" className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1
+            data-testid="dashboard-title"
+            className="text-2xl font-bold text-foreground flex items-center gap-2"
+          >
             {icon}
             {title}
           </h1>
@@ -101,12 +125,12 @@ export function DashboardHeader({
         </div>
         {/* Reserve fixed width to prevent layout shift */}
         <span
-          className={`flex items-center gap-1 text-xs w-[72px] ${isFetching ? 'text-amber-400 animate-pulse' : 'invisible'}`}
+          className={`flex items-center gap-1 text-xs w-[72px] ${isFetching ? "text-amber-400 animate-pulse" : "invisible"}`}
           title="Updating..."
           aria-busy={isLoading}
         >
           <Hourglass className="w-3 h-3" />
-          <span>{t('common.updating')}</span>
+          <span>{t("common.updating")}</span>
         </span>
         {afterTitle}
       </div>
@@ -116,17 +140,17 @@ export function DashboardHeader({
         <div className="flex items-center gap-3">
           {rightExtra}
           <label
-            htmlFor={`remember-position-${autoRefreshId || 'default'}`}
+            htmlFor={`remember-position-${autoRefreshId || "default"}`}
             className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground"
             title="Remember scroll position when navigating away"
           >
             <input
               type="checkbox"
-              id={`remember-position-${autoRefreshId || 'default'}`}
+              id={`remember-position-${autoRefreshId || "default"}`}
               checked={rememberPosition}
               onChange={(e) => {
-                setRememberPositionState(e.target.checked)
-                setRememberPosition(location.pathname, e.target.checked)
+                setRememberPositionState(e.target.checked);
+                setRememberPosition(ownPath, e.target.checked);
               }}
               className="rounded border-border w-3.5 h-3.5"
             />
@@ -134,13 +158,13 @@ export function DashboardHeader({
           </label>
           {onAutoRefreshChange && (
             <label
-              htmlFor={autoRefreshId || 'auto-refresh'}
+              htmlFor={autoRefreshId || "auto-refresh"}
               className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground"
               title="Auto-refresh every 30s"
             >
               <input
                 type="checkbox"
-                id={autoRefreshId || 'auto-refresh'}
+                id={autoRefreshId || "auto-refresh"}
                 checked={autoRefresh ?? false}
                 onChange={(e) => onAutoRefreshChange(e.target.checked)}
                 className="rounded border-border w-3.5 h-3.5"
@@ -153,13 +177,17 @@ export function DashboardHeader({
             onClick={onRefresh}
             disabled={isFetching}
             className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-            title={t('common.refreshClusterData')}
+            title={t("common.refreshClusterData")}
           >
             <RefreshCw
               className="w-4 h-4"
-              style={spinning ? {
-                animation: `spin 0.6s linear ${isFetching ? 'infinite' : '1'}`,
-              } : undefined}
+              style={
+                spinning
+                  ? {
+                      animation: `spin 0.6s linear ${isFetching ? "infinite" : "1"}`,
+                    }
+                  : undefined
+              }
               onAnimationEnd={() => setSpinning(false)}
             />
           </button>
@@ -184,5 +212,5 @@ export function DashboardHeader({
         ) : null}
       </div>
     </div>
-  )
+  );
 }
