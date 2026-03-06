@@ -70,6 +70,7 @@ export function HardwareHealthCard() {
     isLoading,
     isFailed,
     consecutiveFailures,
+    isDemoFallback,
     error: fetchError,
     refetch,
   } = useCachedHardwareHealth()
@@ -116,6 +117,7 @@ export function HardwareHealthCard() {
   useCardLoadingState({
     isLoading,
     hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
+    isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,
   })

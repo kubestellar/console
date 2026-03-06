@@ -9,6 +9,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { Activity } from 'lucide-react'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
@@ -28,13 +29,16 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     isLoading: hookLoading,
   } = useGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
+  const { isDemoMode } = useDemoMode()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Report state to CardWrapper for refresh animation
+  // useGPUNodes falls back to demo data when isDemoMode is true and no live data is available
   const { showSkeleton } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: rawNodes.length > 0,
+    isDemoData: isDemoMode,
   })
   const isLoading = showSkeleton
   const { drillToResources } = useDrillDownActions()
