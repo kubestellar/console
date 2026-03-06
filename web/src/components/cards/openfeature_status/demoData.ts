@@ -5,6 +5,8 @@
  * Used in demo mode or when no Kubernetes clusters are connected.
  */
 
+const DEMO_LAST_CHECK_OFFSET_MS = 90_000 // Demo data shows as checked 90 seconds ago
+
 export interface FeatureFlagStats {
   total: number
   enabled: number
@@ -57,5 +59,5 @@ export const OPENFEATURE_DEMO_DATA: OpenFeatureDemoData = {
     errorRate: 2.3,
   },
   totalEvaluations: 268960,
-  lastCheckTime: new Date(Date.now() - 90 * 1000).toISOString(), // 90 sec ago
+  lastCheckTime: new Date(Date.now() - DEMO_LAST_CHECK_OFFSET_MS).toISOString(),
 }

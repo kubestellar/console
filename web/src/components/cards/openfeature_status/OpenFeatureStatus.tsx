@@ -4,6 +4,8 @@ import { Skeleton } from '../../ui/Skeleton'
 import { useOpenFeatureStatus } from './useOpenFeatureStatus'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 
+const ERROR_RATE_WARNING_PCT = 5 // Show warning when error rate exceeds this percentage
+
 function useFormatRelativeTime() {
   const { t } = useTranslation('cards')
   return (isoString: string): string => {
@@ -158,7 +160,7 @@ export function OpenFeatureStatus() {
       )}
 
       {/* Error rate warning */}
-      {hasFlags && data.featureFlags.errorRate > 5 && (
+      {hasFlags && data.featureFlags.errorRate > ERROR_RATE_WARNING_PCT && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <AlertTriangle className="w-4 h-4 text-orange-400" />
           <span className="text-xs text-orange-400">

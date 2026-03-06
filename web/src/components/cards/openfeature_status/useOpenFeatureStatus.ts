@@ -181,15 +181,14 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
     demoData: OPENFEATURE_DEMO_DATA,
     initialData: INITIAL_DATA,
     category: 'default',
+    persist: true,
   })
-
-  const effectiveIsDemoFallback = cacheResult.isDemoFallback && !cacheResult.isLoading
 
   const hasAnyData = cacheResult.data.providers.length > 0 || cacheResult.data.health !== 'not-installed'
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: cacheResult.isLoading,
-    isDemoData: effectiveIsDemoFallback,
+    isDemoData: cacheResult.isDemoFallback,
     hasAnyData,
     isFailed: cacheResult.isFailed,
     consecutiveFailures: cacheResult.consecutiveFailures,
