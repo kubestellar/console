@@ -1,12 +1,13 @@
 # KubeStellar Console — developer workflow targets
 #
 # Usage:
+#   make dev       Start frontend, backend, and kc-agent (no OAuth required)
 #   make update    Pull latest, build everything, restart
 #   make build     Build frontend + Go binaries
 #   make restart   Restart all processes via startup-oauth.sh
 #   make help      Show available targets
 
-.PHONY: help build restart update pull lint
+.PHONY: help dev build restart update pull lint
 
 SHELL := /bin/bash
 
@@ -35,6 +36,10 @@ restart:
 
 ## update: Pull, build, and restart (full update cycle)
 update: pull build restart
+
+## dev: Start frontend, backend, and kc-agent for local development (no OAuth required)
+dev:
+	bash start-dev.sh
 
 ## lint: Run frontend linter
 lint:
