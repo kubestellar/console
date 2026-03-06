@@ -1,0 +1,45 @@
+/**
+ * FeatureHintTooltip — small, dismissible inline tooltip for feature discovery.
+ *
+ * Positioned relative to its parent (parent must be `position: relative`).
+ * Appears once per user, auto-dismisses after a timeout set by useFeatureHints.
+ */
+
+import { X } from 'lucide-react'
+
+interface FeatureHintTooltipProps {
+  message: string
+  onDismiss: () => void
+  placement?: 'top' | 'bottom' | 'left' | 'right'
+}
+
+const PLACEMENT_CLASSES: Record<string, string> = {
+  top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+  bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+  left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+  right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+}
+
+export function FeatureHintTooltip({
+  message,
+  onDismiss,
+  placement = 'bottom',
+}: FeatureHintTooltipProps) {
+  return (
+    <div
+      className={`absolute z-50 ${PLACEMENT_CLASSES[placement]} animate-in fade-in slide-in-from-top-1 duration-300`}
+      role="tooltip"
+    >
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg glass border border-purple-500/30 bg-purple-500/10 shadow-lg max-w-xs">
+        <span className="text-xs text-purple-300 leading-tight">{message}</span>
+        <button
+          onClick={onDismiss}
+          className="flex-shrink-0 p-0.5 rounded hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors"
+          aria-label="Dismiss hint"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  )
+}

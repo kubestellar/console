@@ -17,7 +17,7 @@ import {
   emitSmartSuggestionsAddAll,
 } from '../../lib/analytics'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
-import { STORAGE_KEY_SMART_SUGGESTIONS_DISMISSED } from '../../lib/constants/storage'
+import { STORAGE_KEY_SMART_SUGGESTIONS_DISMISSED, STORAGE_KEY_HINTS_SUPPRESSED } from '../../lib/constants/storage'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 
 interface SmartCardSuggestionsProps {
@@ -34,6 +34,9 @@ interface Suggestion {
 
 /** How long to show the "Added!" confirmation before hiding the suggestion */
 const ADDED_FEEDBACK_MS = 1500
+
+/** Delay before showing suggestions after dashboard mount (ms) */
+const SUGGESTION_SHOW_DELAY_MS = 30_000
 
 /**
  * Maps cluster capabilities to recommended card types.
@@ -83,6 +86,13 @@ export function SmartCardSuggestions({
   )
   const [addedCards, setAddedCards] = useState<Set<string>>(new Set())
   const [hasEmittedShown, setHasEmittedShown] = useState(false)
+  const [delayElapsed, setDelayElapsed] = useState(false)
+
+  // Delay showing suggestions to let users explore first
+  useEffect(() => {
+    const timer = setTimeout(() => setDelayElapsed(true), SUGGESTION_SHOW_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Build cluster context from live data
   const clusterContext: ClusterContext = useMemo(() => {
@@ -122,7 +132,7 @@ export function SmartCardSuggestions({
   }, [suggestions.length, hasEmittedShown, dismissed])
 
   // Don't show if agent not connected, or no suggestions, or dismissed
-  if (agentStatus !== 'connected' || suggestions.length === 0 || dismissed) {
+  if (safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true' || agentStatus !== 'connected' || suggestions.length === 0 || dismissed || !delayElapsed) {
     return null
   }
 
@@ -209,7 +219,7 @@ export function SmartCardSuggestions({
                 <Plus className="w-3.5 h-3.5 text-primary" />
               )}
               <span className="font-medium">{formatCardTitle(cardType)}</span>
-              <span className="text-xs text-muted-foreground hidden sm:inline">
+              <span className="text-xs text-muted-foreground">
                 {reason}
               </span>
             </button>

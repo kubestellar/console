@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode } from 'react'
+import { useState, useRef, useEffect, useMemo, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
@@ -9,7 +9,7 @@ import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { useToast } from '../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../lib/constants/network'
-import { emitAddCardModalOpened, emitAddCardModalAbandoned } from '../../lib/analytics'
+import { emitAddCardModalOpened, emitAddCardModalAbandoned, emitCardCategoryBrowsed, emitRecommendedCardShown } from '../../lib/analytics'
 
 // Helper function to wrap technical abbreviations in text with tooltips
 function wrapAbbreviations(text: string): ReactNode {
@@ -282,6 +282,20 @@ const CARD_CATALOG = {
     { type: 'crio_status', title: 'CRI-O', description: 'CRI-O container runtime metrics, image pulls, and pod sandbox status', visualization: 'status' },
   ]
 } as const
+
+/**
+ * Popularity-ordered card types for the "Recommended for you" section.
+ * Based on GA4 data — these are the most useful cards for new users.
+ */
+const RECOMMENDED_CARD_TYPES = [
+  'cluster_health', 'resource_usage', 'pod_issues',
+  'deployment_status', 'event_stream', 'gpu_overview',
+  'cluster_metrics', 'security_issues', 'node_status',
+  'helm_release_status', 'namespace_monitor', 'active_alerts',
+] as const
+
+/** Maximum recommended cards shown in the "Recommended for you" section */
+const MAX_RECOMMENDED_CARDS = 5
 
 // Maps CARD_CATALOG category names to i18n keys in cards:categories.*
 const CATEGORY_LOCALE_KEYS: Record<string, string> = {
@@ -973,6 +987,17 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
     return unsub
   }, [])
 
+  // Compute recommended cards — popular cards not already on the dashboard
+  const recommendedCards = useMemo(() => {
+    const existing = new Set(existingCardTypes || [])
+    const allCards = Object.values(CARD_CATALOG).flat()
+    return (RECOMMENDED_CARD_TYPES as readonly string[])
+      .filter(type => !existing.has(type))
+      .map(type => allCards.find(c => c.type === type))
+      .filter((c): c is NonNullable<typeof c> => c != null)
+      .slice(0, MAX_RECOMMENDED_CARDS)
+  }, [existingCardTypes])
+
   // Track whether cards were added during this modal session
   const didAddCards = useRef(false)
   // Guard: only fire "abandoned" after the modal has actually been opened
@@ -983,6 +1008,9 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       didAddCards.current = false
       wasOpened.current = true
       emitAddCardModalOpened()
+      if (recommendedCards.length > 0) {
+        emitRecommendedCardShown(recommendedCards.map(c => c.type))
+      }
     } else if (wasOpened.current) {
       // Modal just closed — if no cards were added, it was abandoned
       wasOpened.current = false
@@ -1043,6 +1071,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       newExpanded.delete(category)
     } else {
       newExpanded.add(category)
+      emitCardCategoryBrowsed(category)
     }
     setExpandedCategories(newExpanded)
   }
@@ -1195,6 +1224,38 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     {t('dashboard.addCard.createStats')}
                   </button>
                 </div>
+
+                {/* Recommended for you — shown at top of browse tab when no search active */}
+                {!browseSearch.trim() && recommendedCards.length > 0 && (
+                  <div className="mb-4 rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
+                    <h4 className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {t('dashboard.addCard.recommended', 'Recommended for you')}
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {recommendedCards.map(card => {
+                        const isSelected = selectedBrowseCards.has(card.type)
+                        return (
+                          <button
+                            key={card.type}
+                            onClick={() => toggleBrowseCard(card.type)}
+                            onMouseEnter={() => setHoveredCard({ type: card.type, title: card.title, description: card.description, visualization: card.visualization })}
+                            onMouseLeave={() => setHoveredCard(null)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                              isSelected
+                                ? 'bg-purple-500/20 border border-purple-500 text-foreground ring-1 ring-purple-500/50'
+                                : 'bg-secondary/50 border border-border/50 hover:border-purple-500/30 hover:bg-secondary text-foreground'
+                            }`}
+                          >
+                            <Activity className="w-3.5 h-3.5 text-purple-400" />
+                            <span className="font-medium text-xs">{card.title}</span>
+                            {!isSelected && <Plus className="w-3 h-3 text-purple-400" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Card catalog */}
                 <div className="max-h-[40vh] overflow-y-auto space-y-3">

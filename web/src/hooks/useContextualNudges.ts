@@ -15,6 +15,7 @@ import {
   STORAGE_KEY_PWA_PROMPT_DISMISSED,
   STORAGE_KEY_SESSION_COUNT,
   STORAGE_KEY_VISIT_COUNT,
+  STORAGE_KEY_HINTS_SUPPRESSED,
 } from '../lib/constants/storage'
 import { emitNudgeShown, emitNudgeDismissed, emitNudgeActioned } from '../lib/analytics'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../lib/utils/localStorage'
@@ -67,6 +68,12 @@ export function useContextualNudges(hasCustomizedDashboard: boolean): NudgeState
 
   // Determine which nudge to show
   useEffect(() => {
+    // Master kill switch — suppress all nudges if user disabled hints in settings
+    if (safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true') {
+      setActiveNudge(null)
+      return
+    }
+
     const dismissed = getDismissedNudges()
     const visitCount = Number(safeGetItem(STORAGE_KEY_VISIT_COUNT) || '0')
     const sessionCount = Number(safeGetItem(STORAGE_KEY_SESSION_COUNT) || '0')

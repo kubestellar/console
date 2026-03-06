@@ -233,6 +233,20 @@
   animation: fade-in-up 0.5s ease-out forwards;
 }
 
+/* FAB shimmer ring — pulsing purple ring around the floating action button */
+@keyframes fab-shimmer {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(168, 85, 247, 0); }
+}
+
+.animate-fab-shimmer {
+  animation: fab-shimmer 2s ease-in-out infinite;
+}
+
+.reduce-motion .animate-fab-shimmer {
+  animation: none;
+}
+
 /* Card flash animation for significant data changes — subtle border highlight */
 @keyframes card-flash {
   0% {

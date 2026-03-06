@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from 'react'
+import { lazy, Suspense, useState, useEffect, useRef } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
@@ -23,7 +23,7 @@ import { SHORT_DELAY_MS } from './lib/constants/network'
 import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
-import { emitPageView } from './lib/analytics'
+import { emitPageView, emitDashboardViewed } from './lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
 
 // Lazy load all page components for better code splitting
@@ -305,15 +305,52 @@ const ROUTE_TITLES: Record<string, string> = {
 
 const APP_NAME = 'KubeStellar Console'
 
+/** Map route paths to dashboard IDs for duration analytics */
+function pathToDashboardId(path: string): string | null {
+  if (path === '/') return 'main'
+  if (path.startsWith('/custom-dashboard/')) return path.replace('/custom-dashboard/', 'custom-')
+  const id = path.replace(/^\//, '')
+  return id || null
+}
+
 // Track page views in Google Analytics on route change and set document title
 function PageViewTracker() {
   const location = useLocation()
+  const pageEnteredRef = useRef<{ path: string; timestamp: number } | null>(null)
+
+  // Flush duration for current page (used on route change and tab close)
+  const flushDuration = () => {
+    if (pageEnteredRef.current) {
+      const durationMs = Date.now() - pageEnteredRef.current.timestamp
+      const dashboardId = pathToDashboardId(pageEnteredRef.current.path)
+      if (dashboardId) {
+        emitDashboardViewed(dashboardId, durationMs)
+      }
+    }
+  }
+
+  // Capture final page duration when the tab becomes hidden (covers tab close/switch)
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushDuration()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
+  useEffect(() => {
+    // Emit duration for previous page
+    flushDuration()
+
+    // Track new page entry
+    pageEnteredRef.current = { path: location.pathname, timestamp: Date.now() }
+
     const section = ROUTE_TITLES[location.pathname]
     const title = section ? `${section} - ${APP_NAME}` : APP_NAME
     document.title = title
     emitPageView(location.pathname)
   }, [location.pathname])
+
   return null
 }
 

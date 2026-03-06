@@ -4,6 +4,8 @@ import { useTour, TourStep } from '../../hooks/useTour'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { TOOLTIP_POSITION_DELAY_MS } from '../../lib/constants/network'
+import { STORAGE_KEY_HINTS_SUPPRESSED } from '../../lib/constants/storage'
+import { safeGetItem } from '../../lib/utils/localStorage'
 
 // KubeStellar logo — clean, no decorative overlays
 function KubeStellarAIIcon({ className }: { className?: string }) {
@@ -470,14 +472,16 @@ export function TourPrompt() {
   // Auto-start the tour after a short delay for users who haven't seen it yet.
   // If the user clicks "Skip" before the timer fires, hasCompletedTour or
   // dismissed will flip and the effect cleans up.
+  // Suppressed when user disables hints in settings (manual restart via TourTrigger still works).
+  const hintsSuppressed = safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true'
   useEffect(() => {
-    if (hasCompletedTour || isActive || dismissed) return
+    if (hasCompletedTour || isActive || dismissed || hintsSuppressed) return
     const timer = setTimeout(() => startTour(), TOUR_AUTO_START_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [hasCompletedTour, isActive, dismissed, startTour])
+  }, [hasCompletedTour, isActive, dismissed, hintsSuppressed, startTour])
 
-  // Don't show if tour completed, dismissed, or already active
-  if (hasCompletedTour || dismissed || isActive) return null
+  // Don't show if tour completed, dismissed, already active, or hints suppressed
+  if (hasCompletedTour || dismissed || isActive || hintsSuppressed) return null
 
   return (
     <div className="fixed bottom-4 left-4 z-50 w-80 p-4 glass rounded-lg border border-purple-500/30 shadow-xl animate-fade-in-up">

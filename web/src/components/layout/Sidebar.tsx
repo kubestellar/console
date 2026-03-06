@@ -17,6 +17,21 @@ import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendation
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
 import { ROUTES } from '../../config/routes'
+import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
+
+/** Map sidebar item href to dashboard config ID for card count display */
+const HREF_TO_DASHBOARD_ID: Record<string, string> = {
+  '/': 'main', '/compute': 'compute', '/security': 'security',
+  '/gitops': 'gitops', '/storage': 'storage', '/network': 'network',
+  '/events': 'events', '/workloads': 'workloads', '/operators': 'operators',
+  '/clusters': 'clusters', '/compliance': 'compliance', '/cost': 'cost',
+  '/gpu-reservations': 'gpu', '/nodes': 'nodes', '/deployments': 'deployments',
+  '/pods': 'pods', '/services': 'services', '/helm': 'helm',
+  '/alerts': 'alerts', '/ai-ml': 'ai-ml', '/ci-cd': 'ci-cd',
+  '/logs': 'logs', '/data-compliance': 'data-compliance', '/arcade': 'arcade',
+  '/deploy': 'deploy', '/ai-agents': 'ai-agents',
+  '/llm-d-benchmarks': 'llm-d-benchmarks', '/cluster-admin': 'cluster-admin',
+}
 
 export function Sidebar() {
   const { config, toggleCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar } = useSidebarConfig()
@@ -252,6 +267,15 @@ export function Sidebar() {
           >
             {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
             {!isCollapsed && <span className="flex-1 truncate">{item.name}</span>}
+            {!isCollapsed && (() => {
+              const dashId = HREF_TO_DASHBOARD_ID[item.href]
+              const count = dashId ? DASHBOARD_CONFIGS[dashId]?.cards?.length : null
+              return count != null ? (
+                <span className="text-[10px] text-muted-foreground/40 tabular-nums group-hover:hidden flex-shrink-0">
+                  {count}
+                </span>
+              ) : null
+            })()}
             {!isCollapsed && (
               <span className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1">
                 {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (

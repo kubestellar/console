@@ -4,6 +4,7 @@ import { Plus, Layout, RotateCcw, Download, Upload, Pencil } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
+import { useFeatureHints } from '../../hooks/useFeatureHints'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { ResetDialog } from './ResetDialog'
 import { SidebarCustomizer } from '../layout/SidebarCustomizer'
@@ -40,6 +41,7 @@ export function FloatingDashboardActions({
   const { t } = useTranslation()
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
   const { isMobile } = useMobile()
+  const fabHint = useFeatureHints('fab-add')
   const menu = useModalState()
   const resetDialog = useModalState()
   const customizer = useModalState()
@@ -210,13 +212,15 @@ export function FloatingDashboardActions({
         {/* FAB toggle - smaller on mobile */}
         <button
           data-tour="fab-button"
-          onClick={menu.toggle}
+          onClick={() => { menu.toggle(); fabHint.action() }}
           className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
             isMobile ? 'w-8 h-8' : 'w-10 h-10'
           } ${
             menu.isOpen
               ? 'bg-card border border-border rotate-45'
               : 'bg-gradient-ks hover:scale-110 hover:shadow-xl'
+          } ${
+            fabHint.isVisible && !menu.isOpen ? 'animate-fab-shimmer' : ''
           }`}
           title={menu.isOpen ? t('dashboard.actions.closeMenu') : t('dashboard.actions.dashboardActions')}
         >

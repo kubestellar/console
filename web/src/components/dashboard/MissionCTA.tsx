@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Sparkles, X } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
+import { safeGetItem } from '../../lib/utils/localStorage'
+import { STORAGE_KEY_HINTS_SUPPRESSED } from '../../lib/constants/storage'
 
 const DISMISSED_KEY = 'kc-mission-cta-dismissed'
 
@@ -20,6 +22,9 @@ export function MissionCTA() {
 
   // Use the missions context instead of reading localStorage directly
   const hasMissions = missions && missions.length > 0
+
+  // Master kill switch — suppress if user disabled hints in settings
+  if (safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true') return null
 
   if (dismissed || hasMissions) return null
 

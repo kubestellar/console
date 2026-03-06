@@ -37,6 +37,8 @@ import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { MissionSuggestions } from './MissionSuggestions'
 import { MissionCTA } from './MissionCTA'
+import { GettingStartedBanner } from './GettingStartedBanner'
+import { useMissions } from '../../hooks/useMissions'
 import { TemplatesModal } from './TemplatesModal'
 import { CreateDashboardModal } from './CreateDashboardModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
@@ -115,6 +117,9 @@ export function Dashboard() {
     pendingRestoreCard,
     clearPendingRestoreCard,
   } = useDashboardContext()
+
+  // Missions context for Getting Started banner
+  const { openSidebar: openMissionSidebar } = useMissions()
 
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
@@ -872,6 +877,16 @@ export function Dashboard() {
         isLoading={isClustersLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-dashboard-stats-collapsed"
+      />
+
+      {/* Getting Started banner — quick-action buttons for first-time users */}
+      <GettingStartedBanner
+        onBrowseCards={openAddCardModal}
+        onTryMission={openMissionSidebar}
+        onExploreDashboards={() => {
+          const sidebar = document.querySelector('[data-tour="sidebar"]')
+          sidebar?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }}
       />
 
       {/* Getting Started guide when no clusters are connected */}

@@ -730,6 +730,57 @@ export function emitDeveloperSession() {
   send('ksc_developer_session', { deployment_type: dep })
 }
 
+// ── Card Modal Browsing ─────────────────────────────────────────────
+
+/** Fired when user expands a category in the add-card modal */
+export function emitCardCategoryBrowsed(category: string) {
+  send('ksc_card_category_browsed', { category })
+}
+
+/** Fired when the "Recommended for you" section renders in add-card modal */
+export function emitRecommendedCardShown(cardTypes: string[]) {
+  send('ksc_recommended_cards_shown', {
+    card_count: cardTypes.length,
+    card_types: cardTypes.join(','),
+  })
+}
+
+// ── Dashboard Duration ──────────────────────────────────────────────
+
+/** Fired when user navigates away from a dashboard, recording time spent */
+export function emitDashboardViewed(dashboardId: string, durationMs: number) {
+  send('ksc_dashboard_viewed', { dashboard_id: dashboardId, duration_ms: durationMs })
+}
+
+// ── Feature Hints ───────────────────────────────────────────────────
+
+/** Fired when a contextual feature hint tooltip appears */
+export function emitFeatureHintShown(hintType: string) {
+  send('ksc_feature_hint_shown', { hint_type: hintType })
+}
+
+/** Fired when user dismisses a feature hint tooltip */
+export function emitFeatureHintDismissed(hintType: string) {
+  send('ksc_feature_hint_dismissed', { hint_type: hintType })
+}
+
+/** Fired when user clicks the CTA on a feature hint tooltip */
+export function emitFeatureHintActioned(hintType: string) {
+  send('ksc_feature_hint_actioned', { hint_type: hintType })
+}
+
+// ── Getting Started Banner ──────────────────────────────────────────
+
+/** Fired when the Getting Started banner renders on main dashboard */
+export function emitGettingStartedShown() {
+  send('ksc_getting_started_shown')
+}
+
+/** Fired when user clicks one of the Getting Started quick-action buttons */
+export function emitGettingStartedActioned(action: string) {
+  send('ksc_getting_started_actioned', { action })
+}
+
 // ── UTM Tracking ───────────────────────────────────────────────────
 
 /** Maximum length for UTM parameter values to avoid oversized beacon URLs */

@@ -48,6 +48,9 @@ export const STORAGE_KEY_DRAG_HINT_SHOWN = 'kc-drag-hint-shown'
 export const STORAGE_KEY_PWA_PROMPT_DISMISSED = 'kc-pwa-prompt-dismissed'
 export const STORAGE_KEY_SESSION_COUNT = 'kc-session-count'
 export const STORAGE_KEY_VISIT_COUNT = 'kc-visit-count'
+export const STORAGE_KEY_FEATURE_HINTS_DISMISSED = 'kc-feature-hints-dismissed'
+export const STORAGE_KEY_GETTING_STARTED_DISMISSED = 'kc-getting-started-dismissed'
+export const STORAGE_KEY_HINTS_SUPPRESSED = 'kc-hints-suppressed'
 
 // ── Component-specific cache ───────────────────────────────────────────
 export const STORAGE_KEY_OPA_CACHE = 'opa-statuses-cache'
