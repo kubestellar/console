@@ -6,6 +6,11 @@ const LAST_ROUTE_KEY = "kubestellar-last-route";
 const SCROLL_POSITIONS_KEY = "kubestellar-scroll-positions";
 const REMEMBER_POSITION_KEY = "kubestellar-remember-position";
 const SIDEBAR_CONFIG_KEY = "kubestellar-sidebar-config-v5";
+const LAST_ROUTE_RESTORE_DELAY_MS = 150; // Wait for a route to finish rendering before restoring scroll
+const SCROLL_SAVE_DEBOUNCE_MS = 2000; // Debounce scroll saves to avoid thrashing localStorage
+const PIN_RESTORE_DELAY_MS = 50; // Delay before restoring pinned scroll after the KeepAlive DOM flip
+const SCROLL_HANDLER_REENABLE_DELAY_MS = 200; // Give restoration time before re-enabling the scroll handler
+const PIN_OFF_SCROLL_HANDLER_DELAY_MS = 100; // Allow the new route to settle before re-enabling the handler when pin is off
 
 /**
  * Get the first dashboard route from sidebar configuration.
@@ -265,7 +270,7 @@ export function useLastRoute() {
         navigate(lastRoute, { replace: true });
         setTimeout(() => {
           restoreScrollPosition(lastRoute);
-        }, 150);
+        }, LAST_ROUTE_RESTORE_DELAY_MS);
       } else if (!lastRoute && firstSidebarRoute && firstSidebarRoute !== "/") {
         // Only use firstSidebarRoute if no lastRoute was saved
         navigate(firstSidebarRoute, { replace: true });
@@ -321,7 +326,7 @@ export function useLastRoute() {
         } catch {
           // Ignore localStorage errors
         }
-      }, 2000);
+      }, SCROLL_SAVE_DEBOUNCE_MS);
     };
 
     container.addEventListener("scroll", handleScroll, { passive: true });
@@ -360,8 +365,8 @@ export function useLastRoute() {
         // Re-enable the scroll handler after restoration settles
         setTimeout(() => {
           isNavigatingRef.current = false;
-        }, 200);
-      }, 50);
+        }, SCROLL_HANDLER_REENABLE_DELAY_MS);
+      }, PIN_RESTORE_DELAY_MS);
       return () => {
         clearTimeout(restoreTimeout);
         isNavigatingRef.current = false;
@@ -370,7 +375,7 @@ export function useLastRoute() {
       // Pin is off — stay at top.  Re-enable scroll handler after settle.
       const settleTimeout = setTimeout(() => {
         isNavigatingRef.current = false;
-      }, 100);
+      }, PIN_OFF_SCROLL_HANDLER_DELAY_MS);
       return () => {
         clearTimeout(settleTimeout);
         isNavigatingRef.current = false;
