@@ -18,6 +18,7 @@ func setupMissionsTest() (*fiber.App, *MissionsHandler) {
 	app := fiber.New()
 	handler := NewMissionsHandler()
 	handler.RegisterRoutes(app.Group("/api/missions"))
+	handler.RegisterPublicRoutes(app.Group("/api/missions/kb"))
 	return app, handler
 }
 
@@ -26,7 +27,7 @@ func setupMissionsTest() (*fiber.App, *MissionsHandler) {
 func TestMissions_BrowseConsoleKB_Success(t *testing.T) {
 	mockBody := `[{"name":"mission1.yaml","type":"file"},{"name":"subdir","type":"dir"}]`
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Contains(t, r.URL.Path, "/repos/kubestellar/console/contents/missions")
+		assert.Contains(t, r.URL.Path, "/repos/kubestellar/console-kb/contents/missions")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(mockBody))
@@ -53,7 +54,7 @@ func TestMissions_BrowseConsoleKB_Success(t *testing.T) {
 func TestMissions_BrowseConsoleKB_NoPath(t *testing.T) {
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// When no path is provided, the URL path should end with /contents/
-		assert.Contains(t, r.URL.Path, "/repos/kubestellar/console/contents/")
+		assert.Contains(t, r.URL.Path, "/repos/kubestellar/console-kb/contents/")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`[{"name":"README.md","type":"file"}]`))
@@ -281,7 +282,7 @@ func TestMissions_ShareToGitHub_Success(t *testing.T) {
 func TestMissions_GetMissionFile_Success(t *testing.T) {
 	fileContent := "apiVersion: kc-mission-v1\nkind: Mission\nmetadata:\n  name: test\n"
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Contains(t, r.URL.Path, "/kubestellar/console/main/missions/example.yaml")
+		assert.Contains(t, r.URL.Path, "/kubestellar/console-kb/master/missions/example.yaml")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(fileContent))
 	}))
