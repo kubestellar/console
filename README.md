@@ -1,655 +1,80 @@
-# KubeStellar Console (kc)
+# KubeStellar Console
 
-A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how you work.
+AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
-**Your clusters, your way - AI that learns how you work**
-
-[🚀 **Try the Live Demo →**](https://console.kubestellar.io?utm_source=github&utm_medium=readme&utm_campaign=live_demo)
+[**Live Demo**](https://console.kubestellar.io) | [Contributing](CONTRIBUTING.md) | [License](LICENSE)
 
 ![KubeStellar Console overview](docs/images/Console-overview.svg)
 
-## What is KubeStellar Console?
-
-KubeStellar Console (kc) is a web-based dashboard for managing multiple Kubernetes clusters. Unlike traditional dashboards that show static views, kc uses AI to observe how you work and automatically restructures itself to surface the most relevant information.
-
-### Key Features
-
-- **Multi-cluster Overview**: See all your clusters in one place - OpenShift, GKE, EKS, kind, or any Kubernetes distribution
-- **Personalized Dashboard**: Answer a few questions during onboarding, and Console creates a dashboard tailored to your role
-- **Proactive AI**: AI analyzes your behavior patterns and suggests card swaps when your focus changes
-- **Real-time Updates**: WebSocket-powered live event streaming from all clusters
-- **Card Swap Mechanism**: Dashboard cards auto-swap based on context, with snooze/expedite/cancel controls
-- **App-Centric View**: Focus on applications, not just resources - see app health across all clusters
-- **Alert Notifications**: Multi-channel alert delivery via Slack, Email, and webhooks with Grafana-style notification routing
-
-## How It Works
-
-### 1. Personalized Onboarding
-
-When you first sign in with GitHub, Console asks 5-10 questions about your role and preferences:
-
-- What's your primary role? (SRE, DevOps, Platform Engineer, Developer...)
-- Which layer do you focus on? (Infrastructure, Platform, Application...)
-- Do you use GitOps?
-- Do you manage GPU workloads?
-
-Based on your answers, Console generates an initial dashboard with relevant cards.
-
-### 2. Adaptive Dashboard
-
-Console tracks which cards you interact with most:
-- Which cards you hover over and expand
-- How long you focus on different information
-- What actions you take
-
-### 3. AI-Powered Card Swaps
-
-When Claude detects a shift in your focus, it suggests swapping dashboard cards:
-
-![Claude dashboard card](docs/images/Cards.svg)
-
-### 4. MCP Integration
-
-Console uses the `kubestellar-ops` and `kubestellar-deploy` MCP servers to fetch data from your clusters. This means it works with any clusters in your kubeconfig.
-
 ## Architecture
 
-![Architecture](docs/images/Architecture.svg)
-
-## KC Agent (Local Agent)
-
-The **kc-agent** is a local agent that runs on your machine and bridges the browser-based console to your local kubeconfig and Claude Code CLI. This allows the hosted console to access your clusters without exposing your kubeconfig over the internet.
-
-### Installation
-
-#### macOS (Homebrew)
-
-```bash
-brew tap kubestellar/tap
-brew install --head kc-agent
+```mermaid
+graph LR
+    A["KubeStellar Console"] --> B["30+ Dashboards<br/>150+ Monitoring Cards"]
+    A --> M["Marketplace<br/>(console-marketplace)"]
+    A --> D["AI Mission Explorer"]
+    D --> E["console-kb"]
+    E --> F["186 Install Missions<br/>67 Solution Missions"]
+    A --> C["AI Recommendations"]
+    A --> H["kc-agent → Codex, Copilot,<br/>Claude CLI, Kube API, MCP"]
+    click A href "https://console.kubestellar.io" _blank
+    click M href "https://github.com/kubestellar/console-marketplace" _blank
+    click E href "https://github.com/kubestellar/console-kb" _blank
+    click H href "https://github.com/kubestellar/console/tree/main/cmd/kc-agent" _blank
 ```
 
-#### Linux (Build from Source — recommended)
+- **[console-kb](https://github.com/kubestellar/console-kb)** — YAML knowledge base defining mission steps, commands, and validation checks
+- **[console-marketplace](https://github.com/kubestellar/console-marketplace)** — Community-contributed monitoring cards per CNCF project
+- **[kc-agent](cmd/kc-agent/)** — Local agent bridging the browser to kubeconfig, coding agents (Codex, Copilot, Claude CLI), and MCP servers (`kubestellar-ops`, `kubestellar-deploy`)
 
-The simplest method on Linux requires only Go 1.24+:
-
-```bash
-git clone https://github.com/kubestellar/console.git
-cd console
-go build -o bin/kc-agent ./cmd/kc-agent
-./bin/kc-agent
-```
-
-> Requires Go 1.24+. Run `go version` to check.
-
-Alternatively, `make build` compiles both the kc-agent binary and the full frontend, but also requires Node.js 20+:
-
-```bash
-# Requires Go 1.24+ AND Node.js 20+
-git clone https://github.com/kubestellar/console.git
-cd console
-make build
-./bin/kc-agent
-```
-
-#### Linux (Linuxbrew — alternative)
-
-If you prefer a Homebrew-based workflow on Linux, you can use [Linuxbrew](https://docs.brew.sh/Homebrew-on-Linux):
-
-```bash
-# Install Homebrew on Linux (if not already installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Add brew to your PATH (follow the instructions printed by the installer, or run:)
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-
-# Install kc-agent
-brew tap kubestellar/tap
-brew install --head kc-agent
-```
-
-### Running the Agent
-
-```bash
-# Start the agent (runs on localhost:8585)
-kc-agent
-
-# macOS only: run as a background service
-brew services start kubestellar/tap/kc-agent
-
-# Linux (build from source): run in the background
-nohup ./bin/kc-agent &
-```
-
-### Configuration
-
-#### CLI Flags
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--port` | Port to listen on | `8585` |
-| `--kubeconfig` | Path to kubeconfig file | `~/.kube/config` |
-| `--allowed-origins` | Comma-separated list of additional allowed WebSocket origins | (none) |
-| `--version` | Print version and exit | |
-
-#### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `KC_ALLOWED_ORIGINS` | Comma-separated list of allowed origins for CORS | localhost only |
-| `KC_AGENT_TOKEN` | Optional shared secret for authentication | (none) |
-
-#### Adding Custom Origins
-
-If you're running the console on a custom domain, add it to the allowed origins via CLI flag or environment variable. Both are additive — they merge on top of the built-in defaults (localhost, `console.kubestellar.io`, `*.ibm.com`).
-
-```bash
-# Via CLI flag
-kc-agent --allowed-origins "https://my-console.example.com"
-
-# Via environment variable
-KC_ALLOWED_ORIGINS="https://my-console.example.com" kc-agent
-
-# Multiple origins (comma-separated)
-kc-agent --allowed-origins "https://console1.example.com,https://console2.example.com"
-
-# Both together (all origins are merged)
-KC_ALLOWED_ORIGINS="https://env-origin.example.com" kc-agent --allowed-origins "https://flag-origin.example.com"
-```
-
-Wildcard subdomains are supported: `https://*.example.com`
-
-#### Running as a Service with Custom Origins
-
-**macOS (Homebrew service):** Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
-
-```bash
-export KC_ALLOWED_ORIGINS="https://my-console.example.com"
-```
-
-Then restart the service:
-
-```bash
-brew services restart kubestellar/tap/kc-agent
-```
-
-**Linux (build from source):** Pass the flag directly or export before running:
-
-```bash
-KC_ALLOWED_ORIGINS="https://my-console.example.com" ./bin/kc-agent
-```
-
-### Security
-
-The agent implements several security measures:
-
-- **Origin Validation**: Only allows connections from configured origins (localhost by default)
-- **Localhost Only**: Binds to `127.0.0.1` - not accessible from other machines
-- **Optional Token Auth**: Can require a shared secret via `KC_AGENT_TOKEN`
-- **Command Allowlist**: Only permits safe kubectl commands (get, describe, logs, etc.)
-
-## Architecture Details
-
-### AI Provider Integration
-
-Console supports Claude, OpenAI, and Gemini as AI providers for the intelligent card swap system. Providers are configured via API keys set as environment variables (`CLAUDE_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`). The agent component (`pkg/agent/`) handles provider routing and fallback.
-
-### MCP Bridge
-
-The MCP (Model Context Protocol) bridge (`pkg/mcp/`) connects the console to Kubernetes clusters by spawning `kubestellar-ops` and `kubestellar-deploy` as MCP server processes. Tool calls are routed through the bridge to query cluster state (pods, deployments, events, etc.). Results are cached and served to the frontend via REST and WebSocket APIs.
-
-### WebSocket Architecture
-
-The frontend establishes a WebSocket connection to receive real-time updates including cluster health changes, deployment progress, and card swap suggestions. The connection supports automatic reconnection with exponential backoff.
-
-## Available Card Types
-
-| Card Type | Description | Data Source |
-|-----------|-------------|-------------|
-| Cluster Health | Availability graph per cluster | `get_cluster_health` |
-| App Status | Multi-cluster app health | `get_app_status` |
-| Event Stream | Live event feed | `get_events` |
-| Deployment Progress | Rollout status | `get_app_status` |
-| Pod Issues | CrashLoopBackOff, OOMKilled | `find_pod_issues` |
-| Deployment Issues | Stuck rollouts | `find_deployment_issues` |
-| Top Pods | By CPU/memory/restarts | `get_pods` |
-| Resource Capacity | CPU/memory/GPU utilization | `list_cluster_capabilities` |
-| GitOps Drift | Out of sync clusters | `detect_drift` |
-| Security Issues | Privileged, root, host | `check_security_issues` |
-| RBAC Overview | Permission summary | `get_roles` |
-| Policy Violations | OPA Gatekeeper | `list_ownership_violations` |
-| Upgrade Status | Cluster upgrades | `get_upgrade_status` |
-
-## Installation
-
-### Quick Start — Up and Running in Under a Minute
-
-One command. No dependencies. Just `curl`.
+## Install
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
 
-This downloads the console and kc-agent binaries, starts both, and opens your browser at http://localhost:8080 — typically in under 45 seconds.
+Opens at [localhost:8080](http://localhost:8080). Deploy into a cluster with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`).
 
-**Optional: Enable GitHub OAuth login**
-
-1. Create a [GitHub OAuth App](https://github.com/settings/developers) with:
-   - Homepage URL: `http://localhost:8080`
-   - Callback URL: `http://localhost:8080/auth/github/callback`
-2. Create a `.env` file next to the binaries:
-   ```
-   GITHUB_CLIENT_ID=your-client-id
-   GITHUB_CLIENT_SECRET=your-client-secret
-   ```
-3. Restart: `curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash`
-
-### Deploy to Kubernetes
-
-One command. Requires `helm` and `kubectl`.
+**kc-agent** connects [console.kubestellar.io](https://console.kubestellar.io) to your local clusters:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/deploy.sh | bash
+brew tap kubestellar/tap && brew install --head kc-agent   # macOS
+go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
 ```
 
-Options:
+## How It Works
 
-| Flag | Description |
-|------|-------------|
-| `--context, -c <name>` | Kubernetes context (default: current) |
-| `--namespace, -n <name>` | Namespace (default: kubestellar-console) |
-| `--openshift` | Enable OpenShift Route |
-| `--ingress <host>` | Enable Ingress with hostname |
-| `--github-oauth` | Prompt for GitHub OAuth credentials |
-| `--uninstall` | Remove the console |
-
-Examples:
-
-```bash
-# Deploy to a specific cluster
-curl -sSL .../deploy.sh | bash -s -- --context my-cluster
-
-# Deploy with OpenShift Route
-curl -sSL .../deploy.sh | bash -s -- --openshift
-
-# Deploy with Ingress
-curl -sSL .../deploy.sh | bash -s -- --ingress console.example.com
-
-# Deploy with GitHub OAuth
-GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy \
-  curl -sSL .../deploy.sh | bash
-
-# Uninstall
-curl -sSL .../deploy.sh | bash -s -- --uninstall
-```
-
-Or manually with Helm — see [Kubernetes Deployment (Helm)](#kubernetes-deployment-helm) below.
-
-### Claude Code Plugins
-
-For AI-powered operations, install [Claude Code](https://claude.ai/claude-code) and the KubeStellar plugins:
-
-```bash
-# Install from Claude Code Marketplace
-claude plugins install kubestellar-ops
-claude plugins install kubestellar-deploy
-```
-
-Or via Homebrew (source: [homebrew-tap](https://github.com/kubestellar/homebrew-tap)):
-
-```bash
-brew tap kubestellar/tap
-brew install kubestellar-ops kubestellar-deploy
-```
-
-### Local Development
-
-Prerequisites: Go 1.24+, Node.js 20+
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/kubestellar/console.git
-cd console
-```
-
-2. **Start in dev mode** (no OAuth required)
-
-```bash
-./start-dev.sh
-```
-
-Opens frontend at http://localhost:5174, backend at http://localhost:8080. Uses a mock `dev-user` account.
-
-3. **Or start with GitHub OAuth**
-
-Create a [GitHub OAuth App](https://github.com/settings/developers) under your **GitHub organization** (not a personal account, so users see an org name in the consent dialog):
-- Homepage URL: `http://localhost:5174`
-- Callback URL: `http://localhost:8080/auth/github/callback`
-
-```bash
-# Create .env with your credentials
-cat > .env << EOF
-GITHUB_CLIENT_ID=your-client-id
-GITHUB_CLIENT_SECRET=your-client-secret
-EOF
-
-./startup-oauth.sh
-```
-
-### Docker Deployment
-
-1. **Build the image**
-
-```bash
-docker build -t kubestellar/console:latest .
-```
-
-2. **Run the container**
-
-```bash
-docker run -d \
-  -p 8080:8080 \
-  -e GITHUB_CLIENT_ID=your_client_id \
-  -e GITHUB_CLIENT_SECRET=your_client_secret \
-  -e CLAUDE_API_KEY=your_claude_api_key \
-  -v ~/.kube:/root/.kube:ro \
-  kubestellar/console:latest
-```
-
-### Kubernetes Deployment (Helm)
-
-1. **Add the Helm repository**
-
-```bash
-helm repo add kubestellar-console https://kubestellar.github.io/console
-helm repo update
-```
-
-2. **Create a secret for credentials**
-
-```bash
-kubectl create namespace kubestellar-console
-
-kubectl create secret generic console-secrets \
-  --namespace kubestellar-console \
-  --from-literal=github-client-id=your_client_id \
-  --from-literal=github-client-secret=your_client_secret \
-  --from-literal=claude-api-key=your_claude_api_key
-```
-
-3. **Install the chart**
-
-```bash
-helm install kc kubestellar-console/kubestellar-console \
-  --namespace kubestellar-console \
-  --set ingress.enabled=true \
-  --set ingress.host=console.your-domain.com
-```
-
-### OpenShift Deployment
-
-```bash
-helm install kc kubestellar-console/kubestellar-console \
-  --namespace kubestellar-console \
-  --create-namespace \
-  -f deploy/helm/kubestellar-console/values-openshift.yaml \
-  --set github.clientId=$GITHUB_CLIENT_ID \
-  --set github.clientSecret=$GITHUB_CLIENT_SECRET
-```
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `8080` |
-| `DEV_MODE` | Enable dev mode (CORS, hot reload) | `false` |
-| `DATABASE_PATH` | SQLite database path | `./data/console.db` |
-| `GITHUB_CLIENT_ID` | GitHub OAuth client ID | (required) |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret | (required) |
-| `JWT_SECRET` | JWT signing secret | (auto-generated) |
-| `FRONTEND_URL` | Frontend URL for redirects | `http://localhost:5174` |
-| `CLAUDE_API_KEY` | Claude API key for AI features | (optional) |
-
-### Helm Values
-
-See [deploy/helm/kubestellar-console/values.yaml](deploy/helm/kubestellar-console/values.yaml) for all available options.
+1. **Onboarding** — Sign in with GitHub, answer role questions, get a personalized dashboard
+2. **Adaptive AI** — Tracks card interactions and suggests swaps when your focus shifts (Claude, OpenAI, or Gemini)
+3. **MCP Bridge** — Queries cluster state (pods, deployments, events, drift, security) via `kubestellar-ops` and `kubestellar-deploy`
+4. **Missions** — Step-by-step guided installs with pre-flight checks, validation, troubleshooting, and rollback
+5. **Real-time** — WebSocket-powered live event streaming from all connected clusters
 
 ## Development
 
-### Project Structure
+Requires Go 1.24+, Node.js 20+.
+
+```bash
+git clone https://github.com/kubestellar/console.git && cd console
+./start-dev.sh
+```
 
 ```
 console/
-├── cmd/console/          # Entry point
-├── pkg/
-│   ├── agent/            # KC Agent (local MCP bridge + AI providers)
-│   ├── api/              # HTTP/WS server
-│   │   ├── handlers/     # Request handlers
-│   │   └── middleware/   # Auth, logging
-│   ├── mcp/              # MCP bridge layer
-│   ├── claude/           # Claude AI integration
-│   ├── models/           # Data models
-│   └── store/            # Database layer
-├── web/                  # React frontend
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── hooks/        # Custom hooks
-│   │   └── lib/          # Utilities
-│   └── ...
-└── deploy/
-    ├── helm/             # Helm chart
-    └── docker/           # Dockerfile
+├── cmd/console/       # Server entry point
+├── cmd/kc-agent/      # Local agent
+├── pkg/agent/         # AI providers (Claude, OpenAI, Gemini)
+├── pkg/api/           # HTTP/WS server + handlers
+├── pkg/mcp/           # MCP bridge to Kubernetes
+├── pkg/store/         # SQLite database layer
+├── web/               # React + TypeScript frontend
+└── deploy/helm/       # Helm chart
 ```
-
-### Running Tests
-
-```bash
-# Backend tests
-go test ./...
-
-# Frontend tests
-cd web && npm test
-```
-
-### Building for Production
-
-```bash
-# Backend
-go build -o console ./cmd/console
-
-# Frontend
-cd web && npm run build
-```
-
-## GitHub OAuth Setup
-
-GitHub OAuth is **required** for authentication. Follow these steps carefully:
-
-### Creating a GitHub OAuth App
-
-> **Important**: Create the OAuth App under a **GitHub organization** account, not a personal account.
-> When the app is owned by an organization, users will see "Authorize by *your-org*" in the consent
-> dialog — clearly identifying it as an application. An app owned by a personal account shows
-> "by *username*", which looks like you are delegating access to a person rather than an application.
-
-1. Go to your **GitHub Organization** → **Settings** → **Developer settings** → **OAuth Apps** → **New OAuth App**
-
-   *(For personal development only, you can use **GitHub** → your personal **Settings** → **Developer settings** → **OAuth Apps**)*
-
-2. Fill in the application details:
-   - **Application name**: `KubeStellar Console` (or your preferred name)
-   - **Homepage URL**: `http://localhost:5174` (for development)
-   - **Authorization callback URL**: `http://localhost:8080/auth/github/callback`
-
-3. Click **Register application**
-
-4. Copy the **Client ID** (shown immediately)
-
-5. Click **Generate a new client secret** and copy it immediately (you won't see it again)
-
-### Callback URL Reference
-
-| Environment | Homepage URL | Callback URL |
-|-------------|--------------|--------------|
-| Local dev | `http://localhost:5174` | `http://localhost:8080/auth/github/callback` |
-| Docker | Your host URL | `http://your-host:8080/auth/github/callback` |
-| Kubernetes | Your ingress URL | `https://console.your-domain.com/auth/github/callback` |
-| OpenShift | Your route URL | `https://console-namespace.apps.cluster.com/auth/github/callback` |
-
-### Using with Helm
-
-When deploying with Helm, provide GitHub credentials via values or secrets:
-
-```bash
-# Option 1: Via --set flags
-helm install kc kubestellar-console/kubestellar-console \
-  --namespace kubestellar-console \
-  --set github.clientId=$GITHUB_CLIENT_ID \
-  --set github.clientSecret=$GITHUB_CLIENT_SECRET
-
-# Option 2: Via values file
-cat > my-values.yaml <<EOF
-github:
-  clientId: "your-client-id"
-  clientSecret: "your-client-secret"
-EOF
-
-helm install kc kubestellar-console/kubestellar-console \
-  --namespace kubestellar-console \
-  -f my-values.yaml
-
-# Option 3: Via existing secret
-kubectl create secret generic github-oauth \
-  --namespace kubestellar-console \
-  --from-literal=client-id=$GITHUB_CLIENT_ID \
-  --from-literal=client-secret=$GITHUB_CLIENT_SECRET
-
-helm install kc kubestellar-console/kubestellar-console \
-  --namespace kubestellar-console \
-  --set github.existingSecret=github-oauth
-```
-
-## Troubleshooting
-
-### GitHub OAuth Issues
-
-#### 404 Error or Blank Page on Login
-
-**Symptom**: Clicking "Sign in with GitHub" shows a 404 or blank page.
-
-**Cause**: The GitHub OAuth Client ID is not configured or not being read by the backend.
-
-**Solutions**:
-1. Verify environment variables are set:
-   ```bash
-   echo $GITHUB_CLIENT_ID  # Should show your client ID
-   ```
-
-2. Pass environment variables inline when starting:
-   ```bash
-   GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy ./console
-   ```
-
-3. Check the backend logs for OAuth configuration errors
-
-#### "dev-user" Instead of GitHub Username
-
-**Symptom**: After login, you see "dev-user" instead of your actual GitHub username.
-
-**Cause**: `DEV_MODE=true` bypasses OAuth and uses a mock user.
-
-**Solution**: Set `DEV_MODE=false` for real GitHub authentication:
-```bash
-DEV_MODE=false GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy ./console
-```
-
-#### Callback URL Mismatch
-
-**Symptom**: GitHub shows "The redirect_uri does not match" error.
-
-**Solution**: Ensure the callback URL in your GitHub OAuth App **exactly** matches:
-- Development: `http://localhost:8080/auth/github/callback`
-- Production: `https://your-domain.com/auth/github/callback`
-
-### MCP Bridge Issues
-
-#### "MCP bridge failed to start"
-
-**Symptom**: Log shows `MCP bridge failed to start: failed to start MCP clients`
-
-**Cause**: `kubestellar-ops` or `kubestellar-deploy` plugins are not installed.
-
-**Solution**:
-```bash
-# Option 1: Install from Claude Code Marketplace (recommended)
-claude plugins install kubestellar-ops
-claude plugins install kubestellar-deploy
-
-# Option 2: Install via Homebrew
-brew tap kubestellar/tap
-brew install kubestellar-ops kubestellar-deploy
-
-# Verify installation
-which kubestellar-ops kubestellar-deploy
-```
-
-**Note**: The console will still function without MCP tools, but cluster data will not be available.
-
-### Frontend Issues
-
-#### CORS Errors
-
-**Symptom**: Browser console shows CORS errors.
-
-**Solution**: Ensure `FRONTEND_URL` is correctly configured in your environment:
-```bash
-FRONTEND_URL=http://localhost:5174 ./console
-```
-
-#### Vite Dependency Errors
-
-**Symptom**: "Failed to resolve import" or "Outdated Optimize Dep"
-
-**Solution**:
-```bash
-cd web
-rm -rf node_modules/.vite
-npm run dev
-```
-
-### Getting Help
-
-- Check the [GitHub Issues](https://github.com/kubestellar/console/issues) for known problems
-- Join the [KubeStellar Slack](https://kubestellar.io/community) for community support
-
-## Roadmap
-
-- [ ] Phase 1: Foundation - Backend, auth, basic dashboard
-- [ ] Phase 2: Core Dashboard - Card grid, real-time updates
-- [ ] Phase 3: Onboarding & Personalization
-- [ ] Phase 4: Claude AI Integration
-- [ ] Phase 5: Polish & Deploy
-
-## Documentation
-
-- [Alert Notifications Setup](docs/ALERT_NOTIFICATIONS.md) - Configure Slack and Email alert delivery
-- [Contributing Guide](CONTRIBUTING.md) - Guidelines for contributing to the project
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a PR.
-
-## License
-
-Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
-- [console](https://github.com/kubestellar/console) - AI-powered kubectl plugins (MCP servers)
-- [claude-plugins](https://github.com/kubestellar/claude-plugins) - Claude Code marketplace plugins for Kubernetes
-- [homebrew-tap](https://github.com/kubestellar/homebrew-tap) - Homebrew formulae for KubeStellar tools
-- [KubeStellar](https://kubestellar.io) - Multi-cluster configuration management
-- [KubeFlex](https://github.com/kubestellar/kubeflex) - Lightweight Kubernetes control planes
+[console-kb](https://github.com/kubestellar/console-kb) · [console-marketplace](https://github.com/kubestellar/console-marketplace) · [claude-plugins](https://github.com/kubestellar/claude-plugins) · [homebrew-tap](https://github.com/kubestellar/homebrew-tap) · [KubeStellar](https://kubestellar.io)
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE).
