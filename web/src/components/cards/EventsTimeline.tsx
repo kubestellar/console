@@ -15,6 +15,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { CardClusterFilter } from '../../lib/cards'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
@@ -95,6 +96,7 @@ function EventsTimelineInternal() {
     TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) })),
     [t]
   )
+  const { isDemoMode } = useDemoMode()
   const {
     events,
     isLoading: hookLoading,
@@ -108,7 +110,7 @@ function EventsTimelineInternal() {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
-    isDemoData: isDemoFallback,
+    isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: events.length > 0,
   })
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()

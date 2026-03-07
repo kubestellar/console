@@ -11,6 +11,7 @@ import {
   CartesianGrid, Cell,
 } from 'recharts'
 import { BarChart3, Trophy } from 'lucide-react'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import { generateBenchmarkReports } from '../../../lib/llmd/benchmarkMockData'
@@ -63,7 +64,7 @@ function CustomTooltip({ active, payload }: {
 
 export function ResourceUtilization() {
   const { t } = useTranslation()
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
     [isDemoFallback, liveReports]
@@ -135,6 +136,12 @@ export function ResourceUtilization() {
         <div className="flex items-center gap-2">
           <BarChart3 size={14} className="text-green-400" />
           <span className="text-sm font-medium text-white">Experiment Comparison</span>
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="xs"
+            showLabel={true}
+          />
           {bestVariant && (
             <StatusBadge color="green" size="xs" rounded="full">
               <Trophy size={10} />

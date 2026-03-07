@@ -6,6 +6,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
@@ -26,6 +27,7 @@ function getMinutesAgo(timestamp: string | undefined): string {
 
 export function RecentEvents() {
   const { t: _t } = useTranslation()
+  const { isDemoMode } = useDemoMode()
   const {
     events,
     isLoading,
@@ -41,7 +43,7 @@ export function RecentEvents() {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
-    isDemoData: isDemoFallback,
+    isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed,
     consecutiveFailures,

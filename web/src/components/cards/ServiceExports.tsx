@@ -11,6 +11,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceExport, ServiceExportStatus } from '../../types/mcs'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 // Demo data for MCS ServiceExports
@@ -119,6 +120,7 @@ interface ServiceExportsProps {
 
 export function ServiceExports({ config: _config }: ServiceExportsProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { isDemoMode } = useDemoMode()
   const SORT_OPTIONS = useMemo(() =>
     SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
@@ -131,7 +133,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: DEMO_EXPORTS.length > 0,
-    isDemoData: true,
+    isDemoData: isDemoMode,
   })
 
   const {

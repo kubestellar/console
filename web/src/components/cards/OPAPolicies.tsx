@@ -7,6 +7,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { StatusBadge } from '../ui/StatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
@@ -229,7 +230,8 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     }
     return {}
   })
-  const [, setIsRefreshing] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<number | null>(null)
 
   // Persist statuses to localStorage when they change (only successful results, not loading/error)
   useEffect(() => {
@@ -440,6 +442,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
         globalCheckedClusters.delete(cluster.name)
       }
       setIsRefreshing(false)
+      setLastRefresh(Date.now())
       isCheckingRef.current = false
       globalCheckInProgress = false
     }
@@ -621,11 +624,19 @@ Let's start by discussing what kind of policy I need.`,
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
       <div className="flex items-center justify-between mb-3">
-        {installedCount > 0 ? (
-          <StatusBadge color="green" size="xs">
-            {installedCount} cluster{installedCount !== 1 ? 's' : ''}
-          </StatusBadge>
-        ) : <div />}
+        <div className="flex items-center gap-2">
+          {installedCount > 0 && (
+            <StatusBadge color="green" size="xs">
+              {installedCount} cluster{installedCount !== 1 ? 's' : ''}
+            </StatusBadge>
+          )}
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+          />
+        </div>
         <CardControlsRow
           clusterFilter={{
             availableClusters,
