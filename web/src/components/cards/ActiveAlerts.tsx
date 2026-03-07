@@ -265,9 +265,9 @@ export function ActiveAlerts() {
             {showAcknowledged ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
             <span>{t('activeAlerts.ackd')}</span>
             {acknowledgedAlerts.length > 0 && (
-              <span className="ml-0.5 px-1 py-0 text-2xs rounded-full bg-green-500/30">
+              <StatusBadge color="green" size="xs" rounded="full" className="ml-0.5">
                 {acknowledgedAlerts.length}
-              </span>
+              </StatusBadge>
             )}
           </button>
           {/* 2. Cluster Filter */}

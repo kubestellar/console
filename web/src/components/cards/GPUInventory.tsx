@@ -9,6 +9,7 @@ import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput } from '../../lib/cards/CardComponents'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -151,9 +152,9 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+          <StatusBadge color="green">
             {t('gpuInventory.gpuCount', { count: stats.totalGPUs })}
-          </span>
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}

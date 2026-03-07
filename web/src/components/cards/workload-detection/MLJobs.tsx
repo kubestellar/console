@@ -69,7 +69,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
       case 'failed':
         return <StatusBadge color="red" icon={<XCircle className="w-2.5 h-2.5" />}>Failed</StatusBadge>
       default:
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">{status}</span>
+        return <StatusBadge color="gray">{status}</StatusBadge>
     }
   }
 

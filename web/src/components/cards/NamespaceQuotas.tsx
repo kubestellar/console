@@ -27,6 +27,7 @@ import {
   type SortDirection,
 } from '../../lib/cards'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 
 interface NamespaceQuotasProps {
   config?: {
@@ -579,9 +580,9 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+          <StatusBadge color="yellow">
             {activeTab === 'quotas' ? `${totalQuotas} quotas` : `${totalLimits} limits`}
-          </span>
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-2">
           <CardControlsRow
@@ -668,13 +669,13 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         {/* Scope badge */}
         <div className="flex items-center gap-2 mb-4 min-w-0 overflow-hidden">
           {selectedCluster === 'all' ? (
-            <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 shrink-0">All Clusters</span>
+            <StatusBadge color="blue" size="md" className="shrink-0">All Clusters</StatusBadge>
           ) : (
             <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
           )}
           <span className="text-muted-foreground shrink-0">/</span>
           {selectedNamespace === 'all' ? (
-            <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 shrink-0">All Namespaces</span>
+            <StatusBadge color="purple" size="md" className="shrink-0">All Namespaces</StatusBadge>
           ) : (
             <span className="text-sm text-foreground truncate min-w-0">{selectedNamespace}</span>
           )}
@@ -817,9 +818,9 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                       <div className="flex items-center gap-2">
                         <Gauge className="w-4 h-4 text-blue-400" />
                         <span className="text-sm text-foreground">{item.name}</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                        <StatusBadge color="blue">
                           {item.type}
-                        </span>
+                        </StatusBadge>
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>

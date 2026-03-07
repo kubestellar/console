@@ -9,6 +9,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions }
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable, isClusterTokenExpired } from '../clusters/utils'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -236,9 +237,9 @@ export function ClusterHealth() {
       {/* Header with controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400" title={t('clusterHealth.totalClustersTitle', { count: rawClusters.length })}>
+          <StatusBadge color="purple" title={t('clusterHealth.totalClustersTitle', { count: rawClusters.length })}>
             {rawClusters.length} {t('clusterHealth.clustersLabel')}
-          </span>
+          </StatusBadge>
         </div>
         <CardControlsRow
           clusterIndicator={

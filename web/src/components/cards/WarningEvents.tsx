@@ -9,6 +9,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 
 function getTimeAgo(timestamp: string | undefined): string {
   if (!timestamp) return 'Unknown'
@@ -193,9 +194,9 @@ export function WarningEvents() {
                 <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium">
+                    <StatusBadge color="yellow">
                       {event.reason}
-                    </span>
+                    </StatusBadge>
                     <span className="text-xs text-foreground truncate">{event.object}</span>
                     {event.count > 1 && (
                       <span className="text-xs px-1 py-0.5 rounded bg-card text-muted-foreground">

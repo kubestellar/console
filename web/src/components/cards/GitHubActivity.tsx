@@ -14,6 +14,7 @@ import {
 import { useCardLoadingState } from './CardDataContext'
 import type { SortDirection } from '../../lib/cards'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 
 // Types for GitHub activity data
 interface GitHubPR {
@@ -715,9 +716,9 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       <div className="h-full flex flex-col content-loaded">
         {/* Header with inline repo editor */}
         <div className="flex items-center justify-between mb-3">
-          <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+          <StatusBadge color="red" variant="outline" rounded="full">
             {t('common:common.error')}
-          </span>
+          </StatusBadge>
           <button
             onClick={() => setIsEditingRepos(!isEditingRepos)}
             className={cn(
@@ -1134,10 +1135,10 @@ function PRItem({ pr }: { pr: GitHubPR }) {
               {statusText}
             </span>
             {pr.draft && (
-              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-muted-foreground shrink-0">{t('cards:github.draft')}</span>
+              <StatusBadge color="gray" size="md" className="shrink-0">{t('cards:github.draft')}</StatusBadge>
             )}
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">{t('cards:github.stale')}</span>
+              <StatusBadge color="yellow" size="md" className="shrink-0">{t('cards:github.stale')}</StatusBadge>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1194,7 +1195,7 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
               {isOpen ? t('cards:github.open') : t('cards:github.closed')}
             </span>
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">{t('cards:github.stale')}</span>
+              <StatusBadge color="yellow" size="md" className="shrink-0">{t('cards:github.stale')}</StatusBadge>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1233,7 +1234,7 @@ function ReleaseItem({ release }: { release: GitHubRelease }) {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium">{release.name || release.tag_name}</span>
             {release.prerelease && (
-              <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400">{t('cards:github.preRelease')}</span>
+              <StatusBadge color="orange" size="md">{t('cards:github.preRelease')}</StatusBadge>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">

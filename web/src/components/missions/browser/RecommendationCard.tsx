@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle, Check, Link } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import type { MissionMatch } from '../../../lib/missions/types'
 
@@ -80,9 +81,9 @@ export function RecommendationCard({
             {mission.type}
           </span>
           {mission.metadata?.projectVersion && (
-            <span className="px-1.5 py-0.5 text-2xs rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+            <StatusBadge color="blue" size="xs" variant="outline">
               v{mission.metadata.projectVersion}
-            </span>
+            </StatusBadge>
           )}
           {mission.metadata?.maturity && (
             <span className={cn(

@@ -27,6 +27,7 @@ import {
   Link,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { StatusBadge } from '../ui/StatusBadge'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 
@@ -280,10 +281,10 @@ export function MissionDetailView({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {matchScore != null && matchScore > 0 && (
-            <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <StatusBadge color="purple" size="md" variant="outline" rounded="full">
               <Star className="w-3 h-3" />
               {matchScore}% match
-            </span>
+            </StatusBadge>
           )}
           {shareUrl && (
             <button
@@ -360,14 +361,14 @@ export function MissionDetailView({
               </span>
             )}
             {mission.cncfProject && (
-              <span className="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <StatusBadge color="blue" size="md" variant="outline" rounded="full">
                 {mission.cncfProject}
-              </span>
+              </StatusBadge>
             )}
             {mission.difficulty && (
-              <span className="px-2.5 py-1 text-xs rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <StatusBadge color="purple" size="md" variant="outline" rounded="full">
                 {mission.difficulty}
-              </span>
+              </StatusBadge>
             )}
             {maturity && (
               <span

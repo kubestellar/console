@@ -319,9 +319,7 @@ const FullClusterCard = memo(function FullClusterCard({
               </span>
             )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (
-              <span className="flex items-center px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400" title="You have limited permissions on this cluster">
-                <ShieldAlert className="w-3.5 h-3.5" />
-              </span>
+              <StatusBadge color="yellow" title="You have limited permissions on this cluster" icon={<ShieldAlert className="w-3.5 h-3.5" />} />
             )}
           </div>
         </div>

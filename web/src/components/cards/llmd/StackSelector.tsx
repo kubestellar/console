@@ -10,6 +10,7 @@ import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } fro
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 const STATUS_COLORS = {
   healthy: 'bg-green-500',
@@ -377,7 +378,7 @@ export function StackSelector() {
             )}
 
             {isDemoMode && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{t('common.demo')}</span>
+              <StatusBadge color="yellow" size="xs">{t('common.demo')}</StatusBadge>
             )}
           </>
         ) : (

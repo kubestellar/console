@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 
 interface RBACFinding {
@@ -67,7 +68,7 @@ export function RBACExplorer() {
                   <span className="text-sm font-medium truncate">{finding.subject}</span>
                   <span className="text-xs text-muted-foreground">({finding.subjectKind})</span>
                 </div>
-                <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 shrink-0">{finding.cluster}</span>
+                <StatusBadge color="purple" className="shrink-0">{finding.cluster}</StatusBadge>
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">{finding.description}</div>
               <div className="text-xs text-muted-foreground/60 mt-0.5 truncate">{finding.binding}</div>

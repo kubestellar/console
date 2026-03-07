@@ -8,6 +8,7 @@ import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import type { PodInfo } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
@@ -223,9 +224,9 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       {/* Controls */}
       <div className="flex items-center justify-between mb-3">
         {summary.failed > 0 ? (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+          <StatusBadge color="red">
             {t('gpuWorkloads.failedCount', { count: summary.failed })}
-          </span>
+          </StatusBadge>
         ) : <div />}
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}

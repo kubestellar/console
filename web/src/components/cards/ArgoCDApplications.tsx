@@ -4,6 +4,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDApplications, useArgoCDTriggerSync, type ArgoApplication } from '../../hooks/useArgoCD'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
@@ -180,9 +181,9 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       {/* Header with controls */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+          <StatusBadge color="orange">
             {t('argoCDApplications.appsCount', { count: totalItems })}
-          </span>
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-2">
           <CardControlsRow

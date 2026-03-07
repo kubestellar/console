@@ -79,11 +79,11 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
       case 'downloading':
         return <StatusBadge color="blue" icon={<RefreshCw className="w-2.5 h-2.5 animate-spin" />}>Downloading</StatusBadge>
       case 'stopped':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">Stopped</span>
+        return <StatusBadge color="gray">Stopped</StatusBadge>
       case 'error':
         return <StatusBadge color="red">{t('common.error')}</StatusBadge>
       default:
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">{status}</span>
+        return <StatusBadge color="gray">{status}</StatusBadge>
     }
   }
 

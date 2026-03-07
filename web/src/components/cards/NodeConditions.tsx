@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useKubectl } from '../../hooks/useKubectl'
 
 type ConditionFilter = 'all' | 'healthy' | 'cordoned' | 'pressure'
@@ -131,7 +132,7 @@ export function NodeConditions() {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {node.unschedulable && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400">{t('nodeConditions.cordoned')}</span>
+                  <StatusBadge color="yellow">{t('nodeConditions.cordoned')}</StatusBadge>
                 )}
                 {pressures.map(p => (
                   <span key={p.type} className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">

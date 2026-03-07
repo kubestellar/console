@@ -24,6 +24,7 @@ import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
@@ -753,9 +754,9 @@ function ClusterUsersTab({
                     <span className="text-muted-foreground text-xs">({user.fullName})</span>
                   )}
                   {showClusterBadge && (
-                    <span className="px-1.5 py-0.5 rounded text-xs bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                    <StatusBadge color="cyan" variant="outline">
                       {user.cluster}
-                    </span>
+                    </StatusBadge>
                   )}
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -881,9 +882,9 @@ function ServiceAccountsTab({
                 <div className="flex items-center gap-2">
                   <span className="text-foreground font-medium group-hover:text-purple-400">{sa.name}</span>
                   {showClusterBadge && (
-                    <span className="px-1.5 py-0.5 rounded text-xs bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                    <StatusBadge color="cyan" variant="outline">
                       {sa.cluster}
-                    </span>
+                    </StatusBadge>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

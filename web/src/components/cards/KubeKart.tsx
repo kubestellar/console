@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, RotateCcw, Pause, Trophy, Flag, Timer, Gauge } from 'lucide-react'
 
 import { useCardExpanded } from './CardWrapper'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
@@ -584,9 +585,9 @@ export function KubeKart() {
               <h3 className="text-2xl font-bold text-blue-400 mb-2">Kube Kart</h3>
               <p className="text-sm text-muted-foreground mb-4">Arrow keys or WASD to drive</p>
               <div className="flex gap-2 mb-4 text-xs">
-                <span className="px-2 py-1 rounded bg-cyan-500/30 text-cyan-400">Boost</span>
-                <span className="px-2 py-1 rounded bg-purple-500/30 text-purple-400">Shield</span>
-                <span className="px-2 py-1 rounded bg-orange-500/30 text-orange-400">Slow Others</span>
+                <StatusBadge color="cyan" size="md">Boost</StatusBadge>
+                <StatusBadge color="purple" size="md">Shield</StatusBadge>
+                <StatusBadge color="orange" size="md">Slow Others</StatusBadge>
               </div>
               <button
                 onClick={startGame}

@@ -22,6 +22,7 @@ import {
   type ExperimentGroup,
 } from '../../../lib/llmd/benchmarkDataUtils'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 interface ChartRow {
   qps: number
@@ -111,10 +112,10 @@ export function ThroughputComparison() {
           <Zap size={14} className="text-blue-400" />
           <span className="text-sm font-medium text-white">Throughput Scaling</span>
           {peakInfo && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-blue-500/15 text-blue-400">
+            <StatusBadge color="blue" size="xs" rounded="full">
               <TrendingUp size={10} />
               Peak: {peakInfo.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} tok/s
-            </span>
+            </StatusBadge>
           )}
         </div>
         <div className="flex items-center gap-2">

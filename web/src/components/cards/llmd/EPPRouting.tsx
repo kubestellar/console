@@ -16,6 +16,7 @@ import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 import { POLL_INTERVAL_FAST_MS } from '../../../lib/constants/network'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -908,7 +909,7 @@ export function EPPRouting() {
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-yellow-500/10 text-yellow-400 text-2xs">{t('common:common.demo')}</span>
+                <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>
               )}
             </div>
           )}

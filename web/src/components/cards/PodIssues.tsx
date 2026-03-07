@@ -4,6 +4,7 @@ import type { PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData, commonComparators, getStatusColors,
@@ -127,9 +128,9 @@ export function PodIssues() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${rawIssues.length} pods with issues`}>
+          <StatusBadge color="red" title={`${rawIssues.length} pods with issues`}>
             {rawIssues.length} issues
-          </span>
+          </StatusBadge>
         </div>
         <CardControlsRow
           clusterIndicator={{

@@ -16,6 +16,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import type { PredictedRisk, TrendDirection } from '../../../types/predictions'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../../lib/cards/CardComponents'
 import { ClusterBadge } from '../../ui/ClusterBadge'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POLL_INTERVAL_MS } from '../../../lib/constants/network'
@@ -1148,9 +1149,9 @@ TASK:
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium text-foreground truncate">{node.name}</span>
-                    <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-red-500/20 text-red-400 rounded">
+                    <StatusBadge color="red" size="xs" className="flex-shrink-0">
                       {rootCause?.cause || t('cards:consoleOfflineDetection.offline')}
-                    </span>
+                    </StatusBadge>
                     {node.cluster && (
                       <ClusterBadge cluster={node.cluster} size="sm" />
                     )}
@@ -1184,9 +1185,9 @@ TASK:
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium text-foreground truncate">{issue.nodeName}</span>
-                    <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-yellow-500/20 text-yellow-400 rounded">
+                    <StatusBadge color="yellow" size="xs" className="flex-shrink-0">
                       GPU
-                    </span>
+                    </StatusBadge>
                     <ClusterBadge cluster={issue.cluster} size="sm" />
                   </div>
                   <div className="text-yellow-400 truncate mt-0.5">0 GPUs available</div>
@@ -1237,13 +1238,13 @@ TASK:
                         <span className="font-medium text-foreground truncate">{risk.name}</span>
                         {/* Source Badge */}
                         {risk.source === 'ai' ? (
-                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-400 rounded">
+                          <StatusBadge color="blue" size="xs" className="flex-shrink-0">
                             AI
-                          </span>
+                          </StatusBadge>
                         ) : (
-                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-400 rounded flex items-center gap-0.5">
+                          <StatusBadge color="blue" size="xs" className="flex-shrink-0">
                             <Zap className="w-2 h-2" />
-                          </span>
+                          </StatusBadge>
                         )}
                         {/* Confidence */}
                         {risk.confidence !== undefined && (
@@ -1253,9 +1254,9 @@ TASK:
                         {risk.trend && <TrendIcon trend={risk.trend} />}
                         {/* Namespace Badge */}
                         {risk.namespace && (
-                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-gray-500/20 text-muted-foreground rounded truncate max-w-[80px]" title={`namespace: ${risk.namespace}`}>
+                          <StatusBadge color="gray" size="xs" className="flex-shrink-0 truncate max-w-[80px]" title={`namespace: ${risk.namespace}`}>
                             {risk.namespace}
-                          </span>
+                          </StatusBadge>
                         )}
                         {/* Cluster Badge */}
                         {risk.cluster && (

@@ -18,6 +18,7 @@ import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 import { KV_CACHE_UPDATE_INTERVAL_MS } from '../../../lib/constants/network'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
@@ -576,7 +577,7 @@ export function KVCacheMonitor() {
                 {selectedStack.name}
               </span>
               {isDemoMode && (
-                <span className="px-1 py-0.5 rounded bg-yellow-500/10 text-yellow-400 text-2xs">{t('common:common.demo')}</span>
+                <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>
               )}
             </div>
           )}

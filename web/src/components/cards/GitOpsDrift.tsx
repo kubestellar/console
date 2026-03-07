@@ -7,6 +7,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData, CardClusterFilter, CardSearchInput } from '../../lib/cards'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -212,10 +213,9 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
             </span>
           )}
           {highSeverityCount > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" />
+            <StatusBadge color="red" size="md" className="flex items-center gap-1" icon={<AlertTriangle className="w-3 h-3" />}>
               {t('gitOpsDrift.nCritical', { count: highSeverityCount })}
-            </span>
+            </StatusBadge>
           )}
           {totalDrifts > 0 && (
             <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">

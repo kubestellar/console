@@ -117,9 +117,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       case 'scaling':
         return <StatusBadge color="blue" icon={<RefreshCw className="w-2.5 h-2.5 animate-spin" />}>Scaling</StatusBadge>
       case 'stopped':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground flex items-center gap-1"><Pause className="w-2.5 h-2.5" /> Stopped</span>
+        return <StatusBadge color="gray" icon={<Pause className="w-2.5 h-2.5" />}>Stopped</StatusBadge>
       default:
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">{status}</span>
+        return <StatusBadge color="gray">{status}</StatusBadge>
     }
   }
 

@@ -56,9 +56,9 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
       case 'idle':
         return <StatusBadge color="yellow">Idle</StatusBadge>
       case 'stopped':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">Stopped</span>
+        return <StatusBadge color="gray">Stopped</StatusBadge>
       default:
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">{status}</span>
+        return <StatusBadge color="gray">{status}</StatusBadge>
     }
   }
 

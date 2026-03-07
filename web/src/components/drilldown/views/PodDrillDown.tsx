@@ -10,6 +10,7 @@ import { cn } from '../../../lib/cn'
 import { Button } from '../../ui/Button'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import {
   getIssueSeverity,
@@ -1743,7 +1744,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                       <Box className="w-4 h-4" />
                       <span className="text-xs text-cyan-300">{t('common.pod')}</span>
                       <span className="font-semibold">{podName}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/30 text-cyan-300">current</span>
+                      <StatusBadge color="cyan">current</StatusBadge>
                     </div>
                   </div>
                 </div>
@@ -1914,7 +1915,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                       <Box className="w-4 h-4" />
                       <span className="text-xs text-cyan-300">{t('common.pod')}</span>
                       <span className="font-semibold">{podName}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/30 text-cyan-300">current</span>
+                      <StatusBadge color="cyan">current</StatusBadge>
                     </div>
                     <p className="text-muted-foreground text-sm mt-3">{t('drilldown.empty.noRelatedResourcesDiscovered')}</p>
                   </div>

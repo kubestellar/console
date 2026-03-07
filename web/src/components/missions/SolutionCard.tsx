@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { StatusBadge } from '../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { MissionExport } from '../../lib/missions/types'
 
@@ -50,9 +51,9 @@ export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact 
           {mission.title}
         </h4>
         {mission.category && (
-          <span className="px-1.5 py-0.5 text-2xs rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 flex-shrink-0">
+          <StatusBadge color="purple" size="xs" variant="outline" className="flex-shrink-0">
             {mission.category}
-          </span>
+          </StatusBadge>
         )}
         <span className="text-2xs text-muted-foreground flex-shrink-0">{mission.steps?.length ?? 0} steps</span>
         <button
@@ -101,9 +102,9 @@ export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact 
       {/* Tags */}
       <div className="flex flex-wrap gap-1 mb-2 mt-auto">
         {mission.category && (
-          <span className="px-1.5 py-0.5 text-2xs rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          <StatusBadge color="purple" size="xs" variant="outline">
             {mission.category}
-          </span>
+          </StatusBadge>
         )}
         {mission.tags?.slice(0, 3).map(tag => (
           <span key={tag} className="px-1.5 py-0.5 text-2xs rounded bg-secondary text-muted-foreground">

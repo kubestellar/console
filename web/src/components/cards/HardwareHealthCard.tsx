@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory, type DeviceCounts } from '../../hooks/useCachedData'
@@ -775,19 +776,19 @@ export function HardwareHealthCard() {
                         )}
                         {/* Status indicators */}
                         {node.devices.sriovCapable && (
-                          <span className="px-1 py-0.5 text-[9px] bg-blue-500/20 text-blue-400 rounded">SR-IOV</span>
+                          <StatusBadge color="blue" size="xs">SR-IOV</StatusBadge>
                         )}
                         {node.devices.rdmaAvailable && (
-                          <span className="px-1 py-0.5 text-[9px] bg-purple-500/20 text-purple-400 rounded">RDMA</span>
+                          <StatusBadge color="purple" size="xs">RDMA</StatusBadge>
                         )}
                         {node.devices.mellanoxPresent && (
-                          <span className="px-1 py-0.5 text-[9px] bg-orange-500/20 text-orange-400 rounded">Mellanox</span>
+                          <StatusBadge color="orange" size="xs">Mellanox</StatusBadge>
                         )}
                         {node.devices.mofedReady && (
-                          <span className="px-1 py-0.5 text-[9px] bg-green-500/20 text-green-400 rounded">MOFED</span>
+                          <StatusBadge color="green" size="xs">MOFED</StatusBadge>
                         )}
                         {node.devices.gpuDriverReady && (
-                          <span className="px-1 py-0.5 text-[9px] bg-green-500/20 text-green-400 rounded">GPU Driver</span>
+                          <StatusBadge color="green" size="xs">GPU Driver</StatusBadge>
                         )}
                         {getTotalDevices(node.devices) === 0 && (
                           <span className="text-2xs text-muted-foreground italic">No devices detected</span>

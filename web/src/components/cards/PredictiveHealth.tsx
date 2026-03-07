@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes, useCachedPods } from '../../hooks/useCachedData'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 
 interface Prediction {
@@ -159,7 +160,7 @@ export function PredictiveHealth() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-0.5 shrink-0">
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">{pred.cluster}</span>
+                    <StatusBadge color="purple">{pred.cluster}</StatusBadge>
                     {pred.timeToExhaustion && (
                       <span className={`text-xs ${style.text}`}>{pred.timeToExhaustion}</span>
                     )}

@@ -22,6 +22,7 @@ import {
   type ScalingPoint,
 } from '../../../lib/llmd/benchmarkDataUtils'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 type MetricTab = 'ttftP50Ms' | 'tpotP50Ms' | 'p99LatencyMs' | 'itlP50Ms' | 'requestLatencyMs'
 
@@ -135,10 +136,10 @@ export function LatencyBreakdown() {
           <Clock size={14} className="text-yellow-400" />
           <span className="text-sm font-medium text-white">Latency Under Load</span>
           {degradationWarning && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-red-500/15 text-red-400">
+            <StatusBadge color="red" size="xs" rounded="full">
               <AlertTriangle size={10} />
               {degradationWarning.variant}: +{degradationWarning.increase.toFixed(0)}% at peak
-            </span>
+            </StatusBadge>
           )}
         </div>
         <div className="flex items-center gap-2">

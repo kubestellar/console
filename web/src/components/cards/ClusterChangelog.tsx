@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedEvents } from '../../hooks/useCachedData'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 
 const CHANGE_REASONS = new Set([
@@ -108,7 +109,7 @@ export function ClusterChangelog() {
                       {event.reason}
                     </span>
                     {event.cluster && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">{event.cluster}</span>
+                      <StatusBadge color="purple">{event.cluster}</StatusBadge>
                     )}
                     {ts && <span className="text-xs text-muted-foreground">{formatTime(ts)}</span>}
                   </div>

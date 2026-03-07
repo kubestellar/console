@@ -9,6 +9,7 @@ import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
@@ -51,9 +52,9 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
         <div className={cn('w-2 h-2 rounded-full', STATUS_COLORS[provider.status])} />
         <span className="text-xs text-muted-foreground">{String(t(STATUS_LABEL_KEYS[provider.status]))}</span>
         {!provider.configured && (
-          <span className="text-2xs text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full font-medium">
+          <StatusBadge color="yellow" size="xs" rounded="full">
             {t('providerHealth.noKey')}
-          </span>
+          </StatusBadge>
         )}
       </div>
 

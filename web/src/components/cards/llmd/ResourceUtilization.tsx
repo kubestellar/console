@@ -20,6 +20,7 @@ import {
   CONFIG_TYPE_COLORS,
 } from '../../../lib/llmd/benchmarkDataUtils'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 type MetricMode = 'throughput' | 'ttftP50Ms' | 'tpotP50Ms' | 'p99LatencyMs'
 
@@ -135,10 +136,10 @@ export function ResourceUtilization() {
           <BarChart3 size={14} className="text-green-400" />
           <span className="text-sm font-medium text-white">Experiment Comparison</span>
           {bestVariant && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-green-500/15 text-green-400">
+            <StatusBadge color="green" size="xs" rounded="full">
               <Trophy size={10} />
               Best: {bestVariant} ({bestValue.toLocaleString(undefined, { maximumFractionDigits: 1 })} {modeInfo.unit})
-            </span>
+            </StatusBadge>
           )}
         </div>
         <div className="flex items-center gap-2">
