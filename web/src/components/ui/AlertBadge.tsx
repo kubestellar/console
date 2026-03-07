@@ -294,6 +294,7 @@ export function AlertBadge() {
               <button
                 onClick={close}
                 className="p-1 rounded hover:bg-secondary/50 text-muted-foreground"
+                aria-label="Close alert panel"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -330,6 +331,7 @@ export function AlertBadge() {
                 </button>
                 <button
                   onClick={() => setSeverityFilter('critical')}
+                  aria-label={`Filter by critical alerts (${stats.critical})`}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
                     severityFilter === 'critical'
                       ? 'bg-red-500/20 text-red-400'
@@ -341,6 +343,7 @@ export function AlertBadge() {
                 </button>
                 <button
                   onClick={() => setSeverityFilter('warning')}
+                  aria-label={`Filter by warning alerts (${stats.warning})`}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
                     severityFilter === 'warning'
                       ? 'bg-orange-500/20 text-orange-400'
@@ -352,6 +355,7 @@ export function AlertBadge() {
                 </button>
                 <button
                   onClick={() => setSeverityFilter('info')}
+                  aria-label={`Filter by info alerts (${stats.info})`}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
                     severityFilter === 'info'
                       ? 'bg-blue-500/20 text-blue-400'
@@ -424,6 +428,7 @@ export function AlertBadge() {
                         onClick={(e) => toggleAlertSelection(e, alert.id)}
                         className="mt-0.5 text-muted-foreground hover:text-foreground transition-colors"
                         title={selectedAlertIds.has(alert.id) ? 'Deselect' : 'Select'}
+                        aria-label={selectedAlertIds.has(alert.id) ? `Deselect alert: ${alert.ruleName}` : `Select alert: ${alert.ruleName}`}
                       >
                         {selectedAlertIds.has(alert.id) ? (
                           <CheckSquare className="w-4 h-4 text-purple-400" />

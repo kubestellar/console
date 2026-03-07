@@ -142,6 +142,7 @@ export function Pagination({
             disabled={!canGoPrevious}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
             title={t('pagination.firstPage')}
+            aria-label={t('pagination.firstPage')}
           >
             <ChevronsLeft className="w-4 h-4" />
           </button>
@@ -150,6 +151,7 @@ export function Pagination({
             disabled={!canGoPrevious}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
             title={t('pagination.previousPage')}
+            aria-label={t('pagination.previousPage')}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -163,6 +165,7 @@ export function Pagination({
             disabled={!canGoNext}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
             title={t('pagination.nextPage')}
+            aria-label={t('pagination.nextPage')}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -171,6 +174,7 @@ export function Pagination({
             disabled={!canGoNext}
             className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
             title={t('pagination.lastPage')}
+            aria-label={t('pagination.lastPage')}
           >
             <ChevronsRight className="w-4 h-4" />
           </button>

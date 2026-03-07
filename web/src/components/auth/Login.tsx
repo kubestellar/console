@@ -136,7 +136,7 @@ export function Login() {
             <div className="flex items-center gap-3">
               <img
                 src="/kubestellar-logo.svg"
-                alt="KubeStellar"
+                alt="KubeStellar logo"
                 className="w-14 h-14"
               />
               <div>

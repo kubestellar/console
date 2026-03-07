@@ -140,6 +140,7 @@ export function CardControls<T extends string = string>({
               onClick={toggleDirection}
               className="p-1 text-xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
               title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+              aria-label={sortDirection === 'asc' ? 'Sort ascending, click to sort descending' : 'Sort descending, click to sort ascending'}
             >
               {sortDirection === 'asc' ? (
                 <ArrowUp className="w-3 h-3" />

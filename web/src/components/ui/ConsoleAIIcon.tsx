@@ -18,7 +18,7 @@ export function ConsoleAIIcon({ className, size = 'md' }: ConsoleAIIconProps) {
   return (
     <img
       src="/kubestellar-logo.svg"
-      alt=""
+      alt="Console AI"
       className={cn(sizeClasses[size], className)}
     />
   )

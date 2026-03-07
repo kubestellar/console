@@ -87,6 +87,7 @@ export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact 
               }}
               className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
               title="Copy shareable link"
+              aria-label={linkCopied ? 'Link copied' : 'Copy shareable link'}
             >
               {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
             </button>

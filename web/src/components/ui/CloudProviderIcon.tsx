@@ -302,36 +302,40 @@ const KubernetesIcon: React.FC<{ size: number; className?: string }> = ({ size, 
 
 export function CloudProviderIcon({ provider, size = 16, className }: CloudProviderIconProps) {
   const iconProps = { size, className }
+  const label = getProviderLabel(provider)
 
+  let icon: React.ReactElement
   switch (provider) {
     case 'eks':
-      return <AWSIcon {...iconProps} />
+      icon = <AWSIcon {...iconProps} />; break
     case 'gke':
-      return <GCPIcon {...iconProps} />
+      icon = <GCPIcon {...iconProps} />; break
     case 'aks':
-      return <AzureIcon {...iconProps} />
+      icon = <AzureIcon {...iconProps} />; break
     case 'openshift':
-      return <OpenShiftIcon {...iconProps} />
+      icon = <OpenShiftIcon {...iconProps} />; break
     case 'oci':
-      return <OCIIcon {...iconProps} />
+      icon = <OCIIcon {...iconProps} />; break
     case 'alibaba':
-      return <AlibabaIcon {...iconProps} />
+      icon = <AlibabaIcon {...iconProps} />; break
     case 'digitalocean':
-      return <DigitalOceanIcon {...iconProps} />
+      icon = <DigitalOceanIcon {...iconProps} />; break
     case 'rancher':
-      return <RancherIcon {...iconProps} />
+      icon = <RancherIcon {...iconProps} />; break
     case 'coreweave':
-      return <CoreWeaveIcon {...iconProps} />
+      icon = <CoreWeaveIcon {...iconProps} />; break
     case 'kind':
-      return <KindIcon {...iconProps} />
+      icon = <KindIcon {...iconProps} />; break
     case 'minikube':
-      return <MinikubeIcon {...iconProps} />
+      icon = <MinikubeIcon {...iconProps} />; break
     case 'k3s':
-      return <K3sIcon {...iconProps} />
+      icon = <K3sIcon {...iconProps} />; break
     case 'kubernetes':
     default:
-      return <KubernetesIcon {...iconProps} />
+      icon = <KubernetesIcon {...iconProps} />; break
   }
+
+  return <span role="img" aria-label={label}>{icon}</span>
 }
 
 export function getProviderLabel(provider: CloudProvider): string {
