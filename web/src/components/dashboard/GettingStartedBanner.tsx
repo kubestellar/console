@@ -79,7 +79,7 @@ export function GettingStartedBanner({
     },
     {
       id: 'explore-dashboards',
-      label: 'Explore Dashboards',
+      label: 'Explore More Dashboards',
       description: `${DASHBOARD_COUNT} topic-specific dashboards`,
       icon: Compass,
       onClick: () => handleAction('explore_dashboards', onExploreDashboards),

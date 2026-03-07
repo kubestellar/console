@@ -62,7 +62,10 @@ export function Navbar() {
             alt="KubeStellar"
             className="w-8 h-8 md:w-9 md:h-9"
           />
-          <span className="text-base md:text-lg font-semibold text-foreground hidden lg:inline">KubeStellar Console</span>
+          <div className="hidden lg:flex flex-col leading-tight">
+            <span className="text-base md:text-lg font-semibold text-foreground">KubeStellar Console</span>
+            <span className="text-[10px] text-muted-foreground tracking-wide">multi-cluster first, saving time and tokens</span>
+          </div>
         </button>
       </div>
 

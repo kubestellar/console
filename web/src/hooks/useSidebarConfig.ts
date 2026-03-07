@@ -1,6 +1,11 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
+/** Width of the collapsed sidebar in pixels (w-20 = 5rem = 80px) */
+export const SIDEBAR_COLLAPSED_WIDTH_PX = 80
+/** Default width of the expanded sidebar in pixels (w-64 = 16rem = 256px) */
+export const SIDEBAR_DEFAULT_WIDTH_PX = 256
+
 export interface SidebarItem {
   id: string
   name: string
@@ -21,6 +26,7 @@ export interface SidebarConfig {
   showClusterStatus: boolean
   collapsed: boolean
   isMobileOpen: boolean
+  width?: number
 }
 
 // Shared state store for sidebar config
@@ -373,6 +379,10 @@ export function useSidebarConfig() {
     setConfig((prev) => ({ ...prev, showClusterStatus: !prev.showClusterStatus }))
   }, [])
 
+  const setWidth = useCallback((width: number) => {
+    setConfig((prev) => ({ ...prev, width }))
+  }, [])
+
   const toggleCollapsed = useCallback(() => {
     setConfig((prev) => ({ ...prev, collapsed: !prev.collapsed }))
   }, [])
@@ -456,6 +466,7 @@ export function useSidebarConfig() {
     reorderItems,
     restoreDashboard,
     toggleClusterStatus,
+    setWidth,
     toggleCollapsed,
     openMobileSidebar,
     closeMobileSidebar,

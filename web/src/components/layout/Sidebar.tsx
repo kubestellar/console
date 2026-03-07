@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 // NOTE: Wildcard import is required for dynamic icon resolution
@@ -8,7 +8,7 @@ import * as Icons from 'lucide-react'
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
-import { useSidebarConfig, SidebarItem, PROTECTED_SIDEBAR_IDS } from '../../hooks/useSidebarConfig'
+import { useSidebarConfig, SidebarItem, PROTECTED_SIDEBAR_IDS, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
 import { useMobile } from '../../hooks/useMobile'
 import { useClusters } from '../../hooks/useMCP'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
@@ -18,6 +18,10 @@ import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
 import { ROUTES } from '../../config/routes'
 import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
+
+/** Sidebar resize limits in pixels */
+const SIDEBAR_MIN_WIDTH_PX = 180
+const SIDEBAR_MAX_WIDTH_PX = 480
 
 /** Map sidebar item href to dashboard config ID for card count display */
 const HREF_TO_DASHBOARD_ID: Record<string, string> = {
@@ -34,7 +38,7 @@ const HREF_TO_DASHBOARD_ID: Record<string, string> = {
 }
 
 export function Sidebar() {
-  const { config, toggleCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar } = useSidebarConfig()
+  const { config, toggleCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar, setWidth } = useSidebarConfig()
   const { isMobile } = useMobile()
   const { deduplicatedClusters } = useClusters()
   const dashboardContext = useDashboardContextOptional()
@@ -52,6 +56,39 @@ export function Sidebar() {
 
   // On mobile, always show expanded view; on desktop, respect collapsed state
   const isCollapsed = !isMobile && config.collapsed
+
+  // Sidebar width (resizable)
+  const sidebarWidth = isCollapsed ? SIDEBAR_COLLAPSED_WIDTH_PX : (config.width ?? SIDEBAR_DEFAULT_WIDTH_PX)
+
+  // Resize handle state
+  const [isResizing, setIsResizing] = useState(false)
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+    const startX = e.clientX
+    const startWidth = config.width ?? SIDEBAR_DEFAULT_WIDTH_PX
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.min(
+        SIDEBAR_MAX_WIDTH_PX,
+        Math.max(SIDEBAR_MIN_WIDTH_PX, startWidth + (moveEvent.clientX - startX))
+      )
+      setWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [config.width, setWidth])
 
   // Inline rename state for custom sidebar items
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -266,18 +303,18 @@ export function Sidebar() {
             title={item.isCustom && item.href.startsWith('/custom-dashboard/') ? `${item.name} — ${t('sidebar.doubleClickRename')}` : item.name}
           >
             {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
-            {!isCollapsed && <span className="flex-1 truncate">{item.name}</span>}
+            {!isCollapsed && <span className="flex-1 min-w-0">{item.name}</span>}
             {!isCollapsed && (() => {
               const dashId = HREF_TO_DASHBOARD_ID[item.href]
               const count = dashId ? DASHBOARD_CONFIGS[dashId]?.cards?.length : null
               return count != null ? (
-                <span className="text-[10px] text-muted-foreground/40 tabular-nums group-hover:hidden flex-shrink-0">
+                <span className="text-[10px] text-muted-foreground/40 tabular-nums flex-shrink-0 min-w-[1.5rem] text-right">
                   {count}
                 </span>
               ) : null
             })()}
             {!isCollapsed && (
-              <span className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1">
+              <span className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded px-0.5">
                 {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (
                   <span
                     role="button"
@@ -313,18 +350,20 @@ export function Sidebar() {
         />
       )}
 
-      <aside 
-        data-testid="sidebar" 
-        data-tour="sidebar" 
+      <aside
+        data-testid="sidebar"
+        data-tour="sidebar"
         className={cn(
-          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced transition-all duration-300 z-40',
+          'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced z-40',
+          !isResizing && 'transition-all duration-300',
           // Desktop: respect collapsed state
-          !isMobile && (config.collapsed ? 'w-20 p-3' : 'w-64 p-4'),
-          // Mobile: always w-64 when open, slide off-screen when closed
-          isMobile && 'w-64 p-4',
+          !isMobile && (config.collapsed ? 'p-3' : 'p-4'),
+          // Mobile: slide off-screen when closed
+          isMobile && 'p-4',
           isMobile && !config.isMobileOpen && '-translate-x-full',
           isMobile && config.isMobileOpen && 'translate-x-0'
-        )}>
+        )}
+        style={{ width: isMobile ? SIDEBAR_DEFAULT_WIDTH_PX : sidebarWidth }}>
         {/* Collapse toggle - hidden on mobile */}
         <button
           data-testid="sidebar-collapse-toggle"
@@ -430,6 +469,17 @@ export function Sidebar() {
         )}
       </aside>
 
+      {/* Resize handle - drag to adjust sidebar width */}
+      {!isCollapsed && !isMobile && (
+        <div
+          onMouseDown={handleResizeStart}
+          className={cn(
+            "fixed top-16 bottom-0 cursor-col-resize z-50 hover:bg-purple-500/30 transition-colors",
+            isResizing && "bg-purple-500/50"
+          )}
+          style={{ left: sidebarWidth - 3, width: 6 }}
+        />
+      )}
     </>
   )
 }

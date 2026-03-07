@@ -37,6 +37,7 @@ import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { MissionSuggestions } from './MissionSuggestions'
 import { GettingStartedBanner } from './GettingStartedBanner'
+import { SidebarCustomizer } from '../layout/SidebarCustomizer'
 import { useMissions } from '../../hooks/useMissions'
 import { TemplatesModal } from './TemplatesModal'
 import { CreateDashboardModal } from './CreateDashboardModal'
@@ -104,6 +105,7 @@ export function Dashboard() {
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
   const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
   const { isOpen: isWidgetExportOpen, open: openWidgetExport, close: closeWidgetExport } = useModalState()
+  const { isOpen: isSidebarCustomizerOpen, open: openSidebarCustomizer, close: closeSidebarCustomizer } = useModalState()
 
   // Get context for modals that can be triggered from sidebar
   const {
@@ -884,7 +886,7 @@ export function Dashboard() {
       <GettingStartedBanner
         onBrowseCards={openAddCardModal}
         onTryMission={openMissionSidebar}
-        onExploreDashboards={openAddCardModal}
+        onExploreDashboards={openSidebarCustomizer}
       />
 
       {/* Demo-to-local CTA — shown on console.kubestellar.io for demo visitors */}
@@ -1080,6 +1082,11 @@ export function Dashboard() {
         sourceCluster={pendingDeploy?.sourceCluster ?? ''}
         targetClusters={pendingDeploy?.targetClusters ?? []}
         groupName={pendingDeploy?.groupName}
+      />
+
+      <SidebarCustomizer
+        isOpen={isSidebarCustomizerOpen}
+        onClose={closeSidebarCustomizer}
       />
     </div>
   )

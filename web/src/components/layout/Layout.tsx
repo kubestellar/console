@@ -5,7 +5,7 @@ import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, Ref
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
-import { useSidebarConfig } from '../../hooks/useSidebarConfig'
+import { useSidebarConfig, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
 import { useMobile } from '../../hooks/useMobile'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
@@ -78,6 +78,7 @@ export function Layout({ children }: LayoutProps) {
   const { t } = useTranslation()
   const { config } = useSidebarConfig()
   const { isMobile } = useMobile()
+  const sidebarWidthPx = isMobile ? 0 : (config.collapsed ? SIDEBAR_COLLAPSED_WIDTH_PX : (config.width ?? SIDEBAR_DEFAULT_WIDTH_PX))
   const { isSidebarOpen: isMissionSidebarOpen, isSidebarMinimized: isMissionSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
@@ -259,11 +260,9 @@ export function Layout({ children }: LayoutProps) {
       {/* Network Disconnected Banner */}
       {showNetworkBanner && (
         <div
-          style={{ top: networkBannerTop }}
+          style={{ top: networkBannerTop, left: sidebarWidthPx }}
           className={cn(
             "fixed right-0 z-40 border-b transition-[left] duration-300",
-            // Mobile: full width
-            isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
             isOnline
               ? "bg-green-500/10 border-green-500/20"
               : "bg-red-500/10 border-red-500/20",
@@ -298,11 +297,9 @@ export function Layout({ children }: LayoutProps) {
         const isAuthenticatedNoAgent = hasRealToken() && agentStatus !== 'connected'
         return (
           <div
-            style={{ top: demoBannerTop }}
+            style={{ top: demoBannerTop, left: sidebarWidthPx }}
             className={cn(
               "fixed right-0 z-30 bg-background border-b border-yellow-500/20 transition-[left] duration-300",
-              // Mobile: full width
-              isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
             )}>
             <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
               {isAuthenticatedNoAgent
@@ -352,11 +349,9 @@ export function Layout({ children }: LayoutProps) {
       {/* Offline Mode Banner - positioned in main content area only */}
       {showOfflineBanner && (
         <div
-          style={{ top: offlineBannerTop }}
+          style={{ top: offlineBannerTop, left: sidebarWidthPx }}
           className={cn(
             "fixed z-20 bg-background border-b border-orange-500/20 transition-[right] duration-300",
-            // Mobile: full width
-            isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
           // Adjust right edge when mission sidebar is open (desktop only)
           !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[500px]" : "right-0",
           !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && "right-12"
@@ -399,11 +394,9 @@ export function Layout({ children }: LayoutProps) {
         <Sidebar />
         <main
           id="main-content"
+          style={{ marginLeft: sidebarWidthPx }}
           className={cn(
             'relative flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0',
-            // Mobile: no left margin (sidebar overlays)
-            // Desktop: respect collapsed state
-            isMobile ? 'ml-0' : (config.collapsed ? 'ml-20' : 'ml-64'),
             // Don't apply right margin when fullscreen is active or on mobile
             !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
             !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'

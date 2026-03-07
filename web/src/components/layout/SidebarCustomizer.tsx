@@ -34,7 +34,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
+import { useSidebarConfig, SidebarItem, DISCOVERABLE_DASHBOARDS } from '../../hooks/useSidebarConfig'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
@@ -181,6 +181,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     toggleClusterStatus,
     resetToDefault,
     generateFromBehavior,
+    restoreDashboard,
   } = useSidebarConfig()
 
   // DnD sensors for both mouse and keyboard
@@ -598,6 +599,40 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               )}
             </div>
           )}
+
+          {/* Recommended Dashboards — discoverable dashboards not yet in the sidebar */}
+          {(() => {
+            const existingHrefs = new Set([
+              ...config.primaryNav.map(item => item.href),
+              ...config.secondaryNav.map(item => item.href),
+            ])
+            const available = DISCOVERABLE_DASHBOARDS.filter(d => !existingHrefs.has(d.href))
+            if (available.length === 0) return null
+            return (
+              <div className="mb-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
+                <h4 className="text-xs font-medium text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Recommended Dashboards
+                </h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Add topic-specific dashboards to your sidebar
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {available.map(dashboard => (
+                    <button
+                      key={dashboard.id}
+                      onClick={() => restoreDashboard(dashboard)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-secondary/50 border border-border/50 hover:border-blue-500/30 hover:bg-secondary text-foreground transition-all"
+                    >
+                      {renderIcon(dashboard.icon, 'w-3.5 h-3.5 text-muted-foreground')}
+                      <span className="font-medium text-xs">{dashboard.name}</span>
+                      <Plus className="w-3 h-3 text-blue-400" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Primary Navigation */}
           <div className="mb-4">

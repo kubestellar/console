@@ -7,7 +7,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Terminal, Copy, Check, ExternalLink, X } from 'lucide-react'
+import { Terminal, Copy, Check, X, Rocket } from 'lucide-react'
+import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { isNetlifyDeployment } from '../../lib/demoMode'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import {
@@ -17,7 +18,6 @@ import {
 import { emitDemoToLocalShown, emitDemoToLocalActioned } from '../../lib/analytics'
 
 const INSTALL_COMMAND = 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent'
-const DOCS_URL = 'https://docs.kubestellar.io/docs/getting-started/'
 
 /** How many seconds the "Copied!" confirmation shows */
 const COPY_FEEDBACK_MS = 2000
@@ -30,6 +30,7 @@ export function DemoToLocalCTA() {
     () => safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true'
   )
   const [copied, setCopied] = useState(false)
+  const [showSetupDialog, setShowSetupDialog] = useState(false)
   const emittedRef = useRef(false)
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export function DemoToLocalCTA() {
 
   const handleDocs = () => {
     emitDemoToLocalActioned('view_docs')
-    window.open(DOCS_URL, '_blank', 'noopener')
+    setShowSetupDialog(true)
   }
 
   return (
@@ -121,9 +122,14 @@ export function DemoToLocalCTA() {
           onClick={handleDocs}
           className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
         >
-          Full setup guide <ExternalLink className="w-3 h-3" />
+          Full setup guide <Rocket className="w-3 h-3" />
         </button>
       </div>
+
+      <SetupInstructionsDialog
+        isOpen={showSetupDialog}
+        onClose={() => setShowSetupDialog(false)}
+      />
     </div>
   )
 }
