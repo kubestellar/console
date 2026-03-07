@@ -291,20 +291,23 @@ const SETTING_ITEMS: SearchItem[] = [
 ]
 
 // All known card types from metadata (makes every card searchable even if not placed)
+// Catalog items navigate to main dashboard and open the Add Card modal
 const CATALOG_CARD_ITEMS: SearchItem[] = Object.entries(CARD_TITLES).map(([type, title]) => ({
   id: `catalog-card-${type}`,
   name: title,
   description: CARD_DESCRIPTIONS[type] || 'Available card',
   category: 'card' as SearchCategory,
+  href: '/?addCard=true',
   keywords: [type, type.replace(/_/g, ' ')],
   meta: 'add card',
 }))
 
 // Static items that don't need localStorage scanning (stats are scanned dynamically now)
+// Note: CATALOG_CARD_ITEMS are NOT included here — they're de-duplicated against
+// placed cards at query time (see filtering logic below)
 const STATIC_ITEMS: SearchItem[] = [
   ...PAGE_ITEMS,
   ...SETTING_ITEMS,
-  ...CATALOG_CARD_ITEMS,
 ]
 
 // --- Matching ---
@@ -467,7 +470,12 @@ export function useSearchIndex(query: string) {
     // Scan placed stats from localStorage / defaults
     const placedStats = scanPlacedStats()
 
-    const allItems = [...STATIC_ITEMS, ...dynamicItems, ...placedCards, ...placedStats]
+    // De-duplicate: if a card is placed on a dashboard, prefer the placed version
+    // (which navigates + scrolls to it) over the generic catalog version
+    const placedCardTypes = new Set(placedCards.map(c => c.id.replace(/^card-/, '').replace(/-on-.*$/, '')))
+    const dedupedCatalog = CATALOG_CARD_ITEMS.filter(c => !placedCardTypes.has(c.id.replace('catalog-card-', '')))
+
+    const allItems = [...STATIC_ITEMS, ...dedupedCatalog, ...dynamicItems, ...placedCards, ...placedStats]
     const matched = allItems.filter(item => matchesQuery(item, query))
 
     // Group by category

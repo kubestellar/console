@@ -18,9 +18,13 @@ import {
 } from 'lucide-react'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
+import { useSidebarConfig, DISCOVERABLE_DASHBOARDS } from '../../../hooks/useSidebarConfig'
 import { scrollToCard } from '../../../lib/scrollToCard'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
 import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
+
+/** Routes for dashboards that are discoverable but not shown by default in the sidebar */
+const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
 
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
   page: { label: 'Pages', icon: LayoutDashboard },
@@ -42,6 +46,7 @@ export function SearchDropdown() {
   const navigate = useNavigate()
   const location = useLocation()
   const { openSidebar, setActiveMission, startMission } = useMissions()
+  const { config: sidebarConfig } = useSidebarConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -85,6 +90,12 @@ export function SearchDropdown() {
   const totalSelectableItems = flatResults.length + 1
   const askAIIndex = flatResults.length // "Ask AI" is always the last item
 
+  // Check if a page route is a discoverable dashboard not currently in the sidebar
+  const sidebarHrefs = useMemo(() => {
+    if (!sidebarConfig) return new Set<string>()
+    return new Set(sidebarConfig.primaryNav.map(item => item.href))
+  }, [sidebarConfig])
+
   const handleSelect = useCallback((item: SearchItem) => {
     // Mission items open the sidebar instead of navigating
     if (item.category === 'mission' && item.href?.startsWith('#mission:')) {
@@ -97,7 +108,18 @@ export function SearchDropdown() {
       if (item.scrollTarget && location.pathname === item.href) {
         scrollToCard(item.scrollTarget)
       } else {
-        navigate(item.href)
+        // For discoverable dashboards not in the sidebar, append customizeSidebar
+        // param so the page auto-opens the sidebar customizer
+        const isDiscoverableNotInSidebar =
+          item.category === 'page' &&
+          DISCOVERABLE_ROUTES.has(item.href) &&
+          !sidebarHrefs.has(item.href)
+
+        const targetHref = isDiscoverableNotInSidebar
+          ? `${item.href}${item.href.includes('?') ? '&' : '?'}customizeSidebar=true`
+          : item.href
+
+        navigate(targetHref)
         // After navigation, scroll to the card if there's a scroll target
         if (item.scrollTarget) {
           scrollToCard(item.scrollTarget)
@@ -106,7 +128,7 @@ export function SearchDropdown() {
     }
     setSearchQuery('')
     setIsSearchOpen(false)
-  }, [navigate, location.pathname, setActiveMission, openSidebar])
+  }, [navigate, location.pathname, setActiveMission, openSidebar, sidebarHrefs])
 
   // Close dropdown when clicking outside
   useEffect(() => {

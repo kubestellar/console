@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Layout, RotateCcw, Download, Upload, Pencil } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
@@ -41,6 +42,7 @@ export function FloatingDashboardActions({
   const { t } = useTranslation()
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
   const { isMobile } = useMobile()
+  const [searchParams, setSearchParams] = useSearchParams()
   const fabHint = useFeatureHints('fab-add')
   const menu = useModalState()
   const resetDialog = useModalState()
@@ -48,6 +50,17 @@ export function FloatingDashboardActions({
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { isOpen: menuIsOpen, close: closeMenu } = menu
+  const { open: openCustomizer } = customizer
+
+  // Auto-open sidebar customizer when navigated from search with ?customizeSidebar=true
+  useEffect(() => {
+    if (searchParams.get('customizeSidebar') === 'true') {
+      openCustomizer()
+      const cleaned = new URLSearchParams(searchParams)
+      cleaned.delete('customizeSidebar')
+      setSearchParams(cleaned, { replace: true })
+    }
+  }, [searchParams, setSearchParams, openCustomizer])
 
   // Close menu when clicking outside
   useEffect(() => {
