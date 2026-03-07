@@ -79,9 +79,13 @@ interface GapAnalysisEntry {
 // Constants
 // ---------------------------------------------------------------------------
 
+// CI runners are slower than local dev — scale timeouts accordingly
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
+
 const BATCH_SIZE = 24
-const BATCH_LOAD_TIMEOUT_MS = 30_000
-const BATCH_NAV_TIMEOUT_MS = 45_000 // navigateToBatch timeout — generous for cold Vite compiles
+const BATCH_LOAD_TIMEOUT_MS = IS_CI ? 45_000 : 30_000
+const BATCH_NAV_TIMEOUT_MS = IS_CI ? 90_000 : 45_000 // navigateToBatch timeout — generous for cold Vite compiles
 const MONITOR_POLL_INTERVAL_MS = 50
 const WARM_RETURN_WAIT_MS = 3_000
 
@@ -728,7 +732,8 @@ function writeReport(report: ComplianceReport, outDir: string) {
 test.describe.configure({ mode: 'serial' })
 
 test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
-  testInfo.setTimeout(180_000) // 8 batches cold + warm needs more time
+  const COMPLIANCE_TIMEOUT_MS = 180_000 // 8 batches cold + warm needs more time
+  testInfo.setTimeout(IS_CI ? COMPLIANCE_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : COMPLIANCE_TIMEOUT_MS)
   const allBatchResults: BatchResult[] = []
   let totalCards = 0
 

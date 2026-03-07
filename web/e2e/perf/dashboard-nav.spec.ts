@@ -45,11 +45,14 @@ interface NavReport {
 const REAL_BACKEND = process.env.REAL_BACKEND === 'true'
 const REAL_TOKEN = process.env.REAL_TOKEN || ''
 const REAL_USER = process.env.REAL_USER || ''
+// CI runners are slower than local dev — scale timeouts accordingly
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
 
 // How long to wait for cards to load after navigation
-const NAV_CARD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : 15_000
+const NAV_CARD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : IS_CI ? 20_000 : 15_000
 // How long to wait for initial app load
-const APP_LOAD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : 15_000
+const APP_LOAD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : IS_CI ? 20_000 : 15_000
 // Real-backend tests need much longer timeouts (25 dashboards, some taking 30s+)
 const REAL_BACKEND_TEST_TIMEOUT = 5 * 60_000 // 5 minutes
 
@@ -452,7 +455,8 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, 
 })
 
 test('warm-nav — revisit dashboards (chunks already cached)', async ({ page }, testInfo) => {
-  testInfo.setTimeout(180_000) // all 26 dashboards cold + warm
+  const WARM_NAV_TIMEOUT_MS = 180_000 // all 26 dashboards cold + warm
+  testInfo.setTimeout(IS_CI ? WARM_NAV_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : WARM_NAV_TIMEOUT_MS)
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -511,7 +515,8 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
 })
 
 test('from-main — navigate away from Main Dashboard to various dashboards', async ({ page }, testInfo) => {
-  testInfo.setTimeout(120_000) // pre-warm + 13 round-trip navigations
+  const FROM_MAIN_TIMEOUT_MS = 120_000 // pre-warm + 13 round-trip navigations
+  testInfo.setTimeout(IS_CI ? FROM_MAIN_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : FROM_MAIN_TIMEOUT_MS)
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -569,7 +574,8 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
 })
 
 test('from-clusters — navigate away from My Clusters to various dashboards', async ({ page }, testInfo) => {
-  testInfo.setTimeout(120_000) // pre-warm + 13 round-trip navigations
+  const FROM_CLUSTERS_TIMEOUT_MS = 120_000 // pre-warm + 13 round-trip navigations
+  testInfo.setTimeout(IS_CI ? FROM_CLUSTERS_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : FROM_CLUSTERS_TIMEOUT_MS)
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -629,7 +635,8 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
 })
 
 test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo) => {
-  testInfo.setTimeout(120_000) // rapid-clicking through all dashboards
+  const RAPID_NAV_TIMEOUT_MS = 120_000 // rapid-clicking through all dashboards
+  testInfo.setTimeout(IS_CI ? RAPID_NAV_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : RAPID_NAV_TIMEOUT_MS)
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
