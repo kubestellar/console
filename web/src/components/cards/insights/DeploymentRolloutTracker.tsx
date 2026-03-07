@@ -6,6 +6,8 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CardControlsRow } from '../../../lib/cards/CardComponents'
+import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 
 /** Color for completed rollout progress */
@@ -38,17 +40,21 @@ export function DeploymentRolloutTracker() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
 
-  const rolloutInsights = useMemo(() => {
+  const rolloutInsightsRaw = useMemo(() => {
     const all = insightsByCategory['rollout-tracker'] || []
     if (selectedClusters.length === 0) return all
     return all.filter(i =>
       (i.affectedClusters || []).some(c => selectedClusters.includes(c)),
     )
   }, [insightsByCategory, selectedClusters])
+  const {
+    sorted: rolloutInsights,
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
+  } = useInsightSort(rolloutInsightsRaw)
 
   useCardLoadingState({
     isLoading,
-    hasAnyData: rolloutInsights.length > 0,
+    hasAnyData: rolloutInsightsRaw.length > 0,
     isDemoData,
   })
 
@@ -73,7 +79,7 @@ export function DeploymentRolloutTracker() {
     })
   }, [insight])
 
-  if (!isLoading && rolloutInsights.length === 0) {
+  if (!isLoading && rolloutInsightsRaw.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <Rocket className="w-8 h-8 mb-2 opacity-50" />
@@ -85,6 +91,18 @@ export function DeploymentRolloutTracker() {
 
   return (
     <div className="space-y-3 p-1">
+      <CardControlsRow
+        cardControls={{
+          limit,
+          onLimitChange: setLimit,
+          sortBy,
+          sortOptions: INSIGHT_SORT_OPTIONS,
+          onSortChange: (v) => setSortBy(v as InsightSortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
+
       {/* Rollout selector */}
       {rolloutInsights.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1">

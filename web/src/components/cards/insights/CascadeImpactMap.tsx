@@ -5,6 +5,8 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CardControlsRow } from '../../../lib/cards/CardComponents'
+import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import type { InsightSeverity } from '../../../types/insights'
 
 const SEVERITY_COLORS: Record<InsightSeverity, string> = {
@@ -23,21 +25,25 @@ export function CascadeImpactMap() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
 
-  const cascadeInsights = useMemo(() => {
+  const cascadeInsightsRaw = useMemo(() => {
     const all = insightsByCategory['cascade-impact'] || []
     if (selectedClusters.length === 0) return all
     return all.filter(i =>
       (i.affectedClusters || []).some(c => selectedClusters.includes(c)),
     )
   }, [insightsByCategory, selectedClusters])
+  const {
+    sorted: cascadeInsights,
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
+  } = useInsightSort(cascadeInsightsRaw)
 
   useCardLoadingState({
     isLoading,
-    hasAnyData: cascadeInsights.length > 0,
+    hasAnyData: cascadeInsightsRaw.length > 0,
     isDemoData,
   })
 
-  if (!isLoading && cascadeInsights.length === 0) {
+  if (!isLoading && cascadeInsightsRaw.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <Workflow className="w-8 h-8 mb-2 opacity-50" />
@@ -49,6 +55,18 @@ export function CascadeImpactMap() {
 
   return (
     <div className="space-y-4 p-1">
+      <CardControlsRow
+        cardControls={{
+          limit,
+          onLimitChange: setLimit,
+          sortBy,
+          sortOptions: INSIGHT_SORT_OPTIONS,
+          onSortChange: (v) => setSortBy(v as InsightSortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
+
       {(cascadeInsights || []).map(insight => (
         <div key={insight.id} className="space-y-2">
           {/* Header */}

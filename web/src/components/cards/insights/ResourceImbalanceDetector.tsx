@@ -6,6 +6,8 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CardControlsRow } from '../../../lib/cards/CardComponents'
+import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 
 /** Percentage threshold for coloring bars as overloaded */
@@ -17,11 +19,15 @@ export function ResourceImbalanceDetector() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
 
-  const imbalanceInsights = useMemo(() => insightsByCategory['resource-imbalance'] || [], [insightsByCategory])
+  const imbalanceInsightsRaw = useMemo(() => insightsByCategory['resource-imbalance'] || [], [insightsByCategory])
+  const {
+    sorted: imbalanceInsights,
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
+  } = useInsightSort(imbalanceInsightsRaw)
 
   useCardLoadingState({
     isLoading,
-    hasAnyData: imbalanceInsights.length > 0,
+    hasAnyData: imbalanceInsightsRaw.length > 0,
     isDemoData,
   })
 
@@ -44,7 +50,7 @@ export function ResourceImbalanceDetector() {
     ? Math.round(chartData.reduce((sum, d) => sum + d.value, 0) / chartData.length)
     : 0
 
-  if (!isLoading && imbalanceInsights.length === 0) {
+  if (!isLoading && imbalanceInsightsRaw.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <Scale className="w-8 h-8 mb-2 opacity-50" />
@@ -56,6 +62,18 @@ export function ResourceImbalanceDetector() {
 
   return (
     <div className="space-y-3 p-1">
+      <CardControlsRow
+        cardControls={{
+          limit,
+          onLimitChange: setLimit,
+          sortBy,
+          sortOptions: INSIGHT_SORT_OPTIONS,
+          onSortChange: (v) => setSortBy(v as InsightSortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
+
       {(imbalanceInsights || []).map(insight => (
         <div key={insight.id} className="space-y-2">
           <div className="flex items-center gap-2">

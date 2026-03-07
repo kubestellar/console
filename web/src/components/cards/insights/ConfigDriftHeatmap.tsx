@@ -5,6 +5,8 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CardControlsRow } from '../../../lib/cards/CardComponents'
+import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 
 /** Maximum clusters to show in the heatmap grid */
 const MAX_HEATMAP_CLUSTERS = 12
@@ -13,11 +15,15 @@ export function ConfigDriftHeatmap() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
 
-  const driftInsights = useMemo(() => insightsByCategory['config-drift'] || [], [insightsByCategory])
+  const driftInsightsRaw = useMemo(() => insightsByCategory['config-drift'] || [], [insightsByCategory])
+  const {
+    sorted: driftInsights,
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
+  } = useInsightSort(driftInsightsRaw)
 
   useCardLoadingState({
     isLoading,
-    hasAnyData: driftInsights.length > 0,
+    hasAnyData: driftInsightsRaw.length > 0,
     isDemoData,
   })
 
@@ -64,7 +70,7 @@ export function ConfigDriftHeatmap() {
     return driftMatrix.get(`${a}:${b}`) || driftMatrix.get(`${b}:${a}`) || 0
   }
 
-  if (!isLoading && driftInsights.length === 0) {
+  if (!isLoading && driftInsightsRaw.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <Diff className="w-8 h-8 mb-2 opacity-50" />
@@ -76,6 +82,18 @@ export function ConfigDriftHeatmap() {
 
   return (
     <div className="space-y-3 p-1">
+      <CardControlsRow
+        cardControls={{
+          limit,
+          onLimitChange: setLimit,
+          sortBy,
+          sortOptions: INSIGHT_SORT_OPTIONS,
+          onSortChange: (v) => setSortBy(v as InsightSortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
+
       {/* Heatmap */}
       {clusters.length >= 2 && (
         <div className="overflow-x-auto">

@@ -5,6 +5,8 @@ import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CardControlsRow } from '../../../lib/cards/CardComponents'
+import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 
 
@@ -22,11 +24,15 @@ const SIGNIFICANCE_COLORS: Record<string, string> = {
 export function ClusterDeltaDetector() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
 
-  const deltaInsights = insightsByCategory['cluster-delta'] || []
+  const deltaInsightsRaw = insightsByCategory['cluster-delta'] || []
+  const {
+    sorted: deltaInsights,
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
+  } = useInsightSort(deltaInsightsRaw)
 
   useCardLoadingState({
     isLoading,
-    hasAnyData: deltaInsights.length > 0,
+    hasAnyData: deltaInsightsRaw.length > 0,
     isDemoData,
   })
 
@@ -53,7 +59,7 @@ export function ClusterDeltaDetector() {
     )
   }, [insight])
 
-  if (!isLoading && deltaInsights.length === 0) {
+  if (!isLoading && deltaInsightsRaw.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <GitCompare className="w-8 h-8 mb-2 opacity-50" />
@@ -67,6 +73,18 @@ export function ClusterDeltaDetector() {
 
   return (
     <div className="space-y-3 p-1">
+      <CardControlsRow
+        cardControls={{
+          limit,
+          onLimitChange: setLimit,
+          sortBy,
+          sortOptions: INSIGHT_SORT_OPTIONS,
+          onSortChange: (v) => setSortBy(v as InsightSortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
+
       {/* Workload selector */}
       {deltaInsights.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1">

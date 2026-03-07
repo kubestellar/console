@@ -7,6 +7,8 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CardControlsRow } from '../../../lib/cards/CardComponents'
+import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 
 /** Time bucket size for the timeline chart (2 minutes) */
@@ -25,11 +27,15 @@ export function CrossClusterEventCorrelation() {
   const { events: warningEvents } = useCachedWarningEvents()
   const { selectedClusters } = useGlobalFilters()
 
-  const correlationInsights = insightsByCategory['event-correlation'] || []
+  const correlationInsightsRaw = insightsByCategory['event-correlation'] || []
+  const {
+    sorted: correlationInsights,
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
+  } = useInsightSort(correlationInsightsRaw)
 
   useCardLoadingState({
     isLoading,
-    hasAnyData: correlationInsights.length > 0 || (warningEvents || []).length > 0,
+    hasAnyData: correlationInsightsRaw.length > 0 || (warningEvents || []).length > 0,
     isDemoData,
   })
 
@@ -66,7 +72,7 @@ export function CrossClusterEventCorrelation() {
     return { chartData: sorted, clusterNames: clusters }
   }, [warningEvents, selectedClusters])
 
-  if (!isLoading && correlationInsights.length === 0 && chartData.length === 0) {
+  if (!isLoading && correlationInsightsRaw.length === 0 && chartData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <Activity className="w-8 h-8 mb-2 opacity-50" />
@@ -78,6 +84,18 @@ export function CrossClusterEventCorrelation() {
 
   return (
     <div className="space-y-3 p-1">
+      <CardControlsRow
+        cardControls={{
+          limit,
+          onLimitChange: setLimit,
+          sortBy,
+          sortOptions: INSIGHT_SORT_OPTIONS,
+          onSortChange: (v) => setSortBy(v as InsightSortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
+
       {/* Timeline chart */}
       {chartData.length > 0 && (
         <div className="h-40">

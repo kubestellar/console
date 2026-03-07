@@ -4,17 +4,23 @@ import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CardControlsRow } from '../../../lib/cards/CardComponents'
+import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 
 
 
 export function RestartCorrelationMatrix() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
 
-  const restartInsights = useMemo(() => insightsByCategory['restart-correlation'] || [], [insightsByCategory])
+  const restartInsightsRaw = useMemo(() => insightsByCategory['restart-correlation'] || [], [insightsByCategory])
+  const {
+    sorted: restartInsights,
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
+  } = useInsightSort(restartInsightsRaw)
 
   useCardLoadingState({
     isLoading,
-    hasAnyData: restartInsights.length > 0,
+    hasAnyData: restartInsightsRaw.length > 0,
     isDemoData,
   })
 
@@ -28,7 +34,7 @@ export function RestartCorrelationMatrix() {
     [restartInsights],
   )
 
-  if (!isLoading && restartInsights.length === 0) {
+  if (!isLoading && restartInsightsRaw.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <RefreshCcw className="w-8 h-8 mb-2 opacity-50" />
@@ -40,6 +46,18 @@ export function RestartCorrelationMatrix() {
 
   return (
     <div className="space-y-4 p-1">
+      <CardControlsRow
+        cardControls={{
+          limit,
+          onLimitChange: setLimit,
+          sortBy,
+          sortOptions: INSIGHT_SORT_OPTIONS,
+          onSortChange: (v) => setSortBy(v as InsightSortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
+
       {/* App Bug Pattern (horizontal) */}
       {appBugInsights.length > 0 && (
         <div className="space-y-2">
