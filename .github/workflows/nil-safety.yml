@@ -7,7 +7,7 @@ on:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
-      - '.nilaway-baseline.json'
+      - '.github/nilaway-baseline.json'
       - 'web/src/**.ts'
       - 'web/src/**.tsx'
   schedule:
@@ -61,7 +61,7 @@ jobs:
       - name: Filter against baseline
         id: filter
         run: |
-          BASELINE=".nilaway-baseline.json"
+          BASELINE=".github/nilaway-baseline.json"
           RAW="/tmp/nilaway-output.txt"
           NEW="/tmp/nilaway-new.txt"
 
