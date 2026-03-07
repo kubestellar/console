@@ -151,10 +151,15 @@ export function UpdateSettings() {
     forceCheck()
   }, [forceCheck])
 
-  // Clear triggered state once WebSocket progress starts
+  // Clear triggered state once WebSocket progress starts or update fails
   useEffect(() => {
     if (updateProgress && triggerState === 'triggered') {
       setTriggerState('idle')
+    }
+    // Reset the double-click guard when the update finishes (success or failure)
+    // so the user can retry without refreshing
+    if (updateProgress && ['done', 'failed'].includes(updateProgress.status)) {
+      triggerGuardRef.current = false
     }
   }, [updateProgress, triggerState])
 

@@ -298,8 +298,9 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 	if hasUncommittedChanges(repoPath) {
 		log.Println("[AutoUpdate] Uncommitted changes detected, skipping update")
 		uc.broadcast("update_progress", UpdateProgressPayload{
-			Status:  "idle",
-			Message: "Update paused: uncommitted changes",
+			Status:  "failed",
+			Message: "Update skipped: uncommitted changes detected",
+			Error:   fmt.Sprintf("Run 'cd %s && git stash' to save your changes, then retry the update", repoPath),
 		})
 		return
 	}
@@ -771,8 +772,8 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 		log.Println("[AutoUpdate] Uncommitted changes detected, skipping release update")
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
-			Message: "Update skipped: uncommitted changes in repo",
-			Error:   "Commit or stash your changes before updating",
+			Message: "Update skipped: uncommitted changes detected",
+			Error:   fmt.Sprintf("Run 'cd %s && git stash' to save your changes, then retry the update", repoPath),
 		})
 		return
 	}
