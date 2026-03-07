@@ -61,7 +61,7 @@ export function UpdateIndicator() {
         <FeatureHintTooltip
           message="An update is available — click here to see what's new and how to update"
           onDismiss={updateHint.dismiss}
-          placement="bottom"
+          placement="bottom-right"
         />
       )}
 
