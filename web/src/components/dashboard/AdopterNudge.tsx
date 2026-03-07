@@ -74,7 +74,7 @@ export function AdopterNudge() {
   }
 
   return (
-    <div className="mb-4 rounded-xl border border-pink-500/20 bg-gradient-to-br from-pink-500/5 via-rose-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+    <div className="mb-4 rounded-xl border border-pink-500/20 bg-gradient-to-br from-pink-500/5 via-pink-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-pink-500/10 flex-shrink-0 mt-0.5">

@@ -93,10 +93,10 @@ export function DemoToLocalCTA() {
     return (
       <>
         <div className="mb-4 flex items-center gap-2 text-xs animate-in fade-in duration-300">
-          <Code2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+          <Code2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
           <button
             onClick={handleDevSetup}
-            className="text-emerald-400 hover:text-emerald-300 transition-colors"
+            className="text-green-400 hover:text-green-300 transition-colors"
           >
             Developer setup &amp; advanced options
           </button>

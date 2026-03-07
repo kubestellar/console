@@ -105,7 +105,7 @@ export function PostConnectBanner({
   ]
 
   return (
-    <div className="mb-4 rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/5 via-emerald-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+    <div className="mb-4 rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/5 via-green-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <Rocket className="w-4 h-4 text-green-400" />

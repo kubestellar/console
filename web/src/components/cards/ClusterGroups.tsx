@@ -666,7 +666,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
               className={cn(
                 'w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors',
                 (!labelSelector.trim() && filters.length === 0)
-                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                  ? 'bg-secondary text-muted-foreground cursor-not-allowed'
                   : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
               )}
             >
@@ -695,7 +695,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
             ? kind === 'dynamic'
               ? 'bg-purple-500 text-white hover:bg-purple-600'
               : 'bg-blue-500 text-white hover:bg-blue-600'
-            : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+            : 'bg-secondary text-muted-foreground cursor-not-allowed'
         )}
       >
         {kind === 'dynamic' ? t('cards:clusterGroups.createDynamicGroup') : t('cards:clusterGroups.createGroup')}
@@ -958,7 +958,7 @@ function AIAssistant({
         className={cn(
           'w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors',
           loading || !prompt.trim()
-            ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+            ? 'bg-secondary text-muted-foreground cursor-not-allowed'
             : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
         )}
       >
@@ -1123,7 +1123,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
             className={cn(
               'w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors',
               (!labelSelector.trim() && filters.length === 0)
-                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                ? 'bg-secondary text-muted-foreground cursor-not-allowed'
                 : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
             )}
           >
