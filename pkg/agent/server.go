@@ -3956,11 +3956,12 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 
 		if tnPath, err := exec.LookPath("terminal-notifier"); err == nil {
 			cmd := exec.Command(tnPath,
-				"-title", title,
+				"-title", "KubeStellar Console",
+				"-subtitle", title,
 				"-message", message,
 				"-sound", "Glass",
 				"-open", consoleURL,
-				"-appIcon", "/tmp/kubestellar-console/web/public/kubestellar-logo.svg",
+				"-sender", "com.google.Chrome",
 			)
 			if err := cmd.Run(); err != nil {
 				log.Printf("[DeviceTracker] terminal-notifier failed: %v, falling back to osascript", err)
