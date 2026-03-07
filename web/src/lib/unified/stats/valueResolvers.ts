@@ -340,7 +340,7 @@ export function formatNumber(value: number): string | number {
  * Format bytes to human-readable
  */
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
 
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
   const exp = Math.floor(Math.log(bytes) / Math.log(1024))

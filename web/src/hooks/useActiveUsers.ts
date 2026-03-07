@@ -280,6 +280,13 @@ export function useActiveUsers() {
       stateSubscribers.delete(handleStateUpdate)
       window.removeEventListener('kc-demo-mode-change', handleDemoChange)
       document.removeEventListener('visibilitychange', handleVisibility)
+
+      // Stop polling when no subscribers remain to prevent leaked intervals
+      if (subscribers.size === 0 && pollInterval) {
+        clearInterval(pollInterval)
+        pollInterval = null
+        pollStarted = false
+      }
     }
   }, [])
 

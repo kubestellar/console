@@ -50,7 +50,7 @@ function parseK8sQuantity(value: string): number {
  * Format bytes to human-readable string (GB, TB, MB, etc.)
  */
 export function formatBytes(bytes: number, decimals = 1): string {
-  if (bytes === 0) return '0 B'
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
 
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']

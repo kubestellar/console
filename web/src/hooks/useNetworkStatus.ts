@@ -5,21 +5,36 @@ const RECONNECTED_DISPLAY_MS = 3000 // Show "reconnected" state for 3 seconds
 // Global state for network status to ensure consistency across components
 let globalOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 const listeners = new Set<(online: boolean) => void>()
+let globalListenersAttached = false
 
 function notifyListeners() {
   listeners.forEach(listener => listener(globalOnline))
 }
 
-// Initialize browser online/offline listeners at module load
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    globalOnline = true
-    notifyListeners()
-  })
-  window.addEventListener('offline', () => {
-    globalOnline = false
-    notifyListeners()
-  })
+// Named handlers so they can be removed with removeEventListener
+function handleOnline() {
+  globalOnline = true
+  notifyListeners()
+}
+
+function handleOffline() {
+  globalOnline = false
+  notifyListeners()
+}
+
+// Attach global browser listeners only while there are active subscribers
+function attachGlobalListeners() {
+  if (globalListenersAttached || typeof window === 'undefined') return
+  globalListenersAttached = true
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
+}
+
+function detachGlobalListeners() {
+  if (!globalListenersAttached || typeof window === 'undefined') return
+  globalListenersAttached = false
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
 }
 
 /**
@@ -56,6 +71,7 @@ export function useNetworkStatus() {
       }
     }
 
+    attachGlobalListeners()
     listeners.add(handleChange)
     setIsOnline(globalOnline)
 
@@ -63,6 +79,10 @@ export function useNetworkStatus() {
       listeners.delete(handleChange)
       if (wasOfflineTimerRef.current) {
         clearTimeout(wasOfflineTimerRef.current)
+      }
+      // Remove global event listeners when no subscribers remain
+      if (listeners.size === 0) {
+        detachGlobalListeners()
       }
     }
   }, [])
