@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
 import { useTranslation } from 'react-i18next'
 
@@ -208,7 +209,7 @@ export function GitHubInviteButton({ onClick }: { onClick: () => void }) {
     >
       <Github className="w-4 h-4" />
       Invite Friend
-      <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-xs">+500</span>
+      <StatusBadge color="yellow">+500</StatusBadge>
     </button>
   )
 }

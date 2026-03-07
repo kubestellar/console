@@ -3,6 +3,7 @@ import { Box, ChevronRight, Server } from 'lucide-react'
 import { useGPUNodes, useAllPods } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import { CardClusterFilter, CardSearchInput } from '../../lib/cards'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
@@ -166,9 +167,9 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+          <StatusBadge color="purple">
             {t('gpuNamespaceAllocations.gpusAcrossNamespaces', { gpus: totalGPUs, count: namespaceAllocations.length })}
-          </span>
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-2">
           {filters.localClusterFilter && filters.localClusterFilter.length > 0 && (

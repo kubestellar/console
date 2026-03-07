@@ -3,6 +3,7 @@ import { AlertTriangle, Info, AlertCircle, Clock, ChevronRight } from 'lucide-re
 import { useClusters, useWarningEvents, useNamespaces, type ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import {
   useCardData, useCascadingSelection, commonComparators,
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
@@ -177,9 +178,9 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+            <StatusBadge color="orange">
               {t('namespaceEvents.nEvents', { count: totalItems })}
-            </span>
+            </StatusBadge>
           )}
         </div>
         <CardControlsRow

@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { Coins, Trophy, Gift, Github, Bug, Lightbulb, Star, ChevronRight, GitPullRequest, GitMerge, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS, ACHIEVEMENTS } from '../../hooks/useRewards'
 import { GitHubInviteModal, GitHubInviteButton } from './GitHubInvite'
 import { LinkedInShareCard } from './LinkedInShare'
@@ -86,9 +87,7 @@ export function RewardsPanel() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <h4 className="font-medium text-foreground">Report Bugs</h4>
-                  <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-xs">
-                    +{REWARD_ACTIONS.bug_report.coins} each
-                  </span>
+                  <StatusBadge color="yellow">+{REWARD_ACTIONS.bug_report.coins} each</StatusBadge>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Found a bug? Report it on GitHub to earn coins!
@@ -109,9 +108,7 @@ export function RewardsPanel() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <h4 className="font-medium text-foreground">Suggest Features</h4>
-                  <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-xs">
-                    +{REWARD_ACTIONS.feature_suggestion.coins} each
-                  </span>
+                  <StatusBadge color="yellow">+{REWARD_ACTIONS.feature_suggestion.coins} each</StatusBadge>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Have an idea? Submit feature requests to earn coins!
@@ -151,34 +148,29 @@ export function RewardsPanel() {
             </div>
             <div className="flex flex-wrap gap-2">
               {githubRewards.breakdown.prs_merged > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-xs">
-                  <GitMerge className="w-3 h-3" />
+                <StatusBadge color="purple" rounded="full" icon={<GitMerge className="w-3 h-3" />}>
                   {githubRewards.breakdown.prs_merged} Merged
-                </span>
+                </StatusBadge>
               )}
               {githubRewards.breakdown.prs_opened > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
-                  <GitPullRequest className="w-3 h-3" />
+                <StatusBadge color="green" rounded="full" icon={<GitPullRequest className="w-3 h-3" />}>
                   {githubRewards.breakdown.prs_opened} PRs
-                </span>
+                </StatusBadge>
               )}
               {githubRewards.breakdown.bug_issues > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs">
-                  <Bug className="w-3 h-3" />
+                <StatusBadge color="red" rounded="full" icon={<Bug className="w-3 h-3" />}>
                   {githubRewards.breakdown.bug_issues} Bugs
-                </span>
+                </StatusBadge>
               )}
               {githubRewards.breakdown.feature_issues > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-xs">
-                  <Lightbulb className="w-3 h-3" />
+                <StatusBadge color="yellow" rounded="full" icon={<Lightbulb className="w-3 h-3" />}>
                   {githubRewards.breakdown.feature_issues} Features
-                </span>
+                </StatusBadge>
               )}
               {githubRewards.breakdown.other_issues > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-500/20 text-muted-foreground text-xs">
-                  <AlertCircle className="w-3 h-3" />
+                <StatusBadge color="purple" rounded="full" className="!bg-gray-500/20 !text-muted-foreground" icon={<AlertCircle className="w-3 h-3" />}>
                   {githubRewards.breakdown.other_issues} Issues
-                </span>
+                </StatusBadge>
               )}
             </div>
           </div>

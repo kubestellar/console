@@ -6,6 +6,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
@@ -513,7 +514,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                       </span>
                       <span className="flex-1">{CLOUD_PRICING[provider].name}</span>
                       {provider === detectedProvider && (
-                        <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{t('cards:clusterCosts.detected')}</span>
+                        <StatusBadge color="yellow" size="xs">{t('cards:clusterCosts.detected')}</StatusBadge>
                       )}
                     </button>
                   ))}
@@ -607,9 +608,9 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                         {t('common:common.cpu')} ${p.cpu.toFixed(3)} • {t('common:common.memory')} ${p.memory.toFixed(4)} • {t('cards:clusterCosts.gpu')} ${p.gpu.toFixed(2)}
                       </span>
                       {count > 0 && (
-                        <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                        <StatusBadge color="purple" size="xs">
                           {count}
-                        </span>
+                        </StatusBadge>
                       )}
                       {p.pricingUrl && (
                         <a

@@ -4,6 +4,7 @@
  */
 
 import { AlertTriangle, AlertCircle } from 'lucide-react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
@@ -196,9 +197,9 @@ export function PolicyViolations({ config: _config }: CardConfig) {
               <p className="text-sm font-medium text-foreground">{v.policy}</p>
               <p className="text-xs text-muted-foreground">{v.tool}</p>
             </div>
-            <span className="px-2 py-1 rounded bg-orange-500/20 text-orange-400 text-xs font-medium">
+            <StatusBadge color="orange" size="md">
               {v.count}
-            </span>
+            </StatusBadge>
           </div>
         ))}
       </div>

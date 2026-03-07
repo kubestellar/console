@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Moon, Sun, Check, Palette, ChevronDown, Trash2 } from 'lucide-react'
+import { StatusBadge } from '../../../components/ui/StatusBadge'
 import type { Theme } from '../../../lib/themes'
 import { themeGroups, getCustomThemes, removeCustomTheme } from '../../../lib/themes'
 import { ConfirmDialog } from '../../../lib/modals'
@@ -311,19 +312,19 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
         {/* Theme Features */}
         <div className="flex flex-wrap gap-2 pt-2">
           {currentTheme.starField && (
-            <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400">
-              ✨ Star Field
-            </span>
+            <StatusBadge color="purple">
+              Star Field
+            </StatusBadge>
           )}
           {currentTheme.glowEffects && (
-            <span className="px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400">
-              💫 Glow Effects
-            </span>
+            <StatusBadge color="blue">
+              Glow Effects
+            </StatusBadge>
           )}
           {currentTheme.gradientAccents && (
-            <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400">
-              🌈 Gradients
-            </span>
+            <StatusBadge color="purple">
+              Gradients
+            </StatusBadge>
           )}
           <span className="px-2 py-1 text-xs rounded bg-secondary text-muted-foreground">
             Font: {currentTheme.font.family.split(',')[0].replace(/'/g, '')}

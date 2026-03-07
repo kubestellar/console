@@ -3,6 +3,7 @@ import {
   AlertCircle, Play, Server
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { CardClusterFilter, CardSearchInput } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -59,13 +60,13 @@ export function MLJobs({ config: _config }: MLJobsProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex items-center gap-1"><Play className="w-2.5 h-2.5" /> Running</span>
+        return <StatusBadge color="green" icon={<Play className="w-2.5 h-2.5" />}>Running</StatusBadge>
       case 'queued':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> Queued</span>
+        return <StatusBadge color="yellow" icon={<Clock className="w-2.5 h-2.5" />}>Queued</StatusBadge>
       case 'completed':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1"><CheckCircle className="w-2.5 h-2.5" /> Done</span>
+        return <StatusBadge color="blue" icon={<CheckCircle className="w-2.5 h-2.5" />}>Done</StatusBadge>
       case 'failed':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"><XCircle className="w-2.5 h-2.5" /> Failed</span>
+        return <StatusBadge color="red" icon={<XCircle className="w-2.5 h-2.5" />}>Failed</StatusBadge>
       default:
         return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">{status}</span>
     }
@@ -92,9 +93,9 @@ export function MLJobs({ config: _config }: MLJobsProps) {
               {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
-          <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+          <StatusBadge color="yellow">
             {jobs.filter(j => j.status === 'running').length} running
-          </span>
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-2">
           <CardClusterFilter

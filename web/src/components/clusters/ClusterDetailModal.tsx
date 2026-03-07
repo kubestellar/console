@@ -12,6 +12,7 @@ import { NamespaceResources } from './components'
 import { CPUDetailModal, MemoryDetailModal, StorageDetailModal, GPUDetailModal } from './ResourceDetailModals'
 import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, getProviderLabel, CloudProvider as CloudProviderType } from '../ui/CloudProviderIcon'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
@@ -265,17 +266,11 @@ After I approve, help me execute the repairs step by step.`,
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             {isUnreachable ? (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 text-yellow-400" title={t('clusterDetail.offlineStatus')}>
-                <WifiOff className="w-4 h-4" />
-              </span>
+              <StatusBadge color="yellow" icon={<WifiOff className="w-4 h-4" />} className="px-2 py-1" />
             ) : isHealthy ? (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/20 text-green-400" title={t('clusterDetail.healthy')}>
-                <CheckCircle className="w-4 h-4" />
-              </span>
+              <StatusBadge color="green" icon={<CheckCircle className="w-4 h-4" />} className="px-2 py-1" />
             ) : (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/20 text-red-400" title={t('clusterDetail.unhealthy')}>
-                <AlertTriangle className="w-4 h-4" />
-              </span>
+              <StatusBadge color="red" icon={<AlertTriangle className="w-4 h-4" />} className="px-2 py-1" />
             )}
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
@@ -364,9 +359,9 @@ After I approve, help me execute the repairs step by step.`,
               <Wrench className="w-3.5 h-3.5" />
               {t('clusterDetail.repair')}
               {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
-                <span className="px-1.5 py-0.5 rounded bg-red-500/30 text-xs">
+                <StatusBadge color="red" size="xs">
                   {podIssues.length + clusterDeploymentIssues.length}
-                </span>
+                </StatusBadge>
               )}
             </button>
             <button
@@ -603,7 +598,7 @@ After I approve, help me execute the repairs step by step.`,
                       >
                         <div className="flex items-center gap-2">
                           {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                          <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><FolderOpen className="w-3 h-3" />{t('clusterDetail.ns')}</span>
+                          <StatusBadge color="blue" size="xs" icon={<FolderOpen className="w-3 h-3" />}>{t('clusterDetail.ns')}</StatusBadge>
                           <span className="font-mono text-sm text-foreground">{ns.name}</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
@@ -675,14 +670,12 @@ After I approve, help me execute the repairs step by step.`,
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium flex-shrink-0">
-                        <Box className="w-3 h-3" />{t('clusterDetail.pod')}
-                      </span>
+                      <StatusBadge color="blue" size="xs" icon={<Box className="w-3 h-3" />} className="flex-shrink-0">{t('clusterDetail.pod')}</StatusBadge>
                       <span className="font-medium text-foreground truncate">{issue.name}</span>
                       <span className="text-xs text-muted-foreground flex-shrink-0">({issue.namespace})</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">{issue.status}</span>
+                      <StatusBadge color="red" size="xs">{issue.status}</StatusBadge>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
                   </div>
@@ -698,16 +691,14 @@ After I approve, help me execute the repairs step by step.`,
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium flex-shrink-0">
-                        <Layers className="w-3 h-3" />{t('clusterDetail.deploy')}
-                      </span>
+                      <StatusBadge color="purple" size="xs" icon={<Layers className="w-3 h-3" />} className="flex-shrink-0">{t('clusterDetail.deploy')}</StatusBadge>
                       <span className="font-medium text-foreground truncate">{issue.name}</span>
                       <span className="text-xs text-muted-foreground flex-shrink-0">({issue.namespace})</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">
+                      <StatusBadge color="red" size="xs">
                         {issue.readyReplicas}/{issue.replicas} ready
-                      </span>
+                      </StatusBadge>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </div>
                   </div>

@@ -3,6 +3,7 @@ import { Zap, Server, Layers, RefreshCw, Cpu, AlertCircle, HardDrive, CircuitBoa
 import { GPUNode, NVIDIAOperatorStatus } from '../../../hooks/useMCP'
 import { BaseModal } from '../../../lib/modals'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 interface GPUDetailModalProps {
   gpuNodes: GPUNode[]
@@ -453,7 +454,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                             <div className="flex items-center gap-1">
                               {node.name}
                               {node.migCapable && (
-                                <span className="px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 text-2xs">MIG</span>
+                                <StatusBadge color="purple" size="xs">MIG</StatusBadge>
                               )}
                             </div>
                           </td>

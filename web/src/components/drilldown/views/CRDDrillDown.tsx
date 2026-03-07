@@ -9,6 +9,7 @@ import {
   FileText, Code, Database, List
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -492,10 +493,10 @@ Please:
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">{version.name}</span>
                         {version.storage && (
-                          <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400">{t('common.storage')}</span>
+                          <StatusBadge color="blue" size="xs">{t('common.storage')}</StatusBadge>
                         )}
                         {version.deprecated && (
-                          <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">Deprecated</span>
+                          <StatusBadge color="yellow" size="xs">Deprecated</StatusBadge>
                         )}
                       </div>
                       <span className={cn(

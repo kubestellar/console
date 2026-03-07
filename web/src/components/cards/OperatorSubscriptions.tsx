@@ -3,6 +3,7 @@ import { Clock, AlertTriangle, Settings, ChevronRight } from 'lucide-react'
 import { useClusters, useOperatorSubscriptions, OperatorSubscription } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import {
@@ -151,9 +152,9 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {pendingCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+            <StatusBadge color="orange">
               {t('operatorSubscriptions.nPending', { count: pendingCount })}
-            </span>
+            </StatusBadge>
           )}
         </div>
         <CardControlsRow
@@ -190,13 +191,13 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
             {localClusterFilter.length === 1 ? (
               <ClusterBadge cluster={localClusterFilter[0]} />
             ) : localClusterFilter.length > 1 ? (
-              <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+              <StatusBadge color="blue" size="md" rounded="full">
                 {t('operatorSubscriptions.nClustersSelected', { count: localClusterFilter.length })}
-              </span>
+              </StatusBadge>
             ) : (
-              <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+              <StatusBadge color="blue" size="md" rounded="full">
                 {t('operatorSubscriptions.allClusters', { count: availableClusters.length })}
-              </span>
+              </StatusBadge>
             )}
           </div>
 

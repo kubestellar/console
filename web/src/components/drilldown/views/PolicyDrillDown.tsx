@@ -10,6 +10,7 @@ import {
   FileText, AlertCircle
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -440,8 +441,8 @@ Please:
                     <div key={i} className="p-3 rounded-lg bg-secondary/50 flex items-center justify-between">
                       <span className="text-sm font-medium text-foreground">{rule.name}</span>
                       <div className="flex gap-2">
-                        {rule.validate && <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400">Validate</span>}
-                        {rule.mutate && <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">Mutate</span>}
+                        {rule.validate && <StatusBadge color="blue" size="xs">Validate</StatusBadge>}
+                        {rule.mutate && <StatusBadge color="purple" size="xs">Mutate</StatusBadge>}
                       </div>
                     </div>
                   ))}

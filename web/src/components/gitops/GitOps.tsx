@@ -15,6 +15,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
+import { StatusBadge } from '../ui/StatusBadge'
 
 // GitOps app configuration (repos to monitor)
 interface GitOpsAppConfig {
@@ -291,7 +292,7 @@ export function GitOps() {
       {/* Apps List */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-sm font-medium text-muted-foreground">{t('gitops.applications')}</span>
-        <span className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{t('common:common.demo')}</span>
+        <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>
       </div>
       {filteredApps.length === 0 ? (
         <div className="text-center py-12">

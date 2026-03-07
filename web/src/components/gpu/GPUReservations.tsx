@@ -48,6 +48,7 @@ import type { GPUUtilizationSnapshot } from '../../hooks/useGPUUtilizations'
 import { Sparkline } from '../charts/Sparkline'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import { CARD_COMPONENTS, getDefaultCardWidth } from '../cards/cardRegistry'
+import { StatusBadge } from '../ui/StatusBadge'
 import { CardWrapper, CARD_TITLES } from '../cards/CardWrapper'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
@@ -625,10 +626,9 @@ export function GPUReservations() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">{t('gpuReservations.title')}</h1>
           {effectiveDemoMode && (
-            <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-              <FlaskConical className="w-3 h-3" />
+            <StatusBadge color="yellow" variant="outline" rounded="full" icon={<FlaskConical className="w-3 h-3" />}>
               {t('gpuReservations.demo')}
-            </span>
+            </StatusBadge>
           )}
         </div>
         <div className="text-muted-foreground">{t('gpuReservations.subtitle')}</div>
@@ -670,9 +670,9 @@ export function GPUReservations() {
               <Icon className="w-4 h-4" aria-hidden="true" />
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="px-1.5 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-400">
+                <StatusBadge color="purple" rounded="full">
                   {tab.count}
-                </span>
+                </StatusBadge>
               )}
             </button>
           )

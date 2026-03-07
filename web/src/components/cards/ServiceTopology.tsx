@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, ArrowRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import type { TopologyNode, TopologyEdge, TopologyHealthStatus } from '../../types/topology'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -363,15 +364,15 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
           {selectedNodeData.metadata && (
             <div className="flex flex-wrap gap-1 mt-1">
               {selectedNodeData.metadata.exported && (
-                <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[9px]">{t('serviceTopology.exported')}</span>
+                <StatusBadge color="cyan" size="xs">{t('serviceTopology.exported')}</StatusBadge>
               )}
               {selectedNodeData.metadata.imported && (
-                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[9px]">{t('serviceTopology.imported')}</span>
+                <StatusBadge color="blue" size="xs">{t('serviceTopology.imported')}</StatusBadge>
               )}
               {selectedNodeData.metadata.gatewayClass && (
-                <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 text-[9px]">
+                <StatusBadge color="purple" size="xs">
                   {selectedNodeData.metadata.gatewayClass as string}
-                </span>
+                </StatusBadge>
               )}
               {typeof selectedNodeData.metadata.endpoints === 'number' && (
                 <span className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground text-[9px]">

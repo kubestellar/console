@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
@@ -288,9 +289,9 @@ export function ReplicaSetDrillDown({ data }: Props) {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(labels).slice(0, 8).map(([key, value]) => (
-                    <span key={key} className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 font-mono">
+                    <StatusBadge key={key} color="blue" size="xs" className="font-mono">
                       {key}={value}
-                    </span>
+                    </StatusBadge>
                   ))}
                   {Object.keys(labels).length > 8 && (
                     <span className="text-xs text-muted-foreground">+{Object.keys(labels).length - 8} more</span>

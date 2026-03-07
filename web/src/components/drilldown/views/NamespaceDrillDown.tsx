@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react'
 import { usePodIssues, useDeploymentIssues, useEvents } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -78,9 +79,9 @@ export function NamespaceDrillDown({ data }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-foreground">{issue.name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400">
+                      <StatusBadge color="orange" size="xs">
                         {issue.readyReplicas}/{issue.replicas} ready
-                      </span>
+                      </StatusBadge>
                     </div>
                     {issue.reason && (
                       <div className="text-sm text-muted-foreground">Reason: {issue.reason}</div>
@@ -112,9 +113,9 @@ export function NamespaceDrillDown({ data }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-foreground">{issue.name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
+                      <StatusBadge color="red" size="xs">
                         {issue.status}
-                      </span>
+                      </StatusBadge>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{issue.restarts} restarts</span>
@@ -123,9 +124,9 @@ export function NamespaceDrillDown({ data }: Props) {
                     {issue.issues.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {issue.issues.map((iss, j) => (
-                          <span key={j} className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
+                          <StatusBadge key={j} color="red" size="xs">
                             {iss}
-                          </span>
+                          </StatusBadge>
                         ))}
                       </div>
                     )}

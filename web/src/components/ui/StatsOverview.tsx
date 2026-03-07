@@ -8,6 +8,7 @@ import {
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
   List, DollarSign, ChevronDown, ChevronRight, FlaskConical,
 } from 'lucide-react'
+import { StatusBadge } from './StatusBadge'
 import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
@@ -220,10 +221,9 @@ export function StatsOverview({
             </div>
           )}
           {isDemoData && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 text-2xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-              <FlaskConical className="w-2.5 h-2.5" />
+            <StatusBadge color="yellow" size="xs" variant="outline" rounded="full" icon={<FlaskConical className="w-2.5 h-2.5" />}>
               {t('statsOverview.demo')}
-            </span>
+            </StatusBadge>
           )}
           {lastUpdated && (
             <span className="text-xs text-muted-foreground/60">

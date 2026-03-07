@@ -1,5 +1,6 @@
 import { ExternalLink, AlertCircle } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { DEMO_NOTEBOOKS, useDemoData } from './shared'
@@ -50,9 +51,9 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">{t('common.active')}</span>
+        return <StatusBadge color="green">{t('common.active')}</StatusBadge>
       case 'idle':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Idle</span>
+        return <StatusBadge color="yellow">Idle</StatusBadge>
       case 'stopped':
         return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">Stopped</span>
       default:
@@ -74,9 +75,9 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+        <StatusBadge color="blue">
           {notebooks.filter(n => n.status === 'running').length} active
-        </span>
+        </StatusBadge>
         <CardControlsRow
           cardControls={{
             limit: itemsPerPage,

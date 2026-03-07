@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { Activity, ChevronDown, ChevronRight, Settings, FlaskConical } from 'lucide-react'
+import { StatusBadge } from '../../../components/ui/StatusBadge'
 import type { UnifiedStatsSectionProps, UnifiedStatBlockConfig, StatBlockValue } from '../types'
 import { UnifiedStatBlock } from './UnifiedStatBlock'
 import { resolveStatValue } from './valueResolvers'
@@ -145,10 +146,9 @@ export function UnifiedStatsSection({
 
           {/* Demo indicator */}
           {isDemoData && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 text-2xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-              <FlaskConical className="w-2.5 h-2.5" />
+            <StatusBadge color="yellow" size="xs" variant="outline" rounded="full" icon={<FlaskConical className="w-2.5 h-2.5" />}>
               Demo
-            </span>
+            </StatusBadge>
           )}
 
           {/* Last updated */}

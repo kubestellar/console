@@ -7,6 +7,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
@@ -271,9 +272,9 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+            <StatusBadge color="purple">
               {t('helmHistory.nRevisions', { count: totalItems })}
-            </span>
+            </StatusBadge>
           )}
         </div>
         <CardControlsRow
@@ -410,9 +411,9 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-foreground">{t('helmHistory.rev', { revision: entry.revision })}</span>
                               {isCurrent && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                                <StatusBadge color="green">
                                   {t('helmHistory.current')}
-                                </span>
+                                </StatusBadge>
                               )}
                             </div>
                             <div className="flex items-center gap-2">

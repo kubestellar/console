@@ -7,6 +7,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, ChevronRight, Sparkles, Settings2, Zap } from 'lucide-react'
+import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
@@ -418,15 +419,14 @@ export function LLMdAIInsights() {
 
         <div className="flex items-center gap-2">
           {selectedStack && !shouldUseDemoData && (
-            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded truncate max-w-[100px]" title={selectedStack.name}>
+            <StatusBadge color="purple" className="truncate max-w-[100px]" title={selectedStack.name}>
               {selectedStack.name}
-            </span>
+            </StatusBadge>
           )}
           {showDemoBadge && (
-            <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded flex items-center gap-1">
-              <Sparkles size={10} />
+            <StatusBadge color="yellow" icon={<Sparkles size={10} />}>
               {t('common:common.demo')}
-            </span>
+            </StatusBadge>
           )}
         </div>
       </div>

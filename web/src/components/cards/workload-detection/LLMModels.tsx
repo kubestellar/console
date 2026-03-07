@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Layers, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCachedLLMdModels } from '../../../hooks/useCachedData'
@@ -74,13 +75,13 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'loaded':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Loaded</span>
+        return <StatusBadge color="green">Loaded</StatusBadge>
       case 'downloading':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Downloading</span>
+        return <StatusBadge color="blue" icon={<RefreshCw className="w-2.5 h-2.5 animate-spin" />}>Downloading</StatusBadge>
       case 'stopped':
         return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">Stopped</span>
       case 'error':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">{t('common.error')}</span>
+        return <StatusBadge color="red">{t('common.error')}</StatusBadge>
       default:
         return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground">{status}</span>
     }
@@ -108,9 +109,9 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
             showLabel={true}
             staleThresholdMinutes={5}
           />
-          <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+          <StatusBadge color="cyan">
             {models.filter(m => m.status === 'loaded').length} loaded
-          </span>
+          </StatusBadge>
         </div>
         <CardControlsRow
           clusterIndicator={

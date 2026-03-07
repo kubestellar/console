@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, ChevronDown, ChevronUp, X, Plus, AlertTriangle, Info, Lightbulb } from 'lucide-react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardRecommendations'
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
 import { AI_THINKING_DELAY_MS } from '../../lib/constants/network'
@@ -134,9 +135,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             )
           })}
           {highPriorityCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
+            <StatusBadge color="red" size="xs" rounded="full">
               {t('dashboard.recommendations.critical', { count: highPriorityCount })}
-            </span>
+            </StatusBadge>
           )}
         </div>
       </div>
@@ -153,9 +154,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             {t('dashboard.recommendations.ai')}
           </span>
           {highPriorityCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
+            <StatusBadge color="red" size="xs" rounded="full">
               {t('dashboard.recommendations.critical', { count: highPriorityCount })}
-            </span>
+            </StatusBadge>
           )}
           {visibleRecommendations.length > 6 && (
             <span className="text-2xs text-muted-foreground">

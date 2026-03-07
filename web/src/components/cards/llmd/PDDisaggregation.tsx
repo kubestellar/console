@@ -9,6 +9,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Split, ArrowRight, Cpu, Zap, Clock, Activity, AlertCircle } from 'lucide-react'
+import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
@@ -351,9 +352,9 @@ export function PDDisaggregation() {
             </span>
           )}
           {isDemoMode && (
-            <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
+            <StatusBadge color="yellow">
               {t('common:common.demo')}
-            </span>
+            </StatusBadge>
           )}
         </div>
       </div>

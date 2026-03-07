@@ -4,6 +4,7 @@ import type { SecurityIssue } from '../../hooks/useMCP'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
@@ -238,14 +239,14 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {highCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={t('securityIssues.highSeverityTitle', { count: highCount })}>
+            <StatusBadge color="red" title={t('securityIssues.highSeverityTitle', { count: highCount })}>
               {highCount} {t('securityIssues.highLabel')}
-            </span>
+            </StatusBadge>
           )}
           {mediumCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400" title={t('securityIssues.mediumSeverityTitle', { count: mediumCount })}>
+            <StatusBadge color="orange" title={t('securityIssues.mediumSeverityTitle', { count: mediumCount })}>
               {mediumCount} {t('securityIssues.medLabel')}
-            </span>
+            </StatusBadge>
           )}
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">

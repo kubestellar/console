@@ -7,6 +7,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -243,9 +244,9 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
                     <div className="flex items-center gap-2 min-w-0">
                       <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                       <span className="text-sm text-foreground truncate min-w-0 flex-1">{issue.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 shrink-0">
+                      <StatusBadge color="red" className="shrink-0">
                         {issue.status}
-                      </span>
+                      </StatusBadge>
                     </div>
                   </div>
                 ))}

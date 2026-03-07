@@ -4,6 +4,7 @@ import { SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput,CardControlsRow,CardPaginationFooter,CardAIActions } from '../../../lib/cards/CardComponents'
 import { useCardLoadingState } from '../CardDataContext'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useCrossplaneManagedResources, type CrossplaneManagedResource } from '../../../hooks/mcp/crossplane'
 
 type ManagedResourceView = {
@@ -142,9 +143,9 @@ export function CrossplaneManagedResources() {
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+        <StatusBadge color="purple">
           {t('crossplaneManagedResources.resourceCount', { count: rawResources.length })}
-        </span>
+        </StatusBadge>
         {isRefreshing && (
           <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
         )}

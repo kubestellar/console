@@ -33,6 +33,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
@@ -302,10 +303,9 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
         <span className={cn('text-sm font-medium flex-1 flex items-center gap-1.5', color.text)}>
           {group.name}
           {isDynamic && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
-              <Zap className="w-2.5 h-2.5" />
+            <StatusBadge color="purple" size="xs" variant="outline" rounded="full" icon={<Zap className="w-2.5 h-2.5" />}>
               {t('cards:clusterGroups.dynamic')}
-            </span>
+            </StatusBadge>
           )}
         </span>
 

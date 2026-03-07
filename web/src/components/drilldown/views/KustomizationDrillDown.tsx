@@ -9,6 +9,7 @@ import {
   FileText, GitBranch, Clock, Package
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -312,9 +313,9 @@ Please:
           {/* Status badges */}
           <div className="flex items-center gap-2">
             {suspended && (
-              <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+              <StatusBadge color="yellow" variant="outline">
                 Suspended
-              </span>
+              </StatusBadge>
             )}
             <span className={cn('px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1', statusStyle.bg, statusStyle.text, 'border', statusStyle.border)}>
               <StatusIcon className="w-3 h-3" />

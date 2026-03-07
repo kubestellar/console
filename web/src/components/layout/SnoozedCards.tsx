@@ -5,6 +5,7 @@ import { useSnoozedCards, formatTimeRemaining, SnoozedSwap } from '../../hooks/u
 import { useSnoozedRecommendations, formatElapsedTime, SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import { useSnoozedMissions, SnoozedMission, formatTimeRemaining as formatMissionTimeRemaining } from '../../hooks/useSnoozedMissions'
 import { MissionType } from '../../hooks/useMissionSuggestions'
+import { StatusBadge } from '../ui/StatusBadge'
 import { cn } from '../../lib/cn'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 
@@ -93,9 +94,7 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {t('sidebar.snoozedActions')}
         </h4>
-        <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">
-          {snoozedMissions.length}
-        </span>
+        <StatusBadge color="purple" className="ml-auto">{snoozedMissions.length}</StatusBadge>
       </div>
       <div className="space-y-2">
         {snoozedMissions.map((mission) => (
@@ -118,9 +117,7 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {t('sidebar.snoozedRecommendations')}
         </h4>
-        <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">
-          {snoozedRecommendations.length}
-        </span>
+        <StatusBadge color="yellow" className="ml-auto">{snoozedRecommendations.length}</StatusBadge>
       </div>
       <div className="space-y-2">
         {snoozedRecommendations.map((rec) => (
@@ -143,9 +140,7 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {t('sidebar.snoozedSwaps')}
         </h4>
-        <span className="ml-auto text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">
-          {snoozedSwaps.length}
-        </span>
+        <StatusBadge color="purple" className="ml-auto">{snoozedSwaps.length}</StatusBadge>
       </div>
       <div className="space-y-2">
         {snoozedSwaps.map((swap) => (

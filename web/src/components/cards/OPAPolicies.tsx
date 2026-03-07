@@ -6,6 +6,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton } 
 import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
@@ -618,9 +619,9 @@ Let's start by discussing what kind of policy I need.`,
       {/* Controls */}
       <div className="flex items-center justify-between mb-3">
         {installedCount > 0 ? (
-          <span className="px-1.5 py-0.5 text-2xs rounded bg-green-500/20 text-green-400">
+          <StatusBadge color="green" size="xs">
             {installedCount} cluster{installedCount !== 1 ? 's' : ''}
-          </span>
+          </StatusBadge>
         ) : <div />}
         <CardControlsRow
           clusterFilter={{

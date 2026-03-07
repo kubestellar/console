@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
 import { useTokenUsage, type TokenCategory } from '../../../hooks/useTokenUsage'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
 import { getSettingsWithHash } from '../../../config/routes'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -66,7 +67,7 @@ export function TokenUsageWidget() {
       >
         <Coins className={cn("w-4 h-4 transition-transform", tokenAnimating && "animate-bounce text-yellow-400 scale-125")} />
         {isDemoData && (
-          <span className="text-xs font-medium px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded" role="img" aria-label="Demo mode active">Demo</span>
+          <StatusBadge color="yellow" role="img" aria-label="Demo mode active">Demo</StatusBadge>
         )}
         <span className="text-xs font-medium hidden sm:inline">{percentage.toFixed(0)}%</span>
         <div className="w-12 h-1.5 bg-secondary rounded-full overflow-hidden hidden sm:block">
@@ -91,9 +92,7 @@ export function TokenUsageWidget() {
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-foreground">Token Usage</h4>
             {isDemoData && (
-              <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded border border-yellow-500/20">
-                Demo Data
-              </span>
+              <StatusBadge color="yellow" variant="outline">Demo Data</StatusBadge>
             )}
           </div>
           {isDemoData && (

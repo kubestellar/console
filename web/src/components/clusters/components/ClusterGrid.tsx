@@ -6,6 +6,7 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { isClusterUnreachable, isClusterLoading } from '../utils'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getProviderColor, getConsoleUrl } from '../../ui/CloudProviderIcon'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 // Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster.
 // Uses refs for condition checks to avoid stale closure issues when refreshing
@@ -258,11 +259,10 @@ const FullClusterCard = memo(function FullClusterCard({
                   </span>
                 )}
                 {cluster.aliases && cluster.aliases.length > 0 && (
-                  <span
-                    className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
-                    title={`Also known as: ${cluster.aliases.join(', ')}`}
-                  >
-                    +{cluster.aliases.length} alias{cluster.aliases.length > 1 ? 'es' : ''}
+                  <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
+                    <StatusBadge color="purple" size="xs" className="flex-shrink-0">
+                      +{cluster.aliases.length} alias{cluster.aliases.length > 1 ? 'es' : ''}
+                    </StatusBadge>
                   </span>
                 )}
                 {isConnected && (cluster.source === 'kubeconfig' || !cluster.source) && (
@@ -466,11 +466,10 @@ const ListClusterCard = memo(function ListClusterCard({
               </span>
             )}
             {cluster.aliases && cluster.aliases.length > 0 && (
-              <span
-                className="text-2xs px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
-                title={`Also known as: ${cluster.aliases.join(', ')}`}
-              >
-                +{cluster.aliases.length}
+              <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
+                <StatusBadge color="purple" size="xs" className="flex-shrink-0">
+                  +{cluster.aliases.length}
+                </StatusBadge>
               </span>
             )}
             {cluster.isCurrent && (
@@ -605,11 +604,10 @@ const CompactClusterCard = memo(function CompactClusterCard({
             {cluster.context || cluster.name.split('/').pop()}
           </span>
           {cluster.aliases && cluster.aliases.length > 0 && (
-            <span
-              className="text-[8px] px-1 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
-              title={`Also known as: ${cluster.aliases.join(', ')}`}
-            >
-              +{cluster.aliases.length}
+            <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
+              <StatusBadge color="purple" size="xs" className="flex-shrink-0">
+                +{cluster.aliases.length}
+              </StatusBadge>
             </span>
           )}
           {cluster.isCurrent && (

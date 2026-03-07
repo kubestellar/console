@@ -13,6 +13,7 @@ import {
   Package,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { StatusBadge } from '../ui/StatusBadge'
 import { ClusterBadge, getClusterInfo } from '../ui/ClusterBadge'
 import { useDeployMissions } from '../../hooks/useDeployMissions'
 import { useClusters } from '../../hooks/useMCP'
@@ -358,9 +359,9 @@ Please:
       <div className="flex items-center justify-between mb-2 shrink-0">
         <div className="flex items-center gap-2">
           {activeMissions.length > 0 ? (
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium">
+            <StatusBadge color="blue" size="xs">
               {activeMissions.length} active
-            </span>
+            </StatusBadge>
           ) : (
             <span className="text-2xs text-muted-foreground">No active</span>
           )}

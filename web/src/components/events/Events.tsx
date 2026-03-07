@@ -14,6 +14,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { getChartColor, getChartColorByName } from '../../lib/chartColors'
+import { StatusBadge } from '../ui/StatusBadge'
 
 // Event-related constants
 const EVENT_LIMIT = 100 // Maximum number of events to fetch
@@ -335,7 +336,7 @@ export function Events() {
                     <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium">{event.reason}</span>
+                        <StatusBadge color="yellow">{event.reason}</StatusBadge>
                         <span className="text-sm text-foreground truncate">{event.object}</span>
                       </div>
                       <div className="text-xs text-muted-foreground truncate mt-0.5">{event.message}</div>

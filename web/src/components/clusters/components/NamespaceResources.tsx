@@ -3,6 +3,7 @@ import { ChevronRight, ChevronDown, Box, Layers, Network, List, GitBranch, Activ
 import { usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, useSecrets, useServiceAccounts, usePVCs } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 type ResourceKind = 'Pod' | 'Deployment' | 'Service' | 'Job' | 'HPA' | 'ConfigMap' | 'Secret' | 'ServiceAccount' | 'PVC'
 
@@ -338,7 +339,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('deployments')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('deployments') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium"><Layers className="w-3 h-3" />Deploy</span>
+                  <StatusBadge color="purple" icon={<Layers className="w-3 h-3" />}>Deploy</StatusBadge>
                   <span className="text-muted-foreground">({deployments.length})</span>
                 </button>
                 {expandedTypes.has('deployments') && (
@@ -391,7 +392,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('pods')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('pods') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium"><Box className="w-3 h-3" />{t('common.pod')}</span>
+                  <StatusBadge color="blue" icon={<Box className="w-3 h-3" />}>{t('common.pod')}</StatusBadge>
                   <span className="text-muted-foreground">Standalone ({podsByDeployment.standalone.length})</span>
                 </button>
                 {expandedTypes.has('pods') && (
@@ -418,7 +419,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('services')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('services') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium"><Network className="w-3 h-3" />Svc</span>
+                  <StatusBadge color="cyan" icon={<Network className="w-3 h-3" />}>Svc</StatusBadge>
                   <span className="text-muted-foreground">({services.length})</span>
                 </button>
                 {expandedTypes.has('services') && (
@@ -445,7 +446,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('jobs')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('jobs') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium"><Briefcase className="w-3 h-3" />Job</span>
+                  <StatusBadge color="yellow" icon={<Briefcase className="w-3 h-3" />}>Job</StatusBadge>
                   <span className="text-muted-foreground">({jobs.length})</span>
                 </button>
                 {expandedTypes.has('jobs') && (
@@ -472,7 +473,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('hpas')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('hpas') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium"><Activity className="w-3 h-3" />HPA</span>
+                  <StatusBadge color="purple" icon={<Activity className="w-3 h-3" />}>HPA</StatusBadge>
                   <span className="text-muted-foreground">({hpas.length})</span>
                 </button>
                 {expandedTypes.has('hpas') && (
@@ -499,7 +500,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('serviceaccounts')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('serviceaccounts') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium"><User className="w-3 h-3" />SA</span>
+                  <StatusBadge color="cyan" icon={<User className="w-3 h-3" />}>SA</StatusBadge>
                   <span className="text-muted-foreground">({serviceAccounts.length})</span>
                 </button>
                 {expandedTypes.has('serviceaccounts') && (
@@ -526,7 +527,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('pvcs')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('pvcs') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium"><HardDrive className="w-3 h-3" />PVC</span>
+                  <StatusBadge color="green" icon={<HardDrive className="w-3 h-3" />}>PVC</StatusBadge>
                   <span className="text-muted-foreground">({pvcs.length})</span>
                 </button>
                 {expandedTypes.has('pvcs') && (
@@ -554,7 +555,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('configmaps')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('configmaps') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-medium"><Settings className="w-3 h-3" />CM</span>
+                  <StatusBadge color="orange" icon={<Settings className="w-3 h-3" />}>CM</StatusBadge>
                   <span className="text-muted-foreground">({configmaps.length})</span>
                 </button>
                 {expandedTypes.has('configmaps') && (
@@ -581,7 +582,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('secrets')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('secrets') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium"><Lock className="w-3 h-3" />Secret</span>
+                  <StatusBadge color="purple" icon={<Lock className="w-3 h-3" />}>Secret</StatusBadge>
                   <span className="text-muted-foreground">({secrets.length})</span>
                 </button>
                 {expandedTypes.has('secrets') && (

@@ -1,5 +1,6 @@
 import { Search, List, GitBranch } from 'lucide-react'
 import { CardControls } from '../../ui/CardControls'
+import { StatusBadge } from '../../ui/StatusBadge'
 import type { MonitorViewMode, ResourceCategory, ResourceHealthStatus } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 
@@ -54,13 +55,13 @@ export function WorkloadMonitorToolbar({
       {/* Top row: summary + controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+          <StatusBadge color="purple">
             {totalItems} resources
-          </span>
+          </StatusBadge>
           {issueCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+            <StatusBadge color="red">
               {issueCount} issue{issueCount !== 1 ? 's' : ''}
-            </span>
+            </StatusBadge>
           )}
         </div>
         <div className="flex items-center gap-2">

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin } from 'lucide-react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
 import { emitFeedbackSubmitted, emitLinkedInShare } from '../../lib/analytics'
@@ -175,9 +176,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 >
                   <Bug className="w-4 h-4" />
                   <span className="text-sm font-medium">Bug Report</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-                    +{REWARD_ACTIONS.bug_report.coins}
-                  </span>
+                  <StatusBadge color="yellow">+{REWARD_ACTIONS.bug_report.coins}</StatusBadge>
                 </button>
                 <button
                   type="button"
@@ -190,9 +189,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 >
                   <Lightbulb className="w-4 h-4" />
                   <span className="text-sm font-medium">Feature Request</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-                    +{REWARD_ACTIONS.feature_suggestion.coins}
-                  </span>
+                  <StatusBadge color="yellow">+{REWARD_ACTIONS.feature_suggestion.coins}</StatusBadge>
                 </button>
               </div>
 
@@ -293,9 +290,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
       >
         <Linkedin className="w-4 h-4" />
         <span>{t('feedback.share')}</span>
-        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-          +{REWARD_ACTIONS.linkedin_share.coins}
-        </span>
+        <StatusBadge color="yellow">+{REWARD_ACTIONS.linkedin_share.coins}</StatusBadge>
       </button>
     )
   }

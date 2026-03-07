@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { CardSearchInput } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
@@ -85,9 +86,9 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+        <StatusBadge color="orange">
           {totalItems} revisions
-        </span>
+        </StatusBadge>
         <div className="flex items-center gap-2">
           <CardControls
             limit={itemsPerPage}

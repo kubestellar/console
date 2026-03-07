@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, Linkedin, Trophy } from 'lucide-react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
@@ -406,9 +407,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
             </p>
           </div>
           {!canPerformActions && (
-            <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-yellow-500/20 text-yellow-400 uppercase tracking-wider">
-              {t('feedback.demo')}
-            </span>
+            <StatusBadge color="yellow" size="xs" className="uppercase tracking-wider">{t('feedback.demo')}</StatusBadge>
           )}
         </div>
         <button
@@ -460,9 +459,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                   ? t('feedback.loginBannerDemo')
                   : t('feedback.loginBannerLocal')}
               </span>
-          <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400">
-            {isDemoModeForced ? t('feedback.loginWithGitHub') : t('feedback.setupOAuth')}
-          </span>
+          <StatusBadge color="yellow">{isDemoModeForced ? t('feedback.loginWithGitHub') : t('feedback.setupOAuth')}</StatusBadge>
         </button>
       )}
 
@@ -562,9 +559,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                                   </span>
                                 )}
                                 {isOwnedByUser && (
-                                  <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-blue-500/20 text-blue-400">
-                                    Yours
-                                  </span>
+                                  <StatusBadge color="blue" size="xs">Yours</StatusBadge>
                                 )}
                                 {/* Unread updates badge with clear button */}
                                 {requestUnreadCount > 0 && (
@@ -959,34 +954,29 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                         <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
                           <div className="flex flex-wrap gap-1.5">
                             {githubRewards.breakdown.prs_merged > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-2xs">
-                                <GitMerge className="w-2.5 h-2.5" />
+                              <StatusBadge color="purple" size="xs" rounded="full" icon={<GitMerge className="w-2.5 h-2.5" />}>
                                 {githubRewards.breakdown.prs_merged} Merged
-                              </span>
+                              </StatusBadge>
                             )}
                             {githubRewards.breakdown.prs_opened > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-2xs">
-                                <GitPullRequest className="w-2.5 h-2.5" />
+                              <StatusBadge color="green" size="xs" rounded="full" icon={<GitPullRequest className="w-2.5 h-2.5" />}>
                                 {githubRewards.breakdown.prs_opened} PRs
-                              </span>
+                              </StatusBadge>
                             )}
                             {githubRewards.breakdown.bug_issues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
-                                <Bug className="w-2.5 h-2.5" />
+                              <StatusBadge color="red" size="xs" rounded="full" icon={<Bug className="w-2.5 h-2.5" />}>
                                 {githubRewards.breakdown.bug_issues} Bugs
-                              </span>
+                              </StatusBadge>
                             )}
                             {githubRewards.breakdown.feature_issues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-2xs">
-                                <Lightbulb className="w-2.5 h-2.5" />
+                              <StatusBadge color="yellow" size="xs" rounded="full" icon={<Lightbulb className="w-2.5 h-2.5" />}>
                                 {githubRewards.breakdown.feature_issues} Features
-                              </span>
+                              </StatusBadge>
                             )}
                             {githubRewards.breakdown.other_issues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-500/20 text-muted-foreground text-2xs">
-                                <AlertCircle className="w-2.5 h-2.5" />
+                              <StatusBadge color="purple" size="xs" rounded="full" className="!bg-gray-500/20 !text-muted-foreground" icon={<AlertCircle className="w-2.5 h-2.5" />}>
                                 {githubRewards.breakdown.other_issues} Issues
-                              </span>
+                              </StatusBadge>
                             )}
                           </div>
                         </div>

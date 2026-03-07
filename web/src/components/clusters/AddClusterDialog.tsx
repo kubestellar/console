@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { CloudProviderIcon } from '../ui/CloudProviderIcon'
+import { StatusBadge } from '../ui/StatusBadge'
 
 interface AddClusterDialogProps {
   open: boolean
@@ -393,7 +394,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
                           <div className="flex items-center gap-2 mb-2">
                             <CloudProviderIcon provider={providerKey} size={16} />
                             <span className="text-sm font-medium text-foreground">{cli.provider}</span>
-                            <span className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">detected</span>
+                            <StatusBadge color="green" size="xs">detected</StatusBadge>
                           </div>
                           <div className="flex items-start justify-between gap-2">
                             <code className="text-xs text-muted-foreground font-mono break-all">{cmds.register || cmds.auth}</code>
@@ -522,9 +523,9 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
                                 </span>
                               )}
                               {ctx.isNew ? (
-                                <span className="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded">
+                                <StatusBadge color="green">
                                   {t('cluster.importNew')}
-                                </span>
+                                </StatusBadge>
                               ) : (
                                 <span className="bg-white/10 text-muted-foreground text-xs px-2 py-0.5 rounded">
                                   {t('cluster.importExists')}

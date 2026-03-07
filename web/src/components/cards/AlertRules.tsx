@@ -10,6 +10,7 @@ import { useAlertRules } from '../../hooks/useAlerts'
 import { formatCondition } from '../../types/alerts'
 import type { AlertRule, AlertSeverity } from '../../types/alerts'
 import { AlertRuleEditor } from '../alerts/AlertRuleEditor'
+import { StatusBadge } from '../ui/StatusBadge'
 import {
   useCardData,
   commonComparators,
@@ -223,9 +224,9 @@ export function AlertRulesCard() {
                       {rule.name}
                     </span>
                     {rule.aiDiagnose && (
-                      <span className="px-1 py-0.5 text-2xs rounded bg-purple-500/20 text-purple-400">
+                      <StatusBadge color="purple" size="xs">
                         AI
-                      </span>
+                      </StatusBadge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">

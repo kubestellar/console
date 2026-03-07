@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { CardSearchInput, CardAIActions } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
@@ -135,14 +136,13 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             showLabel={true}
             staleThresholdMinutes={5}
           />
-          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+          <StatusBadge color="orange">
             {totalItems} jobs
-          </span>
+          </StatusBadge>
           {jobs.filter(j => j.state === 'running').length > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1">
-              <Play className="w-3 h-3" />
+            <StatusBadge color="blue" icon={<Play className="w-3 h-3" />}>
               {jobs.filter(j => j.state === 'running').length} running
-            </span>
+            </StatusBadge>
           )}
         </div>
         <div className="flex items-center gap-2">

@@ -7,6 +7,7 @@ import { CardClusterFilter, CardSearchInput } from '../../../lib/cards'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
@@ -112,9 +113,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex items-center gap-1"><Play className="w-2.5 h-2.5" /> Running</span>
+        return <StatusBadge color="green" icon={<Play className="w-2.5 h-2.5" />}>Running</StatusBadge>
       case 'scaling':
-        return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Scaling</span>
+        return <StatusBadge color="blue" icon={<RefreshCw className="w-2.5 h-2.5 animate-spin" />}>Scaling</StatusBadge>
       case 'stopped':
         return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-muted-foreground flex items-center gap-1"><Pause className="w-2.5 h-2.5" /> Stopped</span>
       default:
@@ -190,9 +191,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
               {COMPONENT_FILTERS.find(f => f.value === componentFilter)?.label}
             </span>
           )}
-          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+          <StatusBadge color="purple">
             {items.filter(s => s.status === 'running').length} running
-          </span>
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-2">
           {/* Component type filter */}
@@ -311,9 +312,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                   )}
                   {/* Autoscaler badge */}
                   {server.hasAutoscaler && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 flex-shrink-0" title={server.autoscalerType === 'va' ? 'VariantAutoscaling' : server.autoscalerType === 'both' ? 'HPA + VariantAutoscaling' : 'HorizontalPodAutoscaler'}>
+                    <StatusBadge color="orange" className="flex-shrink-0" title={server.autoscalerType === 'va' ? 'VariantAutoscaling' : server.autoscalerType === 'both' ? 'HPA + VariantAutoscaling' : 'HorizontalPodAutoscaler'}>
                       {server.autoscalerType === 'va' ? 'VA' : server.autoscalerType === 'both' ? 'HPA+VA' : 'HPA'}
-                    </span>
+                    </StatusBadge>
                   )}
                 </div>
                 {getStatusBadge(server.status)}

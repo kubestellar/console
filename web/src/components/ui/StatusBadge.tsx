@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type HTMLAttributes, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 type BadgeColor = 'green' | 'red' | 'yellow' | 'blue' | 'purple' | 'orange' | 'cyan' | 'gray'
@@ -22,14 +22,13 @@ const SIZE_MAP: Record<BadgeSize, string> = {
   md: 'text-xs px-2 py-1',
 }
 
-interface StatusBadgeProps {
-  children: ReactNode
+interface StatusBadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'color'> {
+  children?: ReactNode
   color: BadgeColor
   size?: BadgeSize
   variant?: BadgeVariant
   rounded?: 'default' | 'full'
   icon?: ReactNode
-  className?: string
 }
 
 export function StatusBadge({
@@ -40,6 +39,7 @@ export function StatusBadge({
   rounded = 'default',
   icon,
   className,
+  ...props
 }: StatusBadgeProps) {
   const colors = COLOR_MAP[color]
   const roundedClass = rounded === 'full' ? 'rounded-full' : 'rounded'
@@ -59,6 +59,7 @@ export function StatusBadge({
         variantClasses[variant],
         className,
       )}
+      {...props}
     >
       {icon}
       {children}

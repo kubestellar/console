@@ -8,6 +8,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
 import { useTranslation } from 'react-i18next'
@@ -554,9 +555,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {pendingUpgrades > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+            <StatusBadge color="yellow">
               {pendingUpgrades} upgrades available
-            </span>
+            </StatusBadge>
           )}
         </div>
         <CardControlsRow

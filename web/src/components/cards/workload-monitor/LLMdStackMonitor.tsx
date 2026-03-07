@@ -18,6 +18,7 @@ import { cn } from '../../../lib/cn'
 import { useLLMdClusters } from '../workload-detection/shared'
 import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
@@ -719,9 +720,9 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                           <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT[item.status] || 'bg-gray-400')} />
                           <span className="text-xs text-foreground truncate flex-1">{item.name}</span>
                           {item.namespace && (
-                            <span className="text-2xs px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 shrink-0">
+                            <StatusBadge color="purple" size="xs" className="shrink-0">
                               {item.namespace}
-                            </span>
+                            </StatusBadge>
                           )}
                           {item.detail && (
                             <span className="text-2xs text-muted-foreground shrink-0 truncate max-w-[150px]">
@@ -829,9 +830,9 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                         )}
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                           {issue.resource?.namespace && (
-                            <span className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                            <StatusBadge color="purple" size="xs">
                               {issue.resource.namespace}
-                            </span>
+                            </StatusBadge>
                           )}
                           {issue.resource?.cluster && (
                             <span className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">

@@ -4,6 +4,7 @@ import { useClusters, useOperators, Operator } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
@@ -179,9 +180,9 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+            <StatusBadge color="purple">
               {t('operatorStatus.nOperators', { count: totalItems })}
-            </span>
+            </StatusBadge>
           )}
         </div>
         <CardControlsRow
@@ -218,13 +219,13 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
             {localClusterFilter.length === 1 ? (
               <ClusterBadge cluster={localClusterFilter[0]} />
             ) : localClusterFilter.length > 1 ? (
-              <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
+              <StatusBadge color="purple" size="md" rounded="full">
                 {t('operatorStatus.nClustersSelected', { count: localClusterFilter.length })}
-              </span>
+              </StatusBadge>
             ) : (
-              <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
+              <StatusBadge color="purple" size="md" rounded="full">
                 {t('operatorStatus.allClusters', { count: availableClusters.length })}
-              </span>
+              </StatusBadge>
             )}
           </div>
 

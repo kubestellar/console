@@ -20,6 +20,7 @@ import { InlineAIAssist } from './InlineAIAssist'
 import { CARD_T1_SYSTEM_PROMPT, CARD_T2_SYSTEM_PROMPT, CARD_INLINE_ASSIST_PROMPT, CODE_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { generateSampleData, detectFieldFormat } from '../../lib/ai/sampleData'
 import { useAIMode } from '../../hooks/useAIMode'
+import { StatusBadge } from '../ui/StatusBadge'
 
 interface CardFactoryModalProps {
   isOpen: boolean
@@ -1230,9 +1231,9 @@ function T1Preview({ result }: { result: AiCardT1Result }) {
       <div className="flex items-center gap-2 mb-3">
         <Layers className="w-4 h-4 text-purple-400" />
         <span className="text-sm font-medium text-foreground">{result.title}</span>
-        <span className="text-2xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+        <StatusBadge color="blue" size="xs">
           {result.layout}
-        </span>
+        </StatusBadge>
       </div>
       {result.description && (
         <p className="text-xs text-muted-foreground mb-3">{result.description}</p>
@@ -1278,9 +1279,9 @@ function T2Preview({ result }: { result: AiCardT2Result }) {
       <div className="flex items-center gap-2 mb-3">
         <Code className="w-4 h-4 text-purple-400" />
         <span className="text-sm font-medium text-foreground">{result.title}</span>
-        <span className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+        <StatusBadge color="purple" size="xs">
           Custom Code
-        </span>
+        </StatusBadge>
       </div>
       {result.description && (
         <p className="text-xs text-muted-foreground mb-2">{result.description}</p>

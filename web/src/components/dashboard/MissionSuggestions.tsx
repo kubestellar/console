@@ -9,6 +9,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
+import { StatusBadge } from '../ui/StatusBadge'
 
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
@@ -209,9 +210,9 @@ export function MissionSuggestions() {
             )
           })}
           {stats.critical > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
+            <StatusBadge color="red" size="xs" rounded="full">
               {t('dashboard.missions.critical', { count: stats.critical })}
-            </span>
+            </StatusBadge>
           )}
         </div>
       </div>
@@ -228,14 +229,14 @@ export function MissionSuggestions() {
             {t('dashboard.missions.actions')}
           </span>
           {stats.critical > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-2xs">
+            <StatusBadge color="red" size="xs" rounded="full">
               {t('dashboard.missions.critical', { count: stats.critical })}
-            </span>
+            </StatusBadge>
           )}
           {stats.high > 0 && stats.critical === 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-2xs">
+            <StatusBadge color="orange" size="xs" rounded="full">
               {t('dashboard.missions.high', { count: stats.high })}
-            </span>
+            </StatusBadge>
           )}
           {suggestions.length > 6 && (
             <span className="text-2xs text-muted-foreground">

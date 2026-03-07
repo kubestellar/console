@@ -9,6 +9,7 @@ import { useClusters } from '../../../hooks/useMCP'
 import { useCachedPodIssues, useCachedDeploymentIssues } from '../../../hooks/useCachedData'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { cn } from '../../../lib/cn'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
@@ -305,9 +306,9 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
                           <XCircle className="w-3 h-3 text-red-400 shrink-0" />
                           <span className="text-xs text-foreground truncate flex-1">{p.name}</span>
                           <span className="text-2xs text-muted-foreground shrink-0">{p.namespace}</span>
-                          <span className="text-2xs px-1 py-0.5 rounded bg-red-500/20 text-red-400 shrink-0">
+                          <StatusBadge color="red" size="xs" className="shrink-0">
                             {p.status || 'error'}
-                          </span>
+                          </StatusBadge>
                         </div>
                       ))}
                       {clusterPodIssues.length > 5 && (
@@ -332,9 +333,9 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
                           <AlertTriangle className="w-3 h-3 text-yellow-400 shrink-0" />
                           <span className="text-xs text-foreground truncate flex-1">{d.name}</span>
                           <span className="text-2xs text-muted-foreground shrink-0">{d.namespace}</span>
-                          <span className="text-2xs px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">
+                          <StatusBadge color="yellow" size="xs" className="shrink-0">
                             {d.readyReplicas ?? 0}/{d.replicas ?? 0}
-                          </span>
+                          </StatusBadge>
                         </div>
                       ))}
                       {clusterDeployIssues.length > 5 && (

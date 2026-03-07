@@ -25,6 +25,7 @@ import { AiGenerationPanel } from './AiGenerationPanel'
 import { InlineAIAssist } from './InlineAIAssist'
 import { STAT_BLOCK_SYSTEM_PROMPT, STAT_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { useAIMode } from '../../hooks/useAIMode'
+import { StatusBadge } from '../ui/StatusBadge'
 
 // Demo/preview constants
 const DEMO_STAT_VALUE = 42 // Placeholder value shown in stat block previews
@@ -662,9 +663,9 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                   <div className="flex items-center gap-1.5">
                     <Eye className="w-3 h-3 text-muted-foreground" />
                     <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400/70">
+                    <StatusBadge color="purple" size="xs">
                       {t('dashboard.preview.sampleValues')}
-                    </span>
+                    </StatusBadge>
                   </div>
                   <div className="flex items-center gap-0.5">
                     <button
@@ -773,9 +774,9 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                     <div className="flex items-center gap-2">
                       <Activity className="w-4 h-4 text-purple-400 shrink-0" />
                       <span className="text-sm font-medium text-foreground">{stats.title || stats.type}</span>
-                      <span className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                      <StatusBadge color="purple" size="xs">
                         {t('dashboard.statFactory.blocksCount', { count: stats.blocks.length })}
-                      </span>
+                      </StatusBadge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Type: {stats.type}

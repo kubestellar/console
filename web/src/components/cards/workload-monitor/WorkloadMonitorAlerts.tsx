@@ -2,6 +2,7 @@ import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight } from 'luc
 import { useState } from 'react'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { CardAIActions } from '../../../lib/cards/CardComponents'
+import { StatusBadge } from '../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 
 interface AlertsProps {
@@ -52,13 +53,13 @@ export function WorkloadMonitorAlerts({ issues, monitorType: _monitorType, expan
           <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
           <span>Issues ({issues.length})</span>
           {criticalCount > 0 && (
-            <span className="text-2xs px-1 py-0.5 rounded bg-red-500/20 text-red-400">{criticalCount} critical</span>
+            <StatusBadge color="red" size="xs">{criticalCount} critical</StatusBadge>
           )}
           {warningCount > 0 && (
-            <span className="text-2xs px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400">{warningCount} warning</span>
+            <StatusBadge color="yellow" size="xs">{warningCount} warning</StatusBadge>
           )}
           {infoCount > 0 && (
-            <span className="text-2xs px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">{infoCount} info</span>
+            <StatusBadge color="blue" size="xs">{infoCount} info</StatusBadge>
           )}
         </button>
       )}
@@ -67,13 +68,13 @@ export function WorkloadMonitorAlerts({ issues, monitorType: _monitorType, expan
       {forcedExpanded && (
         <div className="flex items-center gap-2 mb-3 px-1">
           {criticalCount > 0 && (
-            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">{criticalCount} critical</span>
+            <StatusBadge color="red" size="md">{criticalCount} critical</StatusBadge>
           )}
           {warningCount > 0 && (
-            <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400">{warningCount} warning</span>
+            <StatusBadge color="yellow" size="md">{warningCount} warning</StatusBadge>
           )}
           {infoCount > 0 && (
-            <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400">{infoCount} info</span>
+            <StatusBadge color="blue" size="md">{infoCount} info</StatusBadge>
           )}
         </div>
       )}

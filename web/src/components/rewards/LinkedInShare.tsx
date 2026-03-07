@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
 import { useTranslation } from 'react-i18next'
 import { emitLinkedInShare } from '../../lib/analytics'
@@ -42,7 +43,7 @@ export function LinkedInShareButton() {
       >
         <Linkedin className="w-4 h-4" />
         Share on LinkedIn
-        <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-xs">+200</span>
+        <StatusBadge color="yellow">+200</StatusBadge>
       </button>
 
       {/* Confirmation Modal */}

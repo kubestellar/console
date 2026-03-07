@@ -12,6 +12,7 @@ import { ResourceIcon, SORT_OPTIONS } from './types'
 import { buildNamespaceResources, getVisibleNamespaces, getIssueCounts, getPodsForDeployment } from './TreeBuilder'
 import type { ClusterResourceTreeProps, TreeLens, SortByOption, NamespaceResources, ClusterDataCache } from './types'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../../ui/StatusBadge'
 
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
   const { t } = useTranslation()
@@ -331,9 +332,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
               <lens.icon className="w-3.5 h-3.5" />
               {lens.label}
               {lens.count !== undefined && lens.count > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-2xs bg-red-500/20 text-red-400">
+                <StatusBadge color="red" size="xs" rounded="full" className="ml-0.5">
                   {lens.count}
-                </span>
+                </StatusBadge>
               )}
             </button>
           ))}
