@@ -514,6 +514,7 @@
       "currentSHA": "Current Commit",
       "latestSHA": "Latest on main",
       "uncommittedWarning": "Uncommitted changes — auto-update paused",
+      "uncommittedAutoStash": "Local changes detected — they will be automatically stashed during updates and restored after",
       "agentRequired": "kc-agent required for auto-updates",
       "agentRequiredDesc": "Start kc-agent to enable automatic updates",
       "helmDisabled": "Auto-update not available for Helm installs",

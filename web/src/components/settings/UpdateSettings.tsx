@@ -379,15 +379,6 @@ export function UpdateSettings() {
               failText={t('settings.updates.prereqInstallFail')}
               icon={<HardDrive className="w-3.5 h-3.5" />}
             />
-            {autoUpdateStatus?.hasUncommittedChanges !== undefined && (
-              <PrereqRow
-                ok={!autoUpdateStatus.hasUncommittedChanges}
-                label={t('settings.updates.prereqGitClean')}
-                okText={t('settings.updates.prereqGitCleanOk')}
-                failText={t('settings.updates.prereqGitCleanFail')}
-                icon={<GitCommitHorizontal className="w-3.5 h-3.5" />}
-              />
-            )}
           </div>
           {/* Summary line */}
           {(() => {
@@ -398,9 +389,6 @@ export function UpdateSettings() {
               hasGithubToken,
               installMethod === 'dev',
             ]
-            if (autoUpdateStatus?.hasUncommittedChanges !== undefined) {
-              checks.push(!autoUpdateStatus.hasUncommittedChanges)
-            }
             const failCount = checks.filter((c) => !c).length
             return (
               <div className={`mt-3 pt-3 border-t border-border text-xs ${failCount === 0 ? 'text-green-400' : 'text-yellow-400'}`}>
@@ -436,9 +424,9 @@ export function UpdateSettings() {
             </button>
           </div>
           {autoUpdateEnabled && isDeveloperChannel && autoUpdateStatus?.hasUncommittedChanges && (
-            <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-              <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
-              <p className="text-xs text-yellow-400">{t('settings.updates.uncommittedWarning')}</p>
+            <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <GitCommitHorizontal className="w-4 h-4 text-blue-400 shrink-0" />
+              <p className="text-xs text-blue-400">{t('settings.updates.uncommittedAutoStash')}</p>
             </div>
           )}
         </div>

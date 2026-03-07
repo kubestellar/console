@@ -295,16 +295,6 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 		return
 	}
 
-	if hasUncommittedChanges(repoPath) {
-		log.Println("[AutoUpdate] Uncommitted changes detected, skipping update")
-		uc.broadcast("update_progress", UpdateProgressPayload{
-			Status:  "failed",
-			Message: "Update skipped: uncommitted changes detected",
-			Error:   fmt.Sprintf("Run 'cd %s && git stash' to save your changes, then retry the update", repoPath),
-		})
-		return
-	}
-
 	latestSHA, err := fetchLatestMainSHAWithRepo(repoPath)
 	if err != nil {
 		log.Printf("[AutoUpdate] Failed to check main SHA: %v", err)
@@ -768,15 +758,9 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	if repoPath == "" {
 		return
 	}
-	if hasUncommittedChanges(repoPath) {
-		log.Println("[AutoUpdate] Uncommitted changes detected, skipping release update")
-		uc.broadcast("update_progress", UpdateProgressPayload{
-			Status:  "failed",
-			Message: "Update skipped: uncommitted changes detected",
-			Error:   fmt.Sprintf("Run 'cd %s && git stash' to save your changes, then retry the update", repoPath),
-		})
-		return
-	}
+
+	// Stash any local changes so the checkout succeeds
+	stashed := gitStash(repoPath)
 
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "pulling",
@@ -789,6 +773,9 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	cmd.Dir = repoPath
 	if err := cmd.Run(); err != nil {
 		uc.recordError(fmt.Sprintf("git fetch tag failed: %v", err))
+		if stashed {
+			gitStashPop(repoPath)
+		}
 		return
 	}
 
@@ -796,6 +783,9 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	cmd.Dir = repoPath
 	if err := cmd.Run(); err != nil {
 		uc.recordError(fmt.Sprintf("git checkout failed: %v", err))
+		if stashed {
+			gitStashPop(repoPath)
+		}
 		return
 	}
 
@@ -1054,11 +1044,40 @@ func hasUncommittedChanges(repoPath string) bool {
 }
 
 func runGitPull(repoPath string) error {
-	cmd := exec.Command("git", "pull", "--rebase", "origin", "main")
+	cmd := exec.Command("git", "pull", "--rebase", "--autostash", "origin", "main")
 	cmd.Dir = repoPath
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// gitStash stashes uncommitted changes if any exist. Returns true if a stash was created.
+func gitStash(repoPath string) bool {
+	if !hasUncommittedChanges(repoPath) {
+		return false
+	}
+	log.Println("[AutoUpdate] Stashing uncommitted changes before update")
+	cmd := exec.Command("git", "stash", "push", "-m", "auto-update: stashed by kc-agent")
+	cmd.Dir = repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("[AutoUpdate] git stash failed: %v", err)
+		return false
+	}
+	return true
+}
+
+// gitStashPop restores previously stashed changes.
+func gitStashPop(repoPath string) {
+	log.Println("[AutoUpdate] Restoring stashed changes")
+	cmd := exec.Command("git", "stash", "pop")
+	cmd.Dir = repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("[AutoUpdate] git stash pop failed (changes saved in stash): %v", err)
+	}
 }
 
 func rebuildFrontend(repoPath string) error {
