@@ -55,21 +55,21 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           go install github.com/google/go-licenses@latest
 
-          # Secret scanning
-          GITLEAKS_VERSION="8.18.4"
+          # Secret scanning — fetch latest release dynamically
+          GITLEAKS_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r '.tag_name' | sed 's/^v//')
           wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
           tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
 
           # Helm
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-          # Container scanning
-          TRIVY_VERSION="0.58.2"
+          # Container scanning — fetch latest release dynamically
+          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | jq -r '.tag_name' | sed 's/^v//')
           wget -q "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -O /tmp/trivy.tar.gz
           tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
 
           # SAST (semgrep)
-          pip3 install semgrep
+          pip3 install --break-system-packages semgrep
 
           # ripgrep (some scripts use rg)
           sudo apt-get install -y ripgrep

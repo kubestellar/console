@@ -5,6 +5,7 @@ on:
     workflows:
       - "Release"
       - "Nightly Compliance & Perf"
+      - "Nightly Test Suite"
       - "Auto-QA Agent"
       - "Auto-QA Tuner"
       - "Nil Safety"
