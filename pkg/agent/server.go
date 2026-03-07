@@ -33,7 +33,8 @@ const (
 	metricsHistoryTick    = 10 * time.Minute
 	agentFileMode         = 0600
 	defaultHealthCheckURL = "http://127.0.0.1:8080/health"
-	maxQueryLimit         = 1000 // Upper bound for client-supplied limit query parameter
+	maxQueryLimit         = 1000     // Upper bound for client-supplied limit query parameter
+	maxRequestBodyBytes   = 1 << 20 // 1MB upper bound for request body reads
 )
 
 // Version is set by ldflags during build
@@ -3050,7 +3051,7 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(all)
 
 	case "PUT":
-		body, err := io.ReadAll(r.Body)
+		body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "read_error", Message: "Failed to read request body"})
@@ -3152,7 +3153,7 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes))
 	if err != nil || len(body) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "empty_body", Message: "Empty request body"})

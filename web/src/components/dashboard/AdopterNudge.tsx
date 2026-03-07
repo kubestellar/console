@@ -69,7 +69,7 @@ export function AdopterNudge() {
   const handleAddOrg = () => {
     emitAdopterNudgeActioned('add_org')
     emitConversionStep(7, 'adopter_cta')
-    window.open(ADOPTERS_EDIT_URL, '_blank', 'noopener')
+    window.open(ADOPTERS_EDIT_URL, '_blank', 'noopener,noreferrer')
     handleDismiss()
   }
 

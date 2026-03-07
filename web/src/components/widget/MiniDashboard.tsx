@@ -260,7 +260,7 @@ export function MiniDashboard() {
     }
 
     const separator = path.includes('?') ? '&' : '?'
-    window.open(`${targetOrigin}${path}${separator}${WIDGET_UTM_PARAMS}`, '_blank')
+    window.open(`${targetOrigin}${path}${separator}${WIDGET_UTM_PARAMS}`, '_blank', 'noopener,noreferrer')
   }, [])
 
   // Open full dashboard in new window

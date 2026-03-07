@@ -45,7 +45,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       const githubUrl = `${GITHUB_ISSUES_URL}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${type === 'bug' ? 'bug' : 'enhancement'}`
 
       // Open GitHub in new tab
-      window.open(githubUrl, '_blank')
+      window.open(githubUrl, '_blank', 'noopener,noreferrer')
       emitFeedbackSubmitted(type)
 
       // Award coins based on type
@@ -276,7 +276,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
   const { t } = useTranslation()
   const handleShare = () => {
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
-    window.open(linkedInUrl, '_blank', 'width=600,height=600')
+    window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
     emitLinkedInShare('feedback_modal')
     onShare?.()
   }
