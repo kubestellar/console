@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
+import { Button } from '../ui/Button'
 import { checkOAuthConfigured } from '../../lib/api'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import type { UpdateChannel } from '../../types/updates'
@@ -260,14 +261,15 @@ export function UpdateSettings() {
                t('settings.updates.helmMode')}
             </span>
           )}
-          <button
+          <Button
+            variant="ghost"
+            size="md"
+            icon={<RefreshCw className={`w-4 h-4 ${isVisuallySpinning ? 'animate-spin-min text-blue-400' : ''}`} />}
             onClick={() => { emitUpdateChecked(); forceCheck() }}
             disabled={isChecking || isVisuallySpinning}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isVisuallySpinning ? 'animate-spin-min text-blue-400' : ''}`} />
             {t('settings.updates.checkNow')}
-          </button>
+          </Button>
         </div>
       </div>
 

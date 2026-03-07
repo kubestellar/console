@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Shield, AlertTriangle, CheckCircle, ExternalLink, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '../../ui/Button'
 import { BaseModal } from '../../../lib/modals'
 import { kubectlProxy } from '../../../lib/kubectlProxy'
 import { useToast } from '../../ui/Toast'
@@ -259,13 +260,14 @@ Please proceed with applying this policy.`,
 
             {/* Create Policy Button */}
             <div ref={createMenuRef} className="relative">
-              <button
+              <Button
+                variant="accent"
+                size="md"
+                icon={<Plus className="w-4 h-4" />}
                 onClick={() => setShowCreateMenu(!showCreateMenu)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
               >
-                <Plus className="w-4 h-4" />
                 Create Policy
-              </button>
+              </Button>
               {showCreateMenu && (
                 <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
                   <button
@@ -449,12 +451,13 @@ Please proceed with applying this policy.`,
             <ExternalLink className="w-3 h-3" />
           </a>
           <div className="flex-1" />
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
             onClick={onClose}
-            className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
           >
             Close
-          </button>
+          </Button>
         </BaseModal.Footer>
       </BaseModal>
 
@@ -517,12 +520,13 @@ Please proceed with applying this policy.`,
           </div>
         </BaseModal.Content>
         <BaseModal.Footer>
-          <button
+          <Button
+            variant="ghost"
+            size="lg"
             onClick={() => setShowYamlEditor(false)}
-            className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
-          </button>
+          </Button>
           <div className="flex-1" />
           <button
             onClick={handleApplyYaml}
@@ -562,12 +566,13 @@ Please proceed with applying this policy.`,
           </div>
         </BaseModal.Content>
         <BaseModal.Footer>
-          <button
+          <Button
+            variant="ghost"
+            size="lg"
             onClick={() => setDeleteConfirm(null)}
-            className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
-          </button>
+          </Button>
           <div className="flex-1" />
           <button
             onClick={() => deleteConfirm && handleDelete(deleteConfirm)}

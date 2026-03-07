@@ -4,6 +4,7 @@ import {
   Clock, ArrowUp, ChevronDown, Star, Filter, Pencil
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { Button } from '../../ui/Button'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardLoadingState } from '../CardDataContext'
@@ -903,15 +904,17 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 {t('cards:rssFeed.applyFilter')}
               </button>
               {activeFeed?.filter && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     updateFeedFilter(activeFeedIndex, undefined)
                     setShowFilterEditor(false)
                   }}
-                  className="px-3 py-1 text-xs bg-secondary text-foreground rounded hover:bg-secondary/80 transition-colors"
+                  className="rounded"
                 >
                   {t('cards:rssFeed.clearFilter')}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -1210,7 +1213,9 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     {editingAggregateIndex !== null ? t('common:common.update') : t('common:common.create')} Aggregate ({selectedSourceUrls.length} sources)
                   </button>
                   {editingAggregateIndex !== null && (
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => {
                         setShowAggregateCreator(false)
                         setEditingAggregateIndex(null)
@@ -1219,10 +1224,10 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                         setAggregateIncludeTerms('')
                         setAggregateExcludeTerms('')
                       }}
-                      className="px-3 py-1.5 text-xs bg-secondary text-foreground rounded hover:bg-secondary/80 transition-colors"
+                      className="rounded"
                     >
                       {t('common:common.cancel')}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

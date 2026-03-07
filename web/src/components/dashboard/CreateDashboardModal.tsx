@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { Button } from '../ui/Button'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
 import { FOCUS_DELAY_MS } from '../../lib/constants/network'
 
@@ -223,19 +224,21 @@ export function CreateDashboardModal({
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <button
+        <Button
+          variant="ghost"
+          size="lg"
           onClick={onClose}
-          className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {t('actions.cancel')}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="accent"
+          size="lg"
+          iconRight={<ChevronRight className="w-4 h-4" />}
           onClick={handleCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
         >
           {t('dashboard.create.title')}
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        </Button>
       </BaseModal.Footer>
     </BaseModal>
   )

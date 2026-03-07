@@ -4,6 +4,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import type { TopologyNode, TopologyEdge, TopologyHealthStatus } from '../../types/topology'
 import { useReportCardDataState } from './CardDataContext'
+import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 
 // Demo topology data
@@ -130,27 +131,30 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
       {/* Header */}
       <div className="flex items-center justify-end mb-2">
         <div className="flex items-center gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<ZoomOut className="w-3.5 h-3.5" />}
             onClick={handleZoomOut}
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
             title={t('serviceTopology.zoomOut')}
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <button
+            className="p-1 hover:bg-secondary rounded"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Maximize2 className="w-3.5 h-3.5" />}
             onClick={handleResetZoom}
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
             title={t('serviceTopology.resetZoom')}
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
-          <button
+            className="p-1 hover:bg-secondary rounded"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<ZoomIn className="w-3.5 h-3.5" />}
             onClick={handleZoomIn}
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
             title={t('serviceTopology.zoomIn')}
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
+            className="p-1 hover:bg-secondary rounded"
+          />
         </div>
       </div>
 

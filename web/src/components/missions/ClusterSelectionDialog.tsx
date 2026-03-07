@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { X, Server, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useClusters } from '../../hooks/mcp/clusters'
+import { Button } from '../ui/Button'
 
 /** Delay before auto-selecting a single online cluster (ms) */
 const AUTO_SELECT_DELAY_MS = 600
@@ -47,9 +48,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
             <h3 className="text-sm font-semibold text-foreground">Select Target Cluster</h3>
             <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[320px]">{missionTitle}</p>
           </div>
-          <button onClick={onCancel} className="p-1 rounded hover:bg-secondary transition-colors">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <Button variant="ghost" onClick={onCancel} className="p-1 rounded-md" icon={<X className="w-4 h-4" />} />
         </div>
 
         {/* Cluster list */}
@@ -114,12 +113,13 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
 
         {/* Actions */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onSelect('')}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Skip (use current context)
-          </button>
+          </Button>
           <button
             onClick={() => selected && onSelect(selected)}
             disabled={!selected}

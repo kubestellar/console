@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Shield, FileCode, LayoutTemplate, Sparkles, Copy, MessageSquareText, ScanSearch, Loader2 } from 'lucide-react'
+import { Button } from '../../ui/Button'
 import { BaseModal } from '../../../lib/modals'
 import { kubectlProxy } from '../../../lib/kubectlProxy'
 import { useToast } from '../../ui/Toast'
@@ -229,7 +230,9 @@ Please proceed with applying this policy.`,
             <Shield className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm font-medium mb-1">No clusters have OPA Gatekeeper installed</p>
             <p className="text-xs mb-4">Install Gatekeeper on a cluster first, then create policies.</p>
-            <button
+            <Button
+              variant="accent"
+              size="lg"
               onClick={() => {
                 onClose()
                 const firstCluster = Object.keys(statuses)[0]
@@ -245,10 +248,9 @@ Please proceed with applying this policy.`,
                 }
               }}
               disabled={Object.keys(statuses).length === 0}
-              className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors text-sm disabled:opacity-50"
             >
               Install Gatekeeper with AI
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -447,12 +449,13 @@ Please proceed with applying this policy.`,
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <button
+        <Button
+          variant="ghost"
+          size="lg"
           onClick={onClose}
-          className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
         >
           Cancel
-        </button>
+        </Button>
         <div className="flex-1" />
       </BaseModal.Footer>
     </BaseModal>

@@ -13,6 +13,7 @@ import { CPUDetailModal, MemoryDetailModal, StorageDetailModal, GPUDetailModal }
 import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, getProviderLabel, CloudProvider as CloudProviderType } from '../ui/CloudProviderIcon'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Button } from '../ui/Button'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
@@ -364,7 +365,9 @@ After I approve, help me execute the repairs step by step.`,
                 </StatusBadge>
               )}
             </button>
-            <button
+            <Button
+              variant="accent"
+              size="sm"
               onClick={() => {
                 emitClusterAction('ask', clusterName)
                 startMission({
@@ -378,12 +381,11 @@ After I approve, help me execute the repairs step by step.`,
                 onClose()
               }}
               disabled={isUnreachable}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              icon={<Wand2 className="w-3.5 h-3.5" />}
               title={t('clusterDetail.askTitle')}
             >
-              <Wand2 className="w-3.5 h-3.5" />
               {t('clusterDetail.ask')}
-            </button>
+            </Button>
           </div>
         </div>
 

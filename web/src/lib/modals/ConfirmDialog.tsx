@@ -20,6 +20,7 @@
 
 import { AlertTriangle, AlertCircle, Info, Loader2 } from 'lucide-react'
 import { BaseModal } from './BaseModal'
+import { Button } from '../../components/ui/Button'
 
 export interface ConfirmDialogProps {
   /** Whether dialog is open */
@@ -91,13 +92,15 @@ export function ConfirmDialog({
 
         {/* Actions */}
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50"
+            className="flex-1"
           >
             {cancelLabel}
-          </button>
+          </Button>
           <button
             onClick={onConfirm}
             disabled={isLoading}

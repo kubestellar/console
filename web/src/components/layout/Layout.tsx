@@ -2,6 +2,7 @@ import { ReactNode, Suspense, useState, useEffect, useRef, useCallback } from 'r
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw, Plug } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
@@ -315,9 +316,11 @@ export function Layout({ children }: LayoutProps) {
                   : 'Showing sample data only — install locally to monitor your real clusters'
                 }
               </span>
-              <button
+              <Button
+                variant="accent"
+                size="sm"
                 onClick={() => setShowSetupDialog(true)}
-                className="hidden sm:flex ml-2 items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-full text-xs font-medium transition-colors"
+                className="hidden sm:flex ml-2 rounded-full"
               >
                 {isAuthenticatedNoAgent ? (
                   <>
@@ -332,7 +335,7 @@ export function Layout({ children }: LayoutProps) {
                     <span className="lg:hidden">Get Console</span>
                   </>
                 )}
-              </button>
+              </Button>
               <button
                 onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
                 className="ml-1 md:ml-2 p-2 min-h-11 min-w-11 hover:bg-yellow-500/20 rounded transition-colors"
@@ -486,12 +489,14 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
             <RefreshCw className="w-4 h-4 text-blue-400" />
             <span>A new version is available</span>
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => window.location.reload()}
-              className="ml-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium transition-colors"
+              className="ml-1 rounded"
             >
               Reload
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { Shield, Check, X, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
 import { useCanI } from '../../hooks/usePermissions'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'
+import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 
 const COMMON_VERBS = ['get', 'list', 'create', 'update', 'delete', 'watch', 'patch']
@@ -393,13 +394,14 @@ export function CanIChecker() {
               placeholder="Add custom group..."
               className="flex-1 p-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button
+            <Button
+              variant="primary"
+              size="lg"
               onClick={addCustomUserGroup}
               disabled={!customUserGroup.trim()}
-              className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('rbac.add')}
-            </button>
+            </Button>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {t('rbac.addGroupsDesc')}
@@ -430,32 +432,26 @@ export function CanIChecker() {
 
         {/* Check Button */}
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="primary"
+            size="lg"
             onClick={handleCheck}
             disabled={checking || clusters.length === 0}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            icon={checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+            className="flex-1"
             data-testid="can-i-check"
           >
-            {checking ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t('rbac.checking')}
-              </>
-            ) : (
-              <>
-                <Shield className="w-4 h-4" />
-                {t('rbac.checkPermission')}
-              </>
-            )}
-          </button>
+            {checking ? t('rbac.checking') : t('rbac.checkPermission')}
+          </Button>
           {result && (
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={handleReset}
-              className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors"
               data-testid="can-i-reset"
             >
               {t('rbac.reset')}
-            </button>
+            </Button>
           )}
         </div>
 

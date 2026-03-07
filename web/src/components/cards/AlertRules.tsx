@@ -9,6 +9,7 @@ import {
 import { useAlertRules } from '../../hooks/useAlerts'
 import { formatCondition } from '../../types/alerts'
 import type { AlertRule, AlertSeverity } from '../../types/alerts'
+import { Button } from '../ui/Button'
 import { AlertRuleEditor } from '../alerts/AlertRuleEditor'
 import { StatusBadge } from '../ui/StatusBadge'
 import {
@@ -194,13 +195,15 @@ export function AlertRulesCard() {
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
             <Bell className="w-8 h-8 mb-2" />
             <span>{t('alertRules.noRulesConfigured')}</span>
-            <button
+            <Button
+              variant="accent"
+              size="sm"
               onClick={handleCreateNew}
-              className="mt-2 px-3 py-1.5 text-xs rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors flex items-center gap-1"
+              icon={<Plus className="w-3 h-3" />}
+              className="mt-2"
             >
-              <Plus className="w-3 h-3" />
               {t('alertRules.createRule')}
-            </button>
+            </Button>
           </div>
         ) : (
           displayedRules.map((rule: AlertRule) => (

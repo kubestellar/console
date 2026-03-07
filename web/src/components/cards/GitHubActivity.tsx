@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
+import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
@@ -823,12 +824,14 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
           <AlertCircle className="w-8 h-8 text-red-400 mb-3" />
           <p className="text-sm text-foreground mb-2">{t('cards:github.fetchError')}</p>
           <p className="text-xs text-muted-foreground mb-4 max-w-xs">{error}</p>
-          <button
+          <Button
+            variant="primary"
+            size="lg"
             onClick={refetch}
-            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {t('common:common.retry')}
-          </button>
+          </Button>
           <p className="mt-4 text-xs text-muted-foreground/70 max-w-xs">
             {t('cards:github.configureToken')}
           </p>

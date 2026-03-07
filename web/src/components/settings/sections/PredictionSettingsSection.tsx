@@ -4,6 +4,7 @@ import { TrendingUp, Save, RotateCcw, Sparkles, Clock, Percent, Layers, Info } f
 import type { PredictionSettings } from '../../../types/predictions'
 import { usePredictionFeedback } from '../../../hooks/usePredictionFeedback'
 import { CollapsibleSection } from '../../ui/CollapsibleSection'
+import { Button } from '../../ui/Button'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface PredictionSettingsSectionProps {
@@ -72,14 +73,15 @@ export function PredictionSettingsSection({
             <p className="text-sm text-muted-foreground">{t('settings.predictions.subtitle')}</p>
           </div>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="md"
+          icon={<RotateCcw className="w-4 h-4" />}
           onClick={resetSettings}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           title="Reset to defaults"
         >
-          <RotateCcw className="w-4 h-4" />
           {t('settings.predictions.reset')}
-        </button>
+        </Button>
       </div>
 
       <div className="space-y-6">

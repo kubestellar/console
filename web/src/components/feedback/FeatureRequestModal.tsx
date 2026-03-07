@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, Linkedin, Trophy } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -281,12 +282,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                   {t('feedback.loginDemoExplanation')}
                 </p>
                 <div className="flex justify-end gap-2">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="lg"
                     onClick={() => setShowLoginPrompt(false)}
-                    className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                    className="border border-border"
                   >
                     Cancel
-                  </button>
+                  </Button>
                   <button
                     onClick={handleLoginRedirect}
                     className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors"
@@ -350,12 +353,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
                 {/* Actions */}
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="lg"
                       onClick={() => setShowLoginPrompt(false)}
-                      className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                      className="border border-border"
                     >
                       Cancel
-                    </button>
+                    </Button>
                     <a
                       href="https://github.com/kubestellar/console/issues/new"
                       target="_blank"
@@ -1191,14 +1196,16 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
         <div className="flex items-center gap-2">
         {activeTab === 'submit' && !success ? (
           <>
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+              className="border border-border"
             >
               Cancel
-            </button>
+            </Button>
             {canPerformActions ? (
               <button
                 type="submit"
@@ -1232,13 +1239,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
             )}
           </>
         ) : (
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+            className="border border-border"
           >
             Close
-          </button>
+          </Button>
         )}
         </div>
       </div>

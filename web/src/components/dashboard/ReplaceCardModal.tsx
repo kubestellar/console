@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
+import { Button } from '../ui/Button'
 import { CARD_CONFIGS } from '../../config/cards'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 
@@ -330,12 +331,13 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
         <BaseModal.Footer showKeyboardHints>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
-            <button
+            <Button
+              variant="ghost"
+              size="lg"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             >
               {t('actions.cancel')}
-            </button>
+            </Button>
             {activeTab === 'select' && (
               <button
                 onClick={handleSelectReplace}

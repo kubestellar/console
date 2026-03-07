@@ -4,6 +4,7 @@ import {
   Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
 } from 'lucide-react'
 import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
+import { Button } from '../../ui/Button'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -375,21 +376,23 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
               placeholder="owner/repo (e.g., facebook/react)"
               className="flex-1 px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground"
             />
-            <button
+            <Button
+              variant="accent"
+              size="sm"
+              icon={<Plus className="w-3.5 h-3.5" />}
               onClick={handleAddRepo}
               disabled={!newRepoInput.trim()}
-              className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Add repo"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-            <button
+              className="p-1 rounded"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Check className="w-3.5 h-3.5" />}
               onClick={() => setIsEditingRepos(false)}
-              className="p-1 rounded hover:bg-secondary text-muted-foreground"
               title="Done"
-            >
-              <Check className="w-3.5 h-3.5" />
-            </button>
+              className="p-1 rounded hover:bg-secondary"
+            />
           </div>
           <div className="flex flex-wrap gap-1.5">
             {repos.map((repo) => (

@@ -12,6 +12,7 @@ import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useModalState } from '../../lib/modals'
+import { Button } from './Button'
 
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
@@ -460,25 +461,29 @@ export function AlertBadge() {
                   {/* Quick Actions */}
                   <div className="flex items-center gap-2 mt-2">
                     {!alert.acknowledgedAt && (
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={e => handleAcknowledge(e, alert.id)}
-                        className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+                        className="rounded-md"
                       >
                         Acknowledge
-                      </button>
+                      </Button>
                     )}
                     {(() => {
                       const mission = getMissionForAlert(alert)
                       if (mission) {
                         // Mission exists - show link to view it
                         return (
-                          <button
+                          <Button
+                            variant="accent"
+                            size="sm"
                             onClick={e => handleOpenMission(e, alert)}
-                            className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                            className="rounded-md"
+                            icon={<ExternalLink className="w-3 h-3" />}
                           >
-                            <ExternalLink className="w-3 h-3" />
                             View Diagnosis
-                          </button>
+                          </Button>
                         )
                       } else {
                         // No mission or mission was deleted - show diagnose button

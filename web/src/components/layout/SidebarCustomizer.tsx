@@ -39,6 +39,7 @@ import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
@@ -395,13 +396,13 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
       <BaseModal.Content className="max-h-[60vh]">
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 mb-6">
-            <button
+            <Button
+              variant="accent"
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+              icon={<Plus className="w-4 h-4" />}
             >
-              <Plus className="w-4 h-4" />
               {t('sidebar.customizer.addItem')}
-            </button>
+            </Button>
             <button
               onClick={() => setIsCreateDashboardOpen(true)}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30"
@@ -409,25 +410,25 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               <FolderPlus className="w-4 h-4" />
               {t('sidebar.customizer.newDashboard')}
             </button>
-            <button
+            <Button
+              variant="ghost"
               onClick={resetToDefault}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-foreground"
+              icon={<RotateCcw className="w-4 h-4" />}
             >
-              <RotateCcw className="w-4 h-4" />
               {t('sidebar.customizer.reset')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={handleGenerateFromBehavior}
               disabled={isGenerating}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
-            >
-              {isGenerating ? (
+              icon={isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Sparkles className="w-4 h-4" />
               )}
+            >
               {isGenerating ? t('sidebar.customizer.analyzing') : t('sidebar.customizer.generateFromBehavior')}
-            </button>
+            </Button>
           </div>
 
           {/* Generation Result */}
@@ -781,7 +782,9 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                             {isInSidebar ? (
                               <StatusBadge color="green">{t('sidebar.customizer.added')}</StatusBadge>
                             ) : (
-                              <button
+                              <Button
+                                variant="accent"
+                                size="sm"
                                 onClick={() => {
                                   addItem({
                                     name: template.name,
@@ -790,10 +793,10 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                                     type: 'link',
                                   }, 'primary')
                                 }}
-                                className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 whitespace-nowrap"
+                                className="whitespace-nowrap rounded"
                               >
                                 {t('sidebar.customizer.add')}
-                              </button>
+                              </Button>
                             )}
                           </div>
                         )

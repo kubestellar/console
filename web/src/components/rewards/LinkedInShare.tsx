@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Button } from '../ui/Button'
 import { useRewards } from '../../hooks/useRewards'
 import { useTranslation } from 'react-i18next'
 import { emitLinkedInShare } from '../../lib/analytics'
@@ -67,18 +68,22 @@ export function LinkedInShareButton() {
               </div>
 
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="secondary"
+                  size="lg"
                   onClick={() => setShowConfirm(false)}
-                  className="flex-1 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm transition-colors"
+                  className="flex-1"
                 >
                   Not yet
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
                   onClick={handleConfirmShare}
-                  className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                  className="flex-1"
                 >
                   Yes, I shared!
-                </button>
+                </Button>
               </div>
 
               {shareCount > 0 && (

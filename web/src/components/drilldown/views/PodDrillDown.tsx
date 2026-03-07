@@ -7,6 +7,7 @@ import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw, Stethoscope, Wrench, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { Button } from '../../ui/Button'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -1419,13 +1420,14 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         )}
                         {t('drilldown.actions.saveChanges')}
                       </button>
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={cancelLabelEdit}
                         disabled={labelSaving}
-                        className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm hover:bg-secondary/80 disabled:opacity-50"
                       >
                         {t('common.cancel')}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : labelEntries.length > 0 ? (
@@ -1595,13 +1597,14 @@ Please proceed step by step and ask for confirmation before making any changes.`
                         )}
                         {t('drilldown.actions.saveChanges')}
                       </button>
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={cancelAnnotationEdit}
                         disabled={annotationSaving}
-                        className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm hover:bg-secondary/80 disabled:opacity-50"
                       >
                         {t('common.cancel')}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : annotationEntries.length > 0 ? (
@@ -1921,13 +1924,14 @@ Please proceed step by step and ask for confirmation before making any changes.`
               {/* Refresh button */}
               {agentConnected && (
                 <div className="pt-4 border-t border-border mt-4">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => fetchRelatedResources(true)}
-                    className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-sm hover:bg-secondary/80 flex items-center gap-2"
+                    icon={<Loader2 className={cn('w-4 h-4', relatedLoading && 'animate-spin')} />}
                   >
-                    <Loader2 className={cn('w-4 h-4', relatedLoading && 'animate-spin')} />
                     Refresh
-                  </button>
+                  </Button>
                 </div>
               )}
 

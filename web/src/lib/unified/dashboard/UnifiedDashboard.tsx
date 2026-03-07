@@ -11,6 +11,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Activity, RefreshCw, Plus } from 'lucide-react'
+import { Button } from '../../../components/ui/Button'
 import type {
   UnifiedDashboardProps,
   DashboardCardPlacement,
@@ -220,27 +221,27 @@ export function UnifiedDashboard({
 
           {/* Refresh button */}
           {features.autoRefresh !== false && (
-            <button
+            <Button
+              variant="secondary"
               onClick={handleRefresh}
               disabled={isLoading}
-              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 disabled:opacity-50 transition-colors"
+              className="p-2"
               title="Refresh"
-            >
-              <RefreshCw
+              icon={<RefreshCw
                 className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`}
-              />
-            </button>
+              />}
+            />
           )}
 
           {/* Add card button */}
           {features.addCard !== false && (
-            <button
+            <Button
+              variant="secondary"
               onClick={handleAddCard}
-              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              className="p-2"
               title="Add card"
-            >
-              <Plus className="w-4 h-4 text-muted-foreground" />
-            </button>
+              icon={<Plus className="w-4 h-4 text-muted-foreground" />}
+            />
           )}
 
           {/* Reset button (if customized) */}
@@ -289,12 +290,13 @@ export function UnifiedDashboard({
             Add cards to start building your dashboard
           </p>
           {features.addCard !== false && (
-            <button
+            <Button
+              variant="primary"
+              size="lg"
               onClick={handleAddCard}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
             >
               Add your first card
-            </button>
+            </Button>
           )}
         </div>
       )}

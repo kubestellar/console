@@ -8,6 +8,7 @@ import { CARD_TITLES, CARD_DESCRIPTIONS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -988,27 +989,33 @@ export function CardWrapper({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{pendingSwap.reason}</p>
                 <div className="flex gap-2 mt-2">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => handleSnooze(3600000)}
-                    className="text-xs px-2 py-1 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                    className="rounded"
                     title={t('cardWrapper.snoozeTooltip')}
                   >
                     {t('common:buttons.snoozeHour')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="accent"
+                    size="sm"
                     onClick={handleSwapNow}
-                    className="text-xs px-2 py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300"
+                    className="rounded"
                     title={t('cardWrapper.swapNowTooltip')}
                   >
                     {t('common:buttons.swapNow')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => onSwapCancel?.()}
-                    className="text-xs px-2 py-1 rounded hover:bg-secondary/50 text-muted-foreground"
+                    className="rounded"
                     title={t('cardWrapper.keepThisTooltip')}
                   >
                     {t('common:buttons.keepThis')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

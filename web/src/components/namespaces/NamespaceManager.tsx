@@ -16,6 +16,7 @@ import {
   Server,
   WifiOff
 } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { useClusters } from '../../hooks/useMCP'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { BaseModal } from '../../lib/modals'
@@ -387,13 +388,13 @@ export function NamespaceManager() {
         onRefresh={triggerRefresh}
         lastUpdated={lastUpdated}
         rightExtra={
-          <button
+          <Button
+            variant="primary"
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/80 text-white text-sm hover:bg-blue-500 transition-colors"
+            icon={<Plus className="w-3.5 h-3.5" />}
           >
-            <Plus className="w-3.5 h-3.5" />
             Create
-          </button>
+          </Button>
         }
       />
 
@@ -864,19 +865,21 @@ function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConfirmModa
       <BaseModal.Footer>
         <div className="flex-1" />
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="lg"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="danger"
+            size="lg"
             onClick={handleDelete}
             disabled={!canDelete || deleting}
-            className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {deleting ? 'Deleting...' : 'Delete Namespace'}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>
@@ -1070,13 +1073,13 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
                 )}
               </div>
               <div className="relative">
-                <button
+                <Button
+                  variant="accent"
                   onClick={() => setShowGroupDropdown(!showGroupDropdown)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm"
+                  icon={<Shield className="w-4 h-4" />}
                 >
-                  <Shield className="w-4 h-4" />
                   Add Group
-                </button>
+                </Button>
                 {showGroupDropdown && availableGroups.length > 0 && (
                   <div
                     role="listbox"
@@ -1170,19 +1173,21 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
       <BaseModal.Footer>
         <div className="flex-1" />
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="lg"
             onClick={handleClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
             onClick={handleCreate}
             disabled={!name || !cluster || creating}
-            className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {creating ? 'Creating...' : 'Create'}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>
@@ -1394,19 +1399,21 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
       <BaseModal.Footer>
         <div className="flex-1" />
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="lg"
             onClick={handleClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
             onClick={handleGrant}
             disabled={!subjectName || granting}
-            className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {granting ? 'Granting...' : 'Grant Access'}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

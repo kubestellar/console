@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
+import { Button } from '../ui/Button'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from './AddCardModal'
@@ -120,20 +121,22 @@ export function DashboardCards({
 
         {showCards && (
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Layout className="w-3.5 h-3.5" />}
               onClick={templatesModal.open}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
             >
-              <Layout className="w-3.5 h-3.5" />
               {t('dashboard.actions.templates')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="accent"
+              size="sm"
+              icon={<Plus className="w-3.5 h-3.5" />}
               onClick={addCardModal.open}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" />
               {t('dashboard.actions.addCard')}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -148,13 +151,14 @@ export function DashboardCards({
               <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
                 {emptyDescription}
               </p>
-              <button
+              <Button
+                variant="accent"
+                size="lg"
+                icon={<Plus className="w-4 h-4" />}
                 onClick={addCardModal.open}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
               >
-                <Plus className="w-4 h-4" />
                 {t('dashboard.addCard.addCards')}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

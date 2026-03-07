@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
+import { Gauge, Cpu, HardDrive, Box, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { Button } from '../ui/Button'
 import {
   useClusters,
   useNamespaces,
@@ -238,13 +239,15 @@ function QuotaModal({
               <label className="text-sm font-medium text-muted-foreground">{t('namespaceQuotas.resourceLimits')}</label>
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <button
+                  <Button
+                    variant="accent"
+                    size="sm"
+                    icon={<Zap className="w-3 h-3" />}
                     onClick={() => setShowGpuPresets(!showGpuPresets)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+                    className="rounded"
                   >
-                    <Zap className="w-3 h-3" />
                     GPU
-                  </button>
+                  </Button>
                   {showGpuPresets && (
                     <div className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-10">
                       {GPU_RESOURCE_TYPES.map(rt => (
@@ -315,20 +318,22 @@ function QuotaModal({
       <BaseModal.Footer>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80"
           >
             {t('common:common.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
             onClick={handleSave}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            loading={isLoading}
           >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {editingQuota ? t('common:common.update') : t('common:common.create')}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>
@@ -904,20 +909,22 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         <BaseModal.Footer>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={() => setDeleteConfirm(null)}
-              className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="danger"
+              size="lg"
               onClick={() => deleteConfirm && handleDeleteQuota(deleteConfirm.cluster, deleteConfirm.namespace, deleteConfirm.name)}
               disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              loading={isSaving}
             >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
               Delete
-            </button>
+            </Button>
           </div>
         </BaseModal.Footer>
       </BaseModal>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Search, Server, Activity, Filter, Check, AlertTriangle, Plus, Folder, X, Trash2, WifiOff } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
+import { Button } from '../../ui/Button'
 import { cn } from '../../../lib/cn'
 
 export function ClusterFilterPanel() {
@@ -76,19 +77,20 @@ export function ClusterFilterPanel() {
     <>
       {/* Clear Filters Button - shows when filters active */}
       {isFiltered && (
-        <button
+        <Button
+          variant="accent"
+          size="sm"
           onClick={() => {
             selectAllClusters()
             selectAllSeverities()
             selectAllStatuses()
             clearCustomFilter()
           }}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-xs font-medium"
+          icon={<X className="w-3 h-3" />}
           title={t('common:filters.clearAll', 'Clear all filters')}
         >
-          <X className="w-3 h-3" />
           <span className="hidden sm:inline">{t('common:filters.clear', 'Clear')}</span>
-        </button>
+        </Button>
       )}
 
       {/* Global Filters */}

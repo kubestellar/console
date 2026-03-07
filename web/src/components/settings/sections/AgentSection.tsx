@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plug, RefreshCw, Check, X, Copy, Cpu } from 'lucide-react'
+import { Button } from '../../ui/Button'
 import type { AgentHealth } from '../../../hooks/useLocalAgent'
 import { UI_FEEDBACK_TIMEOUT_MS, RETRY_DELAY_MS } from '../../../lib/constants/network'
 
@@ -55,14 +56,15 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
             <p className="text-sm text-muted-foreground">{t('settings.agent.subtitle')}</p>
           </div>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="md"
+          icon={<RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('settings.agent.refresh')}
-        </button>
+        </Button>
       </div>
 
       {/* Connection Status */}

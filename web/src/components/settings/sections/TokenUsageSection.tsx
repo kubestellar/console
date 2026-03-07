@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, Coins, RefreshCw } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
+import { Button } from '../../../components/ui/Button'
 import type { TokenUsage } from '../../../hooks/useTokenUsage'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
@@ -54,13 +55,14 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
             <p className="text-sm text-muted-foreground">{t('settings.tokens.subtitle')}</p>
           </div>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="md"
+          icon={<RefreshCw className="w-4 h-4" />}
           onClick={resetUsage}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50"
         >
-          <RefreshCw className="w-4 h-4" />
           {t('settings.tokens.resetUsage')}
-        </button>
+        </Button>
       </div>
 
       {isDemoData && (

@@ -4,6 +4,7 @@ import { STORAGE_KEY_KUBECTL_HISTORY } from '../../lib/constants'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
+import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -542,20 +543,23 @@ data:
             className="w-full px-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
           />
           <div className="flex gap-2 mt-2">
-            <button
+            <Button
+              variant="accent"
+              size="sm"
               onClick={generateCommand}
               disabled={isExecuting || !aiPrompt.trim()}
-              className="px-3 py-1.5 text-xs rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('cards:kubectl.generateCommand')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="accent"
+              size="sm"
               onClick={generateYAML}
               disabled={isExecuting || !aiPrompt.trim()}
-              className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300"
             >
               {t('cards:kubectl.generateYAML')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -622,22 +626,25 @@ data:
             </div>
           )}
           <div className="flex gap-2 mt-2">
-            <button
+            <Button
+              variant="accent"
+              size="sm"
               onClick={applyYAML}
               disabled={isExecuting || !yamlContent.trim() || !!yamlError}
-              className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300"
             >
               {isExecuting ? t('cards:kubectl.applying') : isDryRun ? t('cards:kubectl.dryRunApply') : t('common:common.apply')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setYamlContent('')
                 setYamlError(null)
               }}
-              className="px-3 py-1.5 text-xs rounded-lg hover:bg-secondary/50 text-muted-foreground"
             >
               {t('common:common.clear')}
-            </button>
+            </Button>
           </div>
 
           {/* Saved Manifests */}

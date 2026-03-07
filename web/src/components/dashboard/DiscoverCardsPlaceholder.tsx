@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react'
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { Button } from '../ui/Button'
 
 interface DiscoverCardsPlaceholderProps {
   existingCardTypes: string[]
@@ -112,19 +113,21 @@ export function DiscoverCardsPlaceholder({
 
         {/* Actions */}
         <div className="flex gap-2 mt-1">
-          <button
+          <Button
+            variant="accent"
+            size="sm"
+            icon={<Plus className="w-3.5 h-3.5" />}
             onClick={() => onAddCard(current.type)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" />
             {t('dashboard.discover.addThis', 'Add this card')}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onOpenCatalog}
-            className="px-3 py-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground text-xs transition-colors"
           >
             {t('dashboard.discover.browseCatalog', 'Browse all')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

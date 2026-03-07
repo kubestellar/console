@@ -17,6 +17,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon, getSeverityColor } from '../../types/alerts'
 import type { Alert } from '../../types/alerts'
 import { useToast } from '../ui/Toast'
+import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { RETRY_DELAY_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
@@ -208,23 +209,15 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               <span className="text-sm font-medium text-foreground">{t('alerts.aiDiagnosis')}</span>
             </div>
             {!alert.aiDiagnosis?.missionId && (
-              <button
+              <Button
+                variant="accent"
+                size="sm"
                 onClick={handleRunDiagnosis}
                 disabled={isRunningDiagnosis}
-                className="px-3 py-1 text-xs rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1 disabled:opacity-50"
+                icon={isRunningDiagnosis ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Bot className="w-3 h-3" />}
               >
-                {isRunningDiagnosis ? (
-                  <>
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                    {t('alerts.analyzing')}
-                  </>
-                ) : (
-                  <>
-                    <Bot className="w-3 h-3" />
-                    {t('alerts.runDiagnosis')}
-                  </>
-                )}
-              </button>
+                {isRunningDiagnosis ? t('alerts.analyzing') : t('alerts.runDiagnosis')}
+              </Button>
             )}
           </div>
 
@@ -284,15 +277,16 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
             </div>
             <div className="flex flex-wrap gap-2">
               {webhooks.map(webhook => (
-                <button
+                <Button
                   key={webhook.id}
+                  variant="secondary"
+                  size="sm"
                   onClick={() => handleSendSlack(webhook.id)}
                   disabled={isSendingSlack}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1 disabled:opacity-50"
+                  icon={<Send className="w-3 h-3" />}
                 >
-                  <Send className="w-3 h-3" />
                   {webhook.name}
-                </button>
+                </Button>
               ))}
             </div>
             {slackSent && (
@@ -308,12 +302,13 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
       <div className="p-4 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           {!alert.acknowledgedAt && alert.status === 'firing' && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleAcknowledge}
-              className="px-3 py-1.5 text-sm rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
             >
               {t('alerts.acknowledge')}
-            </button>
+            </Button>
           )}
           {alert.status === 'firing' && (
             <button
@@ -325,12 +320,13 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           )}
         </div>
         {onClose && (
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="px-3 py-1.5 text-sm rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
           >
             {t('actions.close')}
-          </button>
+          </Button>
         )}
       </div>
     </div>

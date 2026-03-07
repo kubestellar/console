@@ -17,6 +17,7 @@ import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
+import { Button } from '../ui/Button'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
@@ -357,24 +358,28 @@ export function ActiveAlerts() {
               {/* Quick Actions */}
               <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
                 {!alert.acknowledgedAt && (
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={e => handleAcknowledge(e, alert.id)}
-                    className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+                    className="rounded"
                   >
                     {t('activeAlerts.acknowledge')}
-                  </button>
+                  </Button>
                 )}
                 {(() => {
                   const mission = getMissionForAlert(alert)
                   if (mission) {
                     return (
-                      <button
+                      <Button
+                        variant="accent"
+                        size="sm"
                         onClick={e => handleOpenMission(e, alert)}
-                        className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                        icon={<ExternalLink className="w-3 h-3" />}
+                        className="rounded"
                       >
-                        <ExternalLink className="w-3 h-3" />
                         {t('activeAlerts.viewDiagnosis')}
-                      </button>
+                      </Button>
                     )
                   } else {
                     return (
