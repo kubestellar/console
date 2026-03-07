@@ -3942,13 +3942,34 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 		}
 	}
 
-	// Use osascript for macOS notifications (non-blocking)
+	// Build a deep link URL so clicking the notification opens the console
+	consoleURL := fmt.Sprintf("http://localhost:%d/?action=hardware-health", s.config.Port)
+
+	// Prefer terminal-notifier (supports click-to-open via -open flag).
+	// Fall back to osascript display notification (no click handler support).
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Printf("[DeviceTracker] recovered from panic in notification: %v", r)
 			}
 		}()
+
+		if tnPath, err := exec.LookPath("terminal-notifier"); err == nil {
+			cmd := exec.Command(tnPath,
+				"-title", title,
+				"-message", message,
+				"-sound", "Glass",
+				"-open", consoleURL,
+				"-appIcon", "/tmp/kubestellar-console/web/public/kubestellar-logo.svg",
+			)
+			if err := cmd.Run(); err != nil {
+				log.Printf("[DeviceTracker] terminal-notifier failed: %v, falling back to osascript", err)
+			} else {
+				return
+			}
+		}
+
+		// Fallback: osascript (no click-to-open support on macOS)
 		script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`,
 			message, title)
 		cmd := exec.Command("osascript", "-e", script)

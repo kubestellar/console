@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { POLL_INTERVAL_MS } from '../../lib/constants/network'
 import { emitWidgetLoaded, emitWidgetNavigation, emitWidgetInstalled } from '../../lib/analytics'
+import { sendNotificationWithDeepLink } from '../../hooks/useDeepLink'
 
 /** UTM params appended to click-through URLs for GA4 widget campaign attribution */
 const WIDGET_UTM_PARAMS = 'utm_source=widget&utm_medium=pwa&utm_campaign=widget-usage'
@@ -164,38 +165,19 @@ export function MiniDashboard() {
       const newOffline = offlineCount - prevOfflineCountRef.current
       if ('Notification' in window && Notification.permission === 'granted' && newOffline > 0) {
         const firstOfflineNode = offlineNodes[0]
-        const nodeNames = offlineNodes.slice(0, 3).map(n => n.name).join(', ')
+        const nodeNames = (offlineNodes || []).slice(0, 3).map(n => n.name).join(', ')
 
-        const notification = new Notification('KubeStellar: Nodes Offline', {
-          body: `${newOffline} node${newOffline > 1 ? 's' : ''} went offline: ${nodeNames}${offlineCount > 3 ? '...' : ''}`,
-          icon: '/kubestellar-logo.svg',
-          tag: 'node-offline', // Prevents duplicate notifications
-          requireInteraction: true, // Keeps notification until dismissed
-        })
-
-        // Deep link to node drilldown when notification is clicked
-        notification.onclick = (event: Event) => {
-          // Prevent default OS behavior (e.g., macOS opening Finder instead of the browser)
-          event.preventDefault()
-          window.focus()
-          if (firstOfflineNode) {
-            // Build deep link URL to node drilldown with widget campaign attribution
-            const params = new URLSearchParams({
-              drilldown: 'node',
-              cluster: firstOfflineNode.cluster || 'unknown',
-              node: firstOfflineNode.name,
-              issue: 'Node went offline',
-              utm_source: 'widget',
-              utm_medium: 'notification',
-              utm_campaign: 'widget-usage',
-            })
-            window.location.href = `${window.location.origin}/?${params.toString()}`
-          } else {
-            // Fallback to main dashboard
-            window.location.href = `${window.location.origin}/?${WIDGET_UTM_PARAMS}`
-          }
-          notification.close()
-        }
+        sendNotificationWithDeepLink(
+          'KubeStellar: Nodes Offline',
+          `${newOffline} node${newOffline > 1 ? 's' : ''} went offline: ${nodeNames}${offlineCount > 3 ? '...' : ''}`,
+          {
+            drilldown: 'node',
+            cluster: firstOfflineNode?.cluster || 'unknown',
+            node: firstOfflineNode?.name || 'unknown',
+            issue: 'Node went offline',
+          },
+          { tag: 'node-offline' }
+        )
       }
     }
     prevOfflineCountRef.current = offlineCount

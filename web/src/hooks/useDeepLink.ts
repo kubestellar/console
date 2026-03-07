@@ -63,8 +63,40 @@ export function buildDeepLinkURL(params: DeepLinkParams): string {
   return `${base}?${searchParams.toString()}`
 }
 
+// Cached reference to the notification service worker registration
+let swRegistration: ServiceWorkerRegistration | null = null
+let swRegistrationAttempted = false
+
 /**
- * Send a browser notification with deep link support
+ * Register the notification service worker.
+ * Called once on first notification send. The SW handles notificationclick
+ * via clients.openWindow()/client.focus(), which reliably brings the
+ * browser to the foreground on macOS (unlike window.focus() from a
+ * Notification.onclick handler).
+ */
+async function getNotificationSW(): Promise<ServiceWorkerRegistration | null> {
+  if (swRegistration) return swRegistration
+  if (swRegistrationAttempted) return null
+  swRegistrationAttempted = true
+
+  if (!('serviceWorker' in navigator)) return null
+
+  try {
+    swRegistration = await navigator.serviceWorker.register('/notification-sw.js', {
+      scope: '/',
+    })
+    return swRegistration
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Send a browser notification with deep link support.
+ *
+ * Uses the Service Worker showNotification API when available, which
+ * properly focuses/opens the browser on macOS when clicked. Falls back
+ * to the standard Notification API on browsers without SW support.
  */
 export function sendNotificationWithDeepLink(
   title: string,
@@ -76,6 +108,25 @@ export function sendNotificationWithDeepLink(
     return null
   }
 
+  const url = buildDeepLinkURL(params)
+
+  // Try Service Worker notification first (reliable on macOS)
+  getNotificationSW().then((reg) => {
+    if (reg) {
+      reg.showNotification(title, {
+        body,
+        icon: '/kubestellar-logo.svg',
+        requireInteraction: true,
+        data: { url },
+        ...options,
+      })
+    }
+  })
+
+  // Return a standard Notification as fallback / for callers that
+  // need a reference. If the SW path succeeds, this one is redundant
+  // but harmless (the SW notification takes precedence on most browsers).
+  // On browsers without SW support, this is the only notification.
   const notification = new Notification(title, {
     body,
     icon: '/kubestellar-logo.svg',
@@ -84,17 +135,23 @@ export function sendNotificationWithDeepLink(
   })
 
   notification.onclick = (event: Event) => {
-    // Prevent default OS behavior (e.g., macOS opening Finder instead of the browser)
     event.preventDefault()
-
-    // Focus existing window or open new one
-    window.focus()
-
-    // Navigate to deep link
-    const url = buildDeepLinkURL(params)
-    window.location.href = url
-
     notification.close()
+
+    // On macOS, window.focus() alone is unreliable from notification context.
+    // Use window.open() as a more reliable fallback to bring browser forward.
+    try {
+      const opened = window.open(url, '_self')
+      if (opened) {
+        opened.focus()
+      } else {
+        window.focus()
+        window.location.href = url
+      }
+    } catch {
+      window.focus()
+      window.location.href = url
+    }
   }
 
   return notification
