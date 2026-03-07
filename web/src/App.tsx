@@ -248,25 +248,21 @@ function SettingsSyncInit() {
  *  Redirect /missions/:missionId → /?mission=:missionId to open a specific mission.
  *  Preserves UTM and other query params so GA4 campaign attribution survives the redirect. */
 function IssueRedirect() {
-  const navigate = useNavigate()
   useEffect(() => {
-    // Navigate to home first, then dispatch event for FeatureRequestButton
-    navigate(ROUTES.HOME, { replace: true })
-    // Use setTimeout to ensure the dashboard is mounted before firing
     const MODAL_OPEN_DELAY_MS = 100
-    setTimeout(() => window.dispatchEvent(new CustomEvent('open-feedback')), MODAL_OPEN_DELAY_MS)
-  }, [navigate])
-  return null
+    const timer = setTimeout(() => window.dispatchEvent(new CustomEvent('open-feedback')), MODAL_OPEN_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [])
+  return <Navigate to={ROUTES.HOME} replace />
 }
 
 function FeatureRedirect() {
-  const navigate = useNavigate()
   useEffect(() => {
-    navigate(ROUTES.HOME, { replace: true })
     const MODAL_OPEN_DELAY_MS = 100
-    setTimeout(() => window.dispatchEvent(new CustomEvent('open-feedback-feature')), MODAL_OPEN_DELAY_MS)
-  }, [navigate])
-  return null
+    const timer = setTimeout(() => window.dispatchEvent(new CustomEvent('open-feedback-feature')), MODAL_OPEN_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [])
+  return <Navigate to={ROUTES.HOME} replace />
 }
 
 function MissionBrowseLink() {
