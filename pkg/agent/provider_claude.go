@@ -30,7 +30,7 @@ func NewClaudeProvider() *ClaudeProvider {
 	return &ClaudeProvider{
 		apiKey: cm.GetAPIKey("claude"),
 		model:  cm.GetModel("claude", defaultClaudeModel),
-		client: &http.Client{},
+		client: newAIProviderHTTPClient(),
 	}
 }
 

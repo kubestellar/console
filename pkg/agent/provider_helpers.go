@@ -1,6 +1,18 @@
 package agent
 
-import "strings"
+import (
+	"net/http"
+	"strings"
+	"time"
+)
+
+const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API calls
+
+// newAIProviderHTTPClient creates an HTTP client configured with the standard
+// timeout for AI provider API calls.
+func newAIProviderHTTPClient() *http.Client {
+	return &http.Client{Timeout: aiProviderHTTPTimeout}
+}
 
 // buildPromptWithHistoryGeneric creates a prompt string from a ChatRequest
 // including system prompt and conversation history.

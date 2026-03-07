@@ -39,7 +39,7 @@ func chatViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey,
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := newAIProviderHTTPClient().Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -112,7 +112,7 @@ func streamViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKe
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := newAIProviderHTTPClient().Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}

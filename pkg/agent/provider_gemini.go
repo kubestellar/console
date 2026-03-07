@@ -29,7 +29,7 @@ func NewGeminiProvider() *GeminiProvider {
 	return &GeminiProvider{
 		apiKey: cm.GetAPIKey("gemini"),
 		model:  cm.GetModel("gemini", defaultGeminiModel),
-		client: &http.Client{},
+		client: newAIProviderHTTPClient(),
 	}
 }
 

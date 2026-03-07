@@ -29,7 +29,7 @@ func NewOpenAIProvider() *OpenAIProvider {
 	return &OpenAIProvider{
 		apiKey: cm.GetAPIKey("openai"),
 		model:  cm.GetModel("openai", defaultOpenAIModel),
-		client: &http.Client{},
+		client: newAIProviderHTTPClient(),
 	}
 }
 
