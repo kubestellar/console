@@ -44,7 +44,7 @@ To enable feedback and GitHub-powered features (nightly E2E status, community ac
 
 ## Architecture
 
-- **[console-kb](https://github.com/kubestellar/console-kb)** — YAML knowledge base defining mission steps, commands, and validation checks
+- **[console-kb](https://github.com/kubestellar/console-kb)** — Knowledge base of guided installers for 250+ CNCF projects and solutions to common Kubernetes problems
 - **[console-marketplace](https://github.com/kubestellar/console-marketplace)** — Community-contributed monitoring cards per CNCF project
 - **[kc-agent](cmd/kc-agent/)** — Local agent bridging the browser to kubeconfig, coding agents (Codex, Copilot, Claude CLI), and MCP servers (`kubestellar-ops`, `kubestellar-deploy`)
 
