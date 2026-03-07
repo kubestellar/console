@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, startTransition } from 'react'
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Lightbulb, Clock, X, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope } from 'lucide-react'
+import { Lightbulb, Clock, X, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope, Timer } from 'lucide-react'
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
 import { useSnoozedMissions, formatTimeRemaining } from '../../hooks/useSnoozedMissions'
 import { useMissions } from '../../hooks/useMissions'
@@ -10,6 +10,10 @@ import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
+import { emitMissionSuggestionsShown, emitMissionSuggestionActioned } from '../../lib/analytics'
+
+/** Seconds before the panel auto-collapses */
+const AUTO_COLLAPSE_SECONDS = 20
 
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
@@ -58,7 +62,10 @@ export function MissionSuggestions() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [minimized, setMinimized] = useState(false)
+  const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const analyticsEmittedRef = useRef(false)
 
   // Check agent status for offline skeleton display
   const { status: agentStatus } = useLocalAgent()
@@ -68,6 +75,56 @@ export function MissionSuggestions() {
 
   // Force dependency on snoozedMissions for reactivity
   void snoozedMissions
+
+  // Start / stop countdown timer
+  const startCountdown = useCallback(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current)
+          countdownRef.current = null
+          setMinimized(true)
+          return AUTO_COLLAPSE_SECONDS
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }, [])
+
+  // Manage countdown lifecycle based on minimized state
+  useEffect(() => {
+    if (!minimized && hasSuggestions) {
+      setCountdown(AUTO_COLLAPSE_SECONDS)
+      startCountdown()
+    } else if (countdownRef.current) {
+      clearInterval(countdownRef.current)
+      countdownRef.current = null
+    }
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current)
+    }
+  }, [minimized, hasSuggestions, startCountdown])
+
+  // Pause countdown on hover, resume on leave
+  const handleMouseEnter = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current)
+      countdownRef.current = null
+    }
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    if (!minimized) startCountdown()
+  }, [minimized, startCountdown])
+
+  // Emit analytics once when panel first renders with suggestions
+  useEffect(() => {
+    if (!analyticsEmittedRef.current && hasSuggestions && suggestions.length > 0) {
+      analyticsEmittedRef.current = true
+      emitMissionSuggestionsShown(suggestions.length, stats.critical)
+    }
+  }, [hasSuggestions, suggestions.length, stats.critical])
 
   // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
@@ -102,6 +159,8 @@ export function MissionSuggestions() {
     e.stopPropagation()
     e.preventDefault()
 
+    emitMissionSuggestionActioned(suggestion.type, suggestion.priority, 'investigate')
+
     // Batch state updates to prevent flicker
     startTransition(() => {
       setExpandedId(null)
@@ -128,6 +187,8 @@ export function MissionSuggestions() {
   const handleRepair = (e: React.MouseEvent, suggestion: MissionSuggestion) => {
     e.stopPropagation()
     e.preventDefault()
+
+    emitMissionSuggestionActioned(suggestion.type, suggestion.priority, 'repair')
 
     // Batch state updates to prevent flicker
     startTransition(() => {
@@ -220,7 +281,12 @@ export function MissionSuggestions() {
   }
 
   return (
-    <div data-tour="mission-suggestions" className="mb-4 glass rounded-xl border border-border/50">
+    <div
+      data-tour="mission-suggestions"
+      className="mb-4 glass rounded-xl border border-border/50"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-2">
@@ -244,13 +310,19 @@ export function MissionSuggestions() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setMinimized(true)}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-          title="Minimize"
-        >
-          <ChevronUp className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 text-2xs text-muted-foreground/60 tabular-nums">
+            <Timer className="w-3 h-3" />
+            {countdown}s
+          </span>
+          <button
+            onClick={() => setMinimized(true)}
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            title="Minimize"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Action chips */}

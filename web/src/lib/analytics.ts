@@ -656,6 +656,30 @@ export function emitSmartSuggestionsAddAll(cardCount: number) {
   send('ksc_smart_suggestions_add_all', { card_count: cardCount })
 }
 
+// ── Card Recommendations (dashboard panel) ──────────────────────────
+
+/** Fired when the "Recommended Cards for your clusters" panel renders */
+export function emitCardRecommendationsShown(cardCount: number, highPriorityCount: number) {
+  send('ksc_card_recommendations_shown', { card_count: cardCount, high_priority_count: highPriorityCount })
+}
+
+/** Fired when user adds a card from the recommendations panel */
+export function emitCardRecommendationActioned(cardType: string, priority: string) {
+  send('ksc_card_recommendation_actioned', { card_type: cardType, priority })
+}
+
+// ── Mission Suggestions (dashboard panel) ───────────────────────────
+
+/** Fired when the "Recommended Actions for your clusters" panel renders */
+export function emitMissionSuggestionsShown(count: number, criticalCount: number) {
+  send('ksc_mission_suggestions_shown', { suggestion_count: count, critical_count: criticalCount })
+}
+
+/** Fired when user starts an action from the mission suggestions panel */
+export function emitMissionSuggestionActioned(missionType: string, priority: string, action: string) {
+  send('ksc_mission_suggestion_actioned', { mission_type: missionType, priority, action })
+}
+
 // ── "Almost" Action Tracking ────────────────────────────────────────
 // These track user intent signals — users who almost engaged but didn't.
 // Helps distinguish discovery problems from conversion problems.

@@ -1,15 +1,19 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock, ChevronDown, ChevronUp, X, Plus, AlertTriangle, Info, Lightbulb } from 'lucide-react'
+import { Clock, ChevronDown, ChevronUp, X, Plus, AlertTriangle, Info, Lightbulb, Timer } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardRecommendations'
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
 import { AI_THINKING_DELAY_MS } from '../../lib/constants/network'
+import { emitCardRecommendationsShown, emitCardRecommendationActioned } from '../../lib/analytics'
 
 interface Props {
   currentCardTypes: string[]
   onAddCard: (cardType: string, config?: Record<string, unknown>) => void
 }
+
+/** Seconds before the panel auto-collapses */
+const AUTO_COLLAPSE_SECONDS = 20
 
 const PRIORITY_STYLES = {
   high: {
@@ -37,10 +41,55 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   const [expandedRec, setExpandedRec] = useState<string | null>(null)
   const [addingCard, setAddingCard] = useState<string | null>(null)
   const [minimized, setMinimized] = useState(false)
+  const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const analyticsEmittedRef = useRef(false)
 
   // Force dependency on snoozedRecommendations for reactivity
   void snoozedRecommendations
+
+  // Start / stop countdown timer
+  const startCountdown = useCallback(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current)
+          countdownRef.current = null
+          setMinimized(true)
+          return AUTO_COLLAPSE_SECONDS
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }, [])
+
+  // Manage countdown lifecycle based on minimized state
+  useEffect(() => {
+    if (!minimized) {
+      setCountdown(AUTO_COLLAPSE_SECONDS)
+      startCountdown()
+    } else if (countdownRef.current) {
+      clearInterval(countdownRef.current)
+      countdownRef.current = null
+    }
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current)
+    }
+  }, [minimized, startCountdown])
+
+  // Pause countdown on hover, resume on leave
+  const handleMouseEnter = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current)
+      countdownRef.current = null
+    }
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    if (!minimized) startCountdown()
+  }, [minimized, startCountdown])
 
   // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
@@ -75,6 +124,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
     setAddingCard(rec.id)
     await new Promise(resolve => setTimeout(resolve, AI_THINKING_DELAY_MS))
     onAddCard(rec.cardType, rec.config)
+    emitCardRecommendationActioned(rec.cardType, rec.priority)
     setAddingCard(null)
     setExpandedRec(null)
     dismissRecommendation(rec.id) // Permanently hide tile after adding card
@@ -93,6 +143,14 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
 
   // Filter out snoozed and dismissed recommendations
   const visibleRecommendations = recommendations.filter(rec => !isSnoozed(rec.id) && !isDismissed(rec.id))
+
+  // Emit analytics once when panel first renders with visible recommendations
+  useEffect(() => {
+    if (!analyticsEmittedRef.current && visibleRecommendations.length > 0) {
+      analyticsEmittedRef.current = true
+      emitCardRecommendationsShown(visibleRecommendations.length, highPriorityCount)
+    }
+  }, [visibleRecommendations.length, highPriorityCount])
 
   if (!hasRecommendations || visibleRecommendations.length === 0) return null
 
@@ -145,7 +203,12 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   }
 
   return (
-    <div data-tour="recommendations" className="mb-4 glass rounded-xl border border-border/50">
+    <div
+      data-tour="recommendations"
+      className="mb-4 glass rounded-xl border border-border/50"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-2">
@@ -164,13 +227,19 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setMinimized(true)}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-          title="Minimize"
-        >
-          <ChevronUp className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 text-2xs text-muted-foreground/60 tabular-nums">
+            <Timer className="w-3 h-3" />
+            {countdown}s
+          </span>
+          <button
+            onClick={() => setMinimized(true)}
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            title="Minimize"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Recommendation chips */}

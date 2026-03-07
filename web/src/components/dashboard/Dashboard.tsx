@@ -47,7 +47,7 @@ import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { WelcomeCard } from './WelcomeCard'
-import { SmartCardSuggestions } from './SmartCardSuggestions'
+
 import { PostConnectBanner } from './PostConnectBanner'
 import { AdopterNudge } from './AdopterNudge'
 import { DemoToLocalCTA } from './DemoToLocalCTA'
@@ -780,24 +780,6 @@ export function Dashboard() {
     setLocalCards((prev) => [newCard, ...prev])
   }, [dashboard, recordCardAdded])
 
-  // Handle adding multiple cards from smart suggestions "Add all"
-  const handleAddMultipleCards = useCallback((cardTypes: string[]) => {
-    const newCards: Card[] = cardTypes.map((cardType, index) => {
-      const size = getDefaultCardSize(cardType)
-      return {
-        id: `rec-${Date.now()}-${index}`,
-        card_type: cardType,
-        config: {},
-        position: { x: 0, y: 0, ...size },
-      }
-    })
-    newCards.forEach((card) => {
-      recordCardAdded(card.id, card.card_type, undefined, {}, dashboard?.id, dashboard?.name)
-      emitCardAdded(card.card_type, 'smart_suggestion_all')
-    })
-    setLocalCards((prev) => [...newCards, ...prev])
-  }, [dashboard, recordCardAdded])
-
   // Handle nudge CTA actions
   const handleNudgeAction = useCallback(() => {
     if (activeNudge === 'customize') {
@@ -897,13 +879,6 @@ export function Dashboard() {
       {clusters.length === 0 && !isClustersLoading && !getDemoMode() && (
         <WelcomeCard />
       )}
-
-      {/* Smart Card Suggestions — shown after kc-agent connects */}
-      <SmartCardSuggestions
-        existingCardTypes={currentCardTypes}
-        onAddCard={handleAddSingleCard}
-        onAddMultipleCards={handleAddMultipleCards}
-      />
 
       {/* Post-connect activation — bridges the 90% drop between agent connect and first mission */}
       <PostConnectBanner
