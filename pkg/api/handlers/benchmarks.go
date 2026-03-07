@@ -467,9 +467,9 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 		stale := h.cache.reports
 		h.cache.mu.RUnlock()
 		if stale != nil {
-			return c.JSON(fiber.Map{"reports": stale, "source": "stale-cache", "error": err.Error()})
+			return c.JSON(fiber.Map{"reports": stale, "source": "stale-cache", "error": "failed to refresh benchmark data"})
 		}
-		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("failed to fetch benchmark data: %v", err)})
+		return c.Status(502).JSON(fiber.Map{"error": "failed to fetch benchmark data"})
 	}
 
 	h.cache.set(reports, since)
@@ -566,7 +566,8 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 
 		topLevel, err := h.listDriveFolder(h.folderID)
 		if err != nil {
-			fmt.Fprintf(w, "event: error\ndata: {\"error\":%q}\n\n", err.Error())
+			log.Printf("error listing drive folder: %v", err)
+			fmt.Fprintf(w, "event: error\ndata: {\"error\":\"failed to fetch benchmark data\"}\n\n")
 			w.Flush()
 			return
 		}

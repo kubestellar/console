@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -54,7 +55,8 @@ func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 
 	workloads, err := h.k8sClient.ListWorkloads(c.Context(), cluster, namespace, workloadType)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(workloads)
@@ -73,7 +75,8 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 
 	workload, err := h.k8sClient.GetWorkload(c.Context(), cluster, namespace, name)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	if workload == nil {
@@ -101,7 +104,8 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 
 	var req DeployRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+		log.Printf("invalid request body: %v", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
 	// Validate required fields
@@ -128,7 +132,8 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 
 	result, err := h.k8sClient.DeployWorkload(c.Context(), req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(result)
@@ -148,9 +153,11 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 	workloadKind, bundle, err := h.k8sClient.ResolveWorkloadDependencies(c.Context(), cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("not found: %v", err)
+		return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	type depDTO struct {
@@ -201,9 +208,11 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 	result, err := h.k8sClient.MonitorWorkload(c.Context(), cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("not found: %v", err)
+		return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(result)
@@ -222,7 +231,8 @@ func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 
 	workload, err := h.k8sClient.GetWorkload(c.Context(), cluster, namespace, name)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	if workload == nil {
@@ -296,7 +306,8 @@ func (h *WorkloadHandlers) ListClusterGroups(c *fiber.Ctx) error {
 func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+		log.Printf("invalid request body: %v", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	if group.Name == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "name is required"})
@@ -329,7 +340,8 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+		log.Printf("invalid request body: %v", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	group.Name = name
 
@@ -412,7 +424,8 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 
 	var query ClusterGroupQuery
 	if err := c.BodyParser(&query); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid query: " + err.Error()})
+		log.Printf("invalid query: %v", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
@@ -423,7 +436,8 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	// We only want one result per unique server URL.
 	dedupClusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to list clusters: " + err.Error()})
+		log.Printf("failed to list clusters: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	primaryNames := make(map[string]bool, len(dedupClusters))
 	for _, cl := range dedupClusters {
@@ -433,7 +447,8 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	// Get all cluster health data and keep only deduplicated entries
 	allHealth, err := h.k8sClient.GetAllClusterHealth(ctx)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to get cluster health: " + err.Error()})
+		log.Printf("failed to get cluster health: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	healthData := make([]k8s.ClusterHealth, 0, len(dedupClusters))
 	for _, h := range allHealth {
@@ -670,7 +685,8 @@ func (h *WorkloadHandlers) GenerateClusterQuery(c *fiber.Ctx) error {
 	registry := agent.GetRegistry()
 	provider, err := registry.GetDefault()
 	if err != nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No AI provider available: " + err.Error()})
+		log.Printf("no ai provider available: %v", err)
+		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
 	systemPrompt := `You are a Kubernetes cluster query generator. Given a natural language description, generate a structured JSON query for selecting clusters from a multi-cluster environment.
@@ -712,7 +728,8 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 
 	resp, err := provider.Chat(c.Context(), chatReq)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "AI query generation failed: " + err.Error()})
+		log.Printf("ai query generation failed: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	// Try to parse the AI response as structured JSON
@@ -728,9 +745,10 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 		Query         ClusterGroupQuery `json:"query"`
 	}
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
+		log.Printf("could not parse AI response as structured query: %v", err)
 		return c.JSON(fiber.Map{
 			"raw":   resp.Content,
-			"error": "Could not parse AI response as structured query: " + err.Error(),
+			"error": "could not parse AI response as structured query",
 		})
 	}
 
@@ -769,7 +787,8 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 
 	var req ScaleRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+		log.Printf("invalid request body: %v", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
 	// Validate required fields
@@ -782,7 +801,8 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 
 	result, err := h.k8sClient.ScaleWorkload(c.Context(), req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(result)
@@ -800,7 +820,8 @@ func (h *WorkloadHandlers) DeleteWorkload(c *fiber.Ctx) error {
 	name := c.Params("name")
 
 	if err := h.k8sClient.DeleteWorkload(c.Context(), cluster, namespace, name); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -820,7 +841,8 @@ func (h *WorkloadHandlers) GetClusterCapabilities(c *fiber.Ctx) error {
 
 	capabilities, err := h.k8sClient.GetClusterCapabilities(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(capabilities)
@@ -835,7 +857,8 @@ func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 
 	policies, err := h.k8sClient.ListBindingPolicies(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(policies)

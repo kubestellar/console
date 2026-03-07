@@ -541,7 +541,8 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	if cluster != "" {
 		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			log.Printf("error fetching nodes: %v", err)
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 		allNodes = nodes
@@ -549,7 +550,8 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query all clusters
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			log.Printf("error fetching nodes: %v", err)
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 
@@ -610,7 +612,8 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query specific cluster
 		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			log.Printf("error fetching nodes: %v", err)
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 		allNodes = nodes
@@ -618,7 +621,8 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query all clusters
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			log.Printf("error fetching nodes: %v", err)
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 
@@ -693,7 +697,8 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get events from the cluster
 	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"events": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching events: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"events": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
@@ -737,7 +742,8 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"namespaces": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching namespaces: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"namespaces": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
@@ -776,7 +782,8 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"deployments": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching deployments: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"deployments": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
@@ -805,7 +812,8 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	replicasets, err := s.k8sClient.GetReplicaSets(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching replicasets: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": replicasets, "source": "agent"})
@@ -833,7 +841,8 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	statefulsets, err := s.k8sClient.GetStatefulSets(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching statefulsets: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": statefulsets, "source": "agent"})
@@ -861,7 +870,8 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	daemonsets, err := s.k8sClient.GetDaemonSets(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching daemonsets: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": daemonsets, "source": "agent"})
@@ -889,7 +899,8 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	cronjobs, err := s.k8sClient.GetCronJobs(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching cronjobs: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": cronjobs, "source": "agent"})
@@ -917,7 +928,8 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching ingresses: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": ingresses, "source": "agent"})
@@ -945,7 +957,8 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching networkpolicies: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": policies, "source": "agent"})
@@ -973,7 +986,8 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"services": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching services: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"services": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"services": services, "source": "agent"})
@@ -1001,7 +1015,8 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	configmaps, err := s.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching configmaps: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": configmaps, "source": "agent"})
@@ -1036,7 +1051,8 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	secrets, err := s.k8sClient.GetSecrets(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"secrets": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching secrets: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"secrets": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"secrets": secrets, "source": "agent"})
@@ -1064,7 +1080,8 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	serviceaccounts, err := s.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching serviceaccounts: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
@@ -1092,7 +1109,8 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	jobs, err := s.k8sClient.GetJobs(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"jobs": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching jobs: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"jobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"jobs": jobs, "source": "agent"})
@@ -1120,7 +1138,8 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	hpas, err := s.k8sClient.GetHPAs(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"hpas": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching hpas: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"hpas": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"hpas": hpas, "source": "agent"})
@@ -1148,7 +1167,8 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	pvcs, err := s.k8sClient.GetPVCs(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching pvcs: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": []interface{}{}, "error": "internal server error"})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": pvcs, "source": "agent"})
@@ -1186,7 +1206,8 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": err.Error()})
+		log.Printf("error fetching pods: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
@@ -1227,7 +1248,8 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 
 	health, err := s.k8sClient.GetClusterHealth(ctx, cluster)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error()})
+		log.Printf("request error: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error"})
 		return
 	}
 
@@ -1282,7 +1304,7 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
-			"message": err.Error(),
+			"message": "operation failed",
 		})
 		return
 	}
@@ -1546,8 +1568,9 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := s.kubectl.RenameContext(req.OldName, req.NewName); err != nil {
+		log.Printf("rename context error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "rename_failed", Message: err.Error()})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "rename_failed", Message: "failed to rename context"})
 		return
 	}
 
@@ -1615,8 +1638,9 @@ func (s *Server) handleKubeconfigPreviewHTTP(w http.ResponseWriter, r *http.Requ
 
 	entries, err := s.kubectl.PreviewKubeconfig(req.Kubeconfig)
 	if err != nil {
+		log.Printf("kubeconfig preview error: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "preview_failed", Message: err.Error()})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "preview_failed", Message: "invalid kubeconfig"})
 		return
 	}
 
@@ -1665,8 +1689,9 @@ func (s *Server) handleKubeconfigImportHTTP(w http.ResponseWriter, r *http.Reque
 
 	added, skipped, err := s.kubectl.ImportKubeconfig(req.Kubeconfig)
 	if err != nil {
+		log.Printf("kubeconfig import error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: false, Error: err.Error()})
+		json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: false, Error: "failed to import kubeconfig"})
 		return
 	}
 
@@ -1715,8 +1740,9 @@ func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := s.kubectl.AddCluster(req); err != nil {
+		log.Printf("add cluster error: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: false, Error: err.Error()})
+		json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: false, Error: "failed to add cluster"})
 		return
 	}
 
@@ -1760,8 +1786,9 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 
 	result, err := s.kubectl.TestClusterConnection(req)
 	if err != nil {
+		log.Printf("test connection error: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(TestConnectionResult{Reachable: false, Error: err.Error()})
+		json.NewEncoder(w).Encode(TestConnectionResult{Reachable: false, Error: "connection test failed"})
 		return
 	}
 
@@ -2138,7 +2165,8 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 				log.Printf("[Chat] Session %s cancelled", req.SessionID)
 				return
 			}
-			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s: %s", agentName, err.Error())))
+			log.Printf("[Chat] streaming execution error for %s: %v", agentName, err)
+			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName)))
 			return
 		}
 
@@ -2154,7 +2182,8 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 				log.Printf("[Chat] Session %s cancelled", req.SessionID)
 				return
 			}
-			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s: %s", agentName, err.Error())))
+			log.Printf("[Chat] execution error for %s: %v", agentName, err)
+			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName)))
 			return
 		}
 	}
@@ -2351,7 +2380,8 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 
 	resp, err := provider.Chat(context.Background(), chatReq)
 	if err != nil {
-		return s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s: %s", agentName, err.Error()))
+		log.Printf("[Chat] execution error for %s: %v", agentName, err)
+		return s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName))
 	}
 
 	if resp == nil {
@@ -2439,7 +2469,8 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 	// For now, update the default agent
 	previousAgent := s.registry.GetDefaultName()
 	if err := s.registry.SetDefault(req.Agent); err != nil {
-		return s.errorResponse(msg.ID, "invalid_agent", err.Error())
+		log.Printf("set default agent error: %v", err)
+		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 
 	log.Printf("Agent selected: %s (was: %s)", req.Agent, previousAgent)
@@ -2967,8 +2998,9 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := cm.RemoveAPIKey(provider); err != nil {
+		log.Printf("delete API key error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "delete_failed", Message: err.Error()})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "delete_failed", Message: "failed to delete API key"})
 		return
 	}
 
@@ -3132,7 +3164,7 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 	if err := sm.ImportEncrypted(body); err != nil {
 		log.Printf("[settings] Import error: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "import_failed", Message: err.Error()})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "import_failed", Message: "failed to import settings"})
 		return
 	}
 
@@ -3192,7 +3224,8 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 			// Cache the validity for IsAvailable() checks
 			cm.SetKeyValidity(p.name, valid)
 			if err != nil {
-				status.Error = err.Error()
+				log.Printf("API key validation error for %s: %v", p.name, err)
+				status.Error = "validation failed"
 			}
 		}
 
@@ -3230,11 +3263,10 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	valid, validationErr := s.validateAPIKeyValue(req.Provider, req.APIKey)
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
-		errMsg := "Invalid API key"
 		if validationErr != nil {
-			errMsg = validationErr.Error()
+			log.Printf("API key validation error: %v", validationErr)
 		}
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_key", Message: errMsg})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
 		return
 	}
 
@@ -3242,8 +3274,9 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 
 	// Save the key
 	if err := cm.SetAPIKey(req.Provider, req.APIKey); err != nil {
+		log.Printf("save API key error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: err.Error()})
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save API key"})
 		return
 	}
 
@@ -3649,7 +3682,8 @@ func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := s.predictionWorker.TriggerAnalysis(req.Providers); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("prediction analysis error: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -4039,14 +4073,14 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 					"tool":     req.Tool,
 					"name":     req.Name,
 					"status":   "failed",
-					"message":  err.Error(),
+					"message":  "operation failed",
 					"progress": 0,
 				})
 				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_error", map[string]string{
 					"tool":  req.Tool,
 					"name":  req.Name,
-					"error": err.Error(),
+					"error": "internal server error",
 				})
 			} else {
 				log.Printf("[LocalClusters] Created cluster %s with %s", req.Name, req.Tool)
@@ -4095,14 +4129,14 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 					"tool":     tool,
 					"name":     name,
 					"status":   "failed",
-					"message":  err.Error(),
+					"message":  "operation failed",
 					"progress": 0,
 				})
 				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_error", map[string]string{
 					"tool":  tool,
 					"name":  name,
-					"error": err.Error(),
+					"error": "internal server error",
 				})
 			} else {
 				log.Printf("[LocalClusters] Deleted cluster %s", name)

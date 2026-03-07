@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -34,7 +35,8 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 		// Get exports for specific cluster
 		exports, err := h.k8sClient.ListServiceExportsForCluster(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{
 			"items":      exports,
@@ -46,7 +48,8 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	// Get exports across all clusters
 	list, err := h.k8sClient.ListServiceExports(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(list)
@@ -67,7 +70,8 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 		// Get imports for specific cluster
 		imports, err := h.k8sClient.ListServiceImportsForCluster(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{
 			"items":      imports,
@@ -79,7 +83,8 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	// Get imports across all clusters
 	list, err := h.k8sClient.ListServiceImports(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(list)
@@ -94,7 +99,8 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	type clusterMCSStatus struct {
@@ -129,7 +135,8 @@ func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 
 	exports, err := h.k8sClient.ListServiceExportsForCluster(c.Context(), cluster, namespace)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	for _, export := range exports {
@@ -154,7 +161,8 @@ func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 
 	imports, err := h.k8sClient.ListServiceImportsForCluster(c.Context(), cluster, namespace)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	for _, imp := range imports {
@@ -182,7 +190,8 @@ func (h *MCSHandlers) CreateServiceExport(c *fiber.Ctx) error {
 
 	var req CreateServiceExportRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+		log.Printf("invalid request body: %v", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
 	// Validate required fields
@@ -198,7 +207,8 @@ func (h *MCSHandlers) CreateServiceExport(c *fiber.Ctx) error {
 
 	// Create the ServiceExport
 	if err := h.k8sClient.CreateServiceExport(c.Context(), req.Cluster, req.Namespace, req.ServiceName); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create ServiceExport: " + err.Error()})
+		log.Printf("failed to create serviceexport: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -221,7 +231,8 @@ func (h *MCSHandlers) DeleteServiceExport(c *fiber.Ctx) error {
 	name := c.Params("name")
 
 	if err := h.k8sClient.DeleteServiceExport(c.Context(), cluster, namespace, name); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete ServiceExport: " + err.Error()})
+		log.Printf("failed to delete serviceexport: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(fiber.Map{

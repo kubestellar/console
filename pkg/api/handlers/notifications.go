@@ -55,7 +55,7 @@ func (h *NotificationHandler) TestNotification(c *fiber.Ctx) error {
 		log.Printf("Notification test failed: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Notification test failed",
-			"message": err.Error(),
+			"message": "notification test failed",
 		})
 	}
 
@@ -81,7 +81,7 @@ func (h *NotificationHandler) SendAlertNotification(c *fiber.Ctx) error {
 		log.Printf("Failed to send alert notification: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to send notification",
-			"message": err.Error(),
+			"message": "failed to send notification",
 		})
 	}
 

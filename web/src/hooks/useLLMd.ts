@@ -337,8 +337,6 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             )
           })
 
-          console.log(`[useLLMdServers] Filtered to ${llmdDeployments.length} llm-d deployments on ${cluster}`)
-
           // Build namespace status maps for gateway and prometheus
           const namespaceGatewayStatus = new Map<string, { status: 'running' | 'stopped' | 'unknown', type: LLMdServer['gatewayType'] }>()
           const namespacePrometheusStatus = new Map<string, 'running' | 'stopped' | 'unknown'>()
@@ -395,7 +393,6 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
 
           // Progressive loading: update state after each cluster
           if (clusterServers.length > 0) {
-            console.log(`[useLLMdServers] Progressive update: adding ${clusterServers.length} servers from ${cluster}`)
             setServers(prev => [...prev, ...clusterServers])
             // Clear loading state after first batch of data arrives
             if (!initialLoadDone.current) {
@@ -428,7 +425,6 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
         setError(err instanceof Error ? err.message : 'Failed to fetch LLM-d servers')
       }
     } finally {
-      console.log('[useLLMdServers] refetch finally block')
       setIsLoading(false)
       setIsRefreshing(false)
     }
@@ -436,13 +432,11 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
   }, [(clusters || []).join(',')])
 
   useEffect(() => {
-    console.log('[useLLMdServers] useEffect mounting, starting initial fetch')
     refetch(false).catch(err => {
       console.error('[useLLMdServers] Initial fetch error:', err)
     })
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => {
-      console.log('[useLLMdServers] useEffect cleanup')
       clearInterval(interval)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -495,8 +489,6 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
       return
     }
 
-    console.log(`[useLLMdModels] refetch called, silent=${silent}, clusters=${clusters.join(',')}`)
-
     // Progressive loading: reset state
     if (!silent) {
       setIsRefreshing(true)
@@ -542,7 +534,6 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
 
           // Progressive loading: update state after each cluster
           if (clusterModels.length > 0) {
-            console.log(`[useLLMdModels] Progressive update: adding ${clusterModels.length} models from ${cluster}`)
             setModels(prev => [...prev, ...clusterModels])
             // Clear loading state after first batch of data arrives
             if (!initialLoadDone.current) {

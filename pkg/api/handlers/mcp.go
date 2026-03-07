@@ -117,7 +117,8 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, err := h.k8sClient.ListClusters(c.Context())
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 
 		// Enrich with cached health data only — never block on live health
@@ -167,7 +168,8 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		health, err := h.k8sClient.GetClusterHealth(c.Context(), cluster)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(health)
 	}
@@ -186,7 +188,8 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		health, err := h.k8sClient.GetAllClusterHealth(c.Context())
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"health": health})
 	}
@@ -220,7 +223,8 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -250,7 +254,8 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 
 		pods, err := h.k8sClient.GetPods(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"pods": pods, "source": "k8s"})
 	}
@@ -283,7 +288,8 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -313,7 +319,8 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 		issues, err := h.k8sClient.FindPodIssues(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
@@ -335,7 +342,8 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -365,7 +373,8 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 
 		nodes, err := h.k8sClient.GetGPUNodes(c.Context(), cluster)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -385,7 +394,8 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -415,7 +425,8 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 
 		nodes, err := h.k8sClient.GetGPUNodeHealth(c.Context(), cluster)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -440,7 +451,8 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 
 	status, err := h.k8sClient.GetGPUHealthCronJobStatus(c.Context(), cluster)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	return c.JSON(fiber.Map{"status": status})
 }
@@ -469,7 +481,8 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 	}
 
 	if err := h.k8sClient.InstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob installed on %s (tier %d)", body.Cluster, body.Tier)})
@@ -497,7 +510,8 @@ func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
 	}
 
 	if err := h.k8sClient.UninstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(fiber.Map{"success": true, "message": fmt.Sprintf("GPU health CronJob removed from %s", body.Cluster)})
@@ -521,7 +535,8 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 
 	status, err := h.k8sClient.GetGPUHealthCronJobStatus(c.Context(), cluster)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	return c.JSON(fiber.Map{"results": status.LastResults, "cluster": cluster})
 }
@@ -540,7 +555,8 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -570,7 +586,8 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 
 		status, err := h.k8sClient.GetNVIDIAOperatorStatus(c.Context(), cluster)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"operator": status, "source": "k8s"})
 	}
@@ -592,7 +609,8 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -622,7 +640,8 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 
 		nodes, err := h.k8sClient.GetNodes(c.Context(), cluster)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -646,7 +665,8 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -676,7 +696,8 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 
 		issues, err := h.k8sClient.FindDeploymentIssues(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
@@ -699,7 +720,8 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -729,7 +751,8 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 
 		deployments, err := h.k8sClient.GetDeployments(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"deployments": deployments, "source": "k8s"})
 	}
@@ -751,7 +774,8 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -781,7 +805,8 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 		services, err := h.k8sClient.GetServices(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"services": services, "source": "k8s"})
 	}
@@ -803,7 +828,8 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -833,7 +859,8 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 
 		jobs, err := h.k8sClient.GetJobs(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"jobs": jobs, "source": "k8s"})
 	}
@@ -855,7 +882,8 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -885,7 +913,8 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 		hpas, err := h.k8sClient.GetHPAs(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"hpas": hpas, "source": "k8s"})
 	}
@@ -907,7 +936,8 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -937,7 +967,8 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 
 		configmaps, err := h.k8sClient.GetConfigMaps(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"configmaps": configmaps, "source": "k8s"})
 	}
@@ -959,7 +990,8 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -989,7 +1021,8 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 
 		secrets, err := h.k8sClient.GetSecrets(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"secrets": secrets, "source": "k8s"})
 	}
@@ -1011,7 +1044,8 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -1041,7 +1075,8 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 
 		serviceAccounts, err := h.k8sClient.GetServiceAccounts(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"serviceAccounts": serviceAccounts, "source": "k8s"})
 	}
@@ -1063,7 +1098,8 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -1093,7 +1129,8 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 
 		pvcs, err := h.k8sClient.GetPVCs(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"pvcs": pvcs, "source": "k8s"})
 	}
@@ -1114,7 +1151,8 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -1144,7 +1182,8 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 
 		pvs, err := h.k8sClient.GetPVs(c.Context(), cluster)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"pvs": pvs, "source": "k8s"})
 	}
@@ -1166,7 +1205,8 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -1196,7 +1236,8 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 
 		quotas, err := h.k8sClient.GetResourceQuotas(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"resourceQuotas": quotas, "source": "k8s"})
 	}
@@ -1218,7 +1259,8 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -1248,7 +1290,8 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 
 		ranges, err := h.k8sClient.GetLimitRanges(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"limitRanges": ranges, "source": "k8s"})
 	}
@@ -1284,7 +1327,8 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 		// Auto-create namespace if requested (used by GPU reservation flow)
 		if req.EnsureNamespace {
 			if err := h.k8sClient.EnsureNamespaceExists(c.Context(), req.Cluster, req.Namespace); err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": "Failed to create namespace: " + err.Error()})
+				log.Printf("failed to create namespace: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 		}
 
@@ -1298,7 +1342,8 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 
 		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(c.Context(), req.Cluster, spec)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 
 		return c.JSON(fiber.Map{"resourceQuota": quota, "source": "k8s"})
@@ -1320,7 +1365,8 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		err := h.k8sClient.DeleteResourceQuota(c.Context(), cluster, namespace, name)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 
 		return c.JSON(fiber.Map{"deleted": true, "name": name, "namespace": namespace, "cluster": cluster})
@@ -1349,7 +1395,8 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		logs, err := h.k8sClient.GetPodLogs(c.Context(), cluster, namespace, pod, container, int64(tailLines))
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"logs": logs, "source": "k8s"})
 	}
@@ -1385,7 +1432,8 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			// via multiple kubeconfig contexts (e.g. "vllm-d" and its long OpenShift name)
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			perClusterLimit := limit / len(clusters)
@@ -1426,7 +1474,8 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 
 		events, err := h.k8sClient.GetEvents(c.Context(), cluster, namespace, limit)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
@@ -1460,7 +1509,8 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			perClusterLimit := limit / len(clusters)
@@ -1500,7 +1550,8 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 		events, err := h.k8sClient.GetWarningEvents(c.Context(), cluster, namespace, limit)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
@@ -1524,7 +1575,8 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+				log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
 			var wg sync.WaitGroup
@@ -1554,7 +1606,8 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 
 		issues, err := h.k8sClient.CheckSecurityIssues(c.Context(), cluster, namespace)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
@@ -1695,7 +1748,8 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 
 	result, err := h.bridge.CallOpsTool(c.Context(), req.Name, req.Arguments)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(result)
@@ -1719,7 +1773,8 @@ func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 
 	result, err := h.bridge.CallDeployTool(c.Context(), req.Name, req.Arguments)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	return c.JSON(result)

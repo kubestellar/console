@@ -211,7 +211,7 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 
 	var mission MissionSpec
 	if err := json.Unmarshal(body, &mission); err != nil {
-		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"invalid JSON: " + err.Error()}})
+		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"invalid JSON format"}})
 	}
 
 	var errs []string

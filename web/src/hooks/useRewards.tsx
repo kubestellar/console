@@ -122,7 +122,6 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
     // Check if one-time reward already earned
     if (rewardConfig.oneTime && hasEarnedAction(action)) {
-      console.log(`[useRewards] One-time reward already earned: ${action}`)
       return false
     }
 
@@ -154,7 +153,6 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     setRewards(updated)
     saveRewards(user.id, updated)
 
-    console.log(`[useRewards] Awarded ${rewardConfig.coins} coins for ${action}`)
     return true
   }, [rewards, user?.id, hasEarnedAction])
 

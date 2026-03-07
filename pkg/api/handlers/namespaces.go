@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -34,7 +35,8 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	ctx := c.Context()
 	namespaces, err := h.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list namespaces: "+err.Error())
+		log.Printf("failed to list namespaces: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
 	return c.JSON(namespaces)
@@ -72,7 +74,8 @@ func (h *NamespaceHandler) CreateNamespace(c *fiber.Ctx) error {
 
 	ns, err := h.k8sClient.CreateNamespace(ctx, req.Cluster, req.Name, req.Labels)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create namespace: "+err.Error())
+		log.Printf("failed to create namespace: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
 	return c.JSON(fiber.Map{
@@ -109,7 +112,8 @@ func (h *NamespaceHandler) DeleteNamespace(c *fiber.Ctx) error {
 	}
 
 	if err := h.k8sClient.DeleteNamespace(ctx, cluster, name); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete namespace: "+err.Error())
+		log.Printf("failed to delete namespace: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
 	return c.JSON(fiber.Map{"success": true})
@@ -130,7 +134,8 @@ func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 	ctx := c.Context()
 	bindings, err := h.k8sClient.ListRoleBindings(ctx, cluster, name)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list role bindings: "+err.Error())
+		log.Printf("failed to list role bindings: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
 	// Convert to access list format
@@ -197,7 +202,8 @@ func (h *NamespaceHandler) GrantNamespaceAccess(c *fiber.Ctx) error {
 
 	bindingName, err := h.k8sClient.GrantNamespaceAccess(ctx, req.Cluster, namespace, req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to grant access: "+err.Error())
+		log.Printf("failed to grant access: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
 	return c.JSON(fiber.Map{
@@ -236,7 +242,8 @@ func (h *NamespaceHandler) RevokeNamespaceAccess(c *fiber.Ctx) error {
 	}
 
 	if err := h.k8sClient.DeleteRoleBinding(ctx, cluster, namespace, bindingName, false); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to revoke access: "+err.Error())
+		log.Printf("failed to revoke access: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
 	return c.JSON(fiber.Map{"success": true})

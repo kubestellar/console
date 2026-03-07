@@ -90,7 +90,8 @@ func streamClusters(
 ) error {
 	healthy, offline, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
 	c.Set("Content-Type", "text/event-stream")

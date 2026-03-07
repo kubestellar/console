@@ -83,7 +83,7 @@ func (h *SettingsHandler) ImportSettings(c *fiber.Ctx) error {
 		log.Printf("[settings] Import error: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Failed to import settings",
-			"message": err.Error(),
+			"message": "invalid settings data",
 		})
 	}
 
