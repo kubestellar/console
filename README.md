@@ -4,28 +4,7 @@ AI-powered multi-cluster Kubernetes dashboard with guided install missions for 2
 
 [**Live Demo**](https://console.kubestellar.io) | [Contributing](CONTRIBUTING.md) | [License](LICENSE)
 
-![KubeStellar Console overview](docs/images/Console-overview.svg)
-
-## Architecture
-
-```mermaid
-graph LR
-    A["KubeStellar Console"] --> B["30+ Dashboards<br/>150+ Monitoring Cards"]
-    A --> M["Marketplace<br/>(console-marketplace)"]
-    A --> D["AI Mission Explorer"]
-    D --> E["console-kb"]
-    E --> F["186 Install Missions<br/>67 Solution Missions"]
-    A --> C["AI Recommendations"]
-    A --> H["kc-agent → Codex, Copilot,<br/>Claude CLI, Kube API, MCP"]
-    click A href "https://console.kubestellar.io" _blank
-    click M href "https://github.com/kubestellar/console-marketplace" _blank
-    click E href "https://github.com/kubestellar/console-kb" _blank
-    click H href "https://github.com/kubestellar/console/tree/main/cmd/kc-agent" _blank
-```
-
-- **[console-kb](https://github.com/kubestellar/console-kb)** — YAML knowledge base defining mission steps, commands, and validation checks
-- **[console-marketplace](https://github.com/kubestellar/console-marketplace)** — Community-contributed monitoring cards per CNCF project
-- **[kc-agent](cmd/kc-agent/)** — Local agent bridging the browser to kubeconfig, coding agents (Codex, Copilot, Claude CLI), and MCP servers (`kubestellar-ops`, `kubestellar-deploy`)
+![KubeStellar Console](docs/images/console-screenshot.png)
 
 ## Install
 
@@ -42,6 +21,19 @@ brew tap kubestellar/tap && brew install --head kc-agent   # macOS
 go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
 ```
 
+## GitHub OAuth
+
+Create a [GitHub OAuth App](https://github.com/settings/developers) with callback URL `http://localhost:8080/auth/github/callback`, then add credentials to `.env`:
+
+```
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+```
+
+Restart with `./startup-oauth.sh` (local dev) or pass `--github-oauth` to `deploy.sh`.
+
+To enable feedback and GitHub-powered features (nightly E2E status, community activity), go to **Settings** in the console sidebar and add a GitHub personal access token under **GitHub Token**.
+
 ## How It Works
 
 1. **Onboarding** — Sign in with GitHub, answer role questions, get a personalized dashboard
@@ -50,14 +42,11 @@ go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
 4. **Missions** — Step-by-step guided installs with pre-flight checks, validation, troubleshooting, and rollback
 5. **Real-time** — WebSocket-powered live event streaming from all connected clusters
 
-## Development
+## Architecture
 
-Requires Go 1.24+, Node.js 20+.
-
-```bash
-git clone https://github.com/kubestellar/console.git && cd console
-./start-dev.sh
-```
+- **[console-kb](https://github.com/kubestellar/console-kb)** — YAML knowledge base defining mission steps, commands, and validation checks
+- **[console-marketplace](https://github.com/kubestellar/console-marketplace)** — Community-contributed monitoring cards per CNCF project
+- **[kc-agent](cmd/kc-agent/)** — Local agent bridging the browser to kubeconfig, coding agents (Codex, Copilot, Claude CLI), and MCP servers (`kubestellar-ops`, `kubestellar-deploy`)
 
 ```
 console/
@@ -69,6 +58,15 @@ console/
 ├── pkg/store/         # SQLite database layer
 ├── web/               # React + TypeScript frontend
 └── deploy/helm/       # Helm chart
+```
+
+## Development
+
+Requires Go 1.24+, Node.js 20+.
+
+```bash
+git clone https://github.com/kubestellar/console.git && cd console
+./start-dev.sh
 ```
 
 ## Related Projects
