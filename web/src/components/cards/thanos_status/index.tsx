@@ -78,8 +78,8 @@ export function ThanosStatus() {
             <div className="flex items-center justify-between">
                 <div
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${isHealthy
-                            ? 'bg-green-500/15 text-green-400'
-                            : 'bg-orange-500/15 text-orange-400'
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-yellow-500/20 text-yellow-400'
                         }`}
                 >
                     {isHealthy ? (
@@ -101,19 +101,19 @@ export function ThanosStatus() {
                 <MetricTile
                     label="Targets Up"
                     value={`${targetsUp}/${targetsTotal}`}
-                    colorClass={targetsUp === targetsTotal ? 'text-green-400' : 'text-orange-400'}
+                    colorClass={targetsUp === targetsTotal ? 'text-green-400' : 'text-yellow-400'}
                     icon={<Radio className="w-4 h-4 text-blue-400" />}
                 />
                 <MetricTile
                     label="Store Gateways"
                     value={storesTotal > 0 ? `${storesHealthy}/${storesTotal}` : '—'}
-                    colorClass={storesTotal === 0 || storesHealthy === storesTotal ? 'text-green-400' : 'text-orange-400'}
+                    colorClass={storesTotal === 0 || storesHealthy === storesTotal ? 'text-green-400' : 'text-yellow-400'}
                     icon={<Database className="w-4 h-4 text-purple-400" />}
                 />
                 <MetricTile
                     label="Query"
                     value={isHealthy ? 'OK' : '!'}
-                    colorClass={isHealthy ? 'text-green-400' : 'text-orange-400'}
+                    colorClass={isHealthy ? 'text-green-400' : 'text-yellow-400'}
                     icon={<Activity className="w-4 h-4 text-cyan-400" />}
                 />
             </div>

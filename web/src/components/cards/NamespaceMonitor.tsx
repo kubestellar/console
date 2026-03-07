@@ -706,7 +706,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                               ) : (
                                 <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                               )}
-                              <Layers className={`w-3.5 h-3.5 ${data.hasIssues ? 'text-yellow-400' : 'text-yellow-500'}`} />
+                              <Layers className={`w-3.5 h-3.5 ${data.hasIssues ? 'text-yellow-400' : 'text-blue-400'}`} />
                               <span
                                 className="text-sm text-foreground flex-1 hover:text-purple-400"
                                 onClick={(e) => {
