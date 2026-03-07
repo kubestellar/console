@@ -9,6 +9,13 @@
 # AI Provider Configuration
 provider: copilot
 
+# Network access control for AI engines (AWF firewall)
+network:
+  allowed:
+    - defaults
+    - "telemetry.enterprise.githubcopilot.com"  # Required for Copilot CLI telemetry
+  firewall: true
+
 # Future: Add Claude as fallback provider
 # providers:
 #   primary: copilot

@@ -6640,7 +6640,7 @@ jobs:
               }
             `;
             try {
-              const response = await github.graphql(query, { owner, repo });
+              const response = await github.graphql(query, { owner, repo, headers: { 'GraphQL-Features': 'issues_copilot_assignment_api_support' } });
               const actors = response.repository?.suggestedActors?.nodes || [];
               const knownValues = Object.values(AGENT_LOGIN_NAMES);
               const available = [];
@@ -6797,6 +6797,7 @@ jobs:
                 assignableId: issueId,
                 actorIds: actorIds,
                 headers: { 'GraphQL-Features': 'issues_copilot_assignment_api_support' },
+                headers: { 'GraphQL-Features': 'issues_copilot_assignment_api_support' },
               });
           
               if (response && response.replaceActorsForAssignable && response.replaceActorsForAssignable.__typename) {
@@ -6858,6 +6859,7 @@ jobs:
                   const fallbackResp = await github.graphql(fallbackMutation, {
                     assignableId: issueId,
                     assigneeIds: [agentId],
+                    headers: { 'GraphQL-Features': 'issues_copilot_assignment_api_support' },
                     headers: { 'GraphQL-Features': 'issues_copilot_assignment_api_support' },
                   });
                   if (fallbackResp && fallbackResp.addAssigneesToAssignable) {
