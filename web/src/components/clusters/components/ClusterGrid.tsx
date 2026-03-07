@@ -175,7 +175,7 @@ const FullClusterCard = memo(function FullClusterCard({
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
   const providerLabel = getProviderLabel(provider)
   const providerColor = getProviderColor(provider)
-  const themeColor = '#9333ea'
+  const themeColor = 'var(--ks-purple)'
   const consoleUrl = getConsoleUrl(provider, cluster.name, cluster.server)
 
   return (
@@ -183,7 +183,8 @@ const FullClusterCard = memo(function FullClusterCard({
       onClick={onSelectCluster}
       className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden"
       style={{
-        background: `linear-gradient(135deg, ${providerColor}80 0%, ${themeColor}60 100%)`,
+        /* Card view: prominent gradient — provider at 50%, theme at 38% */
+        background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 50%, transparent) 0%, color-mix(in srgb, ${themeColor} 38%, transparent) 100%)`,
       }}
     >
       <div className="relative glass p-5 rounded-lg h-full overflow-hidden">
@@ -397,14 +398,15 @@ const ListClusterCard = memo(function ListClusterCard({
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
   const providerColor = getProviderColor(provider)
-  const themeColor = '#9333ea'
+  const themeColor = 'var(--ks-purple)'
 
   return (
     <div
       onClick={onSelectCluster}
       className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.01] overflow-hidden"
       style={{
-        background: `linear-gradient(90deg, ${providerColor}60 0%, ${themeColor}40 100%)`,
+        /* List view: subtle gradient — provider at 38%, theme at 25% */
+        background: `linear-gradient(90deg, color-mix(in srgb, ${providerColor} 38%, transparent) 0%, color-mix(in srgb, ${themeColor} 25%, transparent) 100%)`,
       }}
     >
       <div className="relative glass px-4 py-3 rounded-lg h-full overflow-hidden">
@@ -569,14 +571,15 @@ const CompactClusterCard = memo(function CompactClusterCard({
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
   const providerColor = getProviderColor(provider)
-  const themeColor = '#9333ea'
+  const themeColor = 'var(--ks-purple)'
 
   return (
     <div
       onClick={onSelectCluster}
       className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden"
       style={{
-        background: `linear-gradient(135deg, ${providerColor}60 0%, ${themeColor}40 100%)`,
+        /* Grid view: subtle gradient — provider at 38%, theme at 25% */
+        background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 38%, transparent) 0%, color-mix(in srgb, ${themeColor} 25%, transparent) 100%)`,
       }}
     >
       <div className="relative glass p-3 rounded-lg h-full overflow-hidden">

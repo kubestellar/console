@@ -42,6 +42,28 @@
     --color-neutral: #6b7280;
     --color-pending: #eab308;
 
+    /* Cloud provider brand colors */
+    --provider-eks: #5B6AD4;
+    --provider-eks-start: #6B7AE8;
+    --provider-gke: #4285F4;
+    --provider-aks: #773ADC;
+    --provider-aks-start: #B77AF4;
+    --provider-aks-shadow: #341A6E;
+    --provider-openshift: #EE0000;
+    --provider-openshift-dark: #C00000;
+    --provider-oci: #C74634;
+    --provider-alibaba: #FF6A00;
+    --provider-digitalocean: #0080FF;
+    --provider-rancher: #2453FF;
+    --provider-coreweave: #2741E7;
+    --provider-coreweave-start: #3B5BFF;
+    --provider-kind: #2496ED;
+    --provider-kubernetes: #326CE5;
+    --provider-k3s: #FFC61C;
+    --provider-minikube-teal: #5DD3D3;
+    --provider-minikube-teal-light: #8FE3E3;
+    --provider-minikube-teal-lighter: #B8F0F0;
+
     /* Agent provider brand colors */
     --agent-openai: #10A37F;
     --agent-google-blue: #4285F4;
