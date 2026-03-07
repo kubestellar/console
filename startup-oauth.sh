@@ -231,8 +231,10 @@ if [ "$USE_DEV_SERVER" = true ]; then PORTS_TO_CLEAN="8080 5174 8585"; fi
 for p in $PORTS_TO_CLEAN; do
     if lsof -Pi :$p -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${YELLOW}Port $p is in use, killing existing process...${NC}"
+        lsof -ti:$p | xargs kill -TERM 2>/dev/null || true
+        sleep 2
+        # Fall back to SIGKILL if process did not exit gracefully
         lsof -ti:$p | xargs kill -9 2>/dev/null || true
-        sleep 1
     fi
 done
 

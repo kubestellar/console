@@ -46,8 +46,11 @@ COPY --from=backend-builder /app/console .
 # Copy frontend build
 COPY --from=frontend-builder /app/dist ./web/dist
 
+# Create non-root user for container security
+RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
+
 # Create data and settings directories
-RUN mkdir -p /app/data /app/.kc
+RUN mkdir -p /app/data /app/.kc && chown -R appuser:appgroup /app/data /app/.kc
 
 # Environment variables
 ENV PORT=8080
@@ -55,5 +58,12 @@ ENV DATABASE_PATH=/app/data/console.db
 ENV HOME=/app
 
 EXPOSE 8080
+
+# Health check for orchestrator monitoring
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:8080/health || exit 1
+
+# Run as non-root user
+USER appuser
 
 ENTRYPOINT ["./console"]

@@ -114,8 +114,10 @@ for p in 8080 5174 8585; do
     EXISTING_PID=$(lsof -ti :$p 2>/dev/null || true)
     if [ -n "$EXISTING_PID" ]; then
         echo "Killing existing process on port $p (PID: $EXISTING_PID)..."
+        kill -TERM $EXISTING_PID 2>/dev/null || true
+        sleep 2
+        # Fall back to SIGKILL if process did not exit gracefully
         kill -9 $EXISTING_PID 2>/dev/null || true
-        sleep 1
     fi
 done
 

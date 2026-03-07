@@ -190,8 +190,10 @@ chmod +x "$INSTALL_DIR/kc-agent" 2>/dev/null || true
 EXISTING_PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
 if [ -n "$EXISTING_PID" ]; then
     echo "Killing existing process on port $PORT (PID: $EXISTING_PID)..."
+    kill -TERM "$EXISTING_PID" 2>/dev/null || true
+    sleep 2
+    # Fall back to SIGKILL if process did not exit gracefully
     kill -9 "$EXISTING_PID" 2>/dev/null || true
-    sleep 1
 fi
 # Note: kc-agent on port 8585 is managed via PID file — not force-killed here
 

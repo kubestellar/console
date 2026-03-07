@@ -64,8 +64,10 @@ echo ""
 for p in $PORT 5174; do
     if lsof -Pi :$p -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${YELLOW}Port $p is in use, killing existing process...${NC}"
+        lsof -ti:$p | xargs kill -TERM 2>/dev/null || true
+        sleep 2
+        # Fall back to SIGKILL if process did not exit gracefully
         lsof -ti:$p | xargs kill -9 2>/dev/null || true
-        sleep 1
     fi
 done
 

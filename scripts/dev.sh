@@ -54,14 +54,18 @@ echo ""
 # Clear ports if in use (kill existing processes)
 if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
     echo -e "${YELLOW}Port $PORT is in use, killing existing process...${NC}"
+    lsof -ti:$PORT | xargs kill -TERM 2>/dev/null || true
+    sleep 2
+    # Fall back to SIGKILL if process did not exit gracefully
     lsof -ti:$PORT | xargs kill -9 2>/dev/null || true
-    sleep 1
 fi
 
 if lsof -Pi :5174 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
     echo -e "${YELLOW}Port 5174 is in use, killing existing process...${NC}"
+    lsof -ti:5174 | xargs kill -TERM 2>/dev/null || true
+    sleep 2
+    # Fall back to SIGKILL if process did not exit gracefully
     lsof -ti:5174 | xargs kill -9 2>/dev/null || true
-    sleep 1
 fi
 
 # Function to cleanup on exit
