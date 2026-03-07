@@ -94,6 +94,8 @@ if (typeof window !== 'undefined') {
   if (settings) {
     const parsedSettings = JSON.parse(settings)
     sharedUsage = { ...sharedUsage, ...parsedSettings }
+    // Ensure limit is never zero/negative (causes NaN in percentage calculations)
+    if (sharedUsage.limit <= 0) sharedUsage.limit = DEFAULT_SETTINGS.limit
   }
   // Load persisted category data
   const categoryData = localStorage.getItem(CATEGORY_KEY)
@@ -260,6 +262,7 @@ export function useTokenUsage() {
 
   // Calculate alert level
   const getAlertLevel = useCallback((): TokenAlertLevel => {
+    if (usage.limit <= 0) return 'normal'
     const percentage = usage.used / usage.limit
     if (percentage >= usage.stopThreshold) return 'stopped'
     if (percentage >= usage.criticalThreshold) return 'critical'
@@ -313,7 +316,7 @@ export function useTokenUsage() {
   }, [getAlertLevel])
 
   const alertLevel = getAlertLevel()
-  const percentage = Math.min((usage.used / usage.limit) * 100, 100)
+  const percentage = usage.limit > 0 ? Math.min((usage.used / usage.limit) * 100, 100) : 0
   const remaining = Math.max(usage.limit - usage.used, 0)
   const isDemoData = getDemoMode()
 
