@@ -12,6 +12,9 @@ import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
 import { emitMissionSuggestionsShown, emitMissionSuggestionActioned } from '../../lib/analytics'
 
+/** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
+const STORAGE_KEY_MISSIONS_COLLAPSED = 'kc-missions-collapsed'
+
 /** Seconds before the panel auto-collapses */
 const AUTO_COLLAPSE_SECONDS = 20
 
@@ -25,31 +28,11 @@ const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   resource: Activity,
 }
 
-const PRIORITY_STYLES = {
-  critical: {
-    bg: 'bg-red-950',
-    border: 'border-red-800',
-    text: 'text-red-400',
-    badge: 'bg-red-900',
-  },
-  high: {
-    bg: 'bg-orange-950',
-    border: 'border-orange-800',
-    text: 'text-orange-400',
-    badge: 'bg-orange-900',
-  },
-  medium: {
-    bg: 'bg-yellow-950',
-    border: 'border-yellow-800',
-    text: 'text-yellow-400',
-    badge: 'bg-yellow-900',
-  },
-  low: {
-    bg: 'bg-blue-950',
-    border: 'border-blue-800',
-    text: 'text-blue-400',
-    badge: 'bg-blue-900',
-  },
+/** Neutral card-gray styling for all priority levels */
+const CHIP_STYLE = {
+  bg: 'bg-secondary/50',
+  border: 'border-border/50',
+  text: 'text-foreground',
 }
 
 export function MissionSuggestions() {
@@ -61,7 +44,9 @@ export function MissionSuggestions() {
   const { startMission } = useMissions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
-  const [minimized, setMinimized] = useState(false)
+  const [minimized, setMinimized] = useState(() =>
+    localStorage.getItem(STORAGE_KEY_MISSIONS_COLLAPSED) === 'true'
+  )
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -85,6 +70,8 @@ export function MissionSuggestions() {
           if (countdownRef.current) clearInterval(countdownRef.current)
           countdownRef.current = null
           setMinimized(true)
+          // Persist collapse so the expanded panel never comes back
+          localStorage.setItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true')
           return AUTO_COLLAPSE_SECONDS
         }
         return prev - 1
@@ -255,18 +242,14 @@ export function MissionSuggestions() {
           </button>
           {suggestions.slice(0, 6).map((suggestion) => {
             const Icon = MISSION_ICONS[suggestion.type]
-            const style = PRIORITY_STYLES[suggestion.priority]
             return (
               <button
                 key={suggestion.id}
                 onClick={() => { setMinimized(false); setExpandedId(suggestion.id) }}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${style.border} ${style.bg} ${style.text}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
               >
                 <Icon className="w-3 h-3" />
                 <span className="max-w-[150px] truncate">{suggestion.title}</span>
-                {suggestion.priority === 'critical' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                )}
               </button>
             )
           })}
@@ -316,7 +299,7 @@ export function MissionSuggestions() {
             {countdown}s
           </span>
           <button
-            onClick={() => setMinimized(true)}
+            onClick={() => { setMinimized(true); localStorage.setItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true') }}
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Minimize"
           >
@@ -329,7 +312,6 @@ export function MissionSuggestions() {
       <div className="flex flex-wrap gap-2 p-3">
         {suggestions.slice(0, 6).map((suggestion) => {
           const Icon = MISSION_ICONS[suggestion.type]
-          const style = PRIORITY_STYLES[suggestion.priority]
           const isExpanded = expandedId === suggestion.id
           const isProcessing = processingId === suggestion.id
           const snoozeRemaining = getSnoozeRemaining(suggestion.id)
@@ -339,13 +321,10 @@ export function MissionSuggestions() {
               {/* Compact chip */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${style.border} ${style.bg} ${style.text}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
               >
                 <Icon className="w-3 h-3" />
                 <span className="max-w-[180px] truncate">{suggestion.title}</span>
-                {suggestion.priority === 'critical' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                )}
                 {isProcessing && <div className="spinner w-3 h-3" />}
                 <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
               </button>
@@ -355,7 +334,7 @@ export function MissionSuggestions() {
                 <div
                   ref={dropdownRef}
                   role="menu"
-                  className={`absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border ${style.border} ${style.bg} shadow-xl`}
+                  className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                   style={{ isolation: 'isolate' }}
                   onKeyDown={(e) => {
                     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
@@ -397,13 +376,7 @@ export function MissionSuggestions() {
                       <button
                         onClick={(e) => handleAction(e, suggestion)}
                         disabled={isProcessing}
-                        className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
-                          suggestion.priority === 'critical'
-                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : suggestion.priority === 'high'
-                            ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                            : 'bg-primary hover:bg-primary/80 text-white'
-                        } disabled:opacity-50`}
+                        className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white disabled:opacity-50"
                       >
                         <Stethoscope className="w-3 h-3" />
                         {suggestion.action.label}
@@ -411,7 +384,7 @@ export function MissionSuggestions() {
                       <button
                         onClick={(e) => handleRepair(e, suggestion)}
                         disabled={isProcessing}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-green-900 hover:bg-green-800 text-green-400 transition-colors flex items-center gap-1"
+                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors flex items-center gap-1"
                         title={t('dashboard.missions.repairTitle')}
                       >
                         <Wrench className="w-3 h-3" />

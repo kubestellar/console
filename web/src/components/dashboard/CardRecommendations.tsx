@@ -7,6 +7,9 @@ import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations
 import { AI_THINKING_DELAY_MS } from '../../lib/constants/network'
 import { emitCardRecommendationsShown, emitCardRecommendationActioned } from '../../lib/analytics'
 
+/** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
+const STORAGE_KEY_RECS_COLLAPSED = 'kc-recommendations-collapsed'
+
 interface Props {
   currentCardTypes: string[]
   onAddCard: (cardType: string, config?: Record<string, unknown>) => void
@@ -15,22 +18,11 @@ interface Props {
 /** Seconds before the panel auto-collapses */
 const AUTO_COLLAPSE_SECONDS = 20
 
-const PRIORITY_STYLES = {
-  high: {
-    bg: 'bg-red-500/20',
-    border: 'border-red-500/30',
-    text: 'text-red-400',
-  },
-  medium: {
-    bg: 'bg-yellow-500/20',
-    border: 'border-yellow-500/30',
-    text: 'text-yellow-400',
-  },
-  low: {
-    bg: 'bg-blue-500/20',
-    border: 'border-blue-500/30',
-    text: 'text-blue-400',
-  },
+/** Neutral card-gray styling for all priority levels */
+const CHIP_STYLE = {
+  bg: 'bg-secondary/50',
+  border: 'border-border/50',
+  text: 'text-foreground',
 }
 
 export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
@@ -40,7 +32,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   const { snoozeRecommendation, dismissRecommendation, isSnoozed, isDismissed, snoozedRecommendations } = useSnoozedRecommendations()
   const [expandedRec, setExpandedRec] = useState<string | null>(null)
   const [addingCard, setAddingCard] = useState<string | null>(null)
-  const [minimized, setMinimized] = useState(false)
+  const [minimized, setMinimized] = useState(() =>
+    localStorage.getItem(STORAGE_KEY_RECS_COLLAPSED) === 'true'
+  )
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -58,6 +52,8 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
           if (countdownRef.current) clearInterval(countdownRef.current)
           countdownRef.current = null
           setMinimized(true)
+          // Persist collapse so the expanded panel never comes back
+          localStorage.setItem(STORAGE_KEY_RECS_COLLAPSED, 'true')
           return AUTO_COLLAPSE_SECONDS
         }
         return prev - 1
@@ -176,19 +172,15 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             <ChevronDown className="w-3 h-3" />
           </button>
           {visibleRecommendations.slice(0, 6).map((rec) => {
-            const style = PRIORITY_STYLES[rec.priority as keyof typeof PRIORITY_STYLES] || PRIORITY_STYLES.low
             const Icon = getPriorityIcon(rec.priority)
             return (
               <button
                 key={rec.id}
                 onClick={() => { setMinimized(false); setExpandedRec(rec.id) }}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${style.border} ${style.bg} ${style.text}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
               >
                 <Icon className="w-3 h-3" />
                 <span className="max-w-[150px] truncate">{rec.title}</span>
-                {rec.priority === 'high' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                )}
               </button>
             )
           })}
@@ -233,7 +225,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             {countdown}s
           </span>
           <button
-            onClick={() => setMinimized(true)}
+            onClick={() => { setMinimized(true); localStorage.setItem(STORAGE_KEY_RECS_COLLAPSED, 'true') }}
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Minimize"
           >
@@ -245,7 +237,6 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
       {/* Recommendation chips */}
       <div className="flex flex-wrap gap-2 p-3">
         {visibleRecommendations.slice(0, 6).map((rec) => {
-          const style = PRIORITY_STYLES[rec.priority as keyof typeof PRIORITY_STYLES] || PRIORITY_STYLES.low
           const isExpanded = expandedRec === rec.id
           const isAdding = addingCard === rec.id
           const Icon = getPriorityIcon(rec.priority)
@@ -255,13 +246,10 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
               {/* Compact chip */}
               <button
                 onClick={() => setExpandedRec(isExpanded ? null : rec.id)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${style.border} ${style.bg} ${style.text}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
               >
                 <Icon className="w-3 h-3" />
                 <span className="max-w-[180px] truncate">{rec.title}</span>
-                {rec.priority === 'high' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                )}
                 {isAdding && <div className="spinner w-3 h-3" />}
                 <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
               </button>
@@ -271,7 +259,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                 <div
                   ref={dropdownRef}
                   role="menu"
-                  className={`absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border ${style.border} bg-card shadow-xl`}
+                  className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                   onKeyDown={(e) => {
                     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                     e.preventDefault()
@@ -299,13 +287,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                       <button
                         onClick={() => handleAddCard(rec)}
                         disabled={isAdding}
-                        className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
-                          rec.priority === 'high'
-                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : rec.priority === 'medium'
-                            ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                            : 'bg-blue-500 hover:bg-blue-600 text-white'
-                        } disabled:opacity-50`}
+                        className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white disabled:opacity-50"
                       >
                         <Plus className="w-3 h-3" />
                         {isAdding ? t('dashboard.recommendations.adding') : t('buttons.addCard')}
