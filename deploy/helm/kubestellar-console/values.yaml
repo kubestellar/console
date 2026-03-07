@@ -26,7 +26,12 @@ podLabels: {}
 
 podSecurityContext: {}
 
-securityContext: {}
+securityContext:
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
 
 service:
   type: ClusterIP
@@ -152,6 +157,13 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+networkPolicy:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
 
 # Additional environment variables
 extraEnv: []
