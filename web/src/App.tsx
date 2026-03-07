@@ -463,6 +463,9 @@ function App() {
           <Route path="/missions/:missionId" element={<MissionDeepLink />} />
         </Route>
 
+        {/* /issue opens the feedback modal on the dashboard */}
+        <Route path="/issue" element={<Navigate to={ROUTES.HOME} replace state={{ openFeedback: true }} />} />
+
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
       </Suspense>

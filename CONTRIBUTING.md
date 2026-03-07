@@ -4,7 +4,7 @@
 
 The best way to contribute is by opening an issue. Bug reports, feature requests, UX feedback, and questions all help shape the project.
 
-The fastest way to file an issue or feature request is through the bug icon in the console's top navbar — it pre-fills context about the page you're on. Use it from your [local console](http://localhost:8080) (requires GitHub OAuth) or the [live demo](https://console.kubestellar.io). You can also use [GitHub Issues](https://github.com/kubestellar/console/issues) directly.
+The fastest way to file an issue or feature request is through the console at [localhost:8080/issue](http://localhost:8080/issue) (requires GitHub OAuth). You can also use [GitHub Issues](https://github.com/kubestellar/console/issues) directly.
 
 ## How Development Works
 
