@@ -1005,6 +1005,13 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+
+	// SECURITY: Validate token for secrets endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	if s.k8sClient == nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{"secrets": []interface{}{}, "error": "k8s client not initialized"})
 		return
@@ -2862,6 +2869,12 @@ func (s *Server) handleSettingsKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY: Validate token for settings keys endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	switch r.Method {
 	case "GET":
 		s.handleGetKeysStatus(w, r)
@@ -2886,6 +2899,12 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Validate token for settings key deletion endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -2944,6 +2963,12 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Validate token for settings endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -3006,6 +3031,13 @@ func (s *Server) handleSettingsExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY: Validate token for settings export endpoint
+	if !s.validateToken(r) {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	if r.Method != "POST" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -3041,6 +3073,12 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Validate token for settings import endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 

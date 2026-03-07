@@ -42,6 +42,7 @@ type Hub struct {
 	mu           sync.RWMutex
 	done         chan struct{}
 	jwtSecret    string // JWT secret for WebSocket auth
+	devMode      bool   // when true, demo-token bypass is allowed
 }
 
 type broadcastMessage struct {
@@ -65,6 +66,11 @@ func NewHub() *Hub {
 // SetJWTSecret sets the JWT secret for WebSocket authentication
 func (h *Hub) SetJWTSecret(secret string) {
 	h.jwtSecret = secret
+}
+
+// SetDevMode enables or disables dev mode (controls demo-token bypass)
+func (h *Hub) SetDevMode(devMode bool) {
+	h.devMode = devMode
 }
 
 // Run starts the hub
@@ -223,11 +229,17 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	}
 
 	// Validate token
-	if authMsg.Token == "demo-token" {
+	if authMsg.Token == "demo-token" && h.devMode {
 		// Demo mode: accept connection for presence tracking (count only, no user data)
+		// SECURITY: Only allowed when DEV_MODE=true to prevent unauthenticated access in production
 		userID = uuid.Nil
 		authenticated = true
-		log.Printf("Demo-mode WebSocket connection for presence tracking")
+		log.Printf("Demo-mode WebSocket connection for presence tracking (dev mode)")
+	} else if authMsg.Token == "demo-token" && !h.devMode {
+		log.Printf("SECURITY: Rejected demo-token WebSocket connection (dev mode not enabled)")
+		conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "demo-token not allowed in production"}})
+		conn.Close()
+		return
 	} else if h.jwtSecret != "" {
 		claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
 		if err != nil {

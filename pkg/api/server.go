@@ -141,6 +141,7 @@ func NewServer(cfg Config) (*Server, error) {
 	// WebSocket hub
 	hub := handlers.NewHub()
 	hub.SetJWTSecret(cfg.JWTSecret)
+	hub.SetDevMode(cfg.DevMode)
 	go hub.Run()
 
 	// Initialize Kubernetes multi-cluster client
