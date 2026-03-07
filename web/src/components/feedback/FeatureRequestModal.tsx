@@ -100,6 +100,12 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
   const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'submit')
   const [requestType, setRequestType] = useState<RequestType>(initialRequestType || 'bug')
+  // Sync requestType when modal opens with a new initialRequestType (e.g. from /feature route)
+  useEffect(() => {
+    if (isOpen && initialRequestType) {
+      setRequestType(initialRequestType)
+    }
+  }, [isOpen, initialRequestType])
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
