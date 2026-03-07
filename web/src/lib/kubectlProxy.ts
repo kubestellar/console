@@ -275,7 +275,12 @@ class KubectlProxy {
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get nodes')
     }
-    const data = JSON.parse(response.output)
+    let data: { items?: KubeNode[] }
+    try {
+      data = JSON.parse(response.output)
+    } catch {
+      throw new Error('Failed to parse kubectl output as JSON')
+    }
     const nodes = (data.items || []).map((node: KubeNode) => {
       // Parse allocatable resources (prefer allocatable over capacity)
       const alloc = node.status?.allocatable || node.status?.capacity || {}
@@ -310,7 +315,12 @@ class KubectlProxy {
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get pods')
     }
-    const data = JSON.parse(response.output)
+    let data: { items?: Array<{ spec?: { containers?: Array<{ resources?: { requests?: { cpu?: string; memory?: string } } }> } }> }
+    try {
+      data = JSON.parse(response.output)
+    } catch {
+      throw new Error('Failed to parse kubectl output as JSON')
+    }
     const pods = data.items || []
 
     // Sum resource requests from all containers in all pods
@@ -369,7 +379,12 @@ class KubectlProxy {
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get services')
     }
-    const data = JSON.parse(response.output)
+    let data: { items?: Array<{ metadata: { name: string; namespace: string }; spec: { type: string; clusterIP: string; ports?: { port: number; protocol: string }[] } }> }
+    try {
+      data = JSON.parse(response.output)
+    } catch {
+      throw new Error('Failed to parse kubectl output as JSON')
+    }
     return (data.items || []).map((svc: { metadata: { name: string; namespace: string }; spec: { type: string; clusterIP: string; ports?: { port: number; protocol: string }[] } }) => ({
       name: svc.metadata.name,
       namespace: svc.metadata.namespace,
@@ -388,7 +403,12 @@ class KubectlProxy {
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get PVCs')
     }
-    const data = JSON.parse(response.output)
+    let data: { items?: Array<{ metadata: { name: string; namespace: string }; status: { phase: string; capacity?: { storage: string } }; spec: { storageClassName?: string } }> }
+    try {
+      data = JSON.parse(response.output)
+    } catch {
+      throw new Error('Failed to parse kubectl output as JSON')
+    }
     return (data.items || []).map((pvc: { metadata: { name: string; namespace: string }; status: { phase: string; capacity?: { storage: string } }; spec: { storageClassName?: string } }) => ({
       name: pvc.metadata.name,
       namespace: pvc.metadata.namespace,
@@ -530,7 +550,13 @@ class KubectlProxy {
       throw new Error(response.error || 'Failed to get pods')
     }
 
-    const data = JSON.parse(response.output)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let data: { items?: any[] }
+    try {
+      data = JSON.parse(response.output)
+    } catch {
+      throw new Error('Failed to parse kubectl output as JSON')
+    }
     const issues: PodIssue[] = []
 
     for (const pod of data.items || []) {
@@ -604,7 +630,12 @@ class KubectlProxy {
       throw new Error(response.error || 'Failed to get events')
     }
 
-    const data = JSON.parse(response.output)
+    let data: { items?: KubeEvent[] }
+    try {
+      data = JSON.parse(response.output)
+    } catch {
+      throw new Error('Failed to parse kubectl output as JSON')
+    }
     const events: ClusterEvent[] = (data.items || []).slice(-limit).reverse().map((e: KubeEvent) => ({
       type: e.type,
       reason: e.reason,
@@ -631,7 +662,12 @@ class KubectlProxy {
       throw new Error(response.error || 'Failed to get deployments')
     }
 
-    const data = JSON.parse(response.output)
+    let data: { items?: KubeDeployment[] }
+    try {
+      data = JSON.parse(response.output)
+    } catch {
+      throw new Error('Failed to parse kubectl output as JSON')
+    }
     return (data.items || []).map((d: KubeDeployment) => {
       const status = d.status
       const spec = d.spec

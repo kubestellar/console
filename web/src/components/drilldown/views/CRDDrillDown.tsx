@@ -157,9 +157,13 @@ export function CRDDrillDown({ data }: Props) {
         }))
       }
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          output = msg.payload.output
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId && msg.payload?.output) {
+            output = msg.payload.output
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         clearTimeout(timeout)
         ws.close()

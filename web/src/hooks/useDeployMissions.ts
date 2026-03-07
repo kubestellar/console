@@ -27,12 +27,17 @@ async function fetchDeployEventsViaProxy(
     { context, timeout: 10000 },
   )
   if (response.exitCode !== 0) return []
-  const data = JSON.parse(response.output)
   interface KubeEvent {
     lastTimestamp?: string
     reason?: string
     message?: string
     involvedObject?: { name?: string }
+  }
+  let data: { items?: KubeEvent[] }
+  try {
+    data = JSON.parse(response.output)
+  } catch {
+    return []
   }
   const prefix = workload + '-'
   const relevant = (data.items || []).filter((e: KubeEvent) => {

@@ -177,37 +177,41 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          setDescribeOutput(msg.payload.output)
-          // Parse labels and annotations from describe output if not already set
-          if (!labels || !annotations) {
-            const output = msg.payload.output as string
-            const labelsMatch = output.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
-            const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId && msg.payload?.output) {
+            setDescribeOutput(msg.payload.output)
+            // Parse labels and annotations from describe output if not already set
+            if (!labels || !annotations) {
+              const output = msg.payload.output as string
+              const labelsMatch = output.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
+              const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
 
-            if (labelsMatch && !labels) {
-              const parsed: Record<string, string> = {}
-              labelsMatch[1].trim().split('\n').forEach(line => {
-                const [key, ...valueParts] = line.trim().split('=')
-                if (key && key !== '<none>') parsed[key] = valueParts.join('=')
-              })
-              if (Object.keys(parsed).length > 0) setLabels(parsed)
-            }
+              if (labelsMatch && !labels) {
+                const parsed: Record<string, string> = {}
+                labelsMatch[1].trim().split('\n').forEach(line => {
+                  const [key, ...valueParts] = line.trim().split('=')
+                  if (key && key !== '<none>') parsed[key] = valueParts.join('=')
+                })
+                if (Object.keys(parsed).length > 0) setLabels(parsed)
+              }
 
-            if (annotationsMatch && !annotations) {
-              const parsed: Record<string, string> = {}
-              annotationsMatch[1].trim().split('\n').forEach(line => {
-                const colonIdx = line.indexOf(':')
-                if (colonIdx > 0) {
-                  const key = line.substring(0, colonIdx).trim()
-                  const value = line.substring(colonIdx + 1).trim()
-                  if (key && key !== '<none>') parsed[key] = value
-                }
-              })
-              if (Object.keys(parsed).length > 0) setAnnotations(parsed)
+              if (annotationsMatch && !annotations) {
+                const parsed: Record<string, string> = {}
+                annotationsMatch[1].trim().split('\n').forEach(line => {
+                  const colonIdx = line.indexOf(':')
+                  if (colonIdx > 0) {
+                    const key = line.substring(0, colonIdx).trim()
+                    const value = line.substring(colonIdx + 1).trim()
+                    if (key && key !== '<none>') parsed[key] = value
+                  }
+                })
+                if (Object.keys(parsed).length > 0) setAnnotations(parsed)
+              }
             }
           }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         ws.close()
         setDescribeLoading(false)
@@ -240,9 +244,13 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          setLogsOutput(msg.payload.output)
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId && msg.payload?.output) {
+            setLogsOutput(msg.payload.output)
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         ws.close()
         setLogsLoading(false)
@@ -275,9 +283,13 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          setEventsOutput(msg.payload.output)
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId && msg.payload?.output) {
+            setEventsOutput(msg.payload.output)
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         ws.close()
         setEventsLoading(false)
@@ -318,9 +330,13 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
             }))
           }
           ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data)
-            if (msg.id === requestId && msg.payload?.output) {
-              output = msg.payload.output
+            try {
+              const msg = JSON.parse(event.data)
+              if (msg.id === requestId && msg.payload?.output) {
+                output = msg.payload.output
+              }
+            } catch (e) {
+              console.error('Failed to parse WebSocket message:', e)
             }
             clearTimeout(timeout)
             ws.close()
@@ -453,15 +469,19 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       }
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId) {
-          if (msg.payload?.content) {
-            setAiAnalysis(msg.payload.content)
-          } else if (msg.payload?.error || msg.payload?.message) {
-            setAiAnalysis(`Analysis unavailable: ${msg.payload.error || msg.payload.message}`)
-          } else {
-            setAiAnalysis('Analysis complete - no specific issues identified.')
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId) {
+            if (msg.payload?.content) {
+              setAiAnalysis(msg.payload.content)
+            } else if (msg.payload?.error || msg.payload?.message) {
+              setAiAnalysis(`Analysis unavailable: ${msg.payload.error || msg.payload.message}`)
+            } else {
+              setAiAnalysis('Analysis complete - no specific issues identified.')
+            }
           }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         ws.close()
         setAiAnalysisLoading(false)
@@ -496,9 +516,13 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       }
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          setPodStatusOutput(msg.payload.output)
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId && msg.payload?.output) {
+            setPodStatusOutput(msg.payload.output)
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         ws.close()
         setPodStatusLoading(false)
@@ -531,9 +555,13 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       }
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          setYamlOutput(msg.payload.output)
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId && msg.payload?.output) {
+            setYamlOutput(msg.payload.output)
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         ws.close()
         setYamlLoading(false)
@@ -685,14 +713,18 @@ Please proceed step by step and ask for confirmation before making any changes.`
       }
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId) {
-          if (msg.type === 'error' || msg.payload?.exitCode !== 0) {
-            setDeleteError(msg.payload?.error || 'Failed to delete pod')
-          } else {
-            // Success - close the drill down
-            closeDrillDown()
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId) {
+            if (msg.type === 'error' || msg.payload?.exitCode !== 0) {
+              setDeleteError(msg.payload?.error || 'Failed to delete pod')
+            } else {
+              // Success - close the drill down
+              closeDrillDown()
+            }
           }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
         }
         ws.close()
         setDeletingPod(false)
@@ -740,15 +772,22 @@ Please proceed step by step and ask for confirmation before making any changes.`
             }))
           }
           ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data)
-            if (msg.id === requestId) {
+            try {
+              const msg = JSON.parse(event.data)
+              if (msg.id === requestId) {
+                clearTimeout(timeout)
+                ws.close()
+                if (msg.payload?.exitCode === 0 || msg.payload?.output) {
+                  resolve({ success: true })
+                } else {
+                  resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse WebSocket message:', e)
               clearTimeout(timeout)
               ws.close()
-              if (msg.payload?.exitCode === 0 || msg.payload?.output) {
-                resolve({ success: true })
-              } else {
-                resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
-              }
+              resolve({ success: false, error: 'Failed to parse response' })
             }
           }
           ws.onerror = () => {
@@ -867,15 +906,22 @@ Please proceed step by step and ask for confirmation before making any changes.`
             }))
           }
           ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data)
-            if (msg.id === requestId) {
+            try {
+              const msg = JSON.parse(event.data)
+              if (msg.id === requestId) {
+                clearTimeout(timeout)
+                ws.close()
+                if (msg.payload?.exitCode === 0 || msg.payload?.output) {
+                  resolve({ success: true })
+                } else {
+                  resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse WebSocket message:', e)
               clearTimeout(timeout)
               ws.close()
-              if (msg.payload?.exitCode === 0 || msg.payload?.output) {
-                resolve({ success: true })
-              } else {
-                resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
-              }
+              resolve({ success: false, error: 'Failed to parse response' })
             }
           }
           ws.onerror = () => {
@@ -994,9 +1040,13 @@ Please proceed step by step and ask for confirmation before making any changes.`
             }))
           }
           ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data)
-            if (msg.id === requestId && msg.payload?.output) {
-              output = msg.payload.output
+            try {
+              const msg = JSON.parse(event.data)
+              if (msg.id === requestId && msg.payload?.output) {
+                output = msg.payload.output
+              }
+            } catch (e) {
+              console.error('Failed to parse WebSocket message:', e)
             }
             clearTimeout(timeout)
             ws.close()
