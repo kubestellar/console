@@ -338,6 +338,10 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
 
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
+	}
+
 	tokenString := authHeader[7:] // Remove "Bearer "
 	token, err := jwt.ParseWithClaims(tokenString, &middleware.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(h.jwtSecret), nil
