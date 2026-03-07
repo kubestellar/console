@@ -23,7 +23,7 @@ describe('useWasmCloudStatus', () => {
     })
 
     it('uses default API endpoints and no custom refresh interval when no config is provided', async () => {
-        ; (useCache as any).mockReturnValue({
+        vi.mocked(useCache).mockReturnValue({
             data: { totalHosts: 0 },
             isLoading: true,
             isRefreshing: false,
@@ -39,10 +39,10 @@ describe('useWasmCloudStatus', () => {
             refreshInterval: undefined,
         }))
 
-        const cacheOptions = (useCache as any).mock.calls[0][0]
+        const cacheOptions = vi.mocked(useCache).mock.calls[0][0]
         const fetcher = cacheOptions.fetcher
 
-            ; (api.get as any).mockResolvedValue({ data: { hosts: [], actors: [] } })
+        vi.mocked(api.get).mockResolvedValue({ data: { hosts: [], actors: [] } })
 
         await fetcher()
 
@@ -51,7 +51,7 @@ describe('useWasmCloudStatus', () => {
     })
 
     it('uses custom API endpoints and refresh interval from config', async () => {
-        ; (useCache as any).mockReturnValue({
+        vi.mocked(useCache).mockReturnValue({
             data: { totalHosts: 0 },
             isLoading: true,
             isRefreshing: false,
@@ -73,10 +73,10 @@ describe('useWasmCloudStatus', () => {
             refreshInterval: 60000,
         }))
 
-        const cacheOptions = (useCache as any).mock.calls[0][0]
+        const cacheOptions = vi.mocked(useCache).mock.calls[0][0]
         const fetcher = cacheOptions.fetcher
 
-            ; (api.get as any).mockResolvedValue({ data: { hosts: [], actors: [] } })
+        vi.mocked(api.get).mockResolvedValue({ data: { hosts: [], actors: [] } })
 
         await fetcher()
 

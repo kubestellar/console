@@ -17,12 +17,12 @@ const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   unknown: 'bg-gray-400',
 }
 
-const STATUS_LABEL_KEYS: Record<ProviderHealthInfo['status'], string> = {
+const STATUS_LABEL_KEYS = {
   operational: 'providerHealth.operational',
   degraded: 'providerHealth.degraded',
   down: 'providerHealth.down',
-  unknown: 'common.unknown',
-}
+  unknown: 'common:common.unknown',
+} as const satisfies Record<ProviderHealthInfo['status'], string>
 
 function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; onConfigure?: () => void }) {
   const { t } = useTranslation(['cards', 'common'])
@@ -48,8 +48,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
       {/* Status dot + label */}
       <div className="flex items-center gap-1.5 shrink-0">
         <div className={cn('w-2 h-2 rounded-full', STATUS_COLORS[provider.status])} />
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <span className="text-xs text-muted-foreground">{String(t(STATUS_LABEL_KEYS[provider.status] as any))}</span>
+        <span className="text-xs text-muted-foreground">{String(t(STATUS_LABEL_KEYS[provider.status]))}</span>
         {!provider.configured && (
           <span className="text-2xs text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full font-medium">
             {t('providerHealth.noKey')}

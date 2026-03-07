@@ -27,10 +27,10 @@ interface OperatorSubscriptionsProps {
 type SortByOption = 'pending' | 'name' | 'approval' | 'channel'
 
 const SORT_OPTIONS_KEYS = [
-  { value: 'pending' as const, labelKey: 'operatorSubscriptions.pendingFirst' },
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'approval' as const, labelKey: 'operatorSubscriptions.approval' },
-  { value: 'channel' as const, labelKey: 'operatorSubscriptions.channel' },
+  { value: 'pending' as const, labelKey: 'operatorSubscriptions.pendingFirst' as const },
+  { value: 'name' as const, labelKey: 'common:common.name' as const },
+  { value: 'approval' as const, labelKey: 'operatorSubscriptions.approval' as const },
+  { value: 'channel' as const, labelKey: 'operatorSubscriptions.channel' as const },
 ]
 
 const SUBSCRIPTION_SORT_COMPARATORS = {
@@ -51,8 +51,7 @@ const FILTER_CONFIG = {
 export function OperatorSubscriptions({ config: _config }: OperatorSubscriptionsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   const { isLoading: clustersLoading } = useClusters()

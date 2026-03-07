@@ -100,9 +100,9 @@ const getStatusColors = (status: ServiceExportStatus) => {
 type SortByOption = 'name' | 'status' | 'cluster'
 
 const SORT_OPTIONS_KEYS = [
-  { value: 'name' as const, labelKey: 'common.name' },
-  { value: 'status' as const, labelKey: 'common.status' },
-  { value: 'cluster' as const, labelKey: 'common.cluster' },
+  { value: 'name' as const, labelKey: 'common:common.name' as const },
+  { value: 'status' as const, labelKey: 'common:common.status' as const },
+  { value: 'cluster' as const, labelKey: 'common:common.cluster' as const },
 ]
 
 const statusOrder: Record<string, number> = { Failed: 0, Pending: 1, Ready: 2 }
@@ -120,8 +120,7 @@ interface ServiceExportsProps {
 export function ServiceExports({ config: _config }: ServiceExportsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey as any)) })),
+    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
   // Demo data - always available, never loading/erroring
