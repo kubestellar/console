@@ -229,7 +229,7 @@ function DashboardCardWrapper({
       <div
         ref={setNodeRef}
         style={style}
-        className={`${colSpan} glass rounded-lg p-4 flex items-center justify-center text-gray-500`}
+        className={`${colSpan} glass rounded-lg p-4 flex items-center justify-center text-muted-foreground`}
       >
         Unknown card type: {cardTypeKey || 'undefined'}
       </div>
@@ -248,7 +248,7 @@ function DashboardCardWrapper({
         {isDraggable && (
           <div
             {...listeners}
-            className="absolute top-2 left-2 z-10 cursor-grab active:cursor-grabbing p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800/50"
+            className="absolute top-2 left-2 z-10 cursor-grab active:cursor-grabbing p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity bg-secondary/50"
             title="Drag to reorder"
           >
             <svg
@@ -267,7 +267,7 @@ function DashboardCardWrapper({
             {onConfigure && (
               <button
                 onClick={onConfigure}
-                className="p-1 rounded bg-gray-800/50 hover:bg-gray-700 text-muted-foreground hover:text-white transition-colors"
+                className="p-1 rounded bg-secondary/50 hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
                 title="Configure card"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,7 +279,7 @@ function DashboardCardWrapper({
             {onRemove && (
               <button
                 onClick={onRemove}
-                className="p-1 rounded bg-gray-800/50 hover:bg-red-900/50 text-muted-foreground hover:text-red-400 transition-colors"
+                className="p-1 rounded bg-secondary/50 hover:bg-red-900/50 text-muted-foreground hover:text-red-400 transition-colors"
                 title="Remove card"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,7 +300,7 @@ function DashboardCardWrapper({
 
         {/* Loading overlay */}
         {isLoading && !isOverlay && (
-          <div className="absolute inset-0 bg-gray-900/50 rounded-lg flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/50 rounded-lg flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}

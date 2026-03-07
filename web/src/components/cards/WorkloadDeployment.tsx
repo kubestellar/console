@@ -639,27 +639,27 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       <div className="grid grid-cols-6 gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
         <div className="text-center">
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.totalWorkloads}</div>
-          <div className="text-xs text-gray-500">{t('common.total')}</div>
+          <div className="text-xs text-muted-foreground">{t('common.total')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-purple-500">{stats.uniqueWorkloads}</div>
-          <div className="text-xs text-gray-500">Unique</div>
+          <div className="text-xs text-muted-foreground">Unique</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-green-600">{stats.runningCount}</div>
-          <div className="text-xs text-gray-500">{t('common.running')}</div>
+          <div className="text-xs text-muted-foreground">{t('common.running')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-yellow-600">{stats.degradedCount}</div>
-          <div className="text-xs text-gray-500">{t('common.degraded')}</div>
+          <div className="text-xs text-muted-foreground">{t('common.degraded')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-blue-600">{stats.pendingCount}</div>
-          <div className="text-xs text-gray-500">{t('common.pending')}</div>
+          <div className="text-xs text-muted-foreground">{t('common.pending')}</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-red-600">{stats.failedCount}</div>
-          <div className="text-xs text-gray-500">{t('common.failed')}</div>
+          <div className="text-xs text-muted-foreground">{t('common.failed')}</div>
         </div>
       </div>
 

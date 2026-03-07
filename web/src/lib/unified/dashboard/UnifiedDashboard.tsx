@@ -213,7 +213,7 @@ export function UnifiedDashboard({
         <div className="flex items-center gap-2">
           {/* Last updated indicator */}
           {lastUpdated && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               Updated {lastUpdated.toLocaleTimeString()}
             </span>
           )}
@@ -223,7 +223,7 @@ export function UnifiedDashboard({
             <button
               onClick={handleRefresh}
               disabled={isLoading}
-              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 transition-colors"
+              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 disabled:opacity-50 transition-colors"
               title="Refresh"
             >
               <RefreshCw
@@ -236,7 +236,7 @@ export function UnifiedDashboard({
           {features.addCard !== false && (
             <button
               onClick={handleAddCard}
-              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
               title="Add card"
             >
               <Plus className="w-4 h-4 text-muted-foreground" />
@@ -247,7 +247,7 @@ export function UnifiedDashboard({
           {isCustomized && (
             <button
               onClick={handleReset}
-              className="px-3 py-1.5 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-muted-foreground transition-colors"
+              className="px-3 py-1.5 text-xs rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
               title="Reset to default layout"
             >
               Reset
@@ -281,11 +281,11 @@ export function UnifiedDashboard({
       {/* Empty state */}
       {cards.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Activity className="w-12 h-12 text-gray-600 mb-4" />
+          <Activity className="w-12 h-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium text-gray-300 mb-2">
             No cards configured
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Add cards to start building your dashboard
           </p>
           {features.addCard !== false && (

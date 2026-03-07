@@ -87,7 +87,7 @@ function renderText(
   column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const text = String(value)
@@ -106,12 +106,12 @@ function renderNumber(
   column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const num = typeof value === 'number' ? value : parseFloat(String(value))
   if (isNaN(num)) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const prefix = column.prefix ?? ''
@@ -133,12 +133,12 @@ function renderPercentage(
   column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const num = typeof value === 'number' ? value : parseFloat(String(value))
   if (isNaN(num)) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const prefix = column.prefix ?? ''
@@ -160,12 +160,12 @@ function renderBytes(
   column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const num = typeof value === 'number' ? value : parseFloat(String(value))
   if (isNaN(num)) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const prefix = column.prefix ?? ''
@@ -187,12 +187,12 @@ function renderDuration(
   column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const num = typeof value === 'number' ? value : parseFloat(String(value))
   if (isNaN(num)) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const prefix = column.prefix ?? ''
@@ -214,7 +214,7 @@ function renderDate(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   try {
@@ -225,7 +225,7 @@ function renderDate(
       date.toLocaleDateString()
     )
   } catch {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 }
 
@@ -238,7 +238,7 @@ function renderDateTime(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   try {
@@ -249,7 +249,7 @@ function renderDateTime(
       date.toLocaleString()
     )
   } catch {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 }
 
@@ -262,7 +262,7 @@ function renderRelativeTime(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   try {
@@ -289,7 +289,7 @@ function renderRelativeTime(
     const years = Math.floor(days / 365)
     return `${years}y ago`
   } catch {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 }
 
@@ -302,7 +302,7 @@ function renderStatusBadge(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const status = String(value)
@@ -326,7 +326,7 @@ function renderClusterBadge(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const cluster = String(value)
@@ -349,7 +349,7 @@ function renderNamespaceBadge(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const namespace = String(value)
@@ -372,12 +372,12 @@ function renderProgressBar(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const num = typeof value === 'number' ? value : parseFloat(String(value))
   if (isNaN(num)) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   // Clamp to 0-100
@@ -421,7 +421,7 @@ function renderBoolean(
   return createElement(
     'span',
     {
-      className: bool ? 'text-green-400' : 'text-gray-500',
+      className: bool ? 'text-green-400' : 'text-muted-foreground',
     },
     bool ? '✓' : '✗'
   )
@@ -436,7 +436,7 @@ function renderIcon(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   // For now, just render the value - icon lookup can be added later
@@ -456,7 +456,7 @@ function renderJson(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, 'null')
+    return createElement('span', { className: 'text-muted-foreground' }, 'null')
   }
 
   try {
@@ -467,7 +467,7 @@ function renderJson(
       json
     )
   } catch {
-    return createElement('span', { className: 'text-gray-500' }, '[Object]')
+    return createElement('span', { className: 'text-muted-foreground' }, '[Object]')
   }
 }
 
@@ -480,7 +480,7 @@ function renderTruncate(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const text = String(value)
@@ -504,7 +504,7 @@ function renderLink(
   _column: CardColumnConfig
 ): ReactNode {
   if (value === null || value === undefined) {
-    return createElement('span', { className: 'text-gray-500' }, '—')
+    return createElement('span', { className: 'text-muted-foreground' }, '—')
   }
 
   const url = String(value)

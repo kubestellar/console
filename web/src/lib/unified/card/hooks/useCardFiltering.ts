@@ -117,7 +117,7 @@ export function useCardFiltering(
 
     return createElement(
       'div',
-      { className: 'flex items-center gap-2 p-2 border-b border-gray-800' },
+      { className: 'flex items-center gap-2 p-2 border-b border-border' },
       filters.map((filter) =>
         createElement(FilterControl, {
           key: filter.field,
@@ -158,7 +158,7 @@ function FilterControl({
         value: (value as string) ?? '',
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
         className:
-          'flex-1 px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-blue-500 text-gray-200 placeholder-gray-500',
+          'flex-1 px-3 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-none focus:border-blue-500 text-foreground placeholder-muted-foreground',
       })
 
     case 'select':
@@ -170,7 +170,7 @@ function FilterControl({
           onChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
             onChange(e.target.value || undefined),
           className:
-            'px-3 py-1.5 text-sm bg-gray-900 border border-gray-600 rounded focus:outline-none focus:border-blue-500 text-gray-200',
+            'px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:border-blue-500 text-foreground',
         },
         createElement('option', { value: '' }, config.placeholder ?? 'All'),
         config.options?.map((opt) =>
@@ -186,7 +186,7 @@ function FilterControl({
           type: 'checkbox',
           checked: (value as boolean) ?? false,
           onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.checked),
-          className: 'rounded border-gray-700 bg-gray-800',
+          className: 'rounded border-border bg-secondary',
         }),
         config.label ?? config.field
       )
@@ -198,7 +198,7 @@ function FilterControl({
         'div',
         { className: 'flex items-center gap-1 text-xs' },
         createElement('span', { className: 'text-muted-foreground' }, config.label ?? config.field),
-        createElement('span', { className: 'text-gray-500' }, '(multi-select)')
+        createElement('span', { className: 'text-muted-foreground' }, '(multi-select)')
       )
 
     default:

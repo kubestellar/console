@@ -354,7 +354,7 @@ export function UnifiedCardAdapter({
 
   // If no legacy renderer provided, show placeholder
   return (
-    <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
       Card not available
     </div>
   )

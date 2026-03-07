@@ -361,12 +361,12 @@ export function PDDisaggregation() {
       {/* Empty state for non-disaggregated stacks */}
       {selectedStack && !hasDisaggregation && !isDemoMode && (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-          <AlertCircle size={32} className="text-gray-500 mb-3" />
+          <AlertCircle size={32} className="text-muted-foreground mb-3" />
           <span className="text-muted-foreground text-sm font-medium">{t('llmd.unifiedServingMode')}</span>
-          <span className="text-gray-500 text-xs mt-1">
+          <span className="text-muted-foreground text-xs mt-1">
             {t('llmd.stackUsesUnified')}
           </span>
-          <span className="text-gray-500 text-xs">
+          <span className="text-muted-foreground text-xs">
             {t('llmd.disaggregationAvailable')}
           </span>
         </div>
@@ -377,7 +377,7 @@ export function PDDisaggregation() {
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
           <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-cyan-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackDisaggregation')}</span>
-          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+          <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
 

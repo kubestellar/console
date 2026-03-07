@@ -554,7 +554,7 @@ export function KVCacheMonitor() {
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm rounded-lg">
           <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-cyan-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackMonitor')}</span>
-          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+          <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -717,7 +717,7 @@ export function KVCacheMonitor() {
                                 ? metric === 'util'
                                   ? 'bg-yellow-500/20 text-yellow-400'
                                   : 'bg-green-500/20 text-green-400'
-                                : 'bg-gray-700/50 text-gray-500 hover:text-gray-300'
+                                : 'bg-gray-700/50 text-muted-foreground hover:text-gray-300'
                             }`}
                           >
                             {metric === 'util' ? t('llmd.util') : t('llmd.hitRate')}
@@ -729,13 +729,13 @@ export function KVCacheMonitor() {
                       <div className="flex gap-3 text-xs mb-2">
                         {selectedMetrics.includes('util') && (
                           <div>
-                            <span className="text-gray-500">{t('llmd.util')}:</span>{' '}
+                            <span className="text-muted-foreground">{t('llmd.util')}:</span>{' '}
                             <span className="text-yellow-400 font-mono">{stat.utilizationPercent}%</span>
                           </div>
                         )}
                         {selectedMetrics.includes('hitRate') && (
                           <div>
-                            <span className="text-gray-500">{t('llmd.hit')}:</span>{' '}
+                            <span className="text-muted-foreground">{t('llmd.hit')}:</span>{' '}
                             <span className="text-green-400 font-mono">{Math.round(stat.hitRate * 100)}%</span>
                           </div>
                         )}

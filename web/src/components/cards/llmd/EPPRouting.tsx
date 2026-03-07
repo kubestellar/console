@@ -886,7 +886,7 @@ export function EPPRouting() {
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm rounded-lg">
           <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-yellow-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackRouting')}</span>
-          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+          <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -1107,7 +1107,7 @@ export function EPPRouting() {
                                   ? metric === 'load'
                                     ? 'bg-yellow-500/20 text-yellow-400 shadow-sm shadow-yellow-500/20'
                                     : 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
-                                  : 'bg-gray-700/50 text-gray-500 hover:text-gray-300'
+                                  : 'bg-gray-700/50 text-muted-foreground hover:text-gray-300'
                               }`}
                             >
                               {metric === 'load' ? t('llmd.load') : t('llmd.rps')}
@@ -1119,13 +1119,13 @@ export function EPPRouting() {
                         <div className="flex gap-3 text-xs">
                           {selectedMetricTypes.includes('load') && (
                             <div>
-                              <span className="text-gray-500">{t('llmd.load')}:</span>{' '}
+                              <span className="text-muted-foreground">{t('llmd.load')}:</span>{' '}
                               <span className="text-yellow-400 font-mono">{metrics.load}%</span>
                             </div>
                           )}
                           {selectedMetricTypes.includes('rps') && (
                             <div>
-                              <span className="text-gray-500">{t('llmd.rps')}:</span>{' '}
+                              <span className="text-muted-foreground">{t('llmd.rps')}:</span>{' '}
                               <span className="text-cyan-400 font-mono">{metrics.rps}</span>
                             </div>
                           )}
@@ -1162,7 +1162,7 @@ export function EPPRouting() {
                     )}
 
                     {node.type === 'source' && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted-foreground">
                         {t('llmd.incomingRequests')}
                       </div>
                     )}

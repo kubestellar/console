@@ -55,7 +55,7 @@ function StatCard({
     >
       <span className={cn('text-2xl font-bold', color)}>{value}</span>
       <span className="text-xs text-muted-foreground mt-1">{label}</span>
-      {subValue && <span className="text-2xs text-gray-500">{subValue}</span>}
+      {subValue && <span className="text-2xs text-muted-foreground">{subValue}</span>}
     </button>
   )
 }
@@ -311,7 +311,7 @@ export function MiniDashboard() {
         </div>
         <div className="flex items-center gap-2">
           {lastUpdated && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {lastUpdated.toLocaleTimeString()}
             </span>
           )}
@@ -404,7 +404,7 @@ export function MiniDashboard() {
                     )}
                   />
                   <span className="truncate text-gray-300">{issue.name}</span>
-                  <span className="text-gray-500 ml-auto flex-shrink-0">{issue.reason || issue.status}</span>
+                  <span className="text-muted-foreground ml-auto flex-shrink-0">{issue.reason || issue.status}</span>
                 </button>
               )
             })}
@@ -425,7 +425,7 @@ export function MiniDashboard() {
             Install as Desktop Widget
           </button>
         ) : !isInstalled ? (
-          <div className="text-center text-xs text-gray-500 space-y-1">
+          <div className="text-center text-xs text-muted-foreground space-y-1">
             {isSafariBrowser ? (
               <p>Safari: <strong>File → Add to Dock</strong> to install</p>
             ) : (
@@ -436,7 +436,7 @@ export function MiniDashboard() {
             )}
           </div>
         ) : (
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Nodes Widget</span>
             <button
               onClick={openFullDashboard}

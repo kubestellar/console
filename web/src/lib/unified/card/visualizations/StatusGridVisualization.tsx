@@ -185,7 +185,7 @@ function StatusGridItem({
       <div className="flex-1 min-w-0">
         <div className="text-xs text-muted-foreground truncate">{item.label}</div>
         {showValue && (
-          <div className="text-lg font-semibold text-gray-200 truncate">
+          <div className="text-lg font-semibold text-foreground truncate">
             {value}
           </div>
         )}

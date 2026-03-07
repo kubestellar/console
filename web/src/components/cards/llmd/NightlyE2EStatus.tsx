@@ -246,7 +246,7 @@ Please provide:
             {/* llm-d component tags */}
             {hasLLMDImages && (
               <div className="mt-1.5 pt-1.5 border-t border-gray-700">
-                <div className="text-gray-500 text-[9px] font-medium mb-0.5">llm-d components</div>
+                <div className="text-muted-foreground text-[9px] font-medium mb-0.5">llm-d components</div>
                 {Object.entries(llmdImages).map(([name, tag]) => (
                   <div key={name} className="flex items-center gap-1 whitespace-nowrap">
                     <span className="text-muted-foreground">{name}</span>
@@ -259,7 +259,7 @@ Please provide:
             {/* Other container tags */}
             {hasOtherImages && (
               <div className="mt-1.5 pt-1.5 border-t border-gray-700">
-                <div className="text-gray-500 text-[9px] font-medium mb-0.5">other images</div>
+                <div className="text-muted-foreground text-[9px] font-medium mb-0.5">other images</div>
                 {Object.entries(otherImages).map(([name, tag]) => (
                   <div key={name} className="flex items-center gap-1 whitespace-nowrap">
                     <span className="text-muted-foreground">{name}</span>
@@ -423,7 +423,7 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
 
   return (
     <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-2">
-      <div className="text-2xs text-gray-500 uppercase tracking-wider mb-1">{t('cards:llmd.passFailTrend')}</div>
+      <div className="text-2xs text-muted-foreground uppercase tracking-wider mb-1">{t('cards:llmd.passFailTrend')}</div>
       <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -695,7 +695,7 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
           </span>
           <span className="text-sm font-semibold text-gray-200 truncate">{guide.guide}</span>
         </div>
-        <div className="flex items-center gap-2 text-2xs text-gray-500">
+        <div className="flex items-center gap-2 text-2xs text-muted-foreground">
           <span style={{ color: PLATFORM_COLORS[guide.platform] }}>{guide.platform}</span>
           <span>&middot;</span>
           <a href={workflowUrl} target="_blank" rel="noopener noreferrer"
@@ -714,11 +714,11 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
       <div className={`grid ${gpuFails > 0 ? 'grid-cols-6' : 'grid-cols-5'} gap-1.5 mb-2`}>
         <div className="col-span-1 bg-gray-800/60 border border-gray-700/50 rounded-lg p-2 text-center">
           <div className={`text-lg font-bold ${
-            guide.passRate >= 90 ? 'text-green-400' : guide.passRate >= 70 ? 'text-yellow-400' : guide.passRate > 0 ? 'text-red-400' : 'text-gray-500'
+            guide.passRate >= 90 ? 'text-green-400' : guide.passRate >= 70 ? 'text-yellow-400' : guide.passRate > 0 ? 'text-red-400' : 'text-muted-foreground'
           }`}>
             {guide.passRate}%
           </div>
-          <div className="text-[8px] text-gray-500 uppercase tracking-wider">{t('common:common.rate')}</div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wider">{t('common:common.rate')}</div>
         </div>
         <StatBox label={t('cards:llmd.pass')} value={String(passed)} color="text-green-400" />
         <StatBox label={t('cards:llmd.fail')} value={String(failed)} color="text-red-400" />
@@ -760,52 +760,52 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
           </div>
         )}
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-gray-500">{t('cards:llmd.model')}</span>
+          <span className="text-muted-foreground">{t('cards:llmd.model')}</span>
           <span className={`font-mono text-2xs truncate max-w-[140px] ${hoveredRun ? 'text-gray-200' : 'text-gray-300'}`} title={displayModel}>{displayModel}</span>
         </div>
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-gray-500">{t('cards:llmd.gpu')}</span>
+          <span className="text-muted-foreground">{t('cards:llmd.gpu')}</span>
           <span className={`font-mono text-2xs ${hoveredRun ? 'text-gray-200' : 'text-gray-300'}`}>
             {displayGpuCount > 0 ? `${displayGpuCount}× ${displayGpuType}` : displayGpuType}
           </span>
         </div>
         {hoveredRun && runDur !== null ? (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">{t('cards:llmd.duration')}</span>
+            <span className="text-muted-foreground">{t('cards:llmd.duration')}</span>
             <span className="text-gray-200 font-mono">{formatDuration(runDur)}</span>
           </div>
         ) : avgDur !== null ? (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">{t('cards:llmd.avgDuration')}</span>
+            <span className="text-muted-foreground">{t('cards:llmd.avgDuration')}</span>
             <span className="text-gray-300 font-mono">{formatDuration(avgDur)}</span>
           </div>
         ) : null}
         <div className="h-px bg-gray-700/30 my-0.5" />
         {lastSuccess && (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">{t('cards:llmd.lastPass')}</span>
+            <span className="text-muted-foreground">{t('cards:llmd.lastPass')}</span>
             <span className="text-green-400 font-mono">{formatTimeAgo(lastSuccess.updatedAt)}</span>
           </div>
         )}
         {lastFailure && (
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">{t('cards:llmd.lastFail')}</span>
+            <span className="text-muted-foreground">{t('cards:llmd.lastFail')}</span>
             <span className="text-red-400 font-mono">{formatTimeAgo(lastFailure.updatedAt)}</span>
           </div>
         )}
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-gray-500">{t('cards:llmd.totalRuns')}</span>
+          <span className="text-muted-foreground">{t('cards:llmd.totalRuns')}</span>
           <span className="text-gray-300 font-mono">{guide.runs.length}</span>
         </div>
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-gray-500">{t('cards:llmd.trend')}</span>
+          <span className="text-muted-foreground">{t('cards:llmd.trend')}</span>
           <TrendIndicator trend={guide.trend} passRate={guide.passRate} />
         </div>
       </div>
 
       {/* Run history dots — hover to see per-run details above */}
       <div className="mt-auto pt-2 border-t border-gray-700/30">
-        <div className="text-2xs text-gray-500 mb-1.5">
+        <div className="text-2xs text-muted-foreground mb-1.5">
           {hoveredRun ? t('cards:llmd.runHistoryNewest') : `${t('cards:llmd.runHistoryNewest')} — ${t('cards:llmd.hoverDotForDetails')}`}
         </div>
         <div className="flex items-center gap-1 flex-wrap">
@@ -829,7 +829,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
   return (
     <div className="bg-gray-800/40 border border-gray-700/30 rounded-lg p-2 text-center">
       <div className={`text-base font-bold ${color}`}>{value}</div>
-      <div className="text-[9px] text-gray-500 uppercase tracking-wider">{label}</div>
+      <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
     </div>
   )
 }
@@ -982,7 +982,7 @@ export function NightlyE2EStatus() {
                   {platform}
                 </span>
                 <div className="flex-1 h-px bg-gray-700/50" />
-                <span className="text-2xs text-gray-500">
+                <span className="text-2xs text-muted-foreground">
                   {platformGuides.filter(g => g.latestConclusion === 'success').length}/{platformGuides.length} {t('cards:llmd.passing')}
                 </span>
               </div>
@@ -1012,14 +1012,14 @@ export function NightlyE2EStatus() {
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center gap-2">
               <TestTube2 size={20} className="text-gray-600" />
-              <p className="text-[11px] text-gray-500">{t('cards:llmd.hoverTestDetails')}</p>
+              <p className="text-[11px] text-muted-foreground">{t('cards:llmd.hoverTestDetails')}</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 text-2xs text-gray-500 pt-1 border-t border-gray-700/30">
+      <div className="flex items-center justify-center gap-4 text-2xs text-muted-foreground pt-1 border-t border-gray-700/30">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-green-400" />
           <span>{t('cards:llmd.pass')}</span>

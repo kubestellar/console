@@ -755,7 +755,7 @@ function ClusterStatusRow({ status }: ClusterStatusRowProps) {
 const DEP_ACTION_STYLES: Record<string, { color: string; label: string }> = {
   created: { color: 'text-green-400', label: 'Created' },
   updated: { color: 'text-blue-400', label: 'Updated' },
-  skipped: { color: 'text-gray-500', label: 'Skipped' },
+  skipped: { color: 'text-muted-foreground', label: 'Skipped' },
   failed: { color: 'text-red-400', label: 'Failed' },
 }
 

@@ -250,13 +250,13 @@ function PlaceholderVisualization({
   columns?: number
 }) {
   return (
-    <div className="flex flex-col items-center justify-center p-6 text-gray-500 border border-dashed border-gray-700 rounded-lg m-2">
+    <div className="flex flex-col items-center justify-center p-6 text-muted-foreground border border-dashed border-border rounded-lg m-2">
       <Info className="w-8 h-8 mb-2 text-blue-400" />
       <div className="text-sm font-medium">Visualization: {type}</div>
       <div className="text-xs mt-1">
         {itemCount} items{columns ? `, ${columns} columns` : ''}
       </div>
-      <div className="text-xs mt-2 text-gray-600">
+      <div className="text-xs mt-2 text-muted-foreground">
         (Implementation pending - PR 2/4)
       </div>
     </div>
@@ -354,7 +354,7 @@ function EmptyState({
       </div>
       <div className="text-sm font-medium text-gray-300">{title}</div>
       {message && (
-        <div className="text-xs text-gray-500 mt-1">{message}</div>
+        <div className="text-xs text-muted-foreground mt-1">{message}</div>
       )}
     </div>
   )
@@ -374,11 +374,11 @@ function ErrorState({
     <div className="flex flex-col items-center justify-center p-6 text-center">
       <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
       <div className="text-sm font-medium text-gray-300">Error loading data</div>
-      <div className="text-xs text-gray-500 mt-1">{message}</div>
+      <div className="text-xs text-muted-foreground mt-1">{message}</div>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-3 px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded transition-colors"
+          className="mt-3 px-3 py-1 text-xs bg-secondary hover:bg-secondary/80 rounded transition-colors"
         >
           Retry
         </button>
@@ -402,12 +402,12 @@ function InlineStats({
   data: unknown[] | undefined
 }) {
   return (
-    <div className="flex items-center gap-3 px-2 py-1.5 border-b border-gray-800">
+    <div className="flex items-center gap-3 px-2 py-1.5 border-b border-border">
       {stats.map((stat) => (
         <div key={stat.id} className="flex items-center gap-1.5 text-xs">
           <div className={`w-2 h-2 rounded-full ${stat.bgColor ?? 'bg-gray-600'}`} />
           <span className="text-muted-foreground">{stat.label}:</span>
-          <span className="font-medium text-gray-200">--</span>
+          <span className="font-medium text-foreground">--</span>
         </div>
       ))}
     </div>
@@ -425,13 +425,13 @@ function CardFooter({
   data: unknown[] | undefined
 }) {
   return (
-    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-gray-500 border-t border-gray-800">
+    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground border-t border-border">
       {config.showTotal && data && (
         <span>{data.length} items</span>
       )}
       {config.text && <span>{config.text}</span>}
       {config.pagination && (
-        <span className="text-gray-600">Pagination placeholder</span>
+        <span className="text-muted-foreground">Pagination placeholder</span>
       )}
     </div>
   )

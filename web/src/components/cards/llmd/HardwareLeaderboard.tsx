@@ -111,7 +111,7 @@ export function HardwareLeaderboard() {
         <div className="flex items-center gap-2">
           <Trophy size={16} className="text-yellow-400" />
           <span className="text-sm font-medium text-white">Hardware Leaderboard</span>
-          <span className="text-xs text-gray-500">{totalItems} configs</span>
+          <span className="text-xs text-muted-foreground">{totalItems} configs</span>
         </div>
         <div className="flex items-center gap-2">
           <CardSearch
@@ -143,15 +143,15 @@ export function HardwareLeaderboard() {
         <table className="w-full text-xs">
           <thead className="sticky top-0 bg-gray-900 backdrop-blur-sm z-10">
             <tr className="border-b border-gray-700/50">
-              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[36px]">#</th>
-              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[70px]">Hardware</th>
-              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[100px]">Model</th>
-              <th className="text-left py-2 px-2 text-gray-500 font-medium w-[90px]">Config</th>
+              <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[36px]">#</th>
+              <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[70px]">Hardware</th>
+              <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[100px]">Model</th>
+              <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[90px]">Config</th>
               {COLUMNS.map(col => (
                 <th
                   key={col.key}
                   onClick={() => toggleSort(col.key)}
-                  className={`text-right py-2 px-2 text-gray-500 font-medium cursor-pointer hover:text-white transition-colors ${col.width}`}
+                  className={`text-right py-2 px-2 text-muted-foreground font-medium cursor-pointer hover:text-white transition-colors ${col.width}`}
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>{col.label}</span>
@@ -165,7 +165,7 @@ export function HardwareLeaderboard() {
             {rows.map(row => (
               <tr
                 key={row.rank}
-                className={`border-b border-gray-800/50 transition-colors hover:bg-gray-800/30 ${
+                className={`border-b border-border/50 transition-colors hover:bg-gray-800/30 ${
                   row.config !== 'standalone' ? 'bg-blue-500/[0.03]' : ''
                 }`}
               >

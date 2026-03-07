@@ -191,7 +191,7 @@ export function BenchmarkHero() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-white font-semibold text-lg">{model}</span>
-              <ArrowRight size={14} className="text-gray-500" />
+              <ArrowRight size={14} className="text-muted-foreground" />
               <span className="text-gray-300 font-medium">{hw}</span>
               <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{ background: `${CONFIG_COLORS[config]}20`, color: CONFIG_COLORS[config] }}>
@@ -207,7 +207,7 @@ export function BenchmarkHero() {
         </div>
         {/* Time range filter */}
         <div className="flex items-center gap-2">
-          <CalendarDays size={13} className="text-gray-500" />
+          <CalendarDays size={13} className="text-muted-foreground" />
           <select
             value={TIME_RANGE_OPTIONS.some(o => o.value === currentSince) ? currentSince : 'custom'}
             onChange={e => handleTimeRangeChange(e.target.value)}
@@ -288,27 +288,27 @@ export function BenchmarkHero() {
       {/* Bottom strip */}
       <div className="flex items-center gap-6 px-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <span className="text-gray-500">Requests:</span>
+          <span className="text-muted-foreground">Requests:</span>
           <span className="text-white font-mono">{agg.requests.total.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-gray-500">Failures:</span>
+          <span className="text-muted-foreground">Failures:</span>
           <span className={`font-mono ${agg.requests.failures > 0 ? 'text-red-400' : 'text-green-400'}`}>
             {agg.requests.failures === 0 ? '0' : agg.requests.failures}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Cpu size={11} className="text-gray-500" />
-          <span className="text-gray-500">GPU Util:</span>
+          <Cpu size={11} className="text-muted-foreground" />
+          <span className="text-muted-foreground">GPU Util:</span>
           <span className="text-white font-mono">{gpuUtil.toFixed(0)}%</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Zap size={11} className="text-gray-500" />
-          <span className="text-gray-500">Power:</span>
+          <Zap size={11} className="text-muted-foreground" />
+          <span className="text-muted-foreground">Power:</span>
           <span className="text-white font-mono">{gpuPower.toFixed(0)}W</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-gray-500">GPUs:</span>
+          <span className="text-muted-foreground">GPUs:</span>
           <span className="text-white font-mono">{engine?.standardized.accelerator?.count ?? 1}x {hw}</span>
         </div>
       </div>

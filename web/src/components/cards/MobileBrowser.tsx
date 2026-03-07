@@ -319,7 +319,7 @@ export function MobileBrowser() {
                   {/* Bookmarks */}
                   {bookmarks.length > 0 && (
                     <div className="mb-4">
-                      <h3 className="text-xs font-semibold text-gray-500 mb-2">Favorites</h3>
+                      <h3 className="text-xs font-semibold text-muted-foreground mb-2">Favorites</h3>
                       <div className="grid grid-cols-4 gap-2">
                         {bookmarks.slice(0, 8).map((bookmark, i) => (
                           <button
@@ -341,7 +341,7 @@ export function MobileBrowser() {
 
                   {/* Quick Links */}
                   <div>
-                    <h3 className="text-xs font-semibold text-gray-500 mb-2">Quick Links</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground mb-2">Quick Links</h3>
                     <div className="grid grid-cols-4 gap-2">
                       {QUICK_LINKS.map((link) => (
                         <button
@@ -404,7 +404,7 @@ export function MobileBrowser() {
                           </button>
                         </div>
                         {tab.url && (
-                          <span className="text-2xs text-gray-500 truncate block">
+                          <span className="text-2xs text-muted-foreground truncate block">
                             {tab.url}
                           </span>
                         )}
@@ -437,7 +437,7 @@ export function MobileBrowser() {
                   </button>
                 </div>
                 {bookmarks.length === 0 ? (
-                  <p className="text-xs text-gray-500 text-center py-8">
+                  <p className="text-xs text-muted-foreground text-center py-8">
                     No bookmarks yet. Tap the star icon to add one.
                   </p>
                 ) : (
@@ -461,7 +461,7 @@ export function MobileBrowser() {
                             <span className="text-xs font-medium text-gray-700 dark:text-gray-300 block truncate">
                               {bookmark.title}
                             </span>
-                            <span className="text-2xs text-gray-500 truncate block">
+                            <span className="text-2xs text-muted-foreground truncate block">
                               {bookmark.url}
                             </span>
                           </button>

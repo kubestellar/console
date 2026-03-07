@@ -246,7 +246,7 @@ export function LatencyBreakdown() {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             No data available for selected filters
           </div>
         )}

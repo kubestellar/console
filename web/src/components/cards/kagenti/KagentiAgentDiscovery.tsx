@@ -127,7 +127,7 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
             {card.identityBinding ? (
               <Shield className="w-3 h-3 text-green-400" />
             ) : (
-              <span className="text-xs text-gray-500">No ID</span>
+              <span className="text-xs text-muted-foreground">No ID</span>
             )}
             {(card.skills || []).length > 0 && (
               <span className="text-xs text-muted-foreground/40">

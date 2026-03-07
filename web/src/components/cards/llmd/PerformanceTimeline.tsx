@@ -136,7 +136,7 @@ export function PerformanceTimeline() {
         <div className="flex items-center gap-2">
           <LayoutGrid size={14} className="text-purple-400" />
           <span className="text-sm font-medium text-white">Sequence Length Impact</span>
-          <span className="text-2xs text-gray-500">ISL × OSL → {modeInfo.label}</span>
+          <span className="text-2xs text-muted-foreground">ISL × OSL → {modeInfo.label}</span>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -178,7 +178,7 @@ export function PerformanceTimeline() {
         {cells.length > 0 ? (
           <div className="relative">
             {/* Y-axis label */}
-            <div className="absolute -left-8 top-1/2 -translate-y-1/2 -rotate-90 text-2xs text-gray-500 flex items-center gap-1 whitespace-nowrap">
+            <div className="absolute -left-8 top-1/2 -translate-y-1/2 -rotate-90 text-2xs text-muted-foreground flex items-center gap-1 whitespace-nowrap">
               <ArrowDown size={10} className="rotate-90" />
               OSL (Output Seq Len)
             </div>
@@ -193,7 +193,7 @@ export function PerformanceTimeline() {
                 ))}
               </div>
               <div className="flex items-center gap-1 mb-2 pl-16">
-                <div className="flex-1 text-center text-2xs text-gray-500 flex items-center justify-center gap-1">
+                <div className="flex-1 text-center text-2xs text-muted-foreground flex items-center justify-center gap-1">
                   <ArrowRight size={10} />
                   ISL (Input Seq Len)
                 </div>
@@ -242,7 +242,7 @@ export function PerformanceTimeline() {
             )}
           </div>
         ) : (
-          <div className="text-gray-500 text-sm">No data for selected filters</div>
+          <div className="text-muted-foreground text-sm">No data for selected filters</div>
         )}
       </div>
 

@@ -123,8 +123,8 @@ export function TableVisualization({
       <div className="flex-1 overflow-auto">
         <table className="w-full text-sm">
           {/* Header */}
-          <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm">
-            <tr className="border-b border-gray-800">
+          <thead className="sticky top-0 bg-background/95 backdrop-blur-sm">
+            <tr className="border-b border-border">
               {visibleColumns.map((column) => (
                 <th
                   key={column.field}
@@ -132,7 +132,7 @@ export function TableVisualization({
                     px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider
                     ${column.align === 'center' ? 'text-center' : ''}
                     ${column.align === 'right' ? 'text-right' : 'text-left'}
-                    ${sortable && column.sortable !== false ? 'cursor-pointer hover:text-gray-200 select-none' : ''}
+                    ${sortable && column.sortable !== false ? 'cursor-pointer hover:text-foreground select-none' : ''}
                   `}
                   style={
                     column.width
@@ -168,7 +168,7 @@ export function TableVisualization({
               <tr>
                 <td
                   colSpan={visibleColumns.length}
-                  className="px-3 py-8 text-center text-gray-500"
+                  className="px-3 py-8 text-center text-muted-foreground"
                 >
                   No data to display
                 </td>
@@ -178,7 +178,7 @@ export function TableVisualization({
                 <tr
                   key={rowIndex}
                   className={`
-                    ${isClickable ? 'cursor-pointer hover:bg-gray-800/50' : ''}
+                    ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''}
                     transition-colors
                   `}
                   onClick={
@@ -196,7 +196,7 @@ export function TableVisualization({
                           px-3 py-2
                           ${column.align === 'center' ? 'text-center' : ''}
                           ${column.align === 'right' ? 'text-right' : ''}
-                          ${column.primary ? 'font-medium text-gray-200' : 'text-muted-foreground'}
+                          ${column.primary ? 'font-medium text-foreground' : 'text-muted-foreground'}
                         `}
                       >
                         {renderCell(value, item as Record<string, unknown>, column)}
@@ -212,7 +212,7 @@ export function TableVisualization({
 
       {/* Pagination footer */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-border text-xs text-muted-foreground">
           <span>
             {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, sortedData.length)} of {sortedData.length}
           </span>
@@ -220,7 +220,7 @@ export function TableVisualization({
             <button
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0}
-              className="p-1 rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -230,7 +230,7 @@ export function TableVisualization({
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={currentPage >= totalPages - 1}
-              className="p-1 rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

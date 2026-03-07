@@ -137,7 +137,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
             </span>
           )}
           {prefillCount === 0 && decodeCount === 0 && unifiedCount === 0 && (
-            <span className="text-gray-500 italic" title="No running pods - scaled to 0">
+            <span className="text-muted-foreground italic" title="No running pods - scaled to 0">
               0 pods
             </span>
           )}
@@ -152,7 +152,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
         </span>
 
         {/* Cluster */}
-        <span className="px-1.5 py-0.5 rounded bg-gray-800 text-gray-500">
+        <span className="px-1.5 py-0.5 rounded bg-gray-800 text-muted-foreground">
           {stack.cluster}
         </span>
 
@@ -190,7 +190,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
 
         {/* Model name */}
         {stack.model && (
-          <span className="text-gray-500 truncate max-w-[120px] ml-auto" title={`model: ${stack.model}`}>
+          <span className="text-muted-foreground truncate max-w-[120px] ml-auto" title={`model: ${stack.model}`}>
             {stack.model}
           </span>
         )}
@@ -231,7 +231,7 @@ export function StackSelector() {
   // If no context, show placeholder
   if (!stackContext) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-gray-800/50 text-gray-500 text-sm">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-gray-800/50 text-muted-foreground text-sm">
         <Layers className="w-4 h-4" />
         <span>{t('common.noStackData')}</span>
       </div>
@@ -347,7 +347,7 @@ export function StackSelector() {
             <span className="text-sm font-medium text-white max-w-[140px] truncate">
               {selectedStack.name}
             </span>
-            <span className="text-2xs text-gray-500">ns:{selectedStack.namespace}</span>
+            <span className="text-2xs text-muted-foreground">ns:{selectedStack.namespace}</span>
 
             {/* P/D replica counts */}
             {(() => {
@@ -401,7 +401,7 @@ export function StackSelector() {
                 <span className="text-sm font-medium text-white">
                   🎯 Focus on a Stack
                 </span>
-                <p className="text-2xs text-gray-500 mt-0.5">
+                <p className="text-2xs text-muted-foreground mt-0.5">
                   Select an inference stack to visualize its metrics
                 </p>
               </div>
@@ -440,7 +440,7 @@ export function StackSelector() {
               {/* Search input */}
               <div className="px-3 pb-2">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <input
                     ref={searchInputRef}
                     type="text"
@@ -452,7 +452,7 @@ export function StackSelector() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-700 text-gray-500 hover:text-white"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-700 text-muted-foreground hover:text-white"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -462,7 +462,7 @@ export function StackSelector() {
 
               {/* Sort options */}
               <div className="px-3 pb-2 flex items-center gap-1">
-                <span className="text-2xs text-gray-500 mr-1">Sort:</span>
+                <span className="text-2xs text-muted-foreground mr-1">Sort:</span>
                 {(['status', 'name', 'accelerators', 'replicas'] as SortField[]).map(field => (
                   <button
                     key={field}
@@ -506,11 +506,11 @@ export function StackSelector() {
                   </div>
                 ))
               ) : isLoading ? (
-                <div className="px-3 py-4 text-center text-gray-500 text-sm">
+                <div className="px-3 py-4 text-center text-muted-foreground text-sm">
                   Loading stacks...
                 </div>
               ) : (
-                <div className="px-3 py-4 text-center text-gray-500 text-sm">
+                <div className="px-3 py-4 text-center text-muted-foreground text-sm">
                   {searchQuery ? 'No stacks match your search' : 'No llm-d stacks found'}
                 </div>
               )}

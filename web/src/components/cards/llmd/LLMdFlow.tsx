@@ -967,7 +967,7 @@ export function LLMdFlow() {
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm">
           <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-purple-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackVisualize')}</span>
-          <span className="text-gray-500 text-xs mt-1">{t('llmd.useStackSelector')}</span>
+          <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
       {/* Header */}
@@ -981,7 +981,7 @@ export function LLMdFlow() {
               }`}>
                 {selectedStack.name}
               </span>
-              <span className="text-gray-500">{selectedStack.cluster}</span>
+              <span className="text-muted-foreground">{selectedStack.cluster}</span>
               {/* Autoscaler indicator */}
               {selectedStack.autoscaler && (
                 <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${
@@ -1145,7 +1145,7 @@ export function LLMdFlow() {
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-[9px] text-gray-500 uppercase">{t(`llmd.${metric}`)}</div>
+                    <div className="text-[9px] text-muted-foreground uppercase">{t(`llmd.${metric}`)}</div>
                     <div className="font-mono" style={{ color: selectedMetricTypes.includes(metric) ? metricConfig[metric].color : undefined }}>
                       {metric === 'load' ? `${selectedMetrics.load}%` :
                        metric === 'queue' ? selectedMetrics.queueDepth :
@@ -1182,7 +1182,7 @@ export function LLMdFlow() {
             </div>
 
             {/* Hint text */}
-            <div className="text-[9px] text-gray-500 mt-2 text-center">
+            <div className="text-[9px] text-muted-foreground mt-2 text-center">
               Click metrics above to compare
             </div>
           </motion.div>

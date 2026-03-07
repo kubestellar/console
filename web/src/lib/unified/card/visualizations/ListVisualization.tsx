@@ -135,15 +135,15 @@ export function ListVisualization({
     <div className="flex flex-col h-full">
       {/* Sort controls */}
       {sortable && availableSortOptions.length > 0 && (
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800">
-          <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
           <select
             value={sortBy || ''}
             onChange={(e) => {
               setSortBy(e.target.value || undefined)
               setCurrentPage(0) // Reset to first page on sort change
             }}
-            className="px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-blue-500"
+            className="px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground focus:outline-none focus:border-blue-500"
           >
             <option value="">Sort by...</option>
             {availableSortOptions.map((opt) => (
@@ -155,7 +155,7 @@ export function ListVisualization({
           {sortBy && (
             <button
               onClick={toggleSortDirection}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground hover:bg-secondary/80 transition-colors"
               title={sortDirection === 'asc' ? 'Ascending (click to reverse)' : 'Descending (click to reverse)'}
             >
               {sortDirection === 'asc' ? (
@@ -177,7 +177,7 @@ export function ListVisualization({
       {/* List content */}
       <div className="flex-1 overflow-y-auto scroll-enhanced">
         {paginatedData.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             No items to display
           </div>
         ) : (
@@ -200,7 +200,7 @@ export function ListVisualization({
 
       {/* Pagination footer */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-border text-xs text-muted-foreground">
           <span>
             {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, data.length)} of {data.length}
           </span>
@@ -208,7 +208,7 @@ export function ListVisualization({
             <button
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0}
-              className="p-1 rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -218,7 +218,7 @@ export function ListVisualization({
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={currentPage >= totalPages - 1}
-              className="p-1 rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -304,14 +304,14 @@ function ListItem({
     <div
       className={`flex items-center gap-3 px-3 py-2 group ${
         isClickable
-          ? 'cursor-pointer hover:bg-gray-800/50 transition-colors'
+          ? 'cursor-pointer hover:bg-secondary/50 transition-colors'
           : ''
       }`}
       onClick={isClickable ? onClick : undefined}
     >
       {/* Row number */}
       {rowNumber !== undefined && (
-        <span className="text-xs text-gray-600 w-6 text-right shrink-0">
+        <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
           {rowNumber}
         </span>
       )}
@@ -328,7 +328,7 @@ function ListItem({
               ${column.width ? '' : 'flex-1'}
               ${column.align === 'center' ? 'text-center' : ''}
               ${column.align === 'right' ? 'text-right' : ''}
-              ${isPrimary ? 'font-medium text-gray-200' : 'text-muted-foreground'}
+              ${isPrimary ? 'font-medium text-foreground' : 'text-muted-foreground'}
               ${colIndex === 0 && !rowNumber ? 'flex-1' : ''}
               truncate
             `}
