@@ -15,20 +15,20 @@ const translations = {
   controlPlane: "AI Engine",
   clusters: {
     kubeflexCore: {
-      name: "AI Cortex",
-      description: "AI-powered control plane for adaptive multi-cluster operations",
+      name: "Development Clusters",
+      description: "Development clusters for building and iterating on workloads",
     },
     edgeClusters: {
       name: "Edge Clusters",
       description: "Edge computing clusters for distributed workloads",
     },
     productionCluster: {
-      name: "Production Cluster",
+      name: "Production Clusters",
       description: "Production workloads and mission-critical applications",
     },
     devTestCluster: {
-      name: "Dev/Test Cluster",
-      description: "Development and testing environments",
+      name: "Test Clusters",
+      description: "Test clusters for validation and QA environments",
     },
     multiCloudHub: {
       name: "Multi-Cloud Hub",
@@ -143,14 +143,14 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
       type: "workload",
     })
 
-    // AI Cortex to Edge (control commands)
+    // Development to Edge (control commands)
     flows.push({
       path: [clusters[0].position, clusters[1].position],
       id: clusters.length + 2,
       type: "control",
     })
 
-    // Dev/Test to Production (deployment pipeline)
+    // Test to Production (deployment pipeline)
     flows.push({
       path: [clusters[3].position, clusters[2].position],
       id: clusters.length + 3,
