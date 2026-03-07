@@ -2,7 +2,7 @@
 
 AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
-[**Live Demo**](https://console.kubestellar.io) | [Contributing](CONTRIBUTING.md) | [License](LICENSE)
+[**Live Demo**](https://console.kubestellar.io) | [Contributing](CONTRIBUTING.md)
 
 ![KubeStellar Console](docs/images/console-screenshot.png)
 
@@ -62,31 +62,9 @@ graph LR
 - **[console-kb](https://github.com/kubestellar/console-kb)** — Knowledge base of guided installers for 250+ CNCF projects and solutions to common Kubernetes problems
 - **[console-marketplace](https://github.com/kubestellar/console-marketplace)** — Community-contributed monitoring cards per CNCF project
 - **[kc-agent](cmd/kc-agent/)** — Local agent bridging the browser to kubeconfig, coding agents (Codex, Copilot, Claude CLI), and MCP servers (`kubestellar-ops`, `kubestellar-deploy`)
-
-```
-console/
-├── cmd/console/       # Server entry point
-├── cmd/kc-agent/      # Local agent
-├── pkg/agent/         # AI providers (Claude, OpenAI, Gemini)
-├── pkg/api/           # HTTP/WS server + handlers
-├── pkg/mcp/           # MCP bridge to Kubernetes
-├── pkg/store/         # SQLite database layer
-├── web/               # React + TypeScript frontend
-└── deploy/helm/       # Helm chart
-```
-
-## Development
-
-Requires Go 1.24+, Node.js 20+.
-
-```bash
-git clone https://github.com/kubestellar/console.git && cd console
-./start-dev.sh
-```
-
-## Related Projects
-
-[console-kb](https://github.com/kubestellar/console-kb) · [console-marketplace](https://github.com/kubestellar/console-marketplace) · [claude-plugins](https://github.com/kubestellar/claude-plugins) · [homebrew-tap](https://github.com/kubestellar/homebrew-tap) · [KubeStellar](https://kubestellar.io)
+- **[claude-plugins](https://github.com/kubestellar/claude-plugins)** — Claude Code marketplace plugins for Kubernetes
+- **[homebrew-tap](https://github.com/kubestellar/homebrew-tap)** — Homebrew formulae for KubeStellar tools
+- **[KubeStellar](https://kubestellar.io)** — Multi-cluster configuration management
 
 ## License
 

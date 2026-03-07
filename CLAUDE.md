@@ -1,4 +1,36 @@
-# Project Configuration
+# KubeStellar Console — Agent Guide
+
+This file is read by Claude Code, Copilot, Codex, and other coding agents working on this repo.
+
+## Quick Start
+
+```bash
+./start-dev.sh          # No OAuth, mock dev-user, backend :8080, frontend :5174
+./startup-oauth.sh      # With GitHub OAuth (requires .env with GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET)
+```
+
+Build and lint before creating PRs:
+```bash
+cd web && npm run build && npm run lint
+```
+
+## Project Layout
+
+```
+cmd/console/       Server entry point
+cmd/kc-agent/      Local agent (bridges browser to kubeconfig + MCP)
+pkg/agent/         AI providers (Claude, OpenAI, Gemini)
+pkg/api/           HTTP/WS server + handlers
+pkg/mcp/           MCP bridge to Kubernetes
+pkg/store/         SQLite database layer
+web/src/           React + TypeScript frontend
+  components/cards/  Dashboard card components
+  hooks/             Data fetching hooks (useCached*)
+  lib/               Utilities, card registry, demo data
+deploy/helm/       Helm chart
+```
+
+---
 
 ## ⚠️ MANDATORY Testing Requirements
 
