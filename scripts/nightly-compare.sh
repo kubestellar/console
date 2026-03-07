@@ -219,7 +219,19 @@ if [ -n "$FAILING" ]; then
   echo "### :x: Currently Failing"
   echo ""
   for suite in $FAILING; do
-    echo "- \`${suite}\` — see \`/tmp/suite-${suite}.log\` or CI artifacts"
+    REASON=$(jq_or_fail -r --arg s "$suite" '.results[] | select(.suite == $s) | .failure_reason // ""' "$CURRENT_FILE")
+    if [ -n "$REASON" ]; then
+      echo "<details>"
+      echo "<summary><code>${suite}</code> — FAILED</summary>"
+      echo ""
+      echo '```'
+      echo -e "$REASON"
+      echo '```'
+      echo ""
+      echo "</details>"
+    else
+      echo "- \`${suite}\` — see CI artifacts for details"
+    fi
   done
   echo ""
 fi
