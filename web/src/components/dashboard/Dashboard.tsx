@@ -36,7 +36,6 @@ import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { MissionSuggestions } from './MissionSuggestions'
-import { MissionCTA } from './MissionCTA'
 import { GettingStartedBanner } from './GettingStartedBanner'
 import { useMissions } from '../../hooks/useMissions'
 import { TemplatesModal } from './TemplatesModal'
@@ -120,8 +119,8 @@ export function Dashboard() {
     clearPendingRestoreCard,
   } = useDashboardContext()
 
-  // Missions context for Getting Started banner
-  const { startMission } = useMissions()
+  // Missions context for Getting Started banner + PostConnectBanner
+  const { openSidebar: openMissionSidebar, startMission } = useMissions()
 
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
@@ -884,6 +883,7 @@ export function Dashboard() {
       {/* Getting Started banner — quick-action buttons for first-time users */}
       <GettingStartedBanner
         onBrowseCards={openAddCardModal}
+        onTryMission={openMissionSidebar}
         onExploreDashboards={openAddCardModal}
       />
 
@@ -934,9 +934,6 @@ export function Dashboard() {
         {/* Mission Suggestions - actionable items like scaling, restarts, security issues */}
         <MissionSuggestions />
       </div>
-
-      {/* Mission CTA - encourage users who haven't tried missions yet */}
-      <MissionCTA />
 
       {/* Dashboard drop zone (shows when dragging) */}
       <DashboardDropZone
