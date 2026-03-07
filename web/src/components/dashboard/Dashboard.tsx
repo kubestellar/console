@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -90,6 +90,7 @@ export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false) // Cards are pre-populated from localStorage/defaults — never block
   const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { isOpen: isConfigureCardOpen, open: openConfigureCard, close: closeConfigureCard } = useModalState()
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>(() => {
@@ -501,6 +502,16 @@ export function Dashboard() {
       setPendingOpenAddCardModal(false)
     }
   }, [pendingOpenAddCardModal, isLoading, openAddCardModal, setPendingOpenAddCardModal])
+
+  // Handle addCard URL param from search — open modal and clear param
+  useEffect(() => {
+    if (searchParams.get('addCard') === 'true') {
+      openAddCardModal()
+      const cleaned = new URLSearchParams(searchParams)
+      cleaned.delete('addCard')
+      setSearchParams(cleaned, { replace: true })
+    }
+  }, [searchParams, setSearchParams, openAddCardModal])
 
   // Helper to check if a card ID is a local-only (not persisted) card
   const isLocalOnlyCard = (cardId: string) => {

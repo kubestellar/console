@@ -105,7 +105,8 @@ export function SearchDropdown() {
     } else if (item.href) {
       // If we're already on the target route and there's a scroll target,
       // just scroll directly without navigating
-      if (item.scrollTarget && location.pathname === item.href) {
+      const baseHref = item.href.split('?')[0]
+      if (item.scrollTarget && location.pathname === baseHref) {
         scrollToCard(item.scrollTarget)
       } else {
         // For discoverable dashboards not in the sidebar, append customizeSidebar
@@ -115,11 +116,21 @@ export function SearchDropdown() {
           DISCOVERABLE_ROUTES.has(item.href) &&
           !sidebarHrefs.has(item.href)
 
-        const targetHref = isDiscoverableNotInSidebar
-          ? `${item.href}${item.href.includes('?') ? '&' : '?'}customizeSidebar=true`
-          : item.href
+        // Dashboard search results should open the sidebar customizer
+        const isDashboardResult = item.category === 'dashboard'
 
-        navigate(targetHref)
+        let targetHref = item.href
+        if (isDiscoverableNotInSidebar || isDashboardResult) {
+          targetHref = `${item.href}${item.href.includes('?') ? '&' : '?'}customizeSidebar=true`
+        }
+
+        // If already on the same path, force navigation by using replace
+        // so ?addCard=true or ?customizeSidebar=true params are picked up
+        if (location.pathname === baseHref) {
+          navigate(targetHref, { replace: true })
+        } else {
+          navigate(targetHref)
+        }
         // After navigation, scroll to the card if there's a scroll target
         if (item.scrollTarget) {
           scrollToCard(item.scrollTarget)
