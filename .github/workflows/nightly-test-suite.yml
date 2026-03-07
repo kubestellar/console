@@ -180,6 +180,71 @@ jobs:
           gh issue comment "${{ steps.issue.outputs.issue_number }}" \
             --body "${{ steps.compare.outputs.report }}"
 
+      - name: Create issues for failing suites
+        if: steps.tests.outputs.failed != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT_FILE: ${{ steps.tests.outputs.result_file }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Ensure labels exist
+          gh label create "nightly-regression" --color "B60205" \
+            --description "Test regression found by nightly suite" 2>/dev/null || true
+          gh label create "triage/needed" --color "FBCA04" \
+            --description "Needs triage" 2>/dev/null || true
+
+          # Create an issue for each failing suite (skip if one already exists)
+          FAILING_SUITES=$(jq -r '.results[] | select(.status == "fail") | .suite' "$RESULT_FILE")
+          for suite in $FAILING_SUITES; do
+            ISSUE_TITLE="Nightly regression: ${suite}"
+
+            # Check for existing open issue
+            EXISTING=$(gh issue list --state open \
+              --label "nightly-regression" \
+              --search "in:title \"${ISSUE_TITLE}\"" \
+              --json number --jq '.[0].number // empty')
+
+            if [ -n "$EXISTING" ]; then
+              echo "Issue #${EXISTING} already open for ${suite} — adding comment"
+              gh issue comment "$EXISTING" --body "Still failing as of $(date -u +%Y-%m-%d). [Run](${RUN_URL})"
+              continue
+            fi
+
+            # Extract last few lines from the suite log (uploaded as artifact)
+            LOG_TAIL=""
+            if [ -f "/tmp/suite-${suite}.log" ]; then
+              LOG_TAIL=$(tail -20 "/tmp/suite-${suite}.log" 2>/dev/null || true)
+            fi
+
+            gh issue create \
+              --title "$ISSUE_TITLE" \
+              --label "bug,nightly-regression,triage/needed,help wanted" \
+              --body "$(cat <<ISSUEEOF
+          ## Nightly Test Regression: \`${suite}\`
+
+          The **${suite}** test suite failed during the nightly run on $(date -u +%Y-%m-%d).
+
+          **Run:** [View workflow run](${RUN_URL})
+          **Log:** Download the \`nightly-test-logs\` artifact for full output.
+
+          ### Log tail
+          \`\`\`
+          ${LOG_TAIL}
+          \`\`\`
+
+          ### Next steps
+          1. Download the test log artifact from the [workflow run](${RUN_URL})
+          2. Reproduce locally: \`bash scripts/${suite}.sh\`
+          3. Fix the underlying issue
+          4. Close this issue once the nightly passes again
+
+          ---
+          _Auto-created by the nightly test suite. Add \`ai-fix-requested\` + \`triage/accepted\` labels to enable Copilot auto-fix._
+          ISSUEEOF
+            )"
+            echo "Created issue for ${suite}"
+          done
+
       - name: Upload test logs as artifact
         if: always()
         uses: actions/upload-artifact@v4
