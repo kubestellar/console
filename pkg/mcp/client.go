@@ -23,6 +23,7 @@ type Client struct {
 	pending map[interface{}]chan *Response
 	tools   []Tool
 	ready   bool
+	done    chan struct{}
 }
 
 // JSON-RPC types
@@ -140,6 +141,7 @@ func NewClient(name, binaryPath string, args ...string) (*Client, error) {
 		stdout:  bufio.NewReader(stdout),
 		stderr:  stderr,
 		pending: make(map[interface{}]chan *Response),
+		done:    make(chan struct{}),
 	}
 
 	return client, nil
@@ -170,6 +172,12 @@ func (c *Client) Start(ctx context.Context) error {
 
 // Stop stops the MCP server process
 func (c *Client) Stop() error {
+	// Signal readResponses goroutine to exit
+	close(c.done)
+
+	// Close stdin pipe to send EOF to the server process
+	c.stdin.Close()
+
 	if c.cmd.Process != nil {
 		return c.cmd.Process.Kill()
 	}
@@ -317,7 +325,12 @@ func (c *Client) readResponses() {
 		line, err := c.stdout.ReadBytes('\n')
 		if err != nil {
 			if err != io.EOF {
-				fmt.Printf("[%s] read error: %v\n", c.name, err)
+				select {
+				case <-c.done:
+					// Client is stopping; suppress read errors
+				default:
+					fmt.Printf("[%s] read error: %v\n", c.name, err)
+				}
 			}
 			return
 		}
@@ -330,10 +343,15 @@ func (c *Client) readResponses() {
 		// Route response to waiting caller
 		if resp.ID != nil {
 			c.mu.Lock()
-			if ch, ok := c.pending[resp.ID]; ok {
-				ch <- &resp
-			}
+			ch, ok := c.pending[resp.ID]
 			c.mu.Unlock()
+			if ok {
+				select {
+				case ch <- &resp:
+				case <-c.done:
+					return
+				}
+			}
 		}
 	}
 }
