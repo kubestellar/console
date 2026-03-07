@@ -188,6 +188,20 @@ The agent implements several security measures:
 - **Optional Token Auth**: Can require a shared secret via `KC_AGENT_TOKEN`
 - **Command Allowlist**: Only permits safe kubectl commands (get, describe, logs, etc.)
 
+## Architecture Details
+
+### AI Provider Integration
+
+Console supports Claude, OpenAI, and Gemini as AI providers for the intelligent card swap system. Providers are configured via API keys set as environment variables (`CLAUDE_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`). The agent component (`pkg/agent/`) handles provider routing and fallback.
+
+### MCP Bridge
+
+The MCP (Model Context Protocol) bridge (`pkg/mcp/`) connects the console to Kubernetes clusters by spawning `kubestellar-ops` and `kubestellar-deploy` as MCP server processes. Tool calls are routed through the bridge to query cluster state (pods, deployments, events, etc.). Results are cached and served to the frontend via REST and WebSocket APIs.
+
+### WebSocket Architecture
+
+The frontend establishes a WebSocket connection to receive real-time updates including cluster health changes, deployment progress, and card swap suggestions. The connection supports automatic reconnection with exponential backoff.
+
 ## Available Card Types
 
 | Card Type | Description | Data Source |
@@ -411,6 +425,7 @@ See [deploy/helm/kubestellar-console/values.yaml](deploy/helm/kubestellar-consol
 console/
 ├── cmd/console/          # Entry point
 ├── pkg/
+│   ├── agent/            # KC Agent (local MCP bridge + AI providers)
 │   ├── api/              # HTTP/WS server
 │   │   ├── handlers/     # Request handlers
 │   │   └── middleware/   # Auth, logging
