@@ -63,6 +63,7 @@ const AIAgents = lazy(() => import('./components/aiagents/AIAgents').then(m => (
 const LLMdBenchmarks = lazy(() => import('./components/llmd-benchmarks/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
 const ClusterAdmin = lazy(() => import('./components/cluster-admin/ClusterAdmin').then(m => ({ default: m.ClusterAdmin })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
+const Insights = lazy(() => import('./components/insights/Insights').then(m => ({ default: m.Insights })))
 const Marketplace = lazy(() => import('./components/marketplace/Marketplace').then(m => ({ default: m.Marketplace })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
 const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => ({ default: m.UnifiedCardTest })))
@@ -104,6 +105,7 @@ const DASHBOARD_CHUNKS: Record<string, () => Promise<unknown>> = {
   'llm-d-benchmarks': () => import('./components/llmd-benchmarks/LLMdBenchmarks'),
   'cluster-admin': () => import('./components/cluster-admin/ClusterAdmin'),
   'ci-cd': () => import('./components/cicd/CICD'),
+  'insights': () => import('./components/insights/Insights'),
   'marketplace': () => import('./components/marketplace/Marketplace'),
 }
 
@@ -469,6 +471,7 @@ function App() {
           <Route path="/llm-d-benchmarks" element={<LLMdBenchmarks />} />
           <Route path="/cluster-admin" element={<ClusterAdmin />} />
           <Route path="/ci-cd" element={<CICD />} />
+          <Route path="/insights" element={<Insights />} />
           <Route path="/marketplace" element={<Marketplace />} />
           {/* Dev test routes for unified framework validation */}
           <Route path="/test/unified-card" element={<UnifiedCardTest />} />

@@ -36,6 +36,7 @@ export type DashboardStatsType =
   | 'deploy'
   | 'ai-agents'
   | 'cluster-admin'
+  | 'insights'
 
 /**
  * Default stat blocks for the Clusters dashboard
@@ -346,6 +347,16 @@ export const AI_AGENTS_STAT_BLOCKS: StatBlockConfig[] = [
 ]
 
 /**
+ * Default stat blocks for the Insights dashboard
+ */
+export const INSIGHTS_STAT_BLOCKS: StatBlockConfig[] = [
+  { id: 'clusters', name: 'Clusters', icon: 'Server', visible: true, color: 'purple' },
+  { id: 'insights', name: 'Insights', icon: 'Lightbulb', visible: true, color: 'blue' },
+  { id: 'critical', name: 'Critical', icon: 'AlertTriangle', visible: true, color: 'red' },
+  { id: 'warnings', name: 'Warnings', icon: 'AlertCircle', visible: true, color: 'yellow' },
+]
+
+/**
  * Get default stat blocks for a specific dashboard type
  */
 export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlockConfig[] {
@@ -386,6 +397,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return AI_AGENTS_STAT_BLOCKS
     case 'cluster-admin':
       return CLUSTER_ADMIN_STAT_BLOCKS
+    case 'insights':
+      return INSIGHTS_STAT_BLOCKS
     default:
       return []
   }

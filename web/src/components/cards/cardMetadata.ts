@@ -209,6 +209,15 @@ export const CARD_TITLES: Record<string, string> = {
   provider_health: 'Provider Health',
   // CoreDNS
   coredns_status: 'CoreDNS',
+
+  // Multi-cluster insights cards
+  cross_cluster_event_correlation: 'Cross-Cluster Event Correlation',
+  cluster_delta_detector: 'Cluster Delta Detector',
+  cascade_impact_map: 'Cascade Impact Map',
+  config_drift_heatmap: 'Config Drift Heatmap',
+  resource_imbalance_detector: 'Resource Imbalance Detector',
+  restart_correlation_matrix: 'Restart Correlation Matrix',
+  deployment_rollout_tracker: 'Deployment Rollout Tracker',
 }
 
 // Short descriptions shown via info icon tooltip in the card header
@@ -367,4 +376,13 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_chess: 'Chess game with Kubernetes-themed pieces.',
   // CoreDNS
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
+
+  // Multi-cluster insights cards
+  cross_cluster_event_correlation: 'Unified timeline showing correlated warning events across multiple clusters.',
+  cluster_delta_detector: 'Detects differences between clusters sharing the same workloads.',
+  cascade_impact_map: 'Visualizes how issues cascade across clusters over time.',
+  config_drift_heatmap: 'Cluster-pair matrix showing degree of configuration drift.',
+  resource_imbalance_detector: 'Detects CPU/memory utilization skew across the fleet.',
+  restart_correlation_matrix: 'Detects horizontal (app bug) vs vertical (infra issue) restart patterns.',
+  deployment_rollout_tracker: 'Tracks deployment rollout progress across clusters.',
 }

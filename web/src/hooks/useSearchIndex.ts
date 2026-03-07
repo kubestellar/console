@@ -76,6 +76,7 @@ const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
   deploy: 'Deploy',
   'ai-agents': 'AI Agents',
   'cluster-admin': 'Cluster Admin',
+  insights: 'Insights',
 }
 
 const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
@@ -97,13 +98,14 @@ const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
   deploy: '/deploy',
   'ai-agents': '/ai-agents',
   'cluster-admin': '/cluster-admin',
+  insights: '/insights',
 }
 
 const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
   'dashboard', 'clusters', 'workloads', 'pods', 'gitops', 'storage',
   'network', 'security', 'compliance', 'data-compliance', 'compute',
   'events', 'cost', 'alerts', 'operators', 'deploy', 'ai-agents',
-  'cluster-admin',
+  'cluster-admin', 'insights',
 ]
 
 // --- Dashboard storage keys → routes (for scanning placed cards) ---
@@ -133,6 +135,7 @@ const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
   { key: 'kubestellar-arcade-cards', route: '/arcade', name: 'Arcade' },
   { key: 'kubestellar-kagenti-cards', route: '/ai-agents', name: 'AI Agents' },
   { key: 'kubestellar-cluster-admin-cards', route: '/cluster-admin', name: 'Cluster Admin' },
+  { key: 'kubestellar-insights-cards', route: '/insights', name: 'Insights' },
 ]
 
 interface StoredCard {
