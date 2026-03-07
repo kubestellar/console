@@ -414,7 +414,15 @@ export function AlertBadge() {
               ) : displayedAlerts.map(alert => (
                 <div
                   key={alert.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleAlertClick(alert)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleAlertClick(alert)
+                    }
+                  }}
                   className="p-3 border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors group"
                 >
                   <div className="flex items-start gap-2">
