@@ -1,0 +1,8 @@
+# CLOMonitor metadata file
+# This file must be located at the root of the repository
+# https://clomonitor.io/projects/cncf/kubestellar
+
+# Checks exemptions
+exemptions:
+  - check: trademark_disclaimer
+    reason: 'The Linux Foundation trademark disclaimer and link are contained within the KubeStellar Console at https://console.kubestellar.io in the footer. However, because the site is delivered dynamically via React through JavaScript, the check cannot currently identify it.'
