@@ -8,6 +8,7 @@ import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../u
 import WorldMapSvgUrl from '../../assets/world-map.svg'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -216,11 +217,13 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToCluster } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   const {

@@ -175,6 +175,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: DEMO_GATEWAYS.length > 0,
+    isDemoData: true,
   })
 
   const {

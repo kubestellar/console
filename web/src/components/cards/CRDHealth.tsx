@@ -7,6 +7,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface CRDHealthProps {
   config?: {
@@ -43,6 +44,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     [t]
   )
   const { isLoading, deduplicatedClusters } = useClusters()
+  const { isDemoMode } = useDemoMode()
 
   const [filterGroup, setFilterGroup] = useState<string>('')
 
@@ -82,6 +84,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allCRDs.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Apply group filter before passing to useCardData

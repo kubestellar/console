@@ -8,6 +8,7 @@ import {
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ChartVersionsProps {
   config?: {
@@ -34,6 +35,7 @@ const SORT_OPTIONS = [
 export function ChartVersions({ config: _config }: ChartVersionsProps) {
   const { t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
+  const { isDemoMode } = useDemoMode()
 
   // Fetch ALL Helm releases once - filter locally
   const {
@@ -49,6 +51,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     hasAnyData: allHelmReleases.length > 0,
     isFailed,
     consecutiveFailures,
+    isDemoData: isDemoMode,
   })
 
   // Transform Helm releases to chart info

@@ -239,7 +239,7 @@ function StockPile({
 
 export function Solitaire(_props: CardComponentProps) {
   const { t: _t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const [game, setGame] = useState<GameState>(dealGame)
   const [moves, setMoves] = useState(0)

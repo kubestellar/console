@@ -540,8 +540,9 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
     openIssueCount,
     refetch,
   } = useGitHubActivity(effectiveConfig)
+  const { isDemoMode } = useDemoMode()
 
-  useCardLoadingState({ isLoading, hasAnyData: !!repoInfo })
+  useCardLoadingState({ isLoading, hasAnyData: !!repoInfo, isDemoData: isDemoMode })
 
   // Expose refresh method via ref for CardWrapper refresh button
   useImperativeHandle(ref, () => ({

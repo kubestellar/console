@@ -40,6 +40,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: demoMode,
   })
 
   // Apply global filters

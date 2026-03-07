@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ClusterNetworkProps {
   config?: {
@@ -16,11 +17,13 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
+  const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   const {

@@ -64,6 +64,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: demoMode,
   })
 
   // Local cluster filter (card-specific, kept as separate state)

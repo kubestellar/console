@@ -11,6 +11,7 @@ import { Pagination, usePagination } from '../ui/Pagination'
 import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
 import { useChartFilters } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ResourceCapacityProps {
   config?: Record<string, unknown>
@@ -40,6 +41,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, lastRefresh, isFailed, consecutiveFailures, error } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -56,6 +58,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     isFailed,
     consecutiveFailures,
     errorMessage: error ?? undefined,
+    isDemoData: isDemoMode,
   })
 
   // Local cluster filter

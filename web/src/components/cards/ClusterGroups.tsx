@@ -124,6 +124,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0 || groups.length > 0,
+    isDemoData: demoMode,
   })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())

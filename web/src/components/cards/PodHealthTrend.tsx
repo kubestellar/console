@@ -25,6 +25,7 @@ import {
   CHART_TOOLTIP_BORDER,
   CHART_TICK_COLOR,
 } from '../../lib/constants'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface HealthPoint {
   time: string
@@ -48,6 +49,7 @@ export function PodHealthTrend() {
   const { issues, isLoading: issuesLoading } = useCachedPodIssues()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { isDemoMode: isDemoModeActive } = useDemoMode()
 
   // hasData should be true once loading completes (even with empty data)
   const isLoadingData = clustersLoading || issuesLoading
@@ -56,6 +58,7 @@ export function PodHealthTrend() {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoadingData,
     hasAnyData: clusters.length > 0 || issues.length > 0,
+    isDemoData: isDemoModeActive,
   })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])

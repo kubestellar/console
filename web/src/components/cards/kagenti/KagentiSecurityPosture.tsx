@@ -4,6 +4,7 @@ import { useKagentiCards, useKagentiAgents, useKagentiTools } from '../../../hoo
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 interface KagentiSecurityPostureProps {
   config?: { cluster?: string }
@@ -11,6 +12,7 @@ interface KagentiSecurityPostureProps {
 
 export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) {
   const { t: _t } = useTranslation()
+  const { isDemoMode } = useDemoMode()
   const {
     data: cards,
     isLoading: cardsLoading,
@@ -38,6 +40,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,
+    isDemoData: isDemoMode,
   })
 
   const security = useMemo(() => {

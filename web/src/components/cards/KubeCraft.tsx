@@ -37,7 +37,7 @@ const BLOCK_TYPES: BlockType[] = ['dirt', 'grass', 'stone', 'wood', 'leaves', 'w
 
 export function KubeCraft() {
   const { t: _t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedBlock, setSelectedBlock] = useState<BlockType>('grass')

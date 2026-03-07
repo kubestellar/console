@@ -7,6 +7,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ClusterFocusProps {
   config?: {
@@ -23,11 +24,13 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { issues: deploymentIssues } = useCachedDeploymentIssues(selectedCluster)
   const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
+  const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   const {

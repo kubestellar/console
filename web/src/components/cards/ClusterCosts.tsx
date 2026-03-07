@@ -9,6 +9,7 @@ import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/Clo
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
@@ -195,11 +196,13 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Cloud provider selection

@@ -27,6 +27,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: notebooks.length > 0,
+    isDemoData: true,
   })
 
   const statusOrder: Record<string, number> = { running: 0, idle: 1, stopped: 2 }

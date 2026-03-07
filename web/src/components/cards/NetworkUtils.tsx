@@ -66,7 +66,7 @@ export function NetworkUtils() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
   const [isInitialized, setIsInitialized] = useState(false)
-  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized })
+  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized, isDemoData: false })
   const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)

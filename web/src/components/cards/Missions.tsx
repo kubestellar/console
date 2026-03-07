@@ -163,6 +163,7 @@ export function Missions(_props: MissionsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: missions.length > 0 || deduplicatedClusters.length > 0,
+    isDemoData: demoMode,
   })
 
   // Manual cluster filter — filters by target clusters (not source).

@@ -319,6 +319,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   useCardLoadingState({
     isLoading: isLoadingHook,
     hasAnyData: allClusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Track previous agent connection state to detect reconnections

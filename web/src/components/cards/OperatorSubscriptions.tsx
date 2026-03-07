@@ -18,6 +18,7 @@ import {
   CardPaginationFooter,
 } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface OperatorSubscriptionsProps {
   config?: {
@@ -57,6 +58,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   )
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Fetch subscriptions - pass undefined to get all clusters
   const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, consecutiveFailures, isFailed } = useOperatorSubscriptions(undefined)
@@ -67,6 +69,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
     hasAnyData: rawSubscriptions.length > 0,
     isFailed,
     consecutiveFailures,
+    isDemoData: isDemoMode,
   })
 
   // Use useCardFilters for summary counts (globally filtered, before local search/pagination)

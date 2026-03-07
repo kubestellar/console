@@ -7,6 +7,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 export function StorageOverview() {
   const { t } = useTranslation(['cards', 'common'])
@@ -15,6 +16,7 @@ export function StorageOverview() {
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToPVC } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Report card data state
   const combinedLoading = isLoading || pvcsLoading
@@ -23,6 +25,7 @@ export function StorageOverview() {
     hasAnyData: pvcs.length > 0,
     isFailed,
     consecutiveFailures,
+    isDemoData: isDemoMode,
   })
 
   // Local cluster filter

@@ -11,6 +11,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import type { PodInfo } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -66,6 +67,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const { pods: allPods, isLoading: podsLoading } = useAllPods()
   useClusters() // Keep hook for cache warming
   const { drillToPod } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Only show loading when no cached data exists
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
@@ -74,6 +76,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   useCardLoadingState({
     isLoading: gpuLoading || podsLoading,
     hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Pre-filter pods to only GPU workloads (domain-specific logic before hook)

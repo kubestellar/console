@@ -25,6 +25,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -81,6 +82,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const { user: currentUser } = useAuth()
   const { users: allUsers, isLoading: usersLoading, error: usersError, updateUserRole, deleteUser } = useConsoleUsers()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { isDemoMode } = useDemoMode()
   // Fetch ALL SAs from ALL clusters upfront, filter locally
   const { serviceAccounts: allServiceAccounts, isLoading: sasInitialLoading, failedClusters: _saFailedClusters } = useAllK8sServiceAccounts(allClusters)
   // Fetch ALL OpenShift users from ALL clusters upfront, filter locally
@@ -96,6 +98,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     hasAnyData: allClusters.length > 0 || allUsers.length > 0 || allServiceAccounts.length > 0,
     isFailed: Boolean(usersError),
     consecutiveFailures: usersError ? 1 : 0,
+    isDemoData: isDemoMode,
   })
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()

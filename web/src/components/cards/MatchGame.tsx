@@ -48,7 +48,7 @@ const DIFFICULTY_CONFIG = {
 
 export function MatchGame(_props: CardComponentProps) {
   const { t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const [cards, setCards] = useState<GameCard[]>([])

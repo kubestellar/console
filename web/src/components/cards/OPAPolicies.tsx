@@ -13,6 +13,7 @@ import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
 import { PolicyDetailModal, ClusterOPAModal, CreatePolicyModal } from './opa'
 import type { Policy, GatekeeperStatus, OPAClusterItem } from './opa'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 /** Cache TTL: 60 minutes — OPA installation status rarely changes */
 const CACHE_TTL_MS = 60 * 60 * 1000
@@ -182,6 +183,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 
 function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { isDemoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
@@ -472,6 +474,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   useCardLoadingState({
     isLoading: shouldUseDemoData ? false : (isLoading || (isOPAChecking && !hasOPAData)),
     hasAnyData: shouldUseDemoData ? true : (clusters.length > 0 && hasOPAData),
+    isDemoData: isDemoMode,
   })
 
   // In demo mode, update statuses with real cluster names when they become available.

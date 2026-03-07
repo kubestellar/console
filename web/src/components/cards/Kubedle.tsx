@@ -124,7 +124,7 @@ const KEYBOARD_ROWS = [
 
 export function Kubedle(_props: CardComponentProps) {
   const { t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
 
   const [targetWord, setTargetWord] = useState(getTodaysWord)

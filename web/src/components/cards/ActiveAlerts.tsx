@@ -23,6 +23,7 @@ import { useCardData, CardClusterFilter, CardSearchInput, CardAIActions } from '
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 // Severity color map — defined at module level to avoid re-creation on each render
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
@@ -91,11 +92,13 @@ export function ActiveAlerts() {
   const { t } = useTranslation('cards')
   const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
+  const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
     isLoading: false,
     hasAnyData: true,
+    isDemoData: isDemoMode,
   })
   const { open } = useDrillDown()
   const { missions, setActiveMission, openSidebar } = useMissions()

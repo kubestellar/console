@@ -34,6 +34,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: jobs.length > 0,
+    isDemoData: true,
   })
 
   const statusOrder: Record<string, number> = { running: 0, queued: 1, completed: 2, failed: 3 }

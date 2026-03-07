@@ -812,7 +812,7 @@ function KubeChessInternal() {
 
 export function KubeChess() {
   const { t: _t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   return (
     <DynamicCardErrorBoundary cardId="KubeChess">
       <KubeChessInternal />

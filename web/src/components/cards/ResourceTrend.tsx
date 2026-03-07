@@ -23,6 +23,7 @@ import {
   CHART_TOOLTIP_BORDER,
   CHART_TICK_COLOR,
 } from '../../lib/constants'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ResourcePoint {
   time: string
@@ -46,6 +47,7 @@ export function ResourceTrend() {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { isDemoMode } = useDemoMode()
   const [view, setView] = useState<MetricView>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -56,6 +58,7 @@ export function ResourceTrend() {
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Close dropdown when clicking outside

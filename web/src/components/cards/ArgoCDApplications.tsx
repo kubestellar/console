@@ -17,6 +17,7 @@ import {
 } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ArgoCDApplicationsProps {
   config?: {
@@ -69,6 +70,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   } = useArgoCDApplications()
   const { drillToArgoApp } = useDrillDownActions()
   const { triggerSync } = useArgoCDTriggerSync()
+  const { isDemoMode } = useDemoMode()
   // Track per-app sync state with a Set to avoid shared-boolean race conditions
   const [syncingApps, setSyncingApps] = useState<Set<string>>(new Set())
   const addSyncingApp = (key: string) => setSyncingApps(prev => new Set(prev).add(key))
@@ -80,6 +82,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
     hasAnyData: allApps.length > 0,
     isFailed,
     consecutiveFailures,
+    isDemoData: isDemoMode,
   })
 
   // Translated sort options

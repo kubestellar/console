@@ -20,6 +20,7 @@ import {
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 type SortField = 'name' | 'severity' | 'enabled'
 type SortTranslationKey = 'alertRules.sortName' | 'alertRules.sortSeverity' | 'alertRules.sortStatus'
@@ -43,11 +44,13 @@ export function AlertRulesCard() {
   const { rules, createRule, updateRule, toggleRule, deleteRule } = useAlertRules()
   const [showEditor, setShowEditor] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)
+  const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper (local storage rules are always available)
   useCardLoadingState({
     isLoading: false,
     hasAnyData: true,
+    isDemoData: isDemoMode,
   })
 
   // Use shared card data hook for filtering, sorting, and pagination

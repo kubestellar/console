@@ -11,6 +11,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState, useForceLive } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUNamespaceAllocationsProps {
   config?: Record<string, unknown>
@@ -56,12 +57,14 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { pods: allPods, isLoading: podsLoading } = useAllPods(undefined, undefined, forceLive)
   const { drillToGPUNamespace } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
 
   useCardLoadingState({
     isLoading: gpuLoading || podsLoading,
     hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Compute per-namespace GPU allocations

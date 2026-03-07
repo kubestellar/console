@@ -131,6 +131,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: DEMO_EXPORTS.length > 0,
+    isDemoData: true,
   })
 
   const {

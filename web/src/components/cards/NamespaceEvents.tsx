@@ -10,6 +10,7 @@ import {
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface NamespaceEventsProps {
   config?: {
@@ -48,6 +49,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { isLoading: clustersLoading } = useClusters()
   const { events: allEvents, isLoading: eventsLoading } = useWarningEvents()
   const { drillToEvents } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   const isLoading = clustersLoading || eventsLoading
 
@@ -55,6 +57,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allEvents.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Use cascading selection hook for cluster -> namespace

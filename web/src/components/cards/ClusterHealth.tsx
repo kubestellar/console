@@ -11,6 +11,7 @@ import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider
 import { isClusterUnreachable, isClusterTokenExpired } from '../clusters/utils'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 // Console URL generation for cloud providers
 function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
@@ -86,6 +87,7 @@ export function ClusterHealth() {
   const { nodes: gpuNodes } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isMobile } = useMobile()
+  const { isDemoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
 
   // Use shared card data hook for filtering, sorting, and pagination
@@ -139,6 +141,7 @@ export function ClusterHealth() {
     hasAnyData: hasData,
     isFailed: !!error && !hasData,
     consecutiveFailures: error ? 1 : 0,
+    isDemoData: isDemoMode,
   })
   const isLoading = showSkeleton
 

@@ -94,6 +94,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isInitialLoading || !!isFetchingRBAC,
     hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
+    isDemoData: demoMode,
   })
 
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)

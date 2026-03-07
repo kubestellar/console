@@ -5,6 +5,7 @@ import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -50,6 +51,7 @@ const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes TTL
 export function ClusterMetrics() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading, deduplicatedClusters } = useClusters()
+  const { isDemoMode } = useDemoMode()
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cpu')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [chartMode, setChartMode] = useState<ChartMode>('total')
@@ -72,6 +74,7 @@ export function ClusterMetrics() {
   useCardLoadingState({
     isLoading,
     hasAnyData: deduplicatedClusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Use shared chart filters hook for cluster filtering

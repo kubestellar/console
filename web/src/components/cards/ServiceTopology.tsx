@@ -83,7 +83,7 @@ interface ServiceTopologyProps {
 
 export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
   const { t } = useTranslation(['cards', 'common'])
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)

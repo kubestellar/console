@@ -38,7 +38,7 @@ const DEMO_RECOMMENDATIONS = [
 export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
   const { t: _t } = useTranslation()
   const { drillToCost } = useDrillDownActions()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">

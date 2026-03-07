@@ -19,6 +19,7 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POLL_INTERVAL_MS } from '../../../lib/constants/network'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 // ============================================================================
 // Unified Item Type for all card items
@@ -226,6 +227,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
+  const { isDemoMode } = useDemoMode()
 
   // Prediction hooks
   const { settings: predictionSettings } = usePredictionSettings()
@@ -245,6 +247,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   useCardLoadingState({
     isLoading: isLoading && nodesLoading,
     hasAnyData: gpuNodes.length > 0 || nodesCache.length > 0 || allNodes.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Subscribe to cache updates and fetch nodes

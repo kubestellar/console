@@ -9,6 +9,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
 export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
@@ -18,11 +19,13 @@ export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Filter clusters by global filter

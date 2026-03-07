@@ -7,6 +7,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface CommandHistoryItem {
   id: string
@@ -28,12 +29,14 @@ export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
   const { execute } = useKubectl()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { isDemoMode } = useDemoMode()
   const [selectedContext, setSelectedContext] = useState<string>('')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0,
+    isDemoData: isDemoMode,
   })
   const [command, setCommand] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')

@@ -44,7 +44,7 @@ const DEMO_NAMESPACE_COSTS: NamespaceCost[] = [
 function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   const { t } = useTranslation('common')
   const { drillToCost } = useDrillDownActions()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
 
   const {
     items: filteredCosts,

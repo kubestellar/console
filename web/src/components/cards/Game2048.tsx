@@ -174,7 +174,7 @@ function hasWon(grid: Grid): boolean {
 
 export function Game2048(_props: CardComponentProps) {
   const { t: _t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const [grid, setGrid] = useState<Grid>(initGame)
   const [score, setScore] = useState(0)

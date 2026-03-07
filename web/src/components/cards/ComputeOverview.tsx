@@ -8,6 +8,7 @@ import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 export function ComputeOverview() {
   const { t } = useTranslation(['cards', 'common'])
@@ -15,6 +16,7 @@ export function ComputeOverview() {
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Local cluster filter
   const {
@@ -102,6 +104,7 @@ export function ComputeOverview() {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading || gpuLoading,
     hasAnyData: clusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   if (showSkeleton) {

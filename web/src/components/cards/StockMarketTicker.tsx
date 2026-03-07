@@ -567,7 +567,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     },
   })
 
-  useCardLoadingState({ isLoading: isLoadingData, hasAnyData: stockData.length > 0 })
+  useCardLoadingState({ isLoading: isLoadingData, hasAnyData: stockData.length > 0, isDemoData: false })
 
   // Update saved stocks when data changes
   useEffect(() => {

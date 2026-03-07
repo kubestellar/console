@@ -146,7 +146,7 @@ const NUMBER_COLORS = [
 
 export function PodSweeper(_props: CardComponentProps) {
   const { t: _t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
 
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')

@@ -210,7 +210,7 @@ function isComplete(board: Cell[][], solution: number[][]): boolean {
 
 export function SudokuGame({ config: _config }: SudokuGameProps) {
   const { t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null)
   const [pencilMode, setPencilMode] = useState(false)
   const [showSettings, setShowSettings] = useState(false)

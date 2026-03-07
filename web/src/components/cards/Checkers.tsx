@@ -408,7 +408,7 @@ function saveGameState(state: SavedGameState) {
 
 export function Checkers(_props: CardComponentProps) {
   const { t } = useTranslation(['cards', 'common'])
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tauntIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)

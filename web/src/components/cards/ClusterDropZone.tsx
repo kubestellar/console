@@ -68,6 +68,7 @@ export function ClusterDropZone({
   useCardLoadingState({
     isLoading,
     hasAnyData: (realClusters?.length ?? 0) > 0 || DEMO_CLUSTERS.length > 0,
+    isDemoData: demoMode,
   })
 
   if (!isDragging || !draggedWorkload) return null

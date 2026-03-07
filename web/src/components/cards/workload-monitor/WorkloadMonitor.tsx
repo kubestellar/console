@@ -22,6 +22,7 @@ import { WorkloadMonitorList } from './WorkloadMonitorList'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 interface WorkloadMonitorProps {
   config?: Record<string, unknown>
@@ -37,6 +38,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
 
   // Cascading selectors (used when config doesn't pre-specify the workload)
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
+  const { isDemoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState(monitorConfig?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState(monitorConfig?.namespace || '')
   const [selectedWorkload, setSelectedWorkload] = useState(monitorConfig?.workload || '')
@@ -45,6 +47,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: clusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   const isPreConfigured = !!(monitorConfig?.cluster && monitorConfig?.namespace && monitorConfig?.workload)

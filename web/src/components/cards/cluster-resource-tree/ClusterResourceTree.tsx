@@ -13,17 +13,20 @@ import { buildNamespaceResources, getVisibleNamespaces, getIssueCounts, getPodsF
 import type { ClusterResourceTreeProps, TreeLens, SortByOption, NamespaceResources, ClusterDataCache } from './types'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToCluster, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0,
+    isDemoData: isDemoMode,
   })
 
   // Tree view state - start with clusters expanded

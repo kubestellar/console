@@ -6,6 +6,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ClusterComparisonProps {
   config?: {
@@ -18,11 +19,13 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
   const { deduplicatedClusters: rawClusters, isLoading: clustersLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
+  const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: rawClusters.length > 0,
+    isDemoData: isDemoMode,
   })
   const {
     selectedClusters: globalSelectedClusters,

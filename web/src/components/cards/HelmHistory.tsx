@@ -138,6 +138,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     hasAnyData: rawHistory.length > 0 || !selectedRelease,
     isFailed,
     consecutiveFailures,
+    isDemoData: demoMode,
   })
 
   // Apply global filters to clusters

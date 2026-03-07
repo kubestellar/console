@@ -52,6 +52,7 @@ export function ResourceMarshall() {
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0,
+    isDemoData: demoMode,
   })
 
   // Fetch namespaces for selected cluster

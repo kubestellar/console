@@ -11,6 +11,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUInventoryProps {
   config?: Record<string, unknown>
@@ -43,6 +44,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     error,
   } = useGPUNodes(cluster)
   const { drillToGPUNode } = useDrillDownActions()
+  const { isDemoMode } = useDemoMode()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
@@ -53,6 +55,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     hasAnyData: rawNodes.length > 0,
     isFailed: !!error && rawNodes.length === 0,
     consecutiveFailures: error ? 1 : 0,
+    isDemoData: isDemoMode,
   })
 
   // Use unified card data hook for filtering, sorting, and pagination

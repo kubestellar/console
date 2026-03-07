@@ -488,7 +488,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
 
 export function ContainerTetris(props: CardComponentProps) {
   const { t: _t } = useTranslation()
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   return (
     <DynamicCardErrorBoundary cardId="ContainerTetris">
       <ContainerTetrisInternal {...props} />
