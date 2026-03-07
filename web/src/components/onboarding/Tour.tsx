@@ -4,8 +4,6 @@ import { useTour, TourStep } from '../../hooks/useTour'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { TOOLTIP_POSITION_DELAY_MS } from '../../lib/constants/network'
-import { STORAGE_KEY_HINTS_SUPPRESSED } from '../../lib/constants/storage'
-import { safeGetItem } from '../../lib/utils/localStorage'
 
 // KubeStellar logo — clean, no decorative overlays
 function KubeStellarAIIcon({ className }: { className?: string }) {
