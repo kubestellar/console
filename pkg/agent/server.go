@@ -33,6 +33,7 @@ const (
 	metricsHistoryTick    = 10 * time.Minute
 	agentFileMode         = 0600
 	defaultHealthCheckURL = "http://127.0.0.1:8080/health"
+	maxQueryLimit         = 1000 // Upper bound for client-supplied limit query parameter
 )
 
 // Version is set by ldflags during build
@@ -664,6 +665,9 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	limit := 50
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			if l > maxQueryLimit {
+				l = maxQueryLimit
+			}
 			limit = l
 		}
 	}
