@@ -99,13 +99,6 @@ jobs:
           bash scripts/nightly-compare.sh "${{ steps.tests.outputs.result_file }}" "$RESULTS_DIR" > "$REPORT_FILE" || REGRESSION=1
           echo "has_regression=${REGRESSION}" >> "$GITHUB_OUTPUT"
 
-          # Save report content for the issue step
-          {
-            echo 'report<<NIGHTLY_EOF'
-            cat "$REPORT_FILE"
-            echo 'NIGHTLY_EOF'
-          } >> "$GITHUB_OUTPUT"
-
       - name: Commit results to repo
         run: |
           git config user.name "github-actions[bot]"
@@ -184,7 +177,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue comment "${{ steps.issue.outputs.issue_number }}" \
-            --body "${{ steps.compare.outputs.report }}"
+            --body-file /tmp/nightly-comparison.md
 
       - name: Create issues for failing suites
         if: always() && steps.tests.outputs.failed != '0' && steps.tests.outputs.failed != ''
