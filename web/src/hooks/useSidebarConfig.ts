@@ -52,6 +52,7 @@ const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'clusters', name: 'My Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
   { id: 'cluster-admin', name: 'Cluster Admin', icon: 'ShieldAlert', href: '/cluster-admin', type: 'link', order: 2 },
   { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 3 },
+  { id: 'insights', name: 'Insights', icon: 'Lightbulb', href: '/insights', type: 'link', order: 3.5 },
   { id: 'ai-ml', name: 'AI/ML', icon: 'Sparkles', href: '/ai-ml', type: 'link', order: 4 },
   { id: 'ai-agents', name: 'AI Agents', icon: 'Bot', href: '/ai-agents', type: 'link', order: 5 },
   { id: 'ci-cd', name: 'CI/CD', icon: 'GitMerge', href: '/ci-cd', type: 'link', order: 6 },
@@ -483,6 +484,6 @@ export const AVAILABLE_ICONS = [
   'Key', 'Users', 'Bell', 'AlertTriangle', 'CheckCircle', 'XCircle',
   'RefreshCw', 'Search', 'Filter', 'Layers', 'Globe', 'Terminal',
   'Code', 'Cpu', 'HardDrive', 'Wifi', 'Monitor', 'Folder', 'Gamepad2', 'Bot',
-  'Sparkles', 'GitMerge', 'Rocket', 'ShieldCheck', 'ClipboardCheck',
+  'Sparkles', 'GitMerge', 'Rocket', 'ShieldCheck', 'ClipboardCheck', 'Lightbulb',
   'DollarSign', 'Package', 'FileText', 'CircuitBoard', 'Cog', 'Hexagon', 'Network',
 ]

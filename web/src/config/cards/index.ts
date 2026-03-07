@@ -150,6 +150,13 @@ import { warningEventsConfig } from './warning-events'
 import { weatherConfig } from './weather'
 import { workloadDeploymentConfig } from './workload-deployment'
 import { workloadMonitorConfig } from './workload-monitor'
+import { crossClusterEventCorrelationConfig } from './cross-cluster-event-correlation'
+import { clusterDeltaDetectorConfig } from './cluster-delta-detector'
+import { cascadeImpactMapConfig } from './cascade-impact-map'
+import { configDriftHeatmapConfig } from './config-drift-heatmap'
+import { resourceImbalanceDetectorConfig } from './resource-imbalance-detector'
+import { restartCorrelationMatrixConfig } from './restart-correlation-matrix'
+import { deploymentRolloutTrackerConfig } from './deployment-rollout-tracker'
 
 export const CARD_CONFIGS: CardConfigRegistry = {
   active_alerts: activeAlertsConfig,
@@ -298,6 +305,14 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   weather: weatherConfig,
   workload_deployment: workloadDeploymentConfig,
   workload_monitor: workloadMonitorConfig,
+  // Multi-cluster insights cards
+  cross_cluster_event_correlation: crossClusterEventCorrelationConfig,
+  cluster_delta_detector: clusterDeltaDetectorConfig,
+  cascade_impact_map: cascadeImpactMapConfig,
+  config_drift_heatmap: configDriftHeatmapConfig,
+  resource_imbalance_detector: resourceImbalanceDetectorConfig,
+  restart_correlation_matrix: restartCorrelationMatrixConfig,
+  deployment_rollout_tracker: deploymentRolloutTrackerConfig,
 }
 
 export function getCardConfig(cardType: string): UnifiedCardConfig | undefined {
@@ -458,4 +473,11 @@ export {
   weatherConfig,
   workloadDeploymentConfig,
   workloadMonitorConfig,
+  crossClusterEventCorrelationConfig,
+  clusterDeltaDetectorConfig,
+  cascadeImpactMapConfig,
+  configDriftHeatmapConfig,
+  resourceImbalanceDetectorConfig,
+  restartCorrelationMatrixConfig,
+  deploymentRolloutTrackerConfig,
 }

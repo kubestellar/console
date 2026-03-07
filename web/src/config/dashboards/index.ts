@@ -33,6 +33,7 @@ import { deployDashboardConfig } from './deploy'
 import { aiAgentsDashboardConfig } from './ai-agents'
 import { llmdBenchmarksDashboardConfig } from './llmd-benchmarks'
 import { clusterAdminDashboardConfig } from './cluster-admin'
+import { insightsDashboardConfig } from './insights'
 
 /**
  * Registry of all unified dashboard configurations
@@ -66,6 +67,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'ai-agents': aiAgentsDashboardConfig,
   'llm-d-benchmarks': llmdBenchmarksDashboardConfig,
   'cluster-admin': clusterAdminDashboardConfig,
+  insights: insightsDashboardConfig,
 }
 
 /**
@@ -155,4 +157,5 @@ export {
   aiAgentsDashboardConfig,
   llmdBenchmarksDashboardConfig,
   clusterAdminDashboardConfig,
+  insightsDashboardConfig,
 }

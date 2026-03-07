@@ -39,6 +39,7 @@ export type CardCategory =
   | 'games'
   | 'ci-cd'
   | 'events'
+  | 'insights'
 
 export interface CardDefinition {
   /** Unique card type identifier */

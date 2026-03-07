@@ -188,6 +188,16 @@ const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default
 // Lima VM card
 const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
 
+// Multi-cluster insights cards — share one chunk via barrel import
+const _insightsBundle = import('./insights')
+const CrossClusterEventCorrelation = lazy(() => _insightsBundle.then(m => ({ default: m.CrossClusterEventCorrelation })))
+const ClusterDeltaDetector = lazy(() => _insightsBundle.then(m => ({ default: m.ClusterDeltaDetector })))
+const CascadeImpactMap = lazy(() => _insightsBundle.then(m => ({ default: m.CascadeImpactMap })))
+const ConfigDriftHeatmap = lazy(() => _insightsBundle.then(m => ({ default: m.ConfigDriftHeatmap })))
+const ResourceImbalanceDetector = lazy(() => _insightsBundle.then(m => ({ default: m.ResourceImbalanceDetector })))
+const RestartCorrelationMatrix = lazy(() => _insightsBundle.then(m => ({ default: m.RestartCorrelationMatrix })))
+const DeploymentRolloutTracker = lazy(() => _insightsBundle.then(m => ({ default: m.DeploymentRolloutTracker })))
+
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
 const PredictiveHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.PredictiveHealth })))
@@ -457,6 +467,15 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   throughput_comparison: ThroughputComparison,
   performance_timeline: PerformanceTimeline,
   resource_utilization: ResourceUtilization,
+
+  // Multi-cluster insights cards
+  cross_cluster_event_correlation: CrossClusterEventCorrelation,
+  cluster_delta_detector: ClusterDeltaDetector,
+  cascade_impact_map: CascadeImpactMap,
+  config_drift_heatmap: ConfigDriftHeatmap,
+  resource_imbalance_detector: ResourceImbalanceDetector,
+  restart_correlation_matrix: RestartCorrelationMatrix,
+  deployment_rollout_tracker: DeploymentRolloutTracker,
 
   // Dynamic Card (Card Factory meta-component)
   dynamic_card: DynamicCard,
