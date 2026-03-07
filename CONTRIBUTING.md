@@ -2,7 +2,9 @@
 
 ## Issues Are Welcome
 
-The best way to contribute is by opening an issue. Bug reports, feature requests, UX feedback, and questions all help shape the project. Use [GitHub Issues](https://github.com/kubestellar/console/issues).
+The best way to contribute is by opening an issue. Bug reports, feature requests, UX feedback, and questions all help shape the project.
+
+If you have GitHub OAuth configured, use the bug icon in the top navbar of the console to file issues and feature requests directly from the UI — it pre-fills context about the page you're on. Otherwise, use [GitHub Issues](https://github.com/kubestellar/console/issues).
 
 ## How Development Works
 
