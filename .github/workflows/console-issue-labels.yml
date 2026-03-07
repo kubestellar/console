@@ -27,7 +27,8 @@ jobs:
             const typeLabel = isBug ? 'kind/bug' : 'enhancement';
 
             // Labels that should be present on all console-created issues
-            const requiredLabels = [typeLabel, 'ai-fix-requested', 'help wanted', 'triage/accepted'];
+            // Note: triage/accepted is intentionally omitted — only humans should add it
+            const requiredLabels = [typeLabel, 'ai-fix-requested', 'help wanted'];
 
             const labelsToAdd = requiredLabels.filter(l => !existingLabels.includes(l));
 
