@@ -1,4 +1,4 @@
-import { useEffect, useCallback, ReactNode } from 'react'
+import { useState, useEffect, useCallback, ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
 // NOTE: Wildcard import is required for dynamic icon resolution
@@ -154,8 +154,10 @@ export function DashboardPage({
   const isFetching = isLoading || isRefreshing
 
   // Handle addCard URL param - open modal and clear param
+  const [addCardSearch, setAddCardSearch] = useState('')
   useEffect(() => {
     if (searchParams.get('addCard') === 'true') {
+      setAddCardSearch(searchParams.get('cardSearch') || '')
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
@@ -341,9 +343,10 @@ export function DashboardPage({
       {/* Add Card Modal */}
       <AddCardModal
         isOpen={showAddCard}
-        onClose={() => setShowAddCard(false)}
+        onClose={() => { setShowAddCard(false); setAddCardSearch('') }}
         onAddCards={handleAddCards}
         existingCardTypes={cards.map(c => c.card_type)}
+        initialSearch={addCardSearch}
       />
 
       {/* Templates Modal */}

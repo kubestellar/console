@@ -3,17 +3,24 @@ import { Bug } from 'lucide-react'
 import { FeatureRequestModal } from './FeatureRequestModal'
 import { useNotifications } from '../../hooks/useFeatureRequests'
 import { useTranslation } from 'react-i18next'
+import type { RequestType } from '../../hooks/useFeatureRequests'
 
 export function FeatureRequestButton() {
   const { t: _t } = useTranslation()
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [initialRequestType, setInitialRequestType] = useState<RequestType | undefined>()
   const { unreadCount } = useNotifications()
 
-  // Auto-open modal when navigated from /issue route (fires custom event)
+  // Auto-open modal when navigated from /issue, /feedback, /feature routes
   useEffect(() => {
-    const handler = () => setIsModalOpen(true)
+    const handler = () => { setInitialRequestType(undefined); setIsModalOpen(true) }
+    const featureHandler = () => { setInitialRequestType('feature'); setIsModalOpen(true) }
     window.addEventListener('open-feedback', handler)
-    return () => window.removeEventListener('open-feedback', handler)
+    window.addEventListener('open-feedback-feature', featureHandler)
+    return () => {
+      window.removeEventListener('open-feedback', handler)
+      window.removeEventListener('open-feedback-feature', featureHandler)
+    }
   }, [])
 
   const handleClick = () => {
@@ -40,7 +47,8 @@ export function FeatureRequestButton() {
 
       <FeatureRequestModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); setInitialRequestType(undefined) }}
+        initialRequestType={initialRequestType}
       />
     </>
   )

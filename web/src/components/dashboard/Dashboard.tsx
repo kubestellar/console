@@ -504,11 +504,14 @@ export function Dashboard() {
   }, [pendingOpenAddCardModal, isLoading, openAddCardModal, setPendingOpenAddCardModal])
 
   // Handle addCard URL param from search — open modal and clear param
+  const [addCardSearch, setAddCardSearch] = useState('')
   useEffect(() => {
     if (searchParams.get('addCard') === 'true') {
+      setAddCardSearch(searchParams.get('cardSearch') || '')
       openAddCardModal()
       const cleaned = new URLSearchParams(searchParams)
       cleaned.delete('addCard')
+      cleaned.delete('cardSearch')
       setSearchParams(cleaned, { replace: true })
     }
   }, [searchParams, setSearchParams, openAddCardModal])
@@ -1024,9 +1027,10 @@ export function Dashboard() {
       {/* Add Card Modal */}
       <AddCardModal
         isOpen={isAddCardModalOpen}
-        onClose={closeAddCardModal}
+        onClose={() => { closeAddCardModal(); setAddCardSearch('') }}
         onAddCards={handleAddCards}
         existingCardTypes={currentCardTypes}
+        initialSearch={addCardSearch}
       />
 
       {/* Configure Card Modal */}

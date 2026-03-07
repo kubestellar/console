@@ -259,6 +259,16 @@ function IssueRedirect() {
   return null
 }
 
+function FeatureRedirect() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    navigate(ROUTES.HOME, { replace: true })
+    const MODAL_OPEN_DELAY_MS = 100
+    setTimeout(() => window.dispatchEvent(new CustomEvent('open-feedback-feature')), MODAL_OPEN_DELAY_MS)
+  }, [navigate])
+  return null
+}
+
 function MissionBrowseLink() {
   const [searchParams] = useSearchParams()
   const params = new URLSearchParams(searchParams)
@@ -473,8 +483,13 @@ function App() {
               and the ?mission= param survives the OAuth round-trip. */}
           <Route path="/missions" element={<MissionBrowseLink />} />
           <Route path="/missions/:missionId" element={<MissionDeepLink />} />
-          {/* /issue opens the feedback modal on the dashboard */}
+          {/* /issue, /issues, /feedback open the feedback modal on the dashboard */}
           <Route path="/issue" element={<IssueRedirect />} />
+          <Route path="/issues" element={<IssueRedirect />} />
+          <Route path="/feedback" element={<IssueRedirect />} />
+          {/* /feature, /features open the feedback modal on the feature tab */}
+          <Route path="/feature" element={<FeatureRedirect />} />
+          <Route path="/features" element={<FeatureRedirect />} />
         </Route>
 
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />

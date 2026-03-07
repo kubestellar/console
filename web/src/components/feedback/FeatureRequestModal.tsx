@@ -34,6 +34,7 @@ interface FeatureRequestModalProps {
   isOpen: boolean
   onClose: () => void
   initialTab?: TabType
+  initialRequestType?: RequestType
   initialContext?: {
     cardType: string
     cardTitle: string
@@ -80,7 +81,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
   return { label, ...colors[status] }
 }
 
-export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContext }: FeatureRequestModalProps) {
+export function FeatureRequestModal({ isOpen, onClose, initialTab, initialRequestType, initialContext }: FeatureRequestModalProps) {
   const { t } = useTranslation()
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
@@ -98,7 +99,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
   // User can't perform actions if not authenticated or if using demo token
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
   const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'submit')
-  const [requestType, setRequestType] = useState<RequestType>('bug')
+  const [requestType, setRequestType] = useState<RequestType>(initialRequestType || 'bug')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
@@ -251,7 +252,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialContex
         return
       }
       setDescription('')
-      setRequestType('bug')
+      setRequestType(initialRequestType || 'bug')
       setError(null)
       setSuccess(null)
       setActiveTab(initialTab || 'submit')

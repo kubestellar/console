@@ -297,7 +297,7 @@ const CATALOG_CARD_ITEMS: SearchItem[] = Object.entries(CARD_TITLES).map(([type,
   name: title,
   description: CARD_DESCRIPTIONS[type] || 'Available card',
   category: 'card' as SearchCategory,
-  href: '/?addCard=true',
+  href: `/?addCard=true&cardSearch=${encodeURIComponent(title)}`,
   keywords: [type, type.replace(/_/g, ' ')],
   meta: 'add card',
 }))

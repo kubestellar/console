@@ -338,6 +338,7 @@ interface AddCardModalProps {
   onClose: () => void
   onAddCards: (cards: CardSuggestion[]) => void
   existingCardTypes?: string[]
+  initialSearch?: string
 }
 
 // Simulated AI response - in production this would call Claude API
@@ -963,7 +964,7 @@ function CardPreview({ card }: { card: HoveredCard }) {
   )
 }
 
-export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = [] }: AddCardModalProps) {
+export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = [], initialSearch = '' }: AddCardModalProps) {
   const { t } = useTranslation()
   // Cross-namespace lookup for dynamic card keys (template literals can't be statically typed)
   const tCard = t as (key: string, defaultValue?: string) => string
@@ -1003,6 +1004,14 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   const didAddCards = useRef(false)
   // Guard: only fire "abandoned" after the modal has actually been opened
   const wasOpened = useRef(false)
+
+  // Pre-fill browse search when opening with initialSearch from global search
+  useEffect(() => {
+    if (isOpen && initialSearch) {
+      setBrowseSearch(initialSearch)
+      setActiveTab('browse')
+    }
+  }, [isOpen, initialSearch])
 
   useEffect(() => {
     if (isOpen) {
