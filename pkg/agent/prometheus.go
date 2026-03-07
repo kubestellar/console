@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -108,5 +109,7 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	// Stream the raw Prometheus response back to the caller
 	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	if _, copyErr := io.Copy(w, resp.Body); copyErr != nil {
+		log.Printf("failed to stream Prometheus response: %v", copyErr)
+	}
 }

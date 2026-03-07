@@ -420,7 +420,10 @@ func (h *BenchmarkHandlers) driveGetWithRetry(url string) (*http.Response, error
 			continue
 		}
 		if resp.StatusCode == 403 || resp.StatusCode == 429 {
-			body, _ := io.ReadAll(resp.Body)
+			body, readErr := io.ReadAll(resp.Body)
+			if readErr != nil {
+				body = []byte("(failed to read response body)")
+			}
 			resp.Body.Close()
 			lastErr = fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
 			continue
@@ -863,7 +866,10 @@ func (h *BenchmarkHandlers) downloadDriveFile(fileID string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("Drive download returned %d: %s", resp.StatusCode, string(body))
 	}
 

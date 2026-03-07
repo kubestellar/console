@@ -109,7 +109,10 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	defer resp.Body.Close()
 
 	limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
-	body, _ := io.ReadAll(limitedBody)
+	body, err := io.ReadAll(limitedBody)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to read response body"})
+	}
 	if resp.StatusCode != http.StatusOK {
 		code := "github_error"
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
@@ -166,7 +169,10 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	defer resp.Body.Close()
 
 	limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
-	body, _ := io.ReadAll(limitedBody)
+	body, err := io.ReadAll(limitedBody)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to read response body"})
+	}
 	if resp.StatusCode == http.StatusNotFound {
 		return c.Status(404).JSON(fiber.Map{"error": "file not found"})
 	}

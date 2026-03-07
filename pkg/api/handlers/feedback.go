@@ -523,7 +523,10 @@ func (h *FeedbackHandler) fetchGitHubIssues(githubLogin string) ([]GitHubIssue, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -732,7 +735,10 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		log.Printf("GitHub API returned %d when closing issue: %s", resp.StatusCode, string(body))
 	}
 }
@@ -764,7 +770,10 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		log.Printf("GitHub API returned %d when adding comment: %s", resp.StatusCode, string(body))
 	}
 }
@@ -1351,7 +1360,10 @@ func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return 0, "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -1409,7 +1421,10 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		log.Printf("GitHub API returned %d when adding PR comment: %s", resp.StatusCode, string(body))
 	}
 }

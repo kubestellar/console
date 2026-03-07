@@ -3297,7 +3297,10 @@ func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
 	if resp.StatusCode == http.StatusUnauthorized {
 		return false, nil // Invalid key - no error so it gets cached
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		body = []byte("(failed to read response body)")
+	}
 	return false, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
 }
 
@@ -3321,7 +3324,10 @@ func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
 	if resp.StatusCode == http.StatusUnauthorized {
 		return false, fmt.Errorf("invalid API key")
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		body = []byte("(failed to read response body)")
+	}
 	return false, fmt.Errorf("API error: %s", string(body))
 }
 
@@ -3346,7 +3352,10 @@ func validateGeminiKey(ctx context.Context, apiKey string) (bool, error) {
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return false, fmt.Errorf("invalid API key")
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		body = []byte("(failed to read response body)")
+	}
 	return false, fmt.Errorf("API error: %s", string(body))
 }
 
