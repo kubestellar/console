@@ -27,7 +27,7 @@ import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
 const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
 
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
-  page: { label: 'Pages', icon: LayoutDashboard },
+  page: { label: 'Dashboards', icon: LayoutDashboard },
   card: { label: 'Cards', icon: LayoutGrid },
   stat: { label: 'Stats', icon: BarChart3 },
   setting: { label: 'Settings', icon: Settings },
@@ -37,7 +37,7 @@ const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Serv
   pod: { label: 'Pods', icon: Container },
   service: { label: 'Services', icon: Globe },
   mission: { label: 'AI Missions', icon: Bot },
-  dashboard: { label: 'Dashboards', icon: LayoutDashboard },
+  dashboard: { label: 'Custom Dashboards', icon: LayoutDashboard },
   helm: { label: 'Helm Releases', icon: Package },
   node: { label: 'Nodes', icon: HardDrive },
 }
