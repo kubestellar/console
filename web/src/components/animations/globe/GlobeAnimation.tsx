@@ -59,10 +59,11 @@ const GlobeAnimation = ({
           far={1000}
         />
 
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <pointLight position={[-10, -10, -10]} intensity={0.5} />
+        {/* Lighting — hemisphere for soft fill, directional for depth */}
+        <ambientLight intensity={0.25} />
+        <hemisphereLight args={["#1a90ff", "#0a0f1c", 0.35]} />
+        <directionalLight position={[5, 8, 5]} intensity={0.7} color="#e0eaff" />
+        <pointLight position={[-8, -4, -6]} intensity={0.3} color="#6236FF" />
 
         {/* Controls - allow full 360-degree rotation */}
         {enableControls && (

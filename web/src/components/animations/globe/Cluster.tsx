@@ -85,26 +85,38 @@ const Cluster = ({
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
     >
-      {/* Cluster boundary */}
+      {/* Cluster boundary — subtler wireframe with soft glow on hover */}
       <Sphere args={[radius * 1.2, 32, 32]}>
         <meshPhongMaterial
           color={color}
           transparent
-          opacity={hovered ? 0.25 : 0.15}
+          opacity={hovered ? 0.2 : 0.1}
           wireframe
           emissive={color}
-          emissiveIntensity={hovered ? 0.3 : 0.1}
+          emissiveIntensity={hovered ? 0.25 : 0.08}
         />
       </Sphere>
 
+      {/* Outer glow shell (visible on hover) */}
+      {hovered && (
+        <Sphere args={[radius * 1.35, 24, 24]}>
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.06}
+            depthWrite={false}
+          />
+        </Sphere>
+      )}
+
       {/* Cluster name */}
-      <Billboard position={[0, radius * 1.4, 0]}>
+      <Billboard position={[0, radius * 1.5, 0]}>
         <Text
-          fontSize={0.18}
+          fontSize={0.16}
           color={color}
           anchorX="center"
           anchorY="middle"
-          outlineWidth={0.01}
+          outlineWidth={0.012}
           outlineColor={COLORS.background}
         >
           {name}
@@ -113,14 +125,14 @@ const Cluster = ({
         {/* Description (only shown when hovered) */}
         {description && hovered && (
           <Text
-            position={[0, 0.2, 0]}
-            fontSize={0.1}
-            color="white"
+            position={[0, 0.22, 0]}
+            fontSize={0.09}
+            color="#c8d6e5"
             anchorX="center"
             anchorY="middle"
             outlineWidth={0.005}
             outlineColor={COLORS.background}
-            maxWidth={2}
+            maxWidth={2.2}
             textAlign="center"
           >
             {description}
@@ -128,35 +140,39 @@ const Cluster = ({
         )}
       </Billboard>
 
-      {/* Nodes */}
+      {/* Nodes — varied sizes for visual interest */}
       <group ref={clusterRef}>
-        {nodes.map((nodePos, idx) => (
-          <group key={idx}>
-            <Sphere position={nodePos} args={[0.08, 16, 16]}>
-              <meshPhongMaterial
-                color={activeNodes.includes(idx) ? COLORS.success : color}
-                emissive={activeNodes.includes(idx) ? color : undefined}
-                emissiveIntensity={activeNodes.includes(idx) ? 0.5 : 0}
-              />
-            </Sphere>
+        {nodes.map((nodePos, idx) => {
+          const isActive = activeNodes.includes(idx)
+          const nodeSize = 0.06 + (idx % 3) * 0.02
+          return (
+            <group key={idx}>
+              <Sphere position={nodePos} args={[nodeSize, 16, 16]}>
+                <meshPhongMaterial
+                  color={isActive ? COLORS.success : color}
+                  emissive={isActive ? color : color}
+                  emissiveIntensity={isActive ? 0.6 : 0.1}
+                />
+              </Sphere>
 
-            {/* Connect to some other nodes */}
-            {idx % 2 === 0 &&
-              nodes
-                .slice(idx + 1)
-                .filter((_, i) => i % 3 === 0)
-                .map((target, targetIdx) => (
-                  <Line
-                    key={targetIdx}
-                    points={[nodePos, target]}
-                    color={color}
-                    lineWidth={1}
-                    transparent
-                    opacity={0.3}
-                  />
-                ))}
-          </group>
-        ))}
+              {/* Connect to some other nodes — thinner lines */}
+              {idx % 2 === 0 &&
+                nodes
+                  .slice(idx + 1)
+                  .filter((_, i) => i % 3 === 0)
+                  .map((target, targetIdx) => (
+                    <Line
+                      key={targetIdx}
+                      points={[nodePos, target]}
+                      color={color}
+                      lineWidth={0.6}
+                      transparent
+                      opacity={0.2}
+                    />
+                  ))}
+            </group>
+          )
+        })}
       </group>
     </group>
   )

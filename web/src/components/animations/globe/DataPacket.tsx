@@ -16,7 +16,8 @@ const DataPacket = ({ path, speed = 1, color = "#00E396", size = 0.08 }: DataPac
   const [progress, setProgress] = useState(0)
   const trailRef = useRef<THREE.Points>(null)
 
-  const trailPositions = useMemo(() => new Float32Array(20 * 3), [])
+  const TRAIL_LENGTH = 30
+  const trailPositions = useMemo(() => new Float32Array(TRAIL_LENGTH * 3), [])
 
   useFrame(() => {
     setProgress(prev => (prev >= 1 ? 0 : prev + 0.005 * speed))
@@ -54,15 +55,22 @@ const DataPacket = ({ path, speed = 1, color = "#00E396", size = 0.08 }: DataPac
 
   return (
     <group>
+      {/* Trail particles */}
       <points ref={trailRef}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[trailPositions, 3, false]} />
         </bufferGeometry>
-        <pointsMaterial color={color} size={size * 0.8} transparent opacity={0.6} sizeAttenuation />
+        <pointsMaterial color={color} size={size * 0.6} transparent opacity={0.4} sizeAttenuation depthWrite={false} />
       </points>
+      {/* Main packet */}
       <mesh ref={ref} position={position}>
         <sphereGeometry args={[size, 16, 16]} />
         <meshBasicMaterial color={color} />
+      </mesh>
+      {/* Glow halo around packet */}
+      <mesh position={position}>
+        <sphereGeometry args={[size * 2.5, 16, 16]} />
+        <meshBasicMaterial color={color} transparent opacity={0.15} depthWrite={false} />
       </mesh>
     </group>
   )

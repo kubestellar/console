@@ -254,9 +254,10 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
           const flowType = flowData?.type || "data"
 
           if (activeFlows.includes(i)) {
+            // Smooth fade in
             flow.material.opacity = Math.min(
-              flow.material.opacity + 0.05,
-              0.8 * animationProgress
+              flow.material.opacity + 0.03,
+              0.7 * animationProgress
             )
 
             // Set color based on flow type
@@ -271,15 +272,16 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
             }
 
             if (flow.material.dashSize !== undefined) {
-              flow.material.dashSize = 0.1
+              flow.material.dashSize = 0.15
             }
             if (flow.material.gapSize !== undefined) {
               flow.material.gapSize = 0.05
             }
           } else {
+            // Smooth fade out
             flow.material.opacity = Math.max(
-              flow.material.opacity - 0.02,
-              0.1 * animationProgress
+              flow.material.opacity - 0.01,
+              0.06 * animationProgress
             )
             flow.material.color.set(COLORS.primary)
 
@@ -287,7 +289,7 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
               flow.material.dashSize = 0.05
             }
             if (flow.material.gapSize !== undefined) {
-              flow.material.gapSize = 0.1
+              flow.material.gapSize = 0.12
             }
           }
         }
@@ -297,41 +299,41 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
 
   return (
     <group>
-      {/* Main globe - represents the global network */}
-      <Sphere ref={globeRef} args={[3.5, 64, 64]}>
+      {/* Main globe — finer wireframe for a cleaner look */}
+      <Sphere ref={globeRef} args={[3.5, 48, 48]}>
         <meshPhongMaterial
           color={COLORS.primary}
           transparent
-          opacity={0.15 * animationProgress} // Increased from 0.08 to 0.15 for more opacity
+          opacity={0.08 * animationProgress}
           wireframe
         />
       </Sphere>
 
-      {/* Grid lines for the globe */}
+      {/* Grid lines — fewer rings, thinner, softer for less visual clutter */}
       <group ref={gridLinesRef} rotation={[0, 0, 0]}>
-        {Array.from({ length: 8 }).map((_, idx) => (
+        {Array.from({ length: 5 }).map((_, idx) => (
           <Torus
             key={idx}
-            args={[3.5, 0.01, 16, 100]}
-            rotation={[0, 0, (Math.PI * idx) / 8]}
+            args={[3.5, 0.005, 16, 120]}
+            rotation={[0, 0, (Math.PI * idx) / 5]}
           >
             <meshBasicMaterial
               color={COLORS.primary}
               transparent
-              opacity={0.18 * animationProgress} // Increased from 0.1 to 0.18
+              opacity={0.12 * animationProgress}
             />
           </Torus>
         ))}
-        {Array.from({ length: 8 }).map((_, idx) => (
+        {Array.from({ length: 5 }).map((_, idx) => (
           <Torus
-            key={idx + 8}
-            args={[3.5, 0.01, 16, 100]}
-            rotation={[Math.PI / 2, (Math.PI * idx) / 8, 0]}
+            key={idx + 5}
+            args={[3.5, 0.005, 16, 120]}
+            rotation={[Math.PI / 2, (Math.PI * idx) / 5, 0]}
           >
             <meshBasicMaterial
               color={COLORS.primary}
               transparent
-              opacity={0.18 * animationProgress} // Increased from 0.1 to 0.18
+              opacity={0.12 * animationProgress}
             />
           </Torus>
         ))}
@@ -341,25 +343,28 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
       <group ref={centralNodeRef}>
         <LogoElement position={[0, 0, 0]} rotation={[0, 0, 0]} scale={1} />
 
-        <Billboard position={[0, 1, 0]}>
+        <Billboard position={[0, 1.1, 0]}>
           <Text
-            fontSize={0.2}
+            fontSize={0.24}
             color={COLORS.highlight}
             anchorX="center"
             anchorY="middle"
-            outlineWidth={0.01}
+            outlineWidth={0.015}
             outlineColor={COLORS.background}
             fillOpacity={animationProgress}
+            font={undefined}
           >
             {translations.kubestellar}
           </Text>
           <Text
-            position={[0, -0.25, 0]}
+            position={[0, -0.28, 0]}
             fontSize={0.1}
-            color={COLORS.primary}
+            color="#8ab4f8"
             anchorX="center"
             anchorY="middle"
-            fillOpacity={animationProgress}
+            outlineWidth={0.005}
+            outlineColor={COLORS.background}
+            fillOpacity={animationProgress * 0.8}
           >
             {translations.controlPlane}
           </Text>
@@ -389,33 +394,36 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
           </group>
         ))}
 
-        {/* Data flow connections */}
+        {/* Data flow connections — thinner idle, bolder active */}
         <group ref={dataFlowsRef}>
-          {dataFlows.map((flow, idx) => (
-            <Line
-              key={idx}
-              points={flow.path}
-              color={
-                activeFlows.includes(idx)
-                  ? flow.type === "workload"
-                    ? COLORS.success
-                    : flow.type === "deploy"
-                      ? COLORS.accent1
-                      : flow.type === "control"
-                        ? COLORS.secondary
-                        : COLORS.highlight
-                  : COLORS.primary
-              }
-              lineWidth={1.5}
-              transparent
-              opacity={
-                (activeFlows.includes(idx) ? 0.8 : 0.1) * animationProgress
-              }
-              dashed
-              dashSize={0.1}
-              gapSize={0.1}
-            />
-          ))}
+          {dataFlows.map((flow, idx) => {
+            const isActive = activeFlows.includes(idx)
+            return (
+              <Line
+                key={idx}
+                points={flow.path}
+                color={
+                  isActive
+                    ? flow.type === "workload"
+                      ? COLORS.success
+                      : flow.type === "deploy"
+                        ? COLORS.accent1
+                        : flow.type === "control"
+                          ? COLORS.secondary
+                          : COLORS.highlight
+                    : COLORS.primary
+                }
+                lineWidth={isActive ? 2 : 0.8}
+                transparent
+                opacity={
+                  (isActive ? 0.7 : 0.06) * animationProgress
+                }
+                dashed
+                dashSize={isActive ? 0.15 : 0.05}
+                gapSize={isActive ? 0.05 : 0.12}
+              />
+            )
+          })}
         </group>
 
         {/* Data packets traveling along active connections */}
