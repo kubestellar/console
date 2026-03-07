@@ -1183,7 +1183,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               <Layers className="w-4 h-4 text-purple-400" />
               <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
               <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
-              <svg className="w-3 h-3 text-purple-400/50 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -1194,7 +1194,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               <Server className="w-4 h-4 text-blue-400" />
               <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
               <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
-              <svg className="w-3 h-3 text-blue-400/50 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>

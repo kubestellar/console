@@ -95,7 +95,7 @@ function StatBlock({ block, data, hasData, isLoading }: StatBlockProps) {
     >
       {isDemo && (
         <span className="absolute -top-1 -right-1" title="Demo data">
-          <FlaskConical className="w-3.5 h-3.5 text-yellow-400/50" />
+          <FlaskConical className="w-3.5 h-3.5 text-yellow-400/70" />
         </span>
       )}
       <div className="flex items-center gap-2 mb-2">

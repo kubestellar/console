@@ -33,9 +33,9 @@ export function getConditionColor(code: number): string {
   const condition = getWeatherCondition(code)
   const colorMap: Record<string, string> = {
     'sunny': 'text-yellow-400',
-    'partly_cloudy': 'text-gray-300',
+    'partly_cloudy': 'text-gray-500',
     'cloudy': 'text-muted-foreground',
-    'fog': 'text-gray-300',
+    'fog': 'text-gray-500',
     'drizzle': 'text-blue-300',
     'rainy': 'text-blue-400',
     'snowy': 'text-blue-200',
