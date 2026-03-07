@@ -13,7 +13,7 @@ const GlobeLoader = () => {
         </div>
       </div>
       <div className="text-center">
-        <div className="text-blue-400 font-semibold text-lg">KubeStellar</div>
+        <div className="text-blue-400 font-semibold text-lg">Console</div>
         <div className="text-muted-foreground text-sm">Initializing clusters...</div>
         <div className="flex space-x-1 mt-2 justify-center">
           <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>

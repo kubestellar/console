@@ -11,12 +11,12 @@ import Cluster from "./Cluster"
 
 // Hardcoded translations (originally from next-intl)
 const translations = {
-  kubestellar: "KubeStellar",
-  controlPlane: "Control Plane",
+  kubestellar: "Console",
+  controlPlane: "AI Engine",
   clusters: {
     kubeflexCore: {
-      name: "KubeFlex Core",
-      description: "KubeFlex control plane managing multi-cluster operations",
+      name: "AI Cortex",
+      description: "AI-powered control plane for adaptive multi-cluster operations",
     },
     edgeClusters: {
       name: "Edge Clusters",
@@ -70,7 +70,7 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
   const [activeFlows, setActiveFlows] = useState<number[]>([])
   const [animationProgress, setAnimationProgress] = useState(0)
 
-  // Create cluster configurations with KubeStellar-related names and descriptions
+  // Create cluster configurations with Console-related names and descriptions
   const clusters = useMemo(
     () => [
       {
@@ -143,7 +143,7 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
       type: "workload",
     })
 
-    // KubeFlex to Edge (control commands)
+    // AI Cortex to Edge (control commands)
     flows.push({
       path: [clusters[0].position, clusters[1].position],
       id: clusters.length + 2,
@@ -337,7 +337,7 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
         ))}
       </group>
 
-      {/* Central KubeStellar control plane */}
+      {/* Central Console AI engine */}
       <group ref={centralNodeRef}>
         <LogoElement position={[0, 0, 0]} rotation={[0, 0, 0]} scale={1} />
 
