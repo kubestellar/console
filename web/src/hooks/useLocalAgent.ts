@@ -447,15 +447,15 @@ export function useLocalAgent() {
       'To connect to your local kubeconfig and Claude Code, install the kc-agent on your machine.',
     steps: [
       {
-        title: 'Install via Homebrew (macOS)',
+        title: 'Install via Homebrew (macOS / WSL)',
         command: 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
       },
       {
-        title: 'Build from source (Linux — recommended)',
+        title: 'Build from source (Linux / WSL — recommended)',
         command: 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent',
       },
       {
-        title: 'Install via Linuxbrew (Linux — alternative)',
+        title: 'Install via Linuxbrew (Linux / WSL — alternative)',
         command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
       },
     ],

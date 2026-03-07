@@ -128,7 +128,7 @@ export function DemoToLocalCTA() {
 
       <div className="flex items-center gap-3 text-xs">
         <span className="text-muted-foreground">
-          Requires macOS or Linux with Homebrew
+          Requires macOS, Linux, or WSL with Homebrew
         </span>
         <button
           onClick={handleDocs}
