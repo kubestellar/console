@@ -7,6 +7,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { CardControls as CardControlsUI, type SortDirection } from '../../components/ui/CardControls'
 import { ClusterStatusDot, getClusterState, type ClusterState } from '../../components/ui/ClusterStatusBadge'
+import { emitCardSearchUsed, emitCardClusterFilterChanged } from '../analytics'
 import type { ClusterWithHealth } from './cardHooks'
 
 // ============================================================================
@@ -230,6 +231,14 @@ export function CardSearchInput({
     }
   }, [onChange, debounceMs])
 
+  // Fire analytics when user finishes typing (on blur) to avoid per-keystroke spam
+  const handleBlur = useCallback(() => {
+    const current = debounceMs ? localValue : value
+    if (current.length > 0) {
+      emitCardSearchUsed(current.length)
+    }
+  }, [debounceMs, localValue, value])
+
   // Cleanup timer on unmount
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
@@ -240,6 +249,7 @@ export function CardSearchInput({
         type="text"
         value={debounceMs ? localValue : value}
         onChange={(e) => handleChange(e.target.value)}
+        onBlur={handleBlur}
         placeholder={placeholder}
         className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
       />
@@ -320,7 +330,7 @@ export function CardClusterFilter({
         >
           <div className="p-1">
             <button
-              onClick={onClear}
+              onClick={() => { onClear(); emitCardClusterFilterChanged(0, availableClusters.length) }}
               className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${selectedClusters.length === 0
                 ? 'bg-purple-500/20 text-purple-400'
                 : 'hover:bg-secondary text-foreground'
@@ -352,7 +362,15 @@ export function CardClusterFilter({
               return (
                 <button
                   key={cluster.name}
-                  onClick={() => !isUnreachable && onToggle(cluster.name)}
+                  onClick={() => {
+                    if (!isUnreachable) {
+                      onToggle(cluster.name)
+                      // Compute resulting count: toggling adds or removes one cluster
+                      const willBeSelected = !selectedClusters.includes(cluster.name)
+                      const newCount = willBeSelected ? selectedClusters.length + 1 : selectedClusters.length - 1
+                      emitCardClusterFilterChanged(newCount, availableClusters.length)
+                    }
+                  }}
                   disabled={isUnreachable}
                   className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${isUnreachable
                     ? 'opacity-40 cursor-not-allowed'

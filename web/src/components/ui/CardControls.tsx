@@ -1,6 +1,7 @@
 import { ChevronDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '../../lib/cn'
+import { emitCardSortChanged, emitCardSortDirectionChanged, emitCardLimitChanged } from '../../lib/analytics'
 
 interface LimitOption {
   value: number | 'unlimited'
@@ -55,7 +56,9 @@ export function CardControls<T extends string = string>({
 
   const toggleDirection = () => {
     if (onSortDirectionChange) {
-      onSortDirectionChange(sortDirection === 'asc' ? 'desc' : 'asc')
+      const newDir = sortDirection === 'asc' ? 'desc' : 'asc'
+      onSortDirectionChange(newDir)
+      emitCardSortDirectionChanged(newDir)
     }
   }
 
@@ -93,7 +96,7 @@ export function CardControls<T extends string = string>({
               {LIMIT_OPTIONS.map(option => (
                 <button
                   key={String(option.value)}
-                  onClick={() => { onLimitChange(option.value); setLimitOpen(false) }}
+                  onClick={() => { onLimitChange(option.value); setLimitOpen(false); emitCardLimitChanged(String(option.value)) }}
                   className={cn(
                     'w-full px-3 py-1.5 text-left text-xs hover:bg-secondary/50 transition-colors',
                     limit === option.value ? 'text-primary bg-primary/10' : 'text-foreground'
@@ -123,7 +126,7 @@ export function CardControls<T extends string = string>({
                 {sortOptions.map(option => (
                   <button
                     key={option.value}
-                    onClick={() => { onSortChange(option.value); setSortOpen(false) }}
+                    onClick={() => { onSortChange(option.value); setSortOpen(false); emitCardSortChanged(option.value) }}
                     className={cn(
                       'w-full px-3 py-1.5 text-left text-xs hover:bg-secondary/50 transition-colors',
                       sortBy === option.value ? 'text-primary bg-primary/10' : 'text-foreground'

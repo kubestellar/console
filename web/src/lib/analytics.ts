@@ -382,6 +382,40 @@ export function emitCardReplaced(oldType: string, newType: string) {
   send('ksc_card_replaced', { old_type: oldType, new_type: newType })
 }
 
+// ── Card Interactions (framework-level) ──────────────────────────────
+// These fire automatically from shared UI components (CardControls,
+// CardSearchInput, CardClusterFilter) so all cards get consistent
+// tracking without per-card instrumentation.
+
+/** Fired when user changes sort field in a card's controls */
+export function emitCardSortChanged(sortField: string) {
+  send('ksc_card_sort_changed', { sort_field: sortField, page_path: window.location.pathname })
+}
+
+/** Fired when user toggles sort direction in a card's controls */
+export function emitCardSortDirectionChanged(direction: string) {
+  send('ksc_card_sort_direction_changed', { direction, page_path: window.location.pathname })
+}
+
+/** Fired when user changes the item limit in a card's controls */
+export function emitCardLimitChanged(limit: string) {
+  send('ksc_card_limit_changed', { limit, page_path: window.location.pathname })
+}
+
+/** Fired when user types in a card's search input (debounced — fires once per search session) */
+export function emitCardSearchUsed(queryLength: number) {
+  send('ksc_card_search_used', { query_length: queryLength, page_path: window.location.pathname })
+}
+
+/** Fired when user changes cluster filter selection in a card */
+export function emitCardClusterFilterChanged(selectedCount: number, totalCount: number) {
+  send('ksc_card_cluster_filter_changed', {
+    selected_count: selectedCount,
+    total_count: totalCount,
+    page_path: window.location.pathname,
+  })
+}
+
 // ── AI Missions ────────────────────────────────────────────────────
 
 export function emitMissionStarted(missionType: string, agentProvider: string) {
