@@ -764,7 +764,16 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	repoPath := uc.repoPath
 	uc.mu.Unlock()
 
-	if repoPath == "" || hasUncommittedChanges(repoPath) {
+	if repoPath == "" {
+		return
+	}
+	if hasUncommittedChanges(repoPath) {
+		log.Println("[AutoUpdate] Uncommitted changes detected, skipping release update")
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Update skipped: uncommitted changes in repo",
+			Error:   "Commit or stash your changes before updating",
+		})
 		return
 	}
 
