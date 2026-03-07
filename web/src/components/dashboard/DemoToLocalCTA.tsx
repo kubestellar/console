@@ -7,9 +7,10 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Terminal, Copy, Check, X, Rocket } from 'lucide-react'
+import { Terminal, Copy, Check, X, Rocket, KeyRound, Code2 } from 'lucide-react'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
-import { isNetlifyDeployment, getDemoMode } from '../../lib/demoMode'
+import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
+import { isNetlifyDeployment, getDemoMode, hasRealToken } from '../../lib/demoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import {
@@ -19,7 +20,6 @@ import {
 import { emitDemoToLocalShown, emitDemoToLocalActioned } from '../../lib/analytics'
 
 const NETLIFY_INSTALL_COMMAND = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
-const AGENT_INSTALL_COMMAND = 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent'
 
 /** How many seconds the "Copied!" confirmation shows */
 const COPY_FEEDBACK_MS = 2000
@@ -33,12 +33,18 @@ export function DemoToLocalCTA() {
   )
   const [copied, setCopied] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [showDevDialog, setShowDevDialog] = useState(false)
   const emittedRef = useRef(false)
-  const { status: agentStatus } = useLocalAgent()
+  const { isConnected } = useLocalAgent()
 
-  // Show on Netlify (demo site) or on localhost when agent is disconnected and in demo mode
-  const isLocalNoAgent = !isNetlifyDeployment && agentStatus === 'disconnected' && getDemoMode()
-  const shouldShow = (isNetlifyDeployment || isLocalNoAgent) && !dismissed && !hintsSuppressed
+  // Localhost without OAuth = user ran start.sh but hasn't configured GitHub OAuth yet
+  const isLocalNoOAuth = !isNetlifyDeployment && getDemoMode() && !hasRealToken()
+  // Localhost with OAuth + agent = fully set up, offer developer setup
+  const isLocalDeveloper = !isNetlifyDeployment && hasRealToken() && isConnected
+  const shouldShow =
+    (isNetlifyDeployment || isLocalNoOAuth || isLocalDeveloper) &&
+    !dismissed &&
+    !hintsSuppressed
 
   useEffect(() => {
     if (shouldShow && isNetlifyDeployment && !emittedRef.current) {
@@ -49,9 +55,6 @@ export function DemoToLocalCTA() {
 
   if (!shouldShow) return null
 
-  // Context-aware command and copy
-  const installCommand = isNetlifyDeployment ? NETLIFY_INSTALL_COMMAND : AGENT_INSTALL_COMMAND
-
   const handleDismiss = () => {
     setDismissed(true)
     safeSetItem(STORAGE_KEY_DEMO_CTA_DISMISSED, 'true')
@@ -59,7 +62,7 @@ export function DemoToLocalCTA() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(installCommand)
+      await navigator.clipboard.writeText(NETLIFY_INSTALL_COMMAND)
       setCopied(true)
       emitDemoToLocalActioned('copy_command')
       setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
@@ -75,11 +78,86 @@ export function DemoToLocalCTA() {
     }
   }
 
-  const handleDocs = () => {
-    emitDemoToLocalActioned('view_docs')
+  const handleSetupOAuth = () => {
+    emitDemoToLocalActioned('setup_oauth')
     setShowSetupDialog(true)
   }
 
+  const handleDevSetup = () => {
+    emitDemoToLocalActioned('developer_setup')
+    setShowDevDialog(true)
+  }
+
+  // ── State 3: Localhost with OAuth + agent — small developer link ──
+  if (isLocalDeveloper) {
+    return (
+      <>
+        <div className="mb-4 flex items-center gap-2 text-xs animate-in fade-in duration-300">
+          <Code2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+          <button
+            onClick={handleDevSetup}
+            className="text-emerald-400 hover:text-emerald-300 transition-colors"
+          >
+            Developer setup &amp; advanced options
+          </button>
+          <button
+            onClick={handleDismiss}
+            className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 ml-auto"
+            aria-label="Dismiss"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+        <DeveloperSetupDialog
+          isOpen={showDevDialog}
+          onClose={() => setShowDevDialog(false)}
+        />
+      </>
+    )
+  }
+
+  // ── State 2: Localhost without OAuth — prompt to set up GitHub OAuth ──
+  if (isLocalNoOAuth) {
+    return (
+      <div className="mb-4 rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-purple-400" />
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Set up GitHub OAuth to sign in
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                You&apos;re viewing demo data &mdash; configure GitHub OAuth to authenticate and connect your clusters
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleDismiss}
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            aria-label="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <button
+          onClick={handleSetupOAuth}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 text-sm font-medium transition-colors"
+        >
+          <Rocket className="w-4 h-4" />
+          Setup Guide
+        </button>
+
+        <SetupInstructionsDialog
+          isOpen={showSetupDialog}
+          onClose={() => setShowSetupDialog(false)}
+        />
+      </div>
+    )
+  }
+
+  // ── State 1: Netlify — prompt to install locally ──
   return (
     <div className="mb-4 rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between mb-3">
@@ -87,12 +165,10 @@ export function DemoToLocalCTA() {
           <Terminal className="w-4 h-4 text-blue-400" />
           <div>
             <h3 className="text-sm font-semibold text-foreground">
-              {isLocalNoAgent ? 'Connect your clusters' : 'Install KubeStellar Console locally to connect your clusters'}
+              Install KubeStellar Console locally to connect your clusters
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {isLocalNoAgent
-                ? 'Install and run kc-agent to connect your real clusters'
-                : 'You\u0027re viewing demo data \u2014 install locally to monitor your real clusters'}
+              You&apos;re viewing demo data &mdash; install locally to monitor your real clusters
             </p>
           </div>
         </div>
@@ -111,7 +187,7 @@ export function DemoToLocalCTA() {
           data-install-command
           className="flex-1 px-3 py-2 text-xs font-mono bg-secondary/50 rounded-lg border border-border/50 text-foreground overflow-x-auto whitespace-nowrap"
         >
-          {installCommand}
+          {NETLIFY_INSTALL_COMMAND}
         </code>
         <button
           onClick={handleCopy}
@@ -128,10 +204,10 @@ export function DemoToLocalCTA() {
 
       <div className="flex items-center gap-3 text-xs">
         <span className="text-muted-foreground">
-          Requires macOS, Linux, or WSL with Homebrew
+          Requires macOS, Linux, or WSL
         </span>
         <button
-          onClick={handleDocs}
+          onClick={handleSetupOAuth}
           className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
         >
           Full setup guide <Rocket className="w-3 h-3" />

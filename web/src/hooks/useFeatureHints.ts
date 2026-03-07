@@ -9,6 +9,7 @@
  *   - 'card-drag' — "Drag cards to reorder" near card grid
  *   - 'missions'  — "Try AI Missions" near missions toggle
  *   - 'fab-add'   — shimmer ring on the floating "+" button
+ *   - 'update-available' — "Click to update" near update indicator
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -23,7 +24,12 @@ import {
 } from '../lib/analytics'
 import { safeGetJSON, safeSetJSON, safeGetItem } from '../lib/utils/localStorage'
 
-export type FeatureHintType = 'cmd-k' | 'card-drag' | 'missions' | 'fab-add'
+export type FeatureHintType =
+  | 'cmd-k'
+  | 'card-drag'
+  | 'missions'
+  | 'fab-add'
+  | 'update-available'
 
 /** Auto-dismiss feature hints after this duration (ms) */
 const FEATURE_HINT_AUTO_DISMISS_MS = 8_000
