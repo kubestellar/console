@@ -13,20 +13,20 @@ export const clusterAdminDashboardConfig: UnifiedDashboardConfig = {
   route: '/cluster-admin',
   statsType: 'cluster-admin',
   cards: [
-    // Row 1: Health at a glance
-    { id: 'ca-health-1', cardType: 'cluster_health', position: { w: 4, h: 3, x: 0, y: 0 } },
-    { id: 'ca-cp-1', cardType: 'control_plane_health', title: 'Control Plane', position: { w: 4, h: 3, x: 4, y: 0 } },
-    { id: 'ca-provider-1', cardType: 'provider_health', position: { w: 4, h: 3, x: 8, y: 0 } },
-    // Row 2: Resources & prediction
-    { id: 'ca-usage-1', cardType: 'resource_usage', position: { w: 4, h: 3, x: 0, y: 3 } },
-    { id: 'ca-predict-1', cardType: 'predictive_health', title: 'Predictive Health', position: { w: 8, h: 3, x: 4, y: 3 } },
-    // Row 3: Issues & events
-    { id: 'ca-pods-1', cardType: 'pod_issues', position: { w: 4, h: 3, x: 0, y: 6 } },
-    { id: 'ca-deploys-1', cardType: 'deployment_issues', position: { w: 4, h: 3, x: 4, y: 6 } },
-    { id: 'ca-warnings-1', cardType: 'warning_events', position: { w: 4, h: 3, x: 8, y: 6 } },
-    // Row 4: Operations tooling
-    { id: 'ca-kubectl-1', cardType: 'kubectl', position: { w: 6, h: 4, x: 0, y: 9 } },
-    { id: 'ca-nodedebug-1', cardType: 'node_debug', title: 'Node Debug', position: { w: 6, h: 4, x: 6, y: 9 } },
+    // Row 1: Operations tooling (most-used — top of dashboard)
+    { id: 'ca-kubectl-1', cardType: 'kubectl', position: { w: 6, h: 4, x: 0, y: 0 } },
+    { id: 'ca-nodedebug-1', cardType: 'node_debug', title: 'Node Debug', position: { w: 6, h: 4, x: 6, y: 0 } },
+    // Row 2: Health at a glance
+    { id: 'ca-health-1', cardType: 'cluster_health', position: { w: 4, h: 3, x: 0, y: 4 } },
+    { id: 'ca-cp-1', cardType: 'control_plane_health', title: 'Control Plane', position: { w: 4, h: 3, x: 4, y: 4 } },
+    { id: 'ca-provider-1', cardType: 'provider_health', position: { w: 4, h: 3, x: 8, y: 4 } },
+    // Row 3: Resources & prediction
+    { id: 'ca-usage-1', cardType: 'resource_usage', position: { w: 4, h: 3, x: 0, y: 7 } },
+    { id: 'ca-predict-1', cardType: 'predictive_health', title: 'Predictive Health', position: { w: 8, h: 3, x: 4, y: 7 } },
+    // Row 4: Issues & events
+    { id: 'ca-pods-1', cardType: 'pod_issues', position: { w: 4, h: 3, x: 0, y: 10 } },
+    { id: 'ca-deploys-1', cardType: 'deployment_issues', position: { w: 4, h: 3, x: 4, y: 10 } },
+    { id: 'ca-warnings-1', cardType: 'warning_events', position: { w: 4, h: 3, x: 8, y: 10 } },
     // Row 5: Infrastructure
     { id: 'ca-hw-1', cardType: 'hardware_health', position: { w: 6, h: 3, x: 0, y: 13 } },
     { id: 'ca-upgrade-1', cardType: 'upgrade_status', position: { w: 6, h: 3, x: 6, y: 13 } },

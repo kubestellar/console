@@ -121,7 +121,7 @@ export function Dashboard() {
   } = useDashboardContext()
 
   // Missions context for Getting Started banner
-  const { openSidebar: openMissionSidebar, startMission } = useMissions()
+  const { startMission } = useMissions()
 
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
@@ -884,11 +884,7 @@ export function Dashboard() {
       {/* Getting Started banner — quick-action buttons for first-time users */}
       <GettingStartedBanner
         onBrowseCards={openAddCardModal}
-        onTryMission={openMissionSidebar}
-        onExploreDashboards={() => {
-          const sidebar = document.querySelector('[data-tour="sidebar"]')
-          sidebar?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }}
+        onExploreDashboards={openAddCardModal}
       />
 
       {/* Demo-to-local CTA — shown on console.kubestellar.io for demo visitors */}

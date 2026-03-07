@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { LayoutGrid, Sparkles, Compass, X } from 'lucide-react'
+import { LayoutGrid, Compass, X } from 'lucide-react'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import {
   STORAGE_KEY_GETTING_STARTED_DISMISSED,
@@ -24,13 +24,11 @@ const DASHBOARD_COUNT = Object.keys(DASHBOARD_CONFIGS).length
 
 interface GettingStartedBannerProps {
   onBrowseCards: () => void
-  onTryMission: () => void
   onExploreDashboards: () => void
 }
 
 export function GettingStartedBanner({
   onBrowseCards,
-  onTryMission,
   onExploreDashboards,
 }: GettingStartedBannerProps) {
   const [dismissed, setDismissed] = useState(
@@ -71,13 +69,6 @@ export function GettingStartedBanner({
       onClick: () => handleAction('browse_cards', onBrowseCards),
     },
     {
-      id: 'try-mission',
-      label: 'Try a Mission',
-      description: 'Guided workflows powered by AI',
-      icon: Sparkles,
-      onClick: () => handleAction('try_mission', onTryMission),
-    },
-    {
       id: 'explore-dashboards',
       label: 'Explore Dashboards',
       description: `${DASHBOARD_COUNT} topic-specific dashboards`,
@@ -106,7 +97,7 @@ export function GettingStartedBanner({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {actions.map(({ id, label, description, icon: Icon, onClick }) => (
           <button
             key={id}

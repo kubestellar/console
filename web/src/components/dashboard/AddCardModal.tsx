@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity } from 'lucide-react'
+import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity, Compass } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useModalState } from '../../lib/modals'
 import { CardFactoryModal } from './CardFactoryModal'
@@ -10,6 +10,7 @@ import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { useToast } from '../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../lib/constants/network'
 import { emitAddCardModalOpened, emitAddCardModalAbandoned, emitCardCategoryBrowsed, emitRecommendedCardShown } from '../../lib/analytics'
+import { useSidebarConfig, DISCOVERABLE_DASHBOARDS } from '../../hooks/useSidebarConfig'
 
 // Helper function to wrap technical abbreviations in text with tooltips
 function wrapAbbreviations(text: string): ReactNode {
@@ -987,6 +988,13 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
     return unsub
   }, [])
 
+  // Sidebar config for "Recommended Dashboards" section
+  const { config: sidebarConfig, restoreDashboard } = useSidebarConfig()
+  const availableDashboards = useMemo(() => {
+    const sidebarIds = new Set((sidebarConfig.primaryNav || []).map(item => item.id))
+    return DISCOVERABLE_DASHBOARDS.filter(d => !sidebarIds.has(d.id))
+  }, [sidebarConfig.primaryNav])
+
   // Compute recommended cards — popular cards not already on the dashboard
   const recommendedCards = useMemo(() => {
     const existing = new Set(existingCardTypes || [])
@@ -1253,6 +1261,31 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                           </button>
                         )
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommended Dashboards — discoverable dashboards not in the sidebar */}
+                {!browseSearch.trim() && availableDashboards.length > 0 && (
+                  <div className="mb-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
+                    <h4 className="text-xs font-medium text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5" />
+                      Recommended Dashboards
+                    </h4>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Add topic-specific dashboards to your sidebar
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableDashboards.map(dashboard => (
+                        <button
+                          key={dashboard.id}
+                          onClick={() => restoreDashboard(dashboard)}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-secondary/50 border border-border/50 hover:border-blue-500/30 hover:bg-secondary text-foreground transition-all"
+                        >
+                          <span className="font-medium text-xs">{dashboard.name}</span>
+                          <Plus className="w-3 h-3 text-blue-400" />
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
