@@ -193,13 +193,15 @@ export function Arcade() {
     defaultCards: DEFAULT_ARCADE_CARDS,
   })
 
-  // Handle addCard URL param - open modal and clear param
+  // Handle addCard URL param - open modal and clear param.
+  // Guard: KeepAlive keeps hidden dashboards mounted; only process on active route.
   useEffect(() => {
+    if (location.pathname !== '/arcade') return
     if (searchParams.get('addCard') === 'true') {
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams, setShowAddCard])
+  }, [searchParams, setSearchParams, setShowAddCard, location.pathname])
 
   // Track location for any navigation effects
   useEffect(() => {

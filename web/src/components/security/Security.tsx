@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight } from 'lucide-react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -36,6 +36,7 @@ type ViewTab = 'overview' | 'issues' | 'rbac' | 'compliance'
 export function Security() {
   const { t } = useTranslation(['cards', 'common'])
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -81,12 +82,14 @@ export function Security() {
     }
   }, [])
 
-  // Handle addCard URL param - open modal and clear param
+  // Handle addCard URL param - open modal and clear param.
+  // Guard: KeepAlive keeps hidden dashboards mounted; only process on active route.
   useEffect(() => {
+    if (location.pathname !== '/security') return
     if (searchParams.get('addCard') === 'true') {
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, location.pathname])
 
   // Trigger refresh on mount (ensures data is fresh when navigating to this page)
   useEffect(() => {

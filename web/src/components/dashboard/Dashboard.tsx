@@ -503,9 +503,12 @@ export function Dashboard() {
     }
   }, [pendingOpenAddCardModal, isLoading, openAddCardModal, setPendingOpenAddCardModal])
 
-  // Handle addCard URL param from search — open modal and clear param
+  // Handle addCard URL param from search — open modal and clear param.
+  // Guard with pathname check: KeepAlive keeps hidden dashboards mounted,
+  // so all of them see the same searchParams. Only process when active.
   const [addCardSearch, setAddCardSearch] = useState('')
   useEffect(() => {
+    if (location.pathname !== '/' && location.pathname !== '') return
     if (searchParams.get('addCard') === 'true') {
       setAddCardSearch(searchParams.get('cardSearch') || '')
       openAddCardModal()
@@ -514,7 +517,7 @@ export function Dashboard() {
       cleaned.delete('cardSearch')
       setSearchParams(cleaned, { replace: true })
     }
-  }, [searchParams, setSearchParams, openAddCardModal])
+  }, [searchParams, setSearchParams, openAddCardModal, location.pathname])
 
   // Helper to check if a card ID is a local-only (not persisted) card
   const isLocalOnlyCard = (cardId: string) => {

@@ -153,14 +153,16 @@ export function Clusters() {
     onRefresh: refetch,
   })
 
-  // Handle addCard URL param - open modal and clear param
+  // Handle addCard URL param - open modal and clear param.
+  // Guard: KeepAlive keeps hidden dashboards mounted; only process on active route.
   useEffect(() => {
+    if (location.pathname !== '/clusters') return
     if (searchParams.get('addCard') === 'true') {
       setShowAddCard(true)
       searchParams.delete('addCard')
       setSearchParams(searchParams, { replace: true })
     }
-  }, [searchParams, setSearchParams, setShowAddCard])
+  }, [searchParams, setSearchParams, setShowAddCard, location.pathname])
 
   // Trigger refresh when navigating to this page (location.key changes on each navigation)
   useEffect(() => {

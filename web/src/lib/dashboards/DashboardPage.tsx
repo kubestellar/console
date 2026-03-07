@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef, ReactNode } from 'react'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
 // NOTE: Wildcard import is required for dynamic icon resolution
 // Dashboard page resolves icon names from dashboard definitions at runtime
@@ -106,6 +106,10 @@ export function DashboardPage({
   isDemoData = false,
 }: DashboardPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  // Capture the route path at mount time — KeepAlive keeps this component alive
+  // across navigations, so we need to know which route we belong to.
+  const mountedRouteRef = useRef(location.pathname)
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const Icon = getIcon(icon)
 
@@ -153,15 +157,18 @@ export function DashboardPage({
   const isRefreshing = externalRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing
 
-  // Handle addCard URL param - open modal and clear param
+  // Handle addCard URL param - open modal and clear param.
+  // Guard with mounted route: KeepAlive keeps hidden dashboards mounted,
+  // so all of them see the same searchParams. Only process when active.
   const [addCardSearch, setAddCardSearch] = useState('')
   useEffect(() => {
+    if (location.pathname !== mountedRouteRef.current) return
     if (searchParams.get('addCard') === 'true') {
       setAddCardSearch(searchParams.get('cardSearch') || '')
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams, setShowAddCard])
+  }, [searchParams, setSearchParams, setShowAddCard, location.pathname])
 
   // Card handlers
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
