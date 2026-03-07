@@ -1,0 +1,198 @@
+name: Nightly Test Suite
+
+on:
+  schedule:
+    # Run at 6 AM UTC daily (1 AM EST / 2 AM EDT) — after the release workflow
+    - cron: '0 6 * * *'
+  workflow_dispatch: {} # Allow manual trigger
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: nightly-test-suite
+  cancel-in-progress: true
+
+env:
+  RESULTS_DIR: test-results/nightly
+  NODE_VERSION: '22'
+  GO_VERSION: '1.23'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history for commit back
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install npm dependencies
+        run: cd web && npm ci
+
+      - name: Install Playwright browsers
+        run: cd web && npx playwright install --with-deps chromium
+
+      - name: Install test tools
+        run: |
+          # Go security tools
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install github.com/google/go-licenses@latest
+
+          # Secret scanning
+          GITLEAKS_VERSION="8.18.4"
+          wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+
+          # Helm
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+          # Container scanning
+          TRIVY_VERSION="0.58.2"
+          wget -q "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -O /tmp/trivy.tar.gz
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+
+          # SAST (semgrep)
+          pip3 install semgrep
+
+          # ripgrep (some scripts use rg)
+          sudo apt-get install -y ripgrep
+
+      - name: Run full test suite
+        id: tests
+        run: |
+          bash scripts/run-all-tests.sh || true
+
+          # Copy results to nightly dir with date-stamped name
+          DATE=$(date -u +%Y-%m-%d)
+          mkdir -p "$RESULTS_DIR"
+          cp /tmp/all-tests-report.json "${RESULTS_DIR}/${DATE}.json"
+
+          echo "result_file=${RESULTS_DIR}/${DATE}.json" >> "$GITHUB_OUTPUT"
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
+          # Check if tests passed
+          FAILED=$(jq -r '.summary.failed' /tmp/all-tests-report.json)
+          echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate comparison report
+        id: compare
+        run: |
+          REPORT_FILE="/tmp/nightly-comparison.md"
+          REGRESSION=0
+          bash scripts/nightly-compare.sh "${{ steps.tests.outputs.result_file }}" "$RESULTS_DIR" > "$REPORT_FILE" || REGRESSION=1
+          echo "has_regression=${REGRESSION}" >> "$GITHUB_OUTPUT"
+
+          # Save report content for the issue step
+          {
+            echo 'report<<NIGHTLY_EOF'
+            cat "$REPORT_FILE"
+            echo 'NIGHTLY_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit results to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${RESULTS_DIR}/${{ steps.tests.outputs.date }}.json"
+          git commit -m "chore: nightly test results for ${{ steps.tests.outputs.date }}
+
+          Passed: $(jq -r '.summary.passed' ${{ steps.tests.outputs.result_file }})/$( jq -r '.summary.total' ${{ steps.tests.outputs.result_file }})
+          Failed: $(jq -r '.summary.failed' ${{ steps.tests.outputs.result_file }})
+
+          [skip ci]" || echo "No changes to commit"
+          git push origin main
+
+      - name: Find or create tracking issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LABEL="nightly-tests"
+          TITLE="Nightly Test Suite Results"
+
+          # Ensure label exists
+          gh label create "$LABEL" \
+            --description "Automated nightly test suite results" \
+            --color "0075ca" 2>/dev/null || true
+
+          # Find existing open issue
+          EXISTING=$(gh issue list \
+            --state open \
+            --label "$LABEL" \
+            --search "in:title \"${TITLE}\"" \
+            --json number,title \
+            --jq ".[] | select(.title == \"${TITLE}\") | .number" \
+          )
+
+          if [ -n "$EXISTING" ]; then
+            echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "action=comment" >> "$GITHUB_OUTPUT"
+          else
+            # Create new tracking issue
+            NEW_ISSUE=$(gh issue create \
+              --title "$TITLE" \
+              --label "$LABEL" \
+              --body "$(cat <<'EOF'
+          ## Nightly Test Suite Tracking
+
+          This issue tracks nightly test suite results. Each night, the full test suite runs and posts results as a comment below.
+
+          ### How to read the results
+          - **Trend table** shows pass rates over the last 7 runs
+          - **Regressions** are highlighted when a previously-passing suite starts failing
+          - **Improvements** are highlighted when a previously-failing suite starts passing
+          - Raw JSON results are stored in `test-results/nightly/` for graphing
+
+          ### Data location
+          - JSON results: `test-results/nightly/YYYY-MM-DD.json`
+          - Comparison script: `scripts/nightly-compare.sh`
+          - Workflow: `.github/workflows/nightly-test-suite.yml`
+
+          ---
+          _Results are posted as comments below, newest first._
+          EOF
+              )" 2>&1 | grep -oP '\d+$')
+            echo "issue_number=$NEW_ISSUE" >> "$GITHUB_OUTPUT"
+            echo "action=created" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post results to issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+            --body "${{ steps.compare.outputs.report }}"
+
+      - name: Upload test logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-test-logs-${{ steps.tests.outputs.date }}
+          path: |
+            /tmp/suite-*.log
+            /tmp/all-tests-report.json
+            /tmp/all-tests-summary.md
+          retention-days: 30
+
+      - name: Fail on regression
+        if: steps.compare.outputs.has_regression == '1'
+        run: |
+          echo "::error::Regressions detected — see issue #${{ steps.issue.outputs.issue_number }}"
+          exit 1

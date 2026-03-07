@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-03-07T05:05:33Z",
+  "fastMode": false,
+  "summary": {
+    "total": 25,
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [{"suite":"consistency-test","status":"pass","duration":11},{"suite":"helm-lint-test","status":"pass","duration":1},{"suite":"license-compliance-test","status":"pass","duration":2},{"suite":"error-boundary-test","status":"pass","duration":1},{"suite":"mission-security-test","status":"pass","duration":3},{"suite":"auth-lifecycle-test","status":"pass","duration":9},{"suite":"settings-migration-test","status":"pass","duration":3},{"suite":"update-lifecycle-test","status":"pass","duration":10},{"suite":"websocket-resilience-test","status":"pass","duration":3},{"suite":"gosec-test","status":"pass","duration":9},{"suite":"dependency-audit-test","status":"pass","duration":1},{"suite":"secret-scan-test","status":"pass","duration":2},{"suite":"ts-sast-test","status":"pass","duration":4},{"suite":"container-scan-test","status":"pass","duration":19},{"suite":"security-headers-test","status":"pass","duration":1},{"suite":"api-contract-test","status":"pass","duration":0},{"suite":"api-fuzz-test","status":"pass","duration":95},{"suite":"console-error-scan","status":"pass","duration":167},{"suite":"nav-test","status":"pass","duration":549},{"suite":"perf-test","status":"pass","duration":755},{"suite":"ui-compliance-test","status":"pass","duration":53},{"suite":"deploy-test","status":"pass","duration":42},{"suite":"cache-test","status":"pass","duration":66},{"suite":"benchmark-test","status":"pass","duration":153},{"suite":"ai-ml-test","status":"pass","duration":529}]
+}
