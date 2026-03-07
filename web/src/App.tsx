@@ -247,6 +247,18 @@ function SettingsSyncInit() {
 /** Redirect /missions → /?browse=missions to open MissionBrowser.
  *  Redirect /missions/:missionId → /?mission=:missionId to open a specific mission.
  *  Preserves UTM and other query params so GA4 campaign attribution survives the redirect. */
+function IssueRedirect() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    // Navigate to home first, then dispatch event for FeatureRequestButton
+    navigate(ROUTES.HOME, { replace: true })
+    // Use setTimeout to ensure the dashboard is mounted before firing
+    const MODAL_OPEN_DELAY_MS = 100
+    setTimeout(() => window.dispatchEvent(new CustomEvent('open-feedback')), MODAL_OPEN_DELAY_MS)
+  }, [navigate])
+  return null
+}
+
 function MissionBrowseLink() {
   const [searchParams] = useSearchParams()
   const params = new URLSearchParams(searchParams)
@@ -461,10 +473,9 @@ function App() {
               and the ?mission= param survives the OAuth round-trip. */}
           <Route path="/missions" element={<MissionBrowseLink />} />
           <Route path="/missions/:missionId" element={<MissionDeepLink />} />
+          {/* /issue opens the feedback modal on the dashboard */}
+          <Route path="/issue" element={<IssueRedirect />} />
         </Route>
-
-        {/* /issue opens the feedback modal on the dashboard */}
-        <Route path="/issue" element={<Navigate to={ROUTES.HOME} replace state={{ openFeedback: true }} />} />
 
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Bug } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import { FeatureRequestModal } from './FeatureRequestModal'
 import { useNotifications } from '../../hooks/useFeatureRequests'
 import { useTranslation } from 'react-i18next'
@@ -9,16 +8,13 @@ export function FeatureRequestButton() {
   const { t: _t } = useTranslation()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { unreadCount } = useNotifications()
-  const location = useLocation()
 
-  // Auto-open modal when navigated from /issue route
+  // Auto-open modal when navigated from /issue route (fires custom event)
   useEffect(() => {
-    if ((location.state as { openFeedback?: boolean })?.openFeedback) {
-      setIsModalOpen(true)
-      // Clear the state so it doesn't re-trigger on re-renders
-      window.history.replaceState({}, '', location.pathname)
-    }
-  }, [location.state, location.pathname])
+    const handler = () => setIsModalOpen(true)
+    window.addEventListener('open-feedback', handler)
+    return () => window.removeEventListener('open-feedback', handler)
+  }, [])
 
   const handleClick = () => {
     setIsModalOpen(true)
