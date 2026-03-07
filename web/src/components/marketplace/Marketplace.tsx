@@ -377,12 +377,12 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
               className="fixed z-[9999] pointer-events-none"
               style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
             >
-              <div className="px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">
+              <div className="px-4 py-3 bg-background border border-border rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">
                 <div className="flex items-center gap-3 mb-2">
                   <img
                     src={`https://github.com/${github}.png?size=80`}
                     alt={github}
-                    className="w-10 h-10 rounded-full border border-gray-600"
+                    className="w-10 h-10 rounded-full border border-border"
                   />
                   <div>
                     <div className="text-sm font-semibold text-white">@{github}</div>

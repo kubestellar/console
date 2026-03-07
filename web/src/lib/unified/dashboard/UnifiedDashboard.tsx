@@ -283,7 +283,7 @@ export function UnifiedDashboard({
       {cards.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Activity className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium text-gray-300 mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
             No cards configured
           </h3>
           <p className="text-sm text-muted-foreground mb-4">

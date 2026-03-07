@@ -157,7 +157,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-gray-300">
+          <span className="text-sm font-medium text-foreground">
             {t('cards:clusterGroups.groupCount', { count: groups.length })}
           </span>
           {isPersisted && (
@@ -197,9 +197,9 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       {/* Groups list */}
       {groups.length === 0 && !isCreating ? (
         <div className="text-center py-6">
-          <Layers className="w-8 h-8 mx-auto mb-2 text-gray-600" />
+          <Layers className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{t('cards:clusterGroups.noGroupsYet')}</p>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {t('cards:clusterGroups.createGroupHint')}
           </p>
         </div>
@@ -237,7 +237,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
 
       {/* Help text */}
       <div className="pt-2 border-t border-border">
-        <p className="text-2xs text-gray-600 text-center">
+        <p className="text-2xs text-muted-foreground text-center">
           {t('cards:clusterGroups.dragWorkloadHint')}
         </p>
       </div>
@@ -289,7 +289,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
         {/* Expand toggle */}
         <button
           onClick={onToggle}
-          className="text-muted-foreground hover:text-gray-300 transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
           {isExpanded
             ? <ChevronDown className="w-3.5 h-3.5" />
@@ -316,7 +316,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
             <div
               key={cluster}
               className={cn(
-                'w-2 h-2 rounded-full border border-gray-700',
+                'w-2 h-2 rounded-full border border-border',
                 clusterHealthMap.get(cluster) === false ? 'bg-red-500' : 'bg-green-500'
               )}
               title={`${cluster} — ${clusterHealthMap.get(cluster) === false ? t('common:common.unhealthy').toLowerCase() : t('common:common.healthy').toLowerCase()}`}
@@ -355,7 +355,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
         <div className="flex items-center gap-1">
           <button
             onClick={onEdit}
-            className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-gray-300 transition-colors"
+            className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
             title={t('cards:clusterGroups.editGroup')}
           >
             <Edit2 className="w-3 h-3" />
@@ -389,7 +389,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
                 </div>
               ))}
               {group.lastEvaluated && (
-                <div className="text-gray-600">{t('cards:clusterGroups.evaluated', { time: relativeTime(group.lastEvaluated) })}</div>
+                <div className="text-muted-foreground">{t('cards:clusterGroups.evaluated', { time: relativeTime(group.lastEvaluated) })}</div>
               )}
             </div>
           )}
@@ -409,7 +409,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
               )
             })}
             {group.clusters.length === 0 && (
-              <span className="text-xs text-gray-600 italic">{t('cards:clusterGroups.noClustersMatch')}</span>
+              <span className="text-xs text-muted-foreground italic">{t('cards:clusterGroups.noClustersMatch')}</span>
             )}
           </div>
         </div>
@@ -549,7 +549,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={t('cards:clusterGroups.groupNamePlaceholder')}
-        className="w-full px-2.5 py-1.5 text-sm rounded-md bg-gray-900/50 border border-gray-700 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-blue-500"
+        className="w-full px-2.5 py-1.5 text-sm rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500"
         autoFocus
       />
 
@@ -570,7 +570,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
       </div>
 
       {/* Static / Dynamic toggle */}
-      <div className="flex rounded-md overflow-hidden border border-gray-700">
+      <div className="flex rounded-md overflow-hidden border border-border">
         <button
           onClick={() => setKind('static')}
           className={cn(
@@ -747,12 +747,12 @@ function StaticClusterPicker({
                 onClick={() => onToggle(cluster)}
                 className={cn(
                   'flex items-center gap-2 w-full px-2 py-1 rounded text-left text-xs transition-colors',
-                  isSelected ? accent.selected : 'hover:bg-gray-800/50 text-muted-foreground'
+                  isSelected ? accent.selected : 'hover:bg-secondary/50 text-muted-foreground'
                 )}
               >
                 <div className={cn(
                   'w-3.5 h-3.5 rounded border flex items-center justify-center',
-                  isSelected ? accent.check : 'border-gray-600'
+                  isSelected ? accent.check : 'border-border'
                 )}>
                   {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                 </div>
@@ -804,7 +804,7 @@ function QueryBuilder({
           value={labelSelector}
           onChange={(e) => onLabelSelectorChange(e.target.value)}
           placeholder="e.g. topology.kubernetes.io/zone in (us-east-1a)"
-          className="w-full px-2 py-1.5 text-xs font-mono rounded-md bg-gray-900/50 border border-gray-700 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-purple-500"
+          className="w-full px-2 py-1.5 text-xs font-mono rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
         />
       </div>
 
@@ -842,7 +842,7 @@ function QueryBuilder({
                       onUpdateFilter(i, { field: e.target.value, operator: 'gte', value: '1' })
                     }
                   }}
-                  className="flex-1 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                  className="flex-1 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
                 >
                   {FILTER_FIELDS.map(ff => (
                     <option key={ff.field} value={ff.field}>{ff.label}</option>
@@ -854,7 +854,7 @@ function QueryBuilder({
                   <select
                     value={f.value}
                     onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
-                    className="w-16 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                    className="w-16 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
                   >
                     <option value="true">true</option>
                     <option value="false">false</option>
@@ -865,7 +865,7 @@ function QueryBuilder({
                     <select
                       value={f.operator}
                       onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
-                      className="w-16 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                      className="w-16 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
                     >
                       {TEXT_OPERATORS.map(op => (
                         <option key={op.value} value={op.value}>{op.label}</option>
@@ -877,7 +877,7 @@ function QueryBuilder({
                       value={f.value}
                       onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
                       placeholder="e.g. A100"
-                      className="w-20 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-gray-700 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-purple-500"
+                      className="w-20 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
                     />
                   </>
                 ) : (
@@ -886,7 +886,7 @@ function QueryBuilder({
                     <select
                       value={f.operator}
                       onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
-                      className="w-12 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                      className="w-12 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
                     >
                       {NUM_OPERATORS.map(op => (
                         <option key={op.value} value={op.value}>{op.label}</option>
@@ -897,7 +897,7 @@ function QueryBuilder({
                       type="number"
                       value={f.value}
                       onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
-                      className="w-14 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                      className="w-14 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-none focus:border-purple-500"
                     />
                   </>
                 )}
@@ -913,7 +913,7 @@ function QueryBuilder({
             )
           })}
           {filters.length === 0 && (
-            <p className="text-2xs text-gray-600 italic">{t('cards:clusterGroups.noFilters')}</p>
+            <p className="text-2xs text-muted-foreground italic">{t('cards:clusterGroups.noFilters')}</p>
           )}
         </div>
       </div>
@@ -950,7 +950,7 @@ function AIAssistant({
         onChange={(e) => onPromptChange(e.target.value)}
         placeholder='e.g. "Healthy clusters with at least 4 CPU cores"'
         rows={2}
-        className="w-full px-2.5 py-1.5 text-xs rounded-md bg-gray-900/50 border border-gray-700 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-purple-500 resize-none"
+        className="w-full px-2.5 py-1.5 text-xs rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500 resize-none"
       />
       <button
         onClick={onGenerate}
@@ -1068,7 +1068,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
       </div>
 
       {/* Static / Dynamic toggle */}
-      <div className="flex rounded-md overflow-hidden border border-gray-700">
+      <div className="flex rounded-md overflow-hidden border border-border">
         <button
           onClick={() => setKind('static')}
           className={cn(
@@ -1145,7 +1145,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
       <div className="flex gap-2">
         <button
           onClick={onCancel}
-          className="flex-1 py-1.5 text-xs font-medium rounded-md bg-gray-800 text-muted-foreground hover:bg-gray-700 transition-colors"
+          className="flex-1 py-1.5 text-xs font-medium rounded-md bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors"
         >
           {t('common:common.cancel')}
         </button>

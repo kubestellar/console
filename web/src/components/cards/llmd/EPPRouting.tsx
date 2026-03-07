@@ -68,7 +68,7 @@ const getLoadColors = (load: number) => {
 function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
   // Filter out NaN/undefined values and ensure we have enough data points
   const validData = data.filter(v => Number.isFinite(v))
-  if (validData.length < 2) return <div style={{ width, height }} className="bg-gray-800/30 rounded" />
+  if (validData.length < 2) return <div style={{ width, height }} className="bg-secondary/30 rounded" />
 
   const max = Math.max(...validData, 1)
   const min = Math.min(...validData, 0)
@@ -880,11 +880,11 @@ export function EPPRouting() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className="p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-gray-900/50 to-gray-800/30 relative">
+    <div className="p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-background/50 to-secondary/30 relative">
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm rounded-lg">
-          <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-yellow-500 animate-spin mb-4" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-sm rounded-lg">
+          <div className="w-12 h-12 rounded-full border-2 border-border border-t-yellow-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackRouting')}</span>
           <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
@@ -918,7 +918,7 @@ export function EPPRouting() {
             className={`px-2 py-1 text-xs rounded font-medium transition-all flex items-center gap-1 ${
               viewMode === 'horseshoe'
                 ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                : 'bg-gray-700/50 text-muted-foreground'
+                : 'bg-secondary/50 text-muted-foreground'
             }`}
             title={t('llmd.toggleHorseshoe')}
           >
@@ -929,7 +929,7 @@ export function EPPRouting() {
             className={`px-3 py-1 text-xs rounded font-medium transition-all ${
               showParticles
                 ? 'bg-yellow-500/20 text-yellow-400 shadow-lg shadow-yellow-500/20'
-                : 'bg-gray-700/50 text-muted-foreground'
+                : 'bg-secondary/50 text-muted-foreground'
             }`}
           >
             {showParticles ? t('common:common.pause') : t('common:common.play')}
@@ -1068,7 +1068,7 @@ export function EPPRouting() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
-              className="absolute left-2 top-2 bg-gray-900/95 backdrop-blur-sm rounded-lg border border-gray-700 p-3 shadow-xl max-w-[180px]"
+              className="absolute left-2 top-2 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-xl max-w-[180px]"
             >
               {(() => {
                 const node = dynamicNodes.find(n => n.id === selectedNode)
@@ -1107,7 +1107,7 @@ export function EPPRouting() {
                                   ? metric === 'load'
                                     ? 'bg-yellow-500/20 text-yellow-400 shadow-sm shadow-yellow-500/20'
                                     : 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
-                                  : 'bg-gray-700/50 text-muted-foreground hover:text-gray-300'
+                                  : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
                               }`}
                             >
                               {metric === 'load' ? t('llmd.load') : t('llmd.rps')}
@@ -1179,7 +1179,7 @@ export function EPPRouting() {
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gray-900/95 backdrop-blur-sm rounded-lg p-3 border border-gray-700 text-xs shadow-xl"
+          className="bg-background/95 backdrop-blur-sm rounded-lg p-3 border border-border text-xs shadow-xl"
         >
           {(() => {
             const link = links.find(l => `${l.source}-${l.target}` === hoveredLink)

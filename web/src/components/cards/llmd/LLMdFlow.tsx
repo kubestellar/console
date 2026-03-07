@@ -961,11 +961,11 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
+    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-background/50 to-secondary/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-900/60 backdrop-blur-sm">
-          <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-purple-500 animate-spin mb-4" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-sm">
+          <div className="w-12 h-12 rounded-full border-2 border-border border-t-purple-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackVisualize')}</span>
           <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
@@ -994,7 +994,7 @@ export function LLMdFlow() {
               )}
               {/* Scaled to 0 indicator */}
               {selectedStack.autoscaler && selectedStack.totalReplicas === 0 && (
-                <span className="px-1.5 py-0.5 rounded bg-gray-700/50 text-muted-foreground text-2xs italic">
+                <span className="px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground text-2xs italic">
                   ⏸ Scaled to 0
                 </span>
               )}
@@ -1021,7 +1021,7 @@ export function LLMdFlow() {
             className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
               viewMode === 'horseshoe'
                 ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                : 'bg-gray-700/50 text-muted-foreground'
+                : 'bg-secondary/50 text-muted-foreground'
             }`}
             title={t('llmd.toggleHorseshoe')}
           >
@@ -1032,7 +1032,7 @@ export function LLMdFlow() {
             className={`px-3 py-1 rounded text-xs font-medium transition-all ${
               isAnimating
                 ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 shadow-lg shadow-purple-500/20'
-                : 'bg-gray-700/50 text-muted-foreground hover:bg-gray-700'
+                : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
             }`}
           >
             {isAnimating ? t('common:common.pause') : t('common:common.play')}
@@ -1117,7 +1117,7 @@ export function LLMdFlow() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute top-10 left-3 w-56 bg-gray-900/95 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl"
+            className="absolute top-10 left-3 w-56 bg-background/95 backdrop-blur-sm rounded-xl p-4 border border-border shadow-xl"
           >
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-white font-semibold text-sm">
@@ -1140,8 +1140,8 @@ export function LLMdFlow() {
                   onClick={() => toggleMetric(metric)}
                   className={`flex-1 px-2 py-1.5 rounded text-2xs font-medium transition-all ${
                     selectedMetricTypes.includes(metric)
-                      ? 'bg-gray-700 text-white ring-1 ring-gray-500'
-                      : 'bg-gray-800/50 text-muted-foreground hover:bg-gray-800'
+                      ? 'bg-secondary text-white ring-1 ring-border'
+                      : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
                   }`}
                 >
                   <div className="text-center">
@@ -1163,7 +1163,7 @@ export function LLMdFlow() {
               'grid-cols-3'
             }`}>
               {selectedMetricTypes.map(metric => (
-                <div key={metric} className="bg-gray-800/50 rounded-lg p-2">
+                <div key={metric} className="bg-secondary/50 rounded-lg p-2">
                   <div className="text-[9px] text-muted-foreground mb-1 flex items-center gap-1">
                     <div
                       className="w-1.5 h-1.5 rounded-full"

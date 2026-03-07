@@ -130,7 +130,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
         <div>
           <span className="text-muted-foreground">{t('llmd.load')}</span>
           <div className="flex items-center gap-1 mt-0.5">
-            <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full"
                 style={{ backgroundColor: server.load > 70 ? '#f59e0b' : color }}
@@ -164,7 +164,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
           <span className="text-muted-foreground"><Acronym term="GPU" /> Mem</span>
           <span className="text-white font-mono">{server.gpuMemory}%</span>
         </div>
-        <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-1 bg-border rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
             style={{
@@ -376,7 +376,7 @@ export function PDDisaggregation() {
       {/* Empty state when no stack selected in live mode */}
       {!selectedStack && !isDemoMode && (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-          <div className="w-12 h-12 rounded-full border-2 border-gray-600 border-t-cyan-500 animate-spin mb-4" />
+          <div className="w-12 h-12 rounded-full border-2 border-border border-t-cyan-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackDisaggregation')}</span>
           <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
@@ -473,7 +473,7 @@ export function PDDisaggregation() {
                 ))}
               </AnimatePresence>
 
-              <div className="z-10 bg-gray-900 px-2 py-1 rounded text-xs text-cyan-400">
+              <div className="z-10 bg-background px-2 py-1 rounded text-xs text-cyan-400">
                 <Acronym term="KV" /> Cache
               </div>
             </div>

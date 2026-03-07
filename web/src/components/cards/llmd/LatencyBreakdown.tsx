@@ -47,13 +47,13 @@ function CustomTooltip({ active, payload, label, unit }: {
   if (!active || !payload?.length) return null
   const sorted = [...payload].filter(p => p.value !== undefined).sort((a, b) => (a.value ?? 0) - (b.value ?? 0))
   return (
-    <div className="bg-gray-900 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl text-xs max-w-xs">
+    <div className="bg-background backdrop-blur-sm border border-border rounded-lg p-3 shadow-xl text-xs max-w-xs">
       <div className="text-white font-medium mb-2">QPS: {label}</div>
       {sorted.map(p => (
         <div key={p.name} className="flex items-center justify-between gap-4 py-0.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-            <span className="text-gray-300 truncate">{p.name}</span>
+            <span className="text-foreground truncate">{p.name}</span>
           </div>
           <span className="font-mono text-white shrink-0">{p.value.toFixed(1)} {unit}</span>
         </div>
@@ -145,7 +145,7 @@ export function LatencyBreakdown() {
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
           >
             <option value="all">{t('selectors.allCategories')}</option>
             {filterOpts.categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -153,7 +153,7 @@ export function LatencyBreakdown() {
           <select
             value={islFilter}
             onChange={e => setIslFilter(Number(e.target.value))}
-            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
           >
             <option value={0}>All ISL</option>
             {filterOpts.islValues.map(v => <option key={v} value={v}>ISL {v}</option>)}
@@ -161,7 +161,7 @@ export function LatencyBreakdown() {
           <select
             value={oslFilter}
             onChange={e => setOslFilter(Number(e.target.value))}
-            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
           >
             <option value={0}>All OSL</option>
             {filterOpts.oslValues.map(v => <option key={v} value={v}>OSL {v}</option>)}
@@ -170,7 +170,7 @@ export function LatencyBreakdown() {
       </div>
 
       {/* Metric tabs */}
-      <div className="flex gap-1 mb-3 bg-gray-800/80 rounded-lg p-0.5 w-fit">
+      <div className="flex gap-1 mb-3 bg-secondary/80 rounded-lg p-0.5 w-fit">
         {TABS.map(t => (
           <button
             key={t.key}

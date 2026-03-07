@@ -93,7 +93,7 @@ export function ClusterDropZone({
         <div className="flex items-center gap-2 mb-3">
           <Server className="w-5 h-5 text-blue-500" />
           <div>
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <div className="text-sm font-medium text-gray-900 dark:text-foreground">
               Deploy Workload
               {isDemo && <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">(Demo)</span>}
             </div>
@@ -127,7 +127,7 @@ export function ClusterDropZone({
           </div>
         )}
 
-        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-border">
           <p className="text-xs text-muted-foreground text-center">
             {isDemo ? 'Connect clusters to enable real deployments' : 'Drop workload on a cluster to deploy'}
           </p>
@@ -168,7 +168,7 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
         'flex items-start gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer',
         isOver
           ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-[1.02] shadow-lg'
-          : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+          : 'bg-gray-50 dark:bg-secondary/50 border-gray-200 dark:border-border hover:border-blue-300 dark:hover:border-blue-600'
       )}
       onClick={handleClick}
     >

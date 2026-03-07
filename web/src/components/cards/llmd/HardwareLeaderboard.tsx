@@ -47,7 +47,7 @@ const COLUMNS: { key: SortKey; label: string; width: string }[] = [
 ]
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDirection }) {
-  if (!active) return <ArrowUpDown size={11} className="text-gray-600" />
+  if (!active) return <ArrowUpDown size={11} className="text-muted-foreground" />
   return dir === 'desc'
     ? <ChevronDown size={12} className="text-blue-400" />
     : <ChevronUp size={12} className="text-blue-400" />
@@ -130,7 +130,7 @@ export function HardwareLeaderboard() {
           <select
             value={modelFilter}
             onChange={e => setModelFilter(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white"
           >
             <option value="all">{t('selectors.allModels')}</option>
             {models.map(m => <option key={m} value={m}>{m}</option>)}
@@ -141,8 +141,8 @@ export function HardwareLeaderboard() {
       {/* Table */}
       <div className="flex-1 min-h-0 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-gray-900 backdrop-blur-sm z-10">
-            <tr className="border-b border-gray-700/50">
+          <thead className="sticky top-0 bg-background backdrop-blur-sm z-10">
+            <tr className="border-b border-border/50">
               <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[36px]">#</th>
               <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[70px]">Hardware</th>
               <th className="text-left py-2 px-2 text-muted-foreground font-medium w-[100px]">Model</th>
@@ -165,7 +165,7 @@ export function HardwareLeaderboard() {
             {rows.map(row => (
               <tr
                 key={row.rank}
-                className={`border-b border-border/50 transition-colors hover:bg-gray-800/30 ${
+                className={`border-b border-border/50 transition-colors hover:bg-secondary/30 ${
                   row.config !== 'standalone' ? 'bg-blue-500/[0.03]' : ''
                 }`}
               >
@@ -177,7 +177,7 @@ export function HardwareLeaderboard() {
                   )}
                 </td>
                 <td className="py-2 px-2 text-white font-medium">{row.hardware}</td>
-                <td className="py-2 px-2 text-gray-300 truncate max-w-[100px]">{row.model}</td>
+                <td className="py-2 px-2 text-foreground truncate max-w-[100px]">{row.model}</td>
                 <td className="py-2 px-2">
                   <span
                     className="px-1.5 py-0.5 rounded text-2xs font-medium"
@@ -187,9 +187,9 @@ export function HardwareLeaderboard() {
                   </span>
                 </td>
                 <td className="py-2 px-2 text-right font-mono text-white">{row.throughputPerGpu.toLocaleString()}</td>
-                <td className="py-2 px-2 text-right font-mono text-gray-300">{row.ttftP50Ms.toFixed(1)}</td>
-                <td className="py-2 px-2 text-right font-mono text-gray-300">{row.tpotP50Ms.toFixed(2)}</td>
-                <td className="py-2 px-2 text-right font-mono text-gray-300">{row.p99LatencyMs.toLocaleString()}</td>
+                <td className="py-2 px-2 text-right font-mono text-foreground">{row.ttftP50Ms.toFixed(1)}</td>
+                <td className="py-2 px-2 text-right font-mono text-foreground">{row.tpotP50Ms.toFixed(2)}</td>
+                <td className="py-2 px-2 text-right font-mono text-foreground">{row.p99LatencyMs.toLocaleString()}</td>
                 <td className="py-2 px-2 text-right">
                   <span className={`font-mono font-bold ${
                     row.score >= 70 ? 'text-green-400' : row.score >= 50 ? 'text-yellow-400' : 'text-muted-foreground'
@@ -203,7 +203,7 @@ export function HardwareLeaderboard() {
                       {row.llmdAdvantage > 0 ? '+' : ''}{row.llmdAdvantage}%
                     </span>
                   ) : (
-                    <span className="text-gray-600">—</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </td>
               </tr>
@@ -222,7 +222,7 @@ export function HardwareLeaderboard() {
           onPageChange={goToPage}
           onItemsPerPageChange={setPerPage}
           itemsPerPageOptions={[10, 20, 50]}
-          className="mt-2 pt-2 border-t border-gray-700/50 text-xs"
+          className="mt-2 pt-2 border-t border-border/50 text-xs"
         />
       )}
     </div>

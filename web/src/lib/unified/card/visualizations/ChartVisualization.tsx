@@ -212,7 +212,7 @@ function LineChartRenderer({
           {showLegend && (
             <Legend
               wrapperStyle={{ paddingTop: 10 }}
-              formatter={(value) => <span className="text-gray-300 text-xs">{value}</span>}
+              formatter={(value) => <span className="text-foreground text-xs">{value}</span>}
             />
           )}
           {series.map((s, i) => (
@@ -282,7 +282,7 @@ function AreaChartRenderer({
           {showLegend && (
             <Legend
               wrapperStyle={{ paddingTop: 10 }}
-              formatter={(value) => <span className="text-gray-300 text-xs">{value}</span>}
+              formatter={(value) => <span className="text-foreground text-xs">{value}</span>}
             />
           )}
           {series.map((s, i) => {
@@ -354,7 +354,7 @@ function BarChartRenderer({
           {showLegend && (
             <Legend
               wrapperStyle={{ paddingTop: 10 }}
-              formatter={(value) => <span className="text-gray-300 text-xs">{value}</span>}
+              formatter={(value) => <span className="text-foreground text-xs">{value}</span>}
             />
           )}
           {series.map((s, i) => (
@@ -429,7 +429,7 @@ function DonutChartRenderer({
           />
           {showLegend && (
             <Legend
-              formatter={(value) => <span className="text-gray-300 text-xs">{value}</span>}
+              formatter={(value) => <span className="text-foreground text-xs">{value}</span>}
             />
           )}
         </PieChart>

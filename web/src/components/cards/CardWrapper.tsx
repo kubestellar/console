@@ -267,7 +267,7 @@ function InfoTooltip({ text }: { text: string }) {
       {isVisible && position && createPortal(
         <div
           ref={tooltipRef}
-          className="fixed z-[100] max-w-[280px] px-3 py-2 text-xs rounded-lg bg-gray-900 border border-gray-700 text-gray-300 shadow-xl animate-fade-in"
+          className="fixed z-[100] max-w-[280px] px-3 py-2 text-xs rounded-lg bg-background border border-border text-foreground shadow-xl animate-fade-in"
           style={{ top: position.top, left: position.left }}
           onMouseEnter={() => setIsVisible(true)}
           onMouseLeave={() => setIsVisible(false)}

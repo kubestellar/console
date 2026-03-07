@@ -92,7 +92,7 @@ interface ParameterSliderProps {
 function ParameterSlider({ param, onChange }: ParameterSliderProps) {
   if (typeof param.value === 'boolean') {
     return (
-      <div className="flex items-center justify-between py-2 border-b border-gray-700/50">
+      <div className="flex items-center justify-between py-2 border-b border-border/50">
         <div>
           <div className="text-sm text-white">{param.name}</div>
           <div className="text-xs text-muted-foreground">{param.description}</div>
@@ -100,7 +100,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
         <button
           onClick={() => onChange(!param.value)}
           className={`w-10 h-5 rounded-full relative transition-colors ${
-            param.value ? 'bg-green-500' : 'bg-gray-600'
+            param.value ? 'bg-green-500' : 'bg-border'
           }`}
         >
           <motion.div
@@ -114,7 +114,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 
   if (typeof param.value === 'string') {
     return (
-      <div className="py-2 border-b border-gray-700/50">
+      <div className="py-2 border-b border-border/50">
         <div className="flex items-center justify-between mb-1">
           <div className="text-sm text-white">{param.name}</div>
           <div className="text-sm font-mono text-purple-400">{param.value}</div>
@@ -126,7 +126,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 
   // Numeric slider
   return (
-    <div className="py-2 border-b border-gray-700/50">
+    <div className="py-2 border-b border-border/50">
       <div className="flex items-center justify-between mb-1">
         <div className="text-sm text-white">{param.name}</div>
         <div className="text-sm font-mono text-purple-400">
@@ -141,7 +141,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
           max={param.max}
           value={param.value as number}
           onChange={e => onChange(Number(e.target.value))}
-          className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+          className="w-full h-1 bg-border rounded-lg appearance-none cursor-pointer accent-purple-500"
         />
       )}
     </div>
@@ -252,7 +252,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
               Parameters
             </div>
 
-            <div className="flex-1 overflow-auto bg-gray-800/30 rounded-lg p-3 mb-4">
+            <div className="flex-1 overflow-auto bg-secondary/30 rounded-lg p-3 mb-4">
               {currentParams.map(param => (
                 <ParameterSlider
                   key={param.name}
@@ -292,12 +292,12 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
             </div>
 
             {/* Config export */}
-            <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
+            <div className="bg-background rounded-lg p-3 border border-border">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Generated Config</span>
                 <button
                   onClick={copyConfig}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-secondary hover:bg-secondary/80 rounded transition-colors"
                 >
                   {copied ? (
                     <>

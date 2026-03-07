@@ -193,7 +193,7 @@ interface AgentBadgeProps {
 
 export function AgentBadge({ provider, name, className = '' }: AgentBadgeProps) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-secondary text-gray-700 dark:text-foreground ${className}`}>
       <AgentIcon provider={provider} className="w-3.5 h-3.5" />
       {name}
     </span>

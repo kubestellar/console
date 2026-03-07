@@ -221,7 +221,7 @@ function renderDate(
     const date = value instanceof Date ? value : new Date(String(value))
     return createElement(
       'span',
-      { className: 'text-gray-300' },
+      { className: 'text-foreground' },
       date.toLocaleDateString()
     )
   } catch {
@@ -245,7 +245,7 @@ function renderDateTime(
     const date = value instanceof Date ? value : new Date(String(value))
     return createElement(
       'span',
-      { className: 'text-gray-300' },
+      { className: 'text-foreground' },
       date.toLocaleString()
     )
   } catch {
@@ -394,7 +394,7 @@ function renderProgressBar(
     { className: 'flex items-center gap-2 w-full' },
     createElement(
       'div',
-      { className: 'flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden' },
+      { className: 'flex-1 h-1.5 bg-muted rounded-full overflow-hidden' },
       createElement('div', {
         className: `h-full ${colors.barColor} transition-all duration-300`,
         style: { width: `${percent}%` },
@@ -463,7 +463,7 @@ function renderJson(
     const json = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
     return createElement(
       'pre',
-      { className: 'text-xs text-gray-300 font-mono overflow-x-auto max-w-xs' },
+      { className: 'text-xs text-foreground font-mono overflow-x-auto max-w-xs' },
       json
     )
   } catch {

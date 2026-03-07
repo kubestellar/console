@@ -352,7 +352,7 @@ function EmptyState({
       <div className={`mb-2 ${variantColors[variant]}`}>
         <IconComponent className="w-8 h-8" />
       </div>
-      <div className="text-sm font-medium text-gray-300">{title}</div>
+      <div className="text-sm font-medium text-foreground">{title}</div>
       {message && (
         <div className="text-xs text-muted-foreground mt-1">{message}</div>
       )}
@@ -373,7 +373,7 @@ function ErrorState({
   return (
     <div className="flex flex-col items-center justify-center p-6 text-center">
       <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
-      <div className="text-sm font-medium text-gray-300">Error loading data</div>
+      <div className="text-sm font-medium text-foreground">Error loading data</div>
       <div className="text-xs text-muted-foreground mt-1">{message}</div>
       {onRetry && (
         <button
@@ -405,7 +405,7 @@ function InlineStats({
     <div className="flex items-center gap-3 px-2 py-1.5 border-b border-border">
       {stats.map((stat) => (
         <div key={stat.id} className="flex items-center gap-1.5 text-xs">
-          <div className={`w-2 h-2 rounded-full ${stat.bgColor ?? 'bg-gray-600'}`} />
+          <div className={`w-2 h-2 rounded-full ${stat.bgColor ?? 'bg-muted-foreground'}`} />
           <span className="text-muted-foreground">{stat.label}:</span>
           <span className="font-medium text-foreground">--</span>
         </div>

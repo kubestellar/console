@@ -67,7 +67,7 @@ function HeroMetric({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
-      className="flex-1 bg-gray-800/60 border border-gray-700/50 rounded-xl p-4 relative overflow-hidden group"
+      className="flex-1 bg-secondary/60 border border-border/50 rounded-xl p-4 relative overflow-hidden group"
     >
       <div
         className="absolute inset-0 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity"
@@ -192,7 +192,7 @@ export function BenchmarkHero() {
             <div className="flex items-center gap-2">
               <span className="text-white font-semibold text-lg">{model}</span>
               <ArrowRight size={14} className="text-muted-foreground" />
-              <span className="text-gray-300 font-medium">{hw}</span>
+              <span className="text-foreground font-medium">{hw}</span>
               <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{ background: `${CONFIG_COLORS[config]}20`, color: CONFIG_COLORS[config] }}>
                 {config}
@@ -211,7 +211,7 @@ export function BenchmarkHero() {
           <select
             value={TIME_RANGE_OPTIONS.some(o => o.value === currentSince) ? currentSince : 'custom'}
             onChange={e => handleTimeRangeChange(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1 text-xs text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors"
+            className="bg-secondary border border-border rounded-lg px-2.5 py-1 text-xs text-white appearance-none cursor-pointer hover:border-border transition-colors"
           >
             {TIME_RANGE_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -228,7 +228,7 @@ export function BenchmarkHero() {
                 value={customDays}
                 onChange={e => setCustomDays(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCustomSubmit()}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white w-16"
+                className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white w-16"
                 autoFocus
               />
               <button

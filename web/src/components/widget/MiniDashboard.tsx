@@ -48,9 +48,9 @@ function StatCard({
       disabled={!onClick}
       className={cn(
         'flex flex-col items-center justify-center p-3 rounded-lg',
-        'bg-gray-800/50 border border-gray-700/50',
+        'bg-secondary/50 border border-border/50',
         'transition-all duration-200',
-        onClick && 'hover:bg-gray-700/50 hover:border-gray-600 cursor-pointer'
+        onClick && 'hover:bg-secondary/70 hover:border-border cursor-pointer'
       )}
     >
       <span className={cn('text-2xl font-bold', color)}>{value}</span>
@@ -301,7 +301,7 @@ export function MiniDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white flex items-center justify-center p-2">
       {/* Fixed-size widget container */}
-      <div className="w-[520px] h-[320px] flex flex-col bg-gray-900/50 rounded-xl border border-gray-700/50 overflow-hidden">
+      <div className="w-[520px] h-[320px] flex flex-col bg-background/50 rounded-xl border border-border/50 overflow-hidden">
         <div className="flex-1 p-4 overflow-auto scroll-enhanced">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -318,14 +318,14 @@ export function MiniDashboard() {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-muted-foreground hover:text-white transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors disabled:opacity-50"
             title={t('common.refresh')}
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
           <button
             onClick={openFullDashboard}
-            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-muted-foreground hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors"
             title="Open full dashboard"
           >
             <Maximize2 className="w-4 h-4" />
@@ -395,7 +395,7 @@ export function MiniDashboard() {
                 <button
                   key={i}
                   onClick={() => openInBrowser(`/pods?search=${encodeURIComponent(issue.name)}`)}
-                  className="w-full flex items-center gap-2 text-xs p-2 rounded bg-gray-800/50 border border-gray-700/30 hover:bg-gray-700/50 hover:border-gray-600 transition-colors text-left"
+                  className="w-full flex items-center gap-2 text-xs p-2 rounded bg-secondary/50 border border-border/30 hover:bg-secondary/70 hover:border-border transition-colors text-left"
                 >
                   <span
                     className={cn(
@@ -403,7 +403,7 @@ export function MiniDashboard() {
                       isCritical ? 'bg-red-500' : 'bg-orange-500'
                     )}
                   />
-                  <span className="truncate text-gray-300">{issue.name}</span>
+                  <span className="truncate text-foreground">{issue.name}</span>
                   <span className="text-muted-foreground ml-auto flex-shrink-0">{issue.reason || issue.status}</span>
                 </button>
               )
@@ -415,7 +415,7 @@ export function MiniDashboard() {
         </div>{/* End scrollable content */}
 
         {/* Footer / Install Prompt */}
-        <div className="p-3 bg-gray-900/90 border-t border-gray-700/50 flex-shrink-0">
+        <div className="p-3 bg-background/90 border-t border-border/50 flex-shrink-0">
         {!isInstalled && installPrompt ? (
           <button
             onClick={handleInstall}
@@ -431,7 +431,7 @@ export function MiniDashboard() {
             ) : (
               <>
                 <p className="text-yellow-500/80">⚠️ Install from THIS page for the mini widget</p>
-                <p>Click <strong className="text-gray-300">Open in app</strong> in your address bar</p>
+                <p>Click <strong className="text-foreground">Open in app</strong> in your address bar</p>
               </>
             )}
           </div>

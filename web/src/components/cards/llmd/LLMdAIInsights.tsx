@@ -77,7 +77,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mt-3 pt-3 border-t border-gray-700/50"
+              className="mt-3 pt-3 border-t border-border/50"
             >
               {/* Recommendation */}
               <div className="mb-3">
@@ -89,7 +89,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
               {insight.metrics && (
                 <div className="grid grid-cols-3 gap-2">
                   {Object.entries(insight.metrics).map(([key, value]) => (
-                    <div key={key} className="bg-gray-800 rounded p-2 text-center">
+                    <div key={key} className="bg-secondary rounded p-2 text-center">
                       <div className="text-xs text-muted-foreground truncate">{key}</div>
                       <div className="text-sm font-mono text-white">{value}</div>
                     </div>
@@ -475,7 +475,7 @@ export function LLMdAIInsights() {
       </div>
 
       {/* Chat interface */}
-      <div className="border-t border-gray-700 pt-3">
+      <div className="border-t border-border pt-3">
         <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
           <MessageSquare size={12} />
           <span>{t('llmdAIInsights.askAboutStack')}</span>
@@ -489,7 +489,7 @@ export function LLMdAIInsights() {
                 key={i}
                 className={`text-xs p-2 rounded ${
                   msg.role === 'user'
-                    ? 'bg-gray-800 text-white ml-8'
+                    ? 'bg-secondary text-white ml-8'
                     : 'bg-purple-500/10 text-purple-200 mr-8'
                 }`}
               >
@@ -505,7 +505,7 @@ export function LLMdAIInsights() {
             value={chatInput}
             onChange={e => setChatInput(e.target.value)}
             placeholder={t('llmdAIInsights.scalePlaceholder')}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
+            className="flex-1 bg-secondary border border-border rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
           />
           <button
             type="submit"
