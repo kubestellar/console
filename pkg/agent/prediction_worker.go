@@ -488,7 +488,11 @@ func (w *PredictionWorker) buildAnalysisPrompt(data *ClusterAnalysisData) string
 	filteredData.GPUNodes = data.GPUNodes
 	filteredData.OfflineNodes = data.OfflineNodes
 
-	dataJSON, _ := json.MarshalIndent(filteredData, "", "  ")
+	dataJSON, err := json.MarshalIndent(filteredData, "", "  ")
+	if err != nil {
+		log.Printf("[PredictionWorker] Failed to marshal filtered data: %v", err)
+		return ""
+	}
 
 	return fmt.Sprintf(`You are a Kubernetes cluster health analyzer. Analyze the provided metrics for HEALTHY clusters and predict potential failures BEFORE they occur.
 

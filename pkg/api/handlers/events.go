@@ -47,7 +47,10 @@ func (h *EventHandler) RecordEvent(c *fiber.Ctx) error {
 	}
 
 	if input.Metadata != nil {
-		metadata, _ := json.Marshal(input.Metadata)
+		metadata, err := json.Marshal(input.Metadata)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to marshal event metadata")
+		}
 		event.Metadata = metadata
 	}
 

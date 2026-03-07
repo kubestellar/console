@@ -559,6 +559,11 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[GPUNodes] recovered from panic for cluster %s: %v", clusterName, r)
+					}
+				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
 				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
@@ -624,6 +629,11 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[Nodes] recovered from panic for cluster %s: %v", clusterName, r)
+					}
+				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
 				nodes, err := s.k8sClient.GetNodes(clusterCtx, clusterName)
@@ -1328,6 +1338,11 @@ func (s *Server) startBackendProcess() error {
 
 	// Reap process in background to avoid zombies
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[Backend] recovered from panic in process reaper: %v", r)
+			}
+		}()
 		cmd.Wait()
 		s.backendMux.Lock()
 		if s.backendCmd == cmd {
@@ -1808,6 +1823,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				forceAgent = "claude"
 			}
 			go func(m protocol.Message, fa string) {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[Chat] recovered from panic in streaming handler: %v", r)
+					}
+				}()
 				s.handleChatMessageStreaming(conn, m, fa, &writeMu, &closed)
 			}(msg, forceAgent)
 		} else if msg.Type == protocol.TypeCancelChat {
@@ -1817,6 +1837,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			// Handle kubectl messages concurrently so one slow cluster
 			// doesn't block the entire WebSocket message loop.
 			go func(m protocol.Message) {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[Kubectl] recovered from panic in message handler: %v", r)
+					}
+				}()
 				response := s.handleMessage(m)
 				if closed.Load() {
 					return
@@ -2174,11 +2199,18 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 
 // handleCancelChat cancels an in-progress chat session by calling its context cancel function
 func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, writeMu *sync.Mutex) {
-	payloadBytes, _ := json.Marshal(msg.Payload)
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		log.Printf("[Chat] Failed to marshal cancel chat payload: %v", err)
+		return
+	}
 	var req struct {
 		SessionID string `json:"sessionId"`
 	}
-	json.Unmarshal(payloadBytes, &req)
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		log.Printf("[Chat] Failed to unmarshal cancel chat request: %v", err)
+		return
+	}
 
 	s.activeChatCtxsMu.Lock()
 	cancelFn, ok := s.activeChatCtxs[req.SessionID]
@@ -3411,6 +3443,11 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func(providerID, url string) {
 			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[ProviderHealth] recovered from panic checking %s: %v", providerID, r)
+				}
+			}()
 			status := checkStatuspageHealth(client, url)
 			mu.Lock()
 			results = append(results, ProviderHealthStatus{ID: providerID, Status: status})
@@ -3423,6 +3460,11 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func(providerID, url string) {
 			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[ProviderHealth] recovered from panic pinging %s: %v", providerID, r)
+				}
+			}()
 			status := checkPingHealth(client, url)
 			mu.Lock()
 			results = append(results, ProviderHealthStatus{ID: providerID, Status: status})
@@ -3821,6 +3863,11 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 
 	// Use osascript for macOS notifications (non-blocking)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[DeviceTracker] recovered from panic in notification: %v", r)
+			}
+		}()
 		script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`,
 			message, title)
 		cmd := exec.Command("osascript", "-e", script)
@@ -3934,6 +3981,11 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 		// Create cluster in background and return immediately
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[LocalClusters] recovered from panic creating cluster %s: %v", req.Name, r)
+				}
+			}()
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
 				log.Printf("[LocalClusters] Failed to create cluster %s with %s: %v", req.Name, req.Tool, err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
@@ -3985,6 +4037,11 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 		// Delete cluster in background
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[LocalClusters] recovered from panic deleting cluster %s: %v", name, r)
+				}
+			}()
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
 				log.Printf("[LocalClusters] Failed to delete cluster %s: %v", name, err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{

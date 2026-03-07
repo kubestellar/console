@@ -708,7 +708,11 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 // closeGitHubIssue closes an issue on GitHub
 func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
 	payload := map[string]string{"state": "closed"}
-	jsonData, _ := json.Marshal(payload)
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal close issue payload: %v", err)
+		return
+	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d",
 		h.repoOwner, h.repoName, issueNumber)
@@ -740,7 +744,11 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
 // addIssueComment adds a comment to a GitHub issue
 func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string) {
 	payload := map[string]string{"body": comment}
-	jsonData, _ := json.Marshal(payload)
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal issue comment payload: %v", err)
+		return
+	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d/comments",
 		h.repoOwner, h.repoName, issueNumber)
@@ -1331,7 +1339,10 @@ func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user
 		"labels": labels,
 	}
 
-	jsonData, _ := json.Marshal(payload)
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return 0, "", fmt.Errorf("failed to marshal issue payload: %w", err)
+	}
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues", h.repoOwner, h.repoName)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
@@ -1385,7 +1396,11 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 	}
 
 	payload := map[string]string{"body": commentBody}
-	jsonData, _ := json.Marshal(payload)
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal PR comment payload: %v", err)
+		return
+	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d/comments",
 		h.repoOwner, h.repoName, *request.PRNumber)

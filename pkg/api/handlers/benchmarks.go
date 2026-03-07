@@ -496,7 +496,10 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
 		c.Set("Connection", "keep-alive")
-		batch, _ := json.Marshal(reports)
+		batch, err := json.Marshal(reports)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to marshal benchmark reports")
+		}
 		fmt.Fprintf(c, "event: batch\ndata: %s\n\n", batch)
 		fmt.Fprintf(c, "event: done\ndata: {\"total\":%d,\"source\":\"cache\"}\n\n", len(reports))
 		return nil
@@ -526,7 +529,11 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			if len(pendingBatch) == 0 {
 				return
 			}
-			batch, _ := json.Marshal(pendingBatch)
+			batch, err := json.Marshal(pendingBatch)
+			if err != nil {
+				log.Printf("[benchmarks] Failed to marshal batch: %v", err)
+				return
+			}
 			fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
 			w.Flush()
 			log.Printf("[benchmarks] Flushed batch of %d (total: %d)", len(pendingBatch), totalSent)

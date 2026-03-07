@@ -623,27 +623,33 @@ func (s *SQLiteStore) CreateCard(card *models.Card) error {
 	}
 	card.CreatedAt = time.Now()
 
-	positionJSON, _ := json.Marshal(card.Position)
+	positionJSON, err := json.Marshal(card.Position)
+	if err != nil {
+		return fmt.Errorf("failed to marshal card position: %w", err)
+	}
 	var configStr *string
 	if card.Config != nil {
 		str := string(card.Config)
 		configStr = &str
 	}
 
-	_, err := s.db.Exec(`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err = s.db.Exec(`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		card.ID.String(), card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.CreatedAt)
 	return err
 }
 
 func (s *SQLiteStore) UpdateCard(card *models.Card) error {
-	positionJSON, _ := json.Marshal(card.Position)
+	positionJSON, err := json.Marshal(card.Position)
+	if err != nil {
+		return fmt.Errorf("failed to marshal card position: %w", err)
+	}
 	var configStr *string
 	if card.Config != nil {
 		str := string(card.Config)
 		configStr = &str
 	}
 
-	_, err := s.db.Exec(`UPDATE cards SET card_type = ?, config = ?, position = ? WHERE id = ?`,
+	_, err = s.db.Exec(`UPDATE cards SET card_type = ?, config = ?, position = ? WHERE id = ?`,
 		string(card.CardType), configStr, string(positionJSON), card.ID.String())
 	return err
 }

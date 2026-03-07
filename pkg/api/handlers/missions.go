@@ -247,7 +247,10 @@ func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "text is required"})
 	}
 
-	payload, _ := json.Marshal(map[string]string{"text": req.Text})
+	payload, err := json.Marshal(map[string]string{"text": req.Text})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to marshal payload"})
+	}
 	httpReq, err := http.NewRequest("POST", req.WebhookURL, bytes.NewReader(payload))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build request"})
@@ -344,10 +347,13 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 
 	refURL := fmt.Sprintf("%s/repos/%s/git/refs", h.githubAPIURL, forkFullName)
-	refPayload, _ := json.Marshal(map[string]string{
+	refPayload, err := json.Marshal(map[string]string{
 		"ref": "refs/heads/" + req.Branch,
 		"sha": headSHA,
 	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to marshal branch ref payload"})
+	}
 	refReq, err := http.NewRequest("POST", refURL, bytes.NewReader(refPayload))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build branch ref request"})
@@ -358,11 +364,14 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// Step 3: Create/update file (commit)
 	fileURL := fmt.Sprintf("%s/repos/%s/contents/%s", h.githubAPIURL, forkFullName, req.FilePath)
-	filePayload, _ := json.Marshal(map[string]string{
+	filePayload, err := json.Marshal(map[string]string{
 		"message": req.Message,
 		"content": req.Content,
 		"branch":  req.Branch,
 	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to marshal file commit payload"})
+	}
 	fileReq, err := http.NewRequest("PUT", fileURL, bytes.NewReader(filePayload))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build file commit request"})
@@ -377,12 +386,15 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// Step 4: Create PR
 	prURL := fmt.Sprintf("%s/repos/%s/pulls", h.githubAPIURL, req.Repo)
-	prPayload, _ := json.Marshal(map[string]interface{}{
+	prPayload, err := json.Marshal(map[string]interface{}{
 		"title": req.Message,
 		"head":  strings.Split(forkFullName, "/")[0] + ":" + req.Branch,
 		"base":  "main",
 		"body":  "Mission shared via KubeStellar Console",
 	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to marshal PR payload"})
+	}
 	prReq, err := http.NewRequest("POST", prURL, bytes.NewReader(prPayload))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build PR request"})
