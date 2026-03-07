@@ -110,6 +110,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Pull latest main to avoid rejection (other workflows may have pushed)
+          git pull --rebase origin main || git pull origin main
+
           git add "${RESULTS_DIR}/${{ steps.tests.outputs.date }}.json"
           git commit -m "chore: nightly test results for ${{ steps.tests.outputs.date }}
 
@@ -117,9 +121,10 @@ jobs:
           Failed: $(jq -r '.summary.failed' ${{ steps.tests.outputs.result_file }})
 
           [skip ci]" || echo "No changes to commit"
-          git push origin main
+          git push origin main || echo "::warning::Failed to push results — will retry next run"
 
       - name: Find or create tracking issue
+        if: always() && steps.tests.outputs.result_file != ''
         id: issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -174,6 +179,7 @@ jobs:
           fi
 
       - name: Post results to issue
+        if: always() && steps.issue.outputs.issue_number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -181,7 +187,7 @@ jobs:
             --body "${{ steps.compare.outputs.report }}"
 
       - name: Create issues for failing suites
-        if: steps.tests.outputs.failed != '0'
+        if: always() && steps.tests.outputs.failed != '0' && steps.tests.outputs.failed != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RESULT_FILE: ${{ steps.tests.outputs.result_file }}
