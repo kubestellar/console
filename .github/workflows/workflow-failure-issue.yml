@@ -1,0 +1,114 @@
+name: Open Issue on Workflow Failure
+
+on:
+  workflow_run:
+    workflows:
+      - "Release"
+      - "Nightly Compliance & Perf"
+      - "Auto-QA Agent"
+      - "Auto-QA Tuner"
+      - "Nil Safety"
+      - "OpenSSF Scorecard"
+    types:
+      - completed
+
+permissions:
+  issues: write
+
+jobs:
+  open-issue:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'schedule'
+    steps:
+      - name: Check for existing open issue
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          LABEL="workflow-failure"
+          SEARCH_TITLE="Scheduled workflow failure: ${WORKFLOW_NAME}"
+
+          # Search for an existing open issue with matching title and label
+          EXISTING=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --label "$LABEL" \
+            --search "in:title \"${SEARCH_TITLE}\"" \
+            --json number,title \
+            --jq ".[] | select(.title == \"${SEARCH_TITLE}\") | .number" \
+          )
+
+          if [ -n "$EXISTING" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "Found existing issue #${EXISTING}"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on existing issue
+        if: steps.check.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          gh issue comment "${{ steps.check.outputs.issue_number }}" \
+            --repo "${{ github.repository }}" \
+            --body "$(cat <<EOF
+          **Still failing** — \`${WORKFLOW_NAME}\` failed again.
+
+          - **Run:** [#${RUN_ID}](${RUN_URL})
+          - **Time:** $(date -u '+%Y-%m-%d %H:%M UTC')
+          EOF
+          )"
+
+      - name: Ensure label exists
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "workflow-failure" \
+            --repo "${{ github.repository }}" \
+            --description "Automated: scheduled workflow failed" \
+            --color "d93f0b" \
+            2>/dev/null || true
+
+      - name: Open new issue
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_FILE: ${{ github.event.workflow_run.path }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Scheduled workflow failure: ${WORKFLOW_NAME}" \
+            --label "workflow-failure,bug" \
+            --body "$(cat <<EOF
+          ## Scheduled Workflow Failure
+
+          The **${WORKFLOW_NAME}** workflow failed during a scheduled run.
+
+          | Detail | Value |
+          |--------|-------|
+          | **Workflow** | \`${WORKFLOW_NAME}\` |
+          | **Run** | [#${RUN_ID}](${RUN_URL}) |
+          | **File** | \`${WORKFLOW_FILE}\` |
+          | **Time** | $(date -u '+%Y-%m-%d %H:%M UTC') |
+
+          ### Next Steps
+          1. Check the [failed run](${RUN_URL}) for error details
+          2. Fix the underlying issue
+          3. Close this issue once the workflow passes again
+
+          ---
+          *This issue was automatically created by the workflow failure monitor.*
+          EOF
+          )"
