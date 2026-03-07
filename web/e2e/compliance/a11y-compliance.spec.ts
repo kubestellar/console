@@ -66,7 +66,9 @@ const ROUTES_TO_AUDIT = [
   { name: 'Workloads', path: '/workloads' },
 ]
 
-const PAGE_LOAD_TIMEOUT_MS = 15_000
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
+const PAGE_LOAD_TIMEOUT_MS = IS_CI ? 30_000 : 15_000
 const ROUTE_SETTLE_MS = 2_000
 
 // ---------------------------------------------------------------------------
@@ -95,7 +97,8 @@ function addCheck(result: A11yCheckResult) {
 }
 
 test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testInfo) => {
-  testInfo.setTimeout(300_000) // 5 minutes for 15 routes
+  const A11Y_AUDIT_TIMEOUT_MS = 300_000 // 5 minutes for 15 routes
+  testInfo.setTimeout(IS_CI ? A11Y_AUDIT_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : A11Y_AUDIT_TIMEOUT_MS)
 
   // Phase 1: Setup
   console.log('[A11y] Phase 1: Setting up live mode with mocks')

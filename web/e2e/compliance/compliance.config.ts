@@ -16,6 +16,8 @@ import { defineConfig } from '@playwright/test'
 const PREVIEW_PORT = 4174
 const DEV_PORT = 5174
 const useDevServer = !!process.env.PERF_DEV
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
 
 function getWebServer() {
   if (process.env.PLAYWRIGHT_BASE_URL) return undefined
@@ -41,8 +43,8 @@ const port = useDevServer ? DEV_PORT : PREVIEW_PORT
 
 export default defineConfig({
   testDir: '.',
-  timeout: 1_200_000, // 20 minutes — cold + warm phases across all batches
-  expect: { timeout: 30_000 },
+  timeout: IS_CI ? 1_200_000 * CI_TIMEOUT_MULTIPLIER : 1_200_000, // 20 min local, 40 min CI
+  expect: { timeout: IS_CI ? 60_000 : 30_000 },
   retries: 0,
   workers: 1,
   reporter: [

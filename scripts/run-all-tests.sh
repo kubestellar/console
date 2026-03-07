@@ -58,6 +58,8 @@ declare -a FAST_SCRIPTS=(
   "scripts/license-compliance-test.sh"
   "scripts/error-boundary-test.sh"
   "scripts/mission-security-test.sh"
+  "scripts/card-registry-integrity-test.sh"
+  "scripts/unit-test.sh"
 )
 
 # Scripts that run Go tests
@@ -173,6 +175,11 @@ declare -a PLAYWRIGHT_SCRIPTS=(
   "scripts/cache-test.sh"
   "scripts/benchmark-test.sh"
   "scripts/ai-ml-test.sh"
+  "scripts/a11y-test.sh"
+  "scripts/error-resilience-test.sh"
+  "scripts/i18n-test.sh"
+  "scripts/interaction-test.sh"
+  "scripts/security-e2e-test.sh"
 )
 
 PREVIEW_PORT=4174

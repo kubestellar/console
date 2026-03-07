@@ -41,7 +41,9 @@ interface InteractionReport {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PAGE_LOAD_TIMEOUT_MS = 15_000
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
+const PAGE_LOAD_TIMEOUT_MS = IS_CI ? 30_000 : 15_000
 const SETTLE_MS = 2_000
 
 // ---------------------------------------------------------------------------
@@ -239,7 +241,8 @@ test.describe('Interaction Compliance', () => {
   })
 
   test('card expand/collapse', async ({ page }) => {
-    test.setTimeout(30_000)
+    const CARD_EXPAND_TIMEOUT_MS = 30_000
+    test.setTimeout(IS_CI ? CARD_EXPAND_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : CARD_EXPAND_TIMEOUT_MS)
     const start = Date.now()
     await setupPage(page)
     await navigateAndSettle(page, '/')

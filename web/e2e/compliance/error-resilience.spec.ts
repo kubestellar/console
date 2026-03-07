@@ -41,7 +41,9 @@ interface ResilienceReport {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PAGE_LOAD_TIMEOUT_MS = 15_000
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
+const PAGE_LOAD_TIMEOUT_MS = IS_CI ? 30_000 : 15_000
 const SETTLE_MS = 2_000
 
 // ---------------------------------------------------------------------------
@@ -79,7 +81,8 @@ test.describe('Error Resilience', () => {
 
   test('API 500 errors — cards show error state, not blank', async ({ page }) => {
     const start = Date.now()
-    test.setTimeout(60_000)
+    const API_ERROR_TIMEOUT_MS = 60_000
+    test.setTimeout(IS_CI ? API_ERROR_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : API_ERROR_TIMEOUT_MS)
 
     try {
       await setupAuth(page)
@@ -165,7 +168,8 @@ test.describe('Error Resilience', () => {
 
   test('network timeout — cards handle slow responses', async ({ page }) => {
     const start = Date.now()
-    test.setTimeout(90_000)
+    const NETWORK_TIMEOUT_MS = 90_000
+    test.setTimeout(IS_CI ? NETWORK_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : NETWORK_TIMEOUT_MS)
 
     try {
       await setupAuth(page)
@@ -239,7 +243,8 @@ test.describe('Error Resilience', () => {
 
   test('partial failure — healthy endpoints show data', async ({ page }) => {
     const start = Date.now()
-    test.setTimeout(60_000)
+    const PARTIAL_FAIL_TIMEOUT_MS = 60_000
+    test.setTimeout(IS_CI ? PARTIAL_FAIL_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PARTIAL_FAIL_TIMEOUT_MS)
 
     try {
       await setupAuth(page)
@@ -311,7 +316,8 @@ test.describe('Error Resilience', () => {
 
   test('SSE disconnect — cards handle stream interruption', async ({ page }) => {
     const start = Date.now()
-    test.setTimeout(60_000)
+    const SSE_DISCONNECT_TIMEOUT_MS = 60_000
+    test.setTimeout(IS_CI ? SSE_DISCONNECT_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : SSE_DISCONNECT_TIMEOUT_MS)
 
     try {
       // Start with normal mocks
@@ -370,7 +376,8 @@ test.describe('Error Resilience', () => {
 
   test('auth token expiry — handles 401 gracefully', async ({ page }) => {
     const start = Date.now()
-    test.setTimeout(60_000)
+    const AUTH_EXPIRY_TIMEOUT_MS = 60_000
+    test.setTimeout(IS_CI ? AUTH_EXPIRY_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : AUTH_EXPIRY_TIMEOUT_MS)
 
     try {
       // Setup normally first

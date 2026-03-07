@@ -33,6 +33,10 @@ interface I18nReport {
   }
 }
 
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
+const PAGE_LOAD_TIMEOUT_MS = IS_CI ? 30_000 : 15_000
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -362,7 +366,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
 
   await setupAuth(page)
   await setupMockServer(page)
-  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30_000 })
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: IS_CI ? 60_000 : 30_000 })
   await page.waitForTimeout(3_000)
 
   // Check 3.1: No raw translation keys visible in DOM
@@ -611,7 +615,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
 
   for (const { route, checks: expectedTexts } of spotCheckRoutes) {
     try {
-      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 10_000 })
+      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: IS_CI ? 20_000 : 10_000 })
       await page.waitForTimeout(1_500)
 
       const bodyText = await page.evaluate(() => document.body.innerText || '')
@@ -644,7 +648,7 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
   let pagesWithRawKeys = 0
 
   for (const pagePath of pages) {
-    await page.goto(pagePath, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+    await page.goto(pagePath, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
     await page.waitForTimeout(1_500)
 
     const rawKeys = await page.evaluate(() => {

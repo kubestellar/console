@@ -33,6 +33,9 @@ interface SecurityReport {
   }
 }
 
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -131,7 +134,8 @@ async function setupAuth(page: Page) {
 test.describe.configure({ mode: 'serial' })
 
 test('security compliance — frontend security audit', async ({ page }, testInfo) => {
-  testInfo.setTimeout(120_000) // multi-page navigation + auth bypass check needs extra time
+  const SECURITY_AUDIT_TIMEOUT_MS = 120_000 // multi-page navigation + auth bypass check
+  testInfo.setTimeout(IS_CI ? SECURITY_AUDIT_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : SECURITY_AUDIT_TIMEOUT_MS)
   const checks: SecurityCheck[] = []
 
   function addCheck(
