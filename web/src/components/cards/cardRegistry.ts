@@ -183,12 +183,10 @@ const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ d
 const FlatcarStatus = lazy(() => import('./flatcar_status').then(m => ({ default: m.FlatcarStatus })))
 // CoreDNS card
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
-
 // Fluentd log collector card
 const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default: m.FluentdStatus })))
 // Lima VM card
 const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
-
 // KEDA autoscaler card
 const KedaStatus = lazy(() => import('./keda_status').then(m => ({ default: m.KedaStatus })))
 
@@ -451,7 +449,6 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   coredns_status: CoreDNSStatus,
   // Fluentd log collector
   fluentd_status: FluentdStatus,
-
   // Lima VM
   lima_status: LimaStatus,
   // KEDA autoscaler
@@ -564,6 +561,12 @@ export const DEMO_DATA_CARDS = new Set([
   'gateway_status',
   // Note: service_topology removed — now reports isDemoData via useTopology hook
   // Note: buildpacks_status removed — reports isDemoData via useBuildpackImages hook
+  'flatcar_status',
+  'thanos_status',
+  'contour_status',
+  'fluentd_status',
+  'lima_status',
+  'keda_status',
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -793,6 +796,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   // CRI-O container runtime
   crio_status: () => import('./crio_status'),
 
+  // Fluentd log collector
+  fluentd_status: () => import('./fluentd_status'),
   // Lima VM
   lima_status: () => import('./lima_status'),
   // KEDA autoscaler
@@ -938,11 +943,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   thanos_status: 6,
   contour_status: 6,
   crio_status: 6,
-
   fluentd_status: 6,
-
   lima_status: 6,
-
   keda_status: 6,
 
   // MCS cards
