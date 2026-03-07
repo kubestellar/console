@@ -552,6 +552,7 @@ export function emitApiKeyRemoved(provider: string) {
 //   4 = clusters      (real clusters detected)
 //   5 = api_key       (AI API key configured)
 //   6 = github_token  (GitHub token configured)
+//   7 = adopter_cta   (clicked "Join Adopters" to edit ADOPTERS.MD)
 
 export function emitConversionStep(
   step: number,
@@ -803,6 +804,18 @@ export function emitDemoToLocalShown() {
 /** Fired when a demo-site visitor clicks the install CTA */
 export function emitDemoToLocalActioned(action: string) {
   send('ksc_demo_to_local_actioned', { action })
+}
+
+// ── Adopter Nudge ─────────────────────────────────────────────────
+
+/** Fired when the adopter nudge banner renders */
+export function emitAdopterNudgeShown() {
+  send('ksc_adopter_nudge_shown')
+}
+
+/** Fired when user clicks the adopter nudge CTA */
+export function emitAdopterNudgeActioned(action: string) {
+  send('ksc_adopter_nudge_actioned', { action })
 }
 
 // ── UTM Tracking ───────────────────────────────────────────────────

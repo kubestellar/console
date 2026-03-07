@@ -3,6 +3,8 @@ import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, TRANSITION_DELAY_MS } from '../lib/constants/network'
 import { emitAgentConnected, emitAgentDisconnected, emitConversionStep } from '../lib/analytics'
+import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
+import { STORAGE_KEY_FIRST_AGENT_CONNECT } from '../lib/constants/storage'
 
 export interface AgentHealth {
   status: string
@@ -236,6 +238,10 @@ class AgentManager {
             error: null,
           })
           emitAgentConnected(data.version || 'unknown', data.clusters || 0)
+          // Stamp the first-ever agent connection for time-based nudges
+          if (!safeGetItem(STORAGE_KEY_FIRST_AGENT_CONNECT)) {
+            safeSetItem(STORAGE_KEY_FIRST_AGENT_CONNECT, String(Date.now()))
+          }
           emitConversionStep(3, 'agent', { agent_version: data.version || 'unknown' })
           if ((data.clusters || 0) > 0) {
             emitConversionStep(4, 'clusters', { cluster_count: String(data.clusters) })

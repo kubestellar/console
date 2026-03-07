@@ -49,6 +49,7 @@ import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { WelcomeCard } from './WelcomeCard'
 import { SmartCardSuggestions } from './SmartCardSuggestions'
 import { PostConnectBanner } from './PostConnectBanner'
+import { AdopterNudge } from './AdopterNudge'
 import { DemoToLocalCTA } from './DemoToLocalCTA'
 import { ContextualNudgeBanner } from './ContextualNudgeBanner'
 import { DiscoverCardsPlaceholder } from './DiscoverCardsPlaceholder'
@@ -917,6 +918,9 @@ export function Dashboard() {
         onExploreClusters={() => navigate(ROUTES.CLUSTERS)}
         onSetupAlerts={() => navigate(ROUTES.ALERTS)}
       />
+
+      {/* Adopter nudge — shows after 3+ days of usage to encourage ADOPTERS.MD contribution */}
+      <AdopterNudge />
 
       {/* Contextual nudge banner — replaces traditional tour */}
       {activeNudge && activeNudge !== 'drag-hint' && (

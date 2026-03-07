@@ -53,6 +53,8 @@ export const STORAGE_KEY_GETTING_STARTED_DISMISSED = 'kc-getting-started-dismiss
 export const STORAGE_KEY_HINTS_SUPPRESSED = 'kc-hints-suppressed'
 export const STORAGE_KEY_POST_CONNECT_DISMISSED = 'kc-post-connect-dismissed'
 export const STORAGE_KEY_DEMO_CTA_DISMISSED = 'kc-demo-cta-dismissed'
+export const STORAGE_KEY_ADOPTER_NUDGE_DISMISSED = 'kc-adopter-nudge-dismissed'
+export const STORAGE_KEY_FIRST_AGENT_CONNECT = 'kc-first-agent-connect'
 
 // ── Component-specific cache ───────────────────────────────────────────
 export const STORAGE_KEY_OPA_CACHE = 'opa-statuses-cache'
