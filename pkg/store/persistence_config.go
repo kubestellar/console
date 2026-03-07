@@ -143,8 +143,8 @@ func (p *PersistenceStore) Load() error {
 
 // Save persists the config to disk
 func (p *PersistenceStore) Save() error {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	// Ensure directory exists
 	dir := filepath.Dir(p.configPath)
