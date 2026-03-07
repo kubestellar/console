@@ -3,6 +3,17 @@ import { usePodIssues, useDeploymentIssues, useWarningEvents, useGPUNodes, useCl
 import { useAIMode } from './useAIMode'
 import { RECOMMENDATION_INTERVAL_MS } from '../lib/constants/network'
 
+/** Minimum pod issues before recommending a pod issues card */
+const POD_ISSUES_RECOMMEND_THRESHOLD = 5
+/** Deployment issue count above which priority escalates from medium to high */
+const DEPLOYMENT_ISSUES_HIGH_THRESHOLD = 3
+/** Minimum warning events before recommending an event stream card */
+const WARNING_EVENTS_RECOMMEND_THRESHOLD = 10
+/** GPU utilization percentage (0-1) above which GPU status card is recommended */
+const GPU_UTILIZATION_HIGH_THRESHOLD = 0.9
+/** Maximum number of card recommendations to show */
+const MAX_RECOMMENDATIONS = 3
+
 export interface CardRecommendation {
   id: string
   cardType: string
@@ -44,7 +55,7 @@ export function useCardRecommendations(currentCardTypes: string[]) {
     const newRecommendations: CardRecommendation[] = []
 
     // Check for pod issues
-    if ((podIssues || []).length > 5 && !currentCardTypes.includes('pod_issues')) {
+    if ((podIssues || []).length > POD_ISSUES_RECOMMEND_THRESHOLD && !currentCardTypes.includes('pod_issues')) {
       newRecommendations.push({
         id: 'rec-pod-issues',
         cardType: 'pod_issues',
@@ -61,12 +72,12 @@ export function useCardRecommendations(currentCardTypes: string[]) {
         cardType: 'deployment_issues',
         title: 'Deployment Issues',
         reason: `${(deploymentIssues || []).length} deployments have issues`,
-        priority: (deploymentIssues || []).length > 3 ? 'high' : 'medium',
+        priority: (deploymentIssues || []).length > DEPLOYMENT_ISSUES_HIGH_THRESHOLD ? 'high' : 'medium',
       })
     }
 
     // Check for many warning events
-    if ((warningEvents || []).length > 10 && !currentCardTypes.includes('event_stream')) {
+    if ((warningEvents || []).length > WARNING_EVENTS_RECOMMEND_THRESHOLD && !currentCardTypes.includes('event_stream')) {
       newRecommendations.push({
         id: 'rec-events',
         cardType: 'event_stream',
@@ -83,7 +94,7 @@ export function useCardRecommendations(currentCardTypes: string[]) {
     const gpuUtilization = totalGPUs > 0 ? allocatedGPUs / totalGPUs : 0
 
     if (totalGPUs > 0) {
-      if (gpuUtilization > 0.9 && !currentCardTypes.includes('gpu_status')) {
+      if (gpuUtilization > GPU_UTILIZATION_HIGH_THRESHOLD && !currentCardTypes.includes('gpu_status')) {
         newRecommendations.push({
           id: 'rec-gpu-status',
           cardType: 'gpu_status',
@@ -141,7 +152,7 @@ export function useCardRecommendations(currentCardTypes: string[]) {
       filteredRecs = newRecommendations.filter(r => r.priority === 'high')
     }
 
-    setRecommendations(filteredRecs.slice(0, 3)) // Top 3 recommendations
+    setRecommendations(filteredRecs.slice(0, MAX_RECOMMENDATIONS))
   }, [
     shouldProactivelySuggest,
     currentCardTypes,

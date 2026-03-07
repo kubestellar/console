@@ -15,6 +15,13 @@ import {
   formatDuration,
 } from '../../../stats/types'
 
+// ── Time boundary constants for relative time formatting ────────────────
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+const DAYS_PER_MONTH = 30
+const MONTHS_PER_YEAR = 12
+const DAYS_PER_YEAR = 365
+
 // ============================================================================
 // Renderer Registry
 // ============================================================================
@@ -272,21 +279,21 @@ function renderRelativeTime(
 
     // Format relative time
     const seconds = Math.floor(diff / 1000)
-    if (seconds < 60) return 'just now'
+    if (seconds < MINUTES_PER_HOUR) return 'just now'
 
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
+    const minutes = Math.floor(seconds / MINUTES_PER_HOUR)
+    if (minutes < MINUTES_PER_HOUR) return `${minutes}m ago`
 
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
+    const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+    if (hours < HOURS_PER_DAY) return `${hours}h ago`
 
-    const days = Math.floor(hours / 24)
-    if (days < 30) return `${days}d ago`
+    const days = Math.floor(hours / HOURS_PER_DAY)
+    if (days < DAYS_PER_MONTH) return `${days}d ago`
 
-    const months = Math.floor(days / 30)
-    if (months < 12) return `${months}mo ago`
+    const months = Math.floor(days / DAYS_PER_MONTH)
+    if (months < MONTHS_PER_YEAR) return `${months}mo ago`
 
-    const years = Math.floor(days / 365)
+    const years = Math.floor(days / DAYS_PER_YEAR)
     return `${years}y ago`
   } catch {
     return createElement('span', { className: 'text-muted-foreground' }, '—')

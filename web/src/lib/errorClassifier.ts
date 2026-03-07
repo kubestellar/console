@@ -162,6 +162,14 @@ function truncateMessage(message: string, maxLength = 100): string {
   return message.slice(0, maxLength - 3) + '...'
 }
 
+// Time boundary constants for relative time formatting (in seconds)
+const SECONDS_PER_MINUTE = 60
+const SECONDS_PER_HOUR = 3_600
+const SECONDS_PER_DAY = 86_400
+const TWO_MINUTES_IN_SECONDS = 120
+const TWO_HOURS_IN_SECONDS = 7_200
+const TWO_DAYS_IN_SECONDS = 172_800
+
 /**
  * Format a duration for "last seen" display
  */
@@ -173,11 +181,11 @@ export function formatLastSeen(timestamp: string | Date | undefined): string {
 
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
 
-  if (seconds < 60) return 'just now'
-  if (seconds < 120) return '1m ago'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 7200) return '1h ago'
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  if (seconds < 172800) return '1d ago'
-  return `${Math.floor(seconds / 86400)}d ago`
+  if (seconds < SECONDS_PER_MINUTE) return 'just now'
+  if (seconds < TWO_MINUTES_IN_SECONDS) return '1m ago'
+  if (seconds < SECONDS_PER_HOUR) return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m ago`
+  if (seconds < TWO_HOURS_IN_SECONDS) return '1h ago'
+  if (seconds < SECONDS_PER_DAY) return `${Math.floor(seconds / SECONDS_PER_HOUR)}h ago`
+  if (seconds < TWO_DAYS_IN_SECONDS) return '1d ago'
+  return `${Math.floor(seconds / SECONDS_PER_DAY)}d ago`
 }

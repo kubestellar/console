@@ -43,6 +43,17 @@ const THRESHOLDS = {
   securityIssuesHigh: 1,    // Any high severity security issues
 }
 
+/** Maximum items to show in detail summaries (top pods, deployments, issues) */
+const MAX_DETAIL_ITEMS = 5
+/** Maximum items in expanded detail lists */
+const MAX_DETAIL_ITEMS_EXPANDED = 10
+/** Minimum pods without limits before suggesting a mission */
+const PODS_WITHOUT_LIMITS_THRESHOLD = 10
+/** Minimum single-replica deployments before suggesting scaling review */
+const LOW_REPLICA_SUGGEST_THRESHOLD = 3
+/** Restart count above which mission priority escalates to high */
+const HIGH_RESTART_COUNT_THRESHOLD = 5
+
 export function useMissionSuggestions() {
   const [suggestions, setSuggestions] = useState<MissionSuggestion[]>([])
 
@@ -67,14 +78,14 @@ export function useMissionSuggestions() {
       p.restarts && p.restarts > THRESHOLDS.restartCount
     )
     if (highRestartPods.length > 0) {
-      const topPods = highRestartPods.slice(0, 5)
+      const topPods = highRestartPods.slice(0, MAX_DETAIL_ITEMS)
       const podDetails = topPods.map(p => `- ${p.name} in ${p.namespace} (${p.restarts} restarts, status: ${p.status})`).join('\n')
       newSuggestions.push({
         id: 'mission-restart-pods',
         type: 'restart',
         title: 'Investigate Restarting Pods',
         description: `${highRestartPods.length} pod${highRestartPods.length > 1 ? 's have' : ' has'} restarted ${THRESHOLDS.restartCount}+ times`,
-        priority: highRestartPods.length > 5 ? 'high' : 'medium',
+        priority: highRestartPods.length > HIGH_RESTART_COUNT_THRESHOLD ? 'high' : 'medium',
         action: {
           type: 'ai',
           target: `Diagnose why these ${highRestartPods.length} pods are restarting frequently:\n\n${podDetails}\n\nCheck container logs, resource limits, liveness/readiness probes, and OOM kills. Provide specific remediation steps.`,
@@ -93,7 +104,7 @@ export function useMissionSuggestions() {
       d.replicas > d.readyReplicas
     )
     if (unavailableDeployments.length > 0) {
-      const topDeployments = unavailableDeployments.slice(0, 5)
+      const topDeployments = unavailableDeployments.slice(0, MAX_DETAIL_ITEMS)
       const deploymentDetails = topDeployments.map(d => `- ${d.name} in ${d.namespace}: ${d.readyReplicas}/${d.replicas} ready`).join('\n')
       newSuggestions.push({
         id: 'mission-unavailable-deployments',
@@ -117,7 +128,7 @@ export function useMissionSuggestions() {
     // 3. Check for high severity security issues
     const highSeverityIssues = securityIssues.filter(i => i.severity === 'high')
     if (highSeverityIssues.length > 0) {
-      const issueDetails = highSeverityIssues.slice(0, 5).map(i => `- ${i.issue} (${i.cluster || 'unknown cluster'})`).join('\n')
+      const issueDetails = highSeverityIssues.slice(0, MAX_DETAIL_ITEMS).map(i => `- ${i.issue} (${i.cluster || 'unknown cluster'})`).join('\n')
       newSuggestions.push({
         id: 'mission-security-high',
         type: 'security',
@@ -131,7 +142,7 @@ export function useMissionSuggestions() {
         },
         context: {
           count: highSeverityIssues.length,
-          details: highSeverityIssues.slice(0, 5).map(i => `${i.issue} (${i.cluster || 'unknown'})`),
+          details: highSeverityIssues.slice(0, MAX_DETAIL_ITEMS).map(i => `${i.issue} (${i.cluster || 'unknown'})`),
         },
         detectedAt: now,
       })
@@ -166,8 +177,8 @@ export function useMissionSuggestions() {
       return p.status === 'Running' && !p.node  // Placeholder logic
     })
     // Only suggest if we have many pods without limits
-    if (podsWithoutLimits.length > 10) {
-      const samplePods = podsWithoutLimits.slice(0, 5).map(p => `- ${p.name} in ${p.namespace}`).join('\n')
+    if (podsWithoutLimits.length > PODS_WITHOUT_LIMITS_THRESHOLD) {
+      const samplePods = podsWithoutLimits.slice(0, MAX_DETAIL_ITEMS).map(p => `- ${p.name} in ${p.namespace}`).join('\n')
       newSuggestions.push({
         id: 'mission-resource-limits',
         type: 'limits',
@@ -181,7 +192,7 @@ export function useMissionSuggestions() {
         },
         context: {
           count: podsWithoutLimits.length,
-          details: podsWithoutLimits.slice(0, 10).map(p => `${p.name} in ${p.namespace}`),
+          details: podsWithoutLimits.slice(0, MAX_DETAIL_ITEMS_EXPANDED).map(p => `${p.name} in ${p.namespace}`),
         },
         detectedAt: now,
       })
@@ -222,7 +233,7 @@ export function useMissionSuggestions() {
     const lowReplicaDeployments = deploymentIssues.filter(d =>
       d.replicas === 1 && d.readyReplicas === 1  // Running but only one replica
     )
-    if (lowReplicaDeployments.length > 3) {
+    if (lowReplicaDeployments.length > LOW_REPLICA_SUGGEST_THRESHOLD) {
       newSuggestions.push({
         id: 'mission-scale-review',
         type: 'scale',
@@ -236,7 +247,7 @@ export function useMissionSuggestions() {
         },
         context: {
           count: lowReplicaDeployments.length,
-          details: lowReplicaDeployments.slice(0, 5).map(d => d.name),
+          details: lowReplicaDeployments.slice(0, MAX_DETAIL_ITEMS).map(d => d.name),
         },
         detectedAt: now,
       })

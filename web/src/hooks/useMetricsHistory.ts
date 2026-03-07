@@ -8,6 +8,8 @@ const HISTORY_CHANGED_EVENT = 'kubestellar-metrics-history-changed'
 const MAX_SNAPSHOTS = 144 // 24 hours at 10-min intervals
 /** Cache TTL: 24 hours — remove snapshots older than this */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+/** Maximum number of increasing-restart pods to include in AI context */
+const MAX_INCREASING_RESTART_PODS = 10
 
 // Singleton state - shared across all hook instances
 let snapshots: MetricsSnapshot[] = []
@@ -348,7 +350,7 @@ export function getMetricsHistoryContext(): string {
 
   if (increasingPods.length > 0) {
     context += '\nPods with increasing restarts:\n'
-    increasingPods.slice(0, 10).forEach(([key, values]) => {
+    increasingPods.slice(0, MAX_INCREASING_RESTART_PODS).forEach(([key, values]) => {
       context += `  ${key}: ${values.join(' → ')} restarts\n`
     })
   }

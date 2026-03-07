@@ -1008,6 +1008,9 @@ function useComplianceScore() {
   return useDemoDataHook([DEMO_COMPLIANCE_SCORE])
 }
 
+/** Maximum namespace events to return when no namespace filter is set */
+const MAX_NAMESPACE_EVENTS_UNFILTERED = 20
+
 function useNamespaceEvents(params?: Record<string, unknown>) {
   const cluster = params?.cluster as string | undefined
   const namespace = params?.namespace as string | undefined
@@ -1016,7 +1019,7 @@ function useNamespaceEvents(params?: Record<string, unknown>) {
   // Filter to specific namespace if provided
   const namespaceEvents = useMemo(() => {
     if (!result.data) return []
-    if (!namespace) return result.data.slice(0, 20)
+    if (!namespace) return result.data.slice(0, MAX_NAMESPACE_EVENTS_UNFILTERED)
     return result.data.filter(e => e.namespace === namespace)
   }, [result.data, namespace])
 

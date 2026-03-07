@@ -19,10 +19,13 @@ import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
 
 // Cost estimation constants (per-month, rough cloud averages)
-const COST_PER_CPU = 30
-const COST_PER_GB_MEMORY = 4
-const COST_PER_GB_STORAGE = 0.10
-const COST_PER_GPU = 900
+const COST_PER_CPU = 30          // USD per vCPU per month
+const COST_PER_GB_MEMORY = 4     // USD per GB RAM per month
+const COST_PER_GB_STORAGE = 0.10 // USD per GB disk per month
+const COST_PER_GPU = 900         // USD per GPU per month
+
+/** Restart count above which a pod is considered "high restart" */
+const HIGH_RESTART_THRESHOLD = 10
 
 /**
  * Universal stat value provider that works across ALL dashboards.
@@ -76,7 +79,7 @@ export function useUniversalStats() {
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
   const pendingPods = podIssuesList.filter(p => p.status === 'Pending').length
-  const highRestartPods = podIssuesList.filter(p => p.restarts > 10).length
+  const highRestartPods = podIssuesList.filter(p => p.restarts > HIGH_RESTART_THRESHOLD).length
 
   // ─── Deployment-derived values ───
   const allDeployments = deployments || []

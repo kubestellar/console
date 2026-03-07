@@ -6,6 +6,11 @@
 
 import type { MissionExport, FileScanResult, ScanFinding, ScanMetadata } from '../types'
 
+/** Minimum acceptable title length before triggering a quality warning */
+const MIN_TITLE_LENGTH = 5
+/** Minimum acceptable description length before triggering a quality warning */
+const MIN_DESCRIPTION_LENGTH = 20
+
 /**
  * Run a full scan on a validated MissionExport, returning findings and metadata.
  */
@@ -22,7 +27,7 @@ export function fullScan(mission: MissionExport): FileScanResult {
   }
 
   // Content quality checks
-  if (mission.title && mission.title.length < 5) {
+  if (mission.title && mission.title.length < MIN_TITLE_LENGTH) {
     findings.push({
       severity: 'warning',
       code: 'SHORT_TITLE',
@@ -31,7 +36,7 @@ export function fullScan(mission: MissionExport): FileScanResult {
     })
   }
 
-  if (mission.description && mission.description.length < 20) {
+  if (mission.description && mission.description.length < MIN_DESCRIPTION_LENGTH) {
     findings.push({
       severity: 'warning',
       code: 'SHORT_DESCRIPTION',

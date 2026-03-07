@@ -4,6 +4,9 @@ import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { QUICK_ABORT_TIMEOUT_MS } from '../lib/constants/network'
 
+/** Maximum token delta to attribute in a single poll cycle (prevents init spikes) */
+const MAX_SINGLE_DELTA_TOKENS = 50_000
+
 export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
 
 export interface TokenUsageByCategory {
@@ -182,7 +185,7 @@ async function fetchTokenUsage() {
         if (lastKnownUsage !== null && totalUsed > lastKnownUsage && activeCategory) {
           const delta = totalUsed - lastKnownUsage
           // Sanity check: don't attribute more than 50k tokens at once (likely a bug)
-          if (delta < 50000) {
+          if (delta < MAX_SINGLE_DELTA_TOKENS) {
             const newByCategory = { ...sharedUsage.byCategory }
             newByCategory[activeCategory] += delta
             updateSharedUsage({ used: totalUsed, byCategory: newByCategory })

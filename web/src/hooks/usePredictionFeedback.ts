@@ -6,6 +6,8 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 const STORAGE_KEY = 'kubestellar-prediction-feedback'
 const FEEDBACK_CHANGED_EVENT = 'kubestellar-prediction-feedback-changed'
 const MAX_FEEDBACK_ENTRIES = 500 // Keep last 500 feedback entries
+/** Number of recent feedback entries to include in AI prompt context */
+const FEEDBACK_CONTEXT_LIMIT = 50
 
 // Singleton state - shared across all hook instances
 let feedbackMap: Map<string, StoredFeedback> = new Map()
@@ -202,7 +204,7 @@ async function sendFeedbackToBackend(predictionId: string, feedback: PredictionF
 export function getFeedbackContext(): string {
   const entries = Array.from(feedbackMap.values())
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 50)
+    .slice(0, FEEDBACK_CONTEXT_LIMIT)
 
   if (entries.length === 0) {
     return 'No prediction feedback recorded yet.'

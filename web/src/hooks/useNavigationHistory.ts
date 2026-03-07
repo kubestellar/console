@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom'
 
 const STORAGE_KEY = 'kubestellar-nav-history'
 const MAX_HISTORY = 100
+/** Number of most-visited pages to return in behavior analysis */
+const TOP_PAGES_LIMIT = 10
 
 export function useNavigationHistory() {
   const location = useLocation()
@@ -52,6 +54,6 @@ export function getNavigationBehavior() {
   return {
     totalVisits: history.length,
     uniquePages: Object.keys(visitCounts).length,
-    topPages: sortedPaths.slice(0, 10),
+    topPages: sortedPaths.slice(0, TOP_PAGES_LIMIT),
   }
 }

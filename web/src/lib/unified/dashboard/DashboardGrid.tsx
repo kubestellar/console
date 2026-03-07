@@ -28,6 +28,9 @@ import type { DashboardCardPlacement, DashboardFeatures } from '../types'
 import { UnifiedCard } from '../card'
 import { getCardConfig } from '../../../config/cards'
 
+/** Viewport width breakpoint below which small cards are clamped to wider minimum */
+const NARROW_VIEWPORT_BREAKPOINT_PX = 1024
+
 export interface DashboardGridProps {
   /** Card placements */
   cards: DashboardCardPlacement[]
@@ -190,7 +193,7 @@ function DashboardCardWrapper({
 
   // At narrow viewports (< 1024px), clamp small cards to min 6 cols
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== 'undefined' && window.innerWidth < 1024
+    typeof window !== 'undefined' && window.innerWidth < NARROW_VIEWPORT_BREAKPOINT_PX
   )
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)')

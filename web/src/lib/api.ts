@@ -10,7 +10,11 @@ import { emitSessionExpired } from './analytics'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
-const BACKEND_CHECK_INTERVAL = 10000 // 10 seconds between backend checks when unavailable
+const BACKEND_CHECK_INTERVAL = 10_000 // 10 seconds between backend checks when unavailable
+/** How long to trust a cached backend-availability check (5 minutes) */
+const BACKEND_CACHE_TTL_MS = 300_000
+/** Delay before redirecting to login after session expiry (lets user see the banner) */
+const SESSION_EXPIRY_REDIRECT_MS = 3_000
 const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token should be refreshed
 
 // Public API paths that don't require authentication (served without JWT on the backend)
@@ -57,7 +61,7 @@ function handle401(): void {
   // Redirect to login after a delay so the user sees the banner
   setTimeout(() => {
     window.location.href = '/login?reason=session_expired'
-  }, 3000)
+  }, SESSION_EXPIRY_REDIRECT_MS)
 }
 
 /**
@@ -120,7 +124,7 @@ try {
   if (stored) {
     const { available, timestamp } = JSON.parse(stored)
     // Use cached status if checked within the last 5 minutes
-    if (Date.now() - timestamp < 300000) {
+    if (Date.now() - timestamp < BACKEND_CACHE_TTL_MS) {
       backendAvailable = available
       backendLastCheckTime = timestamp
     }

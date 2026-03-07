@@ -17,6 +17,10 @@ import type { GitHubRewardsResponse } from '../types/rewards'
 import { useGitHubRewards } from './useGitHubRewards'
 
 const REWARDS_STORAGE_KEY = 'kubestellar-rewards'
+/** Maximum reward events to keep in history */
+const MAX_REWARD_EVENTS = 100
+/** Number of recent events to show in the UI */
+const RECENT_EVENTS_LIMIT = 10
 
 interface RewardsContextType {
   rewards: UserRewards | null
@@ -141,7 +145,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       ...rewards,
       totalCoins: rewards.totalCoins + rewardConfig.coins,
       lifetimeCoins: rewards.lifetimeCoins + rewardConfig.coins,
-      events: [event, ...rewards.events].slice(0, 100), // Keep last 100 events
+      events: [event, ...rewards.events].slice(0, MAX_REWARD_EVENTS),
       lastUpdated: new Date().toISOString(),
     }
 
@@ -199,7 +203,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   // Get recent events (last 10)
   const recentEvents = useMemo(() => {
     if (!rewards) return []
-    return rewards.events.slice(0, 10)
+    return rewards.events.slice(0, RECENT_EVENTS_LIMIT)
   }, [rewards])
 
   // Dedup: subtract console-submitted bug/feature coins that are already in GitHub data

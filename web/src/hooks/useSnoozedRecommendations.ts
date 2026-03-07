@@ -79,19 +79,24 @@ export function useSnoozedRecommendations() {
   }
 }
 
+// Time boundary constants for elapsed time formatting
+const SECONDS_PER_MINUTE = 60
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+
 // Helper to format elapsed time since snooze
 export function formatElapsedTime(since: Date): string {
   const now = new Date()
   const diff = now.getTime() - since.getTime()
 
   const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
+  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+  const days = Math.floor(hours / HOURS_PER_DAY)
 
-  if (seconds < 60) return 'now'
-  if (minutes < 60) return `${minutes}m`
-  if (hours < 24) return `${hours}h`
+  if (seconds < SECONDS_PER_MINUTE) return 'now'
+  if (minutes < MINUTES_PER_HOUR) return `${minutes}m`
+  if (hours < HOURS_PER_DAY) return `${hours}h`
   if (days === 1) return '1 day'
   return `${days} days`
 }

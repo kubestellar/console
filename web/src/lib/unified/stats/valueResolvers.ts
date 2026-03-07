@@ -362,18 +362,23 @@ export function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`
 }
 
+// Time boundary constants (in seconds) for duration formatting
+const SECS_PER_MINUTE = 60
+const SECS_PER_HOUR = 3_600
+const SECS_PER_DAY = 86_400
+
 /**
  * Format duration in seconds to human-readable
  */
 export function formatDuration(seconds: number): string {
-  if (seconds < 60) {
+  if (seconds < SECS_PER_MINUTE) {
     return `${Math.round(seconds)}s`
   }
-  if (seconds < 3600) {
-    return `${Math.round(seconds / 60)}m`
+  if (seconds < SECS_PER_HOUR) {
+    return `${Math.round(seconds / SECS_PER_MINUTE)}m`
   }
-  if (seconds < 86400) {
-    return `${(seconds / 3600).toFixed(1)}h`
+  if (seconds < SECS_PER_DAY) {
+    return `${(seconds / SECS_PER_HOUR).toFixed(1)}h`
   }
-  return `${(seconds / 86400).toFixed(1)}d`
+  return `${(seconds / SECS_PER_DAY).toFixed(1)}d`
 }

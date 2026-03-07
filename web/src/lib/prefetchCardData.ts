@@ -15,8 +15,10 @@ import { prefetchCache } from './cache'
 import { coreFetchers, specialtyFetchers } from '../hooks/useCachedData'
 import { isDemoMode } from './demoMode'
 
-const SPECIALTY_DELAY_MS = 1000
-const BACKGROUND_DELAY_MS = 5000
+/** Delay before starting core data prefetch (after priority tier) */
+const CORE_PREFETCH_DELAY_MS = 400
+const SPECIALTY_DELAY_MS = 1_000
+const BACKGROUND_DELAY_MS = 5_000
 const PREFETCH_CONCURRENCY = 2
 
 interface PrefetchEntry {
@@ -83,7 +85,7 @@ export function prefetchCardData(): void {
   // Tier 2: Core data after priority warm-up.
   setTimeout(() => {
     runPrefetchQueue(CORE_ENTRIES).catch(() => {})
-  }, 400)
+  }, CORE_PREFETCH_DELAY_MS)
 
   // Tier 3: Heavy fetchers in background (security scans can be expensive).
   setTimeout(() => {

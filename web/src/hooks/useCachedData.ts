@@ -23,7 +23,7 @@ import { fetchSSE } from '../lib/sseClient'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   PodInfo,
   PodIssue,
@@ -44,7 +44,12 @@ import type { Workload } from './useWorkloads'
 
 const getToken = () => localStorage.getItem(STORAGE_KEY_TOKEN)
 
-const AGENT_HTTP_TIMEOUT_MS = 5000
+const AGENT_HTTP_TIMEOUT_MS = 5_000
+
+/** Maximum number of ProwJobs to return from a fetch */
+const MAX_PROW_JOBS = 100
+/** Maximum number of pods to return from a prefetch query */
+const MAX_PREFETCH_PODS = 100
 
 async function fetchAPI<T>(
   endpoint: string,
@@ -802,7 +807,7 @@ async function fetchProwJobs(prowCluster: string, namespace: string): Promise<Pr
   // useCache prevents calling fetchers in demo mode via effectiveEnabled
   const response = await kubectlProxy.exec(
     ['get', 'prowjobs', '-n', namespace, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
-    { context: prowCluster, timeout: 30000 }
+    { context: prowCluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }
   )
 
   if (response.exitCode !== 0) {
@@ -812,7 +817,7 @@ async function fetchProwJobs(prowCluster: string, namespace: string): Promise<Pr
   const data = JSON.parse(response.output)
   return (data.items || [])
     .reverse()
-    .slice(0, 100)
+    .slice(0, MAX_PROW_JOBS)
     .map((pj: ProwJobResource) => {
       const jobName = pj.metadata.labels?.['prow.k8s.io/job'] || pj.spec.job || pj.metadata.name
       const jobType = (pj.metadata.labels?.['prow.k8s.io/type'] || pj.spec.type || 'unknown') as ProwJob['type']
@@ -1233,7 +1238,7 @@ async function fetchLLMdModels(
 
   const promises = clusters.map(async (cluster) => {
     try {
-      const response = await kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: 30000 })
+      const response = await kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS })
       if (response.exitCode !== 0) return []
       const clusterModels: LLMdModel[] = []
       for (const pool of (JSON.parse(response.output).items || []) as InferencePoolResource[]) {
@@ -1482,7 +1487,7 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
       const nsFlag = namespace ? ['-n', namespace] : ['-A']
       const response = await kubectlProxy.exec(
         ['get', 'pods', ...nsFlag, '-o', 'json'],
-        { context: ctx, timeout: 30000 }
+        { context: ctx, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }
       )
 
       if (response.exitCode !== 0) return []
@@ -1950,7 +1955,7 @@ export function useCachedWarningEvents(
 export const coreFetchers = {
   pods: async (): Promise<PodInfo[]> => {
     const pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', {})
-    return pods.sort((a, b) => (b.restarts || 0) - (a.restarts || 0)).slice(0, 100)
+    return pods.sort((a, b) => (b.restarts || 0) - (a.restarts || 0)).slice(0, MAX_PREFETCH_PODS)
   },
   podIssues: async (): Promise<PodIssue[]> => {
     if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
