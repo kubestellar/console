@@ -252,6 +252,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       <div className="grid grid-cols-4 gap-2 mb-3">
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              role="button" tabIndex={0}
+             aria-label={`Show all applications (${stats.synced} synced)`}
              onClick={() => setSelectedFilter('all')}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('all') } }}>
           <p className="text-lg font-bold text-green-400">{stats.synced}</p>
@@ -259,6 +260,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         </div>
         <div className="text-center p-2 rounded-lg bg-yellow-500/10 cursor-pointer hover:bg-yellow-500/20"
              role="button" tabIndex={0}
+             aria-label={`Filter out of sync applications (${stats.outOfSync} out of sync)`}
              onClick={() => setSelectedFilter('outOfSync')}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('outOfSync') } }}>
           <p className="text-lg font-bold text-yellow-400">{stats.outOfSync}</p>
@@ -266,6 +268,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         </div>
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              role="button" tabIndex={0}
+             aria-label={`Show all applications (${stats.healthy} healthy)`}
              onClick={() => setSelectedFilter('all')}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('all') } }}>
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
@@ -273,6 +276,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         </div>
         <div className="text-center p-2 rounded-lg bg-red-500/10 cursor-pointer hover:bg-red-500/20"
              role="button" tabIndex={0}
+             aria-label={`Filter unhealthy applications (${stats.unhealthy} unhealthy)`}
              onClick={() => setSelectedFilter('unhealthy')}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('unhealthy') } }}>
           <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>

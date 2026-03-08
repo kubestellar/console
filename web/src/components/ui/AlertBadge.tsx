@@ -259,11 +259,15 @@ export function AlertBadge() {
           {isMobile && (
             <div
               className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-40"
+              aria-hidden="true"
               onClick={close}
             />
           )}
           <div
             ref={dropdownRef}
+            role="dialog"
+            aria-label="Active Alerts"
+            aria-modal={isMobile}
             className={`${
               isMobile
                 ? 'fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[70vh]'
@@ -420,6 +424,7 @@ export function AlertBadge() {
                   key={alert.id}
                   role="button"
                   tabIndex={0}
+                  aria-label={`View ${alert.severity} alert: ${alert.ruleName}`}
                   onClick={() => handleAlertClick(alert)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {

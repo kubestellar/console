@@ -94,6 +94,8 @@ export function ClusterSelect({
       <button
         ref={buttonRef}
         type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
@@ -110,6 +112,8 @@ export function ClusterSelect({
       {isOpen && dropdownPos && createPortal(
         <div
           ref={dropdownRef}
+          role="listbox"
+          aria-label={placeholder.replace(/\.+$/, '')}
           className="fixed max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
           style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
           onMouseDown={e => e.stopPropagation()}
@@ -117,6 +121,8 @@ export function ClusterSelect({
           <div className="p-1">
             {/* Empty option */}
             <button
+              role="option"
+              aria-selected={!value}
               onClick={() => { onChange(''); setIsOpen(false) }}
               className={cn(
                 'w-full px-2 py-1.5 text-xs text-left rounded transition-colors',
@@ -140,6 +146,8 @@ export function ClusterSelect({
               return (
                 <button
                   key={cluster.name}
+                  role="option"
+                  aria-selected={value === cluster.name}
                   onClick={() => {
                     if (!isUnreachable) {
                       onChange(cluster.name)

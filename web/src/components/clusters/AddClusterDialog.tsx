@@ -326,21 +326,21 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        role="button"
-        tabIndex={0}
-        aria-label="Close dialog"
+        aria-hidden="true"
         onClick={onClose}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClose() } }}
       />
 
       {/* Dialog */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-cluster-dialog-title"
         className="relative w-full max-w-2xl mx-4 bg-card border border-white/10 rounded-xl shadow-2xl"
         aria-busy={isLoading}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-foreground">{t('cluster.addClusterTitle')}</h2>
+          <h2 id="add-cluster-dialog-title" className="text-lg font-semibold text-foreground">{t('cluster.addClusterTitle')}</h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
