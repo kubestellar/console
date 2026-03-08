@@ -170,6 +170,7 @@ async function fetchOpenFeatureStatus(): Promise<OpenFeatureStatus> {
 export interface UseOpenFeatureStatusResult {
   data: OpenFeatureStatus
   error: boolean
+  isRefreshing: boolean
   showSkeleton: boolean
   showEmptyState: boolean
 }
@@ -188,6 +189,7 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: cacheResult.isLoading,
+    isRefreshing: cacheResult.isRefreshing,
     isDemoData: cacheResult.isDemoFallback,
     hasAnyData,
     isFailed: cacheResult.isFailed,
@@ -197,6 +199,7 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
   return {
     data: cacheResult.data,
     error: cacheResult.isFailed && !hasAnyData,
+    isRefreshing: cacheResult.isRefreshing,
     showSkeleton,
     showEmptyState,
   }

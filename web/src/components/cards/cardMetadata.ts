@@ -206,6 +206,7 @@ export const CARD_TITLES: Record<string, string> = {
   provider_health: 'Provider Health',
   // CoreDNS
   coredns_status: 'CoreDNS',
+<<<<<<< HEAD
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Cross-Cluster Event Correlation',
@@ -215,6 +216,10 @@ export const CARD_TITLES: Record<string, string> = {
   resource_imbalance_detector: 'Resource Imbalance Detector',
   restart_correlation_matrix: 'Restart Correlation Matrix',
   deployment_rollout_tracker: 'Deployment Rollout Tracker',
+=======
+  // OpenFeature
+  openfeature_status: 'OpenFeature',
+>>>>>>> a8dd6ad6 (Addressed feedback)
 }
 
 // Short descriptions shown via info icon tooltip in the card header
@@ -370,6 +375,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_chess: 'Chess game with Kubernetes-themed pieces.',
   // CoreDNS
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
+<<<<<<< HEAD
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Unified timeline showing correlated warning events across multiple clusters.',
@@ -379,6 +385,10 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   resource_imbalance_detector: 'Detects CPU/memory utilization skew across the fleet.',
   restart_correlation_matrix: 'Detects horizontal (app bug) vs vertical (infra issue) restart patterns.',
   deployment_rollout_tracker: 'Tracks deployment rollout progress across clusters.',
+=======
+  // OpenFeature
+  openfeature_status: 'OpenFeature flag evaluation status and provider health.',
+>>>>>>> a8dd6ad6 (Addressed feedback)
 }
 
 /**
