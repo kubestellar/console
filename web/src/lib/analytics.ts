@@ -406,6 +406,28 @@ export function emitCardReplaced(oldType: string, newType: string) {
   send('ksc_card_replaced', { old_type: oldType, new_type: newType })
 }
 
+// ── Global Search (Cmd+K) ─────────────────────────────────────────────
+
+/** Fired when user opens the global search dialog (Cmd+K, Ctrl+K, or click) */
+export function emitGlobalSearchOpened(method: 'keyboard' | 'click') {
+  send('ksc_global_search_opened', { method })
+}
+
+/** Fired when user executes a search query (debounced — fires once per search session on blur) */
+export function emitGlobalSearchQueried(queryLength: number, resultCount: number) {
+  send('ksc_global_search_queried', { query_length: queryLength, result_count: resultCount })
+}
+
+/** Fired when user selects a result from global search */
+export function emitGlobalSearchSelected(category: string, resultIndex: number) {
+  send('ksc_global_search_selected', { category, result_index: resultIndex })
+}
+
+/** Fired when user chooses "Ask AI" from global search */
+export function emitGlobalSearchAskAI(queryLength: number) {
+  send('ksc_global_search_ask_ai', { query_length: queryLength })
+}
+
 // ── Card Interactions (framework-level) ──────────────────────────────
 // These fire automatically from shared UI components (CardControls,
 // CardSearchInput, CardClusterFilter) so all cards get consistent

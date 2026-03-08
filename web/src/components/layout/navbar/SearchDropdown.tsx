@@ -22,6 +22,7 @@ import { useSidebarConfig, DISCOVERABLE_DASHBOARDS } from '../../../hooks/useSid
 import { scrollToCard } from '../../../lib/scrollToCard'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
 import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
+import { emitGlobalSearchOpened, emitGlobalSearchQueried, emitGlobalSearchSelected, emitGlobalSearchAskAI } from '../../../lib/analytics'
 
 /** Routes for dashboards that are discoverable but not shown by default in the sidebar */
 const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
@@ -64,6 +65,7 @@ export function SearchDropdown() {
     if (!searchQuery.trim()) return
 
     const query = searchQuery.trim()
+    emitGlobalSearchAskAI(query.length)
     startMission({
       title: query.length > 50 ? query.substring(0, 47) + '...' : query,
       description: 'Custom AI mission from search',
@@ -96,7 +98,8 @@ export function SearchDropdown() {
     return new Set(sidebarConfig.primaryNav.map(item => item.href))
   }, [sidebarConfig])
 
-  const handleSelect = useCallback((item: SearchItem) => {
+  const handleSelect = useCallback((item: SearchItem, index?: number) => {
+    emitGlobalSearchSelected(item.category, index ?? 0)
     // Mission items open the sidebar instead of navigating
     if (item.category === 'mission' && item.href?.startsWith('#mission:')) {
       const missionId = item.href.replace('#mission:', '')
@@ -160,6 +163,7 @@ export function SearchDropdown() {
         event.preventDefault()
         inputRef.current?.focus()
         setIsSearchOpen(true)
+        emitGlobalSearchOpened('keyboard')
       }
 
       if (!isSearchOpen) return
@@ -175,7 +179,7 @@ export function SearchDropdown() {
         if (selectedIndex === askAIIndex) {
           handleAskAI()
         } else if (flatResults[selectedIndex]) {
-          handleSelect(flatResults[selectedIndex])
+          handleSelect(flatResults[selectedIndex], selectedIndex)
         }
       } else if (event.key === 'Escape') {
         setIsSearchOpen(false)
@@ -219,7 +223,8 @@ export function SearchDropdown() {
             setSearchQuery(e.target.value)
             setIsSearchOpen(true)
           }}
-          onFocus={() => { setIsSearchOpen(true); cmdKHint.action() }}
+          onFocus={() => { setIsSearchOpen(true); cmdKHint.action(); emitGlobalSearchOpened('click') }}
+          onBlur={() => { if (searchQuery.trim()) emitGlobalSearchQueried(searchQuery.trim().length, totalCount) }}
           placeholder="Search or ask AI anything..."
           className="w-full pl-10 pr-16 py-2 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
         />
@@ -264,7 +269,7 @@ export function SearchDropdown() {
                           <button
                             key={item.id}
                             data-selected={isSelected}
-                            onClick={() => handleSelect(item)}
+                            onClick={() => handleSelect(item, currentIndex)}
                             className={`w-full flex items-center gap-3 px-4 py-1.5 text-left transition-colors ${
                               isSelected
                                 ? 'bg-purple-900 text-foreground'
