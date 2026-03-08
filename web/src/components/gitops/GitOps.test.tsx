@@ -2,22 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
-vi.mock('../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => { },
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-}))
-vi.mock('../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true, useDemoMode: () => true, isDemoModeForced: false,
-}))
-vi.mock('../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}))
-vi.mock('../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
+import '../../test/utils/setupMocks'
 
 vi.mock('../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, subtitle, children, beforeCards }: { title: string; subtitle?: string; children?: React.ReactNode; beforeCards?: React.ReactNode }) => (
@@ -77,17 +62,17 @@ describe('GitOps Component', () => {
 
   it('renders the DashboardPage with correct title', () => {
     renderGitOps()
-    expect(screen.getByTestId('dashboard-page')).toBeTruthy()
-    expect(screen.getByText('gitops.title')).toBeTruthy()
+    expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
+    expect(screen.getByText('gitops.title')).toBeInTheDocument()
   })
 
   it('renders the applications section', () => {
     renderGitOps()
-    expect(screen.getByText('gitops.applications')).toBeTruthy()
+    expect(screen.getByText('gitops.applications')).toBeInTheDocument()
   })
 
   it('renders the integration info section', () => {
     renderGitOps()
-    expect(screen.getByText('gitops.integrationTitle')).toBeTruthy()
+    expect(screen.getByText('gitops.integrationTitle')).toBeInTheDocument()
   })
 })

@@ -2,22 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
-vi.mock('../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => { },
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-}))
-vi.mock('../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true, useDemoMode: () => true, isDemoModeForced: false,
-}))
-vi.mock('../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}))
-vi.mock('../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
+import '../../test/utils/setupMocks'
 
 vi.mock('../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) => (
@@ -74,13 +59,13 @@ describe('Alerts Component', () => {
 
   it('renders the DashboardPage with correct title', () => {
     renderAlerts()
-    expect(screen.getByTestId('dashboard-page')).toBeTruthy()
-    expect(screen.getAllByText(/alerts/i).length).toBeGreaterThan(0)
+    expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
+    expect(screen.getByText('alerts.title')).toBeInTheDocument()
   })
 
   it('passes a subtitle to DashboardPage', () => {
     renderAlerts()
     const page = screen.getByTestId('dashboard-page')
-    expect(page.getAttribute('data-subtitle')).toBeTruthy()
+    expect(page).toHaveAttribute('data-subtitle')
   })
 })

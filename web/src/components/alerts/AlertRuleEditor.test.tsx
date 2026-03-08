@@ -1,22 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => { },
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-}))
-vi.mock('../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true, useDemoMode: () => true, isDemoModeForced: false,
-}))
-vi.mock('../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}))
-vi.mock('../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
+import '../../test/utils/setupMocks'
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
@@ -58,7 +43,7 @@ describe('AlertRuleEditor Component', () => {
         onCancel={mockOnCancel}
       />
     )
-    expect(screen.getAllByText('alerts.createRule').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('alerts.createRule')[0]).toBeInTheDocument()
   })
 
   it('renders the rule name input', () => {
@@ -70,6 +55,6 @@ describe('AlertRuleEditor Component', () => {
       />
     )
     // Use regex to ignore the trailing " *" or just check if it finds elements matching the pattern
-    expect(screen.getAllByText(/alerts\.ruleName/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/alerts\.ruleName/i)[0]).toBeInTheDocument()
   })
 })

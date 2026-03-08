@@ -1,22 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => { },
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-}))
-vi.mock('../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true, useDemoMode: () => true, isDemoModeForced: false,
-}))
-vi.mock('../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}))
-vi.mock('../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
+import '../../test/utils/setupMocks'
+
+vi.mock('../../lib/modals', () => {
+  const BaseModal: any = ({ children }: any) => <div data-testid="mock-base-modal">{children}</div>
+  BaseModal.Header = ({ title }: any) => <div>{title}</div>
+  BaseModal.Content = ({ children }: any) => <div>{children}</div>
+  BaseModal.Footer = ({ children }: any) => <div>{children}</div>
+  return { BaseModal }
+})
 
 vi.mock('../../lib/api', () => ({
   api: { post: vi.fn() },
@@ -29,6 +22,18 @@ vi.mock('react-i18next', () => ({
 import { SyncDialog } from './SyncDialog'
 
 describe('SyncDialog Component', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({})
+        })
+      )
+    )
+  })
+
   const defaultProps = {
     isOpen: true,
     onClose: vi.fn(),
@@ -48,6 +53,6 @@ describe('SyncDialog Component', () => {
 
   it('renders the app name in the dialog', () => {
     render(<SyncDialog {...defaultProps} />)
-    expect(screen.getByText(/test-app/)).toBeTruthy()
+    expect(screen.getByText('GitOps Sync: test-app')).toBeInTheDocument()
   })
 })
