@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -24,6 +25,19 @@ const (
 	healthCheckDelay       = 2 * time.Second
 	githubMainRefURL       = "https://api.github.com/repos/kubestellar/console/git/ref/heads/main"
 	githubReleasesURL      = "https://api.github.com/repos/kubestellar/console/releases"
+
+	// Timeouts for each build step — prevents updates from hanging indefinitely
+	gitPullTimeout      = 2 * time.Minute
+	npmInstallTimeout   = 5 * time.Minute
+	frontendBuildTimeout = 5 * time.Minute
+	goBuildTimeout      = 5 * time.Minute
+
+	// Heartbeat interval — periodic progress broadcasts during long builds
+	// so the frontend knows the agent is still alive
+	buildHeartbeatInterval = 15 * time.Second
+
+	// Max lines of build output to include in error messages sent to the frontend
+	buildOutputTailLines = 20
 )
 
 // UpdateChecker periodically checks for updates and applies them.
@@ -42,6 +56,10 @@ type UpdateChecker struct {
 	lastUpdateError string
 	cancel          context.CancelFunc
 	updating        int32 // atomic: 1 = update in progress, 0 = idle
+
+	// exitFunc terminates the process after spawning the restart script.
+	// Defaults to os.Exit. Overridden in tests to prevent the test runner from exiting.
+	exitFunc func(code int)
 }
 
 // UpdateCheckerConfig holds initialization parameters.
@@ -337,7 +355,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		TotalSteps: total,
 	})
 
-	if err := runGitPull(repoPath); err != nil {
+	if err := runGitPullWithTimeout(repoPath, gitPullTimeout); err != nil {
 		log.Printf("[AutoUpdate] FAILED at step 1 (git pull) after %s: %v", time.Since(start), err)
 		uc.recordError(fmt.Sprintf("git pull failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -361,7 +379,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	})
 
 	stepStart := time.Now()
-	if err := uc.resilientNpmInstall(webDir, 2, total); err != nil {
+	if err := uc.resilientNpmInstall(webDir, 2, total, npmInstallTimeout); err != nil {
 		log.Printf("[AutoUpdate] FAILED at step 2 (npm install) after %s: %v", time.Since(start), err)
 		uc.recordError(fmt.Sprintf("npm install failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -386,17 +404,15 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	})
 
 	stepStart = time.Now()
-	npmBuild := exec.Command("npm", "run", "build")
-	npmBuild.Dir = webDir
-	npmBuild.Stdout = os.Stdout
-	npmBuild.Stderr = os.Stderr
-	if err := npmBuild.Run(); err != nil {
-		log.Printf("[AutoUpdate] FAILED at step 3 (frontend build) after %s: %v", time.Since(start), err)
-		uc.recordError(fmt.Sprintf("frontend build failed: %v", err))
+	res := uc.runBuildCmd(frontendBuildTimeout, "Building frontend with Vite", 3, total, 30,
+		"npm", []string{"run", "build"}, webDir, nil)
+	if res.err != nil {
+		log.Printf("[AutoUpdate] FAILED at step 3 (frontend build) after %s: %v", time.Since(start), res.err)
+		uc.recordError(fmt.Sprintf("frontend build failed: %v", res.err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Frontend build failed, rolling back...",
-			Error:   err.Error(),
+			Error:   buildErrorDetail(res.err, res.output),
 		})
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath) //nolint:errcheck
@@ -417,25 +433,30 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	stepStart = time.Now()
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		consolePath = "./console"
+		consolePath = filepath.Join(repoPath, "console")
 	}
-	consoleBuild := exec.Command("go", "build", "-o", consolePath, "./cmd/console")
-	consoleBuild.Dir = repoPath
-	consoleBuild.Env = append(os.Environ(), "GOWORK=off")
-	consoleBuild.Stdout = os.Stdout
-	consoleBuild.Stderr = os.Stderr
-	if err := consoleBuild.Run(); err != nil {
-		log.Printf("[AutoUpdate] FAILED at step 4 (console build) after %s: %v", time.Since(start), err)
-		uc.recordError(fmt.Sprintf("go build console failed: %v", err))
+	// Build to a temp file first, then atomically rename to the final path.
+	// This prevents a half-written binary if the build is killed or times out.
+	consoleTmp := consolePath + ".update-tmp"
+	res = uc.runBuildCmd(goBuildTimeout, "Building console binary", 4, total, 45,
+		"go", []string{"build", "-o", consoleTmp, "./cmd/console"}, repoPath, []string{"GOWORK=off"})
+	if res.err != nil {
+		os.Remove(consoleTmp) // clean up partial build
+		log.Printf("[AutoUpdate] FAILED at step 4 (console build) after %s: %v", time.Since(start), res.err)
+		uc.recordError(fmt.Sprintf("go build console failed: %v", res.err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Console build failed, rolling back...",
-			Error:   err.Error(),
+			Error:   buildErrorDetail(res.err, res.output),
 		})
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath)   //nolint:errcheck
 		rebuildGoBinaries(repoPath) //nolint:errcheck
 		return
+	}
+	if err := os.Rename(consoleTmp, consolePath); err != nil {
+		log.Printf("[AutoUpdate] Failed to move console binary: %v", err)
+		os.Remove(consoleTmp)
 	}
 	log.Printf("[AutoUpdate] Step 4/%d complete (console binary) in %s", total, time.Since(stepStart))
 
@@ -452,25 +473,29 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	stepStart = time.Now()
 	agentPath, err := exec.LookPath("kc-agent")
 	if err != nil {
-		agentPath = "./kc-agent"
+		agentPath = filepath.Join(repoPath, "kc-agent")
 	}
-	agentBuild := exec.Command("go", "build", "-o", agentPath, "./cmd/kc-agent")
-	agentBuild.Dir = repoPath
-	agentBuild.Env = append(os.Environ(), "GOWORK=off")
-	agentBuild.Stdout = os.Stdout
-	agentBuild.Stderr = os.Stderr
-	if err := agentBuild.Run(); err != nil {
-		log.Printf("[AutoUpdate] FAILED at step 5 (kc-agent build) after %s: %v", time.Since(start), err)
-		uc.recordError(fmt.Sprintf("go build kc-agent failed: %v", err))
+	// Build to a temp file first, then atomically rename.
+	agentTmp := agentPath + ".update-tmp"
+	res = uc.runBuildCmd(goBuildTimeout, "Building kc-agent binary", 5, total, 58,
+		"go", []string{"build", "-o", agentTmp, "./cmd/kc-agent"}, repoPath, []string{"GOWORK=off"})
+	if res.err != nil {
+		os.Remove(agentTmp) // clean up partial build
+		log.Printf("[AutoUpdate] FAILED at step 5 (kc-agent build) after %s: %v", time.Since(start), res.err)
+		uc.recordError(fmt.Sprintf("go build kc-agent failed: %v", res.err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "kc-agent build failed, rolling back...",
-			Error:   err.Error(),
+			Error:   buildErrorDetail(res.err, res.output),
 		})
 		rollbackGit(repoPath, previousSHA)
 		rebuildFrontend(repoPath)   //nolint:errcheck
 		rebuildGoBinaries(repoPath) //nolint:errcheck
 		return
+	}
+	if err := os.Rename(agentTmp, agentPath); err != nil {
+		log.Printf("[AutoUpdate] Failed to move kc-agent binary: %v", err)
+		os.Remove(agentTmp)
 	}
 	log.Printf("[AutoUpdate] Step 5/%d complete (kc-agent binary) in %s", total, time.Since(stepStart))
 
@@ -558,7 +583,11 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	}
 
 	// Exit this process — startup-oauth.sh will start fresh instances
-	os.Exit(0)
+	exit := uc.exitFunc
+	if exit == nil {
+		exit = os.Exit
+	}
+	exit(0)
 }
 
 // selfUpdateFallback rebuilds the kc-agent binary and replaces the running
@@ -842,23 +871,21 @@ const npmInstallMaxRetries = 3 // Max retries for npm install with cache recover
 // resilientNpmInstall runs npm install with automatic recovery from cache corruption.
 // On failure it runs npm cache clean --force and retries. On 2nd+ failure it also
 // removes node_modules for a completely clean install. Broadcasts progress via WebSocket.
-func (uc *UpdateChecker) resilientNpmInstall(webDir string, step, totalSteps int) error {
+// Each attempt has a hard timeout to prevent indefinite hangs.
+func (uc *UpdateChecker) resilientNpmInstall(webDir string, step, totalSteps int, timeout time.Duration) error {
 	for attempt := 1; attempt <= npmInstallMaxRetries; attempt++ {
 		// Remove stale lockfiles that can block concurrent installs
 		os.Remove(webDir + "/package-lock.json.lock")
 		os.Remove(webDir + "/.package-lock.json")
 
-		npmInstall := exec.Command("npm", "install", "--prefer-offline")
-		npmInstall.Dir = webDir
-		npmInstall.Stdout = os.Stdout
-		npmInstall.Stderr = os.Stderr
-
-		if err := npmInstall.Run(); err == nil {
+		res := uc.runBuildCmd(timeout, fmt.Sprintf("Installing npm dependencies (attempt %d/%d)", attempt, npmInstallMaxRetries),
+			step, totalSteps, 18, "npm", []string{"install", "--prefer-offline"}, webDir, nil)
+		if res.err == nil {
 			return nil // success
 		}
 
 		if attempt == npmInstallMaxRetries {
-			return fmt.Errorf("npm install failed after %d attempts", npmInstallMaxRetries)
+			return fmt.Errorf("npm install failed after %d attempts: %s", npmInstallMaxRetries, buildErrorDetail(res.err, res.output))
 		}
 
 		// Broadcast retry status
@@ -1051,6 +1078,23 @@ func runGitPull(repoPath string) error {
 	return cmd.Run()
 }
 
+// runGitPullWithTimeout runs git pull with a hard timeout to prevent hanging on network issues.
+func runGitPullWithTimeout(repoPath string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", "pull", "--rebase", "--autostash", "origin", "main")
+	cmd.Dir = repoPath
+	out, err := cmd.CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("timed out after %s", timeout)
+	}
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 // gitStash stashes uncommitted changes if any exist. Returns true if a stash was created.
 func gitStash(repoPath string) bool {
 	if !hasUncommittedChanges(repoPath) {
@@ -1124,7 +1168,7 @@ func rebuildGoBinaries(repoPath string) error {
 	// Build console binary
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		consolePath = "./console"
+		consolePath = filepath.Join(repoPath, "console")
 	}
 	consoleBuild := exec.Command("go", "build", "-o", consolePath, "./cmd/console")
 	consoleBuild.Dir = repoPath
@@ -1138,7 +1182,7 @@ func rebuildGoBinaries(repoPath string) error {
 	// Build kc-agent binary
 	agentPath, err := exec.LookPath("kc-agent")
 	if err != nil {
-		agentPath = "./kc-agent"
+		agentPath = filepath.Join(repoPath, "kc-agent")
 	}
 	agentBuild := exec.Command("go", "build", "-o", agentPath, "./cmd/kc-agent")
 	agentBuild.Dir = repoPath
@@ -1206,4 +1250,107 @@ func short(sha string) string {
 		return sha[:7]
 	}
 	return sha
+}
+
+// --- Build execution with timeout, heartbeat, and output capture ---
+
+// buildResult holds the outcome of a build command.
+type buildResult struct {
+	err    error
+	output string // combined stdout+stderr (last buildOutputTailLines lines)
+}
+
+// runBuildCmd executes an external command with:
+//   - A hard timeout so builds can never hang indefinitely
+//   - Periodic heartbeat broadcasts so the frontend knows the agent is still alive
+//   - Captured stderr/stdout so error messages include the actual build output
+//
+// The heartbeat sends a WebSocket progress message every buildHeartbeatInterval
+// with an updated elapsed-time string.
+func (uc *UpdateChecker) runBuildCmd(
+	timeout time.Duration,
+	stepLabel string,
+	step, totalSteps, progressPct int,
+	name string, args []string,
+	dir string,
+	env []string,
+) buildResult {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Dir = dir
+	// After the context cancels and the process is killed, give I/O pipes
+	// this long to drain before force-closing them. Without this, cmd.Wait()
+	// can hang indefinitely waiting on pipe-reader goroutines.
+	const waitDelayAfterKill = 3 * time.Second
+	cmd.WaitDelay = waitDelayAfterKill
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
+
+	// Capture combined output for error reporting
+	var buf strings.Builder
+	cmd.Stdout = io.MultiWriter(os.Stdout, &buf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &buf)
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return buildResult{err: err}
+	}
+
+	// Heartbeat goroutine — sends periodic "still building..." messages
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(buildHeartbeatInterval)
+		defer ticker.Stop()
+		start := time.Now()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				elapsed := time.Since(start).Truncate(time.Second)
+				uc.broadcast("update_progress", UpdateProgressPayload{
+					Status:     "building",
+					Message:    fmt.Sprintf("%s (%s elapsed)...", stepLabel, elapsed),
+					Progress:   progressPct,
+					Step:       step,
+					TotalSteps: totalSteps,
+				})
+			}
+		}
+	}()
+
+	err := cmd.Wait()
+	close(done)
+
+	// Extract the tail of the output for error messages
+	output := tailLines(buf.String(), buildOutputTailLines)
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return buildResult{
+			err:    fmt.Errorf("timed out after %s", timeout),
+			output: output,
+		}
+	}
+	return buildResult{err: err, output: output}
+}
+
+// tailLines returns the last n lines of s. If s has fewer than n lines, returns all of s.
+func tailLines(s string, n int) string {
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	if len(lines) <= n {
+		return s
+	}
+	return strings.Join(lines[len(lines)-n:], "\n")
+}
+
+// buildErrorDetail formats an error message that includes both the Go error and
+// the tail of the build output, giving the user actionable information.
+func buildErrorDetail(err error, output string) string {
+	if output == "" {
+		return err.Error()
+	}
+	return fmt.Sprintf("%v\n---\n%s", err, output)
 }

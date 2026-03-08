@@ -7,6 +7,11 @@ const WS_RECONNECT_MS = 5000  // Reconnect interval after WebSocket disconnect
 const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
 const BACKEND_POLL_MAX = 90   // Max attempts (~3 min) before giving up
 
+// Stale detection: if WebSocket has been disconnected for this long during an
+// active update (status is "pulling", "building", or "restarting"), we assume
+// the kc-agent died and show a failure message instead of leaving the UI stuck.
+const STALE_UPDATE_TIMEOUT_MS = 45_000  // 45 seconds without a WebSocket message
+
 /** Known update step labels for developer channel (7-step update) */
 const DEV_UPDATE_STEP_LABELS: Record<number, string> = {
   1: 'Git pull',
@@ -18,16 +23,28 @@ const DEV_UPDATE_STEP_LABELS: Record<number, string> = {
   7: 'Restart',
 }
 
+/** Statuses that indicate an update is actively running */
+const ACTIVE_UPDATE_STATUSES = new Set(['pulling', 'building', 'restarting'])
+
 /**
  * Hook that listens for update_progress WebSocket broadcasts from kc-agent.
  * Uses a separate WebSocket connection to avoid interfering with the shared one.
  * Also tracks step history for detailed progress display.
+ *
+ * Includes stale-state detection: if the WebSocket disconnects during an active
+ * update and stays disconnected for STALE_UPDATE_TIMEOUT_MS, the hook
+ * automatically transitions to a "failed" state with a helpful error message.
  */
 export function useUpdateProgress() {
   const [progress, setProgress] = useState<UpdateProgress | null>(null)
   const [stepHistory, setStepHistory] = useState<UpdateStepEntry[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const progressRef = useRef<UpdateProgress | null>(null)
+
+  // Track the last time we received a WebSocket message during an active update.
+  // Used for stale-state detection.
+  const lastMessageTimeRef = useRef<number>(0)
+  const staleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Keep ref in sync so the connect closure always sees the latest value
   progressRef.current = progress
@@ -67,6 +84,48 @@ export function useUpdateProgress() {
       }
       return entries
     })
+  }, [])
+
+  // Start or stop the stale-state detection timer based on current progress.
+  // When an update is active, we check periodically whether the WebSocket
+  // has gone silent for too long — which means the kc-agent process likely died.
+  const startStaleDetection = useCallback(() => {
+    // Clear any existing timer
+    if (staleTimerRef.current) {
+      clearInterval(staleTimerRef.current)
+      staleTimerRef.current = null
+    }
+
+    const STALE_CHECK_INTERVAL_MS = 5000  // Check every 5 seconds
+    staleTimerRef.current = setInterval(() => {
+      const cur = progressRef.current
+      if (!cur || !ACTIVE_UPDATE_STATUSES.has(cur.status)) {
+        // Not in an active update — stop checking
+        if (staleTimerRef.current) {
+          clearInterval(staleTimerRef.current)
+          staleTimerRef.current = null
+        }
+        return
+      }
+
+      const elapsed = Date.now() - lastMessageTimeRef.current
+      if (elapsed > STALE_UPDATE_TIMEOUT_MS && !wsRef.current) {
+        // WebSocket disconnected during active update for too long — agent likely died
+        setProgress({
+          status: 'failed',
+          message: 'Update agent stopped responding — the kc-agent process may have crashed during the build.',
+          progress: cur.progress,
+          error: 'No response from kc-agent for ' + Math.round(elapsed / 1000) + 's. '
+            + 'Try restarting manually: cd <repo> && bash startup-oauth.sh',
+        })
+
+        // Stop the timer
+        if (staleTimerRef.current) {
+          clearInterval(staleTimerRef.current)
+          staleTimerRef.current = null
+        }
+      }
+    }, STALE_CHECK_INTERVAL_MS)
   }, [])
 
   useEffect(() => {
@@ -131,6 +190,9 @@ export function useUpdateProgress() {
         wsRef.current = ws
 
         ws.onopen = () => {
+          // Reset stale timer on successful connection
+          lastMessageTimeRef.current = Date.now()
+
           // If we reconnected while showing "restarting", kc-agent is back —
           // but backend may still be building. Wait for it.
           const cur = progressRef.current
@@ -140,12 +202,29 @@ export function useUpdateProgress() {
         }
 
         ws.onmessage = (event) => {
+          // Update last-message timestamp for stale detection
+          lastMessageTimeRef.current = Date.now()
+
           try {
             const msg = JSON.parse(event.data)
             if (msg.type === 'update_progress' && msg.payload) {
               const p = msg.payload as UpdateProgress
+
+              // Start stale detection when an active update begins
+              if (ACTIVE_UPDATE_STATUSES.has(p.status) && !staleTimerRef.current) {
+                startStaleDetection()
+              }
+
               setProgress(p)
               updateStepHistory(p)
+
+              // Stop stale detection when update is done or failed
+              if (p.status === 'done' || p.status === 'failed') {
+                if (staleTimerRef.current) {
+                  clearInterval(staleTimerRef.current)
+                  staleTimerRef.current = null
+                }
+              }
             }
           } catch {
             // Ignore parse errors
@@ -174,12 +253,16 @@ export function useUpdateProgress() {
 
     return () => {
       clearTimeout(reconnectTimer)
+      if (staleTimerRef.current) {
+        clearInterval(staleTimerRef.current)
+        staleTimerRef.current = null
+      }
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null
       }
     }
-  }, [updateStepHistory])
+  }, [updateStepHistory, startStaleDetection])
 
   const dismiss = () => {
     setProgress(null)
