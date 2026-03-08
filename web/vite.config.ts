@@ -196,6 +196,13 @@ manualChunks: (id) => {
     css: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e/**/*'],
+    teardownTimeout: process.env.CI ? 60_000 : 10_000, // CI runners need more time to terminate workers
+    poolOptions: {
+      forks: {
+        // Prevent "Timeout terminating forks worker" on slow CI runners
+        terminateTimeout: process.env.CI ? 60_000 : 10_000,
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

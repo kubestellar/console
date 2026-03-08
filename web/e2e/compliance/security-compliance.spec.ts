@@ -763,7 +763,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
   })
 
   try {
-    await noAuthPage.goto('http://localhost:5174/clusters', { waitUntil: 'domcontentloaded', timeout: 10000 })
+    const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5174'
+    await noAuthPage.goto(`${baseUrl}/clusters`, { waitUntil: 'domcontentloaded', timeout: IS_CI ? 20_000 : 10_000 })
     await noAuthPage.waitForTimeout(2000)
 
     // Check if protected content is visible
