@@ -1,11 +1,10 @@
-import { ReactNode, Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { ReactNode, Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw, Plug } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
-import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
 import { useSidebarConfig, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
 import { useMobile } from '../../hooks/useMobile'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
@@ -27,6 +26,15 @@ import { KeepAliveOutlet } from './KeepAliveOutlet'
 import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
+
+// Lazy-load the AI mission sidebar so react-markdown and remark plugins are
+// not part of the initial bundle — they only load when the sidebar is first rendered.
+const MissionSidebar = lazy(() =>
+  import('./mission-sidebar').then(m => ({ default: m.MissionSidebar }))
+)
+const MissionSidebarToggle = lazy(() =>
+  import('./mission-sidebar').then(m => ({ default: m.MissionSidebarToggle }))
+)
 
 
 // Module-level constant — computed once, never changes on re-render.
@@ -415,9 +423,11 @@ export function Layout({ children }: LayoutProps) {
         </main>
       </div>
 
-      {/* AI Mission sidebar */}
-      <MissionSidebar />
-      <MissionSidebarToggle />
+      {/* AI Mission sidebar — lazy loaded to keep react-markdown out of initial bundle */}
+      <Suspense fallback={null}>
+        <MissionSidebar />
+        <MissionSidebarToggle />
+      </Suspense>
 
       {/* Setup Instructions Dialog — also shown when user tries to exit forced demo mode */}
       <SetupInstructionsDialog

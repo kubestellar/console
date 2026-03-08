@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => ({
     },
     rollupOptions: {
       output: {
-manualChunks: (id) => {
+        manualChunks: (id) => {
           if (!id.includes('node_modules')) return
           // React ecosystem must stay together (shared hooks/context internals)
           if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/')) {
@@ -95,9 +95,37 @@ manualChunks: (id) => {
           if (id.includes('/echarts/') || id.includes('/echarts-for-react/') || id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
             return 'charts-vendor'
           }
-          // UI animation & interaction
-          if (id.includes('/framer-motion/') || id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) {
+          // Animation — framer-motion is large (~350KB) and only needed on pages
+          // that use <motion.*> or AnimatePresence, so isolate it from core UI deps.
+          if (id.includes('/framer-motion/')) {
+            return 'motion-vendor'
+          }
+          // Core UI interaction (icons + drag-and-drop)
+          if (id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) {
             return 'ui-vendor'
+          }
+          // Markdown rendering — only loaded when the AI mission sidebar is open
+          if (
+            id.includes('/react-markdown/') ||
+            id.includes('/remark-') ||
+            id.includes('/rehype-') ||
+            id.includes('/micromark') ||
+            id.includes('/mdast-') ||
+            id.includes('/hast-') ||
+            id.includes('/unist-') ||
+            id.includes('/vfile') ||
+            id.includes('/property-information') ||
+            id.includes('/zwitch') ||
+            id.includes('/stringify-entities') ||
+            id.includes('/ccount') ||
+            id.includes('/character-entities')
+          ) {
+            return 'markdown-vendor'
+          }
+          // Sucrase JS compiler — only used when editing/previewing dynamic cards;
+          // isolate it so the ~150 KB compiler never loads on normal page views.
+          if (id.includes('/sucrase/')) {
+            return 'sucrase-vendor'
           }
           // Internationalization
           if (id.includes('/i18next') || id.includes('/react-i18next/')) {
@@ -107,6 +135,9 @@ manualChunks: (id) => {
         },
       },
     },
+    // Warn when any chunk exceeds 300 KB after minification, matching the
+    // Auto-QA performance threshold so CI catches regressions early.
+    chunkSizeWarningLimit: 300,
   },
   server: {
     port: 5174,
