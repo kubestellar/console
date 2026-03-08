@@ -10,7 +10,7 @@ const ERROR_RATE_WARNING_PCT = 5 // Show warning when error rate exceeds this pe
 export function OpenFeatureStatus() {
   const { t } = useTranslation('cards')
   const { t: tc } = useTranslation('common')
-  const formatRelativeTime = createRelativeTimeFormatter(tc)
+  const formatRelativeTime = createRelativeTimeFormatter(tc as (key: string, options?: { count?: number }) => string)
   const { data, error, showSkeleton, showEmptyState } = useOpenFeatureStatus()
 
   if (showSkeleton) {
