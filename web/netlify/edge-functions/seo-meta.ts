@@ -15,6 +15,11 @@ import type { Context } from "https://edge.netlify.com";
 const SITE_URL = "https://console.kubestellar.io";
 const SITE_NAME = "KubeStellar Console";
 const DEFAULT_IMAGE = `${SITE_URL}/kubestellar.png`;
+const ORG_URL = "https://kubestellar.io";
+const ORG_NAME = "KubeStellar";
+const GITHUB_URL = "https://github.com/kubestellar";
+const DOCS_URL = "https://docs.kubestellar.io";
+const LOGO_URL = `${SITE_URL}/kubestellar.png`;
 
 /** Known search engine crawler user-agent patterns */
 const CRAWLER_UA_PATTERNS = [
@@ -210,6 +215,84 @@ const ROUTE_META: Record<string, RouteMeta> = {
   },
 };
 
+/** Human-readable names for route segments used in BreadcrumbList schema */
+const ROUTE_DISPLAY_NAMES: Record<string, string> = {
+  clusters: "Clusters",
+  workloads: "Workloads",
+  missions: "Missions",
+  "gpu-reservations": "GPU Management",
+  deploy: "Deploy",
+  security: "Security",
+  "llm-d-benchmarks": "LLM Benchmarks",
+  gitops: "GitOps",
+  marketplace: "Marketplace",
+  "ai-agents": "AI Agents",
+  cost: "Cost Management",
+  nodes: "Nodes",
+  deployments: "Deployments",
+  pods: "Pods",
+  services: "Services",
+  operators: "Operators",
+  helm: "Helm",
+  events: "Events",
+  logs: "Logs",
+  compute: "Compute",
+  storage: "Storage",
+  network: "Network",
+  alerts: "Alerts",
+  "security-posture": "Security Posture",
+  "data-compliance": "Data Compliance",
+  "ci-cd": "CI/CD",
+  "ai-ml": "AI/ML",
+  arcade: "Arcade",
+};
+
+/** Build Organization JSON-LD — appears once per page for knowledge panel */
+function buildOrganizationJsonLd(): string {
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: ORG_NAME,
+    url: ORG_URL,
+    logo: LOGO_URL,
+    sameAs: [GITHUB_URL, DOCS_URL],
+    description:
+      "Open-source multi-cluster Kubernetes orchestration platform by the CNCF.",
+  });
+}
+
+/**
+ * Build BreadcrumbList JSON-LD from the current route path.
+ * Home → Section (e.g. "/" → "/clusters")
+ */
+function buildBreadcrumbJsonLd(route: string): string {
+  const items: { "@type": string; position: number; name: string; item: string }[] = [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Console Home",
+      item: SITE_URL,
+    },
+  ];
+
+  if (route !== "/") {
+    const segment = route.replace(/^\//, "");
+    const displayName = ROUTE_DISPLAY_NAMES[segment] || segment;
+    items.push({
+      "@type": "ListItem",
+      position: 2,
+      name: displayName,
+      item: `${SITE_URL}${route}`,
+    });
+  }
+
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items,
+  });
+}
+
 /** Generate JSON-LD structured data for the SoftwareApplication */
 function buildJsonLd(route: string, meta: RouteMeta): string {
   const jsonLd: Record<string, unknown> = {
@@ -270,8 +353,14 @@ function buildMetaTags(route: string, meta: RouteMeta): string {
     `<meta name="twitter:description" content="${meta.description}" />`,
     `<meta name="twitter:image" content="${DEFAULT_IMAGE}" />`,
 
-    // JSON-LD Structured Data
+    // DNS prefetch for external APIs
+    `<link rel="dns-prefetch" href="https://api.github.com" />`,
+    `<link rel="dns-prefetch" href="https://www.googletagmanager.com" />`,
+
+    // JSON-LD Structured Data (SoftwareApplication + Organization + BreadcrumbList)
     `<script type="application/ld+json">${buildJsonLd(route, meta)}</script>`,
+    `<script type="application/ld+json">${buildOrganizationJsonLd()}</script>`,
+    `<script type="application/ld+json">${buildBreadcrumbJsonLd(route)}</script>`,
   ].join("\n    ");
 }
 
