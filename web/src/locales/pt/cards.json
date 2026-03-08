@@ -2684,6 +2684,10 @@
     "searchPlaceholder": "Pesquisar objetos dimensionados…",
     "noScaledObjects": "Operador em execução",
     "noScaledObjectsHint": "Os dados de objetos dimensionados requerem a API CRD do KEDA.",
-    "noSearchResults": "Nenhum objeto dimensionado corresponde à sua pesquisa."
+    "noSearchResults": "Nenhum objeto dimensionado corresponde à sua pesquisa.",
+    "syncedJustNow": "agora mesmo",
+    "syncedMinutesAgo": "há {{count}} min",
+    "syncedHoursAgo": "há {{count}} h",
+    "syncedDaysAgo": "há {{count}} dias"
   }
 }

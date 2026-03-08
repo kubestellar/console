@@ -2684,6 +2684,10 @@
     "searchPlaceholder": "Rechercher des objets mis à l'échelle…",
     "noScaledObjects": "Opérateur en cours d'exécution",
     "noScaledObjectsHint": "Les données des objets mis à l'échelle nécessitent l'API CRD de KEDA.",
-    "noSearchResults": "Aucun objet mis à l'échelle ne correspond à votre recherche."
+    "noSearchResults": "Aucun objet mis à l'échelle ne correspond à votre recherche.",
+    "syncedJustNow": "à l'instant",
+    "syncedMinutesAgo": "il y a {{count}} min",
+    "syncedHoursAgo": "il y a {{count}} h",
+    "syncedDaysAgo": "il y a {{count}} j"
   }
 }
