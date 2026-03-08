@@ -6,6 +6,7 @@ import { checkOAuthConfigured } from '../../lib/api'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { emitLogin } from '../../lib/analytics'
+import { LogoWithStar } from '../ui/LogoWithStar'
 
 // Lazy load the heavy Three.js globe animation
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
@@ -134,11 +135,7 @@ export function Login() {
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="flex items-center gap-3">
-              <img
-                src="/kubestellar-logo.svg"
-                alt="KubeStellar logo"
-                className="w-14 h-14"
-              />
+              <LogoWithStar className="w-14 h-14" alt="KubeStellar logo" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">KubeStellar</h1>
                 <p className="text-sm text-muted-foreground">KubeStellar Console</p>

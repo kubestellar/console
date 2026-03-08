@@ -4,17 +4,7 @@ import { useTour, TourStep } from '../../hooks/useTour'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { TOOLTIP_POSITION_DELAY_MS } from '../../lib/constants/network'
-
-// KubeStellar logo — clean, no decorative overlays
-function KubeStellarAIIcon({ className }: { className?: string }) {
-  return (
-    <img
-      src="/kubestellar-logo.svg"
-      alt=""
-      className={cn('w-full h-full', className)}
-    />
-  )
-}
+import { LogoWithStar } from '../ui/LogoWithStar'
 
 interface TooltipPosition {
   top?: number
@@ -364,7 +354,7 @@ export function TourOverlay() {
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-purple-500/20">
-              <KubeStellarAIIcon className="w-5 h-5" />
+              <LogoWithStar className="w-5 h-5" />
             </div>
             <h3 className="font-semibold text-foreground">{currentStep.title}</h3>
           </div>
@@ -452,7 +442,7 @@ export function TourTrigger() {
       )}
       title="Take a tour"
     >
-      <KubeStellarAIIcon className="w-5 h-5" />
+      <LogoWithStar className="w-5 h-5" />
       {!hasCompletedTour && <span>Take the tour</span>}
     </button>
   )

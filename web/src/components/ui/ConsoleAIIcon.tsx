@@ -1,4 +1,5 @@
 import { cn } from '../../lib/cn'
+import { LogoWithStar } from './LogoWithStar'
 
 interface ConsoleAIIconProps {
   className?: string
@@ -6,7 +7,7 @@ interface ConsoleAIIconProps {
 }
 
 /**
- * KubeStellar Console AI icon — clean logo without decorative overlays.
+ * KubeStellar Console AI icon with star treatment.
  */
 export function ConsoleAIIcon({ className, size = 'md' }: ConsoleAIIconProps) {
   const sizeClasses = {
@@ -16,10 +17,9 @@ export function ConsoleAIIcon({ className, size = 'md' }: ConsoleAIIconProps) {
   }
 
   return (
-    <img
-      src="/kubestellar-logo.svg"
-      alt="Console AI"
+    <LogoWithStar
       className={cn(sizeClasses[size], className)}
+      alt="Console AI"
     />
   )
 }

@@ -7,6 +7,7 @@ import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
 import { useMobile } from '../../../hooks/useMobile'
 import { TourTrigger } from '../../onboarding/Tour'
+import { LogoWithStar } from '../../ui/LogoWithStar'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
 import { FeatureRequestButton } from '../../feedback'
@@ -57,11 +58,7 @@ export function Navbar() {
           className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity"
           aria-label={t('navbar.goHome')}
         >
-          <img
-            src="/kubestellar-logo.svg"
-            alt="KubeStellar"
-            className="w-8 h-8 md:w-9 md:h-9"
-          />
+          <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" />
         </button>
         <a
           href="https://kubestellar.io/docs/console/readme"
