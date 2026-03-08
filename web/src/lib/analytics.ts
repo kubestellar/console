@@ -388,30 +388,31 @@ export function emitCardReplaced(oldType: string, newType: string) {
 // tracking without per-card instrumentation.
 
 /** Fired when user changes sort field in a card's controls */
-export function emitCardSortChanged(sortField: string) {
-  send('ksc_card_sort_changed', { sort_field: sortField, page_path: window.location.pathname })
+export function emitCardSortChanged(sortField: string, cardType: string) {
+  send('ksc_card_sort_changed', { sort_field: sortField, card_type: cardType, page_path: window.location.pathname })
 }
 
 /** Fired when user toggles sort direction in a card's controls */
-export function emitCardSortDirectionChanged(direction: string) {
-  send('ksc_card_sort_direction_changed', { direction, page_path: window.location.pathname })
+export function emitCardSortDirectionChanged(direction: string, cardType: string) {
+  send('ksc_card_sort_direction_changed', { direction, card_type: cardType, page_path: window.location.pathname })
 }
 
 /** Fired when user changes the item limit in a card's controls */
-export function emitCardLimitChanged(limit: string) {
-  send('ksc_card_limit_changed', { limit, page_path: window.location.pathname })
+export function emitCardLimitChanged(limit: string, cardType: string) {
+  send('ksc_card_limit_changed', { limit, card_type: cardType, page_path: window.location.pathname })
 }
 
 /** Fired when user types in a card's search input (debounced — fires once per search session) */
-export function emitCardSearchUsed(queryLength: number) {
-  send('ksc_card_search_used', { query_length: queryLength, page_path: window.location.pathname })
+export function emitCardSearchUsed(queryLength: number, cardType: string) {
+  send('ksc_card_search_used', { query_length: queryLength, card_type: cardType, page_path: window.location.pathname })
 }
 
 /** Fired when user changes cluster filter selection in a card */
-export function emitCardClusterFilterChanged(selectedCount: number, totalCount: number) {
+export function emitCardClusterFilterChanged(selectedCount: number, totalCount: number, cardType: string) {
   send('ksc_card_cluster_filter_changed', {
     selected_count: selectedCount,
     total_count: totalCount,
+    card_type: cardType,
     page_path: window.location.pathname,
   })
 }

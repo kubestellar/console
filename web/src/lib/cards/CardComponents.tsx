@@ -8,6 +8,7 @@ import { Pagination } from '../../components/ui/Pagination'
 import { CardControls as CardControlsUI, type SortDirection } from '../../components/ui/CardControls'
 import { ClusterStatusDot, getClusterState, type ClusterState } from '../../components/ui/ClusterStatusBadge'
 import { emitCardSearchUsed, emitCardClusterFilterChanged } from '../analytics'
+import { useCardType } from '../../components/cards/CardWrapper'
 import type { ClusterWithHealth } from './cardHooks'
 
 // ============================================================================
@@ -213,6 +214,7 @@ export function CardSearchInput({
   className = '',
   debounceMs,
 }: CardSearchInputProps) {
+  const cardType = useCardType()
   const [localValue, setLocalValue] = useState(value)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
 
@@ -235,9 +237,9 @@ export function CardSearchInput({
   const handleBlur = useCallback(() => {
     const current = debounceMs ? localValue : value
     if (current.length > 0) {
-      emitCardSearchUsed(current.length)
+      emitCardSearchUsed(current.length, cardType)
     }
-  }, [debounceMs, localValue, value])
+  }, [debounceMs, localValue, value, cardType])
 
   // Cleanup timer on unmount
   useEffect(() => () => clearTimeout(timerRef.current), [])
@@ -290,6 +292,7 @@ export function CardClusterFilter({
   containerRef,
   minClusters = 2,
 }: CardClusterFilterProps) {
+  const cardType = useCardType()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
 
@@ -330,7 +333,7 @@ export function CardClusterFilter({
         >
           <div className="p-1">
             <button
-              onClick={() => { onClear(); emitCardClusterFilterChanged(0, availableClusters.length) }}
+              onClick={() => { onClear(); emitCardClusterFilterChanged(0, availableClusters.length, cardType) }}
               className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${selectedClusters.length === 0
                 ? 'bg-purple-500/20 text-purple-400'
                 : 'hover:bg-secondary text-foreground'
@@ -368,7 +371,7 @@ export function CardClusterFilter({
                       // Compute resulting count: toggling adds or removes one cluster
                       const willBeSelected = !selectedClusters.includes(cluster.name)
                       const newCount = willBeSelected ? selectedClusters.length + 1 : selectedClusters.length - 1
-                      emitCardClusterFilterChanged(newCount, availableClusters.length)
+                      emitCardClusterFilterChanged(newCount, availableClusters.length, cardType)
                     }
                   }}
                   disabled={isUnreachable}

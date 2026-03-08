@@ -96,6 +96,16 @@ export function useCardExpanded() {
   return useContext(CardExpandedContext)
 }
 
+// Context to expose cardType to descendant shared components (CardControls,
+// CardSearchInput, CardClusterFilter) so GA4 events can identify which card
+// the user interacted with — no prop threading required.
+const CardTypeContext = createContext<string>('')
+
+/** Hook for shared UI components to read the cardType of their parent CardWrapper */
+export function useCardType() {
+  return useContext(CardTypeContext)
+}
+
 // Note: Lazy mounting and eager mount scheduling have been removed.
 // Cards now render immediately to show cached data without delay.
 // This trades some initial render performance for better UX with cached data.
@@ -678,6 +688,7 @@ export function CardWrapper({
   void setLocalMessages
 
   return (
+    <CardTypeContext.Provider value={cardType}>
     <CardExpandedContext.Provider value={{ isExpanded }}>
       <ForceLiveContext.Provider value={!!forceLive}>
       <CardDataReportContext.Provider value={reportCtx}>
@@ -1079,5 +1090,6 @@ export function CardWrapper({
       </CardDataReportContext.Provider>
       </ForceLiveContext.Provider>
     </CardExpandedContext.Provider>
+    </CardTypeContext.Provider>
   )
 }

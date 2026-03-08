@@ -2,6 +2,7 @@ import { ChevronDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '../../lib/cn'
 import { emitCardSortChanged, emitCardSortDirectionChanged, emitCardLimitChanged } from '../../lib/analytics'
+import { useCardType } from '../cards/CardWrapper'
 
 interface LimitOption {
   value: number | 'unlimited'
@@ -49,6 +50,7 @@ export function CardControls<T extends string = string>({
   showLimit = true,
   showSort = true,
 }: CardControlsProps<T>) {
+  const cardType = useCardType()
   const [limitOpen, setLimitOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const limitRef = useRef<HTMLDivElement>(null)
@@ -58,7 +60,7 @@ export function CardControls<T extends string = string>({
     if (onSortDirectionChange) {
       const newDir = sortDirection === 'asc' ? 'desc' : 'asc'
       onSortDirectionChange(newDir)
-      emitCardSortDirectionChanged(newDir)
+      emitCardSortDirectionChanged(newDir, cardType)
     }
   }
 
@@ -96,7 +98,7 @@ export function CardControls<T extends string = string>({
               {LIMIT_OPTIONS.map(option => (
                 <button
                   key={String(option.value)}
-                  onClick={() => { onLimitChange(option.value); setLimitOpen(false); emitCardLimitChanged(String(option.value)) }}
+                  onClick={() => { onLimitChange(option.value); setLimitOpen(false); emitCardLimitChanged(String(option.value), cardType) }}
                   className={cn(
                     'w-full px-3 py-1.5 text-left text-xs hover:bg-secondary/50 transition-colors',
                     limit === option.value ? 'text-primary bg-primary/10' : 'text-foreground'
@@ -126,7 +128,7 @@ export function CardControls<T extends string = string>({
                 {sortOptions.map(option => (
                   <button
                     key={option.value}
-                    onClick={() => { onSortChange(option.value); setSortOpen(false); emitCardSortChanged(option.value) }}
+                    onClick={() => { onSortChange(option.value); setSortOpen(false); emitCardSortChanged(option.value, cardType) }}
                     className={cn(
                       'w-full px-3 py-1.5 text-left text-xs hover:bg-secondary/50 transition-colors',
                       sortBy === option.value ? 'text-primary bg-primary/10' : 'text-foreground'
