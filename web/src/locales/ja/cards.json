@@ -2684,6 +2684,10 @@
     "searchPlaceholder": "スケールオブジェクトを検索…",
     "noScaledObjects": "オペレーター稼働中",
     "noScaledObjectsHint": "スケールオブジェクトデータには KEDA CRD API が必要です。",
-    "noSearchResults": "検索に一致するスケールオブジェクトはありません。"
+    "noSearchResults": "検索に一致するスケールオブジェクトはありません。",
+    "syncedJustNow": "たった今",
+    "syncedMinutesAgo": "{{count}}分前",
+    "syncedHoursAgo": "{{count}}時間前",
+    "syncedDaysAgo": "{{count}}日前"
   }
 }

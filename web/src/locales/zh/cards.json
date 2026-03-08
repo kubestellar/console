@@ -2684,6 +2684,10 @@
     "searchPlaceholder": "搜索扩展对象…",
     "noScaledObjects": "操作器运行中",
     "noScaledObjectsHint": "扩展对象数据需要 KEDA CRD API。",
-    "noSearchResults": "没有与搜索匹配的扩展对象。"
+    "noSearchResults": "没有与搜索匹配的扩展对象。",
+    "syncedJustNow": "刚刚",
+    "syncedMinutesAgo": "{{count}} 分钟前",
+    "syncedHoursAgo": "{{count}} 小时前",
+    "syncedDaysAgo": "{{count}} 天前"
   }
 }

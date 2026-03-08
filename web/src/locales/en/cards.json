@@ -448,13 +448,8 @@
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
     "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
     "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health.",
-<<<<<<< HEAD
     "lima_status": "Lima virtual machine instances and resource usage.",
     "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths."
-=======
-    "lima_status": "Lima",
-    "keda_status": "KEDA"
->>>>>>> 693ea45e (Addressed feedback)
   },
   "categories": {
     "core": "Core",
@@ -2761,6 +2756,10 @@
     "searchPlaceholder": "Search scaled objects…",
     "noScaledObjects": "Operator running",
     "noScaledObjectsHint": "ScaledObject data requires the KEDA CRD API.",
-    "noSearchResults": "No scaled objects match your search."
+    "noSearchResults": "No scaled objects match your search.",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }

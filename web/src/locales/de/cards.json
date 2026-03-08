@@ -2684,6 +2684,10 @@
     "searchPlaceholder": "Skalierte Objekte suchen…",
     "noScaledObjects": "Operator läuft",
     "noScaledObjectsHint": "Daten skalierter Objekte erfordern die KEDA CRD API.",
-    "noSearchResults": "Keine skalierten Objekte entsprechen Ihrer Suche."
+    "noSearchResults": "Keine skalierten Objekte entsprechen Ihrer Suche.",
+    "syncedJustNow": "gerade eben",
+    "syncedMinutesAgo": "vor {{count}} Min.",
+    "syncedHoursAgo": "vor {{count}} Std.",
+    "syncedDaysAgo": "vor {{count}} Tagen"
   }
 }

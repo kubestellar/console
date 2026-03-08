@@ -2684,6 +2684,10 @@
     "searchPlaceholder": "Buscar objetos escalados…",
     "noScaledObjects": "Operador en ejecución",
     "noScaledObjectsHint": "Los datos de objetos escalados requieren la API CRD de KEDA.",
-    "noSearchResults": "Ningún objeto escalado coincide con su búsqueda."
+    "noSearchResults": "Ningún objeto escalado coincide con su búsqueda.",
+    "syncedJustNow": "justo ahora",
+    "syncedMinutesAgo": "hace {{count}} min",
+    "syncedHoursAgo": "hace {{count}} h",
+    "syncedDaysAgo": "hace {{count}} días"
   }
 }
