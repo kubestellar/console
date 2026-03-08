@@ -58,14 +58,21 @@ function checkEngagement() {
   }
 }
 
-/** Get total engagement time in ms and reset the accumulator */
-function getAndResetEngagementMs(): number {
+/** Get total engagement time in ms without resetting (peek) */
+function peekEngagementMs(): number {
   let total = accumulatedEngagementMs
   if (isUserActive) {
-    // Add current active period
     total += Date.now() - engagementStartMs
   }
-  // Reset for next event
+  return total
+}
+
+/** Get total engagement time in ms and reset the accumulator.
+ *  Only called for user_engagement events — GA4 calculates Engaged Sessions
+ *  and Average Engagement Time exclusively from _et on user_engagement hits.
+ *  Other events get a non-resetting peek so the accumulator isn't drained. */
+function getAndResetEngagementMs(): number {
+  const total = peekEngagementMs()
   accumulatedEngagementMs = 0
   if (isUserActive) {
     engagementStartMs = Date.now()
@@ -114,15 +121,11 @@ function stopEngagementTracking() {
  * the _et parameter on other events (page_view, custom events) is ignored
  * for engagement metrics.
  *
- * Note: We do NOT call getAndResetEngagementMs() here because send() already
- * calls it internally to set the _et parameter. Calling it here would reset
- * the accumulator before send() reads it, resulting in _et=0.
+ * send() calls getAndResetEngagementMs() only for user_engagement events,
+ * ensuring the full accumulated engagement time is attributed here.
  */
 function emitUserEngagement() {
-  // Check if there's accumulated engagement without resetting.
-  // send() will handle getting and resetting the actual value via _et.
-  const hasEngagement = accumulatedEngagementMs > 0 || (isUserActive && Date.now() - engagementStartMs > 0)
-  if (hasEngagement) {
+  if (peekEngagementMs() > 0) {
     send('user_engagement', {})
   }
 }
@@ -189,7 +192,11 @@ let pageId = ''
 let userProperties: Record<string, string> = {}
 let userId = ''
 let initialized = false
-let eventCount = 0
+
+// GA4 considers a session "engaged" after 10 seconds of active use.
+// Once set, it stays true for the rest of the session.
+const ENGAGED_SESSION_THRESHOLD_MS = 10_000
+let sessionEngaged = false
 
 function send(
   eventName: string,
@@ -198,7 +205,6 @@ function send(
   if (!initialized || isOptedOut()) return
 
   const { sid, sc, isNew } = getSession()
-  eventCount++
 
   const p = new URLSearchParams()
   p.set('v', '2')
@@ -216,18 +222,36 @@ function send(
   if (isNew) {
     p.set('_ss', '1')
     p.set('_nsi', '1')
+    sessionEngaged = false // Reset engaged flag for new sessions
   }
   if (sc === 1 && isNew) {
     p.set('_fv', '1')
   }
-  if (eventCount > 1) {
+
+  // Mark session as engaged after 10s of active use (GA4 standard threshold).
+  // Check BEFORE resetting the accumulator so user_engagement events can
+  // still trigger the threshold. Once engaged, stays true for the session.
+  if (!sessionEngaged && peekEngagementMs() >= ENGAGED_SESSION_THRESHOLD_MS) {
+    sessionEngaged = true
+  }
+  if (sessionEngaged) {
     p.set('seg', '1')
   }
 
-  // Engagement time — GA4 uses this to calculate Average Engagement Time
-  const engagementMs = getAndResetEngagementMs()
-  if (engagementMs > 0) {
-    p.set('_et', String(engagementMs))
+  // Engagement time — GA4 uses _et on user_engagement events to calculate
+  // Engaged Sessions and Average Engagement Time. Only consume (reset) the
+  // accumulator for user_engagement events so the full engagement duration
+  // is attributed to them. Other events get a non-resetting peek.
+  if (eventName === 'user_engagement') {
+    const engagementMs = getAndResetEngagementMs()
+    if (engagementMs > 0) {
+      p.set('_et', String(engagementMs))
+    }
+  } else {
+    const engagementMs = peekEngagementMs()
+    if (engagementMs > 0) {
+      p.set('_et', String(engagementMs))
+    }
   }
 
   // Event parameters (ep.key=val)
