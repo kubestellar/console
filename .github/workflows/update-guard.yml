@@ -1,0 +1,167 @@
+name: Update Mechanism Guard
+
+# Prevents PRs from breaking the self-update mechanism.
+# Runs the full update test suite (including a 10-iteration reliability loop)
+# on every PR that touches the update code or its dependencies.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'pkg/agent/update_checker.go'
+      - 'pkg/agent/update_checker_test.go'
+      - 'pkg/agent/server.go'
+      - 'web/src/hooks/useUpdateProgress.ts'
+      - 'startup-oauth.sh'
+      - 'scripts/update-lifecycle-test.sh'
+      - '.github/workflows/update-guard.yml'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: "1.24"
+
+permissions:
+  contents: read
+
+jobs:
+  update-tests:
+    name: Update Mechanism Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run update mechanism tests (10-iteration loop)
+        run: |
+          echo "=== Running full update mechanism test suite ==="
+          echo ""
+          echo "--- Phase 1: 5-iteration reliability loop ---"
+          go test ./pkg/agent/ -v -run "TestDeveloperUpdateLoop_5x" -timeout 120s
+          echo ""
+          echo "--- Phase 2: Build timeout handling ---"
+          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_BuildTimeout" -timeout 30s
+          echo ""
+          echo "--- Phase 3: Build failure with output capture ---"
+          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_BuildFailure" -timeout 30s
+          echo ""
+          echo "--- Phase 4: npm install retry logic ---"
+          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_NpmInstallRetry" -timeout 30s
+          echo ""
+          echo "--- Phase 5: Git pull failure (early abort) ---"
+          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_GitPullFailure" -timeout 30s
+          echo ""
+          echo "--- Phase 6: Heartbeat during long builds ---"
+          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_HeartbeatDuringBuild" -timeout 120s
+          echo ""
+          echo "--- Phase 7: Output capture and utilities ---"
+          go test ./pkg/agent/ -v -run "TestRunBuildCmd_OutputCapture|TestTailLines|TestBuildErrorDetail|TestMockPathResolution" -timeout 30s
+
+      - name: Run concurrency safety tests
+        run: |
+          echo "=== Running concurrency safety tests ==="
+          go test ./pkg/agent/ -v -run "TestTriggerNow|TestIsUpdating|TestStatus" -timeout 30s -count=3
+
+      - name: Verify update invariants in source
+        run: |
+          echo "=== Verifying critical update invariants ==="
+          CHECKER="pkg/agent/update_checker.go"
+          ERRORS=0
+
+          # 1. Atomic flag for mutual exclusion
+          if ! grep -q "atomic.CompareAndSwapInt32" "$CHECKER"; then
+            echo "FAIL: Missing atomic.CompareAndSwapInt32 for update mutual exclusion"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: Atomic CAS for mutual exclusion present"
+          fi
+
+          # 2. Defer cleanup of updating flag
+          if ! grep -q "defer atomic.StoreInt32" "$CHECKER"; then
+            echo "FAIL: Missing defer cleanup of updating flag"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: Defer cleanup of updating flag present"
+          fi
+
+          # 3. Build timeouts defined
+          for TIMEOUT in gitPullTimeout npmInstallTimeout frontendBuildTimeout goBuildTimeout; do
+            if ! grep -q "$TIMEOUT" "$CHECKER"; then
+              echo "FAIL: Missing timeout constant: $TIMEOUT"
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "PASS: Timeout constant $TIMEOUT present"
+            fi
+          done
+
+          # 4. Heartbeat interval defined
+          if ! grep -q "buildHeartbeatInterval" "$CHECKER"; then
+            echo "FAIL: Missing buildHeartbeatInterval constant"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: Heartbeat interval constant present"
+          fi
+
+          # 5. Atomic binary replacement (build-to-temp-then-rename)
+          if ! grep -q "update-tmp" "$CHECKER"; then
+            echo "FAIL: Missing atomic binary replacement (.update-tmp pattern)"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: Atomic binary replacement pattern present"
+          fi
+
+          # 6. WaitDelay for pipe cleanup
+          if ! grep -q "WaitDelay" "$CHECKER"; then
+            echo "FAIL: Missing cmd.WaitDelay for pipe cleanup after timeout"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: WaitDelay for pipe cleanup present"
+          fi
+
+          # 7. exitFunc injection for testability
+          if ! grep -q "exitFunc" "$CHECKER"; then
+            echo "FAIL: Missing exitFunc injection (needed for testing restart path)"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: exitFunc injection present"
+          fi
+
+          # 8. runBuildCmd helper with timeout+heartbeat
+          if ! grep -q "func.*runBuildCmd" "$CHECKER"; then
+            echo "FAIL: Missing runBuildCmd helper"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: runBuildCmd helper present"
+          fi
+
+          # 9. Rollback functions
+          if ! grep -q "rollbackGit" "$CHECKER"; then
+            echo "FAIL: Missing rollbackGit function"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: rollbackGit function present"
+          fi
+
+          # 10. Frontend stale detection (check TypeScript)
+          TS_FILE="web/src/hooks/useUpdateProgress.ts"
+          if ! grep -q "STALE_UPDATE_TIMEOUT_MS" "$TS_FILE"; then
+            echo "FAIL: Missing stale-state detection in frontend"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "PASS: Frontend stale-state detection present"
+          fi
+
+          echo ""
+          if [ $ERRORS -gt 0 ]; then
+            echo "FAILED: $ERRORS invariant violations found"
+            exit 1
+          else
+            echo "All update mechanism invariants verified"
+          fi

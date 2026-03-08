@@ -1,7 +1,7 @@
 #!/bin/bash
-# Update mechanism verification — runs Go unit tests for the update checker
-# to verify version parsing, channel switching, concurrent update rejection,
-# and status reporting.
+# Update mechanism verification — comprehensive test suite for the self-update
+# lifecycle: concurrency safety, panic recovery, build timeouts, failure
+# handling, npm retry logic, heartbeat, output capture, and source invariants.
 #
 # Usage:
 #   ./scripts/update-lifecycle-test.sh              # Run all update tests
@@ -127,7 +127,151 @@ fi
 echo ""
 
 # ============================================================================
-# Phase 4: Verify update checker source patterns
+# Phase 4: 5-iteration developer update reliability loop
+# ============================================================================
+
+echo -e "${BOLD}Phase 4: Developer update reliability loop (5 iterations)${NC}"
+
+LOOP_OUTPUT="$TMPDIR_UL/loop-tests.txt"
+LOOP_EXIT=0
+go test ./pkg/agent/... -run "TestDeveloperUpdateLoop_5x" -v -timeout 120s > "$LOOP_OUTPUT" 2>&1 || LOOP_EXIT=$?
+
+TOTAL=$((TOTAL + 1))
+if [ "$LOOP_EXIT" -eq 0 ]; then
+  echo -e "  ${GREEN}✓${NC}  5-iteration reliability loop passed"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}❌${NC} 5-iteration reliability loop failed"
+  grep "FAIL\|Error" "$LOOP_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
+    echo -e "    ${DIM}${line}${NC}"
+  done
+  FAILED=$((FAILED + 1))
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 5: Build timeout handling
+# ============================================================================
+
+echo -e "${BOLD}Phase 5: Build timeout handling${NC}"
+
+TIMEOUT_OUTPUT="$TMPDIR_UL/timeout-tests.txt"
+TIMEOUT_EXIT=0
+go test ./pkg/agent/... -run "TestDeveloperUpdate_BuildTimeout" -v -timeout 30s > "$TIMEOUT_OUTPUT" 2>&1 || TIMEOUT_EXIT=$?
+
+TOTAL=$((TOTAL + 1))
+if [ "$TIMEOUT_EXIT" -eq 0 ]; then
+  echo -e "  ${GREEN}✓${NC}  Build timeout handling passed"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}❌${NC} Build timeout handling failed"
+  grep "FAIL\|Error" "$TIMEOUT_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
+    echo -e "    ${DIM}${line}${NC}"
+  done
+  FAILED=$((FAILED + 1))
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 6: Build failure with output capture
+# ============================================================================
+
+echo -e "${BOLD}Phase 6: Build failure with output capture${NC}"
+
+BUILDFAIL_OUTPUT="$TMPDIR_UL/buildfail-tests.txt"
+BUILDFAIL_EXIT=0
+go test ./pkg/agent/... -run "TestDeveloperUpdate_BuildFailure" -v -timeout 30s > "$BUILDFAIL_OUTPUT" 2>&1 || BUILDFAIL_EXIT=$?
+
+TOTAL=$((TOTAL + 1))
+if [ "$BUILDFAIL_EXIT" -eq 0 ]; then
+  echo -e "  ${GREEN}✓${NC}  Build failure output capture passed"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}❌${NC} Build failure output capture failed"
+  grep "FAIL\|Error" "$BUILDFAIL_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
+    echo -e "    ${DIM}${line}${NC}"
+  done
+  FAILED=$((FAILED + 1))
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 7: npm install retry logic
+# ============================================================================
+
+echo -e "${BOLD}Phase 7: npm install retry logic${NC}"
+
+RETRY_OUTPUT="$TMPDIR_UL/retry-tests.txt"
+RETRY_EXIT=0
+go test ./pkg/agent/... -run "TestDeveloperUpdate_NpmInstallRetry" -v -timeout 30s > "$RETRY_OUTPUT" 2>&1 || RETRY_EXIT=$?
+
+TOTAL=$((TOTAL + 1))
+if [ "$RETRY_EXIT" -eq 0 ]; then
+  echo -e "  ${GREEN}✓${NC}  npm install retry logic passed"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}❌${NC} npm install retry logic failed"
+  grep "FAIL\|Error" "$RETRY_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
+    echo -e "    ${DIM}${line}${NC}"
+  done
+  FAILED=$((FAILED + 1))
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 8: Heartbeat during long builds
+# ============================================================================
+
+echo -e "${BOLD}Phase 8: Heartbeat during long builds${NC}"
+
+HEARTBEAT_OUTPUT="$TMPDIR_UL/heartbeat-tests.txt"
+HEARTBEAT_EXIT=0
+go test ./pkg/agent/... -run "TestDeveloperUpdate_HeartbeatDuringBuild" -v -timeout 120s > "$HEARTBEAT_OUTPUT" 2>&1 || HEARTBEAT_EXIT=$?
+
+TOTAL=$((TOTAL + 1))
+if [ "$HEARTBEAT_EXIT" -eq 0 ]; then
+  echo -e "  ${GREEN}✓${NC}  Heartbeat during long builds passed"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}❌${NC} Heartbeat during long builds failed"
+  grep "FAIL\|Error" "$HEARTBEAT_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
+    echo -e "    ${DIM}${line}${NC}"
+  done
+  FAILED=$((FAILED + 1))
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 9: Output capture utilities
+# ============================================================================
+
+echo -e "${BOLD}Phase 9: Output capture and utility tests${NC}"
+
+UTIL_OUTPUT="$TMPDIR_UL/util-tests.txt"
+UTIL_EXIT=0
+go test ./pkg/agent/... -run "TestRunBuildCmd_OutputCapture|TestTailLines|TestBuildErrorDetail|TestMockPathResolution" -v -timeout 30s > "$UTIL_OUTPUT" 2>&1 || UTIL_EXIT=$?
+
+TOTAL=$((TOTAL + 1))
+if [ "$UTIL_EXIT" -eq 0 ]; then
+  echo -e "  ${GREEN}✓${NC}  Output capture and utility tests passed"
+  PASSED=$((PASSED + 1))
+else
+  echo -e "  ${RED}❌${NC} Output capture and utility tests failed"
+  grep "FAIL\|Error" "$UTIL_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
+    echo -e "    ${DIM}${line}${NC}"
+  done
+  FAILED=$((FAILED + 1))
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 10: Verify update checker source patterns
 # ============================================================================
 
 echo -e "${BOLD}Phase 4: Update mechanism source verification${NC}"
@@ -178,7 +322,13 @@ cat > "$REPORT_JSON" << EOF
   "phases": {
     "unitTests": { "exit_code": ${TEST_EXIT}, "passed": ${GO_PASSED} },
     "stressTest": { "exit_code": ${STRESS_EXIT} },
-    "panicRecovery": { "exit_code": ${PANIC_EXIT} }
+    "panicRecovery": { "exit_code": ${PANIC_EXIT} },
+    "reliabilityLoop": { "exit_code": ${LOOP_EXIT} },
+    "buildTimeout": { "exit_code": ${TIMEOUT_EXIT} },
+    "buildFailure": { "exit_code": ${BUILDFAIL_EXIT} },
+    "npmRetry": { "exit_code": ${RETRY_EXIT} },
+    "heartbeat": { "exit_code": ${HEARTBEAT_EXIT} },
+    "utilities": { "exit_code": ${UTIL_EXIT} }
   }
 }
 EOF
@@ -201,7 +351,13 @@ cat > "$REPORT_MD" << EOF
 - **Phase 1:** Update checker unit tests — $([ "$TEST_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
 - **Phase 2:** Concurrent rejection stress — $([ "$STRESS_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
 - **Phase 3:** Panic recovery — $([ "$PANIC_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
-- **Phase 4:** Source pattern verification
+- **Phase 4:** 5x reliability loop — $([ "$LOOP_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
+- **Phase 5:** Build timeout — $([ "$TIMEOUT_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
+- **Phase 6:** Build failure capture — $([ "$BUILDFAIL_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
+- **Phase 7:** npm retry — $([ "$RETRY_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
+- **Phase 8:** Heartbeat — $([ "$HEARTBEAT_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
+- **Phase 9:** Utilities — $([ "$UTIL_EXIT" -eq 0 ] && echo "PASS" || echo "FAIL")
+- **Phase 10:** Source pattern verification
 EOF
 
 # ============================================================================

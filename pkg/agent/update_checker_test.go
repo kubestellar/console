@@ -310,11 +310,11 @@ func newTestUpdateChecker(t *testing.T, repoPath string) (*UpdateChecker, *[]Upd
 	return uc, &broadcasts
 }
 
-// TestDeveloperUpdateLoop_10x runs the full 7-step developer update 10 times
-// in a row, verifying each iteration completes all steps successfully,
-// progress increases monotonically, and the correct broadcast sequence is emitted.
-// This is the primary CI reliability test for the self-update mechanism.
-func TestDeveloperUpdateLoop_10x(t *testing.T) {
+// developerUpdateLoop runs the full 7-step developer update N times in a row,
+// verifying each iteration completes all steps successfully, progress increases
+// monotonically, and the correct broadcast sequence is emitted.
+func developerUpdateLoop(t *testing.T, iterations int) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping update loop test in short mode")
 	}
@@ -322,8 +322,6 @@ func TestDeveloperUpdateLoop_10x(t *testing.T) {
 	mockBin := setupMockBin(t)
 	repoPath := setupFakeRepo(t)
 	t.Setenv("PATH", mockBin+":"+os.Getenv("PATH"))
-
-	const iterations = 10
 
 	for i := 1; i <= iterations; i++ {
 		t.Run(fmt.Sprintf("iteration_%d", i), func(t *testing.T) {
@@ -395,6 +393,20 @@ func TestDeveloperUpdateLoop_10x(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestDeveloperUpdateLoop_5x runs the developer update 5 times — used by CI
+// guard workflow on every PR touching update code.
+func TestDeveloperUpdateLoop_5x(t *testing.T) {
+	const ciIterations = 5
+	developerUpdateLoop(t, ciIterations)
+}
+
+// TestDeveloperUpdateLoop_10x runs the developer update 10 times — used by
+// nightly for deeper reliability verification.
+func TestDeveloperUpdateLoop_10x(t *testing.T) {
+	const nightlyIterations = 10
+	developerUpdateLoop(t, nightlyIterations)
 }
 
 // TestDeveloperUpdate_BuildTimeout verifies that builds are killed after the
