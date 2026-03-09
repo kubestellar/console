@@ -8,6 +8,13 @@ import { formatLastSeen } from '../../lib/errorClassifier'
 // Must match animation duration (1s) defined in index.css for animate-spin-min
 const MIN_SPIN_DURATION = 1000
 
+/** Milliseconds per minute, used for relative-time formatting */
+const MS_PER_MINUTE = 60_000
+/** Milliseconds per hour, used for relative-time formatting */
+const MS_PER_HOUR = 3_600_000
+/** Milliseconds per day, used for relative-time formatting */
+const MS_PER_DAY = 86_400_000
+
 interface RefreshIndicatorProps {
   isRefreshing: boolean
   lastUpdated?: Date | null
@@ -128,16 +135,16 @@ function formatLastRefreshTime(value: Date | number | null | undefined): string 
   const now = Date.now()
   const diff = now - timestamp
 
-  if (diff < 60000) {
+  if (diff < MS_PER_MINUTE) {
     return 'Just now'
-  } else if (diff < 3600000) {
-    const minutes = Math.floor(diff / 60000)
+  } else if (diff < MS_PER_HOUR) {
+    const minutes = Math.floor(diff / MS_PER_MINUTE)
     return `${minutes}m ago`
-  } else if (diff < 86400000) {
-    const hours = Math.floor(diff / 3600000)
+  } else if (diff < MS_PER_DAY) {
+    const hours = Math.floor(diff / MS_PER_HOUR)
     return `${hours}h ago`
   } else {
-    const days = Math.floor(diff / 86400000)
+    const days = Math.floor(diff / MS_PER_DAY)
     return `${days}d ago`
   }
 }

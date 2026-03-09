@@ -11,6 +11,9 @@ import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
 import { TICK_INTERVAL_MS } from '../../lib/constants/network'
 
+/** GiB per TiB — used for storage unit display in cost blocks */
+const GB_PER_TB = 1_024
+
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
 
 // Default cards for the Cost dashboard
@@ -153,7 +156,7 @@ export function Cost() {
       case 'memory_cost':
         return { value: `$${Math.round(costStats.memoryMonthly).toLocaleString()}`, sublabel: `${costStats.totalMemoryGB} GB`, onClick: () => drillToCostType('memory'), isClickable: costStats.memoryMonthly > 0 }
       case 'storage_cost':
-        return { value: `$${Math.round(costStats.storageMonthly).toLocaleString()}`, sublabel: costStats.totalStorageGB >= 1024 ? `${(costStats.totalStorageGB / 1024).toFixed(1)} TB` : `${Math.round(costStats.totalStorageGB)} GB`, onClick: () => drillToCostType('storage'), isClickable: costStats.storageMonthly > 0 }
+        return { value: `$${Math.round(costStats.storageMonthly).toLocaleString()}`, sublabel: costStats.totalStorageGB >= GB_PER_TB ? `${(costStats.totalStorageGB / GB_PER_TB).toFixed(1)} TB` : `${Math.round(costStats.totalStorageGB)} GB`, onClick: () => drillToCostType('storage'), isClickable: costStats.storageMonthly > 0 }
       case 'network_cost':
         return { value: '$0', sublabel: 'not tracked', isClickable: false }
       case 'gpu_cost':

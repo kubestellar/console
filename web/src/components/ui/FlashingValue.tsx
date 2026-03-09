@@ -1,6 +1,9 @@
 import { memo } from 'react'
 import { useFlashOnChange } from '../../hooks/useFlashOnChange'
 
+/** Default duration for the flash highlight animation in milliseconds */
+const DEFAULT_FLASH_DURATION_MS = 1500
+
 interface FlashingValueProps {
   value: number | string | undefined
   className?: string
@@ -14,7 +17,7 @@ interface FlashingValueProps {
 export const FlashingValue = memo(function FlashingValue({
   value,
   className = '',
-  flashDuration = 1500,
+  flashDuration = DEFAULT_FLASH_DURATION_MS,
 }: FlashingValueProps) {
   const isFlashing = useFlashOnChange(value, flashDuration)
 

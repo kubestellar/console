@@ -1,6 +1,9 @@
 import { RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
+/** Default transition duration for animated value changes in milliseconds */
+const DEFAULT_ANIMATION_DURATION_MS = 200
+
 interface SkeletonProps {
   className?: string
   variant?: 'text' | 'circular' | 'rectangular' | 'rounded'
@@ -262,7 +265,7 @@ interface AnimatedValueProps {
   duration?: number
 }
 
-export function AnimatedValue({ value, className, duration = 200 }: AnimatedValueProps) {
+export function AnimatedValue({ value, className, duration = DEFAULT_ANIMATION_DURATION_MS }: AnimatedValueProps) {
   return (
     <span
       className={cn('inline-block transition-all', className)}

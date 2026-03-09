@@ -278,12 +278,16 @@ export function StatsOverview({
 /**
  * Helper to format large numbers (1000 -> 1K, 1000000 -> 1M)
  */
+const STAT_MILLION_THRESHOLD = 1_000_000
+const STAT_KILO_THRESHOLD = 10_000
+const STAT_KILO_DIVISOR = 1_000
+
 export function formatStatNumber(value: number): string {
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`
+  if (value >= STAT_MILLION_THRESHOLD) {
+    return `${(value / STAT_MILLION_THRESHOLD).toFixed(1)}M`
   }
-  if (value >= 10_000) {
-    return `${(value / 1000).toFixed(1)}K`
+  if (value >= STAT_KILO_THRESHOLD) {
+    return `${(value / STAT_KILO_DIVISOR).toFixed(1)}K`
   }
   return value.toLocaleString()
 }
@@ -291,18 +295,23 @@ export function formatStatNumber(value: number): string {
 /**
  * Helper to format memory/storage values
  */
+/** GiB per TiB (1024) — used for memory/storage unit conversions */
+const GB_PER_TB = 1_024
+/** GiB per PiB (1024²) — used for memory/storage unit conversions */
+const GB_PER_PB = 1_024 * 1_024
+
 export function formatMemoryValue(gb: number): string {
-  if (gb >= 1024 * 1024) {
-    return `${(gb / (1024 * 1024)).toFixed(1)} PB`
+  if (gb >= GB_PER_PB) {
+    return `${(gb / GB_PER_PB).toFixed(1)} PB`
   }
-  if (gb >= 1024) {
-    return `${(gb / 1024).toFixed(1)} TB`
+  if (gb >= GB_PER_TB) {
+    return `${(gb / GB_PER_TB).toFixed(1)} TB`
   }
   if (gb >= 1) {
     return `${Math.round(gb)} GB`
   }
   if (gb >= 0.001) {
-    return `${Math.round(gb * 1024)} MB`
+    return `${Math.round(gb * GB_PER_TB)} MB`
   }
   return '0 GB'
 }
@@ -314,12 +323,15 @@ export function formatPercentage(value: number): string {
   return `${Math.round(value)}%`
 }
 
+/** Threshold above which currency values are abbreviated to K (e.g. $1.5K) */
+const CURRENCY_KILO_THRESHOLD = 1_000
+
 /**
  * Helper to format currency values
  */
 export function formatCurrency(value: number): string {
-  if (value >= 1000) {
-    return `$${(value / 1000).toFixed(1)}K`
+  if (value >= CURRENCY_KILO_THRESHOLD) {
+    return `$${(value / CURRENCY_KILO_THRESHOLD).toFixed(1)}K`
   }
   return `$${value.toFixed(2)}`
 }

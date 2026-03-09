@@ -14,6 +14,13 @@ import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useModalState } from '../../lib/modals'
 import { Button } from './Button'
 
+/** Maximum numeric value to display in the badge before switching to overflow text (e.g. "99+") */
+const BADGE_MAX_COUNT = 99
+/** Number of minutes in an hour, used for relative-time formatting */
+const MINS_PER_HOUR = 60
+/** Number of hours in a day, used for relative-time formatting */
+const HOURS_PER_DAY = 24
+
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
   const { t: _t } = useTranslation()
@@ -37,7 +44,7 @@ export function AnimatedCounter({ value, className }: { value: number; className
     }
   }, [value])
 
-  const displayText = displayValue > 99 ? '99+' : displayValue.toString()
+  const displayText = displayValue > BADGE_MAX_COUNT ? `${BADGE_MAX_COUNT}+` : displayValue.toString()
 
   return (
     <span
@@ -63,8 +70,8 @@ function formatRelativeTime(dateString: string): string {
   const diffHours = Math.floor(diffMins / 60)
 
   if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffMins < MINS_PER_HOUR) return `${diffMins}m ago`
+  if (diffHours < HOURS_PER_DAY) return `${diffHours}h ago`
   return new Date(dateString).toLocaleDateString()
 }
 

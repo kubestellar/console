@@ -4,6 +4,9 @@ import { Search, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
 
+/** Default debounce delay for search input in milliseconds */
+const DEFAULT_DEBOUNCE_MS = 300
+
 interface CardSearchProps {
   /** Current search value */
   value: string
@@ -31,7 +34,7 @@ export function CardSearch({
   onChange,
   placeholder,
   className,
-  debounceMs = 300,
+  debounceMs = DEFAULT_DEBOUNCE_MS,
   defaultExpanded = false,
   size = 'sm',
 }: CardSearchProps) {

@@ -4,6 +4,9 @@ import { useFrame } from "@react-three/fiber"
 // R3F uses THREE namespace for type annotations and JSX intrinsic elements
 import * as THREE from "three"
 
+/** Number of trail particles rendered behind each data packet */
+const TRAIL_LENGTH = 30
+
 interface DataPacketProps {
   path: [number, number, number][]
   speed?: number
@@ -16,7 +19,6 @@ const DataPacket = ({ path, speed = 1, color = "#00E396", size = 0.08 }: DataPac
   const [progress, setProgress] = useState(0)
   const trailRef = useRef<THREE.Points>(null)
 
-  const TRAIL_LENGTH = 30
   const trailPositions = useMemo(() => new Float32Array(TRAIL_LENGTH * 3), [])
 
   useFrame(() => {
