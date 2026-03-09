@@ -351,6 +351,13 @@ export function setAnalyticsUserProperties(props: Record<string, string>) {
 // ── Opt-out management ─────────────────────────────────────────────
 
 export function setAnalyticsOptOut(optOut: boolean) {
+  // Fire the event BEFORE setting the flag — send() checks isOptedOut()
+  // and would drop the event if the flag were already set.
+  if (optOut) {
+    send('ksc_analytics_opted_out', {})
+  } else {
+    send('ksc_analytics_opted_in', {})
+  }
   localStorage.setItem(STORAGE_KEY_ANALYTICS_OPT_OUT, String(optOut))
   window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   if (optOut) {
