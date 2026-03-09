@@ -311,7 +311,7 @@ export function Sidebar() {
                 <span className="flex-1 min-w-0">
                   {item.name}
                   {count != null && (
-                    <span className="text-[10px] text-muted-foreground/40 tabular-nums ml-1">({count})</span>
+                    <span className="text-[10px] text-muted-foreground/40 tabular-nums ml-1">{count}</span>
                   )}
                 </span>
               )
