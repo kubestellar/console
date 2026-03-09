@@ -157,6 +157,9 @@ import { configDriftHeatmapConfig } from './config-drift-heatmap'
 import { resourceImbalanceDetectorConfig } from './resource-imbalance-detector'
 import { restartCorrelationMatrixConfig } from './restart-correlation-matrix'
 import { deploymentRolloutTrackerConfig } from './deployment-rollout-tracker'
+import { fleetComplianceHeatmapConfig } from './fleet-compliance-heatmap'
+import { complianceDriftConfig } from './compliance-drift'
+import { crossClusterPolicyComparisonConfig } from './cross-cluster-policy-comparison'
 
 export const CARD_CONFIGS: CardConfigRegistry = {
   active_alerts: activeAlertsConfig,
@@ -313,6 +316,10 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   resource_imbalance_detector: resourceImbalanceDetectorConfig,
   restart_correlation_matrix: restartCorrelationMatrixConfig,
   deployment_rollout_tracker: deploymentRolloutTrackerConfig,
+  // Cross-cluster compliance cards
+  fleet_compliance_heatmap: fleetComplianceHeatmapConfig,
+  compliance_drift: complianceDriftConfig,
+  cross_cluster_policy_comparison: crossClusterPolicyComparisonConfig,
 }
 
 export function getCardConfig(cardType: string): UnifiedCardConfig | undefined {
@@ -480,4 +487,7 @@ export {
   resourceImbalanceDetectorConfig,
   restartCorrelationMatrixConfig,
   deploymentRolloutTrackerConfig,
+  fleetComplianceHeatmapConfig,
+  complianceDriftConfig,
+  crossClusterPolicyComparisonConfig,
 }

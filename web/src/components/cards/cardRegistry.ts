@@ -73,6 +73,9 @@ const AlertRulesCard = lazy(() => import('./AlertRules').then(m => ({ default: m
 const OpenCostOverview = lazy(() => import('./OpenCostOverview').then(m => ({ default: m.OpenCostOverview })))
 const KubecostOverview = lazy(() => import('./KubecostOverview').then(m => ({ default: m.KubecostOverview })))
 const OPAPolicies = lazy(() => import('./OPAPolicies').then(m => ({ default: m.OPAPolicies })))
+const FleetComplianceHeatmap = lazy(() => import('./FleetComplianceHeatmap').then(m => ({ default: m.FleetComplianceHeatmap })))
+const ComplianceDrift = lazy(() => import('./ComplianceDrift').then(m => ({ default: m.ComplianceDrift })))
+const CrossClusterPolicyComparison = lazy(() => import('./CrossClusterPolicyComparison').then(m => ({ default: m.CrossClusterPolicyComparison })))
 const KyvernoPolicies = lazy(() => import('./KyvernoPolicies').then(m => ({ default: m.KyvernoPolicies })))
 // Eagerly import demo-only compliance cards — they're tiny (~255 lines total),
 // contain only hardcoded demo data, and lazy loading them causes blank cards
@@ -318,6 +321,10 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kubescape_scan: KubescapeScan,
   policy_violations: PolicyViolations,
   compliance_score: ComplianceScore,
+  // Cross-cluster compliance cards
+  fleet_compliance_heatmap: FleetComplianceHeatmap,
+  compliance_drift: ComplianceDrift,
+  cross_cluster_policy_comparison: CrossClusterPolicyComparison,
   // Data compliance tool cards
   vault_secrets: VaultSecrets,
   external_secrets: ExternalSecrets,
@@ -729,6 +736,10 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kubescape_scan: () => import('./ComplianceCards'),
   policy_violations: () => import('./ComplianceCards'),
   compliance_score: () => import('./ComplianceCards'),
+  // Cross-cluster compliance cards
+  fleet_compliance_heatmap: () => import('./FleetComplianceHeatmap'),
+  compliance_drift: () => import('./ComplianceDrift'),
+  cross_cluster_policy_comparison: () => import('./CrossClusterPolicyComparison'),
   vault_secrets: () => import('./DataComplianceCards'),
   external_secrets: () => import('./DataComplianceCards'),
   cert_manager: () => import('./DataComplianceCards'),
@@ -1070,6 +1081,10 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kubescape_scan: 4,
   policy_violations: 6,
   compliance_score: 4,
+  // Cross-cluster compliance cards
+  fleet_compliance_heatmap: 6,
+  compliance_drift: 5,
+  cross_cluster_policy_comparison: 5,
   vault_secrets: 4,
   external_secrets: 4,
   cert_manager: 4,
