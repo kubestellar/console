@@ -33,12 +33,20 @@ type Message struct {
 
 // HealthPayload is the response for health checks
 type HealthPayload struct {
-	Status        string      `json:"status"`
-	Version       string      `json:"version"`
-	Clusters      int         `json:"clusters"`
-	HasClaude     bool        `json:"hasClaude"`
-	Claude        *ClaudeInfo `json:"claude,omitempty"`
-	InstallMethod string      `json:"install_method,omitempty"`
+	Status             string            `json:"status"`
+	Version            string            `json:"version"`
+	Clusters           int               `json:"clusters"`
+	HasClaude          bool              `json:"hasClaude"`
+	Claude             *ClaudeInfo       `json:"claude,omitempty"`
+	InstallMethod      string            `json:"install_method,omitempty"`
+	AvailableProviders []ProviderSummary `json:"availableProviders,omitempty"`
+}
+
+// ProviderSummary is a lightweight view of a detected AI provider for telemetry
+type ProviderSummary struct {
+	Name         string `json:"name"`
+	DisplayName  string `json:"displayName"`
+	Capabilities int    `json:"capabilities"` // bitmask: 1=chat, 2=toolExec
 }
 
 // ClaudeInfo contains information about the local Claude Code installation

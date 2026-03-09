@@ -2,9 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, TRANSITION_DELAY_MS } from '../lib/constants/network'
-import { emitAgentConnected, emitAgentDisconnected, emitConversionStep } from '../lib/analytics'
+import { emitAgentConnected, emitAgentDisconnected, emitAgentProvidersDetected, emitConversionStep } from '../lib/analytics'
 import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 import { STORAGE_KEY_FIRST_AGENT_CONNECT } from '../lib/constants/storage'
+
+export interface ProviderSummary {
+  name: string
+  displayName: string
+  capabilities: number // bitmask: 1=chat, 2=toolExec
+}
 
 export interface AgentHealth {
   status: string
@@ -12,6 +18,7 @@ export interface AgentHealth {
   clusters: number
   hasClaude: boolean
   install_method?: string
+  availableProviders?: ProviderSummary[]
   claude?: {
     installed: boolean
     path?: string
@@ -228,6 +235,7 @@ class AgentManager {
             error: null,
           })
           emitAgentConnected(data.version || 'unknown', data.clusters || 0)
+          emitAgentProvidersDetected(data.availableProviders || [])
         } else if (wasConnecting) {
           // Initial connection - connect immediately on first success
           this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
@@ -238,6 +246,7 @@ class AgentManager {
             error: null,
           })
           emitAgentConnected(data.version || 'unknown', data.clusters || 0)
+          emitAgentProvidersDetected(data.availableProviders || [])
           // Stamp the first-ever agent connection for time-based nudges
           if (!safeGetItem(STORAGE_KEY_FIRST_AGENT_CONNECT)) {
             safeSetItem(STORAGE_KEY_FIRST_AGENT_CONNECT, String(Date.now()))

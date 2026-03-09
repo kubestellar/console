@@ -446,13 +446,24 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	clusters, _ := s.kubectl.ListContexts()
 	hasClaude := s.checkClaudeAvailable()
 
+	// Build lightweight provider summaries for telemetry
+	var providerSummaries []protocol.ProviderSummary
+	for _, p := range s.registry.ListAvailable() {
+		providerSummaries = append(providerSummaries, protocol.ProviderSummary{
+			Name:         p.Name,
+			DisplayName:  p.DisplayName,
+			Capabilities: p.Capabilities,
+		})
+	}
+
 	payload := protocol.HealthPayload{
-		Status:        "ok",
-		Version:       Version,
-		Clusters:      len(clusters),
-		HasClaude:     hasClaude,
-		Claude:        s.getClaudeInfo(),
-		InstallMethod: detectAgentInstallMethod(),
+		Status:             "ok",
+		Version:            Version,
+		Clusters:           len(clusters),
+		HasClaude:          hasClaude,
+		Claude:             s.getClaudeInfo(),
+		InstallMethod:      detectAgentInstallMethod(),
+		AvailableProviders: providerSummaries,
 	}
 
 	json.NewEncoder(w).Encode(payload)

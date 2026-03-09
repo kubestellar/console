@@ -622,6 +622,44 @@ export function emitAgentDisconnected() {
   send('ksc_agent_disconnected')
 }
 
+// ── Agent Provider Detection ────────────────────────────────────
+// Emitted once per agent connection to track which coding agent CLIs
+// and API keys are configured on the user's machine.
+
+/** Capability bitmask values matching Go ProviderCapability constants */
+const CAPABILITY_CHAT = 1
+const CAPABILITY_TOOL_EXEC = 2
+
+interface ProviderSummary {
+  name: string
+  displayName: string
+  capabilities: number
+}
+
+/**
+ * Fired when kc-agent connects with the list of available AI providers.
+ * Categorizes providers into CLI (tool-exec capable) and API (chat-only)
+ * so GA4 reports show which coding agents users have installed.
+ */
+export function emitAgentProvidersDetected(providers: ProviderSummary[]) {
+  if (!providers || providers.length === 0) return
+
+  const cliProviders = (providers || [])
+    .filter(p => (p.capabilities & CAPABILITY_TOOL_EXEC) !== 0)
+    .map(p => p.name)
+  const apiProviders = (providers || [])
+    .filter(p => (p.capabilities & CAPABILITY_TOOL_EXEC) === 0 && (p.capabilities & CAPABILITY_CHAT) !== 0)
+    .map(p => p.name)
+
+  send('ksc_agent_providers_detected', {
+    provider_count: providers.length,
+    cli_providers: cliProviders.join(',') || 'none',
+    api_providers: apiProviders.join(',') || 'none',
+    cli_count: cliProviders.length,
+    api_count: apiProviders.length,
+  })
+}
+
 // ── API Key Configuration ───────────────────────────────────────
 
 export function emitApiKeyConfigured(provider: string) {
