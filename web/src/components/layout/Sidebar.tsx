@@ -35,6 +35,7 @@ const HREF_TO_DASHBOARD_ID: Record<string, string> = {
   '/logs': 'logs', '/data-compliance': 'data-compliance', '/arcade': 'arcade',
   '/deploy': 'deploy', '/ai-agents': 'ai-agents',
   '/llm-d-benchmarks': 'llm-d-benchmarks', '/cluster-admin': 'cluster-admin',
+  '/insights': 'insights',
 }
 
 export function Sidebar() {
@@ -303,15 +304,17 @@ export function Sidebar() {
             title={item.isCustom && item.href.startsWith('/custom-dashboard/') ? `${item.name} — ${t('sidebar.doubleClickRename')}` : item.name}
           >
             {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
-            {!isCollapsed && <span className="flex-1 min-w-0">{item.name}</span>}
             {!isCollapsed && (() => {
               const dashId = HREF_TO_DASHBOARD_ID[item.href]
               const count = dashId ? DASHBOARD_CONFIGS[dashId]?.cards?.length : null
-              return count != null ? (
-                <span className="text-[10px] text-muted-foreground/40 tabular-nums flex-shrink-0 min-w-[1.5rem] text-right pr-6">
-                  {count}
+              return (
+                <span className="flex-1 min-w-0">
+                  {item.name}
+                  {count != null && (
+                    <span className="text-[10px] text-muted-foreground/40 tabular-nums ml-1">({count})</span>
+                  )}
                 </span>
-              ) : null
+              )
             })()}
             {!isCollapsed && (
               <span className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded px-0.5">
