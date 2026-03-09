@@ -87,6 +87,9 @@ type Server struct {
 	predictionWorker *PredictionWorker
 	metricsHistory   *MetricsHistory
 
+	// Insight enrichment
+	insightWorker *InsightWorker
+
 	// Hardware device tracking
 	deviceTracker *DeviceTracker
 
@@ -183,6 +186,9 @@ func NewServer(cfg Config) (*Server, error) {
 	// Initialize prediction system
 	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
 	server.metricsHistory = NewMetricsHistory(k8sClient, "")
+
+	// Initialize insight enrichment
+	server.insightWorker = NewInsightWorker(server.registry, server.BroadcastToClients)
 
 	// Initialize local cluster manager with broadcast callback for progress updates
 	server.localClusters = NewLocalClusterManager(server.BroadcastToClients)
@@ -311,6 +317,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/predictions/analyze", s.handlePredictionsAnalyze)
 	mux.HandleFunc("/predictions/feedback", s.handlePredictionsFeedback)
 	mux.HandleFunc("/predictions/stats", s.handlePredictionsStats)
+
+	// Insight enrichment endpoints
+	mux.HandleFunc("/insights/enrich", s.handleInsightsEnrich)
+	mux.HandleFunc("/insights/ai", s.handleInsightsAI)
 
 	// Device tracking endpoints
 	mux.HandleFunc("/devices/alerts", s.handleDeviceAlerts)
@@ -4200,4 +4210,85 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// handleInsightsEnrich accepts heuristic insight summaries and returns AI enrichments
+func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.insightWorker == nil {
+		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
+			Enrichments: []AIInsightEnrichment{},
+			Timestamp:   time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	var req InsightEnrichmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := s.insightWorker.Enrich(req)
+	if err != nil {
+		log.Printf("[insights] enrichment error: %v", err)
+		// Return empty enrichments on error, not HTTP error
+		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
+			Enrichments: []AIInsightEnrichment{},
+			Timestamp:   time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(resp)
+}
+
+// handleInsightsAI returns cached AI enrichments
+func (s *Server) handleInsightsAI(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.insightWorker == nil {
+		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
+			Enrichments: []AIInsightEnrichment{},
+			Timestamp:   time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.insightWorker.GetEnrichments())
 }

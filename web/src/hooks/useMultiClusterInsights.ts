@@ -11,6 +11,7 @@ import { useMemo } from 'react'
 import { useCachedEvents, useCachedWarningEvents, useCachedDeployments, useCachedPodIssues } from './useCachedData'
 import { useClusters } from './mcp/clusters'
 import { useDemoMode } from './useDemoMode'
+import { useInsightEnrichment } from './useInsightEnrichment'
 import type {
   MultiClusterInsight,
   InsightCategory,
@@ -722,6 +723,11 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
     })
   }, [isDemoData, events, warningEvents, deployments, deduplicatedClusters, podIssues])
 
+  // AI enrichment: when agent is connected, enrich heuristic insights
+  // with AI-generated descriptions, root causes, and remediation.
+  // Falls back gracefully to heuristic-only when agent is unavailable.
+  const { enrichedInsights } = useInsightEnrichment(insights)
+
   const insightsByCategory = useMemo(() => {
     const result: Record<InsightCategory, MultiClusterInsight[]> = {
       'event-correlation': [],
@@ -732,19 +738,19 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
       'restart-correlation': [],
       'rollout-tracker': [],
     }
-    for (const insight of insights || []) {
+    for (const insight of enrichedInsights || []) {
       result[insight.category].push(insight)
     }
     return result
-  }, [insights])
+  }, [enrichedInsights])
 
   const topInsights = useMemo(
-    () => (insights || []).slice(0, MAX_TOP_INSIGHTS),
-    [insights],
+    () => (enrichedInsights || []).slice(0, MAX_TOP_INSIGHTS),
+    [enrichedInsights],
   )
 
   return {
-    insights,
+    insights: enrichedInsights,
     isLoading,
     isDemoData: !!isDemoData,
     insightsByCategory,

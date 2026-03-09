@@ -72,3 +72,44 @@ export interface UseMultiClusterInsightsResult {
   insightsByCategory: Record<InsightCategory, MultiClusterInsight[]>
   topInsights: MultiClusterInsight[]
 }
+
+// ── AI Enrichment Types ──────────────────────────────────────────────────
+
+/** AI enrichment for a single heuristic insight */
+export interface AIInsightEnrichment {
+  /** Matches the heuristic insight's id */
+  insightId: string
+  /** Natural-language explanation (replaces heuristic description) */
+  description: string
+  /** Root cause hypothesis */
+  rootCause?: string
+  /** Suggested remediation action */
+  remediation: string
+  /** AI confidence 0-100 */
+  confidence: number
+  /** AI provider name (e.g. 'claude', 'gpt-4') */
+  provider: string
+  /** AI may upgrade severity (higher severity wins) */
+  severity?: InsightSeverity
+}
+
+/** Request payload for POST /insights/enrich */
+export interface InsightEnrichmentRequest {
+  insights: Array<{
+    id: string
+    category: InsightCategory
+    title: string
+    description: string
+    severity: InsightSeverity
+    affectedClusters: string[]
+    chain?: CascadeLink[]
+    deltas?: ClusterDelta[]
+    metrics?: Record<string, number>
+  }>
+}
+
+/** Response payload from POST /insights/enrich or WebSocket insights_enriched */
+export interface InsightEnrichmentResponse {
+  enrichments: AIInsightEnrichment[]
+  timestamp: string
+}
