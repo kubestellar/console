@@ -175,6 +175,16 @@ export function ClusterDeltaDetector() {
               ))}
             </div>
           )}
+
+          {/* AI remediation */}
+          {insight.remediation && (
+            <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 mt-1">
+              <div className="flex items-center gap-1 mb-1">
+                <StatusBadge color="blue" size="xs">AI Suggestion</StatusBadge>
+              </div>
+              <p className="text-xs text-muted-foreground">{insight.remediation}</p>
+            </div>
+          )}
         </>
       )}
     </div>

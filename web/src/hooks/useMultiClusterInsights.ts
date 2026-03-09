@@ -47,6 +47,22 @@ const INFRA_ISSUE_MIN_WORKLOADS = 3
 /** Minimum clusters in a horizontal restart pattern to flag app bug */
 const APP_BUG_MIN_CLUSTERS = 2
 
+/** Rollout per-cluster status indices (stored in metrics as ${cluster}_status): 0=pending, 1=in-progress, 2=complete, 3=failed */
+const ROLLOUT_STATUS_IN_PROGRESS = 1
+const ROLLOUT_STATUS_COMPLETE = 2
+const ROLLOUT_STATUS_FAILED = 3
+/** Full rollout progress percentage */
+const FULL_PROGRESS = 100
+/** Partial rollout progress percentage (pending cluster) */
+const PARTIAL_PROGRESS = 50
+
+/** Demo time offset: 5 minutes ago */
+const DEMO_OFFSET_5M_MS = 5 * 60 * 1000
+/** Demo time offset: 10 minutes ago */
+const DEMO_OFFSET_10M_MS = 10 * 60 * 1000
+/** Demo time offset: 15 minutes ago */
+const DEMO_OFFSET_15M_MS = 15 * 60 * 1000
+
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function generateId(category: InsightCategory, ...parts: string[]): string {
@@ -484,10 +500,31 @@ function trackRolloutProgress(deployments: Deployment[]): MultiClusterInsight[] 
     const [newestImage] = Array.from(imageCounts.entries()).sort((a, b) => b[1] - a[1])[0]
 
     const completed = (deps || []).filter(d => d.image === newestImage && d.cluster)
-    const pending = (deps || []).filter(d => d.image !== newestImage && d.cluster)
+    const pending = (deps || []).filter(d => d.image !== newestImage && d.status !== 'failed' && d.cluster)
     const failed = (deps || []).filter(d => d.status === 'failed' && d.cluster)
 
     const affectedClusters = [...new Set((deps || []).map(d => d.cluster).filter((c): c is string => !!c))]
+
+    // Build per-cluster progress metrics for the DeploymentRolloutTracker chart
+    const metrics: Record<string, number> = {
+      completed: completed.length,
+      pending: pending.length,
+      failed: failed.length,
+      total: deps.length,
+    }
+    for (const dep of deps) {
+      if (!dep.cluster) continue
+      if (dep.status === 'failed') {
+        metrics[`${dep.cluster}_progress`] = 0
+        metrics[`${dep.cluster}_status`] = ROLLOUT_STATUS_FAILED
+      } else if (dep.image === newestImage) {
+        metrics[`${dep.cluster}_progress`] = FULL_PROGRESS
+        metrics[`${dep.cluster}_status`] = ROLLOUT_STATUS_COMPLETE
+      } else {
+        metrics[`${dep.cluster}_progress`] = PARTIAL_PROGRESS
+        metrics[`${dep.cluster}_status`] = ROLLOUT_STATUS_IN_PROGRESS
+      }
+    }
 
     insights.push({
       id: generateId('rollout-tracker', workloadKey),
@@ -499,12 +536,7 @@ function trackRolloutProgress(deployments: Deployment[]): MultiClusterInsight[] 
       affectedClusters,
       relatedResources: [workloadKey],
       detectedAt: now(),
-      metrics: {
-        completed: completed.length,
-        pending: pending.length,
-        failed: failed.length,
-        total: deps.length,
-      },
+      metrics,
     })
   }
 
@@ -515,9 +547,9 @@ function trackRolloutProgress(deployments: Deployment[]): MultiClusterInsight[] 
 
 function getDemoInsights(): MultiClusterInsight[] {
   const demoTime = new Date()
-  const fiveMinAgo = new Date(demoTime.getTime() - 5 * 60 * 1000).toISOString()
-  const tenMinAgo = new Date(demoTime.getTime() - 10 * 60 * 1000).toISOString()
-  const fifteenMinAgo = new Date(demoTime.getTime() - 15 * 60 * 1000).toISOString()
+  const fiveMinAgo = new Date(demoTime.getTime() - DEMO_OFFSET_5M_MS).toISOString()
+  const tenMinAgo = new Date(demoTime.getTime() - DEMO_OFFSET_10M_MS).toISOString()
+  const fifteenMinAgo = new Date(demoTime.getTime() - DEMO_OFFSET_15M_MS).toISOString()
 
   return [
     {
@@ -530,16 +562,20 @@ function getDemoInsights(): MultiClusterInsight[] {
       affectedClusters: ['eks-prod-us-east-1', 'gke-staging', 'openshift-prod'],
       relatedResources: ['api-server', 'metrics-collector'],
       detectedAt: fiveMinAgo,
+      remediation: 'Check shared infrastructure (DNS, load balancer, or shared storage) that all three clusters depend on. The simultaneous timing strongly suggests a common upstream dependency failure.',
     },
     {
       id: 'demo-resource-imbalance-cpu',
       category: 'resource-imbalance',
-      source: 'heuristic',
+      source: 'ai',
       severity: 'warning',
+      confidence: 82,
+      provider: 'claude',
       title: 'CPU imbalance across fleet (avg 54%)',
-      description: 'eks-prod-us-east-1 (87%) above average; aks-dev-westeu (22%) below average. Fleet average: 54%.',
+      description: 'eks-prod-us-east-1 is significantly overloaded at 87% CPU while aks-dev-westeu sits at only 22%. This 65-point spread indicates workloads are not evenly distributed across the fleet.',
       affectedClusters: ['eks-prod-us-east-1', 'aks-dev-westeu'],
       detectedAt: fiveMinAgo,
+      remediation: 'Consider migrating 2-3 non-critical workloads from eks-prod-us-east-1 to aks-dev-westeu. Alternatively, enable HPA on the top CPU consumers in eks-prod to allow autoscaling.',
       metrics: {
         'eks-prod-us-east-1': 87,
         'gke-staging': 55,
@@ -558,6 +594,7 @@ function getDemoInsights(): MultiClusterInsight[] {
       affectedClusters: ['eks-prod-us-east-1', 'gke-staging', 'openshift-prod'],
       relatedResources: ['default/api-server'],
       detectedAt: tenMinAgo,
+      remediation: 'Check api-server logs for OOMKilled or panic traces. Since the same workload fails across all clusters, this is almost certainly an application bug — not infrastructure. Roll back to the previous image if this started after a recent deployment.',
     },
     {
       id: 'demo-restart-infra-issue',
@@ -573,12 +610,15 @@ function getDemoInsights(): MultiClusterInsight[] {
     {
       id: 'demo-cascade-1',
       category: 'cascade-impact',
-      source: 'heuristic',
+      source: 'ai',
       severity: 'critical',
+      confidence: 91,
+      provider: 'claude',
       title: 'Possible cascade across 3 clusters',
-      description: 'Issues started in openshift-prod (FailedMount) and spread to eks-prod-us-east-1, gke-staging within 15 minutes.',
+      description: 'A shared ConfigMap mount failure in openshift-prod propagated to dependent services in eks-prod-us-east-1 and gke-staging. The cascade pattern matches a centralized config distribution failure.',
       affectedClusters: ['openshift-prod', 'eks-prod-us-east-1', 'gke-staging'],
       detectedAt: fifteenMinAgo,
+      remediation: 'The root cause is the FailedMount in openshift-prod/config-service. Check if the backing Secret or ConfigMap was recently modified or deleted. Restoring it should resolve the downstream Unhealthy and CrashLoopBackOff issues within minutes.',
       chain: [
         { cluster: 'openshift-prod', resource: 'config-service', event: 'FailedMount', timestamp: fifteenMinAgo, severity: 'warning' },
         { cluster: 'eks-prod-us-east-1', resource: 'api-gateway', event: 'Unhealthy', timestamp: tenMinAgo, severity: 'warning' },
@@ -595,6 +635,7 @@ function getDemoInsights(): MultiClusterInsight[] {
       affectedClusters: ['eks-prod-us-east-1', 'gke-staging', 'openshift-prod', 'aks-dev-westeu'],
       relatedResources: ['default/api-server'],
       detectedAt: fiveMinAgo,
+      remediation: 'Standardize on the newest stable image across all clusters. Use a KubeStellar BindingPolicy to enforce consistent image versions and replica counts fleet-wide.',
     },
     {
       id: 'demo-cluster-delta-1',
@@ -622,7 +663,19 @@ function getDemoInsights(): MultiClusterInsight[] {
       affectedClusters: ['eks-prod-us-east-1', 'gke-staging', 'openshift-prod', 'aks-dev-westeu', 'vllm-gpu-cluster'],
       relatedResources: ['default/api-server'],
       detectedAt: fiveMinAgo,
-      metrics: { completed: 3, pending: 1, failed: 1, total: 5 },
+      metrics: {
+        completed: 3, pending: 1, failed: 1, total: 5,
+        'eks-prod-us-east-1_progress': FULL_PROGRESS,
+        'eks-prod-us-east-1_status': ROLLOUT_STATUS_COMPLETE,
+        'gke-staging_progress': FULL_PROGRESS,
+        'gke-staging_status': ROLLOUT_STATUS_COMPLETE,
+        'openshift-prod_progress': FULL_PROGRESS,
+        'openshift-prod_status': ROLLOUT_STATUS_COMPLETE,
+        'aks-dev-westeu_progress': PARTIAL_PROGRESS,
+        'aks-dev-westeu_status': ROLLOUT_STATUS_IN_PROGRESS,
+        'vllm-gpu-cluster_progress': 0,
+        'vllm-gpu-cluster_status': ROLLOUT_STATUS_FAILED,
+      },
     },
   ]
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Diff } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
@@ -10,6 +10,18 @@ import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './i
 
 /** Maximum clusters to show in the heatmap grid */
 const MAX_HEATMAP_CLUSTERS = 12
+/** Max length for cluster name in column headers */
+const COLUMN_HEADER_MAX_LEN = 8
+/** Truncated column header suffix length */
+const COLUMN_HEADER_TRUNCATE_LEN = 6
+/** Max length for cluster name in row labels */
+const ROW_LABEL_MAX_LEN = 10
+/** Truncated row label suffix length */
+const ROW_LABEL_TRUNCATE_LEN = 8
+/** High drift intensity threshold for red coloring */
+const HIGH_DRIFT_THRESHOLD = 0.7
+/** Medium drift intensity threshold for yellow coloring */
+const MEDIUM_DRIFT_THRESHOLD = 0.3
 
 export function ConfigDriftHeatmap() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
@@ -26,8 +38,6 @@ export function ConfigDriftHeatmap() {
     hasAnyData: driftInsightsRaw.length > 0,
     isDemoData,
   })
-
-  const [selectedWorkload, setSelectedWorkload] = useState<string | null>(null)
 
   // Build cluster-pair drift counts
   const { clusters, driftMatrix } = useMemo(() => {
@@ -61,8 +71,8 @@ export function ConfigDriftHeatmap() {
   function getDriftColor(count: number): string {
     if (count === 0) return 'bg-green-500/20'
     const intensity = count / maxDrift
-    if (intensity > 0.7) return 'bg-red-500/30'
-    if (intensity > 0.3) return 'bg-yellow-500/25'
+    if (intensity > HIGH_DRIFT_THRESHOLD) return 'bg-red-500/30'
+    if (intensity > MEDIUM_DRIFT_THRESHOLD) return 'bg-yellow-500/25'
     return 'bg-orange-500/15'
   }
 
@@ -103,7 +113,7 @@ export function ConfigDriftHeatmap() {
                 <th className="p-1 text-left text-muted-foreground" />
                 {(clusters || []).map(c => (
                   <th key={c} className="p-1 text-center text-muted-foreground max-w-16 truncate" title={c}>
-                    {c.length > 8 ? c.slice(0, 6) + '..' : c}
+                    {c.length > COLUMN_HEADER_MAX_LEN ? c.slice(0, COLUMN_HEADER_TRUNCATE_LEN) + '..' : c}
                   </th>
                 ))}
               </tr>
@@ -112,7 +122,7 @@ export function ConfigDriftHeatmap() {
               {(clusters || []).map((row, ri) => (
                 <tr key={row}>
                   <td className="p-1 text-muted-foreground max-w-20 truncate" title={row}>
-                    {row.length > 10 ? row.slice(0, 8) + '..' : row}
+                    {row.length > ROW_LABEL_MAX_LEN ? row.slice(0, ROW_LABEL_TRUNCATE_LEN) + '..' : row}
                   </td>
                   {(clusters || []).map((col, ci) => {
                     if (ri === ci) {
@@ -160,20 +170,26 @@ export function ConfigDriftHeatmap() {
       {/* Drift details list */}
       <div className="space-y-1 border-t border-border pt-2 max-h-32 overflow-y-auto">
         {(driftInsights || []).map(insight => (
-          <div
-            key={insight.id}
-            className="flex items-center gap-2 text-xs py-1 hover:bg-secondary/30 rounded px-1 cursor-pointer"
-            onClick={() => setSelectedWorkload(selectedWorkload === insight.id ? null : insight.id)}
-          >
-            <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
-            <StatusBadge
-              color={insight.severity === 'warning' ? 'yellow' : 'blue'}
-              size="xs"
+          <div key={insight.id} className="space-y-1">
+            <div
+              className="flex items-center gap-2 text-xs py-1 hover:bg-secondary/30 rounded px-1"
             >
-              {insight.severity}
-            </StatusBadge>
-            <span className="flex-1 truncate">{insight.title}</span>
-            <span className="text-2xs text-muted-foreground">{insight.affectedClusters.length} clusters</span>
+              <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
+              <StatusBadge
+                color={insight.severity === 'warning' ? 'yellow' : 'blue'}
+                size="xs"
+              >
+                {insight.severity}
+              </StatusBadge>
+              <span className="flex-1 truncate">{insight.title}</span>
+              <span className="text-2xs text-muted-foreground">{insight.affectedClusters.length} clusters</span>
+            </div>
+            {insight.remediation && (
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 mt-1">
+                <StatusBadge color="blue" size="xs">AI Suggestion</StatusBadge>
+                <p className="text-xs text-muted-foreground">{insight.remediation}</p>
+              </div>
+            )}
           </div>
         ))}
       </div>

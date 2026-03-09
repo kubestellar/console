@@ -2,17 +2,23 @@ import { useMemo } from 'react'
 import { RefreshCcw, Bug, Server } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
+import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 
-
-
 export function RestartCorrelationMatrix() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
+  const { selectedClusters } = useGlobalFilters()
 
-  const restartInsightsRaw = useMemo(() => insightsByCategory['restart-correlation'] || [], [insightsByCategory])
+  const restartInsightsRaw = useMemo(() => {
+    const all = insightsByCategory['restart-correlation'] || []
+    if (selectedClusters.length === 0) return all
+    return all.filter(i =>
+      (i.affectedClusters || []).some(c => selectedClusters.includes(c)),
+    )
+  }, [insightsByCategory, selectedClusters])
   const {
     sorted: restartInsights,
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
@@ -87,6 +93,12 @@ export function RestartCorrelationMatrix() {
                   <StatusBadge key={cluster} color="yellow" size="xs">{cluster}</StatusBadge>
                 ))}
               </div>
+              {insight.remediation && (
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 mt-1">
+                  <StatusBadge color="blue" size="xs">AI Suggestion</StatusBadge>
+                  <p className="text-xs text-muted-foreground">{insight.remediation}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -121,6 +133,12 @@ export function RestartCorrelationMatrix() {
                   {(insight.relatedResources || []).map(resource => (
                     <StatusBadge key={resource} color="gray" size="xs">{resource}</StatusBadge>
                   ))}
+                </div>
+              )}
+              {insight.remediation && (
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 mt-1">
+                  <StatusBadge color="blue" size="xs">AI Suggestion</StatusBadge>
+                  <p className="text-xs text-muted-foreground">{insight.remediation}</p>
                 </div>
               )}
             </div>

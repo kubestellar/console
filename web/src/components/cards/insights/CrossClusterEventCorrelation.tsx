@@ -163,6 +163,12 @@ export function CrossClusterEventCorrelation() {
                 <span className="text-xs font-medium flex-1">{insight.title}</span>
               </div>
               <p className="text-xs text-muted-foreground">{insight.description}</p>
+              {insight.remediation && (
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 mt-1">
+                  <StatusBadge color="blue" size="xs">AI Suggestion</StatusBadge>
+                  <p className="text-xs text-muted-foreground">{insight.remediation}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
