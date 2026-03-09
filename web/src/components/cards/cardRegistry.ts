@@ -578,14 +578,13 @@ export const DEMO_DATA_CARDS = new Set([
   // Cost management integrations - demo until connected
   'opencost_overview',
   'kubecost_overview',
-  // Policy management - kyverno is demo-only
-  'kyverno_policies',
+  // Note: kyverno_policies removed — now reports isDemoData via useKyverno hook
+  // Note: trivy_scan removed — now reports isDemoData via useTrivy hook
+  // Note: kubescape_scan removed — now reports isDemoData via useKubescape hook
+  // Note: policy_violations removed — now reports isDemoData via useKyverno hook
+  // Note: compliance_score removed — now reports isDemoData via useKubescape/useKyverno hooks
   // Security posture cards - demo until tools are detected
   'falco_alerts',
-  'trivy_scan',
-  'kubescape_scan',
-  'policy_violations',
-  'compliance_score',
   // Data compliance cards - demo until tools are detected
   // Note: cert_manager now uses real data via useCertManager hook
   'vault_secrets',

@@ -1,23 +1,30 @@
 /**
- * Placeholder cards for compliance tools that will be populated with real data
- * when the respective tools are detected in the cluster.
+ * Compliance cards backed by live data hooks.
+ *
+ * Each card detects whether the corresponding tool is installed in connected
+ * clusters. When installed, it displays real per-cluster data. When not
+ * installed, it falls back to demo data and offers an AI mission install link.
  */
 
-import { AlertTriangle, AlertCircle } from 'lucide-react'
+import { useMemo } from 'react'
+import { AlertTriangle, AlertCircle, Shield } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useTrivy } from '../../hooks/useTrivy'
+import { useKubescape } from '../../hooks/useKubescape'
+import { useKyverno } from '../../hooks/useKyverno'
+import { useMissions } from '../../hooks/useMissions'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 
 interface CardConfig {
   config?: Record<string, unknown>
 }
 
-// Falco Runtime Security Card
+// ── Falco (still static — no hook yet) ──────────────────────────────────
+
 export function FalcoAlerts({ config: _config }: CardConfig) {
-  const { t: _t } = useTranslation()
   useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
-  // Integration approach: Detect Falco installation via K8s API, query Falco alerts from its API/CRDs
-  // UI already displays integration notice with install guide when Falco is not detected
   const demoAlerts = [
     { severity: 'critical', message: 'Container escape attempt detected', time: '2m ago' },
     { severity: 'warning', message: 'Privileged pod spawned', time: '15m ago' },
@@ -26,7 +33,6 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
         <div>
@@ -67,53 +73,94 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
   )
 }
 
-// Trivy Vulnerability Scanner Card
+// ── Trivy Vulnerability Scanner ─────────────────────────────────────────
+
 export function TrivyScan({ config: _config }: CardConfig) {
   const { t } = useTranslation()
-  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
-  const demoVulns = {
-    critical: 3,
-    high: 12,
-    medium: 28,
-    low: 45,
+  const { statuses, aggregated, isLoading, installed, isDemoData } = useTrivy()
+  const { startMission } = useMissions()
+  const { selectedClusters } = useGlobalFilters()
+
+  // Filter by selected clusters
+  const filtered = useMemo(() => {
+    if (selectedClusters.length === 0) return aggregated
+    const agg = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
+    for (const [name, s] of Object.entries(statuses)) {
+      if (!s.installed || !selectedClusters.includes(name)) continue
+      agg.critical += s.vulnerabilities.critical
+      agg.high += s.vulnerabilities.high
+      agg.medium += s.vulnerabilities.medium
+      agg.low += s.vulnerabilities.low
+      agg.unknown += s.vulnerabilities.unknown
+    }
+    return agg
+  }, [statuses, aggregated, selectedClusters])
+
+  useCardLoadingState({ isLoading, hasAnyData: installed || isDemoData, isDemoData })
+
+  const handleInstall = () => {
+    startMission({
+      title: 'Install Trivy Operator',
+      description: 'Install Trivy Operator for container vulnerability scanning',
+      type: 'deploy',
+      initialPrompt: `I want to install the Trivy Operator for vulnerability scanning on my clusters.
+
+Please help me:
+1. Install Trivy Operator via Helm (scan-only mode, no enforcement)
+2. Verify the operator is running and scanning
+3. Check for initial vulnerability reports
+
+Use: helm install trivy-operator aquasecurity/trivy-operator --version 0.23.0 --namespace trivy --create-namespace
+
+Please proceed step by step.`,
+      context: {},
+    })
   }
 
   return (
     <div className="space-y-3">
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-cyan-400 font-medium">Trivy Integration</p>
-          <p className="text-muted-foreground">
-            Install Trivy Operator for vulnerability scanning.{' '}
-            <a
-              href="https://aquasecurity.github.io/trivy-operator/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-cyan-400 hover:underline"
-            >
-              Install guide →
-            </a>
-          </p>
+      {/* Install prompt when not detected */}
+      {!installed && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-cyan-400 font-medium">Trivy Integration</p>
+            <p className="text-muted-foreground">
+              Install Trivy Operator for vulnerability scanning.{' '}
+              <button onClick={handleInstall} className="text-cyan-400 hover:underline">
+                Install with AI →
+              </button>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Per-cluster badges */}
+      {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
+        <div className="flex flex-wrap gap-1">
+          {Object.values(statuses).filter(s => s.installed).map(s => (
+            <StatusBadge key={s.cluster} color={s.vulnerabilities.critical > 0 ? 'red' : 'green'} size="xs">
+              {s.cluster}: {s.vulnerabilities.critical}C/{s.vulnerabilities.high}H
+            </StatusBadge>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <div className="p-2 rounded-lg bg-red-500/10 text-center">
-          <p className="text-xl font-bold text-red-400">{demoVulns.critical}</p>
+          <p className="text-xl font-bold text-red-400">{filtered.critical}</p>
           <p className="text-xs text-muted-foreground">{t('common.critical')}</p>
         </div>
         <div className="p-2 rounded-lg bg-orange-500/10 text-center">
-          <p className="text-xl font-bold text-orange-400">{demoVulns.high}</p>
+          <p className="text-xl font-bold text-orange-400">{filtered.high}</p>
           <p className="text-xs text-muted-foreground">High</p>
         </div>
         <div className="p-2 rounded-lg bg-yellow-500/10 text-center">
-          <p className="text-xl font-bold text-yellow-400">{demoVulns.medium}</p>
+          <p className="text-xl font-bold text-yellow-400">{filtered.medium}</p>
           <p className="text-xs text-muted-foreground">Medium</p>
         </div>
         <div className="p-2 rounded-lg bg-blue-500/10 text-center">
-          <p className="text-xl font-bold text-blue-400">{demoVulns.low}</p>
+          <p className="text-xl font-bold text-blue-400">{filtered.low}</p>
           <p className="text-xs text-muted-foreground">Low</p>
         </div>
       </div>
@@ -121,36 +168,81 @@ export function TrivyScan({ config: _config }: CardConfig) {
   )
 }
 
-// Kubescape Security Posture Card
+// ── Kubescape Security Posture ──────────────────────────────────────────
+
 export function KubescapeScan({ config: _config }: CardConfig) {
-  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
-  const score = 78
-  const frameworks = [
-    { name: 'NSA-CISA', score: 82 },
-    { name: 'MITRE ATT&CK', score: 75 },
-    { name: 'CIS Benchmark', score: 79 },
-  ]
+  const { statuses, aggregated, isLoading, installed, isDemoData } = useKubescape()
+  const { startMission } = useMissions()
+  const { selectedClusters } = useGlobalFilters()
+
+  // Filter by selected clusters
+  const filtered = useMemo(() => {
+    if (selectedClusters.length === 0) return aggregated
+    const clusterStatuses = Object.entries(statuses)
+      .filter(([name, s]) => s.installed && selectedClusters.includes(name))
+      .map(([, s]) => s)
+    if (clusterStatuses.length === 0) return aggregated
+    const totalScore = clusterStatuses.reduce((sum, s) => sum + s.overallScore, 0)
+    return {
+      overallScore: Math.round(totalScore / clusterStatuses.length),
+      frameworks: clusterStatuses[0]?.frameworks || [],
+      totalControls: clusterStatuses.reduce((sum, s) => sum + s.totalControls, 0),
+      passedControls: clusterStatuses.reduce((sum, s) => sum + s.passedControls, 0),
+      failedControls: clusterStatuses.reduce((sum, s) => sum + s.failedControls, 0),
+    }
+  }, [statuses, aggregated, selectedClusters])
+
+  useCardLoadingState({ isLoading, hasAnyData: installed || isDemoData, isDemoData })
+
+  const handleInstall = () => {
+    startMission({
+      title: 'Install Kubescape',
+      description: 'Install Kubescape Operator for security posture management',
+      type: 'deploy',
+      initialPrompt: `I want to install the Kubescape Operator for security posture scanning on my clusters.
+
+Please help me:
+1. Install Kubescape Operator via Helm (scan-only, no enforcement)
+2. Verify it's running and scanning
+3. Check initial scan results
+
+Use: helm install kubescape-operator kubescape/kubescape-operator --version 1.30.5 --namespace kubescape --create-namespace --set capabilities.continuousScan=enable
+
+Please proceed step by step.`,
+      context: {},
+    })
+  }
+
+  const score = filtered.overallScore
 
   return (
     <div className="space-y-3">
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-green-400 font-medium">Kubescape Integration</p>
-          <p className="text-muted-foreground">
-            Install Kubescape for security posture management.{' '}
-            <a
-              href="https://kubescape.io/docs/install-operator/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-green-400 hover:underline"
-            >
-              Install guide →
-            </a>
-          </p>
+      {/* Install prompt when not detected */}
+      {!installed && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-green-400 font-medium">Kubescape Integration</p>
+            <p className="text-muted-foreground">
+              Install Kubescape for security posture management.{' '}
+              <button onClick={handleInstall} className="text-green-400 hover:underline">
+                Install with AI →
+              </button>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Per-cluster scores */}
+      {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
+        <div className="flex flex-wrap gap-1">
+          {Object.values(statuses).filter(s => s.installed).map(s => (
+            <StatusBadge key={s.cluster} color={s.overallScore >= 80 ? 'green' : s.overallScore >= 60 ? 'yellow' : 'red'} size="xs">
+              {s.cluster}: {s.overallScore}%
+            </StatusBadge>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center justify-center py-2">
         <div className="relative w-20 h-20">
@@ -159,7 +251,7 @@ export function KubescapeScan({ config: _config }: CardConfig) {
             <circle
               cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2"
               strokeDasharray={`${score}, 100`}
-              className="text-green-400"
+              className={score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -168,7 +260,7 @@ export function KubescapeScan({ config: _config }: CardConfig) {
         </div>
       </div>
       <div className="space-y-1">
-        {frameworks.map((fw, i) => (
+        {(filtered.frameworks || []).map((fw, i) => (
           <div key={i} className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">{fw.name}</span>
             <span className="font-medium text-foreground">{fw.score}%</span>
@@ -179,23 +271,69 @@ export function KubescapeScan({ config: _config }: CardConfig) {
   )
 }
 
-// Policy Violations Aggregated Card
+// ── Policy Violations Aggregated ────────────────────────────────────────
+
 export function PolicyViolations({ config: _config }: CardConfig) {
-  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
-  const violations = [
-    { policy: 'require-labels', count: 12, tool: 'Gatekeeper' },
-    { policy: 'disallow-privileged', count: 5, tool: 'Kyverno' },
-    { policy: 'require-resource-limits', count: 23, tool: 'Gatekeeper' },
-  ]
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData } = useKyverno()
+  const { selectedClusters } = useGlobalFilters()
+
+  // Aggregate violations from Kyverno (and OPA could be added here too)
+  const violations = useMemo(() => {
+    const result: Array<{ policy: string; count: number; tool: string; clusters: string[] }> = []
+    const policyMap = new Map<string, { count: number; tool: string; clusters: string[] }>()
+
+    for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
+      if (!status.installed) continue
+      if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
+
+      for (const policy of (status.policies || [])) {
+        if (policy.violations === 0) continue
+        const key = `kyverno:${policy.name}`
+        if (!policyMap.has(key)) {
+          policyMap.set(key, { count: 0, tool: 'Kyverno', clusters: [] })
+        }
+        const entry = policyMap.get(key)!
+        entry.count += policy.violations
+        if (!entry.clusters.includes(clusterName)) {
+          entry.clusters.push(clusterName)
+        }
+      }
+    }
+
+    for (const [key, data] of policyMap.entries()) {
+      const policyName = key.split(':')[1]
+      result.push({ policy: policyName, ...data })
+    }
+
+    return result.sort((a, b) => b.count - a.count).slice(0, 10)
+  }, [kyvernoStatuses, selectedClusters])
+
+  const hasData = violations.length > 0 || kyvernoDemoData
+  useCardLoadingState({ isLoading: kyvernoLoading, hasAnyData: hasData, isDemoData: kyvernoDemoData })
+
+  if (violations.length === 0 && !kyvernoDemoData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+        <Shield className="w-8 h-8 mb-2 opacity-50" />
+        <p className="text-sm">No policy violations detected</p>
+        <p className="text-xs mt-1">All resources comply with active policies</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        {violations.map((v, i) => (
+        {(violations || []).map((v, i) => (
           <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
             <div>
               <p className="text-sm font-medium text-foreground">{v.policy}</p>
-              <p className="text-xs text-muted-foreground">{v.tool}</p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{v.tool}</span>
+                {v.clusters.length > 0 && (
+                  <span>· {(v.clusters || []).join(', ')}</span>
+                )}
+              </div>
             </div>
             <StatusBadge color="orange" size="md">
               {v.count}
@@ -207,17 +345,61 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   )
 }
 
-// Compliance Score Gauge Card
-export function ComplianceScore({ config: _config }: CardConfig) {
-  const score = 85
-  const trend = '+3%'
+// ── Compliance Score Gauge ──────────────────────────────────────────────
 
-  // Report loading state to CardWrapper - demo card always has data
-  useCardLoadingState({
-    isLoading: false,
-    hasAnyData: true,
-    isDemoData: true,
-  })
+export function ComplianceScore({ config: _config }: CardConfig) {
+  const { aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData } = useKyverno()
+  const { selectedClusters } = useGlobalFilters()
+
+  const isDemoData = ksDemoData || kyDemoData
+  const isLoading = ksLoading || kyLoading
+
+  // Compute composite score from available tools
+  const { score, breakdown } = useMemo(() => {
+    const scores: Array<{ name: string; value: number }> = []
+
+    // Kubescape score (filtered by cluster if needed)
+    if (kubescapeAgg.overallScore > 0) {
+      scores.push({ name: 'Kubescape', value: kubescapeAgg.overallScore })
+    }
+
+    // Kyverno compliance rate
+    let totalPolicies = 0
+    for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
+      if (!status.installed) continue
+      if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
+      totalPolicies += status.totalPolicies
+    }
+    if (totalPolicies > 0) {
+      // Compliance rate: policies with zero violations / total policies
+      let compliant = 0
+      for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
+        if (!status.installed) continue
+        if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
+        compliant += (status.policies || []).filter(p => p.violations === 0).length
+      }
+      const rate = Math.round((compliant / totalPolicies) * 100)
+      scores.push({ name: 'Kyverno', value: rate })
+    }
+
+    if (scores.length === 0) {
+      // Demo fallback
+      return {
+        score: 85,
+        breakdown: [
+          { name: 'CIS', value: 82 },
+          { name: 'NSA', value: 79 },
+          { name: 'PCI', value: 71 },
+        ],
+      }
+    }
+
+    const avg = Math.round(scores.reduce((sum, s) => sum + s.value, 0) / scores.length)
+    return { score: avg, breakdown: scores }
+  }, [kubescapeAgg, kyvernoStatuses, selectedClusters])
+
+  useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
 
   return (
     <div className="space-y-3">
@@ -228,28 +410,21 @@ export function ComplianceScore({ config: _config }: CardConfig) {
             <circle
               cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3"
               strokeDasharray={`${score}, 100`}
-              className="text-green-400"
+              className={score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-2xl font-bold text-foreground">{score}%</span>
-            <span className="text-xs text-green-400">{trend}</span>
           </div>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div>
-          <p className="font-medium text-foreground">CIS</p>
-          <p className="text-muted-foreground">82%</p>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">NSA</p>
-          <p className="text-muted-foreground">79%</p>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">PCI</p>
-          <p className="text-muted-foreground">71%</p>
-        </div>
+        {(breakdown || []).map((item, i) => (
+          <div key={i}>
+            <p className="font-medium text-foreground">{item.name}</p>
+            <p className="text-muted-foreground">{item.value}%</p>
+          </div>
+        ))}
       </div>
     </div>
   )
