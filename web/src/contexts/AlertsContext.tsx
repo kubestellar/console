@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
-import { useGPUNodes, usePodIssues, useClusters } from '../hooks/useMCP'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type ReactNode } from 'react'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
 import type {
@@ -10,10 +9,16 @@ import type {
 } from '../types/alerts'
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
+import type { AlertsMCPData } from './AlertsDataFetcher'
 import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
+
+// Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
+// the main chunk.  The provider renders immediately with empty data; once
+// the fetcher chunk loads, it starts pushing live data via onData callback.
+const AlertsDataFetcher = lazy(() => import('./AlertsDataFetcher'))
 
 // Generate unique ID
 function generateId(): string {
@@ -134,21 +139,29 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   )
   const [isEvaluating, setIsEvaluating] = useState(false)
 
-  const { nodes: gpuNodes, isLoading: isGPULoading, error: gpuError } = useGPUNodes()
-  const { issues: podIssues, isLoading: isPodIssuesLoading, error: podIssuesError } = usePodIssues()
-  const { deduplicatedClusters: clusters, isLoading: isClustersLoading, error: clustersError } = useClusters()
+  // MCP data arrives from the lazy-loaded AlertsDataFetcher bridge.
+  // Until the fetcher chunk loads, we start with empty arrays (same as
+  // hook loading state).
+  const [mcpData, setMCPData] = useState<AlertsMCPData>({
+    gpuNodes: [],
+    podIssues: [],
+    clusters: [],
+    isLoading: true,
+    error: null,
+  })
+
   const { startMission } = useMissions()
   const { isDemoMode } = useDemoMode()
   const previousDemoMode = useRef(isDemoMode)
 
   // Refs for polling data — lets evaluateConditions read latest data
   // without being recreated on every poll cycle
-  const gpuNodesRef = useRef(gpuNodes)
-  gpuNodesRef.current = gpuNodes
-  const podIssuesRef = useRef(podIssues)
-  podIssuesRef.current = podIssues
-  const clustersRef = useRef(clusters)
-  clustersRef.current = clusters
+  const gpuNodesRef = useRef(mcpData.gpuNodes)
+  gpuNodesRef.current = mcpData.gpuNodes
+  const podIssuesRef = useRef(mcpData.podIssues)
+  podIssuesRef.current = mcpData.podIssues
+  const clustersRef = useRef(mcpData.clusters)
+  clustersRef.current = mcpData.clusters
   const rulesRef = useRef(rules)
   rulesRef.current = rules
 
@@ -253,11 +266,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // Aggregate loading and error states from dependencies
-  const isLoadingData = isGPULoading || isPodIssuesLoading || isClustersLoading
-  // Combine errors from multiple sources for better debugging (separated by "; ")
-  const errors = [gpuError, podIssuesError, clustersError].filter(Boolean)
-  const dataError = errors.length > 0 ? errors.join('; ') : null
+  // Aggregate loading and error states from the lazy MCP data bridge
+  const isLoadingData = mcpData.isLoading
+  const dataError = mcpData.error
 
   // Save rules whenever they change
   useEffect(() => {
@@ -990,6 +1001,9 @@ Please provide:
 
   return (
     <AlertsContext.Provider value={value}>
+      <Suspense fallback={null}>
+        <AlertsDataFetcher onData={setMCPData} />
+      </Suspense>
       {children}
     </AlertsContext.Provider>
   )

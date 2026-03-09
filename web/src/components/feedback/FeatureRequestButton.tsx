@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { Bug } from 'lucide-react'
-import { FeatureRequestModal } from './FeatureRequestModal'
 import { useNotifications } from '../../hooks/useFeatureRequests'
 import { useTranslation } from 'react-i18next'
 import type { RequestType } from '../../hooks/useFeatureRequests'
+
+// Lazy-load the modal (~67 KB) — only needed when the user clicks the bug icon
+const FeatureRequestModal = lazy(() =>
+  import('./FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
+)
 
 export function FeatureRequestButton() {
   const { t: _t } = useTranslation()
@@ -45,11 +49,15 @@ export function FeatureRequestButton() {
         )}
       </button>
 
-      <FeatureRequestModal
-        isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setInitialRequestType(undefined) }}
-        initialRequestType={initialRequestType}
-      />
+      {isModalOpen && (
+        <Suspense fallback={null}>
+          <FeatureRequestModal
+            isOpen={isModalOpen}
+            onClose={() => { setIsModalOpen(false); setInitialRequestType(undefined) }}
+            initialRequestType={initialRequestType}
+          />
+        </Suspense>
+      )}
     </>
   )
 }

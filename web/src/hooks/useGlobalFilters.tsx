@@ -1,5 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
-import { useClusters, ClusterInfo } from './useMCP'
+// Import directly from mcp/clusters to avoid pulling in the full MCP barrel
+// (~254 KB). Only clusters.ts + shared.ts are needed here.
+import { useClusters } from './mcp/clusters'
+import type { ClusterInfo } from './mcp/types'
 
 // Severity levels
 export type SeverityLevel = 'critical' | 'warning' | 'high' | 'medium' | 'low' | 'info'

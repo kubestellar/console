@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CARD_TITLES, CARD_DESCRIPTIONS } from '../components/cards/CardWrapper'
+import { CARD_TITLES, CARD_DESCRIPTIONS } from '../components/cards/cardMetadata'
 import { getDefaultStatBlocks, type DashboardStatsType, type StatBlockConfig } from '../components/ui/StatsBlockDefinitions'
 import { useClusters } from './mcp/clusters'
 import { useDeployments, usePods } from './mcp/workloads'

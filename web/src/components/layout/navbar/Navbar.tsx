@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Sun, Moon, Monitor, Menu, X, MoreVertical } from 'lucide-react'
@@ -11,8 +11,17 @@ import { LogoWithStar } from '../../ui/LogoWithStar'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
 import { FeatureRequestButton } from '../../feedback'
-import { AgentSelector } from '../../agent/AgentSelector'
-import { SearchDropdown } from './SearchDropdown'
+// Lazy-load SearchDropdown — it imports useSearchIndex which pulls in 5 MCP
+// modules (~135 KB). The search bar appears after the chunk loads (near-instant).
+const SearchDropdown = lazy(() =>
+  import('./SearchDropdown').then(m => ({ default: m.SearchDropdown }))
+)
+
+// Lazy-load AgentSelector — agent UI components (~41 KB) are only needed
+// when a local kc-agent is available (never on console.kubestellar.io).
+const AgentSelector = lazy(() =>
+  import('../../agent/AgentSelector').then(m => ({ default: m.AgentSelector }))
+)
 import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
@@ -73,7 +82,7 @@ export function Navbar() {
 
       {/* Search - hidden on small mobile */}
       <div className="hidden sm:block flex-1 max-w-md mx-4">
-        <SearchDropdown />
+        <Suspense fallback={null}><SearchDropdown /></Suspense>
       </div>
 
       {/* Right side */}
@@ -85,7 +94,7 @@ export function Navbar() {
 
           {/* Agent Status + Selector — status (Demo/AI pill) on left, selector on right */}
           <AgentStatusIndicator />
-          <AgentSelector compact />
+          <Suspense fallback={null}><AgentSelector compact /></Suspense>
         </div>
 
         {/* Extended desktop items: lg+ (1024px) */}
@@ -151,7 +160,7 @@ export function Navbar() {
                 <div className={`${isMobile ? 'max-h-[calc(60vh-24px)]' : ''} overflow-y-auto py-2`}>
                   {/* Search on mobile */}
                   <div className="px-3 py-2 sm:hidden">
-                    <SearchDropdown />
+                    <Suspense fallback={null}><SearchDropdown /></Suspense>
                   </div>
                   <div className="border-t border-border my-2 sm:hidden" />
 
@@ -164,7 +173,7 @@ export function Navbar() {
                       <AgentStatusIndicator />
                     </div>
                     <div className="px-3 py-2">
-                      <AgentSelector compact />
+                      <Suspense fallback={null}><AgentSelector compact /></Suspense>
                     </div>
                     <div className="border-t border-border mx-3 my-1" />
                   </div>

@@ -623,35 +623,8 @@ export const DEMO_DATA_CARDS = new Set([
  * Cards that should never show demo indicators (badge/yellow border).
  * Arcade/game cards don't have "demo data" — they're always just games.
  */
-export const DEMO_EXEMPT_CARDS = new Set([
-  // All arcade games - never show skeleton, always show game content
-  'sudoku_game',
-  'checkers',
-  'container_tetris',
-  'kube_kong',
-  'pod_crosser',
-  'kube_kart',
-  'kube_snake',
-  'kube_chess',
-  'kube_man',
-  'node_invaders',
-  'flappy_pod',
-  'pod_pitfall',
-  'pod_brothers',
-  'match_game',
-  'solitaire',
-  'game_2048',
-  'kubedle',
-  'pod_sweeper',
-  'kube_pong',
-  'kube_galaga',
-  'kube_craft',
-  'kube_doom',
-  'dynamic_card',
-  // Cluster admin cards - no demo/live concept
-  'maintenance_windows',
-  'node_debug',
-])
+// Re-export from cardMetadata for backward compatibility
+export { DEMO_EXEMPT_CARDS } from './cardMetadata'
 
 /**
  * Map of card type → chunk preload function.

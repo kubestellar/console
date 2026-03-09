@@ -5,8 +5,8 @@ import App from './App.tsx'
 import './index.css'
 // Initialize i18n before rendering
 import './lib/i18n'
-// Register unified card data hooks (must be before App renders)
-import './lib/unified/registerHooks'
+// NOTE: registerHooks is loaded dynamically (below) to split the MCP hooks
+// (~300 KB) into a separate chunk that downloads in parallel with the main bundle.
 // Register demo data generators for unified demo system
 import { registerAllDemoGenerators } from './lib/unified/demo'
 registerAllDemoGenerators()
@@ -20,7 +20,6 @@ import {
 } from './lib/cache'
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
-import { registerDynamicCardType } from './components/cards/cardRegistry'
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
 import { initAnalytics } from './lib/analytics'
 
@@ -101,12 +100,23 @@ enableMocking()
       console.error('[Cache] Preload failed:', e)
     }
 
-    // Restore dynamic cards and stat blocks from localStorage
+    // Restore dynamic cards and stat blocks from localStorage.
+    // registerDynamicCardType is dynamically imported to keep cardRegistry
+    // (~52 KB + 195 KB card configs) out of the main chunk.
     loadDynamicCards()
-    getAllDynamicCards().forEach(card => {
-      registerDynamicCardType(card.id, card.defaultWidth ?? 6)
-    })
+    const dynamicCards = getAllDynamicCards()
+    if (dynamicCards.length > 0) {
+      const { registerDynamicCardType } = await import('./components/cards/cardRegistry')
+      dynamicCards.forEach(card => {
+        registerDynamicCardType(card.id, card.defaultWidth ?? 6)
+      })
+    }
     loadDynamicStats()
+
+    // Register unified card data hooks — loaded as a dynamic import so the
+    // MCP hooks (~300 KB) end up in a separate chunk that the browser downloads
+    // in parallel with the main bundle, reducing time-to-first-paint.
+    await import('./lib/unified/registerHooks')
 
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>

@@ -9,7 +9,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../hooks/useStackDiscovery'
 import { useDemoMode } from '../hooks/useDemoMode'
-import { useClusters } from '../hooks/useMCP'
+import { useClusters } from '../hooks/mcp/clusters'
 
 const STORAGE_KEY = 'kubestellar-llmd-stack'
 

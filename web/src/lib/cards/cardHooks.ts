@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useClusters } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/mcp/clusters'
 import { FLASH_ANIMATION_MS } from '../constants/network'
 import type { ClusterErrorType } from '../errorClassifier'
 

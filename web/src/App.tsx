@@ -2,7 +2,6 @@ import { lazy, Suspense, useState, useEffect, useRef } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
-import { DrillDownModal } from './components/drilldown/DrillDownModal'
 import { AuthProvider, useAuth } from './lib/auth'
 import { ThemeProvider } from './hooks/useTheme'
 import { DrillDownProvider } from './hooks/useDrillDown'
@@ -18,13 +17,17 @@ import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
-import { prefetchCardData } from './lib/prefetchCardData'
 import { SHORT_DELAY_MS } from './lib/constants/network'
-import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
 import { emitPageView, emitDashboardViewed } from './lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
+
+// Lazy-load DrillDownModal — the drilldown views (~64 KB) are only needed
+// when a user clicks into a card detail, not on initial page render.
+const DrillDownModal = lazy(() =>
+  import('./components/drilldown/DrillDownModal').then(m => ({ default: m.DrillDownModal }))
+)
 
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
@@ -392,20 +395,26 @@ const DEFAULT_MAIN_CARD_TYPES = [
 
 // Prefetches core Kubernetes data and card chunks immediately after login
 // so dashboard cards render instantly instead of showing skeletons.
+// Uses dynamic imports to keep prefetchCardData (~92 KB useCachedData) and
+// cardRegistry (~52 KB + 195 KB card configs) out of the main chunk.
 function DataPrefetchInit() {
   const { isAuthenticated } = useAuth()
   useEffect(() => {
     if (!isAuthenticated) return
-    prefetchCardData()
-    // Prefetch default dashboard card chunks immediately — don't wait for
-    // Dashboard.tsx to lazy-load and mount before starting chunk downloads.
-    prefetchCardChunks(DEFAULT_MAIN_CARD_TYPES)
-    // Demo-only card chunks are lower priority — defer 15s in live mode.
-    if (isDemoMode()) {
-      prefetchDemoCardChunks()
-    } else {
-      setTimeout(prefetchDemoCardChunks, 15_000)
-    }
+    // Dynamic import: prefetchCardData pulls in useCachedData (~92 KB)
+    import('./lib/prefetchCardData').then(m => m.prefetchCardData()).catch(() => {})
+    // Dynamic import: cardRegistry pulls in card configs (~195 KB)
+    import('./components/cards/cardRegistry').then(m => {
+      // Prefetch default dashboard card chunks immediately — don't wait for
+      // Dashboard.tsx to lazy-load and mount before starting chunk downloads.
+      m.prefetchCardChunks(DEFAULT_MAIN_CARD_TYPES)
+      // Demo-only card chunks are lower priority — defer 15s in live mode.
+      if (isDemoMode()) {
+        m.prefetchDemoCardChunks()
+      } else {
+        setTimeout(m.prefetchDemoCardChunks, 15_000)
+      }
+    }).catch(() => {})
   }, [isAuthenticated])
   return null
 }
@@ -426,7 +435,7 @@ function App() {
       <AlertsProvider>
       <DashboardProvider>
       <DrillDownProvider>
-      <DrillDownModal />
+      <Suspense fallback={null}><DrillDownModal /></Suspense>
       <AppErrorBoundary>
       <ChunkErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>

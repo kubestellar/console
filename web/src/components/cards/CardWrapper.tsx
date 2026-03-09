@@ -1,10 +1,10 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { CARD_TITLES, CARD_DESCRIPTIONS } from './cardMetadata'
+import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
@@ -16,14 +16,19 @@ import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 // useLocalAgent removed — cards render immediately regardless of agent state
 // isInClusterMode removed — cards render immediately without offline skeleton
 import { useIsModeSwitching } from '../../lib/unified/demo'
-import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 import { isCardExportable } from '../../lib/widgets/widgetRegistry'
 import { emitCardExpanded } from '../../lib/analytics'
-import { WidgetExportModal } from '../widgets/WidgetExportModal'
-import { FeatureRequestModal } from '../feedback/FeatureRequestModal'
+// Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
+const WidgetExportModal = lazy(() =>
+  import('../widgets/WidgetExportModal').then(m => ({ default: m.WidgetExportModal }))
+)
+// Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
+const FeatureRequestModal = lazy(() =>
+  import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
+)
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS } from '../../lib/constants/network'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
@@ -1070,22 +1075,30 @@ export function CardWrapper({
           </BaseModal>
 
           {/* Widget Export Modal */}
-          <WidgetExportModal
-            isOpen={showWidgetExport}
-            onClose={() => setShowWidgetExport(false)}
-            cardType={cardType}
-          />
+          {showWidgetExport && (
+            <Suspense fallback={null}>
+              <WidgetExportModal
+                isOpen={showWidgetExport}
+                onClose={() => setShowWidgetExport(false)}
+                cardType={cardType}
+              />
+            </Suspense>
+          )}
 
           {/* Per-card bug/feature report modal */}
-          <FeatureRequestModal
-            isOpen={showBugReport}
-            onClose={() => setShowBugReport(false)}
-            initialTab="submit"
-            initialContext={{
-              cardType,
-              cardTitle: title || CARD_TITLES[cardType] || cardType,
-            }}
-          />
+          {showBugReport && (
+            <Suspense fallback={null}>
+              <FeatureRequestModal
+                isOpen={showBugReport}
+                onClose={() => setShowBugReport(false)}
+                initialTab="submit"
+                initialContext={{
+                  cardType,
+                  cardTitle: title || CARD_TITLES[cardType] || cardType,
+                }}
+              />
+            </Suspense>
+          )}
         </>
       </CardDataReportContext.Provider>
       </ForceLiveContext.Provider>

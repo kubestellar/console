@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
@@ -10,7 +10,10 @@ import { emitLinkedInShare } from '../../lib/analytics'
 import { checkOAuthConfigured } from '../../lib/api'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
-import { FeatureRequestModal } from '../feedback/FeatureRequestModal'
+// Lazy-load the feedback modal (~67 KB) — only needed when user opens it
+const FeatureRequestModal = lazy(() =>
+  import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
+)
 
 interface UserProfileDropdownProps {
   user: {
@@ -417,18 +420,26 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       />
 
       {/* Rewards panel — opens feedback dialog to GitHub contributions tab */}
-      <FeatureRequestModal
-        isOpen={showRewards}
-        onClose={() => setShowRewards(false)}
-        initialTab="updates"
-      />
+      {showRewards && (
+        <Suspense fallback={null}>
+          <FeatureRequestModal
+            isOpen={showRewards}
+            onClose={() => setShowRewards(false)}
+            initialTab="updates"
+          />
+        </Suspense>
+      )}
 
       {/* Feedback modal — same as top navbar/card bug button */}
-      <FeatureRequestModal
-        isOpen={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
-        initialTab="submit"
-      />
+      {showFeedbackModal && (
+        <Suspense fallback={null}>
+          <FeatureRequestModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+            initialTab="submit"
+          />
+        </Suspense>
+      )}
     </div>
   )
 }
