@@ -26,7 +26,7 @@ import {
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { Button } from '../ui/Button'
-import { checkOAuthConfigured } from '../../lib/api'
+import { useAuth } from '../../lib/auth'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import type { UpdateChannel } from '../../types/updates'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
@@ -41,11 +41,11 @@ const INITIAL_PROGRESS_PCT = 5
 /** Estimated total update duration in seconds (pull + install + build + restart) */
 const ESTIMATED_UPDATE_SECS = 180
 
+/** Timeout (ms) for the trigger to receive a WebSocket progress message before auto-failing */
+const TRIGGER_STALL_TIMEOUT_MS = 30_000
+
 /** Countdown tick interval in milliseconds */
 const COUNTDOWN_TICK_MS = 1000
-
-/** Retry interval (ms) when polling OAuth status while backend is starting */
-const OAUTH_RETRY_MS = 5000
 
 /** Scroll to a settings section by ID (mirrors Settings.tsx logic) */
 function scrollToSettingsSection(sectionId: string) {
@@ -87,6 +87,10 @@ export function UpdateSettings() {
   // WebSocket-driven update progress from kc-agent
   const { progress: updateProgress, stepHistory, dismiss: dismissProgress } = useUpdateProgress()
 
+  // OAuth is configured if the user is authenticated (no backend call needed)
+  const { isAuthenticated } = useAuth()
+  const oauthConfigured = isAuthenticated
+
   const CHANNEL_OPTIONS: { value: UpdateChannel; label: string; description: string; devOnly?: boolean }[] = [
     {
       value: 'stable',
@@ -114,7 +118,6 @@ export function UpdateSettings() {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
-  const [oauthConfigured, setOauthConfigured] = useState<boolean | null>(null)
   const [triggerState, setTriggerState] = useState<'idle' | 'triggered' | 'error'>('idle')
   const [triggerError, setTriggerError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState(ESTIMATED_UPDATE_SECS)
@@ -163,22 +166,19 @@ export function UpdateSettings() {
     }
   }, [updateProgress, triggerState])
 
-  // Fetch OAuth status on mount — retry if backend was down
+  // Auto-fail the triggered state if no WebSocket progress arrives within timeout.
+  // This prevents the UI from being stuck forever on "Starting update — please wait..."
+  // when kc-agent accepts the trigger but never sends progress messages (e.g. no update needed).
   useEffect(() => {
-    let retryTimer: ReturnType<typeof setTimeout>
-    function check() {
-      checkOAuthConfigured().then(({ backendUp, oauthConfigured: configured }) => {
-        if (backendUp) {
-          setOauthConfigured(configured)
-        } else {
-          // Backend not ready yet — retry in 5s
-          retryTimer = setTimeout(check, OAUTH_RETRY_MS)
-        }
-      })
-    }
-    check()
-    return () => clearTimeout(retryTimer)
-  }, [])
+    if (triggerState !== 'triggered') return
+    const timer = setTimeout(() => {
+      setTriggerState('error')
+      setTriggerError('No response from kc-agent — the update may not have started. Check if an update is actually available.')
+      triggerGuardRef.current = false
+    }, TRIGGER_STALL_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [triggerState])
+
 
   // Re-check GitHub token when settings change (e.g. env token auto-detected by GitHubTokenSection)
   useEffect(() => {
@@ -356,8 +356,7 @@ export function UpdateSettings() {
               icon={<Bot className="w-3.5 h-3.5" />}
             />
             <PrereqRow
-              ok={oauthConfigured === true}
-              loading={oauthConfigured === null}
+              ok={oauthConfigured}
               label={t('settings.updates.prereqOAuth')}
               okText={t('settings.updates.prereqOAuthOk')}
               failText={t('settings.updates.prereqOAuthFail')}
@@ -385,7 +384,7 @@ export function UpdateSettings() {
             const checks = [
               agentConnected,
               hasCodingAgent,
-              oauthConfigured === true,
+              oauthConfigured,
               hasGithubToken,
               installMethod === 'dev',
             ]

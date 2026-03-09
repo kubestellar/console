@@ -322,6 +322,8 @@ function useVersionCheckCore() {
         const data = (await resp.json()) as AutoUpdateStatus
         console.debug('[version-check] Auto-update status:', data)
         setAutoUpdateStatus(data)
+        // Clear any stale error from a previous failed check
+        setError(null)
         // Update latestMainSHA and lastChecked from agent response
         if (data.latestSHA) {
           setLatestMainSHA(data.latestSHA)

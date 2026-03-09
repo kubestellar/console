@@ -328,6 +328,12 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 	}
 
 	if latestSHA == currentSHA || currentSHA == "" {
+		log.Printf("[AutoUpdate] Already up to date (%s), no update needed", short(currentSHA))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:   "done",
+			Message:  "Already up to date — no changes on main",
+			Progress: 100,
+		})
 		return
 	}
 
@@ -640,6 +646,12 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 	}
 
 	if latest == nil || latest.TagName == currentVersion {
+		log.Printf("[AutoUpdate] Already on latest %s release (%s)", channel, currentVersion)
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:   "done",
+			Message:  fmt.Sprintf("Already up to date — running latest %s release", channel),
+			Progress: 100,
+		})
 		return
 	}
 
