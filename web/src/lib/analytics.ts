@@ -11,6 +11,7 @@
  */
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
+import { CHUNK_RELOAD_TS_KEY } from './chunkErrors'
 import { isDemoMode } from './demoMode'
 
 // DECOY Measurement ID — the proxy rewrites this to the real ID server-side.
@@ -557,8 +558,39 @@ export function emitError(category: string, detail: string) {
   })
 }
 
+/**
+ * Check if this page load is a recovery from a chunk-load auto-reload.
+ * If CHUNK_RELOAD_TS_KEY exists in sessionStorage, the previous page load
+ * hit a stale chunk error and triggered window.location.reload().
+ * Emit a recovery event with the outcome and clear the marker.
+ */
+function checkChunkReloadRecovery() {
+  try {
+    const reloadTs = sessionStorage.getItem(CHUNK_RELOAD_TS_KEY)
+    if (!reloadTs) return
+
+    const reloadTime = parseInt(reloadTs)
+    const recoveryMs = Date.now() - reloadTime
+
+    // Clear the marker so we don't re-emit on subsequent navigations
+    sessionStorage.removeItem(CHUNK_RELOAD_TS_KEY)
+
+    // Emit recovery event — the app loaded successfully after auto-reload
+    send('ksc_chunk_reload_recovery', {
+      recovery_result: 'success',
+      recovery_latency_ms: recoveryMs,
+      recovery_page: window.location.pathname,
+    })
+  } catch {
+    // sessionStorage may be unavailable in some contexts
+  }
+}
+
 /** Track unhandled promise rejections and runtime errors globally */
 export function startGlobalErrorTracking() {
+  // Check if we just recovered from a chunk-load auto-reload
+  checkChunkReloadRecovery()
+
   // Re-entrancy guard: if emitError() → send() triggers another error,
   // the global handler must NOT call emitError() again (infinite recursion → max call stack)
   let isEmitting = false
@@ -589,6 +621,15 @@ export function startGlobalErrorTracking() {
 
 export function emitSessionExpired() {
   send('ksc_session_expired')
+}
+
+/** Emit when auto-reload failed to fix stale chunks (user sees manual reload UI) */
+export function emitChunkReloadRecoveryFailed(errorDetail: string) {
+  send('ksc_chunk_reload_recovery', {
+    recovery_result: 'failed',
+    recovery_page: window.location.pathname,
+    error_detail: errorDetail.slice(0, ERROR_DETAIL_MAX_LEN),
+  })
 }
 
 // ── Tour ───────────────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import i18next from 'i18next'
-import { emitError } from '../lib/analytics'
-import { isChunkLoadError } from '../lib/chunkErrors'
+import { emitError, emitChunkReloadRecoveryFailed } from '../lib/analytics'
+import { isChunkLoadError, CHUNK_RELOAD_TS_KEY } from '../lib/chunkErrors'
 
 // Reload throttle interval in milliseconds to prevent infinite reload loops
 const RELOAD_THROTTLE_MS = 30_000 // 30 seconds
@@ -46,12 +46,16 @@ export class ChunkErrorBoundary extends Component<Props, State> {
     emitError('chunk_load', error.message)
 
     // Auto-reload once. Use sessionStorage to prevent infinite loops.
-    const key = 'chunk-reload-ts'
-    const lastReload = sessionStorage.getItem(key)
+    const lastReload = sessionStorage.getItem(CHUNK_RELOAD_TS_KEY)
     const now = Date.now()
     if (!lastReload || now - parseInt(lastReload) > RELOAD_THROTTLE_MS) {
-      sessionStorage.setItem(key, String(now))
+      sessionStorage.setItem(CHUNK_RELOAD_TS_KEY, String(now))
       window.location.reload()
+    } else {
+      // Auto-reload already happened within the throttle window but chunks
+      // are still stale — recovery failed, user sees manual reload UI
+      sessionStorage.removeItem(CHUNK_RELOAD_TS_KEY)
+      emitChunkReloadRecoveryFailed(error.message)
     }
   }
 

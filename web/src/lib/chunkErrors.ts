@@ -6,6 +6,10 @@
  * content hashing. Browsers with cached HTML still reference old
  * chunk URLs, producing these characteristic error messages.
  */
+
+/** SessionStorage key set before auto-reload, checked after to measure recovery */
+export const CHUNK_RELOAD_TS_KEY = 'chunk-reload-ts'
+
 export function isChunkLoadError(error: Error): boolean {
   const msg = error.message || ''
   return (
