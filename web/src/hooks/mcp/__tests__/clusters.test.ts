@@ -112,6 +112,10 @@ import {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Matches the offline threshold in shared.ts (5 minutes). */
+const OFFLINE_THRESHOLD_MS = 5 * 60_000
+
 const EMPTY_CACHE = {
   clusters: [] as ClusterInfo[],
   lastUpdated: null,
@@ -211,7 +215,7 @@ describe('shouldMarkOffline / recordClusterFailure / clearClusterFailure', () =>
   it('shouldMarkOffline returns true after 5 minutes since the first failure', () => {
     vi.useFakeTimers()
     recordClusterFailure(TEST_CLUSTER)
-    vi.advanceTimersByTime(5 * 60_000 + 1)
+    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS + 1)
     expect(shouldMarkOffline(TEST_CLUSTER)).toBe(true)
   })
 
@@ -221,14 +225,14 @@ describe('shouldMarkOffline / recordClusterFailure / clearClusterFailure', () =>
     vi.advanceTimersByTime(1_000)
     recordClusterFailure(TEST_CLUSTER) // second call must NOT reset the timestamp
     // Should be offline 5 minutes after the FIRST call, not the second
-    vi.advanceTimersByTime(5 * 60_000)
+    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS)
     expect(shouldMarkOffline(TEST_CLUSTER)).toBe(true)
   })
 
   it('clearClusterFailure resets offline tracking', () => {
     vi.useFakeTimers()
     recordClusterFailure(TEST_CLUSTER)
-    vi.advanceTimersByTime(5 * 60_000 + 1)
+    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS + 1)
     expect(shouldMarkOffline(TEST_CLUSTER)).toBe(true)
     clearClusterFailure(TEST_CLUSTER)
     expect(shouldMarkOffline(TEST_CLUSTER)).toBe(false)
@@ -386,7 +390,7 @@ describe('useClusters', () => {
       rerender()
     })
 
-    expect(mockFullFetchClusters).toHaveBeenCalled()
+    expect(mockFullFetchClusters).toHaveBeenCalledTimes(1)
   })
 
   it('polls every CLUSTER_POLL_INTERVAL_MS', async () => {
@@ -579,7 +583,8 @@ describe('useClusterHealth', () => {
     mockFetchSingleClusterHealth.mockResolvedValueOnce(null)
     await act(async () => { await result.current.refetch() })
 
-    // Must still show the previous good health
+    // Must still show the previous good health and be done loading
+    expect(result.current.isLoading).toBe(false)
     expect(result.current.health).toEqual(goodHealth)
     expect(result.current.error).toBeNull()
   })
@@ -593,7 +598,7 @@ describe('useClusterHealth', () => {
     await act(() => Promise.resolve())
 
     // Simulate 5+ minutes passing since first failure
-    vi.advanceTimersByTime(5 * 60_000 + 1)
+    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS + 1)
 
     // Trigger another refetch after the threshold
     await act(async () => { await result.current.refetch() })
