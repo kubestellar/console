@@ -16,8 +16,8 @@ import { PolicyDetailModal, ClusterOPAModal, CreatePolicyModal } from './opa'
 import type { Policy, GatekeeperStatus, OPAClusterItem } from './opa'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
-/** Cache TTL: 60 minutes — OPA installation status rarely changes */
-const CACHE_TTL_MS = 60 * 60 * 1000
+/** Cache TTL: 5 minutes — short enough to pick up connectivity changes */
+const CACHE_TTL_MS = 5 * 60 * 1000
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -789,6 +789,11 @@ Let's start by discussing what kind of policy I need.`,
                         </>
                       )}
                     </div>
+                  </div>
+                ) : status?.error ? (
+                  <div className="flex items-center gap-1 text-xs text-yellow-400/70">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>{status.error}</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">

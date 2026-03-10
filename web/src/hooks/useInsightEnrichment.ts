@@ -28,15 +28,22 @@ const ENRICHMENT_TIMEOUT_MS = 15_000
 /** Cache TTL for enrichments (5 minutes) */
 const ENRICHMENT_CACHE_TTL_MS = 5 * 60_000
 
-/** WebSocket reconnect delay (5 seconds) */
-const WS_RECONNECT_DELAY_MS = 5_000
+/** Base WebSocket reconnect delay (5 seconds) */
+const WS_BASE_RECONNECT_DELAY_MS = 5_000
+/** Maximum WebSocket reconnect delay (2 minutes) */
+const WS_MAX_RECONNECT_DELAY_MS = 2 * 60_000
+/** Maximum WebSocket reconnect attempts before giving up */
+const MAX_WS_RECONNECT_ATTEMPTS = 5
 
 // ── Singleton state ──────────────────────────────────────────────────────
 
-let enrichments: Map<string, AIInsightEnrichment> = new Map()
+const enrichments: Map<string, AIInsightEnrichment> = new Map()
 let lastEnrichmentTime = 0
 let lastRequestHash = ''
 let wsConnection: WebSocket | null = null
+let wsReconnectAttempts = 0
+/** Set to false after receiving 404 — endpoint doesn't exist */
+let enrichmentEndpointAvailable = true
 const subscribers = new Set<() => void>()
 
 function notifySubscribers() {
@@ -59,6 +66,7 @@ function isCacheValid(): boolean {
 /** Request AI enrichment from agent */
 async function requestEnrichment(insights: MultiClusterInsight[]): Promise<void> {
   if (!isAgentConnected() || isAgentUnavailable()) return
+  if (!enrichmentEndpointAvailable) return
   if (insights.length === 0) return
 
   const hash = hashInsights(insights)
@@ -96,6 +104,9 @@ async function requestEnrichment(insights: MultiClusterInsight[]): Promise<void>
     if (response.ok) {
       const data = (await response.json()) as InsightEnrichmentResponse
       applyEnrichments(data.enrichments)
+    } else if (response.status === 404) {
+      // Endpoint not implemented — stop retrying until next page load
+      enrichmentEndpointAvailable = false
     }
   } catch {
     // Silently fail — heuristic insights remain unchanged
@@ -119,9 +130,16 @@ function applyEnrichments(newEnrichments: AIInsightEnrichment[]): void {
 function connectWebSocket(): void {
   if (wsConnection) return
   if (!isAgentConnected() || isAgentUnavailable()) return
+  if (wsReconnectAttempts >= MAX_WS_RECONNECT_ATTEMPTS) return
 
   try {
-    wsConnection = new WebSocket(`${LOCAL_AGENT_WS_URL}/ws`)
+    // LOCAL_AGENT_WS_URL already includes /ws — don't append it again
+    wsConnection = new WebSocket(LOCAL_AGENT_WS_URL)
+
+    wsConnection.onopen = () => {
+      // Reset backoff on successful connection
+      wsReconnectAttempts = 0
+    }
 
     wsConnection.onmessage = (event) => {
       try {
@@ -136,10 +154,16 @@ function connectWebSocket(): void {
 
     wsConnection.onclose = () => {
       wsConnection = null
-      // Reconnect after delay if agent is still connected
-      if (isAgentConnected() && !isAgentUnavailable()) {
-        setTimeout(connectWebSocket, WS_RECONNECT_DELAY_MS)
-      }
+      wsReconnectAttempts++
+      if (wsReconnectAttempts >= MAX_WS_RECONNECT_ATTEMPTS) return
+      if (!isAgentConnected() || isAgentUnavailable()) return
+
+      // Exponential backoff: 5s, 10s, 20s, 40s, 80s (capped at 2 min)
+      const delay = Math.min(
+        WS_BASE_RECONNECT_DELAY_MS * Math.pow(2, wsReconnectAttempts - 1),
+        WS_MAX_RECONNECT_DELAY_MS,
+      )
+      setTimeout(connectWebSocket, delay)
     }
 
     wsConnection.onerror = () => {
