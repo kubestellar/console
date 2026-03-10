@@ -3,7 +3,6 @@ import { RotateCcw, Trophy, Crosshair } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
-import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
@@ -55,7 +54,6 @@ interface Explosion {
 let nextId = 0
 
 export function MissileCommand(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -453,15 +451,18 @@ export function MissileCommand(_props: CardComponentProps) {
 
       if (!bestBatt) return
 
+      const launchX = bestBatt.x + MISSILE_BATTERY_WIDTH / 2
+      const battX = bestBatt.x
+
       setBatteries(bs =>
-        bs.map(b => (b === bestBatt ? { ...b, ammo: b.ammo - 1 } : b))
+        bs.map(b => (b.x === battX ? { ...b, ammo: b.ammo - 1 } : b))
       )
 
       setPlayerMissiles(ms => [
         ...ms,
         {
           id: nextId++,
-          x: bestBatt!.x + MISSILE_BATTERY_WIDTH / 2,
+          x: launchX,
           y: GROUND_Y - 14,
           targetX: clickX,
           targetY: clickY,
