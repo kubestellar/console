@@ -15,17 +15,25 @@ const {
   mockRegisterCacheReset,
   mockKubectlProxy,
   mockClusterCacheRef,
-} = vi.hoisted(() => ({
-  mockIsDemoMode: vi.fn(() => false),
-  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
-  mockIsAgentUnavailable: vi.fn(() => true),
-  mockReportAgentDataSuccess: vi.fn(),
-  mockApiGet: vi.fn(),
-  mockRegisterRefetch: vi.fn(() => vi.fn()),
-  mockRegisterCacheReset: vi.fn(() => vi.fn()),
-  mockKubectlProxy: { getPVCs: vi.fn() },
-  mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> },
-}))
+  capturedCacheResets,
+} = vi.hoisted(() => {
+  const capturedCacheResets = new Map<string, () => void>()
+  return {
+    mockIsDemoMode: vi.fn(() => false),
+    mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
+    mockIsAgentUnavailable: vi.fn(() => true),
+    mockReportAgentDataSuccess: vi.fn(),
+    mockApiGet: vi.fn(),
+    mockRegisterRefetch: vi.fn(() => vi.fn()),
+    mockRegisterCacheReset: vi.fn((_key: string, callback: () => void) => {
+      capturedCacheResets.set(_key, callback)
+      return vi.fn()
+    }),
+    mockKubectlProxy: { getPVCs: vi.fn() },
+    mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> },
+    capturedCacheResets,
+  }
+})
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
@@ -76,7 +84,7 @@ vi.mock('../../../lib/constants', () => ({
 // Imports under test (after mocks)
 // ---------------------------------------------------------------------------
 
-import { usePVCs, usePVs, useResourceQuotas, useLimitRanges, subscribeStorageCache } from '../storage'
+import { usePVCs, usePVs, useResourceQuotas, useLimitRanges } from '../storage'
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -168,12 +176,26 @@ describe('usePVCs', () => {
     expect(mockApiGet.mock.calls.length).toBe(callsAfterPoll)
   })
 
-  it('reacts to storage cache reset via subscribeStorageCache', () => {
-    // Verify the exported subscription function manages subscriptions correctly
-    const received: unknown[] = []
-    const unsub = subscribeStorageCache((state) => received.push(state))
-    expect(typeof unsub).toBe('function')
-    unsub()
+  it('reacts to storage cache reset by clearing data and entering loading state', async () => {
+    const fakePVCs = [
+      { name: 'pvc-1', namespace: 'default', cluster: 'c1', status: 'Bound', capacity: '10Gi', storageClass: 'standard' },
+    ]
+    mockApiGet.mockResolvedValue({ data: { pvcs: fakePVCs } })
+
+    const { result } = renderHook(() => usePVCs())
+    await waitFor(() => expect(result.current.pvcs.length).toBeGreaterThan(0))
+
+    // Block the next fetch so loading state is visible after reset
+    mockApiGet.mockReturnValue(new Promise(() => {}))
+
+    // Trigger the real cache reset via the captured registerCacheReset callback
+    const reset = capturedCacheResets.get('storage')
+    expect(reset).toBeDefined()
+    await act(async () => { reset!() })
+
+    // Hook reacts: loading flag is set and visible data is cleared
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.pvcs).toEqual([])
   })
 
   it('returns demo PVCs in demo mode', async () => {

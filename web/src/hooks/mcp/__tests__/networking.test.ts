@@ -14,16 +14,24 @@ const {
   mockRegisterRefetch,
   mockRegisterCacheReset,
   mockClusterCacheRef,
-} = vi.hoisted(() => ({
-  mockIsDemoMode: vi.fn(() => false),
-  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
-  mockIsAgentUnavailable: vi.fn(() => true), // agent unavailable by default
-  mockReportAgentDataSuccess: vi.fn(),
-  mockApiGet: vi.fn(),
-  mockRegisterRefetch: vi.fn(() => vi.fn()),
-  mockRegisterCacheReset: vi.fn(() => vi.fn()),
-  mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> },
-}))
+  capturedCacheResets,
+} = vi.hoisted(() => {
+  const capturedCacheResets = new Map<string, () => void>()
+  return {
+    mockIsDemoMode: vi.fn(() => false),
+    mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
+    mockIsAgentUnavailable: vi.fn(() => true), // agent unavailable by default
+    mockReportAgentDataSuccess: vi.fn(),
+    mockApiGet: vi.fn(),
+    mockRegisterRefetch: vi.fn(() => vi.fn()),
+    mockRegisterCacheReset: vi.fn((_key: string, callback: () => void) => {
+      capturedCacheResets.set(_key, callback)
+      return vi.fn()
+    }),
+    mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> },
+    capturedCacheResets,
+  }
+})
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
@@ -78,7 +86,6 @@ import {
   useServices,
   useIngresses,
   useNetworkPolicies,
-  subscribeNetworkingCache,
 } from '../networking'
 
 // ---------------------------------------------------------------------------
@@ -193,12 +200,29 @@ describe('useServices', () => {
     expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterPoll)
   })
 
-  it('reacts to networking cache reset notification via subscribeNetworkingCache', () => {
-    // Verify the exported subscription function is callable and manages subscriptions
-    const received: unknown[] = []
-    const unsub = subscribeNetworkingCache((state) => received.push(state))
-    expect(typeof unsub).toBe('function')
-    unsub()
+  it('reacts to networking cache reset by clearing data and entering loading state', async () => {
+    const fakeServices = [
+      { name: 'svc-a', namespace: 'default', cluster: 'c1', type: 'ClusterIP', clusterIP: '10.0.0.1', ports: [] },
+    ]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: fakeServices }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.services.length).toBeGreaterThan(0))
+
+    // Block the next fetch so loading state is visible after reset
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))
+
+    // Trigger the real cache reset via the captured registerCacheReset callback
+    const reset = capturedCacheResets.get('services')
+    expect(reset).toBeDefined()
+    await act(async () => { reset!() })
+
+    // Hook reacts: loading flag is set and visible data is cleared
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.services).toEqual([])
   })
 
   it('does not surface an error on fetch failure (services are optional)', async () => {

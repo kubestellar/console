@@ -13,15 +13,23 @@ const {
   mockFetchSSE,
   mockRegisterRefetch,
   mockRegisterCacheReset,
-} = vi.hoisted(() => ({
-  mockIsDemoMode: vi.fn(() => false),
-  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
-  mockIsAgentUnavailable: vi.fn(() => true),
-  mockReportAgentDataSuccess: vi.fn(),
-  mockFetchSSE: vi.fn(),
-  mockRegisterRefetch: vi.fn(() => vi.fn()),
-  mockRegisterCacheReset: vi.fn(() => vi.fn()),
-}))
+  capturedCacheResets,
+} = vi.hoisted(() => {
+  const capturedCacheResets = new Map<string, () => void>()
+  return {
+    mockIsDemoMode: vi.fn(() => false),
+    mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
+    mockIsAgentUnavailable: vi.fn(() => true),
+    mockReportAgentDataSuccess: vi.fn(),
+    mockFetchSSE: vi.fn(),
+    mockRegisterRefetch: vi.fn(() => vi.fn()),
+    mockRegisterCacheReset: vi.fn((_key: string, callback: () => void) => {
+      capturedCacheResets.set(_key, callback)
+      return vi.fn()
+    }),
+    capturedCacheResets,
+  }
+})
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
@@ -63,7 +71,6 @@ vi.mock('../../../lib/constants/network', () => ({
 import {
   useEvents,
   useWarningEvents,
-  subscribeEventsCache,
 } from '../events'
 
 // ---------------------------------------------------------------------------
@@ -172,16 +179,34 @@ describe('useEvents', () => {
     // Cleanup runs on unmount and aborts the controller
     unmount()
 
-    if (capturedSignal) {
-      expect(capturedSignal.aborted).toBe(true)
-    }
+    expect(capturedSignal).toBeDefined()
+    expect(capturedSignal!.aborted).toBe(true)
   })
 
-  it('reacts to events cache reset via subscribeEventsCache', () => {
-    const received: unknown[] = []
-    const unsub = subscribeEventsCache((state) => received.push(state))
-    expect(typeof unsub).toBe('function')
-    unsub()
+  it('reacts to events cache reset by clearing data and entering loading state', async () => {
+    const fakeEvents = [
+      {
+        type: 'Normal', reason: 'Scheduled', message: 'Pod assigned',
+        object: 'Pod/pod-1', namespace: 'default', cluster: 'c1',
+        count: 1, firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString(),
+      },
+    ]
+    mockFetchSSE.mockResolvedValue(fakeEvents)
+
+    const { result } = renderHook(() => useEvents())
+    await waitFor(() => expect(result.current.events.length).toBeGreaterThan(0))
+
+    // Block next fetch so loading state is visible after reset
+    mockFetchSSE.mockReturnValue(new Promise(() => {}))
+
+    // Trigger the real cache reset via the captured registerCacheReset callback
+    const reset = capturedCacheResets.get('events')
+    expect(reset).toBeDefined()
+    await act(async () => { reset!() })
+
+    // Hook reacts: loading flag is set and visible data is cleared
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.events).toEqual([])
   })
 
   it('handles SSE failure without surfacing an error (events are optional)', async () => {

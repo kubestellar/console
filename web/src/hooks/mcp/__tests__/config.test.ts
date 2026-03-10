@@ -245,6 +245,7 @@ describe('useSecrets', () => {
     )
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const callsBefore = mockFetchSSE.mock.calls.length
 
     // Trigger demo mode change — hook should re-fetch and return demo secrets
     mockIsDemoMode.mockReturnValue(true)
@@ -252,6 +253,8 @@ describe('useSecrets', () => {
 
     // In demo mode the hook short-circuits to demo data
     await waitFor(() => expect(result.current.secrets.length).toBeGreaterThan(0))
+    // Demo path bypasses SSE entirely — call count stays the same
+    expect(mockFetchSSE.mock.calls.length).toBe(callsBefore)
     expect(result.current.error).toBeNull()
   })
 
