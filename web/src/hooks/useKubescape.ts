@@ -38,6 +38,14 @@ export interface KubescapeFrameworkScore {
   failCount: number
 }
 
+/** Per-control pass/fail detail for drill-down modals */
+export interface KubescapeControl {
+  id: string
+  name: string
+  passed: number
+  failed: number
+}
+
 export interface KubescapeClusterStatus {
   cluster: string
   installed: boolean
@@ -48,6 +56,8 @@ export interface KubescapeClusterStatus {
   totalControls: number
   passedControls: number
   failedControls: number
+  /** Per-control results for drill-down detail view */
+  controls: KubescapeControl[]
 }
 
 interface CacheData {
@@ -101,6 +111,16 @@ function getDemoStatus(cluster: string): KubescapeClusterStatus {
     totalControls: 95 + (seed % 10),
     passedControls: 72 + (seed % 8),
     failedControls: 23 + (seed % 5),
+    controls: [
+      { id: 'C-0034', name: 'Automatic mapping of service account', passed: 12, failed: 3 + (seed % 2) },
+      { id: 'C-0017', name: 'Immutable container filesystem', passed: 8, failed: 5 },
+      { id: 'C-0016', name: 'Allow privilege escalation', passed: 15, failed: 2 },
+      { id: 'C-0044', name: 'Container hostPort', passed: 18, failed: 0 },
+      { id: 'C-0057', name: 'Privileged container', passed: 14, failed: 4 + (seed % 3) },
+      { id: 'C-0009', name: 'Resource limits', passed: 6, failed: 10 },
+      { id: 'C-0030', name: 'Ingress and Egress blocked', passed: 9, failed: 7 },
+      { id: 'C-0055', name: 'Linux hardening', passed: 11, failed: 6 },
+    ],
   }
 }
 
@@ -185,7 +205,7 @@ export function useKubescape() {
           if (crdCheck.exitCode !== 0) {
             newStatuses[cluster] = {
               cluster, installed: false, loading: false,
-              overallScore: 0, frameworks: [],
+              overallScore: 0, frameworks: [], controls: [],
               totalControls: 0, passedControls: 0, failedControls: 0,
             }
             continue
@@ -218,6 +238,7 @@ export function useKubescape() {
 
         // Try to fetch detailed control scan data for framework breakdown
         const frameworks: KubescapeFrameworkScore[] = []
+        const controlResults = new Map<string, { name: string; passed: number; failed: number }>()
         const detailResult = await kubectlProxy.exec(
           ['get', 'workloadconfigurationscans', '-A', '-o', 'json', '--limit=50'],
           { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
@@ -227,14 +248,17 @@ export function useKubescape() {
           const data = JSON.parse(detailResult.output)
           const items = (data.items || []) as WorkloadConfigScanResource[]
 
-          // Aggregate control results
-          const controlResults = new Map<string, { passed: number; failed: number }>()
+          // Aggregate control results with names
           for (const item of items) {
             for (const [controlId, control] of Object.entries(item.spec?.controls || {})) {
               if (!controlResults.has(controlId)) {
-                controlResults.set(controlId, { passed: 0, failed: 0 })
+                controlResults.set(controlId, { name: control.name || controlId, passed: 0, failed: 0 })
               }
               const entry = controlResults.get(controlId)!
+              // Update name if we find a non-empty one
+              if (control.name && entry.name === controlId) {
+                entry.name = control.name
+              }
               if (control.status?.status === 'passed') {
                 entry.passed++
               } else {
@@ -272,6 +296,16 @@ export function useKubescape() {
           )
         }
 
+        // Build per-control detail array from aggregated results
+        const controls: KubescapeControl[] = []
+        if (detailResult.exitCode === 0 && controlResults.size > 0) {
+          for (const [id, result] of controlResults.entries()) {
+            controls.push({ id, name: result.name, passed: result.passed, failed: result.failed })
+          }
+          // Sort failed-first for drill-down priority
+          controls.sort((a, b) => b.failed - a.failed)
+        }
+
         newStatuses[cluster] = {
           cluster,
           installed: true,
@@ -281,6 +315,7 @@ export function useKubescape() {
           totalControls,
           passedControls,
           failedControls,
+          controls,
         }
       } catch (err) {
         const isDemoError = err instanceof Error && err.message.includes('demo mode')
@@ -290,7 +325,7 @@ export function useKubescape() {
         newStatuses[cluster] = {
           cluster, installed: false, loading: false,
           error: err instanceof Error ? err.message : 'Connection failed',
-          overallScore: 0, frameworks: [],
+          overallScore: 0, frameworks: [], controls: [],
           totalControls: 0, passedControls: 0, failedControls: 0,
         }
       }

@@ -1,12 +1,13 @@
 /**
  * Fleet Compliance Heatmap
  *
- * Grid view: rows = clusters, columns = tool categories (OPA, Kyverno, Kubescape, Trivy).
+ * Grid view: rows = clusters, columns = tool categories (Kyverno, Kubescape, Trivy, OPA).
  * Cells colored green/yellow/red based on violation thresholds or posture scores.
+ * Click any installed cell to open the tool's detail modal for that cluster.
  * Consumes all compliance hooks for a cross-cluster compliance overview.
  */
 
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Info } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
@@ -16,6 +17,10 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/useMCP'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useMissions } from '../../hooks/useMissions'
+import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
+import { TrivyDetailModal } from './trivy/TrivyDetailModal'
+import { KubescapeDetailModal } from './kubescape/KubescapeDetailModal'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -108,18 +113,38 @@ Use: helm install trivy-operator aquasecurity/trivy-operator --version 0.23.0 --
 
 Please proceed step by step.`,
   },
+  gatekeeper: {
+    title: 'Install OPA Gatekeeper',
+    description: 'Install OPA Gatekeeper for policy enforcement',
+    prompt: `I want to install OPA Gatekeeper for policy enforcement on my clusters.
+
+Please help me:
+1. Install Gatekeeper via Helm
+2. Verify the installation is running
+3. Set up a basic constraint template and constraint (audit mode)
+
+Use: helm install gatekeeper gatekeeper/gatekeeper --namespace gatekeeper-system --create-namespace --set auditInterval=60
+
+Important: Start with audit mode — do NOT set enforcementAction to deny until policies are tested.
+
+Please proceed step by step.`,
+  },
 }
 
 export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData, installed: kyvernoInstalled } = useKyverno()
-  const { statuses: trivyStatuses, isLoading: trivyLoading, isDemoData: trivyDemoData, installed: trivyInstalled } = useTrivy()
-  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isDemoData: kubescapeDemoData, installed: kubescapeInstalled } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, refetch: kyvernoRefetch } = useKyverno()
+  const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, installed: trivyInstalled, refetch: trivyRefetch } = useTrivy()
+  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, installed: kubescapeInstalled, refetch: kubescapeRefetch } = useKubescape()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { deduplicatedClusters } = useClusters()
   const { isDemoMode } = useDemoMode()
   const { startMission } = useMissions()
 
+  // Modal state: { tool, cluster }
+  const [modal, setModal] = useState<{ tool: string; cluster: string } | null>(null)
+
   const isLoading = kyvernoLoading || trivyLoading || kubescapeLoading
+  const isRefreshing = kyvernoRefreshing || trivyRefreshing || kubescapeRefreshing
   const isDemoData = isDemoMode || kyvernoDemoData || trivyDemoData || kubescapeDemoData
 
   /** Whether each tool is installed on at least one cluster */
@@ -139,6 +164,19 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       initialPrompt: mission.prompt,
       context: {},
     })
+  }
+
+  const handleCellClick = (toolKey: string, cluster: string) => {
+    // Only allow click on installed cells
+    const statusMap: Record<string, Record<string, { installed?: boolean }>> = {
+      kyverno: kyvernoStatuses,
+      kubescape: kubescapeStatuses,
+      trivy: trivyStatuses,
+    }
+    const clusterStatus = statusMap[toolKey]?.[cluster]
+    if (clusterStatus?.installed) {
+      setModal({ tool: toolKey, cluster })
+    }
   }
 
   useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
@@ -168,7 +206,6 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       } else if (ks.totalPolicies === 0) {
         kyvernoCell = { status: 'warning', label: 'No policies', tooltip: 'Kyverno installed but no policies configured' }
       } else {
-        // Use totalViolations from cluster status — individual policy violations aren't populated from reports
         const violations = ks.totalViolations ?? 0
         const status: CellStatus = violations >= POLICY_CRITICAL_THRESHOLD ? 'critical'
           : violations >= POLICY_WARNING_THRESHOLD ? 'warning' : 'good'
@@ -232,6 +269,11 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-2 p-1">
+      {/* Refresh indicator */}
+      <div className="flex justify-end">
+        <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />
+      </div>
+
       {/* Header row */}
       <div className="grid grid-cols-4 gap-1 text-xs font-medium text-muted-foreground">
         <div className="px-2 py-1">Cluster</div>
@@ -263,11 +305,18 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
           </div>
           {toolKeys.map(key => {
             const cell = row[key]
+            const isClickable = cell.status !== 'not-installed'
             return (
               <div
                 key={key}
-                className={`px-2 py-1.5 rounded border text-xs text-center ${STATUS_COLORS[cell.status]}`}
+                className={`px-2 py-1.5 rounded border text-xs text-center ${STATUS_COLORS[cell.status]} ${
+                  isClickable ? 'cursor-pointer hover:brightness-125 transition-all' : ''
+                }`}
                 title={cell.tooltip}
+                onClick={() => isClickable && handleCellClick(key, row.cluster)}
+                role={isClickable ? 'button' : undefined}
+                tabIndex={isClickable ? 0 : undefined}
+                onKeyDown={isClickable ? (e) => { if (e.key === 'Enter') handleCellClick(key, row.cluster) } : undefined}
               >
                 <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${STATUS_DOTS[cell.status]}`} />
                 {cell.label}
@@ -283,6 +332,38 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-400 mr-0.5" /> Warning</span>
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-0.5" /> Critical</span>
       </div>
+
+      {/* Detail modals */}
+      {modal?.tool === 'kyverno' && kyvernoStatuses[modal.cluster] && (
+        <KyvernoDetailModal
+          isOpen
+          onClose={() => setModal(null)}
+          clusterName={modal.cluster}
+          status={kyvernoStatuses[modal.cluster]}
+          onRefresh={() => kyvernoRefetch()}
+          isRefreshing={kyvernoRefreshing}
+        />
+      )}
+      {modal?.tool === 'trivy' && trivyStatuses[modal.cluster] && (
+        <TrivyDetailModal
+          isOpen
+          onClose={() => setModal(null)}
+          clusterName={modal.cluster}
+          status={trivyStatuses[modal.cluster]}
+          onRefresh={() => trivyRefetch()}
+          isRefreshing={trivyRefreshing}
+        />
+      )}
+      {modal?.tool === 'kubescape' && kubescapeStatuses[modal.cluster] && (
+        <KubescapeDetailModal
+          isOpen
+          onClose={() => setModal(null)}
+          clusterName={modal.cluster}
+          status={kubescapeStatuses[modal.cluster]}
+          onRefresh={() => kubescapeRefetch()}
+          isRefreshing={kubescapeRefreshing}
+        />
+      )}
     </div>
   )
 }

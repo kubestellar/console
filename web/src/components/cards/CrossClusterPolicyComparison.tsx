@@ -9,10 +9,12 @@
 
 import { useState, useMemo } from 'react'
 import { CheckCircle2, XCircle, Minus } from 'lucide-react'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/useMCP'
+import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -34,10 +36,11 @@ interface PolicyRow {
 }
 
 export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading, isDemoData } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading, isRefreshing, lastRefresh, isDemoData, refetch } = useKyverno()
   const { deduplicatedClusters: rawClusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const [localSelected, setLocalSelected] = useState<string[]>([])
+  const [modalCluster, setModalCluster] = useState<string | null>(null)
 
   useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
 
@@ -142,8 +145,23 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
     )
   }
 
+  /** Open the detail modal for the first cluster where this policy has a failing status */
+  const handleRowClick = (row: PolicyRow) => {
+    // Prefer a cluster with failures, otherwise first cluster
+    const failCluster = clustersToCompare.find(c => row.statuses[c] === 'fail')
+    const cluster = failCluster || clustersToCompare[0]
+    if (cluster && kyvernoStatuses?.[cluster]?.installed) {
+      setModalCluster(cluster)
+    }
+  }
+
   return (
     <div className="space-y-2 p-1">
+      {/* Refresh indicator */}
+      <div className="flex justify-end">
+        <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />
+      </div>
+
       {/* Cluster selector */}
       <div className="flex flex-wrap gap-1">
         {allClusters.map(cluster => {
@@ -188,7 +206,8 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
               {policyRows.map(row => (
                 <tr
                   key={`${row.kind}/${row.name}`}
-                  className={`border-b border-border/20 ${row.discrepancies > 0 ? 'bg-yellow-500/5' : ''}`}
+                  className={`border-b border-border/20 cursor-pointer hover:bg-secondary/30 transition-colors ${row.discrepancies > 0 ? 'bg-yellow-500/5' : ''}`}
+                  onClick={() => handleRowClick(row)}
                 >
                   <td className="py-1 px-1">
                     <span className="font-mono truncate block max-w-[120px]" title={`${row.kind}/${row.name}`}>
@@ -218,6 +237,18 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
           </span>
         )}
       </div>
+
+      {/* Detail Modal */}
+      {modalCluster && kyvernoStatuses?.[modalCluster] && (
+        <KyvernoDetailModal
+          isOpen={!!modalCluster}
+          onClose={() => setModalCluster(null)}
+          clusterName={modalCluster}
+          status={kyvernoStatuses[modalCluster]}
+          onRefresh={() => refetch()}
+          isRefreshing={isRefreshing}
+        />
+      )}
     </div>
   )
 }

@@ -7,14 +7,18 @@
  * Empty state: "All clusters within baseline" with green checkmark.
  */
 
-import { useMemo } from 'react'
-import { CheckCircle2, TrendingDown, TrendingUp } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { CheckCircle2, TrendingDown, TrendingUp, ChevronRight } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useTrivy } from '../../hooks/useTrivy'
 import { useKubescape } from '../../hooks/useKubescape'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
+import { TrivyDetailModal } from './trivy/TrivyDetailModal'
+import { KubescapeDetailModal } from './kubescape/KubescapeDetailModal'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -41,13 +45,20 @@ function stats(values: number[]): { mean: number; stdDev: number } {
 }
 
 export function ComplianceDrift({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData } = useKyverno()
-  const { statuses: trivyStatuses, isLoading: trivyLoading, isDemoData: trivyDemoData } = useTrivy()
-  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isDemoData: kubescapeDemoData } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, refetch: kyvernoRefetch } = useKyverno()
+  const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, refetch: trivyRefetch } = useTrivy()
+  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, refetch: kubescapeRefetch } = useKubescape()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const [modal, setModal] = useState<{ tool: string; cluster: string } | null>(null)
 
   const isLoading = kyvernoLoading || trivyLoading || kubescapeLoading
+  const isRefreshing = kyvernoRefreshing || trivyRefreshing || kubescapeRefreshing
   const isDemoData = kyvernoDemoData || trivyDemoData || kubescapeDemoData
+
+  const handleDriftClick = (d: DriftEntry) => {
+    const toolKey = d.tool.toLowerCase()
+    setModal({ tool: toolKey, cluster: d.cluster })
+  }
 
   useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
 
@@ -151,6 +162,11 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-1.5 p-1">
+      {/* Refresh indicator */}
+      <div className="flex justify-end">
+        <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />
+      </div>
+
       {drifts.map((d, i) => {
         const isBad = (d.tool === 'Kubescape' && d.direction === 'below') ||
           (d.tool !== 'Kubescape' && d.direction === 'above')
@@ -159,7 +175,11 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
         return (
           <div
             key={`${d.cluster}-${d.tool}-${i}`}
-            className="flex items-center gap-2 p-2 rounded-lg bg-card/50 border border-border/50"
+            className="flex items-center gap-2 p-2 rounded-lg bg-card/50 border border-border/50 cursor-pointer hover:bg-secondary/50 transition-colors group"
+            onClick={() => handleDriftClick(d)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleDriftClick(d) }}
           >
             {d.direction === 'above' ? (
               <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isBad ? 'text-red-400' : 'text-yellow-400'}`} />
@@ -179,9 +199,42 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
                 {' '}({d.magnitude}σ deviation)
               </p>
             </div>
+            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
           </div>
         )
       })}
+
+      {/* Detail modals */}
+      {modal?.tool === 'kyverno' && kyvernoStatuses[modal.cluster] && (
+        <KyvernoDetailModal
+          isOpen
+          onClose={() => setModal(null)}
+          clusterName={modal.cluster}
+          status={kyvernoStatuses[modal.cluster]}
+          onRefresh={() => kyvernoRefetch()}
+          isRefreshing={kyvernoRefreshing}
+        />
+      )}
+      {modal?.tool === 'trivy' && trivyStatuses[modal.cluster] && (
+        <TrivyDetailModal
+          isOpen
+          onClose={() => setModal(null)}
+          clusterName={modal.cluster}
+          status={trivyStatuses[modal.cluster]}
+          onRefresh={() => trivyRefetch()}
+          isRefreshing={trivyRefreshing}
+        />
+      )}
+      {modal?.tool === 'kubescape' && kubescapeStatuses[modal.cluster] && (
+        <KubescapeDetailModal
+          isOpen
+          onClose={() => setModal(null)}
+          clusterName={modal.cluster}
+          status={kubescapeStatuses[modal.cluster]}
+          onRefresh={() => kubescapeRefetch()}
+          isRefreshing={kubescapeRefreshing}
+        />
+      )}
     </div>
   )
 }

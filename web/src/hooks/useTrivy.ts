@@ -26,6 +26,9 @@ const CRD_CHECK_TIMEOUT_MS = 5_000
 /** Timeout for data fetch */
 const DATA_FETCH_TIMEOUT_MS = 15_000
 
+/** Maximum images to store per cluster to keep cache size reasonable */
+const MAX_IMAGES_PER_CLUSTER = 50
+
 // ── Types ────────────────────────────────────────────────────────────────
 
 export interface TrivyVulnSummary {
@@ -36,6 +39,17 @@ export interface TrivyVulnSummary {
   unknown: number
 }
 
+/** Per-image vulnerability breakdown for drill-down modals */
+export interface TrivyImageReport {
+  image: string
+  tag: string
+  namespace: string
+  critical: number
+  high: number
+  medium: number
+  low: number
+}
+
 export interface TrivyClusterStatus {
   cluster: string
   installed: boolean
@@ -44,6 +58,8 @@ export interface TrivyClusterStatus {
   vulnerabilities: TrivyVulnSummary
   totalReports: number
   scannedImages: number
+  /** Top images by severity for drill-down detail view */
+  images: TrivyImageReport[]
 }
 
 interface CacheData {
@@ -98,6 +114,14 @@ function getDemoStatus(cluster: string): TrivyClusterStatus {
     },
     totalReports: 15 + (seed % 10),
     scannedImages: 12 + (seed % 8),
+    images: [
+      { image: 'nginx', tag: '1.25', namespace: 'default', critical: 1, high: 3, medium: 5, low: 8 },
+      { image: 'redis', tag: '7.2', namespace: 'cache', critical: 0, high: 2, medium: 4, low: 6 },
+      { image: 'postgres', tag: '16', namespace: 'database', critical: 1 + (seed % 2), high: 1, medium: 3, low: 5 },
+      { image: 'node', tag: '20-alpine', namespace: 'app', critical: 0, high: 1 + (seed % 3), medium: 4, low: 7 },
+      { image: 'python', tag: '3.12-slim', namespace: 'ml', critical: 0, high: 1, medium: 2 + (seed % 4), low: 4 },
+      { image: 'grafana/grafana', tag: '10.2', namespace: 'monitoring', critical: 0, high: 0, medium: 2, low: 5 },
+    ],
   }
 }
 
@@ -166,7 +190,7 @@ export function useTrivy() {
           newStatuses[cluster] = {
             cluster, installed: false, loading: false,
             vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
-            totalReports: 0, scannedImages: 0,
+            totalReports: 0, scannedImages: 0, images: [],
           }
           continue
         }
@@ -180,6 +204,7 @@ export function useTrivy() {
         const summary: TrivyVulnSummary = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
         let totalReports = 0
         const imageSet = new Set<string>()
+        const imageReports: TrivyImageReport[] = []
 
         if (result.exitCode === 0 && result.output) {
           const data = JSON.parse(result.output)
@@ -187,18 +212,34 @@ export function useTrivy() {
           totalReports = items.length
 
           for (const item of items) {
-            const repo = item.report?.artifact?.repository
+            const repo = item.report?.artifact?.repository || ''
+            const tag = item.report?.artifact?.tag || 'latest'
+            const ns = item.metadata?.namespace || 'default'
             if (repo) imageSet.add(repo)
 
+            const crit = item.report?.summary?.criticalCount || 0
+            const high = item.report?.summary?.highCount || 0
+            const med = item.report?.summary?.mediumCount || 0
+            const low = item.report?.summary?.lowCount || 0
+
             if (item.report?.summary) {
-              summary.critical += item.report.summary.criticalCount || 0
-              summary.high += item.report.summary.highCount || 0
-              summary.medium += item.report.summary.mediumCount || 0
-              summary.low += item.report.summary.lowCount || 0
+              summary.critical += crit
+              summary.high += high
+              summary.medium += med
+              summary.low += low
               summary.unknown += item.report.summary.unknownCount || 0
+            }
+
+            // Collect per-image data for drill-down
+            if (repo) {
+              imageReports.push({ image: repo, tag, namespace: ns, critical: crit, high, medium: med, low })
             }
           }
         }
+
+        // Sort by severity (critical+high desc) and limit to top N
+        imageReports.sort((a, b) => (b.critical + b.high) - (a.critical + a.high))
+        const topImages = imageReports.slice(0, MAX_IMAGES_PER_CLUSTER)
 
         newStatuses[cluster] = {
           cluster,
@@ -207,6 +248,7 @@ export function useTrivy() {
           vulnerabilities: summary,
           totalReports,
           scannedImages: imageSet.size,
+          images: topImages,
         }
       } catch (err) {
         const isDemoError = err instanceof Error && err.message.includes('demo mode')
@@ -217,7 +259,7 @@ export function useTrivy() {
           cluster, installed: false, loading: false,
           error: err instanceof Error ? err.message : 'Connection failed',
           vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
-          totalReports: 0, scannedImages: 0,
+          totalReports: 0, scannedImages: 0, images: [],
         }
       }
     }

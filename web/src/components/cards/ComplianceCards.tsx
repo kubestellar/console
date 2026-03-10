@@ -6,7 +6,7 @@
  * installed, it falls back to demo data and offers an AI mission install link.
  */
 
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { AlertTriangle, AlertCircle, Shield } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
@@ -16,6 +16,9 @@ import { useKubescape } from '../../hooks/useKubescape'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useMissions } from '../../hooks/useMissions'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { TrivyDetailModal } from './trivy/TrivyDetailModal'
+import { KubescapeDetailModal } from './kubescape/KubescapeDetailModal'
+import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -134,9 +137,10 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
 export function TrivyScan({ config: _config }: CardConfig) {
   const { t } = useTranslation()
-  const { statuses, aggregated, isLoading, installed, isDemoData } = useTrivy()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, refetch } = useTrivy()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
+  const [modalCluster, setModalCluster] = useState<string | null>(null)
 
   // Filter by selected clusters
   const filtered = useMemo(() => {
@@ -226,35 +230,64 @@ Please proceed step by step.`,
         </div>
       )}
 
-      {/* Per-cluster badges */}
+      {/* Per-cluster badges — click to open detail modal */}
       {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
         <div className="flex flex-wrap gap-1">
           {Object.values(statuses).filter(s => s.installed).map(s => (
-            <StatusBadge key={s.cluster} color={s.vulnerabilities.critical > 0 ? 'red' : 'green'} size="xs">
-              {s.cluster}: {s.vulnerabilities.critical}C/{s.vulnerabilities.high}H
-            </StatusBadge>
+            <button key={s.cluster} onClick={() => setModalCluster(s.cluster)} className="cursor-pointer">
+              <StatusBadge color={s.vulnerabilities.critical > 0 ? 'red' : 'green'} size="xs">
+                {s.cluster}: {s.vulnerabilities.critical}C/{s.vulnerabilities.high}H
+              </StatusBadge>
+            </button>
           ))}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="p-2 rounded-lg bg-red-500/10 text-center">
+      <div
+        className="grid grid-cols-2 gap-2 cursor-pointer"
+        onClick={() => {
+          // Open modal for first installed cluster
+          const first = Object.values(statuses).find(s => s.installed)
+          if (first) setModalCluster(first.cluster)
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            const first = Object.values(statuses).find(s => s.installed)
+            if (first) setModalCluster(first.cluster)
+          }
+        }}
+      >
+        <div className="p-2 rounded-lg bg-red-500/10 text-center hover:bg-red-500/20 transition-colors">
           <p className="text-xl font-bold text-red-400">{filtered.critical}</p>
           <p className="text-xs text-muted-foreground">{t('common.critical')}</p>
         </div>
-        <div className="p-2 rounded-lg bg-orange-500/10 text-center">
+        <div className="p-2 rounded-lg bg-orange-500/10 text-center hover:bg-orange-500/20 transition-colors">
           <p className="text-xl font-bold text-orange-400">{filtered.high}</p>
           <p className="text-xs text-muted-foreground">High</p>
         </div>
-        <div className="p-2 rounded-lg bg-yellow-500/10 text-center">
+        <div className="p-2 rounded-lg bg-yellow-500/10 text-center hover:bg-yellow-500/20 transition-colors">
           <p className="text-xl font-bold text-yellow-400">{filtered.medium}</p>
           <p className="text-xs text-muted-foreground">Medium</p>
         </div>
-        <div className="p-2 rounded-lg bg-blue-500/10 text-center">
+        <div className="p-2 rounded-lg bg-blue-500/10 text-center hover:bg-blue-500/20 transition-colors">
           <p className="text-xl font-bold text-blue-400">{filtered.low}</p>
           <p className="text-xs text-muted-foreground">Low</p>
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {modalCluster && statuses[modalCluster] && (
+        <TrivyDetailModal
+          isOpen={!!modalCluster}
+          onClose={() => setModalCluster(null)}
+          clusterName={modalCluster}
+          status={statuses[modalCluster]}
+          onRefresh={() => refetch()}
+          isRefreshing={isRefreshing}
+        />
+      )}
     </div>
   )
 }
@@ -262,9 +295,10 @@ Please proceed step by step.`,
 // ── Kubescape Security Posture ──────────────────────────────────────────
 
 export function KubescapeScan({ config: _config }: CardConfig) {
-  const { statuses, aggregated, isLoading, installed, isDemoData } = useKubescape()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, refetch } = useKubescape()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
+  const [modalCluster, setModalCluster] = useState<string | null>(null)
 
   // Filter by selected clusters
   const filtered = useMemo(() => {
@@ -358,40 +392,70 @@ Please proceed step by step.`,
         </div>
       )}
 
-      {/* Per-cluster scores */}
+      {/* Per-cluster scores — click to open detail modal */}
       {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
         <div className="flex flex-wrap gap-1">
           {Object.values(statuses).filter(s => s.installed).map(s => (
-            <StatusBadge key={s.cluster} color={s.overallScore >= 80 ? 'green' : s.overallScore >= 60 ? 'yellow' : 'red'} size="xs">
-              {s.cluster}: {s.overallScore}%
-            </StatusBadge>
+            <button key={s.cluster} onClick={() => setModalCluster(s.cluster)} className="cursor-pointer">
+              <StatusBadge color={s.overallScore >= 80 ? 'green' : s.overallScore >= 60 ? 'yellow' : 'red'} size="xs">
+                {s.cluster}: {s.overallScore}%
+              </StatusBadge>
+            </button>
           ))}
         </div>
       )}
 
-      <div className="flex items-center justify-center py-2">
-        <div className="relative w-20 h-20">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" className="text-secondary" />
-            <circle
-              cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2"
-              strokeDasharray={`${score}, 100`}
-              className={score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold text-foreground">{score}%</span>
+      <div
+        className="cursor-pointer"
+        onClick={() => {
+          const first = Object.values(statuses).find(s => s.installed)
+          if (first) setModalCluster(first.cluster)
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            const first = Object.values(statuses).find(s => s.installed)
+            if (first) setModalCluster(first.cluster)
+          }
+        }}
+      >
+        <div className="flex items-center justify-center py-2">
+          <div className="relative w-20 h-20">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" className="text-secondary" />
+              <circle
+                cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2"
+                strokeDasharray={`${score}, 100`}
+                className={score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-bold text-foreground">{score}%</span>
+            </div>
           </div>
         </div>
+        <div className="space-y-1">
+          {(filtered.frameworks || []).map((fw, i) => (
+            <div key={i} className="flex items-center justify-between text-xs hover:bg-secondary/30 rounded px-1 transition-colors">
+              <span className="text-muted-foreground">{fw.name}</span>
+              <span className="font-medium text-foreground">{fw.score}%</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="space-y-1">
-        {(filtered.frameworks || []).map((fw, i) => (
-          <div key={i} className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">{fw.name}</span>
-            <span className="font-medium text-foreground">{fw.score}%</span>
-          </div>
-        ))}
-      </div>
+
+      {/* Detail Modal */}
+      {modalCluster && statuses[modalCluster] && (
+        <KubescapeDetailModal
+          isOpen={!!modalCluster}
+          onClose={() => setModalCluster(null)}
+          clusterName={modalCluster}
+          status={statuses[modalCluster]}
+          onRefresh={() => refetch()}
+          isRefreshing={isRefreshing}
+        />
+      )}
     </div>
   )
 }
@@ -399,9 +463,10 @@ Please proceed step by step.`,
 // ── Policy Violations Aggregated ────────────────────────────────────────
 
 export function PolicyViolations({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData, installed: kyvernoInstalled } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, refetch: kyvernoRefetch } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
+  const [modalCluster, setModalCluster] = useState<string | null>(null)
 
   // Aggregate violations from Kyverno reports (policy.violations is always 0
   // because the hook doesn't back-populate per-policy counts from PolicyReports;
@@ -501,7 +566,23 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     <div className="space-y-3">
       <div className="space-y-2">
         {(violations || []).map((v, i) => (
-          <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+          <div
+            key={i}
+            className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+            onClick={() => {
+              // Open modal for the first cluster associated with this violation
+              const cluster = (v.clusters || [])[0]
+              if (cluster) setModalCluster(cluster)
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const cluster = (v.clusters || [])[0]
+                if (cluster) setModalCluster(cluster)
+              }
+            }}
+          >
             <div>
               <p className="text-sm font-medium text-foreground">{v.policy}</p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -517,6 +598,18 @@ export function PolicyViolations({ config: _config }: CardConfig) {
           </div>
         ))}
       </div>
+
+      {/* Detail Modal */}
+      {modalCluster && kyvernoStatuses[modalCluster] && (
+        <KyvernoDetailModal
+          isOpen={!!modalCluster}
+          onClose={() => setModalCluster(null)}
+          clusterName={modalCluster}
+          status={kyvernoStatuses[modalCluster]}
+          onRefresh={() => kyvernoRefetch()}
+          isRefreshing={kyvernoRefreshing}
+        />
+      )}
     </div>
   )
 }
