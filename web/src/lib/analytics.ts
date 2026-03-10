@@ -854,6 +854,26 @@ export function emitUpdateTriggered() {
   send('ksc_update_triggered')
 }
 
+/** Fired when kc-agent reports the update completed successfully */
+export function emitUpdateCompleted(durationMs: number) {
+  send('ksc_update_completed', { duration_ms: durationMs })
+}
+
+/** Fired when kc-agent reports the update failed */
+export function emitUpdateFailed(error: string) {
+  send('ksc_update_failed', { error_detail: error.slice(0, 100) })
+}
+
+/** Fired when user clicks "Refresh to load new version" after a successful update */
+export function emitUpdateRefreshed() {
+  send('ksc_update_refreshed')
+}
+
+/** Fired when the stale-update timeout fires (no WebSocket progress within threshold) */
+export function emitUpdateStalled() {
+  send('ksc_update_stalled')
+}
+
 // ── Local Cluster ─────────────────────────────────────────────────
 
 /** Fired when user creates a local cluster (kind, k3d, minikube) */

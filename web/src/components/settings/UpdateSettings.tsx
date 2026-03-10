@@ -30,7 +30,14 @@ import { useAuth } from '../../lib/auth'
 import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import type { UpdateChannel } from '../../types/updates'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
-import { emitUpdateChecked, emitUpdateTriggered } from '../../lib/analytics'
+import {
+  emitUpdateChecked,
+  emitUpdateTriggered,
+  emitUpdateCompleted,
+  emitUpdateFailed,
+  emitUpdateStalled,
+  emitUpdateRefreshed,
+} from '../../lib/analytics'
 
 /** Minimum spin duration to guarantee one full rotation (matches cards) */
 const MIN_SPIN_DURATION = 1000
@@ -123,6 +130,7 @@ export function UpdateSettings() {
   const [countdown, setCountdown] = useState(ESTIMATED_UPDATE_SECS)
   const [hasGithubToken, setHasGithubToken] = useState(() => Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)))
   const triggerGuardRef = useRef(false) // prevents rapid double-clicks from firing multiple triggers
+  const triggerTimestampRef = useRef(0) // when "Update Now" was clicked (for duration tracking)
 
   // Track visual spinning for Check Now button (ensures 1 full rotation like cards)
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
@@ -154,15 +162,23 @@ export function UpdateSettings() {
     forceCheck()
   }, [forceCheck])
 
-  // Clear triggered state once WebSocket progress starts or update fails
+  // Clear triggered state once WebSocket progress starts or update fails.
+  // Emit GA4 lifecycle events for update completion/failure.
   useEffect(() => {
     if (updateProgress && triggerState === 'triggered') {
       setTriggerState('idle')
     }
     // Reset the double-click guard when the update finishes (success or failure)
     // so the user can retry without refreshing
-    if (updateProgress && ['done', 'failed'].includes(updateProgress.status)) {
+    if (updateProgress && updateProgress.status === 'done') {
       triggerGuardRef.current = false
+      const durationMs = triggerTimestampRef.current
+        ? Date.now() - triggerTimestampRef.current
+        : 0
+      emitUpdateCompleted(durationMs)
+    } else if (updateProgress && updateProgress.status === 'failed') {
+      triggerGuardRef.current = false
+      emitUpdateFailed(updateProgress.error ?? updateProgress.message ?? 'unknown')
     }
   }, [updateProgress, triggerState])
 
@@ -175,6 +191,7 @@ export function UpdateSettings() {
       setTriggerState('error')
       setTriggerError('No response from kc-agent — the update may not have started. Check if an update is actually available.')
       triggerGuardRef.current = false
+      emitUpdateStalled()
     }, TRIGGER_STALL_TIMEOUT_MS)
     return () => clearTimeout(timer)
   }, [triggerState])
@@ -530,7 +547,10 @@ export function UpdateSettings() {
                 <p className="text-sm text-green-400">{updateProgress.message}</p>
                 <button
                   data-testid="update-refresh-button"
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    emitUpdateRefreshed()
+                    window.location.reload()
+                  }}
                   className="text-xs text-green-400/80 hover:text-green-300 underline underline-offset-2 mt-1"
                 >
                   {t('settings.updates.refreshToLoad')}
@@ -656,6 +676,7 @@ export function UpdateSettings() {
               if (triggerGuardRef.current) return
               emitUpdateTriggered()
               triggerGuardRef.current = true
+              triggerTimestampRef.current = Date.now()
               setTriggerState('triggered')
               setTriggerError(null)
               const result = await triggerUpdate()
