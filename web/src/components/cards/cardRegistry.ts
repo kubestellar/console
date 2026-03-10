@@ -117,6 +117,7 @@ const KubeKart = lazy(() => import('./KubeKart').then(m => ({ default: m.KubeKar
 const KubePong = lazy(() => import('./KubePong').then(m => ({ default: m.KubePong })))
 const KubeSnake = lazy(() => import('./KubeSnake').then(m => ({ default: m.KubeSnake })))
 const KubeGalaga = lazy(() => import('./KubeGalaga').then(m => ({ default: m.KubeGalaga })))
+const KubeBert = lazy(() => import('./KubeBert').then(m => ({ default: m.KubeBert })))
 const KubeDoom = lazy(() => import('./KubeDoom').then(m => ({ default: m.KubeDoom })))
 const KubeCraft = lazy(() => import('./KubeCraft').then(m => ({ default: m.KubeCraft })))
 const IframeEmbed = lazy(() => import('./IframeEmbed').then(m => ({ default: m.IframeEmbed })))
@@ -378,6 +379,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kube_pong: KubePong,
   kube_snake: KubeSnake,
   kube_galaga: KubeGalaga,
+  kube_bert: KubeBert,
   kube_doom: KubeDoom,
   kube_craft: KubeCraft,
   // Generic Iframe Embed card

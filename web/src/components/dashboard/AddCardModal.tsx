@@ -258,6 +258,7 @@ const CARD_CATALOG = {
     { type: 'kube_galaga', title: 'Kube Galaga', description: 'Space shooter with enemy waves and power-ups', visualization: 'status' },
     { type: 'kube_craft', title: 'KubeCraft 2D', description: '2D Minecraft-style block builder with terrain generation', visualization: 'status' },
     { type: 'kube_craft_3d', title: 'KubeCraft 3D', description: 'Full 3D Minecraft-style game with first-person controls', visualization: 'status' },
+    { type: 'kube_bert', title: 'Kube Bert', description: 'Q*bert-style pyramid hopper — change every tile while dodging enemies', visualization: 'status' },
     { type: 'kube_doom', title: 'Kube Doom', description: 'Raycasting FPS - eliminate rogue CrashPods, OOMKillers, and ZombieDeploys', visualization: 'status' },
     { type: 'pod_crosser', title: 'Pod Crosser', description: 'Frogger-style game - guide your pod across traffic and rivers', visualization: 'status' },
   ],

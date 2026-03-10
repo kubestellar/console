@@ -56,6 +56,8 @@ const DEFAULT_ARCADE_CARDS = [
   // Sandbox games
   { type: 'kube_craft', title: 'KubeCraft', position: { w: 5, h: 4 } },
   // { type: 'kube_craft_3d', title: 'KubeCraft 3D', position: { w: 6, h: 4 } }, // Disabled — component removed to reduce bundle size
+  // Isometric classic
+  { type: 'kube_bert', title: 'Kube Bert', position: { w: 6, h: 4 } },
   // Classic (last)
   { type: 'flappy_pod', title: 'Flappy Pod', position: { w: 6, h: 4 } },
 ]

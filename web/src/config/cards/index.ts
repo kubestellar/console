@@ -65,6 +65,7 @@ import { hpaStatusConfig } from './hpa-status'
 import { iframeEmbedConfig } from './iframe-embed'
 import { ingressStatusConfig } from './ingress-status'
 import { jobStatusConfig } from './job-status'
+import { kubeBertConfig } from './kube-bert'
 import { kubeChessConfig } from './kube-chess'
 import { kubeCraftConfig } from './kube-craft'
 import { kubeDoomConfig } from './kube-doom'
@@ -223,6 +224,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   iframe_embed: iframeEmbedConfig,
   ingress_status: ingressStatusConfig,
   job_status: jobStatusConfig,
+  kube_bert: kubeBertConfig,
   kube_chess: kubeChessConfig,
   kube_craft: kubeCraftConfig,
   kube_doom: kubeDoomConfig,
@@ -396,6 +398,7 @@ export {
   iframeEmbedConfig,
   ingressStatusConfig,
   jobStatusConfig,
+  kubeBertConfig,
   kubeChessConfig,
   kubeCraftConfig,
   kubeDoomConfig,
