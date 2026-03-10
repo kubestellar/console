@@ -114,7 +114,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
           <p className="text-orange-400 font-medium">{t('argoCDSyncStatus.argocdIntegration')}</p>
           <p className="text-muted-foreground">
             {t('argoCDSyncStatus.installArgoCD')}{' '}
-            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-flex items-center min-h-11">
               {t('argoCDSyncStatus.installGuide')}
             </a>
           </p>

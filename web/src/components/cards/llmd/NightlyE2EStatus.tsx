@@ -282,7 +282,7 @@ Please provide:
                 </button>
               )}
               <a href={logsUrl} target="_blank" rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5"
+                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5 min-h-11 min-w-11"
                 onClick={e => e.stopPropagation()}>
                 View Logs <ExternalLink size={8} />
               </a>
@@ -699,7 +699,7 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
           <span style={{ color: PLATFORM_COLORS[guide.platform] }}>{guide.platform}</span>
           <span>&middot;</span>
           <a href={workflowUrl} target="_blank" rel="noopener noreferrer"
-            className="hover:text-foreground transition-colors flex items-center gap-0.5">
+            className="hover:text-foreground transition-colors flex items-center gap-0.5 min-h-11 min-w-11">
             {guide.repo.split('/')[1]} <ExternalLink size={9} />
           </a>
         </div>

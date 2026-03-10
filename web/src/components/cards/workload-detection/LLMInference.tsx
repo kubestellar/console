@@ -273,7 +273,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
           <p className="text-purple-400 font-medium">llm-d Inference Detection</p>
           <p className="text-muted-foreground">
             Auto-detects vLLM, TGI, LLM-d, and Triton inference servers.{' '}
-            <a href="https://docs.vllm.ai/en/latest/getting_started/installation.html" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+            <a href="https://docs.vllm.ai/en/latest/getting_started/installation.html" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-flex items-center min-h-11">
               vLLM docs <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>

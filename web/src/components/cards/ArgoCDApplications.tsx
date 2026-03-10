@@ -235,7 +235,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
           <p className="text-orange-400 font-medium">{t('argoCDApplications.argocdIntegration')}</p>
           <p className="text-muted-foreground">
             {t('argoCDApplications.installArgoCD')}{' '}
-            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-flex items-center min-h-11">
               {t('argoCDApplications.installGuide')}
             </a>
           </p>

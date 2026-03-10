@@ -111,7 +111,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
           <p className="text-blue-400 font-medium">Notebook Detection</p>
           <p className="text-muted-foreground">
             Scans for JupyterHub and standalone notebook servers.{' '}
-            <a href="https://jupyterhub.readthedocs.io/en/stable/getting-started/index.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+            <a href="https://jupyterhub.readthedocs.io/en/stable/getting-started/index.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center min-h-11">
               JupyterHub docs <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>

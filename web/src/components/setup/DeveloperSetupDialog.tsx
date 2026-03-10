@@ -100,7 +100,7 @@ export function DeveloperSetupDialog({ isOpen, onClose }: DeveloperSetupDialogPr
               <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
                 <li>
                   {t('developerSetup.oauthStep1')}{' '}
-                  <a href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline">
+                  <a href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline inline-flex items-center min-h-11">
                     GitHub Developer Settings
                   </a>
                 </li>

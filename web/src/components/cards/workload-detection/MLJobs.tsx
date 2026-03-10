@@ -139,7 +139,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
           <p className="text-yellow-400 font-medium">ML Job Detection</p>
           <p className="text-muted-foreground">
             Auto-detects Kubeflow, Ray, and custom ML training jobs.{' '}
-            <a href="https://www.kubeflow.org/docs/started/installing-kubeflow/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">
+            <a href="https://www.kubeflow.org/docs/started/installing-kubeflow/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline inline-flex items-center min-h-11">
               Kubeflow docs <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>
