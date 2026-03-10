@@ -9,14 +9,14 @@ import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
 import { CardSearchInput, CardAIActions } from '../../../lib/cards'
-import { useCachedLLMdServers } from '../../../hooks/useCachedData'
+import { useCachedLLMdServers, useCachedGPUNodes } from '../../../hooks/useCachedData'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
 import { cn } from '../../../lib/cn'
 // WorkloadMonitorAlerts replaced with inline issue cards in Issues tab
 import { useLLMdClusters } from '../workload-detection/shared'
-import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
+import { useClusters } from '../../../hooks/useMCP'
 import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
@@ -109,7 +109,7 @@ const STATUS_BADGE: Record<string, string> = {
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const { t } = useTranslation()
   const { deduplicatedClusters } = useClusters()
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes } = useCachedGPUNodes()
 
   // Dynamically discover clusters that likely have llm-d stacks
   const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])

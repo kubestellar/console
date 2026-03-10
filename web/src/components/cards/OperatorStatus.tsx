@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, ArrowUpCircle, ChevronRight } from 'lucide-react'
-import { useClusters, useOperators, Operator } from '../../hooks/useMCP'
+import { useClusters, Operator } from '../../hooks/useMCP'
+import { useCachedOperators } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -63,10 +63,9 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   )
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
-  const { isDemoMode: demoMode } = useDemoMode()
 
   // Fetch operators - pass undefined to get all clusters
-  const { operators: rawOperators, isLoading: operatorsLoading, consecutiveFailures, isFailed } = useOperators(undefined)
+  const { operators: rawOperators, isLoading: operatorsLoading, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperators(undefined)
 
   // Report card data state
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -74,7 +73,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
     hasAnyData: rawOperators.length > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData: demoMode,
+    isDemoData,
   })
 
   // Use useCardFilters for status counts (globally filtered, before local search/pagination)

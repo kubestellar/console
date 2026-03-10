@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Box, ChevronRight, Server } from 'lucide-react'
-import { useGPUNodes, useAllPods } from '../../hooks/useMCP'
+import { useCachedGPUNodes, useCachedAllPods } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -9,9 +9,8 @@ import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { useCardLoadingState, useForceLive } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUNamespaceAllocationsProps {
   config?: Record<string, unknown>
@@ -53,18 +52,19 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const forceLive = useForceLive()
-  const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
-  const { pods: allPods, isLoading: podsLoading } = useAllPods(undefined, undefined, forceLive)
+  const { nodes: gpuNodes, isLoading: gpuLoading, isDemoFallback: gpuNodesDemoFallback } = useCachedGPUNodes()
+  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback } = useCachedAllPods()
   const { drillToGPUNamespace } = useDrillDownActions()
-  const { isDemoMode } = useDemoMode()
+
+  // Combine all isDemoFallback values from cached hooks
+  const isDemoData = gpuNodesDemoFallback || podsDemoFallback
 
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
 
   useCardLoadingState({
     isLoading: gpuLoading || podsLoading,
     hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData,
   })
 
   // Compute per-namespace GPU allocations

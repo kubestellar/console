@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Cpu, Server, ChevronRight } from 'lucide-react'
-import { useGPUNodes } from '../../hooks/useMCP'
+import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardClusterFilter } from '../../lib/cards'
@@ -12,7 +12,6 @@ import { CardSearchInput } from '../../lib/cards/CardComponents'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUInventoryProps {
   config?: Record<string, unknown>
@@ -27,7 +26,7 @@ const SORT_OPTIONS = [
   { value: 'gpuType' as const, label: 'GPU Type' },
 ]
 
-type GPUNode = ReturnType<typeof useGPUNodes>['nodes'][number]
+type GPUNode = ReturnType<typeof useCachedGPUNodes>['nodes'][number]
 
 const GPU_SORT_COMPARATORS: Record<SortByOption, (a: GPUNode, b: GPUNode) => number> = {
   utilization: (a, b) => (a.gpuAllocated / a.gpuCount) - (b.gpuAllocated / b.gpuCount),
@@ -43,9 +42,9 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     nodes: rawNodes,
     isLoading: hookLoading,
     error,
-  } = useGPUNodes(cluster)
+    isDemoFallback,
+  } = useCachedGPUNodes(cluster)
   const { drillToGPUNode } = useDrillDownActions()
-  const { isDemoMode } = useDemoMode()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
@@ -56,7 +55,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     hasAnyData: rawNodes.length > 0,
     isFailed: !!error && rawNodes.length === 0,
     consecutiveFailures: error ? 1 : 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoFallback,
   })
 
   // Use unified card data hook for filtering, sorting, and pagination

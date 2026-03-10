@@ -1,6 +1,7 @@
 import { useMemo, useEffect } from 'react'
 import { AlertTriangle, Info, AlertCircle, Clock, ChevronRight } from 'lucide-react'
-import { useClusters, useWarningEvents, useNamespaces, type ClusterEvent } from '../../hooks/useMCP'
+import { useClusters, type ClusterEvent } from '../../hooks/useMCP'
+import { useCachedWarningEvents, useCachedNamespaces } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -47,7 +48,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     [t]
   )
   const { isLoading: clustersLoading } = useClusters()
-  const { events: allEvents, isLoading: eventsLoading } = useWarningEvents()
+  const { events: allEvents, isLoading: eventsLoading, isDemoFallback: eventsDemoFallback } = useCachedWarningEvents()
   const { drillToEvents } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -57,7 +58,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allEvents.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: eventsDemoFallback || isDemoMode,
   })
 
   // Use cascading selection hook for cluster -> namespace
@@ -84,7 +85,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   }, [])
 
   // Fetch namespaces for the selected cluster
-  const { namespaces } = useNamespaces(selectedCluster || undefined)
+  const { namespaces } = useCachedNamespaces(selectedCluster || undefined)
 
   // Pre-filter by selected cluster/namespace (card-specific cascading selection)
   const preFilteredEvents = useMemo(() => {

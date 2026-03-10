@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Server, Box, Layers, Database, Network, HardDrive, AlertTriangle, RefreshCw, Folder } from 'lucide-react'
-import { useClusters, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts, useJobs, useHPAs, useReplicaSets, useStatefulSets, useDaemonSets, useCronJobs, useIngresses, useNetworkPolicies } from '../../../hooks/useMCP'
-import { useCachedPodIssues } from '../../../hooks/useCachedData'
+import { useClusters } from '../../../hooks/useMCP'
+import { useCachedPodIssues, useCachedNodes, useCachedNamespaces, useCachedDeployments, useCachedServices, useCachedPVCs, useCachedPods, useCachedConfigMaps, useCachedSecrets, useCachedServiceAccounts, useCachedJobs, useCachedHPAs, useCachedReplicaSets, useCachedStatefulSets, useCachedDaemonSets, useCachedCronJobs, useCachedIngresses, useCachedNetworkPolicies } from '../../../hooks/useCachedData'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useCardLoadingState } from '../CardDataContext'
@@ -13,22 +13,12 @@ import { buildNamespaceResources, getVisibleNamespaces, getIssueCounts, getPodsF
 import type { ClusterResourceTreeProps, TreeLens, SortByOption, NamespaceResources, ClusterDataCache } from './types'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToCluster, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
-  const { isDemoMode } = useDemoMode()
-
-  // Report state to CardWrapper for refresh animation
-  useCardLoadingState({
-    isLoading,
-    hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode,
-  })
-
   // Tree view state - start with clusters expanded
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['clusters']))
   const [searchFilter, setSearchFilter] = useState('')
@@ -79,23 +69,37 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
 
   // Fetch data for the selected cluster (only when a cluster is expanded)
   const { issues: podIssues } = useCachedPodIssues(selectedCluster || undefined)
-  const { nodes: allNodes, isLoading: nodesLoading } = useNodes(selectedCluster || undefined)
-  const { namespaces: allNamespaces, isLoading: namespacesLoading } = useNamespaces(selectedCluster || undefined)
-  const { deployments: allDeployments } = useDeployments(selectedCluster || undefined)
-  const { services: allServices } = useServices(selectedCluster || undefined)
-  const { pvcs: allPVCs } = usePVCs(selectedCluster || undefined)
-  const { pods: allPods } = usePods(selectedCluster || undefined, undefined, 'name', 500)
-  const { configmaps: allConfigMaps } = useConfigMaps(selectedCluster || undefined)
-  const { secrets: allSecrets } = useSecrets(selectedCluster || undefined)
-  const { serviceAccounts: allServiceAccounts } = useServiceAccounts(selectedCluster || undefined)
-  const { jobs: allJobs } = useJobs(selectedCluster || undefined)
-  const { hpas: allHPAs } = useHPAs(selectedCluster || undefined)
-  const { replicasets: allReplicaSets } = useReplicaSets(selectedCluster || undefined)
-  const { statefulsets: allStatefulSets } = useStatefulSets(selectedCluster || undefined)
-  const { daemonsets: allDaemonSets } = useDaemonSets(selectedCluster || undefined)
-  const { cronjobs: allCronJobs } = useCronJobs(selectedCluster || undefined)
-  const { ingresses: allIngresses } = useIngresses(selectedCluster || undefined)
-  const { networkpolicies: allNetworkPolicies } = useNetworkPolicies(selectedCluster || undefined)
+  const { nodes: allNodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback } = useCachedNodes(selectedCluster || undefined)
+  const { namespaces: allNamespaces, isLoading: namespacesLoading, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+  const { deployments: allDeployments, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments(selectedCluster || undefined)
+  const { services: allServices, isDemoFallback: servicesDemoFallback } = useCachedServices(selectedCluster || undefined)
+  const { pvcs: allPVCs, isDemoFallback: pvcsDemoFallback } = useCachedPVCs(selectedCluster || undefined)
+  const { pods: allPods, isDemoFallback: podsDemoFallback } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
+  const { configmaps: allConfigMaps, isDemoFallback: configmapsDemoFallback } = useCachedConfigMaps(selectedCluster || undefined)
+  const { secrets: allSecrets, isDemoFallback: secretsDemoFallback } = useCachedSecrets(selectedCluster || undefined)
+  const { serviceAccounts: allServiceAccounts, isDemoFallback: serviceAccountsDemoFallback } = useCachedServiceAccounts(selectedCluster || undefined)
+  const { jobs: allJobs, isDemoFallback: jobsDemoFallback } = useCachedJobs(selectedCluster || undefined)
+  const { hpas: allHPAs, isDemoFallback: hpasDemoFallback } = useCachedHPAs(selectedCluster || undefined)
+  const { replicasets: allReplicaSets, isDemoFallback: replicasetsDemoFallback } = useCachedReplicaSets(selectedCluster || undefined)
+  const { statefulsets: allStatefulSets, isDemoFallback: statefulsetsDemoFallback } = useCachedStatefulSets(selectedCluster || undefined)
+  const { daemonsets: allDaemonSets, isDemoFallback: daemonsetsDemoFallback } = useCachedDaemonSets(selectedCluster || undefined)
+  const { cronjobs: allCronJobs, isDemoFallback: cronjobsDemoFallback } = useCachedCronJobs(selectedCluster || undefined)
+  const { ingresses: allIngresses, isDemoFallback: ingressesDemoFallback } = useCachedIngresses(selectedCluster || undefined)
+  const { networkpolicies: allNetworkPolicies, isDemoFallback: networkpoliciesDemoFallback } = useCachedNetworkPolicies(selectedCluster || undefined)
+
+  // Combine all isDemoFallback values from cached hooks
+  const isDemoData = nodesDemoFallback || namespacesDemoFallback || deploymentsDemoFallback ||
+    servicesDemoFallback || pvcsDemoFallback || podsDemoFallback || configmapsDemoFallback ||
+    secretsDemoFallback || serviceAccountsDemoFallback || jobsDemoFallback || hpasDemoFallback ||
+    replicasetsDemoFallback || statefulsetsDemoFallback || daemonsetsDemoFallback ||
+    cronjobsDemoFallback || ingressesDemoFallback || networkpoliciesDemoFallback
+
+  // Report state to CardWrapper for refresh animation
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0,
+    isDemoData,
+  })
 
   // Cache data for the selected cluster when it changes
   useEffect(() => {

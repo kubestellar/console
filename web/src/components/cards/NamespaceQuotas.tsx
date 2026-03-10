@@ -4,7 +4,6 @@ import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import {
   useClusters,
-  useNamespaces,
   useResourceQuotas,
   useLimitRanges,
   LimitRange,
@@ -14,6 +13,7 @@ import {
   COMMON_RESOURCE_TYPES,
   GPU_RESOURCE_TYPES,
 } from '../../hooks/useMCP'
+import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
@@ -122,7 +122,7 @@ function QuotaModal({
   const [showGpuPresets, setShowGpuPresets] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { namespaces: clusterNamespaces } = useNamespaces(cluster || undefined)
+  const { namespaces: clusterNamespaces } = useCachedNamespaces(cluster || undefined)
   const availableNamespaces = cluster ? clusterNamespaces : namespaces
 
   const addResource = () => {
@@ -356,7 +356,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
 
   // Fetch namespaces for the selected cluster (only when specific cluster selected)
-  const { namespaces } = useNamespaces(selectedCluster !== 'all' ? selectedCluster : undefined)
+  const { namespaces, isDemoFallback } = useCachedNamespaces(selectedCluster !== 'all' ? selectedCluster : undefined)
 
   // Filter clusters based on global filter (useCardData handles global filtering internally)
   const clusters = allClusters
@@ -379,7 +379,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   useCardLoadingState({
     isLoading: isInitialLoading || isFetchingData,
     hasAnyData: allClusters.length > 0 || resourceQuotas.length > 0 || limitRanges.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || isDemoFallback,
   })
 
   // Handle save quota

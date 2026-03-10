@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Cpu, MemoryStick, Zap, Server, Box, Activity } from 'lucide-react'
-import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatMemoryStat } from '../../lib/formatStats'
@@ -13,7 +14,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 export function ComputeOverview() {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
+  const { nodes: gpuNodes, isLoading: gpuLoading, isDemoFallback } = useCachedGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
@@ -104,7 +105,7 @@ export function ComputeOverview() {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading || gpuLoading,
     hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || isDemoFallback,
   })
 
   if (showSkeleton) {

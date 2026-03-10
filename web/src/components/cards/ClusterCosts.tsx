@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
 import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
-import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -194,7 +195,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     [t]
   )
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
   const { drillToCost } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -202,7 +203,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || isDemoFallback,
   })
 
   // Cloud provider selection

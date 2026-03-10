@@ -33,6 +33,30 @@ import type {
   Service,
   SecurityIssue,
   NodeInfo,
+  GPUNode,
+  GPUNodeHealthStatus,
+  PVC,
+  Job,
+  HPA,
+  HelmRelease,
+  HelmHistoryEntry,
+  Operator,
+  OperatorSubscription,
+  GitOpsDrift,
+  BuildpackImage,
+  ConfigMap,
+  Secret,
+  ServiceAccount,
+  ReplicaSet,
+  StatefulSet,
+  DaemonSet,
+  CronJob,
+  Ingress,
+  NetworkPolicy,
+  K8sRole,
+  K8sRoleBinding,
+  K8sServiceAccountInfo,
+  GPUHealthCronJobStatus,
 } from './useMCP'
 import type { ProwJob, ProwStatus } from './useProw'
 import type { LLMdServer, LLMdStatus, LLMdModel } from './useLLMd'
@@ -182,6 +206,91 @@ async function fetchViaSSE<T>(
     // SSE failed — fall back to per-cluster REST
     return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress)
   }
+}
+
+/**
+ * Fetch GitOps data via SSE streaming (uses /api/gitops/ prefix).
+ */
+async function fetchViaGitOpsSSE<T>(
+  endpoint: string,
+  resultKey: string,
+  params?: Record<string, string | number | undefined>,
+  onProgress?: (partial: T[]) => void
+): Promise<T[]> {
+  const token = getToken()
+  if (!token || token === 'demo-token' || isBackendUnavailable()) {
+    return []
+  }
+
+  const accumulated: T[] = []
+  return await fetchSSE<T>({
+    url: `/api/gitops/${endpoint}/stream`,
+    params,
+    itemsKey: resultKey,
+    onClusterData: (_cluster, items) => {
+      accumulated.push(...items)
+      onProgress?.([...accumulated])
+    },
+  })
+}
+
+/**
+ * Fetch data from a GitOps REST endpoint.
+ */
+async function fetchGitOpsAPI<T>(
+  endpoint: string,
+  params?: Record<string, string | number | undefined>
+): Promise<T> {
+  const token = getToken()
+  if (!token) throw new Error('No authentication token')
+
+  const searchParams = new URLSearchParams()
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, String(value))
+    })
+  }
+
+  const url = `/api/gitops/${endpoint}?${searchParams}`
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
+
+  if (!response.ok) throw new Error(`API error: ${response.status}`)
+  return response.json()
+}
+
+/** RBAC timeout — roles/bindings can be slow on large clusters */
+const RBAC_FETCH_TIMEOUT_MS = 60_000
+
+/**
+ * Fetch data from an RBAC REST endpoint (/api/rbac/).
+ */
+async function fetchRbacAPI<T>(
+  endpoint: string,
+  params?: Record<string, string | number | boolean | undefined>
+): Promise<T> {
+  const token = getToken()
+  if (!token) throw new Error('No authentication token')
+
+  const searchParams = new URLSearchParams()
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, String(value))
+    })
+  }
+
+  const url = `/api/rbac/${endpoint}?${searchParams}`
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(RBAC_FETCH_TIMEOUT_MS),
+  })
+
+  if (!response.ok) throw new Error(`API error: ${response.status}`)
+  return response.json()
 }
 
 // ============================================================================
@@ -1678,8 +1787,6 @@ export function useCachedNodes(
 // GPU Node Health Cached Hooks (SSE-enabled, proactive monitoring)
 // ============================================================================
 
-import type { GPUNodeHealthStatus, GPUHealthCronJobStatus } from './useMCP'
-
 const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
   {
     nodeName: 'gpu-node-1', cluster: 'vllm-gpu-cluster', status: 'healthy',
@@ -2358,6 +2465,1112 @@ export function useCachedCoreDNSStatus(
 
   return {
     clusters: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+// ============================================================================
+// Additional Demo Data (for new cached hooks)
+// ============================================================================
+
+const getDemoGPUNodes = (): GPUNode[] => [
+  { name: 'gpu-node-1', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 5, acceleratorType: 'GPU', gpuMemoryMB: 81920, manufacturer: 'NVIDIA' },
+  { name: 'gpu-node-2', cluster: 'eks-prod-us-east-1', gpuType: 'NVIDIA T4', gpuCount: 4, gpuAllocated: 3, acceleratorType: 'GPU', gpuMemoryMB: 16384, manufacturer: 'NVIDIA' },
+  { name: 'gpu-node-3', cluster: 'gke-staging', gpuType: 'NVIDIA L4', gpuCount: 2, gpuAllocated: 0, acceleratorType: 'GPU', gpuMemoryMB: 24576, manufacturer: 'NVIDIA' },
+]
+
+const getDemoPVCs = (): PVC[] => [
+  { name: 'data-postgres-0', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'Bound', storageClass: 'gp3', capacity: '100Gi', accessModes: ['ReadWriteOnce'], age: '30d' },
+  { name: 'redis-data-0', namespace: 'data', cluster: 'gke-staging', status: 'Bound', storageClass: 'standard', capacity: '50Gi', accessModes: ['ReadWriteOnce'], age: '14d' },
+  { name: 'ml-scratch', namespace: 'ml-workloads', cluster: 'vllm-gpu-cluster', status: 'Pending', storageClass: 'fast-nvme', capacity: '500Gi', accessModes: ['ReadWriteMany'], age: '1h' },
+]
+
+const getDemoNamespaces = (): string[] =>
+  ['default', 'kube-system', 'kube-public', 'monitoring', 'production', 'staging', 'batch', 'data', 'ingress', 'security']
+
+const getDemoJobs = (): Job[] => [
+  { name: 'data-migration-v2', namespace: 'batch', cluster: 'eks-prod-us-east-1', status: 'Complete', completions: '1/1', duration: '5m', age: '2h' },
+  { name: 'model-training-run-42', namespace: 'ml-workloads', cluster: 'vllm-gpu-cluster', status: 'Running', completions: '0/1', age: '30m' },
+  { name: 'backup-db-daily', namespace: 'production', cluster: 'gke-staging', status: 'Failed', completions: '0/1', duration: '10m', age: '6h' },
+]
+
+const getDemoHPAs = (): HPA[] => [
+  { name: 'web-frontend', namespace: 'production', cluster: 'eks-prod-us-east-1', reference: 'Deployment/web-frontend', minReplicas: 2, maxReplicas: 10, currentReplicas: 4, targetCPU: '70%', currentCPU: '55%', age: '30d' },
+  { name: 'api-gateway', namespace: 'production', cluster: 'eks-prod-us-east-1', reference: 'Deployment/api-gateway', minReplicas: 3, maxReplicas: 20, currentReplicas: 8, targetCPU: '60%', currentCPU: '78%', age: '14d' },
+]
+
+const getDemoConfigMaps = (): ConfigMap[] => [
+  { name: 'app-config', namespace: 'production', cluster: 'eks-prod-us-east-1', dataCount: 5, age: '7d' },
+  { name: 'nginx-config', namespace: 'ingress', cluster: 'gke-staging', dataCount: 3, age: '14d' },
+]
+
+const getDemoSecrets = (): Secret[] => [
+  { name: 'db-credentials', namespace: 'production', cluster: 'eks-prod-us-east-1', type: 'Opaque', dataCount: 3, age: '30d' },
+  { name: 'tls-cert', namespace: 'ingress', cluster: 'eks-prod-us-east-1', type: 'kubernetes.io/tls', dataCount: 2, age: '90d' },
+]
+
+const getDemoServiceAccounts = (): ServiceAccount[] => [
+  { name: 'default', namespace: 'production', cluster: 'eks-prod-us-east-1', age: '90d' },
+  { name: 'prometheus', namespace: 'monitoring', cluster: 'gke-staging', age: '30d' },
+]
+
+const getDemoReplicaSets = (): ReplicaSet[] => [
+  { name: 'web-frontend-7d8f9c4b5', namespace: 'production', cluster: 'eks-prod-us-east-1', replicas: 3, readyReplicas: 3, ownerName: 'web-frontend', ownerKind: 'Deployment', age: '2d' },
+  { name: 'api-gateway-6c8d7f5e4', namespace: 'production', cluster: 'eks-prod-us-east-1', replicas: 3, readyReplicas: 1, ownerName: 'api-gateway', ownerKind: 'Deployment', age: '1d' },
+]
+
+const getDemoStatefulSets = (): StatefulSet[] => [
+  { name: 'postgres', namespace: 'production', cluster: 'eks-prod-us-east-1', replicas: 3, readyReplicas: 3, status: 'running', image: 'postgres:15', age: '30d' },
+  { name: 'redis', namespace: 'data', cluster: 'gke-staging', replicas: 3, readyReplicas: 3, status: 'running', image: 'redis:7', age: '14d' },
+]
+
+const getDemoDaemonSets = (): DaemonSet[] => [
+  { name: 'node-exporter', namespace: 'monitoring', cluster: 'eks-prod-us-east-1', desiredScheduled: 5, currentScheduled: 5, ready: 5, status: 'running', age: '60d' },
+  { name: 'fluentd', namespace: 'logging', cluster: 'gke-staging', desiredScheduled: 3, currentScheduled: 3, ready: 3, status: 'running', age: '30d' },
+]
+
+const getDemoCronJobs = (): CronJob[] => [
+  { name: 'db-backup', namespace: 'production', cluster: 'eks-prod-us-east-1', schedule: '0 2 * * *', suspend: false, active: 0, lastSchedule: new Date(Date.now() - 8 * 3600000).toISOString(), age: '60d' },
+  { name: 'log-cleanup', namespace: 'monitoring', cluster: 'gke-staging', schedule: '0 0 * * 0', suspend: false, active: 0, lastSchedule: new Date(Date.now() - 48 * 3600000).toISOString(), age: '30d' },
+]
+
+const getDemoIngresses = (): Ingress[] => [
+  { name: 'main-ingress', namespace: 'production', cluster: 'eks-prod-us-east-1', class: 'nginx', hosts: ['app.example.com', 'api.example.com'], address: '10.0.0.100', age: '30d' },
+  { name: 'staging-ingress', namespace: 'staging', cluster: 'gke-staging', class: 'nginx', hosts: ['staging.example.com'], address: '10.0.1.50', age: '14d' },
+]
+
+const getDemoNetworkPolicies = (): NetworkPolicy[] => [
+  { name: 'deny-all', namespace: 'production', cluster: 'eks-prod-us-east-1', policyTypes: ['Ingress', 'Egress'], podSelector: '{}', age: '60d' },
+  { name: 'allow-web', namespace: 'production', cluster: 'eks-prod-us-east-1', policyTypes: ['Ingress'], podSelector: 'app=web', age: '30d' },
+]
+
+const getDemoHelmReleases = (): HelmRelease[] => [
+  { name: 'prometheus', namespace: 'monitoring', revision: '5', updated: new Date(Date.now() - 2 * 3600000).toISOString(), status: 'deployed', chart: 'prometheus-25.8.0', app_version: '2.48.1', cluster: 'eks-prod-us-east-1' },
+  { name: 'grafana', namespace: 'monitoring', revision: '3', updated: new Date(Date.now() - 5 * 3600000).toISOString(), status: 'deployed', chart: 'grafana-7.0.11', app_version: '10.2.3', cluster: 'eks-prod-us-east-1' },
+  { name: 'nginx-ingress', namespace: 'ingress', revision: '8', updated: new Date(Date.now() - 24 * 3600000).toISOString(), status: 'deployed', chart: 'ingress-nginx-4.8.3', app_version: '1.9.4', cluster: 'gke-staging' },
+  { name: 'api-gateway', namespace: 'production', revision: '6', updated: new Date(Date.now() - 1 * 3600000).toISOString(), status: 'failed', chart: 'api-gateway-2.1.0', app_version: '3.5.0', cluster: 'eks-prod-us-east-1' },
+]
+
+const getDemoHelmHistory = (): HelmHistoryEntry[] => [
+  { revision: 6, updated: new Date(Date.now() - 1 * 3600000).toISOString(), status: 'failed', chart: 'api-gateway-2.1.0', app_version: '3.5.0', description: 'Upgrade failed: container crashed' },
+  { revision: 5, updated: new Date(Date.now() - 2 * 3600000).toISOString(), status: 'deployed', chart: 'prometheus-25.8.0', app_version: '2.48.1', description: 'Upgrade complete' },
+  { revision: 4, updated: new Date(Date.now() - 24 * 3600000).toISOString(), status: 'superseded', chart: 'prometheus-25.7.0', app_version: '2.48.0', description: 'Upgrade complete' },
+]
+
+const getDemoHelmValues = (): Record<string, unknown> => ({
+  replicaCount: 2,
+  image: { repository: 'prom/prometheus', tag: 'v2.48.1', pullPolicy: 'IfNotPresent' },
+  service: { type: 'ClusterIP', port: 9090 },
+  resources: { limits: { cpu: '500m', memory: '512Mi' }, requests: { cpu: '200m', memory: '256Mi' } },
+})
+
+const getDemoOperators = (): Operator[] => [
+  { name: 'prometheus-operator', namespace: 'monitoring', version: '0.72.0', status: 'Succeeded', cluster: 'eks-prod-us-east-1' },
+  { name: 'cert-manager', namespace: 'cert-manager', version: '1.14.0', status: 'Succeeded', upgradeAvailable: '1.15.0', cluster: 'eks-prod-us-east-1' },
+  { name: 'gpu-operator', namespace: 'nvidia-gpu-operator', version: '23.9.1', status: 'Succeeded', cluster: 'vllm-gpu-cluster' },
+]
+
+const getDemoOperatorSubscriptions = (): OperatorSubscription[] => [
+  { name: 'prometheus-sub', namespace: 'monitoring', channel: 'stable', source: 'community-operators', installPlanApproval: 'Automatic', currentCSV: 'prometheusoperator.0.72.0', cluster: 'eks-prod-us-east-1' },
+  { name: 'cert-manager-sub', namespace: 'cert-manager', channel: 'stable', source: 'community-operators', installPlanApproval: 'Manual', currentCSV: 'cert-manager.v1.14.0', pendingUpgrade: 'cert-manager.v1.15.0', cluster: 'eks-prod-us-east-1' },
+]
+
+const getDemoGitOpsDrifts = (): GitOpsDrift[] => [
+  { resource: 'nginx-deployment', namespace: 'production', cluster: 'eks-prod-us-east-1', kind: 'Deployment', driftType: 'modified', gitVersion: 'abc1234', details: 'replicas changed from 3 to 5', severity: 'medium' },
+  { resource: 'redis-config', namespace: 'data', cluster: 'gke-staging', kind: 'ConfigMap', driftType: 'modified', gitVersion: 'def5678', details: 'maxmemory-policy changed', severity: 'low' },
+]
+
+const getDemoBuildpackImages = (): BuildpackImage[] => [
+  { name: 'api-service', namespace: 'production', builder: 'paketo-buildpacks/builder-jammy-base', image: 'registry.example.com/api-service:latest', status: 'succeeded', updated: new Date(Date.now() - 2 * 3600000).toISOString(), cluster: 'eks-prod-us-east-1' },
+  { name: 'web-app', namespace: 'staging', builder: 'paketo-buildpacks/builder-jammy-full', image: 'registry.example.com/web-app:v2.1', status: 'building', updated: new Date(Date.now() - 300000).toISOString(), cluster: 'gke-staging' },
+]
+
+const getDemoK8sRoles = (): K8sRole[] => [
+  { name: 'pod-reader', namespace: 'production', cluster: 'eks-prod-us-east-1', isCluster: false, ruleCount: 3 },
+  { name: 'admin', cluster: 'eks-prod-us-east-1', isCluster: true, ruleCount: 15 },
+]
+
+const getDemoK8sRoleBindings = (): K8sRoleBinding[] => [
+  { name: 'pod-reader-binding', namespace: 'production', cluster: 'eks-prod-us-east-1', isCluster: false, roleName: 'pod-reader', roleKind: 'Role', subjects: [{ kind: 'User', name: 'jane' }] },
+  { name: 'admin-binding', cluster: 'eks-prod-us-east-1', isCluster: true, roleName: 'admin', roleKind: 'ClusterRole', subjects: [{ kind: 'Group', name: 'admins' }] },
+]
+
+const getDemoK8sServiceAccountsRbac = (): K8sServiceAccountInfo[] => [
+  { name: 'default', namespace: 'production', cluster: 'eks-prod-us-east-1', createdAt: new Date(Date.now() - 90 * 86400000).toISOString() },
+  { name: 'prometheus', namespace: 'monitoring', cluster: 'eks-prod-us-east-1', roles: ['prometheus-reader'], createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
+]
+
+// ============================================================================
+// Additional Cached Data Hooks
+// ============================================================================
+
+/**
+ * Hook for fetching GPU nodes with caching
+ */
+export function useCachedGPUNodes(
+  cluster?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<GPUNode[]> & { nodes: GPUNode[] } {
+  const { category = 'gpu' } = options || {}
+  const key = `gpuNodes:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as GPUNode[],
+    demoData: getDemoGPUNodes(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ nodes: GPUNode[] }>('gpu-nodes', { cluster })
+        return (data.nodes || []).map(n => ({ ...n, cluster }))
+      }
+      return await fetchFromAllClusters<GPUNode>('gpu-nodes', 'nodes')
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<GPUNode>('gpu-nodes', 'nodes', {}, onProgress)
+    },
+  })
+
+  return {
+    nodes: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching all pods (no namespace filter) with caching.
+ * Used by GPU cards that need all pods across clusters for allocation tracking.
+ */
+export function useCachedAllPods(
+  cluster?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<PodInfo[]> & { pods: PodInfo[] } {
+  const { category = 'pods' } = options || {}
+  const key = `allPods:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as PodInfo[],
+    demoData: getDemoPods(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ pods: PodInfo[] }>('pods', { cluster })
+        return (data.pods || []).map(p => ({ ...p, cluster }))
+      }
+      return await fetchFromAllClusters<PodInfo>('pods', 'pods')
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<PodInfo>('pods', 'pods', {}, onProgress)
+    },
+  })
+
+  return {
+    pods: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching PVCs with caching
+ */
+export function useCachedPVCs(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<PVC[]> & { pvcs: PVC[] } {
+  const { category = 'default' } = options || {}
+  const key = `pvcs:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as PVC[],
+    demoData: getDemoPVCs(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ pvcs: PVC[] }>('pvcs', { cluster, namespace })
+        return (data.pvcs || []).map(p => ({ ...p, cluster }))
+      }
+      return await fetchFromAllClusters<PVC>('pvcs', 'pvcs', { namespace })
+    },
+  })
+
+  return {
+    pvcs: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching namespaces with caching.
+ * Returns a list of namespace names for a given cluster.
+ */
+export function useCachedNamespaces(
+  cluster?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<string[]> & { namespaces: string[] } {
+  const { category = 'namespaces' } = options || {}
+  const key = `namespaces:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as string[],
+    demoData: getDemoNamespaces(),
+    fetcher: async () => {
+      if (!cluster) return getDemoNamespaces()
+      // Use the dedicated /api/namespaces endpoint which returns namespace details
+      const token = getToken()
+      if (!token) throw new Error('No authentication token')
+      const response = await fetch(`/api/namespaces?cluster=${encodeURIComponent(cluster)}`, {
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+      if (!response.ok) throw new Error(`API error: ${response.status}`)
+      const data = await response.json() as Array<{ name?: string; Name?: string }>
+      return (data || []).map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
+    },
+  })
+
+  return {
+    namespaces: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching jobs with caching
+ */
+export function useCachedJobs(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<Job[]> & { jobs: Job[] } {
+  const { category = 'default' } = options || {}
+  const key = `jobs:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as Job[],
+    demoData: getDemoJobs(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ jobs: Job[] }>('jobs', { cluster, namespace })
+        return (data.jobs || []).map(j => ({ ...j, cluster }))
+      }
+      return await fetchFromAllClusters<Job>('jobs', 'jobs', { namespace })
+    },
+  })
+
+  return {
+    jobs: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching HPAs with caching
+ */
+export function useCachedHPAs(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<HPA[]> & { hpas: HPA[] } {
+  const { category = 'default' } = options || {}
+  const key = `hpas:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as HPA[],
+    demoData: getDemoHPAs(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ hpas: HPA[] }>('hpas', { cluster, namespace })
+        return (data.hpas || []).map(h => ({ ...h, cluster }))
+      }
+      return await fetchFromAllClusters<HPA>('hpas', 'hpas', { namespace })
+    },
+  })
+
+  return {
+    hpas: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching ConfigMaps with caching
+ */
+export function useCachedConfigMaps(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<ConfigMap[]> & { configmaps: ConfigMap[] } {
+  const { category = 'default' } = options || {}
+  const key = `configMaps:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as ConfigMap[],
+    demoData: getDemoConfigMaps(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ configmaps: ConfigMap[] }>('configmaps', { cluster, namespace })
+        return (data.configmaps || []).map(c => ({ ...c, cluster }))
+      }
+      return await fetchFromAllClusters<ConfigMap>('configmaps', 'configmaps', { namespace })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<ConfigMap>('configmaps', 'configmaps', { namespace }, onProgress)
+    },
+  })
+
+  return {
+    configmaps: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching Secrets with caching
+ */
+export function useCachedSecrets(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<Secret[]> & { secrets: Secret[] } {
+  const { category = 'default' } = options || {}
+  const key = `secrets:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as Secret[],
+    demoData: getDemoSecrets(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ secrets: Secret[] }>('secrets', { cluster, namespace })
+        return (data.secrets || []).map(s => ({ ...s, cluster }))
+      }
+      return await fetchFromAllClusters<Secret>('secrets', 'secrets', { namespace })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<Secret>('secrets', 'secrets', { namespace }, onProgress)
+    },
+  })
+
+  return {
+    secrets: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching ServiceAccounts with caching
+ */
+export function useCachedServiceAccounts(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<ServiceAccount[]> & { serviceAccounts: ServiceAccount[] } {
+  const { category = 'default' } = options || {}
+  const key = `serviceAccounts:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as ServiceAccount[],
+    demoData: getDemoServiceAccounts(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ serviceaccounts: ServiceAccount[] }>('serviceaccounts', { cluster, namespace })
+        return (data.serviceaccounts || []).map(sa => ({ ...sa, cluster }))
+      }
+      return await fetchFromAllClusters<ServiceAccount>('serviceaccounts', 'serviceaccounts', { namespace })
+    },
+  })
+
+  return {
+    serviceAccounts: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching ReplicaSets with caching
+ */
+export function useCachedReplicaSets(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<ReplicaSet[]> & { replicasets: ReplicaSet[] } {
+  const { category = 'default' } = options || {}
+  const key = `replicaSets:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as ReplicaSet[],
+    demoData: getDemoReplicaSets(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ replicasets: ReplicaSet[] }>('replicasets', { cluster, namespace })
+        return (data.replicasets || []).map(rs => ({ ...rs, cluster }))
+      }
+      return await fetchFromAllClusters<ReplicaSet>('replicasets', 'replicasets', { namespace })
+    },
+  })
+
+  return {
+    replicasets: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching StatefulSets with caching
+ */
+export function useCachedStatefulSets(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<StatefulSet[]> & { statefulsets: StatefulSet[] } {
+  const { category = 'default' } = options || {}
+  const key = `statefulSets:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as StatefulSet[],
+    demoData: getDemoStatefulSets(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ statefulsets: StatefulSet[] }>('statefulsets', { cluster, namespace })
+        return (data.statefulsets || []).map(ss => ({ ...ss, cluster }))
+      }
+      return await fetchFromAllClusters<StatefulSet>('statefulsets', 'statefulsets', { namespace })
+    },
+  })
+
+  return {
+    statefulsets: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching DaemonSets with caching
+ */
+export function useCachedDaemonSets(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<DaemonSet[]> & { daemonsets: DaemonSet[] } {
+  const { category = 'default' } = options || {}
+  const key = `daemonSets:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as DaemonSet[],
+    demoData: getDemoDaemonSets(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ daemonsets: DaemonSet[] }>('daemonsets', { cluster, namespace })
+        return (data.daemonsets || []).map(ds => ({ ...ds, cluster }))
+      }
+      return await fetchFromAllClusters<DaemonSet>('daemonsets', 'daemonsets', { namespace })
+    },
+  })
+
+  return {
+    daemonsets: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching CronJobs with caching
+ */
+export function useCachedCronJobs(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<CronJob[]> & { cronjobs: CronJob[] } {
+  const { category = 'default' } = options || {}
+  const key = `cronJobs:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as CronJob[],
+    demoData: getDemoCronJobs(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ cronjobs: CronJob[] }>('cronjobs', { cluster, namespace })
+        return (data.cronjobs || []).map(cj => ({ ...cj, cluster }))
+      }
+      return await fetchFromAllClusters<CronJob>('cronjobs', 'cronjobs', { namespace })
+    },
+  })
+
+  return {
+    cronjobs: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching Ingresses with caching
+ */
+export function useCachedIngresses(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<Ingress[]> & { ingresses: Ingress[] } {
+  const { category = 'default' } = options || {}
+  const key = `ingresses:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as Ingress[],
+    demoData: getDemoIngresses(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ ingresses: Ingress[] }>('ingresses', { cluster, namespace })
+        return (data.ingresses || []).map(i => ({ ...i, cluster }))
+      }
+      return await fetchFromAllClusters<Ingress>('ingresses', 'ingresses', { namespace })
+    },
+  })
+
+  return {
+    ingresses: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching NetworkPolicies with caching
+ */
+export function useCachedNetworkPolicies(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<NetworkPolicy[]> & { networkpolicies: NetworkPolicy[] } {
+  const { category = 'default' } = options || {}
+  const key = `networkPolicies:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as NetworkPolicy[],
+    demoData: getDemoNetworkPolicies(),
+    fetcher: async () => {
+      if (cluster) {
+        const data = await fetchAPI<{ networkpolicies: NetworkPolicy[] }>('networkpolicies', { cluster, namespace })
+        return (data.networkpolicies || []).map(np => ({ ...np, cluster }))
+      }
+      return await fetchFromAllClusters<NetworkPolicy>('networkpolicies', 'networkpolicies', { namespace })
+    },
+  })
+
+  return {
+    networkpolicies: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching Helm releases with caching (GitOps SSE endpoint)
+ */
+export function useCachedHelmReleases(
+  cluster?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<HelmRelease[]> & { releases: HelmRelease[] } {
+  const { category = 'helm' } = options || {}
+  const key = `helmReleases:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as HelmRelease[],
+    demoData: getDemoHelmReleases(),
+    fetcher: async () => {
+      const data = await fetchGitOpsAPI<{ releases: HelmRelease[] }>('helm-releases', cluster ? { cluster } : undefined)
+      return data.releases || []
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaGitOpsSSE<HelmRelease>('helm-releases', 'releases', {}, onProgress)
+    },
+  })
+
+  return {
+    releases: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching Helm release history with caching
+ */
+export function useCachedHelmHistory(
+  cluster?: string,
+  release?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<HelmHistoryEntry[]> & { history: HelmHistoryEntry[] } {
+  const { category = 'helm' } = options || {}
+  const key = `helmHistory:${cluster || 'none'}:${release || 'none'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as HelmHistoryEntry[],
+    demoData: getDemoHelmHistory(),
+    enabled: !!(cluster && release),
+    fetcher: async () => {
+      const data = await fetchGitOpsAPI<{ history: HelmHistoryEntry[] }>('helm-history', { cluster, release, namespace })
+      return data.history || []
+    },
+  })
+
+  return {
+    history: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching Helm release values with caching
+ */
+export function useCachedHelmValues(
+  cluster?: string,
+  release?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<Record<string, unknown>> & { values: Record<string, unknown> } {
+  const { category = 'helm' } = options || {}
+  const key = `helmValues:${cluster || 'none'}:${release || 'none'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: {} as Record<string, unknown>,
+    demoData: getDemoHelmValues(),
+    enabled: !!(cluster && release),
+    fetcher: async () => {
+      const data = await fetchGitOpsAPI<{ values: Record<string, unknown> }>('helm-values', { cluster, release, namespace })
+      return data.values || {}
+    },
+  })
+
+  return {
+    values: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching operators with caching (GitOps SSE endpoint)
+ */
+export function useCachedOperators(
+  cluster?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<Operator[]> & { operators: Operator[] } {
+  const { category = 'operators' } = options || {}
+  const key = `operators:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as Operator[],
+    demoData: getDemoOperators(),
+    fetcher: async () => {
+      const data = await fetchGitOpsAPI<{ operators: Operator[] }>('operators', cluster ? { cluster } : undefined)
+      return data.operators || []
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaGitOpsSSE<Operator>('operators', 'operators', {}, onProgress)
+    },
+  })
+
+  return {
+    operators: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching operator subscriptions with caching (GitOps SSE endpoint)
+ */
+export function useCachedOperatorSubscriptions(
+  cluster?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<OperatorSubscription[]> & { subscriptions: OperatorSubscription[] } {
+  const { category = 'operators' } = options || {}
+  const key = `operatorSubscriptions:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as OperatorSubscription[],
+    demoData: getDemoOperatorSubscriptions(),
+    fetcher: async () => {
+      const data = await fetchGitOpsAPI<{ subscriptions: OperatorSubscription[] }>('operator-subscriptions', cluster ? { cluster } : undefined)
+      return data.subscriptions || []
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaGitOpsSSE<OperatorSubscription>('operator-subscriptions', 'subscriptions', {}, onProgress)
+    },
+  })
+
+  return {
+    subscriptions: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching GitOps drift data with caching
+ */
+export function useCachedGitOpsDrifts(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<GitOpsDrift[]> & { drifts: GitOpsDrift[] } {
+  const { category = 'gitops' } = options || {}
+  const key = `gitopsDrifts:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as GitOpsDrift[],
+    demoData: getDemoGitOpsDrifts(),
+    fetcher: async () => {
+      const data = await fetchGitOpsAPI<{ drifts: GitOpsDrift[] }>('drifts', { cluster, namespace })
+      return data.drifts || []
+    },
+  })
+
+  return {
+    drifts: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching buildpack images with caching
+ */
+export function useCachedBuildpackImages(
+  cluster?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<BuildpackImage[]> & { images: BuildpackImage[] } {
+  const { category = 'default' } = options || {}
+  const key = `buildpackImages:${cluster || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as BuildpackImage[],
+    demoData: getDemoBuildpackImages(),
+    fetcher: async () => {
+      const data = await fetchGitOpsAPI<{ images: BuildpackImage[] }>('buildpack-images', cluster ? { cluster } : undefined)
+      return data.images || []
+    },
+  })
+
+  return {
+    images: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching K8s Roles with caching (RBAC endpoint)
+ */
+export function useCachedK8sRoles(
+  cluster?: string,
+  namespace?: string,
+  options?: { includeSystem?: boolean; category?: RefreshCategory }
+): CachedHookResult<K8sRole[]> & { roles: K8sRole[] } {
+  const { includeSystem = false, category = 'rbac' } = options || {}
+  const key = `k8sRoles:${cluster || 'all'}:${namespace || 'all'}:${includeSystem}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as K8sRole[],
+    demoData: getDemoK8sRoles(),
+    fetcher: async () => {
+      const data = await fetchRbacAPI<{ roles: K8sRole[] }>('roles', { cluster, namespace, includeSystem })
+      return data.roles || []
+    },
+  })
+
+  return {
+    roles: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching K8s RoleBindings with caching (RBAC endpoint)
+ */
+export function useCachedK8sRoleBindings(
+  cluster?: string,
+  namespace?: string,
+  options?: { includeSystem?: boolean; category?: RefreshCategory }
+): CachedHookResult<K8sRoleBinding[]> & { bindings: K8sRoleBinding[] } {
+  const { includeSystem = false, category = 'rbac' } = options || {}
+  const key = `k8sRoleBindings:${cluster || 'all'}:${namespace || 'all'}:${includeSystem}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as K8sRoleBinding[],
+    demoData: getDemoK8sRoleBindings(),
+    fetcher: async () => {
+      const data = await fetchRbacAPI<{ bindings: K8sRoleBinding[] }>('bindings', { cluster, namespace, includeSystem })
+      return data.bindings || []
+    },
+  })
+
+  return {
+    bindings: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoFallback: result.isDemoFallback,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+/**
+ * Hook for fetching K8s ServiceAccounts with caching (RBAC endpoint)
+ */
+export function useCachedK8sServiceAccounts(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<K8sServiceAccountInfo[]> & { serviceAccounts: K8sServiceAccountInfo[] } {
+  const { category = 'rbac' } = options || {}
+  const key = `k8sServiceAccounts:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: [] as K8sServiceAccountInfo[],
+    demoData: getDemoK8sServiceAccountsRbac(),
+    fetcher: async () => {
+      const data = await fetchRbacAPI<{ serviceAccounts: K8sServiceAccountInfo[] }>('service-accounts', { cluster, namespace })
+      return data.serviceAccounts || []
+    },
+  })
+
+  return {
+    serviceAccounts: result.data,
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,

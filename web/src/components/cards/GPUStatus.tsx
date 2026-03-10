@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Activity, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useGPUNodes } from '../../hooks/useMCP'
+import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -37,15 +36,15 @@ export function GPUStatus({ config }: GPUStatusProps) {
   const {
     nodes: rawNodes,
     isLoading: hookLoading,
-  } = useGPUNodes(cluster)
+    isDemoFallback,
+  } = useCachedGPUNodes(cluster)
   const { drillToCluster } = useDrillDownActions()
-  const { isDemoMode: demoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: rawNodes.length > 0,
-    isDemoData: demoMode,
+    isDemoData: isDemoFallback,
   })
 
   // Card-specific GPU type filter (not handled by useCardData)

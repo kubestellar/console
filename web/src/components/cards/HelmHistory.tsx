@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useClusters, useHelmReleases, useHelmHistory, type HelmHistoryEntry } from '../../hooks/useMCP'
+import { useClusters, type HelmHistoryEntry } from '../../hooks/useMCP'
+import { useCachedHelmReleases, useCachedHelmHistory } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -46,7 +46,6 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     [t]
   )
   const { deduplicatedClusters: allClusters } = useClusters()
-  const { isDemoMode: demoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
 
@@ -91,11 +90,11 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   }, [globalSelectedClusters, isAllClustersSelected])
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
-  const { releases: allHelmReleases, isLoading: releasesLoading } = useHelmReleases()
+  const { releases: allHelmReleases, isLoading: releasesLoading, isDemoFallback: isDemoData } = useCachedHelmReleases()
 
   // Auto-select cluster and release in demo mode so card shows data immediately
   useEffect(() => {
-    if (demoMode && allHelmReleases.length > 0 && allClusters.length > 0) {
+    if (isDemoData && allHelmReleases.length > 0 && allClusters.length > 0) {
       if (!selectedCluster) {
         const firstCluster = allClusters[0].name
         setSelectedCluster(firstCluster)
@@ -107,7 +106,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demoMode, allHelmReleases, allClusters])
+  }, [isDemoData, allHelmReleases, allClusters])
 
   // Look up namespace from the selected release (required for helm history command)
   const selectedReleaseNamespace = useMemo(() => {
@@ -125,7 +124,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     isRefreshing: historyRefreshing,
     isFailed,
     consecutiveFailures,
-  } = useHelmHistory(
+  } = useCachedHelmHistory(
     selectedCluster || undefined,
     selectedRelease || undefined,
     selectedReleaseNamespace
@@ -138,7 +137,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     hasAnyData: rawHistory.length > 0 || !selectedRelease,
     isFailed,
     consecutiveFailures,
-    isDemoData: demoMode,
+    isDemoData,
   })
 
   // Apply global filters to clusters

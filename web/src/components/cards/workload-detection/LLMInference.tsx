@@ -11,10 +11,10 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
-import { useCachedLLMdServers } from '../../../hooks/useCachedData'
+import { useCachedLLMdServers, useCachedGPUNodes } from '../../../hooks/useCachedData'
 import type { LLMdServer, LLMdComponentType } from '../../../hooks/useLLMd'
 import { useLLMdClusters } from './shared'
-import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
+import { useClusters } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
 
@@ -45,7 +45,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   const { t: _t } = useTranslation()
   // Dynamically discover LLM-d clusters instead of using static list
   const { deduplicatedClusters } = useClusters()
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes } = useCachedGPUNodes()
   const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
   const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { useGPUNodes, useClusters } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -27,7 +28,8 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   const {
     nodes: rawNodes,
     isLoading: hookLoading,
-  } = useGPUNodes()
+    isDemoFallback,
+  } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
 
@@ -38,7 +40,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   const { showSkeleton } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: rawNodes.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || isDemoFallback,
   })
   const isLoading = showSkeleton
   const { drillToResources } = useDrillDownActions()

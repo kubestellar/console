@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Package } from 'lucide-react'
-import { useClusters, useHelmReleases } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedHelmReleases } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import {
   useCardData, commonComparators,
@@ -8,7 +9,6 @@ import {
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ChartVersionsProps {
   config?: {
@@ -35,7 +35,6 @@ const SORT_OPTIONS = [
 export function ChartVersions({ config: _config }: ChartVersionsProps) {
   const { t } = useTranslation()
   const { isLoading: clustersLoading } = useClusters()
-  const { isDemoMode } = useDemoMode()
 
   // Fetch ALL Helm releases once - filter locally
   const {
@@ -43,7 +42,8 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     isLoading: releasesLoading,
     isFailed,
     consecutiveFailures,
-  } = useHelmReleases()
+    isDemoFallback: isDemoData,
+  } = useCachedHelmReleases()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -51,7 +51,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     hasAnyData: allHelmReleases.length > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoMode,
+    isDemoData,
   })
 
   // Transform Helm releases to chart info

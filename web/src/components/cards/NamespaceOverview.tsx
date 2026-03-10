@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useClusters, useNamespaces } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -63,7 +64,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback, isRefreshing: isDeploymentIssuesRefreshing, lastRefresh: deploymentIssuesLastRefresh } = useCachedDeploymentIssues(selectedCluster)
 
   // Fetch namespaces for the selected cluster
-  const { namespaces } = useNamespaces(selectedCluster || undefined)
+  const { namespaces } = useCachedNamespaces(selectedCluster || undefined)
 
   // Auto-select first namespace in demo mode once namespaces load
   useEffect(() => {

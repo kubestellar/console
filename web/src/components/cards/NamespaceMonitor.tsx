@@ -5,16 +5,13 @@ import {
   AlertTriangle, Eye, X, Activity
 } from 'lucide-react'
 import { CardSearchInput } from '../../lib/cards'
-import {
-  useClusters, useNamespaces, useDeployments, useServices, usePVCs,
-  usePods, useConfigMaps, useSecrets, useJobs
-} from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedNamespaces, useCachedDeployments, useCachedServices, useCachedPVCs, useCachedPods, useCachedConfigMaps, useCachedSecrets, useCachedJobs } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardComponentProps } from './cardRegistry'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 // Resource types to monitor
 type ResourceType = 'pods' | 'deployments' | 'services' | 'configmaps' | 'secrets' | 'pvcs' | 'jobs'
@@ -98,15 +95,6 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
-  const { isDemoMode } = useDemoMode()
-
-  // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
-    isLoading,
-    hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode,
-  })
-
   // UI state
   const [searchFilter, setSearchFilter] = useState('')
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set())
@@ -144,14 +132,25 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   }, [clusters, selectedClusters, isAllClustersSelected, searchFilter])
 
   // Fetch data for selected cluster
-  const { namespaces } = useNamespaces(selectedCluster || undefined)
-  const { deployments } = useDeployments(selectedCluster || undefined)
-  const { services } = useServices(selectedCluster || undefined)
-  const { pvcs } = usePVCs(selectedCluster || undefined)
-  const { pods } = usePods(selectedCluster || undefined, undefined, 'name', 500)
-  const { configmaps } = useConfigMaps(selectedCluster || undefined)
-  const { secrets } = useSecrets(selectedCluster || undefined)
-  const { jobs } = useJobs(selectedCluster || undefined)
+  const { namespaces, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+  const { deployments, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments(selectedCluster || undefined)
+  const { services, isDemoFallback: servicesDemoFallback } = useCachedServices(selectedCluster || undefined)
+  const { pvcs, isDemoFallback: pvcsDemoFallback } = useCachedPVCs(selectedCluster || undefined)
+  const { pods, isDemoFallback: podsDemoFallback } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
+  const { configmaps, isDemoFallback: configmapsDemoFallback } = useCachedConfigMaps(selectedCluster || undefined)
+  const { secrets, isDemoFallback: secretsDemoFallback } = useCachedSecrets(selectedCluster || undefined)
+  const { jobs, isDemoFallback: jobsDemoFallback } = useCachedJobs(selectedCluster || undefined)
+
+  // Combine all isDemoFallback values from cached hooks
+  const isDemoData = namespacesDemoFallback || deploymentsDemoFallback || servicesDemoFallback ||
+    pvcsDemoFallback || podsDemoFallback || configmapsDemoFallback || secretsDemoFallback || jobsDemoFallback
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0,
+    isDemoData,
+  })
 
   // Build snapshots and detect changes
   useEffect(() => {

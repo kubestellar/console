@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Activity, Box, Cpu, HardDrive, Network, AlertTriangle } from 'lucide-react'
-import { useClusters, useGPUNodes } from '../../hooks/useMCP'
-import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCachedData'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedPodIssues, useCachedDeploymentIssues, useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -19,9 +19,9 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const selectedCluster = config?.cluster
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
-  const { nodes: gpuNodes } = useGPUNodes()
-  const { issues: podIssues } = useCachedPodIssues(selectedCluster)
-  const { issues: deploymentIssues } = useCachedDeploymentIssues(selectedCluster)
+  const { nodes: gpuNodes, isDemoFallback: gpuDemoFallback } = useCachedGPUNodes()
+  const { issues: podIssues, isDemoFallback: podsDemoFallback } = useCachedPodIssues(selectedCluster)
+  const { issues: deploymentIssues, isDemoFallback: deployDemoFallback } = useCachedDeploymentIssues(selectedCluster)
   const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
   const { isDemoMode } = useDemoMode()
@@ -30,7 +30,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: allClusters.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback || deployDemoFallback,
   })
 
   const {

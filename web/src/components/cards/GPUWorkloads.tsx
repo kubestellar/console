@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Server } from 'lucide-react'
-import { useGPUNodes, useAllPods, useClusters } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedGPUNodes, useCachedAllPods } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
@@ -12,7 +13,6 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import type { PodInfo } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -64,11 +64,14 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const {
     nodes: gpuNodes,
     isLoading: gpuLoading,
-  } = useGPUNodes()
-  const { pods: allPods, isLoading: podsLoading } = useAllPods()
+    isDemoFallback: gpuNodesDemoFallback,
+  } = useCachedGPUNodes()
+  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback } = useCachedAllPods()
   useClusters() // Keep hook for cache warming
   const { drillToPod } = useDrillDownActions()
-  const { isDemoMode } = useDemoMode()
+
+  // Combine all isDemoFallback values from cached hooks
+  const isDemoData = gpuNodesDemoFallback || podsDemoFallback
 
   // Only show loading when no cached data exists
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
@@ -77,7 +80,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   useCardLoadingState({
     isLoading: gpuLoading || podsLoading,
     hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData,
   })
 
   // Pre-filter pods to only GPU workloads (domain-specific logic before hook)

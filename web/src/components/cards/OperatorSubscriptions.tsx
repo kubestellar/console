@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Clock, AlertTriangle, Settings, ChevronRight } from 'lucide-react'
-import { useClusters, useOperatorSubscriptions, OperatorSubscription } from '../../hooks/useMCP'
+import { useClusters, OperatorSubscription } from '../../hooks/useMCP'
+import { useCachedOperatorSubscriptions } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -18,7 +19,6 @@ import {
   CardPaginationFooter,
 } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface OperatorSubscriptionsProps {
   config?: {
@@ -58,10 +58,9 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   )
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
-  const { isDemoMode } = useDemoMode()
 
   // Fetch subscriptions - pass undefined to get all clusters
-  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, consecutiveFailures, isFailed } = useOperatorSubscriptions(undefined)
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperatorSubscriptions(undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -69,7 +68,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
     hasAnyData: rawSubscriptions.length > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoMode,
+    isDemoData,
   })
 
   // Use useCardFilters for summary counts (globally filtered, before local search/pagination)

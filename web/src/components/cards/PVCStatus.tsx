@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
-import { usePVCs } from '../../hooks/useMCP'
 import type { PVC } from '../../hooks/useMCP'
+import { useCachedPVCs } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
@@ -71,7 +71,7 @@ function getStatusColor(status: string) {
 
 function PVCStatusInternal() {
   const { t } = useTranslation()
-  const { pvcs, isLoading, error, consecutiveFailures, isFailed } = usePVCs()
+  const { pvcs, isLoading, error, consecutiveFailures, isFailed, isDemoFallback } = useCachedPVCs()
   const { drillToPVC } = useDrillDownActions()
   const { isDemoMode: demoMode } = useDemoMode()
 
@@ -81,7 +81,7 @@ function PVCStatusInternal() {
     hasAnyData: pvcs.length > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData: demoMode,
+    isDemoData: isDemoFallback || demoMode,
   })
 
   const {

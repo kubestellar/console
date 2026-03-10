@@ -9,7 +9,7 @@ import {
   Search,
 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
-import { useNamespaces } from '../../hooks/useMCP'
+import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { useWorkloads } from '../../hooks/useWorkloads'
 import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
@@ -48,15 +48,15 @@ export function ResourceMarshall() {
   const [selectedWorkload, setSelectedWorkload] = useState<string>('')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
+  // Fetch namespaces for selected cluster
+  const { namespaces, isLoading: nsLoading, isDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0,
-    isDemoData: demoMode,
+    isDemoData: demoMode || isDemoFallback,
   })
-
-  // Fetch namespaces for selected cluster
-  const { namespaces, isLoading: nsLoading } = useNamespaces(selectedCluster || undefined)
 
   // Fetch workloads only when both cluster and namespace are selected.
   // Passing enabled=false prevents fetching all workloads across clusters.

@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, Plus, Edit, Filter, ChevronDown, Server, RotateCcw } from 'lucide-react'
-import { useClusters, useHelmReleases, useHelmValues } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedHelmReleases, useCachedHelmValues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -58,14 +58,6 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const { drillToHelm } = useDrillDownActions()
-  const { isDemoMode: demoMode } = useDemoMode()
-
-  // Report state to CardWrapper for refresh animation
-  useCardLoadingState({
-    isLoading: clustersLoading,
-    hasAnyData: allClusters.length > 0,
-    isDemoData: demoMode,
-  })
 
   // Local cluster filter (card-specific, kept as separate state)
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -137,11 +129,18 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   }, [globalSelectedClusters, isAllClustersSelected])
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
-  const { releases: allHelmReleases, isLoading: releasesLoading } = useHelmReleases()
+  const { releases: allHelmReleases, isLoading: releasesLoading, isDemoFallback: isDemoData } = useCachedHelmReleases()
+
+  // Report state to CardWrapper for refresh animation
+  useCardLoadingState({
+    isLoading: clustersLoading,
+    hasAnyData: allClusters.length > 0,
+    isDemoData,
+  })
 
   // Auto-select first cluster and release in demo mode
   useEffect(() => {
-    if (demoMode && allHelmReleases.length > 0 && allClusters.length > 0) {
+    if (isDemoData && allHelmReleases.length > 0 && allClusters.length > 0) {
       if (!selectedCluster) {
         const firstCluster = allClusters[0].name
         setSelectedCluster(firstCluster)
@@ -153,7 +152,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demoMode, allHelmReleases, allClusters])
+  }, [isDemoData, allHelmReleases, allClusters])
 
   // Look up namespace from the selected release (required for helm commands)
   const selectedReleaseNamespace = useMemo(() => {
@@ -167,14 +166,15 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   // Fetch values for selected release (hook handles caching)
   const {
     values,
-    format,
     isLoading: valuesLoading,
     isRefreshing: valuesRefreshing,
-  } = useHelmValues(
+  } = useCachedHelmValues(
     selectedCluster || undefined,
     selectedRelease || undefined,
     selectedReleaseNamespace
   )
+  // Cached hook doesn't return format; values are always JSON objects
+  const format = 'json' as string
 
   // Only show skeleton when no cached data exists
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0

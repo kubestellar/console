@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, ChevronRight, Server } from 'lucide-react'
-import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
+import { GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
+import { useCachedGitOpsDrifts } from '../../hooks/useCachedData'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -10,7 +11,6 @@ import { useCardData, CardClusterFilter, CardSearchInput } from '../../lib/cards
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
 type SortTranslationKey = 'cards:gitOpsDrift.severity' | 'cards:gitOpsDrift.type' | 'cards:gitOpsDrift.resource' | 'common:common.cluster'
@@ -74,9 +74,9 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     error,
     isFailed,
     consecutiveFailures,
-  } = useGitOpsDrifts(cluster, namespace)
+    isDemoFallback: isDemoData,
+  } = useCachedGitOpsDrifts(cluster, namespace)
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
-  const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -84,7 +84,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     hasAnyData: drifts.length > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoMode,
+    isDemoData,
   })
 
   // Map drift severity to global SeverityLevel

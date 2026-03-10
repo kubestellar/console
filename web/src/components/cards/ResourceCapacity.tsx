@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Cpu, HardDrive, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useClusters, useGPUNodes, GPUNode } from '../../hooks/useMCP'
+import { useClusters, GPUNode } from '../../hooks/useMCP'
+import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -39,7 +40,7 @@ const SORT_OPTIONS = [
 export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, lastRefresh, isFailed, consecutiveFailures, error } = useClusters()
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
   const {
@@ -58,7 +59,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     isFailed,
     consecutiveFailures,
     errorMessage: error ?? undefined,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || isDemoFallback,
   })
 
   // Local cluster filter

@@ -4,7 +4,8 @@ import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
-import { useClusters, useNamespaces } from '../../../hooks/useMCP'
+import { useClusters } from '../../../hooks/useMCP'
+import { useCachedNamespaces } from '../../../hooks/useCachedData'
 import { useWorkloads } from '../../../hooks/useWorkloads'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
 import { cn } from '../../../lib/cn'
@@ -43,20 +44,20 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   const [selectedNamespace, setSelectedNamespace] = useState(monitorConfig?.namespace || '')
   const [selectedWorkload, setSelectedWorkload] = useState(monitorConfig?.workload || '')
 
+  // Fetch namespaces/workloads for selectors
+  const { namespaces, isLoading: nsLoading, isDemoFallback: nsDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || nsDemoFallback,
   })
 
   const isPreConfigured = !!(monitorConfig?.cluster && monitorConfig?.namespace && monitorConfig?.workload)
   const activeCluster = isPreConfigured ? monitorConfig!.cluster! : selectedCluster
   const activeNamespace = isPreConfigured ? monitorConfig!.namespace! : selectedNamespace
   const activeWorkload = isPreConfigured ? monitorConfig!.workload! : selectedWorkload
-
-  // Fetch namespaces/workloads for selectors
-  const { namespaces, isLoading: nsLoading } = useNamespaces(selectedCluster || undefined)
   const hasSelection = !!selectedCluster && !!selectedNamespace
   const workloadOpts = useMemo(() => {
     if (!selectedCluster || !selectedNamespace) return undefined

@@ -2,7 +2,8 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap, Layers, List } from 'lucide-react'
 import { useCardDemoState } from '../CardDataContext'
 import { useMissions } from '../../../hooks/useMissions'
-import { useGPUNodes, usePodIssues, useClusters } from '../../../hooks/useMCP'
+import { useClusters } from '../../../hooks/useMCP'
+import { useCachedPodIssues, useCachedGPUNodes } from '../../../hooks/useCachedData'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { usePredictionSettings } from '../../../hooks/usePredictionSettings'
@@ -221,8 +222,8 @@ function generatePredictionId(type: string, name: string, cluster?: string): str
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, missions } = useMissions()
-  const { nodes: gpuNodes, isLoading } = useGPUNodes()
-  const { issues: podIssues } = usePodIssues()
+  const { nodes: gpuNodes, isLoading, isDemoFallback: gpuDemoFallback } = useCachedGPUNodes()
+  const { issues: podIssues, isDemoFallback: podsDemoFallback } = useCachedPodIssues()
   const { deduplicatedClusters: clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToNode } = useDrillDownActions()
@@ -248,7 +249,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   useCardLoadingState({
     isLoading: isLoading && nodesLoading,
     hasAnyData: gpuNodes.length > 0 || nodesCache.length > 0 || allNodes.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback,
   })
 
   // Subscribe to cache updates and fetch nodes

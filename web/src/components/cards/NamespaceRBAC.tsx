@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Users, Key, Lock, ChevronRight, AlertCircle } from 'lucide-react'
-import { useClusters, useNamespaces, useK8sRoles, useK8sRoleBindings, useK8sServiceAccounts } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedNamespaces, useCachedK8sRoles, useCachedK8sRoleBindings, useCachedK8sServiceAccounts } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -10,7 +11,6 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 interface NamespaceRBACProps {
@@ -45,46 +45,48 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
-  const { isDemoMode: demoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
-  const { namespaces } = useNamespaces(selectedCluster || undefined)
+  const { namespaces, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+
+  // Fetch RBAC data using cached hooks (requires a cluster to be selected)
+  const { roles: k8sRoles, isLoading: rolesLoading, isDemoFallback: rolesDemoFallback } = useCachedK8sRoles(
+    selectedCluster || undefined,
+    selectedNamespace || undefined
+  )
+  const { bindings: k8sBindings, isLoading: bindingsLoading, isDemoFallback: bindingsDemoFallback } = useCachedK8sRoleBindings(
+    selectedCluster || undefined,
+    selectedNamespace || undefined
+  )
+  const { serviceAccounts: k8sServiceAccounts, isLoading: sasLoading, isDemoFallback: sasDemoFallback } = useCachedK8sServiceAccounts(
+    selectedCluster || undefined,
+    selectedNamespace || undefined
+  )
+
+  // Combine all isDemoFallback values from cached hooks
+  const isDemoData = namespacesDemoFallback || rolesDemoFallback || bindingsDemoFallback || sasDemoFallback
 
   // Auto-select first cluster and namespace in demo mode
   useEffect(() => {
-    if (demoMode && clusters.length > 0 && !selectedCluster) {
+    if (isDemoData && clusters.length > 0 && !selectedCluster) {
       setSelectedCluster(clusters[0].name)
     }
-  }, [demoMode, clusters, selectedCluster])
+  }, [isDemoData, clusters, selectedCluster])
 
   useEffect(() => {
-    if (demoMode && selectedCluster && namespaces.length > 0 && !selectedNamespace) {
+    if (isDemoData && selectedCluster && namespaces.length > 0 && !selectedNamespace) {
       setSelectedNamespace(namespaces[0])
     }
-  }, [demoMode, selectedCluster, namespaces, selectedNamespace])
+  }, [isDemoData, selectedCluster, namespaces, selectedNamespace])
 
   // Filter clusters based on global filter
   const filteredClusters = useMemo(() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
   }, [clusters, selectedClusters, isAllClustersSelected])
-
-  // Fetch RBAC data using real hooks (requires a cluster to be selected)
-  const { roles: k8sRoles, isLoading: rolesLoading } = useK8sRoles(
-    selectedCluster || undefined,
-    selectedNamespace || undefined
-  )
-  const { bindings: k8sBindings, isLoading: bindingsLoading } = useK8sRoleBindings(
-    selectedCluster || undefined,
-    selectedNamespace || undefined
-  )
-  const { serviceAccounts: k8sServiceAccounts, isLoading: sasLoading } = useK8sServiceAccounts(
-    selectedCluster || undefined,
-    selectedNamespace || undefined
-  )
 
   // Check if we're loading initial data or fetching RBAC data
   const isInitialLoading = clustersLoading
@@ -94,7 +96,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isInitialLoading || !!isFetchingRBAC,
     hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
-    isDemoData: demoMode,
+    isDemoData,
   })
 
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound } from 'lucide-react'
-import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
+import { useClusters, ClusterInfo } from '../../hooks/useMCP'
+import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMobile } from '../../hooks/useMobile'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
@@ -85,7 +86,7 @@ export function ClusterHealth() {
     error,
     lastRefresh,
   } = useClusters()
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isMobile } = useMobile()
   const { isDemoMode } = useDemoMode()
@@ -142,7 +143,7 @@ export function ClusterHealth() {
     hasAnyData: hasData,
     isFailed: !!error && !hasData,
     consecutiveFailures: error ? 1 : 0,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode || isDemoFallback,
   })
   const isLoading = showSkeleton
 
