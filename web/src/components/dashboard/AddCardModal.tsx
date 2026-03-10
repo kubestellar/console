@@ -273,7 +273,7 @@ const CARD_CATALOG = {
   ],
   'Misc': [
     { type: 'buildpacks_status', title: 'Buildpacks Status', description: 'Cloud Native Buildpacks detection, builders, and image build status', visualization: 'status' },
-    { type: 'kubevela_status', title: 'KubeVela Status', description: 'KubeVela platform status, component inventory, and deployment information', visualization: 'status' },
+    { type: 'kubevela_status', title: 'KubeVela Status', description: 'KubeVela controller health and installation status across clusters', visualization: 'status' },
     { type: 'flatcar_status', title: 'Flatcar Container Linux', description: 'Flatcar node OS versions, update status, and version distribution', visualization: 'status' },
     { type: 'thanos_status', title: 'Thanos', description: 'Thanos global view metrics, store gateway status, and target health', visualization: 'status' },
     { type: 'fluentd_status', title: 'Fluentd', description: 'Log pipeline status, buffer utilization, and output plugin health', visualization: 'status' },

@@ -375,7 +375,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
 
   // KubeVela application delivery
-  kubevela_status: 'KubeVela application status, component health, and OAM resource tracking.',
+  kubevela_status: 'KubeVela controller health and installation status across clusters.',
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Unified timeline showing correlated warning events across multiple clusters.',

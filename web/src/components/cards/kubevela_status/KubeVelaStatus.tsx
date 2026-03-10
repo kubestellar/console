@@ -30,6 +30,8 @@ function appStatusColor(status: KubeVelaApplication['status']): string {
 function appStatusIcon(status: KubeVelaApplication['status']) {
   if (status === 'running') return <CheckCircle className="w-3.5 h-3.5 text-green-400" />
   if (status === 'workflowSuspending') return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
+  if (status === 'deleting') return <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
+  if (status === 'workflowTerminated') return <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
   return <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
 }
 
