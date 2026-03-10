@@ -21,6 +21,9 @@ interface CardConfig {
   config?: Record<string, unknown>
 }
 
+/** Maximum number of violation entries to display in PolicyViolations card */
+const MAX_VIOLATION_ENTRIES = 10
+
 // ── Falco (still static — no hook yet) ──────────────────────────────────
 
 export function FalcoAlerts({ config: _config }: CardConfig) {
@@ -277,9 +280,6 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
 
-  /** Maximum number of violation entries to display */
-  const MAX_VIOLATION_ENTRIES = 10
-
   // Aggregate violations from Kyverno reports (policy.violations is always 0
   // because the hook doesn't back-populate per-policy counts from PolicyReports;
   // instead use totalViolations and reports for the real data)
@@ -397,8 +397,9 @@ export function ComplianceScore({ config: _config }: CardConfig) {
         if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
         totalViolations += status.totalViolations
       }
-      // Score: 100% when no violations, 0% when violations >= totalPolicies
-      // Scale: each violation reduces score proportionally
+      // Score: 100% when no violations, clamped to 0% when violations >= totalPolicies.
+      // Note: multiple resources can violate the same policy, so totalViolations
+      // often exceeds totalPolicies — the score floors at 0% in that case.
       const rate = totalViolations === 0
         ? 100
         : Math.max(0, Math.round(100 - (totalViolations / totalPolicies) * 100))

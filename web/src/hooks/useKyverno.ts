@@ -180,6 +180,7 @@ export function useKyverno() {
     if (fetchInProgress.current) return
     fetchInProgress.current = true
 
+    try {
     if (!silent) {
       setIsRefreshing(true)
       if (!initialLoadDone.current) setIsLoading(true)
@@ -323,7 +324,9 @@ export function useKyverno() {
     initialLoadDone.current = true
     setIsLoading(false)
     setIsRefreshing(false)
-    fetchInProgress.current = false
+    } finally {
+      fetchInProgress.current = false
+    }
   }, [clusters])
 
   // Demo mode

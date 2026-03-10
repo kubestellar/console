@@ -85,6 +85,12 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
       const cs = kyvernoStatuses?.[cluster]
       if (!cs) continue
 
+      // Note: per-policy violations are not populated by the hook (always 0).
+      // Use cluster-level totalViolations as a signal: if the cluster has
+      // violations, audit-mode policies are marked 'fail' since they may
+      // be contributing; enforcing policies always pass (violations are blocked).
+      const clusterHasViolations = cs.totalViolations > 0
+
       for (const policy of (cs.policies || [])) {
         const key = `${policy.kind}/${policy.name}`
         if (!policyMap.has(key)) {
@@ -96,7 +102,8 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
           })
         }
         const row = policyMap.get(key)!
-        row.statuses[cluster] = policy.violations > 0 ? 'fail' : 'pass'
+        const isAudit = policy.status === 'audit'
+        row.statuses[cluster] = (clusterHasViolations && isAudit) ? 'fail' : 'pass'
       }
     }
 
