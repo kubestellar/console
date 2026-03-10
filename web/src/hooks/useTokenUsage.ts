@@ -299,14 +299,12 @@ export function useTokenUsage() {
   const updateSettings = useCallback(
     (settings: Partial<Omit<TokenUsage, 'used' | 'resetDate'>>) => {
       const newSettings = {
-        limit: settings.limit ?? sharedUsage.limit,
-        warningThreshold: settings.warningThreshold ?? sharedUsage.warningThreshold,
-        criticalThreshold: settings.criticalThreshold ?? sharedUsage.criticalThreshold,
-        // Always preserve stopThreshold at 100% — not user-configurable, prevents corruption
+        // Use || (not ??) so that 0 falls back to defaults — 0 is never a valid threshold
+        limit: settings.limit || sharedUsage.limit || DEFAULT_SETTINGS.limit,
+        warningThreshold: settings.warningThreshold || sharedUsage.warningThreshold || DEFAULT_SETTINGS.warningThreshold,
+        criticalThreshold: settings.criticalThreshold || sharedUsage.criticalThreshold || DEFAULT_SETTINGS.criticalThreshold,
         stopThreshold: DEFAULT_SETTINGS.stopThreshold,
       }
-      // Ensure limit is always positive
-      if (newSettings.limit <= 0) newSettings.limit = DEFAULT_SETTINGS.limit
       updateSharedUsage(newSettings)
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings))
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
