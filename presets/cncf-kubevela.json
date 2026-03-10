@@ -1,0 +1,6 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "kubevela_status",
+  "title": "KubeVela",
+  "config": {}
+}
