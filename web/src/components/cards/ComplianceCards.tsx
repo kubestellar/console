@@ -352,11 +352,10 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
 
-  const isDemoData = ksDemoData || kyDemoData
   const isLoading = ksLoading || kyLoading
 
   // Compute composite score from available tools
-  const { score, breakdown } = useMemo(() => {
+  const { score, breakdown, usingFallback } = useMemo(() => {
     const scores: Array<{ name: string; value: number }> = []
 
     // Kubescape score (filtered by cluster if needed)
@@ -384,7 +383,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
     }
 
     if (scores.length === 0) {
-      // Demo fallback
+      // No real compliance data — show placeholder with demo indicator
       return {
         score: 85,
         breakdown: [
@@ -392,12 +391,16 @@ export function ComplianceScore({ config: _config }: CardConfig) {
           { name: 'NSA', value: 79 },
           { name: 'PCI', value: 71 },
         ],
+        usingFallback: true,
       }
     }
 
     const avg = Math.round(scores.reduce((sum, s) => sum + s.value, 0) / scores.length)
-    return { score: avg, breakdown: scores }
+    return { score: avg, breakdown: scores, usingFallback: false }
   }, [kubescapeAgg, kyvernoStatuses, selectedClusters])
+
+  // Mark as demo data when hooks report demo OR when using hardcoded fallback values
+  const isDemoData = ksDemoData || kyDemoData || usingFallback
 
   useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
 

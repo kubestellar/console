@@ -157,20 +157,25 @@ export function useKubescape() {
 
     for (const cluster of (clusters || [])) {
       try {
-        // Phase 1: CRD check — Kubescape uses workloadconfigurationscansummaries
-        const crdCheck = await kubectlProxy.exec(
-          ['get', 'crd', 'workloadconfigurationscansummaries.spdx.softwarecomposition.kubescape.io', '-o', 'name'],
+        // Phase 1: API resource check — Kubescape uses workloadconfigurationscansummaries
+        // Note: Kubescape Operator serves these via API aggregation (storage pod),
+        // not as standard CRDs, so we check API availability instead of CRD existence.
+        const apiCheck = await kubectlProxy.exec(
+          ['api-resources', '--api-group=spdx.softwarecomposition.kubescape.io', '-o', 'name'],
           { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
         )
 
-        if (crdCheck.exitCode !== 0) {
-          // Try alternative CRD name (older kubescape versions)
-          const altCheck = await kubectlProxy.exec(
-            ['get', 'crd', 'configurationscansummaries.spdx.softwarecomposition.kubescape.io', '-o', 'name'],
+        const hasKubescapeApi = apiCheck.exitCode === 0 &&
+          (apiCheck.output || '').includes('workloadconfigurationscansummaries')
+
+        if (!hasKubescapeApi) {
+          // Fallback: try traditional CRD check (some installations use standard CRDs)
+          const crdCheck = await kubectlProxy.exec(
+            ['get', 'crd', 'workloadconfigurationscansummaries.spdx.softwarecomposition.kubescape.io', '-o', 'name'],
             { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
           )
 
-          if (altCheck.exitCode !== 0) {
+          if (crdCheck.exitCode !== 0) {
             newStatuses[cluster] = {
               cluster, installed: false, loading: false,
               overallScore: 0, frameworks: [],
