@@ -3,6 +3,7 @@ import { Play, RotateCcw, Pause, Trophy, Target, Heart, Crosshair } from 'lucide
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Canvas dimensions
 const CANVAS_WIDTH = 480
@@ -263,6 +264,7 @@ export function KubeDoom() {
                 setHighScore(s)
                 localStorage.setItem('kubeDoomHighScore', s.toString())
               }
+              emitGameEnded('kube_doom', 'loss', s)
               return s
             })
             setGameState('gameover')
@@ -547,6 +549,7 @@ export function KubeDoom() {
   const startGame = () => {
     initGame()
     setGameState('playing')
+    emitGameStarted('kube_doom')
   }
 
   const nextLevel = () => {

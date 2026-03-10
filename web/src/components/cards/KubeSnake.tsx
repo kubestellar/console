@@ -4,6 +4,7 @@ import { Play, RotateCcw, Pause, Trophy, Apple, Zap } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -104,6 +105,7 @@ export function KubeSnake() {
     // Check wall collision
     if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
       setGameState('gameover')
+      emitGameEnded('snake', 'loss', score)
       if (score > highScore) {
         setHighScore(score)
         localStorage.setItem('kubeSnakeHighScore', score.toString())
@@ -114,6 +116,7 @@ export function KubeSnake() {
     // Check self collision
     if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
       setGameState('gameover')
+      emitGameEnded('snake', 'loss', score)
       if (score > highScore) {
         setHighScore(score)
         localStorage.setItem('kubeSnakeHighScore', score.toString())
@@ -296,6 +299,7 @@ export function KubeSnake() {
   const startGame = () => {
     initGame()
     setGameState('playing')
+    emitGameStarted('snake')
   }
 
   const togglePause = () => {

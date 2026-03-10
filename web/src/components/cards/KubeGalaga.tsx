@@ -5,6 +5,7 @@ import { Play, RotateCcw, Pause, Trophy, Target, Heart, Zap } from 'lucide-react
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -301,6 +302,7 @@ export function KubeGalaga() {
                 localStorage.setItem('kubeGalagaHighScore', score.toString())
               }
               setGameState('gameover')
+              emitGameEnded('kube_galaga', 'loss', score)
               return 0
             }
             invincibleRef.current = 120
@@ -330,6 +332,7 @@ export function KubeGalaga() {
                 localStorage.setItem('kubeGalagaHighScore', score.toString())
               }
               setGameState('gameover')
+              emitGameEnded('kube_galaga', 'loss', score)
               return 0
             }
             invincibleRef.current = 120
@@ -353,6 +356,7 @@ export function KubeGalaga() {
         localStorage.setItem('kubeGalagaHighScore', score.toString())
       }
       setGameState('gameover')
+      emitGameEnded('kube_galaga', 'loss', score)
     }
   }, [shoot, enemyShoot, startDive, score, highScore])
 
@@ -479,6 +483,7 @@ export function KubeGalaga() {
   const startGame = () => {
     initGame()
     setGameState('playing')
+    emitGameStarted('kube_galaga')
   }
 
   const nextLevel = () => {

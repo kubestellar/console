@@ -6,6 +6,7 @@ import {
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Types
 type Difficulty = 'easy' | 'medium' | 'hard' | 'expert'
@@ -305,6 +306,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
     setSelectedCell(null)
     setShowSettings(false)
     setShowVictory(false)
+    emitGameStarted('sudoku')
   }, [])
 
   // Initialize with easy game if no saved state
@@ -391,6 +393,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
 
     if (complete) {
       setShowVictory(true)
+      emitGameEnded('sudoku', 'win', gameState.timer)
       const currentBest = bestTimes[gameState.difficulty]
       if (!currentBest || gameState.timer < currentBest) {
         const newBestTimes = { ...bestTimes, [gameState.difficulty]: gameState.timer }

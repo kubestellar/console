@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 type Grid = (number | null)[][]
 
@@ -209,11 +210,13 @@ export function Game2048(_props: CardComponentProps) {
       // Check win
       if (!won && !keepPlaying && hasWon(newGrid)) {
         setWon(true)
+        emitGameEnded('2048', 'win', newScore)
       }
 
       // Check game over
       if (!canMove(newGrid)) {
         setGameOver(true)
+        emitGameEnded('2048', 'loss', newScore)
       }
     }
   }, [grid, score, bestScore, gameOver, won, keepPlaying])
@@ -262,6 +265,7 @@ export function Game2048(_props: CardComponentProps) {
     setGameOver(false)
     setWon(false)
     setKeepPlaying(false)
+    emitGameStarted('2048')
   }, [])
 
   // Continue after winning

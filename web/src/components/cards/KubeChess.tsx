@@ -4,6 +4,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Chess piece types
 type PieceType = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P' // King, Queen, Rook, Bishop, kNight, Pawn
@@ -522,12 +523,15 @@ function KubeChessInternal() {
     if (gameResult !== 'ongoing') {
       if (gameResult === 'stalemate') {
         setStats((prev: typeof stats) => ({ ...prev, draws: prev.draws + 1 }))
+        emitGameEnded('chess', 'draw', 0)
       } else {
         const winner = gameState.turn === 'white' ? 'black' : 'white'
         if (winner === playerColor) {
           setStats((prev: typeof stats) => ({ ...prev, wins: prev.wins + 1 }))
+          emitGameEnded('chess', 'win', 0)
         } else {
           setStats((prev: typeof stats) => ({ ...prev, losses: prev.losses + 1 }))
+          emitGameEnded('chess', 'loss', 0)
         }
       }
     }
@@ -598,6 +602,7 @@ function KubeChessInternal() {
     setSelectedSquare(null)
     setValidMoves([])
     setPromotionPending(null)
+    emitGameStarted('chess')
   }, [])
 
   // Flip board

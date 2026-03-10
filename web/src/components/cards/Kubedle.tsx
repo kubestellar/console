@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // 5-letter Kubernetes-themed words
 const WORD_LIST = [
@@ -182,6 +183,7 @@ export function Kubedle(_props: CardComponentProps) {
       if (currentGuess === targetWord) {
         setGameOver(true)
         setMessage('Excellent!')
+        emitGameEnded('kubedle', 'win', newGuesses.length)
 
         // Update stats
         setStats(prev => {
@@ -200,6 +202,7 @@ export function Kubedle(_props: CardComponentProps) {
       } else if (newGuesses.length >= 6) {
         setGameOver(true)
         setMessage(`The word was ${targetWord}`)
+        emitGameEnded('kubedle', 'loss', newGuesses.length)
 
         // Update stats
         setStats(prev => {
@@ -238,6 +241,7 @@ export function Kubedle(_props: CardComponentProps) {
     setCurrentGuess('')
     setGameOver(false)
     setMessage('')
+    emitGameStarted('kubedle')
   }, [])
 
   const states = letterStates()

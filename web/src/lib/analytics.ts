@@ -1046,6 +1046,18 @@ export function emitInsightViewed(insightCategory: string) {
   send('ksc_insight_viewed', { insight_category: insightCategory })
 }
 
+// ── Arcade Games ────────────────────────────────────────────────
+
+/** Fired when user starts or restarts an arcade game */
+export function emitGameStarted(gameName: string) {
+  send('ksc_game_started', { game_name: gameName })
+}
+
+/** Fired when a game ends (win, loss, or completion) */
+export function emitGameEnded(gameName: string, outcome: string, score: number) {
+  send('ksc_game_ended', { game_name: gameName, outcome, score })
+}
+
 // ── Sidebar Navigation ──────────────────────────────────────────
 
 /** Fired when user clicks a sidebar navigation item */

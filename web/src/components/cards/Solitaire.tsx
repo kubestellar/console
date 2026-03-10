@@ -7,6 +7,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Kubernetes-themed suits (replacing hearts, diamonds, clubs, spades)
 type Suit = 'pods' | 'containers' | 'clusters' | 'nodes'
@@ -272,6 +273,7 @@ export function Solitaire(_props: CardComponentProps) {
     if (totalInFoundations === 52) {
       setHasWon(true)
       setIsPlaying(false)
+      emitGameEnded('solitaire', 'win', moves)
 
       // Save high score
       if (!highScore || moves < highScore.moves || (moves === highScore.moves && time < highScore.time)) {
@@ -291,6 +293,7 @@ export function Solitaire(_props: CardComponentProps) {
     setHasWon(false)
     setSelectedCard(null)
     setHistory([])
+    emitGameStarted('solitaire')
   }, [])
 
   // Start on mount

@@ -5,6 +5,7 @@ import { Play, RotateCcw, Pause, Trophy, Heart, Star } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
 const CANVAS_WIDTH = 480
@@ -240,6 +241,7 @@ export function PodBrothers() {
       setLives(l => {
         if (l <= 1) {
           setGameState('lost')
+          setScore(s => { emitGameEnded('pod_brothers', 'loss', s); return s })
           return 0
         }
         initLevel()
@@ -281,6 +283,7 @@ export function PodBrothers() {
           setLives(l => {
             if (l <= 1) {
               setGameState('lost')
+              setScore(s => { emitGameEnded('pod_brothers', 'loss', s); return s })
               return 0
             }
             initLevel()
@@ -320,6 +323,7 @@ export function PodBrothers() {
             setHighScore(finalScore)
             localStorage.setItem('podBrothersHighScore', finalScore.toString())
           }
+          emitGameEnded('pod_brothers', 'win', finalScore)
           return finalScore
         })
         setGameState('won')
@@ -480,6 +484,7 @@ export function PodBrothers() {
     setScore(0)
     setLives(3)
     setGameState('playing')
+    emitGameStarted('pod_brothers')
   }
 
   const togglePause = () => {

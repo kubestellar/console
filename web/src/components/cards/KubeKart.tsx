@@ -6,6 +6,7 @@ import { useCardExpanded } from './CardWrapper'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -274,6 +275,10 @@ export function KubeKart() {
           localStorage.setItem('kubeKartBestTime', finalTime.toString())
         }
         setGameState('finished')
+        setPosition(pos => {
+          emitGameEnded('kube_kart', pos === 1 ? 'win' : 'loss', Math.round(finalTime * 100))
+          return pos
+        })
         return
       }
     }
@@ -526,6 +531,7 @@ export function KubeKart() {
     setPosition(4)
     setCountdown(3)
     setGameState('countdown')
+    emitGameStarted('kube_kart')
   }
 
   const togglePause = () => {

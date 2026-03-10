@@ -5,6 +5,7 @@ import { Save, Download, Trash2, Grid, Sun, Moon } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted } from '../../lib/analytics'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -316,6 +317,7 @@ export function KubeCraft() {
     const newWorld = generateWorld()
     setWorld(newWorld)
     localStorage.removeItem('kubeCraftWorld')
+    emitGameStarted('kube_craft')
   }, [])
 
   // Clear world

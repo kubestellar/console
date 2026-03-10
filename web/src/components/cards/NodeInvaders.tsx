@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
 const CANVAS_WIDTH = 300
@@ -310,6 +311,7 @@ export function NodeInvaders(_props: CardComponentProps) {
             if (p.lives <= 1) {
               setGameOver(true)
               setIsPlaying(false)
+              emitGameEnded('node_invaders', 'loss', score)
               return { ...p, lives: 0 }
             }
             return { ...p, lives: p.lives - 1 }
@@ -339,6 +341,7 @@ export function NodeInvaders(_props: CardComponentProps) {
             setWon(true)
             setGameOver(true)
             setIsPlaying(false)
+            emitGameEnded('node_invaders', 'win', score)
           } else {
             initInvaders(newLevel)
             initShields()
@@ -352,6 +355,7 @@ export function NodeInvaders(_props: CardComponentProps) {
         if (inv.alive && inv.y + INVADER_HEIGHT > CANVAS_HEIGHT - 50) {
           setGameOver(true)
           setIsPlaying(false)
+          emitGameEnded('node_invaders', 'loss', score)
           break
         }
       }
@@ -398,6 +402,7 @@ export function NodeInvaders(_props: CardComponentProps) {
     setWon(false)
     setIsPlaying(true)
     setCanShoot(true)
+    emitGameStarted('node_invaders')
   }, [initInvaders, initShields])
 
   const scale = isExpanded ? 1.4 : 1

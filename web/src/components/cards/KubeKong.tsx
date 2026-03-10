@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
 const CANVAS_WIDTH = 280
@@ -474,6 +475,7 @@ export function KubeKong(_props: CardComponentProps) {
             if (l <= 1) {
               setGameOver(true)
               setIsPlaying(false)
+              setScore(s => { emitGameEnded('kube_kong', 'loss', s); return s })
               return 0
             }
             return l - 1
@@ -486,7 +488,11 @@ export function KubeKong(_props: CardComponentProps) {
           setWon(true)
           setGameOver(true)
           setIsPlaying(false)
-          setScore(s => s + 1000 + lives * 500)
+          setScore(s => {
+            const finalScore = s + 1000 + lives * 500
+            emitGameEnded('kube_kong', 'win', finalScore)
+            return finalScore
+          })
         }
 
         return { ...p, x: newX, y: newY, vy: newVy, onGround, climbing, facingRight }
@@ -588,6 +594,7 @@ export function KubeKong(_props: CardComponentProps) {
               if (l <= 1) {
                 setGameOver(true)
                 setIsPlaying(false)
+                setScore(s => { emitGameEnded('kube_kong', 'loss', s); return s })
                 return 0
               }
               return l - 1
@@ -665,6 +672,7 @@ export function KubeKong(_props: CardComponentProps) {
     setWon(false)
     setBossFrame(0)
     setIsPlaying(true)
+    emitGameStarted('kube_kong')
   }, [])
 
   const scale = isExpanded ? 1.5 : 1

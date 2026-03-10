@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { 
-  Box, Container, Database, Server, Cloud, Network, HardDrive, 
+import {
+  Box, Container, Database, Server, Cloud, Network, HardDrive,
   Cpu, Lock, Shield, Globe, GitBranch, Terminal,
   Play, Pause, RotateCcw, Trophy, Clock, Hash
 } from 'lucide-react'
@@ -8,6 +8,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Kubernetes/Cloud themed icons for matching
 const CARD_ICONS = [
@@ -100,6 +101,7 @@ export function MatchGame(_props: CardComponentProps) {
     setIsPlaying(true)
     setIsPaused(false)
     setGameWon(false)
+    emitGameStarted('match')
   }, [difficulty])
 
   // Timer
@@ -133,6 +135,8 @@ export function MatchGame(_props: CardComponentProps) {
         localStorage.setItem('matchGameHighScores', JSON.stringify(newHighScores))
       }
       
+      emitGameEnded('match', 'win', moves)
+
       // Trigger confetti
       triggerConfetti()
     }

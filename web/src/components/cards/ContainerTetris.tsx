@@ -5,6 +5,7 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Board dimensions
 const ROWS = 20
@@ -180,6 +181,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
       if (piece.y < 0) {
         setGameOver(true)
         setIsPlaying(false)
+        emitGameEnded('tetris', 'loss', score)
         return
       }
 
@@ -319,6 +321,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
     setGameOver(false)
     setIsPaused(false)
     setIsPlaying(true)
+    emitGameStarted('tetris')
   }, [])
 
   // Toggle pause

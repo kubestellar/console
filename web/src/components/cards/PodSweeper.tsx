@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -199,6 +200,7 @@ export function PodSweeper(_props: CardComponentProps) {
       newGrid = initializeGrid(config.rows, config.cols, config.mines, row, col)
       setGameStarted(true)
       setStartTime(Date.now())
+      emitGameStarted('pod_sweeper')
     } else {
       newGrid = cloneGrid(grid)
     }
@@ -216,6 +218,7 @@ export function PodSweeper(_props: CardComponentProps) {
       setGrid(newGrid)
       setGameOver(true)
       setWon(false)
+      emitGameEnded('pod_sweeper', 'loss', elapsed)
       return
     }
 
@@ -226,6 +229,7 @@ export function PodSweeper(_props: CardComponentProps) {
     if (checkWin(newGrid)) {
       setGameOver(true)
       setWon(true)
+      emitGameEnded('pod_sweeper', 'win', elapsed)
     }
   }, [grid, gameStarted, gameOver, config])
 

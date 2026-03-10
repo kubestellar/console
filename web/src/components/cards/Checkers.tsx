@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Board is 8x8, pieces only on dark squares
 const BOARD_SIZE = 8
@@ -447,6 +448,7 @@ export function Checkers(_props: CardComponentProps) {
 
     if (counts.pods === 0 || podMoves.length === 0) {
       setGameOver('nodes')
+      emitGameEnded('checkers', 'loss', moveCount)
       setHighScore(prev => {
         const newScore = { ...prev, losses: prev.losses + 1 }
         localStorage.setItem('checkers-score', JSON.stringify(newScore))
@@ -454,13 +456,14 @@ export function Checkers(_props: CardComponentProps) {
       })
     } else if (counts.nodes === 0 || nodeMoves.length === 0) {
       setGameOver('pods')
+      emitGameEnded('checkers', 'win', moveCount)
       setHighScore(prev => {
         const newScore = { ...prev, wins: prev.wins + 1 }
         localStorage.setItem('checkers-score', JSON.stringify(newScore))
         return newScore
       })
     }
-  }, [board, gameOver])
+  }, [board, gameOver, moveCount])
 
   // Save game state when it changes
   useEffect(() => {
@@ -667,6 +670,7 @@ export function Checkers(_props: CardComponentProps) {
     setMustContinueJump(null)
     setMoveCount(0)
     setIsThinking(false)
+    emitGameStarted('checkers')
   }, [])
 
   const isSmall = !isExpanded

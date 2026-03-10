@@ -4,6 +4,7 @@ import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
 const GRAVITY = 0.5
@@ -64,12 +65,14 @@ export function FlappyPod(_props: CardComponentProps) {
     setScore(0)
     setGameOver(false)
     setIsPlaying(true)
+    emitGameStarted('flappy_pod')
   }, [gameHeight])
 
   // End game
   const endGame = useCallback(() => {
     setGameOver(true)
     setIsPlaying(false)
+    emitGameEnded('flappy_pod', 'loss', scoreRef.current)
 
     if (scoreRef.current > highScore) {
       setHighScore(scoreRef.current)
