@@ -68,6 +68,17 @@ const CAPTURE_TAUNTS = [
   "Blimey! That'll teach ye to cross Captain Node!",
 ]
 
+// Pre-game taunts before the player starts
+const PRE_GAME_TAUNTS = [
+  "Arrr! Ye dare challenge Captain Node? Step right up!",
+  "Ahoy! Another scallywag approaches me checkerboard!",
+  "Yo ho ho! Fresh meat! Press that button if ye dare!",
+  "Shiver me timbers! Ye think ye can outwit a pirate?",
+  "Avast! Welcome aboard, ye bilge rat! Make yer move!",
+]
+
+const PRE_GAME_TAUNT_DELAY_MS = 2_000
+
 // Initialize board with starting positions
 function createInitialBoard(): Board {
   const board: Board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null))
@@ -510,6 +521,17 @@ export function Checkers(_props: CardComponentProps) {
     }
   }, [currentPlayer, gameOver, moveCount])
 
+  // Pre-game taunt after 2 seconds of being open
+  useEffect(() => {
+    if (moveCount > 0 || gameOver) return
+
+    const timer = setTimeout(() => {
+      setPirateTaunt(PRE_GAME_TAUNTS[Math.floor(Math.random() * PRE_GAME_TAUNTS.length)])
+    }, PRE_GAME_TAUNT_DELAY_MS)
+
+    return () => clearTimeout(timer)
+  }, [moveCount, gameOver])
+
   // AI move - runs when it's the AI's turn (1 second delay)
   useEffect(() => {
     // Only start AI if it's nodes turn and game is active
@@ -736,21 +758,8 @@ export function Checkers(_props: CardComponentProps) {
         )}
       </div>
 
-      {/* Pirate Taunt Speech Bubble */}
-      {pirateTaunt && (
-        <div className="flex items-start gap-2 mb-2 px-2 animate-fade-in">
-          <div className="text-2xl flex-shrink-0">🏴‍☠️</div>
-          <div className="relative bg-orange-500/20 border border-orange-400/50 rounded-lg px-3 py-2 flex-1">
-            <div className="absolute -left-2 top-3 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[8px] border-r-orange-400/50" />
-            <span className="text-orange-300 italic text-sm font-medium leading-tight block">
-              &quot;{pirateTaunt}&quot;
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Board */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center relative min-h-0">
         <div className="inline-block border border-border rounded overflow-hidden">
           {board.map((row, rowIdx) => (
             <div key={rowIdx} className="flex">
@@ -797,6 +806,20 @@ export function Checkers(_props: CardComponentProps) {
             </div>
           ))}
         </div>
+
+        {/* Pirate Taunt — absolute overlay, no layout shift */}
+        {pirateTaunt && (
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-1 animate-fade-in pointer-events-none">
+            <div className="flex items-start gap-2 px-2">
+              <div className="text-lg flex-shrink-0">🏴‍☠️</div>
+              <div className="bg-background/80 backdrop-blur-sm border border-orange-400/50 rounded-lg px-2 py-1.5 flex-1">
+                <span className="text-orange-300 italic text-xs font-medium leading-tight block">
+                  &quot;{pirateTaunt}&quot;
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Game over overlay */}

@@ -470,6 +470,16 @@ export function emitCardClusterFilterChanged(selectedCount: number, totalCount: 
   })
 }
 
+/** Fired when user navigates pages via pagination controls */
+export function emitCardPaginationUsed(page: number, totalPages: number, cardType: string) {
+  send('ksc_card_pagination_used', { page, total_pages: totalPages, card_type: cardType, page_path: window.location.pathname })
+}
+
+/** Fired when user clicks a list item row in a card */
+export function emitCardListItemClicked(cardType: string) {
+  send('ksc_card_list_item_clicked', { card_type: cardType, page_path: window.location.pathname })
+}
+
 // ── AI Missions ────────────────────────────────────────────────────
 
 export function emitMissionStarted(missionType: string, agentProvider: string) {

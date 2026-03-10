@@ -7,7 +7,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { CardControls as CardControlsUI, type SortDirection } from '../../components/ui/CardControls'
 import { ClusterStatusDot, getClusterState, type ClusterState } from '../../components/ui/ClusterStatusBadge'
-import { emitCardSearchUsed, emitCardClusterFilterChanged } from '../analytics'
+import { emitCardSearchUsed, emitCardClusterFilterChanged, emitCardListItemClicked, emitCardPaginationUsed } from '../analytics'
 import { useCardType } from '../../components/cards/CardWrapper'
 import type { ClusterWithHealth } from './cardHooks'
 
@@ -490,20 +490,26 @@ export function CardListItem({
   title,
   dataTour,
 }: CardListItemProps) {
+  const cardType = useCardType()
   const variantConfig = listItemVariants[variant]
   const bg = bgClass || variantConfig.bg
   const border = borderClass || variantConfig.border
 
+  const handleClick = onClick ? () => {
+    emitCardListItemClicked(cardType)
+    onClick()
+  } : undefined
+
   return (
     <div
       data-tour={dataTour}
-      className={`p-3 rounded-lg ${bg} border ${border} ${onClick ? 'cursor-pointer hover:opacity-80' : ''
+      className={`p-3 rounded-lg ${bg} border ${border} ${handleClick ? 'cursor-pointer hover:opacity-80' : ''
         } transition-all group`}
-      onClick={onClick}
-      {...(onClick ? {
+      onClick={handleClick}
+      {...(handleClick ? {
         role: 'button' as const,
         tabIndex: 0,
-        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick() } },
       } : {})}
       title={title}
     >
@@ -773,7 +779,14 @@ export function CardPaginationFooter({
   onPageChange,
   needsPagination,
 }: CardPaginationFooterProps) {
+  const cardType = useCardType()
+
   if (!needsPagination) return null
+
+  const handlePageChange = (page: number) => {
+    emitCardPaginationUsed(page, totalPages, cardType)
+    onPageChange(page)
+  }
 
   return (
     <div className="pt-2 mt-2 border-t border-border/50">
@@ -782,7 +795,7 @@ export function CardPaginationFooter({
         totalPages={totalPages}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
-        onPageChange={onPageChange}
+        onPageChange={handlePageChange}
       />
     </div>
   )
