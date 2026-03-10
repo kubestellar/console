@@ -225,16 +225,40 @@ else
 fi
 echo ""
 
-# Port cleanup
-PORTS_TO_CLEAN="8080 8585"
-if [ "$USE_DEV_SERVER" = true ]; then PORTS_TO_CLEAN="8080 5174 8585"; fi
+# Watchdog-aware port cleanup
+# The watchdog on port 8080 survives restarts so users never see "connection refused".
+# Backend runs on port 8081 when watchdog is active.
+WATCHDOG_PID_FILE="/tmp/.kc-watchdog.pid"
+WATCHDOG_RUNNING=false
+BACKEND_LISTEN_PORT=8081
+
+# Check if watchdog is already alive on port 8080
+if [ -f "$WATCHDOG_PID_FILE" ]; then
+    WD_PID=$(cat "$WATCHDOG_PID_FILE" 2>/dev/null)
+    if [ -n "$WD_PID" ] && kill -0 "$WD_PID" 2>/dev/null; then
+        echo -e "${GREEN}Watchdog (pid $WD_PID) is alive on port 8080, preserving it${NC}"
+        WATCHDOG_RUNNING=true
+    else
+        echo -e "${YELLOW}Stale watchdog PID file, will clean up${NC}"
+        rm -f "$WATCHDOG_PID_FILE"
+    fi
+fi
+
+# Clean ports — skip 8080 if watchdog is alive
+PORTS_TO_CLEAN="$BACKEND_LISTEN_PORT 8585"
+if [ "$WATCHDOG_RUNNING" = false ]; then
+    PORTS_TO_CLEAN="8080 $BACKEND_LISTEN_PORT 8585"
+fi
+if [ "$USE_DEV_SERVER" = true ]; then PORTS_TO_CLEAN="$PORTS_TO_CLEAN 5174"; fi
 for p in $PORTS_TO_CLEAN; do
     if lsof -Pi :$p -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${YELLOW}Port $p is in use, killing existing process...${NC}"
-        lsof -ti:$p | xargs kill -TERM 2>/dev/null || true
+        # Only kill LISTENING processes — not processes with outgoing connections
+        # (the watchdog has outgoing connections to the backend port)
+        lsof -ti:$p -sTCP:LISTEN | xargs kill -TERM 2>/dev/null || true
         sleep 2
         # Fall back to SIGKILL if process did not exit gracefully
-        lsof -ti:$p | xargs kill -9 2>/dev/null || true
+        lsof -ti:$p -sTCP:LISTEN | xargs kill -9 2>/dev/null || true
     fi
 done
 
@@ -247,6 +271,7 @@ cleanup() {
     kill $FRONTEND_PID 2>/dev/null || true
     kill $AGENT_LOOP_PID 2>/dev/null || true
     kill $AGENT_PID 2>/dev/null || true
+    kill $WATCHDOG_PID 2>/dev/null || true
     rm -f "$SHUTDOWN_FLAG"
     exit 0
 }
@@ -306,10 +331,18 @@ if [ "$USE_DEV_SERVER" = true ]; then
     if [ ! -d "web/node_modules" ]; then
         safe_npm_install web
     fi
-    echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
-    GOWORK=off go run ./cmd/console &
+    echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
+    BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
     BACKEND_PID=$!
     sleep 2
+
+    # Start watchdog if not already running
+    if [ "$WATCHDOG_RUNNING" = false ]; then
+        echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
+        GOWORK=off go run ./cmd/console --watchdog --backend-port "$BACKEND_LISTEN_PORT" &
+        WATCHDOG_PID=$!
+        sleep 1
+    fi
 
     echo -e "${GREEN}Starting Vite dev server...${NC}"
     (cd web && npm run dev -- --port 5174) &
@@ -319,7 +352,8 @@ if [ "$USE_DEV_SERVER" = true ]; then
     echo -e "${GREEN}=== Console is running in OAUTH + DEV mode ===${NC}"
     echo ""
     echo -e "  Frontend: ${CYAN}http://localhost:5174${NC}  (Vite HMR)"
-    echo -e "  Backend:  ${CYAN}http://localhost:8080${NC}"
+    echo -e "  Watchdog: ${CYAN}http://localhost:8080${NC}  (reverse proxy)"
+    echo -e "  Backend:  ${CYAN}http://localhost:$BACKEND_LISTEN_PORT${NC}"
     echo -e "  Agent:    ${CYAN}http://localhost:8585${NC}"
     echo -e "  Auth:     GitHub OAuth (real login)"
 else
@@ -331,18 +365,27 @@ else
     (cd web && npm run build)
     echo -e "${GREEN}Frontend built successfully${NC}"
 
-    # Start backend — serves both API and frontend static files from ./web/dist
-    echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
-    GOWORK=off go run ./cmd/console &
+    # Start backend on port 8081 — watchdog on 8080 proxies to it
+    echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
+    BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
     BACKEND_PID=$!
     sleep 2
+
+    # Start watchdog if not already running
+    if [ "$WATCHDOG_RUNNING" = false ]; then
+        echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
+        GOWORK=off go run ./cmd/console --watchdog --backend-port "$BACKEND_LISTEN_PORT" &
+        WATCHDOG_PID=$!
+        sleep 1
+    fi
 
     echo ""
     echo -e "${GREEN}=== Console is running in OAUTH mode ===${NC}"
     echo ""
-    echo -e "  Console: ${CYAN}http://localhost:8080${NC}"
-    echo -e "  Agent:   ${CYAN}http://localhost:8585${NC}"
-    echo -e "  Auth:    GitHub OAuth (real login)"
+    echo -e "  Console:  ${CYAN}http://localhost:8080${NC}  (via watchdog)"
+    echo -e "  Backend:  ${CYAN}http://localhost:$BACKEND_LISTEN_PORT${NC}"
+    echo -e "  Agent:    ${CYAN}http://localhost:8585${NC}"
+    echo -e "  Auth:     GitHub OAuth (real login)"
 fi
 echo ""
 echo "Press Ctrl+C to stop"

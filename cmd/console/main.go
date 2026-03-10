@@ -19,7 +19,25 @@ func main() {
 	devMode := flag.Bool("dev", false, "Run in development mode")
 	port := flag.Int("port", 0, "Server port (default: 8080)")
 	dbPath := flag.String("db", "", "Database path (default: ./data/console.db)")
+	watchdog := flag.Bool("watchdog", false, "Run as watchdog reverse proxy (serves fallback page when backend is down)")
+	backendPort := flag.Int("backend-port", watchdogDefaultBackendPort, "Backend port for watchdog to proxy to")
 	flag.Parse()
+
+	// Watchdog mode: lightweight reverse proxy, no DB/k8s/MCP initialization
+	if *watchdog {
+		listenPort := watchdogDefaultListenPort
+		if *port > 0 {
+			listenPort = *port
+		}
+		cfg := WatchdogConfig{
+			ListenPort:  listenPort,
+			BackendPort: *backendPort,
+		}
+		if err := runWatchdog(cfg); err != nil {
+			log.Fatalf("Watchdog error: %v", err)
+		}
+		return
+	}
 
 	// Load config from environment
 	cfg := api.LoadConfigFromEnv()

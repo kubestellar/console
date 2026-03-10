@@ -44,13 +44,13 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /health
+              path: {{ if .Values.watchdog.enabled }}/watchdog/health{{ else }}/health{{ end }}
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ if .Values.watchdog.enabled }}/watchdog/ready{{ else }}/health{{ end }}
               port: http
             initialDelaySeconds: 5
             periodSeconds: 5
@@ -59,6 +59,10 @@ spec:
           env:
             - name: PORT
               value: "8080"
+            {{- if .Values.watchdog.enabled }}
+            - name: BACKEND_PORT
+              value: "8081"
+            {{- end }}
             - name: DATABASE_PATH
               value: {{ .Values.database.sqlitePath | quote }}
             {{- if .Values.route.enabled }}

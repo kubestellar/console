@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -73,6 +74,8 @@ type Config struct {
 	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
 	// Sidebar configuration
 	EnabledDashboards string // Comma-separated list of dashboard IDs to show in sidebar (empty = all)
+	// Watchdog support: when set, the backend listens on this port instead of Port
+	BackendPort int
 }
 
 // Server represents the API server
@@ -117,7 +120,12 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Start a temporary loading page server immediately so the user
 	// sees a loading screen instead of "connection refused" during init.
-	addr := fmt.Sprintf(":%d", cfg.Port)
+	// When BackendPort is set (watchdog mode), listen on that port instead.
+	listenPort := cfg.Port
+	if cfg.BackendPort > 0 {
+		listenPort = cfg.BackendPort
+	}
+	addr := fmt.Sprintf(":%d", listenPort)
 	loadingSrv := startLoadingServer(addr)
 
 	// --- Heavy initialization (loading page is already being served) ---
@@ -847,7 +855,12 @@ func (s *Server) Start() error {
 		time.Sleep(serverStartupDelay)
 	}
 
-	addr := fmt.Sprintf(":%d", s.config.Port)
+	// When BackendPort is set (watchdog mode), listen on that port instead
+	listenPort := s.config.Port
+	if s.config.BackendPort > 0 {
+		listenPort = s.config.BackendPort
+	}
+	addr := fmt.Sprintf(":%d", listenPort)
 	log.Printf("Starting server on %s (dev=%v)", addr, s.config.DevMode)
 	return s.app.Listen(addr)
 }
@@ -894,6 +907,15 @@ func LoadConfigFromEnv() Config {
 	port := 8080
 	if p := os.Getenv("PORT"); p != "" {
 		fmt.Sscanf(p, "%d", &port)
+	}
+
+	var backendPort int
+	if p := os.Getenv("BACKEND_PORT"); p != "" {
+		if v, err := strconv.Atoi(p); err != nil {
+			log.Printf("WARNING: invalid BACKEND_PORT %q, ignoring: %v", p, err)
+		} else {
+			backendPort = v
+		}
 	}
 
 	dbPath := "./data/console.db"
@@ -945,6 +967,8 @@ func LoadConfigFromEnv() Config {
 		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
 		// Sidebar dashboard filter
 		EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
+		// Watchdog backend port override
+		BackendPort: backendPort,
 	}
 }
 

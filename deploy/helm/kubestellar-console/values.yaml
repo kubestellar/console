@@ -165,5 +165,9 @@ podDisruptionBudget:
   enabled: false
   minAvailable: 1
 
+# Watchdog reverse proxy — serves a branded "Reconnecting..." page when backend is down
+watchdog:
+  enabled: true
+
 # Additional environment variables
 extraEnv: []
