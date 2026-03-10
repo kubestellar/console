@@ -5,7 +5,7 @@
  * which has access to the user's kubeconfig.
  */
 
-import { getDemoMode } from '../hooks/useDemoMode'
+import { isNetlifyDeployment } from './demoMode'
 import {
   LOCAL_AGENT_WS_URL,
   WS_CONNECT_TIMEOUT_MS,
@@ -70,9 +70,9 @@ class KubectlProxy {
    * Ensure WebSocket is connected
    */
   private async ensureConnected(): Promise<void> {
-    // In demo mode, skip WebSocket connection to avoid console errors
-    if (getDemoMode()) {
-      throw new Error('Agent unavailable in demo mode')
+    // On Netlify there is no local agent — skip WebSocket entirely
+    if (isNetlifyDeployment) {
+      throw new Error('Agent unavailable on Netlify deployment')
     }
 
     if (this.ws?.readyState === WebSocket.OPEN) {
