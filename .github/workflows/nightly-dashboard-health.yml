@@ -1,0 +1,278 @@
+name: Nightly Dashboard Health
+
+# Runs every night at 4:30 UTC (11:30 PM EST).
+# Tests all 30+ dashboard routes in demo mode for:
+#   - Console errors / unhandled exceptions
+#   - Card rendering (not blank pages)
+#   - Demo mode indicators
+#
+# On failure, creates a GitHub issue with diagnostics and assigns to Copilot.
+
+on:
+  schedule:
+    - cron: '45 4 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_issue_creation:
+        description: 'Skip creating issues for failures'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CI: true
+  NODE_VERSION: '20'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: nightly-dashboard-health
+  cancel-in-progress: true
+
+jobs:
+  health-check:
+    name: Dashboard Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run dashboard health tests
+        id: tests
+        run: |
+          set +e
+          npx playwright test \
+            e2e/nightly/dashboard-health.spec.ts \
+            -c e2e/nightly/nightly.config.ts \
+            --reporter=list,json 2>&1 | tee /tmp/test-output.txt
+          TEST_EXIT=$?
+          echo "exit_code=$TEST_EXIT" >> "$GITHUB_OUTPUT"
+
+          # Extract the JSON report from test output
+          if grep -q '__NIGHTLY_REPORT_JSON__' /tmp/test-output.txt; then
+            sed -n '/__NIGHTLY_REPORT_JSON__/,/__NIGHTLY_REPORT_JSON_END__/p' /tmp/test-output.txt \
+              | grep -v '__NIGHTLY_REPORT_JSON' > /tmp/nightly-report.json
+            echo "has_report=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_report=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          exit $TEST_EXIT
+        env:
+          PLAYWRIGHT_BASE_URL: ''
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-dashboard-results
+          path: |
+            web/test-results/nightly-dashboard-results.json
+            web/nightly-report/
+          retention-days: 14
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-screenshots
+          path: web/test-results/nightly/
+          retention-days: 7
+
+      # ── Issue Creation ──────────────────────────────────────────────
+
+      - name: Create issue for failures
+        if: failure() && inputs.skip_issue_creation != true
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const sha = context.sha.substring(0, 7);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const now = new Date().toISOString().split('T')[0];
+
+            // Parse the JSON report if available
+            let report = null;
+            try {
+              const raw = fs.readFileSync('/tmp/nightly-report.json', 'utf8');
+              report = JSON.parse(raw);
+            } catch {
+              core.warning('Could not parse nightly report JSON');
+            }
+
+            // Build the issue body
+            let failedDashboards = [];
+            let warnedDashboards = [];
+            let details = '';
+
+            if (report) {
+              failedDashboards = (report.results || []).filter(r => r.status === 'fail');
+              warnedDashboards = (report.results || []).filter(r => r.status === 'warn');
+
+              details += `## Results\n\n`;
+              details += `| Dashboard | Status | Cards | Loaded | Demo | Errors | Details |\n`;
+              details += `|-----------|--------|-------|--------|------|--------|---------|\n`;
+
+              for (const r of (report.results || [])) {
+                const icon = r.status === 'pass' ? '✅' : r.status === 'warn' ? '⚠️' : '❌';
+                details += `| ${r.name} | ${icon} | ${r.cardCount} | ${r.contentLoadedCount} | ${r.demoBadgeCount} | ${r.consoleErrors.length + r.pageErrors.length} | ${r.details} |\n`;
+              }
+
+              if (failedDashboards.length > 0) {
+                details += `\n## Failed Dashboards\n\n`;
+                for (const r of failedDashboards) {
+                  details += `### ${r.name} (\`${r.path}\`)\n\n`;
+                  if (r.pageErrors.length > 0) {
+                    details += `**Unhandled Exceptions:**\n`;
+                    for (const e of r.pageErrors) {
+                      details += `- \`${e.substring(0, 200)}\`\n`;
+                    }
+                  }
+                  if (r.consoleErrors.length > 0) {
+                    details += `**Console Errors:**\n`;
+                    for (const e of r.consoleErrors.slice(0, 5)) {
+                      details += `- \`${e.substring(0, 200)}\`\n`;
+                    }
+                    if (r.consoleErrors.length > 5) {
+                      details += `- ... and ${r.consoleErrors.length - 5} more\n`;
+                    }
+                  }
+                  if (!r.hasContent) {
+                    details += `**Page appears blank** (no meaningful text content)\n`;
+                  }
+                  details += '\n';
+                }
+              }
+            } else {
+              details = 'Test output could not be parsed. See the workflow run for details.';
+            }
+
+            const failCount = failedDashboards.length;
+            const warnCount = warnedDashboards.length;
+            const total = report ? report.total : '?';
+
+            const title = `[Nightly Health] ${failCount} dashboard(s) failing (${now})`;
+
+            const body = [
+              `## Nightly Dashboard Health Check — ${now}`,
+              '',
+              `**Commit:** \`${sha}\``,
+              `**Run:** [View workflow](${runUrl})`,
+              `**Total:** ${total} dashboards | **Failed:** ${failCount} | **Warnings:** ${warnCount}`,
+              '',
+              details,
+              '',
+              '## Fix Guidance',
+              '',
+              '1. Check the failed dashboard routes locally: `npm run dev` → navigate to the failing path',
+              '2. Open browser DevTools console to see the error',
+              '3. Common fixes:',
+              '   - **Unhandled exceptions**: Check for undefined data in hooks (guard with `|| []`)',
+              '   - **Blank pages**: Check lazy loading / Suspense boundaries',
+              '   - **Console errors**: Check API call error handling',
+              '',
+              '## Reproduction',
+              '',
+              '```bash',
+              'cd web',
+              'npx playwright test e2e/nightly/dashboard-health.spec.ts -c e2e/nightly/nightly.config.ts --headed',
+              '```',
+            ].join('\n');
+
+            // Check for duplicate open issues
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'auto-qa,nightly-health',
+              per_page: 10,
+            });
+
+            // Close stale nightly health issues (older than 3 days)
+            const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+            for (const existing of openIssues) {
+              if (new Date(existing.created_at) < threeDaysAgo) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                  state_reason: 'not_planned',
+                });
+                core.info(`Closed stale issue #${existing.number}`);
+              }
+            }
+
+            // Skip if a recent issue already exists for the same failure pattern
+            const recentDuplicate = openIssues.find(i => {
+              const created = new Date(i.created_at);
+              return created > threeDaysAgo && i.title.includes('dashboard(s) failing');
+            });
+
+            if (recentDuplicate) {
+              // Update the existing issue instead of creating a new one
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: recentDuplicate.number,
+                body: `## Updated: ${now}\n\n${details}\n\n**Run:** [View workflow](${runUrl})`,
+              });
+              core.info(`Updated existing issue #${recentDuplicate.number} with latest results`);
+              return;
+            }
+
+            // Create new issue
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['bug', 'auto-qa', 'nightly-health', 'ai-fix-requested', 'help wanted', 'triage/accepted'],
+            });
+
+            core.info(`Created issue #${issue.number}: ${title}`);
+
+            // Assign Copilot coding agent
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            try {
+              await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: ['copilot-swe-agent[bot]'],
+                agent_assignment: {
+                  target_repo: repo,
+                  base_branch: 'main',
+                },
+              });
+              core.info(`Assigned Copilot to #${issue.number}`);
+            } catch (e) {
+              const hint = e.status === 401
+                ? ' — CONSOLE_AUTO PAT may be expired (check repo secrets)'
+                : e.status === 403
+                ? ' — token may lack repo scope or Copilot agent is not enabled'
+                : '';
+              core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}${hint}`);
+            }
