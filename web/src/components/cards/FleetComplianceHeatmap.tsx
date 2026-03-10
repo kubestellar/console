@@ -165,6 +165,8 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       let kyvernoCell: HeatmapCell
       if (!ks || !ks.installed) {
         kyvernoCell = { status: 'not-installed', label: 'N/A', tooltip: 'Kyverno not installed' }
+      } else if (ks.totalPolicies === 0) {
+        kyvernoCell = { status: 'warning', label: 'No policies', tooltip: 'Kyverno installed but no policies configured' }
       } else {
         // Use totalViolations from cluster status — individual policy violations aren't populated from reports
         const violations = ks.totalViolations ?? 0
@@ -182,6 +184,8 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       let trivyCell: HeatmapCell
       if (!ts || !ts.installed) {
         trivyCell = { status: 'not-installed', label: 'N/A', tooltip: 'Trivy not installed' }
+      } else if (ts.totalReports === 0) {
+        trivyCell = { status: 'warning', label: 'No reports', tooltip: 'Trivy installed but no vulnerability reports generated' }
       } else {
         const critHigh = ts.vulnerabilities.critical + ts.vulnerabilities.high
         const status: CellStatus = critHigh >= VULN_CRITICAL_THRESHOLD ? 'critical'
@@ -198,6 +202,8 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       let kubescapeCell: HeatmapCell
       if (!kss || !kss.installed) {
         kubescapeCell = { status: 'not-installed', label: 'N/A', tooltip: 'Kubescape not installed' }
+      } else if (kss.totalControls === 0) {
+        kubescapeCell = { status: 'warning', label: 'No scans', tooltip: 'Kubescape installed but no scan data generated' }
       } else {
         const score = kss.overallScore
         const status: CellStatus = score >= POSTURE_GOOD_THRESHOLD ? 'good'

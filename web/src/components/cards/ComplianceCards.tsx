@@ -24,6 +24,60 @@ interface CardConfig {
 /** Maximum number of violation entries to display in PolicyViolations card */
 const MAX_VIOLATION_ENTRIES = 10
 
+/** Troubleshoot mission definitions for tools that are installed but not producing data */
+const TROUBLESHOOT_MISSIONS: Record<string, { title: string; description: string; prompt: string }> = {
+  trivy: {
+    title: 'Troubleshoot Trivy Operator',
+    description: 'Trivy is installed but not producing vulnerability reports',
+    prompt: `Trivy Operator is installed on my cluster but no VulnerabilityReports are being generated.
+
+Please help me diagnose and fix the issue:
+1. Check the trivy-operator pod status: kubectl get pods -n trivy-system -n trivy
+2. Check operator logs for errors: kubectl logs -n trivy-system -l app.kubernetes.io/name=trivy-operator --tail=50
+3. Check if any VulnerabilityReports exist: kubectl get vulnerabilityreports -A
+4. Check if the operator's scan jobs are running or failing: kubectl get jobs -n trivy-system -n trivy
+5. If pods are crashing, check resource limits and node capacity
+6. If scans are stuck, try restarting the operator: kubectl rollout restart deployment -n trivy-system trivy-operator
+
+Please diagnose step by step and fix any issues found.`,
+  },
+  kubescape: {
+    title: 'Troubleshoot Kubescape Operator',
+    description: 'Kubescape is installed but not producing scan results',
+    prompt: `Kubescape Operator is installed on my cluster but no scan data is being generated (0 controls scanned).
+
+Please help me diagnose and fix the issue:
+1. Check all pods in the kubescape namespace: kubectl get pods -n kubescape
+2. Look for crashing pods (especially kubevuln, operator, storage): kubectl get pods -n kubescape | grep -v Running
+3. Check logs of failing pods: kubectl logs -n kubescape <pod-name> --tail=50
+4. Verify the storage pod is running (required for scan data): kubectl get pods -n kubescape -l app=storage
+5. Check if workloadconfigurationscans exist: kubectl get workloadconfigurationscans -A
+6. If kubevuln or other pods are OOMKilled, increase resource limits
+7. If storage pod is failing, check PVC status: kubectl get pvc -n kubescape
+8. Try triggering a fresh scan: kubectl annotate ns default kubescape.io/scan=true --overwrite
+
+Please diagnose step by step and fix any issues found.`,
+  },
+  kyverno: {
+    title: 'Troubleshoot Kyverno',
+    description: 'Kyverno is installed but no policies are configured',
+    prompt: `Kyverno is installed on my cluster but no policies are configured or producing reports.
+
+Please help me diagnose and fix the issue:
+1. Check Kyverno pod status: kubectl get pods -n kyverno
+2. Check for any existing policies: kubectl get clusterpolicies,policies -A
+3. Check Kyverno controller logs: kubectl logs -n kyverno -l app.kubernetes.io/component=admission-controller --tail=50
+4. If no policies exist, install a basic audit policy set:
+   - disallow-privileged-containers (audit mode)
+   - require-labels (audit mode)
+   - restrict-image-registries (audit mode)
+5. Check PolicyReports are being generated: kubectl get policyreports -A
+6. If pods are crashing, check resource limits and webhook configuration
+
+Please diagnose step by step and fix any issues found.`,
+  },
+}
+
 // ── Falco (still static — no hook yet) ──────────────────────────────────
 
 export function FalcoAlerts({ config: _config }: CardConfig) {
@@ -101,6 +155,13 @@ export function TrivyScan({ config: _config }: CardConfig) {
 
   useCardLoadingState({ isLoading, hasAnyData: installed || isDemoData, isDemoData })
 
+  // Detect degraded state: installed but no reports generated
+  const isDegraded = useMemo(() => {
+    if (!installed || isLoading) return false
+    const installedClusters = Object.values(statuses).filter(s => s.installed)
+    return installedClusters.length > 0 && installedClusters.every(s => s.totalReports === 0)
+  }, [installed, isLoading, statuses])
+
   const handleInstall = () => {
     startMission({
       title: 'Install Trivy Operator',
@@ -120,6 +181,17 @@ Please proceed step by step.`,
     })
   }
 
+  const handleTroubleshoot = () => {
+    const mission = TROUBLESHOOT_MISSIONS.trivy
+    startMission({
+      title: mission.title,
+      description: mission.description,
+      type: 'troubleshoot',
+      initialPrompt: mission.prompt,
+      context: {},
+    })
+  }
+
   return (
     <div className="space-y-3">
       {/* Install prompt when not detected */}
@@ -132,6 +204,22 @@ Please proceed step by step.`,
               Install Trivy Operator for vulnerability scanning.{' '}
               <button onClick={handleInstall} className="text-cyan-400 hover:underline">
                 Install with an AI Mission →
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Degraded state: installed but no scan data */}
+      {isDegraded && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+          <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-400 font-medium">No Scan Data</p>
+            <p className="text-muted-foreground">
+              Trivy is installed but no vulnerability reports found.{' '}
+              <button onClick={handleTroubleshoot} className="text-amber-400 hover:underline">
+                Fix with an AI Mission →
               </button>
             </p>
           </div>
@@ -197,6 +285,13 @@ export function KubescapeScan({ config: _config }: CardConfig) {
 
   useCardLoadingState({ isLoading, hasAnyData: installed || isDemoData, isDemoData })
 
+  // Detect degraded state: installed but no scan data produced
+  const isDegraded = useMemo(() => {
+    if (!installed || isLoading) return false
+    const installedClusters = Object.values(statuses).filter(s => s.installed)
+    return installedClusters.length > 0 && installedClusters.every(s => s.totalControls === 0)
+  }, [installed, isLoading, statuses])
+
   const handleInstall = () => {
     startMission({
       title: 'Install Kubescape',
@@ -216,6 +311,17 @@ Please proceed step by step.`,
     })
   }
 
+  const handleTroubleshoot = () => {
+    const mission = TROUBLESHOOT_MISSIONS.kubescape
+    startMission({
+      title: mission.title,
+      description: mission.description,
+      type: 'troubleshoot',
+      initialPrompt: mission.prompt,
+      context: {},
+    })
+  }
+
   const score = filtered.overallScore
 
   return (
@@ -230,6 +336,22 @@ Please proceed step by step.`,
               Install Kubescape for security posture management.{' '}
               <button onClick={handleInstall} className="text-green-400 hover:underline">
                 Install with an AI Mission →
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Degraded state: installed but no scan data */}
+      {isDegraded && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+          <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-400 font-medium">No Scan Data</p>
+            <p className="text-muted-foreground">
+              Kubescape is installed but no scan results detected.{' '}
+              <button onClick={handleTroubleshoot} className="text-amber-400 hover:underline">
+                Fix with an AI Mission →
               </button>
             </p>
           </div>
@@ -277,7 +399,8 @@ Please proceed step by step.`,
 // ── Policy Violations Aggregated ────────────────────────────────────────
 
 export function PolicyViolations({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData, installed: kyvernoInstalled } = useKyverno()
+  const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
 
   // Aggregate violations from Kyverno reports (policy.violations is always 0
@@ -326,15 +449,50 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     return result.sort((a, b) => b.count - a.count).slice(0, MAX_VIOLATION_ENTRIES)
   }, [kyvernoStatuses, selectedClusters])
 
+  // Detect degraded state: installed but no policies configured
+  const isDegraded = useMemo(() => {
+    if (!kyvernoInstalled || kyvernoLoading) return false
+    const installedClusters = Object.values(kyvernoStatuses).filter(s => s.installed)
+    return installedClusters.length > 0 && installedClusters.every(s => s.totalPolicies === 0)
+  }, [kyvernoInstalled, kyvernoLoading, kyvernoStatuses])
+
+  const handleTroubleshoot = () => {
+    const mission = TROUBLESHOOT_MISSIONS.kyverno
+    startMission({
+      title: mission.title,
+      description: mission.description,
+      type: 'troubleshoot',
+      initialPrompt: mission.prompt,
+      context: {},
+    })
+  }
+
   const hasData = violations.length > 0 || kyvernoDemoData
   useCardLoadingState({ isLoading: kyvernoLoading, hasAnyData: hasData, isDemoData: kyvernoDemoData })
 
   if (violations.length === 0 && !kyvernoDemoData) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
-        <Shield className="w-8 h-8 mb-2 opacity-50" />
-        <p className="text-sm">No policy violations detected</p>
-        <p className="text-xs mt-1">All resources comply with active policies</p>
+      <div className="space-y-3">
+        {/* Degraded state: installed but no policies */}
+        {isDegraded && (
+          <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-amber-400 font-medium">No Policies Configured</p>
+              <p className="text-muted-foreground">
+                Kyverno is installed but no policies are active.{' '}
+                <button onClick={handleTroubleshoot} className="text-amber-400 hover:underline">
+                  Fix with an AI Mission →
+                </button>
+              </p>
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+          <Shield className="w-8 h-8 mb-2 opacity-50" />
+          <p className="text-sm">No policy violations detected</p>
+          <p className="text-xs mt-1">All resources comply with active policies</p>
+        </div>
       </div>
     )
   }
