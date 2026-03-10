@@ -213,7 +213,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
               {job.pr && <span>PR: #{job.pr}</span>}
               <span>Duration: {job.duration}</span>
               {job.url && (
-                <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline flex items-center gap-1">
+                <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline flex items-center gap-1 min-h-11 min-w-11">
                   Logs <ExternalLink className="w-3 h-3" />
                 </a>
               )}
