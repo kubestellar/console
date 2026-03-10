@@ -67,7 +67,7 @@ vi.mock('../../../lib/constants', () => ({
 // Imports under test (after mocks)
 // ---------------------------------------------------------------------------
 
-import { useConfigMaps, useSecrets } from '../config'
+import { useConfigMaps, useSecrets, useServiceAccounts } from '../config'
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -143,7 +143,7 @@ describe('useConfigMaps', () => {
 
   it('re-fetches when demo mode changes', async () => {
     mockFetchSSE.mockResolvedValue([])
-    const { rerender } = renderHook(
+    const { result, rerender } = renderHook(
       ({ demoMode }) => {
         mockUseDemoMode.mockReturnValue({ isDemoMode: demoMode })
         return useConfigMaps()
@@ -151,12 +151,17 @@ describe('useConfigMaps', () => {
       { initialProps: { demoMode: false } }
     )
 
-    // Trigger demo mode change
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const callsBefore = mockFetchSSE.mock.calls.length
+
+    // Trigger demo mode change — hook registers an effect that calls refetch()
     mockIsDemoMode.mockReturnValue(true)
     rerender({ demoMode: true })
 
-    // In demo mode refetch uses demo data — no error expected
-    expect(mockFetchSSE).toBeDefined()
+    // In demo mode, refetch short-circuits before calling SSE, so configmaps should be demo data
+    await waitFor(() => expect(result.current.configmaps.length).toBeGreaterThan(0))
+    // Demo path bypasses SSE entirely — call count stays the same
+    expect(mockFetchSSE.mock.calls.length).toBe(callsBefore)
   })
 
   it('falls back to demo config maps with error: null on SSE and REST failure', async () => {
@@ -231,7 +236,7 @@ describe('useSecrets', () => {
 
   it('re-fetches when demo mode changes', async () => {
     mockFetchSSE.mockResolvedValue([])
-    const { rerender } = renderHook(
+    const { result, rerender } = renderHook(
       ({ demoMode }) => {
         mockUseDemoMode.mockReturnValue({ isDemoMode: demoMode })
         return useSecrets()
@@ -239,10 +244,15 @@ describe('useSecrets', () => {
       { initialProps: { demoMode: false } }
     )
 
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Trigger demo mode change — hook should re-fetch and return demo secrets
     mockIsDemoMode.mockReturnValue(true)
     rerender({ demoMode: true })
 
-    expect(mockFetchSSE).toBeDefined()
+    // In demo mode the hook short-circuits to demo data
+    await waitFor(() => expect(result.current.secrets.length).toBeGreaterThan(0))
+    expect(result.current.error).toBeNull()
   })
 
   it('falls back to demo secrets with error: null on SSE and REST failure', async () => {
@@ -264,6 +274,78 @@ describe('useSecrets', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.secrets.length).toBeGreaterThan(0)
+    expect(result.current.error).toBeNull()
+  })
+})
+
+// ===========================================================================
+// useServiceAccounts
+// ===========================================================================
+
+describe('useServiceAccounts', () => {
+  it('returns empty array with loading state on mount', () => {
+    mockApiGet.mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(() => useServiceAccounts())
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.serviceAccounts).toEqual([])
+  })
+
+  it('returns service accounts after REST fetch resolves', async () => {
+    const fakeSAs = [{ name: 'default', namespace: 'default', cluster: 'c1', secrets: ['default-token'], age: '30d' }]
+    mockApiGet.mockResolvedValue({ data: { serviceAccounts: fakeSAs } })
+    // SSE fails to force the REST path
+    mockFetchSSE.mockRejectedValue(new Error('no SSE'))
+
+    const { result } = renderHook(() => useServiceAccounts())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts).toEqual(fakeSAs)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('forwards cluster and namespace when provided', async () => {
+    mockApiGet.mockResolvedValue({ data: { serviceAccounts: [] } })
+    mockFetchSSE.mockRejectedValue(new Error('no SSE'))
+
+    renderHook(() => useServiceAccounts('my-cluster', 'my-ns'))
+
+    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
+    const url: string = mockApiGet.mock.calls[0][0]
+    expect(url).toContain('cluster=my-cluster')
+    expect(url).toContain('namespace=my-ns')
+  })
+
+  it('refetch() triggers a new fetch', async () => {
+    mockApiGet.mockResolvedValue({ data: { serviceAccounts: [] } })
+    const { result } = renderHook(() => useServiceAccounts())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const callsBefore = mockApiGet.mock.calls.length
+
+    await act(async () => { result.current.refetch() })
+
+    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+  })
+
+  it('falls back to demo service accounts with error: null on failure', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE error'))
+    mockApiGet.mockRejectedValue(new Error('REST error'))
+
+    const { result } = renderHook(() => useServiceAccounts())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts.length).toBeGreaterThan(0)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('returns demo service accounts when demo mode is active', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    const { result } = renderHook(() => useServiceAccounts())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts.length).toBeGreaterThan(0)
     expect(result.current.error).toBeNull()
   })
 })

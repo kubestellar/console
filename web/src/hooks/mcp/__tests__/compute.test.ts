@@ -89,6 +89,7 @@ vi.mock('../../../lib/constants', () => ({
 import {
   useNodes,
   useGPUNodes,
+  useNVIDIAOperators,
   gpuNodeCache,
   gpuNodeSubscribers,
   updateGPUNodeCache,
@@ -309,8 +310,8 @@ describe('useGPUNodes', () => {
     expect(result.current.nodes.find(n => n.name === 'gpu-b')).toBeUndefined()
   })
 
-  it('preserves cached GPU data on refresh failure', async () => {
-    // Pre-load cache with a known node
+  it('preserves cached GPU data on refresh failure (hook reflects cache)', async () => {
+    // Pre-load the shared cache with a known node
     const cachedNode = {
       name: 'cached-gpu', cluster: 'c1',
       gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 6, acceleratorType: 'GPU' as const,
@@ -326,11 +327,21 @@ describe('useGPUNodes', () => {
     })
     notifyGPUNodeSubscribers()
 
-    // Subsequent fetch fails — cache should be preserved
+    // Next fetch will fail — cache data should be preserved
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
 
-    // The cache protection prevents nodes from being cleared on error
+    const { result } = renderHook(() => useGPUNodes())
+
+    // Hook should immediately reflect the pre-loaded cached node
+    expect(result.current.nodes.find(n => n.name === 'cached-gpu')).toBeDefined()
+    // Cache protection ensures the node count never drops to zero on error
     expect(gpuNodeCache.nodes.length).toBeGreaterThan(0)
+
+    // After the failed fetch completes, loading is false and error remains null
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toBeNull()
+    // Cached node is still present — not wiped by the failed refresh
+    expect(result.current.nodes.find(n => n.name === 'cached-gpu')).toBeDefined()
   })
 
   it('uses demo GPU nodes when demo mode is enabled and no cached data exists', async () => {
@@ -345,5 +356,74 @@ describe('useGPUNodes', () => {
     await waitFor(() => !result.current.isLoading, { timeout: 3000 })
     // Nodes may be demo data or whatever was cached — just verify no crash
     expect(Array.isArray(result.current.nodes)).toBe(true)
+  })
+})
+
+// ===========================================================================
+// useNVIDIAOperators
+// ===========================================================================
+
+describe('useNVIDIAOperators', () => {
+  it('returns empty array with loading state on mount', () => {
+    mockFetchSSE.mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(() => useNVIDIAOperators())
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.operators).toEqual([])
+  })
+
+  it('returns operators after SSE fetch resolves', async () => {
+    const fakeOps = [{ cluster: 'c1', installed: true, version: '23.9.0', components: [] }]
+    mockFetchSSE.mockResolvedValue(fakeOps)
+
+    const { result } = renderHook(() => useNVIDIAOperators())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.operators).toEqual(fakeOps)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('falls back to REST when SSE fails', async () => {
+    const fakeOps = [{ cluster: 'c1', installed: true, version: '23.9.0', components: [] }]
+    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
+    mockApiGet.mockResolvedValue({ data: { operators: fakeOps } })
+
+    const { result } = renderHook(() => useNVIDIAOperators())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.operators).toEqual(fakeOps)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('forwards cluster when provided via SSE params', async () => {
+    mockFetchSSE.mockResolvedValue([])
+
+    renderHook(() => useNVIDIAOperators('my-cluster'))
+
+    await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
+    const callArgs = mockFetchSSE.mock.calls[0][0] as { params: Record<string, string> }
+    expect(callArgs.params?.cluster).toBe('my-cluster')
+  })
+
+  it('refetch() triggers a new fetch', async () => {
+    mockFetchSSE.mockResolvedValue([])
+    const { result } = renderHook(() => useNVIDIAOperators())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const callsBefore = mockFetchSSE.mock.calls.length
+
+    await act(async () => { result.current.refetch() })
+
+    await waitFor(() => expect(mockFetchSSE.mock.calls.length).toBeGreaterThan(callsBefore))
+  })
+
+  it('returns empty list with error: null when both SSE and REST fail', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
+    mockApiGet.mockRejectedValue(new Error('REST failed'))
+
+    const { result } = renderHook(() => useNVIDIAOperators())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.operators).toEqual([])
+    expect(result.current.error).toBeNull()
   })
 })
