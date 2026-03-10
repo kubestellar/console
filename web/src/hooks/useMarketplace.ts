@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
-import { emitMarketplaceInstall, emitMarketplaceRemove } from '../lib/analytics'
+import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
@@ -186,10 +186,20 @@ export function useMarketplace() {
   }, [installedItems])
 
   const installItem = useCallback(async (item: MarketplaceItem): Promise<InstallResult> => {
-    const response = await fetch(item.downloadUrl, {
-      signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
-    })
-    if (!response.ok) throw new Error(`Download failed: ${response.status}`)
+    let response: Response
+    try {
+      response = await fetch(item.downloadUrl, {
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'network error'
+      emitMarketplaceInstallFailed(item.type, item.name, msg)
+      throw e
+    }
+    if (!response.ok) {
+      emitMarketplaceInstallFailed(item.type, item.name, `HTTP ${response.status}`)
+      throw new Error(`Download failed: ${response.status}`)
+    }
     const json = await response.json()
 
     if (item.type === 'card-preset') {

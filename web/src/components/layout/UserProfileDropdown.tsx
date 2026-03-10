@@ -6,7 +6,7 @@ import { getContributorLevel } from '../../types/rewards'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
-import { emitLinkedInShare } from '../../lib/analytics'
+import { emitLinkedInShare, emitLanguageChanged } from '../../lib/analytics'
 import { checkOAuthConfigured } from '../../lib/api'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
@@ -49,6 +49,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
 
   const handleLanguageChange = (langCode: string) => {
     i18n.changeLanguage(langCode)
+    emitLanguageChanged(langCode)
     setShowLanguageSubmenu(false)
   }
 

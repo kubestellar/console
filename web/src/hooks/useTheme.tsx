@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react'
 import { Theme, themes, getAllThemes, getThemeById, getDefaultTheme } from '../lib/themes'
+import { emitThemeChanged } from '../lib/analytics'
 
 // Legacy type for backwards compatibility
 export type ThemeMode = 'dark' | 'light' | 'system'
@@ -239,6 +240,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const newTheme = getThemeById(id)
     if (newTheme || id === 'system') {
       setThemeId(id)
+      emitThemeChanged(id, 'settings')
     }
   }, [setThemeId])
 
@@ -246,16 +248,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Cycle through: current dark theme -> light -> system -> back to dark theme
     const currentTheme = getThemeById(themeId === 'system' ? (systemPrefersDark ? 'kubestellar' : 'kubestellar-light') : themeId)
 
+    let nextId: string
     if (themeId === 'system') {
       // From system, go to the user's last selected dark theme
-      setThemeId(lastDarkTheme)
+      nextId = lastDarkTheme
     } else if (currentTheme?.dark) {
       // From any dark theme, go to light
-      setThemeId('kubestellar-light')
+      nextId = 'kubestellar-light'
     } else {
       // From light theme, go to system
-      setThemeId('system')
+      nextId = 'system'
     }
+    setThemeId(nextId)
+    emitThemeChanged(nextId, 'toggle')
   }, [themeId, lastDarkTheme, systemPrefersDark, setThemeId])
 
   const value: ThemeContextValue = {

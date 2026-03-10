@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Cpu } from 'lucide-react'
 import { AIMode } from '../../../hooks/useAIMode'
+import { emitAIModeChanged } from '../../../lib/analytics'
 
 interface AISettingsSectionProps {
   mode: AIMode
@@ -32,7 +33,9 @@ export function AISettingsSection({ mode, setMode, description }: AISettingsSect
             value={mode === 'low' ? 0 : mode === 'medium' ? 1 : 2}
             onChange={(e) => {
               const val = parseInt(e.target.value)
-              setMode(val === 0 ? 'low' : val === 1 ? 'medium' : 'high')
+              const newMode = val === 0 ? 'low' : val === 1 ? 'medium' : 'high'
+              setMode(newMode)
+              emitAIModeChanged(newMode)
             }}
             aria-label="AI usage mode"
             aria-valuetext={`${mode} AI mode`}
@@ -52,7 +55,7 @@ export function AISettingsSection({ mode, setMode, description }: AISettingsSect
           {(['low', 'medium', 'high'] as AIMode[]).map((m) => (
             <button
               key={m}
-              onClick={() => setMode(m)}
+              onClick={() => { setMode(m); emitAIModeChanged(m) }}
               className={`p-3 rounded-lg border transition-all ${
                 mode === m
                   ? 'border-purple-500 bg-purple-500/10'

@@ -589,6 +589,47 @@ export function emitMarketplaceRemove(itemType: string) {
   send('ksc_marketplace_remove', { item_type: itemType })
 }
 
+/** Fired when a marketplace install attempt fails */
+export function emitMarketplaceInstallFailed(itemType: string, itemName: string, error: string) {
+  send('ksc_marketplace_install_failed', { item_type: itemType, item_name: itemName, error_detail: error.slice(0, 100) })
+}
+
+// ── Theme ─────────────────────────────────────────────────────────
+
+/** Fired when user changes theme via settings dropdown or navbar toggle */
+export function emitThemeChanged(themeId: string, source: string) {
+  send('ksc_theme_changed', { theme_id: themeId, source })
+}
+
+// ── Language ──────────────────────────────────────────────────────
+
+/** Fired when user changes UI language */
+export function emitLanguageChanged(langCode: string) {
+  send('ksc_language_changed', { language: langCode })
+}
+
+// ── AI Settings ───────────────────────────────────────────────────
+
+/** Fired when user changes AI mode (low/medium/high) */
+export function emitAIModeChanged(mode: string) {
+  send('ksc_ai_mode_changed', { mode })
+}
+
+/** Fired when user toggles AI predictions on/off */
+export function emitAIPredictionsToggled(enabled: boolean) {
+  send('ksc_ai_predictions_toggled', { enabled: String(enabled) })
+}
+
+/** Fired when user changes prediction confidence threshold */
+export function emitConfidenceThresholdChanged(value: number) {
+  send('ksc_confidence_threshold_changed', { threshold: value })
+}
+
+/** Fired when user toggles consensus (multi-provider) mode */
+export function emitConsensusModeToggled(enabled: boolean) {
+  send('ksc_consensus_mode_toggled', { enabled: String(enabled) })
+}
+
 // ── GitHub Token ───────────────────────────────────────────────────
 
 export function emitGitHubTokenConfigured() {

@@ -6,6 +6,7 @@ import { usePredictionFeedback } from '../../../hooks/usePredictionFeedback'
 import { CollapsibleSection } from '../../ui/CollapsibleSection'
 import { Button } from '../../ui/Button'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { emitAIPredictionsToggled, emitConfidenceThresholdChanged, emitConsensusModeToggled } from '../../../lib/analytics'
 
 interface PredictionSettingsSectionProps {
   settings: PredictionSettings
@@ -35,12 +36,16 @@ export function PredictionSettingsSection({
   }
 
   const handleToggleAI = () => {
-    updateSettings({ aiEnabled: !settings.aiEnabled })
+    const newValue = !settings.aiEnabled
+    updateSettings({ aiEnabled: newValue })
+    emitAIPredictionsToggled(newValue)
     handleSave()
   }
 
   const handleToggleConsensus = () => {
-    updateSettings({ consensusMode: !settings.consensusMode })
+    const newValue = !settings.consensusMode
+    updateSettings({ consensusMode: newValue })
+    emitConsensusModeToggled(newValue)
     handleSave()
   }
 
@@ -49,7 +54,9 @@ export function PredictionSettingsSection({
   }
 
   const handleConfidenceChange = (value: number) => {
-    updateSettings({ minConfidence: Math.min(Math.max(value, 50), 90) })
+    const clamped = Math.min(Math.max(value, 50), 90)
+    updateSettings({ minConfidence: clamped })
+    emitConfidenceThresholdChanged(clamped)
   }
 
   const handleThresholdChange = (key: keyof PredictionSettings['thresholds'], value: number) => {
