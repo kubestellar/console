@@ -689,6 +689,33 @@ export function emitAgentDisconnected() {
   send('ksc_agent_disconnected')
 }
 
+/**
+ * Emitted when cluster inventory changes. Sends only aggregate counts —
+ * NEVER cluster names, IPs, servers, or any identifiable information.
+ */
+export function emitClusterInventory(counts: {
+  total: number
+  healthy: number
+  unhealthy: number
+  unreachable: number
+  distributions: Record<string, number>
+}) {
+  // Flatten distribution counts into safe GA4 params (e.g., dist_eks: 2)
+  const distParams: Record<string, string | number> = {}
+  for (const [dist, count] of Object.entries(counts.distributions)) {
+    distParams[`dist_${dist}`] = count
+  }
+  send('ksc_cluster_inventory', {
+    cluster_count: counts.total,
+    healthy_count: counts.healthy,
+    unhealthy_count: counts.unhealthy,
+    unreachable_count: counts.unreachable,
+    ...distParams,
+  })
+  // Set as user property so GA4 can compute averages across users
+  userProperties.cluster_count = String(counts.total)
+}
+
 // ── Agent Provider Detection ────────────────────────────────────
 // Emitted once per agent connection to track which coding agent CLIs
 // and API keys are configured on the user's machine.

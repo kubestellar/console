@@ -13,6 +13,8 @@ import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, isDemoModeForced, hasRealToken } from '../../hooks/useDemoMode'
 import { setDemoMode } from '../../lib/demoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useClusters } from '../../hooks/mcp/clusters'
+import { emitClusterInventory } from '../../lib/analytics'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
@@ -91,6 +93,7 @@ export function Layout({ children }: LayoutProps) {
   const { isSidebarOpen: isMissionSidebarOpen, isSidebarMinimized: isMissionSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
+  const { deduplicatedClusters } = useClusters()
   const { progress: updateProgress, dismiss: dismissUpdateProgress } = useUpdateProgress()
   const { isOnline, wasOffline } = useNetworkStatus()
   const { status: backendStatus, versionChanged, isInClusterMode } = useBackendHealth()
@@ -189,6 +192,34 @@ export function Layout({ children }: LayoutProps) {
     }
     return () => { if (demoReEnableTimerRef.current) clearTimeout(demoReEnableTimerRef.current) }
   }, [agentStatus, isInClusterMode, isDemoMode])
+
+  // Emit cluster inventory when cluster count changes (counts only, never names).
+  // Sets GA4 user property "cluster_count" so you can compute averages across users.
+  const prevClusterCountRef = useRef<number>(-1)
+  useEffect(() => {
+    const total = deduplicatedClusters.length
+    if (total === 0 || total === prevClusterCountRef.current) return
+    prevClusterCountRef.current = total
+
+    let healthy = 0
+    let unhealthy = 0
+    let unreachable = 0
+    const distributions: Record<string, number> = {}
+
+    for (const c of deduplicatedClusters) {
+      if (c.reachable === false) {
+        unreachable++
+      } else if (c.healthy === false) {
+        unhealthy++
+      } else {
+        healthy++
+      }
+      const dist = c.distribution || 'unknown'
+      distributions[dist] = (distributions[dist] || 0) + 1
+    }
+
+    emitClusterInventory({ total, healthy, unhealthy, unreachable, distributions })
+  }, [deduplicatedClusters])
 
   // Startup snackbar — shows while backend health is in initial 'connecting' state
   const showStartupSnackbar = !isDemoModeForced && backendStatus === 'connecting'
