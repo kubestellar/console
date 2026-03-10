@@ -2668,23 +2668,23 @@
     "syncedDaysAgo": "{{count}}d ago"
   },
   "strimziStatus": {
-    "noData": "Nessun dato del cluster Strimzi",
-    "noDataHint": "I cluster Kafka Strimzi appariranno qui",
+    "fetchError": "Impossibile recuperare lo stato di Strimzi",
+    "notInstalled": "Strimzi non rilevato",
+    "notInstalledHint": "Nessun operatore Strimzi o pod Kafka trovato. Distribuire Strimzi per monitorare i cluster Kafka.",
+    "healthy": "Sano",
+    "degraded": "Degradato",
+    "brokers": "Broker",
     "topics": "Argomenti",
-    "partitions": "Partizioni",
-    "consumerLag": "Ritardo del consumatore",
+    "totalLag": "Ritardo totale",
     "kafkaTopics": "Argomenti Kafka",
     "consumerGroups": "Gruppi di consumatori",
-    "summary": "{{topics}} argomenti, {{groups}} gruppi di consumatori",
-    "summary_one": "{{topics}} argomento, {{groups}} gruppo di consumatore",
-    "summary_other": "{{topics}} argomenti, {{groups}} gruppi di consumatori",
     "topicStatus_active": "Attivo",
     "topicStatus_inactive": "Inattivo",
     "topicStatus_error": "Errore",
+    "topicPartitionsRf": "{{count}} partizioni · RF {{rf}}",
     "groupStatus_ok": "OK",
     "groupStatus_warning": "Avviso",
     "groupStatus_error": "Errore",
-    "partitions_short": "parti",
-    "lag": "Ritardo"
+    "lag": "ritardo"
   }
 }

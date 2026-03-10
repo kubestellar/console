@@ -20,21 +20,24 @@ function useFormatRelativeTime() {
 }
 
 function TopicRow({ topic }: { topic: StrimziTopic }) {
+  const { t } = useTranslation('cards')
+
   const statusColor =
     topic.status === 'active' ? 'text-green-400 bg-green-500/10' :
     topic.status === 'inactive' ? 'text-yellow-400 bg-yellow-500/10' :
     'text-red-400 bg-red-500/10'
 
   const statusLabel =
-    topic.status === 'active' ? 'Active' :
-    topic.status === 'inactive' ? 'Inactive' : 'Error'
+    topic.status === 'active' ? t('strimziStatus.topicStatus_active', 'Active') :
+    topic.status === 'inactive' ? t('strimziStatus.topicStatus_inactive', 'Inactive') :
+    t('strimziStatus.topicStatus_error', 'Error')
 
   return (
     <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium truncate">{topic.name}</p>
         <p className="text-xs text-muted-foreground">
-          {topic.partitions} partitions &middot; RF {topic.replicationFactor}
+          {t('strimziStatus.topicPartitionsRf', '{{count}} partitions \u00b7 RF {{rf}}', { count: topic.partitions, rf: topic.replicationFactor })}
         </p>
       </div>
       <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ml-2 ${statusColor}`}>
@@ -45,6 +48,8 @@ function TopicRow({ topic }: { topic: StrimziTopic }) {
 }
 
 function ConsumerGroupRow({ group }: { group: StrimziConsumerGroup }) {
+  const { t } = useTranslation('cards')
+
   const statusColor =
     group.status === 'ok' ? 'text-green-400' :
     group.status === 'warning' ? 'text-yellow-400' : 'text-red-400'
@@ -53,16 +58,21 @@ function ConsumerGroupRow({ group }: { group: StrimziConsumerGroup }) {
     group.lag === 0 ? 'text-green-400' :
     group.lag < 100 ? 'text-yellow-400' : 'text-red-400'
 
+  const statusLabel =
+    group.status === 'ok' ? t('strimziStatus.groupStatus_ok', 'OK') :
+    group.status === 'warning' ? t('strimziStatus.groupStatus_warning', 'Warning') :
+    t('strimziStatus.groupStatus_error', 'Error')
+
   return (
     <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium truncate">{group.groupId}</p>
         <p className={`text-xs tabular-nums ${lagColor}`}>
-          lag: {group.lag.toLocaleString()}
+          {t('strimziStatus.lag', 'lag')}: {group.lag.toLocaleString()}
         </p>
       </div>
       <span className={`text-xs font-medium shrink-0 ml-2 ${statusColor}`}>
-        {group.status === 'ok' ? 'OK' : group.status === 'warning' ? 'Warning' : 'Error'}
+        {statusLabel}
       </span>
     </div>
   )

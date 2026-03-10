@@ -2668,23 +2668,23 @@
     "syncedDaysAgo": "{{count}}d ago"
   },
   "strimziStatus": {
-    "noData": "कोई Strimzi क्लस्टर डेटा नहीं",
-    "noDataHint": "Strimzi Kafka क्लस्टर यहां दिखाई देंगे",
+    "fetchError": "Strimzi स्थिति प्राप्त करने में विफल",
+    "notInstalled": "Strimzi नहीं मिला",
+    "notInstalledHint": "कोई Strimzi ऑपरेटर या Kafka पॉड नहीं मिला। Kafka क्लस्टर की निगरानी के लिए Strimzi तैनात करें।",
+    "healthy": "स्वस्थ",
+    "degraded": "खराब",
+    "brokers": "ब्रोकर",
     "topics": "विषय",
-    "partitions": "विभाजन",
-    "consumerLag": "उपभोक्ता विलंब",
+    "totalLag": "कुल विलंब",
     "kafkaTopics": "Kafka विषय",
     "consumerGroups": "उपभोक्ता समूह",
-    "summary": "{{topics}} विषय, {{groups}} उपभोक्ता समूह",
-    "summary_one": "{{topics}} विषय, {{groups}} उपभोक्ता समूह",
-    "summary_other": "{{topics}} विषय, {{groups}} उपभोक्ता समूह",
     "topicStatus_active": "सक्रिय",
     "topicStatus_inactive": "निष्क्रिय",
     "topicStatus_error": "त्रुटि",
+    "topicPartitionsRf": "{{count}} विभाजन · RF {{rf}}",
     "groupStatus_ok": "ठीक है",
     "groupStatus_warning": "चेतावनी",
     "groupStatus_error": "त्रुटि",
-    "partitions_short": "विभाजन",
     "lag": "विलंब"
   }
 }

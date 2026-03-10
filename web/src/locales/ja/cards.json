@@ -2668,23 +2668,23 @@
     "syncedDaysAgo": "{{count}}d ago"
   },
   "strimziStatus": {
-    "noData": "Strimziクラスターデータがありません",
-    "noDataHint": "Strimzi Kafkaクラスターがここに表示されます",
+    "fetchError": "Strimziのステータスを取得できませんでした",
+    "notInstalled": "Strimziが検出されません",
+    "notInstalledHint": "Strimziオペレータまたは Kafkaポッドが見つかりません。Kafkaクラスターを監視するにはStrimziをデプロイしてください。",
+    "healthy": "正常",
+    "degraded": "劣化",
+    "brokers": "ブローカー",
     "topics": "トピック",
-    "partitions": "パーティション",
-    "consumerLag": "コンシューマー遅延",
+    "totalLag": "合計遅延",
     "kafkaTopics": "Kafkaトピック",
     "consumerGroups": "コンシューマーグループ",
-    "summary": "{{topics}}トピック、{{groups}}コンシューマーグループ",
-    "summary_one": "{{topics}}トピック、{{groups}}コンシューマーグループ",
-    "summary_other": "{{topics}}トピック、{{groups}}コンシューマーグループ",
     "topicStatus_active": "アクティブ",
     "topicStatus_inactive": "非アクティブ",
     "topicStatus_error": "エラー",
+    "topicPartitionsRf": "{{count}}パーティション · RF {{rf}}",
     "groupStatus_ok": "OK",
     "groupStatus_warning": "警告",
     "groupStatus_error": "エラー",
-    "partitions_short": "パーツ",
     "lag": "遅延"
   }
 }

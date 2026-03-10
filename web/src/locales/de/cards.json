@@ -2668,23 +2668,23 @@
     "syncedDaysAgo": "{{count}}d ago"
   },
   "strimziStatus": {
-    "noData": "Keine Strimzi-Cluster-Daten",
-    "noDataHint": "Strimzi Kafka-Cluster werden hier angezeigt",
+    "fetchError": "Strimzi-Status konnte nicht abgerufen werden",
+    "notInstalled": "Strimzi nicht erkannt",
+    "notInstalledHint": "Kein Strimzi-Operator oder Kafka-Pods gefunden. Strimzi bereitstellen, um Kafka-Cluster zu überwachen.",
+    "healthy": "Gesund",
+    "degraded": "Beeinträchtigt",
+    "brokers": "Broker",
     "topics": "Themen",
-    "partitions": "Partitionen",
-    "consumerLag": "Verbraucher-Verzögerung",
+    "totalLag": "Gesamtverzögerung",
     "kafkaTopics": "Kafka-Themen",
     "consumerGroups": "Verbrauchergruppen",
-    "summary": "{{topics}} Themen, {{groups}} Verbrauchergruppen",
-    "summary_one": "{{topics}} Thema, {{groups}} Verbrauchergruppe",
-    "summary_other": "{{topics}} Themen, {{groups}} Verbrauchergruppen",
     "topicStatus_active": "Aktiv",
     "topicStatus_inactive": "Inaktiv",
     "topicStatus_error": "Fehler",
+    "topicPartitionsRf": "{{count}} Partitionen · RF {{rf}}",
     "groupStatus_ok": "OK",
     "groupStatus_warning": "Warnung",
     "groupStatus_error": "Fehler",
-    "partitions_short": "Partn.",
     "lag": "Verzögerung"
   }
 }
