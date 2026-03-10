@@ -12,6 +12,8 @@ import { useKyverno } from '../../hooks/useKyverno'
 import { useTrivy } from '../../hooks/useTrivy'
 import { useKubescape } from '../../hooks/useKubescape'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useClusters } from '../../hooks/useMCP'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -63,18 +65,22 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   const { statuses: trivyStatuses, isLoading: trivyLoading, isDemoData: trivyDemoData } = useTrivy()
   const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isDemoData: kubescapeDemoData } = useKubescape()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { deduplicatedClusters } = useClusters()
+  const { isDemoMode } = useDemoMode()
 
   const isLoading = kyvernoLoading || trivyLoading || kubescapeLoading
-  const isDemoData = kyvernoDemoData || trivyDemoData || kubescapeDemoData
+  const isDemoData = isDemoMode || kyvernoDemoData || trivyDemoData || kubescapeDemoData
 
   useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
 
   const rows = useMemo((): HeatmapRow[] => {
-    // Collect all cluster names from all hooks
+    // Collect all cluster names from compliance hooks + useClusters fallback
     const clusterSet = new Set<string>()
     for (const name of Object.keys(kyvernoStatuses || {})) clusterSet.add(name)
     for (const name of Object.keys(trivyStatuses || {})) clusterSet.add(name)
     for (const name of Object.keys(kubescapeStatuses || {})) clusterSet.add(name)
+    // Fallback: include clusters from useClusters so the grid is always populated
+    for (const c of (deduplicatedClusters || [])) clusterSet.add(c.name)
 
     let clusterNames = Array.from(clusterSet).sort()
 
@@ -134,7 +140,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
 
       return { cluster, kyverno: kyvernoCell, kubescape: kubescapeCell, trivy: trivyCell }
     })
-  }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, selectedClusters, isAllClustersSelected])
+  }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
   if (rows.length === 0) {
     return (

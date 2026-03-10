@@ -805,7 +805,7 @@ Let's start by discussing what kind of policy I need.`,
                       }}
                       className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer"
                     >
-                      Install with AI →
+                      Install with an AI Mission →
                     </span>
                   </div>
                 )}

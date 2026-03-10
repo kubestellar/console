@@ -139,7 +139,7 @@ Please proceed step by step.`,
             <p className="text-muted-foreground">
               Install Kyverno for Kubernetes-native policy management.{' '}
               <button onClick={handleInstall} className="text-purple-400 hover:underline">
-                Install with AI →
+                Install with an AI Mission →
               </button>
             </p>
           </div>

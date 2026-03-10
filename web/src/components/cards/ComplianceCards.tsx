@@ -128,7 +128,7 @@ Please proceed step by step.`,
             <p className="text-muted-foreground">
               Install Trivy Operator for vulnerability scanning.{' '}
               <button onClick={handleInstall} className="text-cyan-400 hover:underline">
-                Install with AI →
+                Install with an AI Mission →
               </button>
             </p>
           </div>
@@ -226,7 +226,7 @@ Please proceed step by step.`,
             <p className="text-muted-foreground">
               Install Kubescape for security posture management.{' '}
               <button onClick={handleInstall} className="text-green-400 hover:underline">
-                Install with AI →
+                Install with an AI Mission →
               </button>
             </p>
           </div>
