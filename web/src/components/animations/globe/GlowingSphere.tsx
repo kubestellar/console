@@ -1,8 +1,6 @@
 import { useRef } from "react"
 import { useFrame } from "@react-three/fiber"
-// NOTE: Wildcard import is required for React Three Fiber (R3F) type support
-// R3F uses THREE namespace for type annotations and JSX intrinsic elements
-import * as THREE from "three"
+import { Mesh } from "three"
 
 interface GlowingSphereProps {
   position?: [number, number, number]
@@ -17,7 +15,7 @@ const GlowingSphere = ({
   size = 0.3,
   intensity = 1.0,
 }: GlowingSphereProps) => {
-  const meshRef = useRef<THREE.Mesh>(null)
+  const meshRef = useRef<Mesh>(null)
 
   useFrame(({ clock }) => {
     if (meshRef.current) {

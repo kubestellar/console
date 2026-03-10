@@ -37,11 +37,7 @@
  */
 
 import { ReactNode, useMemo } from 'react'
-import { LucideIcon } from 'lucide-react'
-// NOTE: Wildcard import is required for dynamic icon resolution
-// Card definitions specify icon names as strings at runtime
-// The getIcon() helper resolves these names dynamically via Icons[name]
-import * as Icons from 'lucide-react'
+import { getIcon } from '../icons'
 import { CardDefinition, CardColumnDefinition } from './types'
 import { useCardData, SortDirection } from './cardHooks'
 import {
@@ -129,15 +125,6 @@ registerRenderer('number', (value) => (
 registerRenderer('percentage', (value) => (
   <span className="font-mono text-sm">{Number(value).toFixed(1)}%</span>
 ))
-
-// ============================================================================
-// Icon Resolver - Gets icon component from name
-// ============================================================================
-
-function getIcon(name: string): LucideIcon {
-  const icon = (Icons as unknown as Record<string, LucideIcon>)[name]
-  return icon || Icons.HelpCircle
-}
 
 // ============================================================================
 // CardRuntime Props

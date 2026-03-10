@@ -1,10 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, useReducer } from 'react'
-// NOTE: Wildcard import is intentional for dynamic card scope
-// All Lucide icons are spread into the sandbox scope, allowing dynamic cards
-// to reference any icon by name (e.g., <CheckCircle />) without explicit imports.
-// Tree-shaking is not applicable here as the entire icon library must be available
-// for user-defined dynamic card code at runtime.
-import * as LucideIcons from 'lucide-react'
+import { iconRegistry } from '../icons'
 import { cn } from '../cn'
 import { useCardData, commonComparators } from '../cards/cardHooks'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -28,8 +23,8 @@ export function getDynamicScope(): Record<string, unknown> {
     useRef,
     useReducer,
 
-    // Icons (all of lucide-react)
-    ...LucideIcons,
+    // Icons (all icons from the centralized registry)
+    ...iconRegistry,
 
     // Utility
     cn,

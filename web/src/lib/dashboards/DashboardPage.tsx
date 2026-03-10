@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
-// NOTE: Wildcard import is required for dynamic icon resolution
-// Dashboard page resolves icon names from dashboard definitions at runtime
-import * as Icons from 'lucide-react'
-import { LucideIcon } from 'lucide-react'
+import { getIcon } from '../icons'
 import {
   DndContext,
   closestCenter,
@@ -74,11 +71,6 @@ export interface DashboardPageProps {
   }
   /** Whether this dashboard shows demo/mock data */
   isDemoData?: boolean
-}
-
-// Helper to get icon component
-function getIcon(name: string): LucideIcon {
-  return (Icons as unknown as Record<string, LucideIcon>)[name] || Icons.HelpCircle
 }
 
 // ============================================================================

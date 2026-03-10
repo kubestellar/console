@@ -1,9 +1,7 @@
 import { useRef, useMemo, useState, useEffect } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Sphere, Line, Text, Torus, Billboard } from "@react-three/drei"
-// NOTE: Wildcard import is required for React Three Fiber (R3F) type support
-// R3F uses THREE namespace for type annotations and JSX intrinsic elements
-import * as THREE from "three"
+import { Mesh, Group, Material, Color, Object3D } from "three"
 import { COLORS } from "./colors"
 import DataPacket from "./DataPacket"
 import LogoElement from "./LogoElement"
@@ -43,28 +41,28 @@ interface NetworkGlobeProps {
 }
 
 // Define interfaces for better type safety
-interface FlowMaterial extends THREE.Material {
+interface FlowMaterial extends Material {
   opacity: number
-  color: THREE.Color
+  color: Color
   dashSize?: number
   gapSize?: number
 }
 
-interface FlowChild extends THREE.Object3D {
+interface FlowChild extends Object3D {
   material?: FlowMaterial
 }
 
-interface CentralNodeChild extends THREE.Object3D {
-  material?: THREE.Material & { opacity?: number }
+interface CentralNodeChild extends Object3D {
+  material?: Material & { opacity?: number }
 }
 
 // Update the main component to accept props
 const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
-  const globeRef = useRef<THREE.Mesh>(null)
-  const gridLinesRef = useRef<THREE.Group>(null)
-  const centralNodeRef = useRef<THREE.Group>(null)
-  const dataFlowsRef = useRef<THREE.Group>(null)
-  const rotatingContentRef = useRef<THREE.Group>(null)
+  const globeRef = useRef<Mesh>(null)
+  const gridLinesRef = useRef<Group>(null)
+  const centralNodeRef = useRef<Group>(null)
+  const dataFlowsRef = useRef<Group>(null)
+  const rotatingContentRef = useRef<Group>(null)
 
   // Animation state for data flows
   const [activeFlows, setActiveFlows] = useState<number[]>([])

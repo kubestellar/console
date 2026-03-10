@@ -46,10 +46,7 @@ import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
 import { BaseModal } from '../../lib/modals'
-// NOTE: Wildcard import is required for dynamic icon resolution
-// Sidebar customizer allows users to add/edit items with configurable icons
-// The renderIcon() function resolves icon names dynamically via Icons[iconName]
-import * as Icons from 'lucide-react'
+import { iconRegistry } from '../../lib/icons'
 
 // Sortable sidebar item component
 interface SortableItemProps {
@@ -357,7 +354,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   }
 
   const renderIcon = (iconName: string, className?: string) => {
-    const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName]
+    const IconComponent = iconRegistry[iconName] as React.ComponentType<{ className?: string }> | undefined
     return IconComponent ? <IconComponent className={className} /> : null
   }
 

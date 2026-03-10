@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-// NOTE: Wildcard import is required for dynamic icon resolution
-// Sidebar items are configured with icon names as strings (from sidebar config)
-// The renderIcon() function resolves these names dynamically via Icons[iconName]
-import * as Icons from 'lucide-react'
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User } from 'lucide-react'
+import { iconRegistry } from '../../lib/icons'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
 import { useSidebarConfig, SidebarItem, PROTECTED_SIDEBAR_IDS, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
@@ -252,7 +249,7 @@ export function Sidebar() {
   }
 
   const renderIcon = (iconName: string, className?: string) => {
-    const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName]
+    const IconComponent = iconRegistry[iconName] as React.ComponentType<{ className?: string }> | undefined
     return IconComponent ? <IconComponent className={className} /> : null
   }
 

@@ -1,9 +1,6 @@
 import { useRef } from "react"
 import { useFrame } from "@react-three/fiber"
-// NOTE: Wildcard import is required for React Three Fiber (R3F) type support
-// R3F uses THREE namespace for type annotations and JSX intrinsic elements
-// Named imports would break R3F's type system which expects the THREE namespace
-import * as THREE from "three"
+import { Group, Mesh } from "three"
 import GlowingSphere from "./GlowingSphere"
 
 const COLORS = {
@@ -21,10 +18,10 @@ interface LogoElementProps {
 }
 
 const LogoElement = ({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }: LogoElementProps) => {
-  const groupRef = useRef<THREE.Group>(null)
-  const ringRef1 = useRef<THREE.Mesh>(null)
-  const ringRef2 = useRef<THREE.Mesh>(null)
-  const ringRef3 = useRef<THREE.Mesh>(null)
+  const groupRef = useRef<Group>(null)
+  const ringRef1 = useRef<Mesh>(null)
+  const ringRef2 = useRef<Mesh>(null)
+  const ringRef3 = useRef<Mesh>(null)
 
   useFrame(state => {
     const t = state.clock.getElapsedTime()
