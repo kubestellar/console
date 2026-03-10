@@ -188,7 +188,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     setItemsPerPage: setOpenShiftUserItemsPerPage,
     filters: openshiftUserFilters,
     sorting: openshiftUserSorting,
-  } = useCardData<OpenShiftUser, OpenShiftUserSortBy>(openshiftUsersPreFiltered, {
+  containerRef,
+  containerStyle,
+} = useCardData<OpenShiftUser, OpenShiftUserSortBy>(openshiftUsersPreFiltered, {
     filter: {
       searchFields: ['name', 'cluster'] as (keyof OpenShiftUser)[],
       clusterField: 'cluster' as keyof OpenShiftUser,
@@ -457,7 +459,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       </div>
 
       {/* Content - fixed height to prevent jumping, p-px prevents border clipping */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-px">
+      <div ref={containerRef} className="flex-1 overflow-y-auto min-h-0 p-px" style={containerStyle}>
         {activeTab === 'clusterUsers' && (
           <ClusterUsersTab
             clusters={clusters}

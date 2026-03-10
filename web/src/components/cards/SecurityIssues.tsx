@@ -150,7 +150,9 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<SecurityIssue, SortByOption>(rawIssues, {
+  containerRef,
+  containerStyle,
+} = useCardData<SecurityIssue, SortByOption>(rawIssues, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'issue', 'severity', 'details'],
       clusterField: 'cluster',
@@ -288,7 +290,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       />
 
       {/* Issues list */}
-      <div className="flex-1 space-y-3 overflow-y-auto min-h-card-content">
+      <div ref={containerRef} className="flex-1 space-y-3 overflow-y-auto min-h-card-content" style={containerStyle}>
         {issues.map((issue: SecurityIssue, idx: number) => {
           const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue, t as unknown as (key: string) => string)
           const colors = getSeverityColor(issue.severity)

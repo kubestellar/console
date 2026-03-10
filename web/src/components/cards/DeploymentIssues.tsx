@@ -92,7 +92,9 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<DeploymentIssue, SortByOption>(rawIssues, {
+  containerRef,
+  containerStyle,
+} = useCardData<DeploymentIssue, SortByOption>(rawIssues, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'reason', 'message'],
       clusterField: 'cluster',
@@ -192,7 +194,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       />
 
       {/* Issues list */}
-      <div className="flex-1 space-y-3 overflow-y-auto min-h-card-content">
+      <div ref={containerRef} className="flex-1 space-y-3 overflow-y-auto min-h-card-content" style={containerStyle}>
         {issues.map((issue, idx) => {
           const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.reason || '', t)
 

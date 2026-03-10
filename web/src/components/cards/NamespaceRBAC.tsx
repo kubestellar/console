@@ -154,7 +154,9 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<RBACItem, SortByOption>(activeTabItems, {
+  containerRef,
+  containerStyle,
+} = useCardData<RBACItem, SortByOption>(activeTabItems, {
     filter: {
       searchFields: ['name'] as (keyof RBACItem)[],
       storageKey: 'namespace-rbac',
@@ -320,7 +322,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
           </div>
 
           {/* List */}
-          <div className="flex-1 space-y-2 overflow-y-auto">
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
             {isFetchingRBAC && paginatedItems.length === 0 ? (
               // Show skeletons when loading and no data
               <>

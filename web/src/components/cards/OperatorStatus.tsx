@@ -106,7 +106,9 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<Operator, SortByOption>(rawOperators, {
+  containerRef,
+  containerStyle,
+} = useCardData<Operator, SortByOption>(rawOperators, {
     filter: {
       searchFields: ['name', 'namespace', 'version'] as (keyof Operator)[],
       clusterField: 'cluster',
@@ -253,7 +255,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           </div>
 
           {/* Operators list */}
-          <div className="flex-1 space-y-2 overflow-y-auto">
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
             {operators.map((op) => {
               const StatusIcon = getStatusIcon(op.status)
               const color = getStatusColor(op.status)

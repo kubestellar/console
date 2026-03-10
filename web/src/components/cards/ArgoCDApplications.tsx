@@ -129,7 +129,9 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<ArgoApplication, SortByOption>(preFiltered, {
+  containerRef,
+  containerStyle,
+} = useCardData<ArgoApplication, SortByOption>(preFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'],
       clusterField: 'cluster',
@@ -299,7 +301,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       )}
 
       {/* Applications list */}
-      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
         {applications.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             {t('argoCDApplications.noMatchingApplications')}

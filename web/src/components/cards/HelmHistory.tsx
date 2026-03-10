@@ -198,7 +198,9 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<HelmHistoryEntry, SortByOption>(rawHistory, {
+  containerRef,
+  containerStyle,
+} = useCardData<HelmHistoryEntry, SortByOption>(rawHistory, {
     filter: {
       searchFields: ['chart', 'status', 'description'] as (keyof HelmHistoryEntry)[],
       customPredicate: (item, query) => String(item.revision).includes(query),
@@ -371,7 +373,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           />
 
           {/* History timeline */}
-          <div className="flex-1 overflow-y-auto">
+          <div ref={containerRef} className="flex-1 overflow-y-auto" style={containerStyle}>
             {history.length === 0 ? (
               <div className="flex items-center justify-center text-muted-foreground text-sm py-4">
                 {t('helmHistory.noHistoryFound')}

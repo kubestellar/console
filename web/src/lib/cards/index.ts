@@ -93,5 +93,9 @@ export {
   type StatusColorSet,
 } from './statusColors'
 
+// Stable Paginated Content
+export { useStablePageHeight } from './useStablePageHeight'
+export { StablePaginatedContent } from './StablePaginatedContent'
+
 // Card Types
 export * from './types'

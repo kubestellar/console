@@ -107,7 +107,9 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<MonitoredResource, SortField>(preFiltered, {
+  containerRef,
+  containerStyle,
+} = useCardData<MonitoredResource, SortField>(preFiltered, {
     filter: {
       searchFields: ['name', 'kind', 'status', 'category', 'message'] as (keyof MonitoredResource)[],
     },
@@ -293,7 +295,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
           />
 
           {/* View */}
-          <div className="flex-1 overflow-y-auto">
+          <div ref={containerRef} className="flex-1 overflow-y-auto" style={containerStyle}>
             {viewMode === 'tree' ? (
               <WorkloadMonitorTree resources={items} onResourceClick={handleResourceClick} />
             ) : (

@@ -32,7 +32,10 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
 
   const statusOrder: Record<string, number> = { running: 0, idle: 1, stopped: 2 }
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<Notebook, SortByOption>(notebooks, {
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting,
+    containerRef,
+    containerStyle,
+  } = useCardData<Notebook, SortByOption>(notebooks, {
     filter: {
       searchFields: ['name', 'user', 'status'] as (keyof Notebook)[],
       storageKey: 'ml-notebooks',
@@ -116,7 +119,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
       </div>
 
       {/* Notebook list */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 overflow-y-auto" style={containerStyle}>
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-muted-foreground border-b border-border/50">

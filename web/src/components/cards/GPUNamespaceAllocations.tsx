@@ -117,7 +117,9 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<NamespaceGPUAllocation, SortByOption>(namespaceAllocations, {
+  containerRef,
+  containerStyle,
+} = useCardData<NamespaceGPUAllocation, SortByOption>(namespaceAllocations, {
     filter: {
       searchFields: ['namespace'] as (keyof NamespaceGPUAllocation)[],
       storageKey: 'gpu-namespace-allocations',
@@ -216,7 +218,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       />
 
       {/* Namespace list */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {displayItems.map((ns) => (
           <div
             key={ns.namespace}

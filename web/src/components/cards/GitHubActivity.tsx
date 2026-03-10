@@ -640,7 +640,9 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       setSearch: setSearchQuery,
     },
     sorting,
-  } = useCardData<GitHubItem, SortByOption>(preFilteredData, {
+  containerRef,
+  containerStyle,
+} = useCardData<GitHubItem, SortByOption>(preFilteredData, {
     filter: {
       searchFields: [] as (keyof GitHubItem)[],
       customPredicate: githubSearchPredicate,
@@ -1051,7 +1053,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin min-h-0">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 scrollbar-thin min-h-0" style={containerStyle}>
         {paginatedItems.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
             No {viewMode} found{searchQuery ? ' matching search' : ' for this time range'}

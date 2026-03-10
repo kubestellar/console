@@ -53,7 +53,9 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<LLMdModel, SortByOption>(models, {
+  containerRef,
+  containerStyle,
+} = useCardData<LLMdModel, SortByOption>(models, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof LLMdModel)[],
       clusterField: 'cluster' as keyof LLMdModel,
@@ -166,7 +168,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
       </div>
 
       {/* Model list */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 overflow-y-auto" style={containerStyle}>
         {paginatedItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <Layers className="w-8 h-8 mb-2 opacity-50" />

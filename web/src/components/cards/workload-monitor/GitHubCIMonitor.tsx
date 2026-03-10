@@ -271,7 +271,9 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData(workflows, {
+  containerRef,
+  containerStyle,
+} = useCardData(workflows, {
     filter: {
       searchFields: ['name', 'repo', 'branch', 'event'] as (keyof WorkflowRun)[],
     },
@@ -481,7 +483,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
       />
 
       {/* Workflow runs */}
-      <div className="flex-1 overflow-y-auto space-y-0.5">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-0.5" style={containerStyle}>
         {items.map(w => {
           const status = effectiveStatus(w)
           const badgeClass = w.status === 'completed'

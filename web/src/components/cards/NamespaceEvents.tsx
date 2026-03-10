@@ -126,7 +126,9 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<ClusterEvent, SortByOption>(preFilteredEvents, {
+  containerRef,
+  containerStyle,
+} = useCardData<ClusterEvent, SortByOption>(preFilteredEvents, {
     filter: {
       searchFields: ['message', 'object', 'namespace', 'type', 'reason'],
       clusterField: 'cluster',
@@ -260,7 +262,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       />
 
       {/* Events list */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center mb-2">

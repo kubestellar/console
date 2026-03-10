@@ -142,7 +142,9 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<ServiceImport, SortByOption>(DEMO_IMPORTS, {
+  containerRef,
+  containerStyle,
+} = useCardData<ServiceImport, SortByOption>(DEMO_IMPORTS, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'sourceCluster', 'dnsName', 'type'],
       clusterField: 'cluster',
@@ -278,7 +280,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
       />
 
       {/* Imports list */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {filteredImports.map((imp, idx) => {
           const endpointStatus = getEndpointStatus(imp.endpoints)
           const EndpointIcon = endpointStatus.icon

@@ -206,7 +206,9 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<Kustomization, SortByOption>(namespacedKustomizations, {
+  containerRef,
+  containerStyle,
+} = useCardData<Kustomization, SortByOption>(namespacedKustomizations, {
     filter: {
       searchFields: ['name', 'namespace', 'path', 'sourceRef'] as (keyof Kustomization)[],
       storageKey: 'kustomization-status',
@@ -355,7 +357,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           </div>
 
           {/* Kustomizations list */}
-          <div className="flex-1 space-y-2 overflow-y-auto">
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
             {kustomizations.map((ks, idx) => {
               const StatusIcon = getStatusIcon(ks.status)
               const color = getStatusColor(ks.status)

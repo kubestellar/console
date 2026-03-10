@@ -101,7 +101,9 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
+  containerRef,
+  containerStyle,
+} = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
     filter: {
       searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
       clusterField: 'cluster',
@@ -229,7 +231,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           </div>
 
           {/* Subscriptions list */}
-          <div className="flex-1 space-y-2 overflow-y-auto">
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
             {subscriptions.map((sub) => (
               <div
                 key={`${sub.cluster || 'unknown'}-${sub.namespace}-${sub.name}`}

@@ -52,7 +52,9 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     items: filteredNodes,
     filters,
     sorting,
-  } = useCardData(rawNodes, {
+  containerRef,
+  containerStyle,
+} = useCardData(rawNodes, {
     filter: {
       searchFields: ['gpuType' as keyof typeof rawNodes[number]],
       clusterField: 'cluster' as keyof typeof rawNodes[number],
@@ -313,7 +315,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       {sortedGpuTypes.length > 0 && (
         <div className="flex-1">
           <p className="text-xs text-muted-foreground mb-2">{t('gpuOverview.gpuTypes')}</p>
-          <div className="space-y-1">
+          <div ref={containerRef} className="space-y-1" style={containerStyle}>
             {sortedGpuTypes.map(([type, count]) => (
               <div
                 key={type}

@@ -293,7 +293,9 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       clusterFilterRef,
     },
     sorting,
-  } = useCardData<OPAClusterItem, SortByOption>(clusterItems, {
+  containerRef,
+  containerStyle,
+} = useCardData<OPAClusterItem, SortByOption>(clusterItems, {
     filter: {
       searchFields: ['name'] as (keyof OPAClusterItem)[],
       clusterField: 'cluster' as keyof OPAClusterItem,
@@ -704,7 +706,7 @@ Let's start by discussing what kind of policy I need.`,
       )}
 
       {/* Cluster list - p-1 -m-1 gives room for focus rings without clipping */}
-      <div className="flex-1 overflow-y-auto space-y-2 p-1 -m-1">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 p-1 -m-1" style={containerStyle}>
         {paginatedClusters.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             No clusters available

@@ -74,7 +74,9 @@ export function AlertRulesCard() {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<AlertRule, SortField>(rules, {
+  containerRef,
+  containerStyle,
+} = useCardData<AlertRule, SortField>(rules, {
     filter: {
       searchFields: ['name', 'severity'],
       customPredicate: (rule, query) =>
@@ -193,7 +195,7 @@ export function AlertRulesCard() {
       />
 
       {/* Rules List */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {displayedRules.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
             <Bell className="w-8 h-8 mb-2" />

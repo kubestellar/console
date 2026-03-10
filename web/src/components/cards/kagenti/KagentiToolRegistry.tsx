@@ -38,7 +38,9 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
-  } = useCardData(tools, {
+  containerRef,
+  containerStyle,
+} = useCardData(tools, {
     filter: {
       searchFields: ['name', 'namespace', 'toolPrefix', 'targetRef', 'cluster'],
       clusterField: 'cluster',
@@ -80,7 +82,7 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
         }
       />
 
-      <div className="space-y-1">
+      <div ref={containerRef} className="space-y-1" style={containerStyle}>
         {paginatedItems.map(tool => (
           <div
             key={`${tool.cluster}-${tool.namespace}-${tool.name}`}

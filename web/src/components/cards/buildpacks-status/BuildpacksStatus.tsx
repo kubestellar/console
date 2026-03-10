@@ -141,7 +141,9 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<BuildpackImage, SortByOption>(namespacedBuilds, {
+  containerRef,
+  containerStyle,
+} = useCardData<BuildpackImage, SortByOption>(namespacedBuilds, {
     filter: {
       searchFields: ['name', 'namespace', 'builder', 'image'],
       clusterField: 'cluster',
@@ -290,7 +292,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       </div>
 
       {/* List */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {builds.map(build => {
           const Icon =
             build.status === 'succeeded'

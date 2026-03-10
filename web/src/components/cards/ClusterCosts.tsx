@@ -342,7 +342,9 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       clusterFilterRef,
     },
     sorting,
-  } = useCardData<ClusterCostItem, SortByOption>(allClusterCosts, {
+  containerRef,
+  containerStyle,
+} = useCardData<ClusterCostItem, SortByOption>(allClusterCosts, {
     filter: {
       searchFields: ['name', 'context'] as (keyof ClusterCostItem)[],
       clusterField: 'cluster' as keyof ClusterCostItem,
@@ -658,7 +660,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       </div>
 
       {/* Per-cluster breakdown */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {clusterCosts.map((cluster) => {
           const percent = totalMonthly > 0 ? (cluster.monthly / totalMonthly) * 100 : 0
           const providerIcon = PROVIDER_ICONS[cluster.provider]

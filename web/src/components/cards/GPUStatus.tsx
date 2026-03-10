@@ -112,7 +112,9 @@ export function GPUStatus({ config }: GPUStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<ClusterGPUStats, SortByOption>(clusterStatsList, {
+  containerRef,
+  containerStyle,
+} = useCardData<ClusterGPUStats, SortByOption>(clusterStatsList, {
     filter: {
       searchFields: ['clusterName'],
       clusterField: 'clusterName',
@@ -222,7 +224,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
       )}
 
       {/* Cluster GPU status */}
-      <div className="flex-1 space-y-3 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-3 overflow-y-auto" style={containerStyle}>
         {displayStats.map((stats) => (
           <div
             key={stats.clusterName}

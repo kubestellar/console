@@ -55,7 +55,10 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
     [jobs]
   )
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<ProwJob, SortField>(completedJobs, {
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting,
+    containerRef,
+    containerStyle,
+  } = useCardData<ProwJob, SortField>(completedJobs, {
     filter: {
       searchFields: ['name', 'state', 'type', 'duration'] as (keyof ProwJob)[],
     },
@@ -111,7 +114,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       />
 
       {/* Timeline */}
-      <div className="flex-1 overflow-y-auto relative">
+      <div ref={containerRef} className="flex-1 overflow-y-auto relative" style={containerStyle}>
         <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
         <div className="space-y-2">
           {items.map((job) => (

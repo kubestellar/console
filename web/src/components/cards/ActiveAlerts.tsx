@@ -176,7 +176,9 @@ export function ActiveAlerts() {
       sortBy,
       setSortBy,
     },
-  } = useCardData<Alert, SortField>(severityFilteredAlerts, {
+  containerRef,
+  containerStyle,
+} = useCardData<Alert, SortField>(severityFilteredAlerts, {
     filter: {
       searchFields: ['ruleName', 'message', 'cluster'],
       clusterField: 'cluster',
@@ -307,7 +309,7 @@ export function ActiveAlerts() {
       <AlertStatsRow critical={stats.critical} warning={stats.warning} acknowledged={stats.acknowledged} />
 
       {/* Alerts List */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {displayedAlerts.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
             <CheckCircle className="w-8 h-8 mb-2 text-green-400" />

@@ -9,6 +9,7 @@ import { useMemo, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import type { CardContentTable, CardDrillDownConfig } from '../../types'
 import { renderCell } from '../renderers'
+import { useStablePageHeight } from '../../../cards/useStablePageHeight'
 
 export interface TableVisualizationProps {
   /** Content configuration */
@@ -117,10 +118,13 @@ export function TableVisualization({
 
   const isClickable = !!(drillDown || onDrillDown)
 
+  // Stable height across paginated pages
+  const { containerRef, containerStyle } = useStablePageHeight(pageSize, data.length)
+
   return (
     <div className="flex flex-col h-full">
       {/* Table */}
-      <div className="flex-1 overflow-auto">
+      <div ref={containerRef} className="flex-1 overflow-auto" style={containerStyle}>
         <table className="w-full text-sm">
           {/* Header */}
           <thead className="sticky top-0 bg-background/95 backdrop-blur-sm">

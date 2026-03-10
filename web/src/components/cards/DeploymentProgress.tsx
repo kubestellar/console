@@ -129,7 +129,9 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<Deployment, SortByOption>(statusFilteredDeployments, {
+  containerRef,
+  containerStyle,
+} = useCardData<Deployment, SortByOption>(statusFilteredDeployments, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
       clusterField: 'cluster' as keyof Deployment,
@@ -273,7 +275,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
       </div>
 
       {/* Deployments list */}
-      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
         {paginatedDeployments.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             No deployments match the current filters

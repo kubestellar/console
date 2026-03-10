@@ -3,6 +3,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { FLASH_ANIMATION_MS } from '../constants/network'
 import type { ClusterErrorType } from '../errorClassifier'
+import { useStablePageHeight } from './useStablePageHeight'
 
 // ============================================================================
 // Cluster with health info for filter dropdowns
@@ -346,6 +347,10 @@ export interface UseCardDataResult<T, S extends string> {
   filters: Omit<UseCardFiltersResult<T>, 'filtered'>
   /** All sort controls */
   sorting: Omit<UseCardSortResult<T, S>, 'sorted'>
+  /** Ref for the paginated items container (attach to keep height stable across pages) */
+  containerRef: React.RefObject<HTMLDivElement>
+  /** Style to apply to the paginated items container for stable height */
+  containerStyle: React.CSSProperties | undefined
 }
 
 export function useCardData<T, S extends string = string>(
@@ -392,6 +397,9 @@ export function useCardData<T, S extends string = string>(
     setCurrentPage(Math.max(1, Math.min(page, totalPages)))
   }, [totalPages])
 
+  // Stable height for paginated container
+  const { containerRef, containerStyle } = useStablePageHeight(effectivePerPage, sorted.length)
+
   // Extract filter controls (without 'filtered')
   const { filtered: _filtered, ...filters } = filterResult
   // Extract sort controls (without 'sorted')
@@ -408,6 +416,8 @@ export function useCardData<T, S extends string = string>(
     setItemsPerPage,
     filters,
     sorting,
+    containerRef,
+    containerStyle,
   }
 }
 

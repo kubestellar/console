@@ -80,7 +80,9 @@ export function WarningEvents() {
       clusterFilterRef,
     },
     sorting,
-  } = useCardData<ClusterEvent, SortByOption>(warningOnly, {
+  containerRef,
+  containerStyle,
+} = useCardData<ClusterEvent, SortByOption>(warningOnly, {
     filter: {
       searchFields: ['reason', 'message', 'object', 'namespace'],
       clusterField: 'cluster',
@@ -184,7 +186,7 @@ export function WarningEvents() {
           <p className="text-sm text-muted-foreground">No warnings</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div ref={containerRef} className="space-y-2" style={containerStyle}>
           {displayedEvents.map((event, i) => (
             <div
               key={`${event.object}-${event.reason}-${i}`}

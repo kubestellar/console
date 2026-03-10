@@ -110,7 +110,9 @@ function PVCStatusInternal() {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<PVC, SortByOption>(pvcs, {
+  containerRef,
+  containerStyle,
+} = useCardData<PVC, SortByOption>(pvcs, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'storageClass'],
       clusterField: 'cluster',
@@ -233,7 +235,7 @@ function PVCStatusInternal() {
       </div>
 
       {/* PVC List */}
-      <div className="flex-1 space-y-1.5 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto" style={containerStyle}>
         {displayPVCs.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             {error ? 'Failed to load PVCs' : 'No PVCs found'}

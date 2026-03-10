@@ -71,7 +71,9 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<ProwJob, 'name' | 'state' | 'started'>(preFilteredJobs, {
+  containerRef,
+  containerStyle,
+} = useCardData<ProwJob, 'name' | 'state' | 'started'>(preFilteredJobs, {
     filter: {
       searchFields: ['name', 'state', 'type'] as (keyof ProwJob)[],
       customPredicate: (j, q) => !!(j.pr && String(j.pr).includes(q)),
@@ -194,7 +196,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       />
 
       {/* Jobs list */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {items.map((job) => (
           <div key={job.id} className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
             <div className="flex items-center justify-between">

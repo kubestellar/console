@@ -89,7 +89,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   const {
     items, totalItems, currentPage, totalPages, goToPage, needsPagination,
     itemsPerPage, setItemsPerPage, filters, sorting,
-  } = useCardData<LLMdServer, LLMdSortByOption>(componentFiltered, {
+  containerRef,
+  containerStyle,
+} = useCardData<LLMdServer, LLMdSortByOption>(componentFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'status', 'componentType', 'type'] as (keyof LLMdServer)[],
       clusterField: 'cluster' as keyof LLMdServer,
@@ -279,7 +281,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       </div>
 
       {/* Server list */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <Cpu className="w-8 h-8 mb-2 opacity-50" />

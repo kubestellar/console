@@ -97,7 +97,9 @@ export function ServiceStatus() {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<Service, SortByOption>(services, {
+  containerRef,
+  containerStyle,
+} = useCardData<Service, SortByOption>(services, {
     filter: {
       searchFields: ['name', 'namespace', 'type'],
       clusterField: 'cluster',
@@ -209,7 +211,7 @@ export function ServiceStatus() {
       </div>
 
       {/* Service List */}
-      <div className="flex-1 space-y-1.5 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto" style={containerStyle}>
         {displayServices.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             {error ? 'Failed to load services' : searchQuery ? 'No matching services' : 'No services found'}

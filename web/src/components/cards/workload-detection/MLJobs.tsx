@@ -39,7 +39,10 @@ export function MLJobs({ config: _config }: MLJobsProps) {
 
   const statusOrder: Record<string, number> = { running: 0, queued: 1, completed: 2, failed: 3 }
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<MLJob, SortByOption>(jobs, {
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting,
+    containerRef,
+    containerStyle,
+  } = useCardData<MLJob, SortByOption>(jobs, {
     filter: {
       searchFields: ['name', 'framework', 'status', 'cluster'] as (keyof MLJob)[],
       clusterField: 'cluster' as keyof MLJob,
@@ -144,7 +147,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
       </div>
 
       {/* Jobs list */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {items.map((job, idx) => (
           <div key={idx} className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
             <div className="flex items-center justify-between mb-2">

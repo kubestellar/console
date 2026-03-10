@@ -197,7 +197,9 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
+  containerRef,
+  containerStyle,
+} = useCardData<FeedItem, SortByOption>(preFilteredItems, {
     filter: {
       searchFields: ['title', 'description', 'author'] as (keyof FeedItem)[],
       customPredicate: (item, query) => {
@@ -1269,7 +1271,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       </div>
 
       {/* Feed items */}
-      <div className="flex-1 overflow-y-auto space-y-2 min-h-0 scrollbar-thin">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 min-h-0 scrollbar-thin" style={containerStyle}>
         {showListSkeleton ? (
           /* Show skeleton items while loading */
           <div className="space-y-2 animate-pulse">

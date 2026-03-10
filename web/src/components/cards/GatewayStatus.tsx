@@ -204,7 +204,9 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<Gateway, SortByOption>(DEMO_GATEWAYS, {
+  containerRef,
+  containerStyle,
+} = useCardData<Gateway, SortByOption>(DEMO_GATEWAYS, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'gatewayClass', 'status'],
       clusterField: 'cluster',
@@ -342,7 +344,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       </div>
 
       {/* Gateways list */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         {paginatedGateways.map((gw, idx) => {
           const Icon = getStatusIcon(gw.status)
           const colors = getStatusColors(gw.status)

@@ -106,7 +106,9 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData(jobs, {
+  containerRef,
+  containerStyle,
+} = useCardData(jobs, {
     filter: {
       searchFields: ['name', 'state', 'type', 'cluster'] as (keyof typeof jobs[0])[],
     },
@@ -268,7 +270,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
       />
 
       {/* Job list */}
-      <div className="flex-1 overflow-y-auto space-y-0.5">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-0.5" style={containerStyle}>
         {items.map(job => {
           const StateIcon = STATE_ICON[job.state] || Activity
           return (

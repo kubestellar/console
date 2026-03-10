@@ -70,7 +70,9 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     setItemsPerPage,
     filters,
     sorting,
-  } = useCardData<GPUNode, SortByOption>(rawNodes, {
+  containerRef,
+  containerStyle,
+} = useCardData<GPUNode, SortByOption>(rawNodes, {
     filter: {
       searchFields: ['name', 'cluster', 'gpuType'] as (keyof GPUNode)[],
       clusterField: 'cluster' as keyof GPUNode,
@@ -213,7 +215,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       </div>
 
       {/* Node list */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {nodes.map((node) => (
           <div
             key={`${node.cluster}-${node.name}`}

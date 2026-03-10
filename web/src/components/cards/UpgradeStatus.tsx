@@ -523,7 +523,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<UpgradeItem, SortByOption>(clusterVersionData, {
+  containerRef,
+  containerStyle,
+} = useCardData<UpgradeItem, SortByOption>(clusterVersionData, {
     filter: {
       searchFields: ['name', 'currentVersion'],
       clusterField: 'name',
@@ -599,7 +601,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
       />
 
       {/* Clusters list */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {displayClusters.map((cluster) => (
           <div
             key={cluster.name}

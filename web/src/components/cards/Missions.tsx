@@ -333,7 +333,9 @@ Please:
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<DeployMission, SortByOption>(rawMissions, {
+  containerRef,
+  containerStyle,
+} = useCardData<DeployMission, SortByOption>(rawMissions, {
     filter: {
       searchFields: ['workload', 'namespace', 'sourceCluster', 'groupName'],
       customPredicate: (mission, query) =>
@@ -423,7 +425,7 @@ Please:
             : 'Deploy a workload to start a mission'}
         />
       ) : (
-        <div className="flex-1 min-h-0 overflow-auto scroll-enhanced space-y-2">
+        <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scroll-enhanced space-y-2" style={containerStyle}>
           {visibleMissions.map(mission => {
             const isActive = mission.status === 'launching' || mission.status === 'deploying'
             return (

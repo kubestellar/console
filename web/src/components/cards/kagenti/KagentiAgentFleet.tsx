@@ -54,7 +54,9 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
-  } = useCardData(agents, {
+  containerRef,
+  containerStyle,
+} = useCardData(agents, {
     filter: {
       searchFields: ['name', 'namespace', 'framework', 'cluster', 'status'],
       clusterField: 'cluster',
@@ -101,7 +103,7 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
         }
       />
 
-      <div className="space-y-1">
+      <div ref={containerRef} className="space-y-1" style={containerStyle}>
         {paginatedItems.map(agent => (
           <div
             key={`${agent.cluster}-${agent.namespace}-${agent.name}`}

@@ -79,7 +79,9 @@ export function PodIssues() {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<PodIssue, SortByOption>(rawIssues, {
+  containerRef,
+  containerStyle,
+} = useCardData<PodIssue, SortByOption>(rawIssues, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'status'],
       clusterField: 'cluster',
@@ -169,7 +171,7 @@ export function PodIssues() {
       />
 
       {/* Issues list */}
-      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
+      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
         {issues.map((issue: PodIssue, idx: number) => {
           const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.status)
           const colors = getStatusColors(issue.status)

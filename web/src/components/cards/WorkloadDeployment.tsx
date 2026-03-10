@@ -550,7 +550,9 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<Workload, SortByOption>(preFiltered, {
+  containerRef,
+  containerStyle,
+} = useCardData<Workload, SortByOption>(preFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'image'] as (keyof Workload)[],
       customPredicate: (w, query) =>
@@ -695,7 +697,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       </div>
 
       {/* Workload list */}
-      <div className="flex-1 overflow-auto">
+      <div ref={containerRef} className="flex-1 overflow-auto" style={containerStyle}>
         {filteredWorkloads.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
             <Box className="h-8 w-8 mb-2 opacity-50" />

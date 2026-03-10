@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'luci
 import type { CardContentList, CardColumnConfig, CardDrillDownConfig, CardAIActionsConfig } from '../../types'
 import { renderCell } from '../renderers'
 import { CardAIActions } from '../../../cards/CardComponents'
+import { useStablePageHeight } from '../../../cards/useStablePageHeight'
 
 type SortDirection = 'asc' | 'desc'
 
@@ -126,6 +127,9 @@ export function ListVisualization({
 
   const isClickable = itemClick !== 'none' && !!(drillDown || onDrillDown)
 
+  // Stable height across paginated pages
+  const { containerRef, containerStyle } = useStablePageHeight(pageSize, data.length)
+
   // Toggle sort direction
   const toggleSortDirection = useCallback(() => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -175,7 +179,7 @@ export function ListVisualization({
       )}
 
       {/* List content */}
-      <div className="flex-1 overflow-y-auto scroll-enhanced">
+      <div ref={containerRef} className="flex-1 overflow-y-auto scroll-enhanced" style={containerStyle}>
         {paginatedData.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             No items to display

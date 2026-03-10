@@ -134,7 +134,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<HelmReleaseDisplay, SortByOption>(namespacedReleases, {
+  containerRef,
+  containerStyle,
+} = useCardData<HelmReleaseDisplay, SortByOption>(namespacedReleases, {
     filter: {
       searchFields: ['name', 'namespace', 'chart', 'version'] as (keyof HelmReleaseDisplay)[],
       clusterField: 'cluster' as keyof HelmReleaseDisplay,
@@ -309,7 +311,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
           </div>
 
           {/* Releases list */}
-          <div className="flex-1 space-y-2 overflow-y-auto">
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
             {releases.map((release, idx) => {
               const StatusIcon = getStatusIcon(release.status)
               const color = getStatusColor(release.status)
