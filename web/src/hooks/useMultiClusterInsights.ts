@@ -122,7 +122,7 @@ function detectEventCorrelations(events: ClusterEvent[]): MultiClusterInsight[] 
       title: `${clusterMap.size} clusters had simultaneous warnings`,
       description: `${totalEvents} warning events across ${affectedClusters.join(', ')} within a 5-minute window. Common reasons: ${reasons}.`,
       affectedClusters,
-      relatedResources: [...new Set((allEvents || []).map(e => e.object))].slice(0, 5),
+      relatedResources: [...new Set((allEvents || []).map(e => String(e.object || '')))].slice(0, 5),
       detectedAt: new Date(bucket).toISOString(),
     })
   }

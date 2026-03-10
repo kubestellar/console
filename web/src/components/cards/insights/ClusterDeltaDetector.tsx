@@ -98,7 +98,7 @@ export function ClusterDeltaDetector() {
                   : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
               }`}
             >
-              {(ins.relatedResources || [])[0] || ins.title}
+              {String((ins.relatedResources || [])[0] || ins.title)}
             </button>
           ))}
         </div>

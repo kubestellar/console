@@ -131,7 +131,7 @@ export function RestartCorrelationMatrix() {
               {insight.relatedResources && insight.relatedResources.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {(insight.relatedResources || []).map(resource => (
-                    <StatusBadge key={resource} color="gray" size="xs">{resource}</StatusBadge>
+                    <StatusBadge key={String(resource)} color="gray" size="xs">{String(resource)}</StatusBadge>
                   ))}
                 </div>
               )}
