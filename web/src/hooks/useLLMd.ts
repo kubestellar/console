@@ -207,6 +207,8 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const initialLoadDone = useRef(false)
+  /** Guard to prevent concurrent refetch calls from flooding the request queue */
+  const fetchInProgress = useRef(false)
 
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching in demo mode — no agent available
@@ -214,6 +216,10 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       setIsLoading(false)
       return
     }
+
+    // Skip if a fetch is already in progress to prevent queue flooding
+    if (fetchInProgress.current) return
+    fetchInProgress.current = true
 
     // Progressive loading: reset state
     if (!silent) {
@@ -427,6 +433,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
+      fetchInProgress.current = false
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [(clusters || []).join(',')])
@@ -481,6 +488,8 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const initialLoadDone = useRef(false)
+  /** Guard to prevent concurrent refetch calls from flooding the request queue */
+  const fetchInProgress = useRef(false)
 
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching in demo mode — no agent available
@@ -488,6 +497,10 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
       setIsLoading(false)
       return
     }
+
+    // Skip if a fetch is already in progress to prevent queue flooding
+    if (fetchInProgress.current) return
+    fetchInProgress.current = true
 
     // Progressive loading: reset state
     if (!silent) {
@@ -563,6 +576,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
+      fetchInProgress.current = false
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [(clusters || []).join(',')])
