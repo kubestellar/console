@@ -2666,5 +2666,25 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "strimziStatus": {
+    "noData": "无Strimzi集群数据",
+    "noDataHint": "Strimzi Kafka集群将显示在这里",
+    "topics": "主题",
+    "partitions": "分区",
+    "consumerLag": "消费者延迟",
+    "kafkaTopics": "Kafka主题",
+    "consumerGroups": "消费者组",
+    "summary": "{{topics}}个主题，{{groups}}个消费者组",
+    "summary_one": "{{topics}}个主题，{{groups}}个消费者组",
+    "summary_other": "{{topics}}个主题，{{groups}}个消费者组",
+    "topicStatus_active": "活跃",
+    "topicStatus_inactive": "非活跃",
+    "topicStatus_error": "错误",
+    "groupStatus_ok": "正常",
+    "groupStatus_warning": "警告",
+    "groupStatus_error": "错误",
+    "partitions_short": "分区",
+    "lag": "延迟"
   }
 }

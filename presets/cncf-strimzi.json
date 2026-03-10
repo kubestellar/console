@@ -1,0 +1,6 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "strimzi_status",
+  "title": "Strimzi",
+  "config": {}
+}

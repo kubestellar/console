@@ -2666,5 +2666,25 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "strimziStatus": {
+    "noData": "कोई Strimzi क्लस्टर डेटा नहीं",
+    "noDataHint": "Strimzi Kafka क्लस्टर यहां दिखाई देंगे",
+    "topics": "विषय",
+    "partitions": "विभाजन",
+    "consumerLag": "उपभोक्ता विलंब",
+    "kafkaTopics": "Kafka विषय",
+    "consumerGroups": "उपभोक्ता समूह",
+    "summary": "{{topics}} विषय, {{groups}} उपभोक्ता समूह",
+    "summary_one": "{{topics}} विषय, {{groups}} उपभोक्ता समूह",
+    "summary_other": "{{topics}} विषय, {{groups}} उपभोक्ता समूह",
+    "topicStatus_active": "सक्रिय",
+    "topicStatus_inactive": "निष्क्रिय",
+    "topicStatus_error": "त्रुटि",
+    "groupStatus_ok": "ठीक है",
+    "groupStatus_warning": "चेतावनी",
+    "groupStatus_error": "त्रुटि",
+    "partitions_short": "विभाजन",
+    "lag": "विलंब"
   }
 }

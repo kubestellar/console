@@ -2666,5 +2666,25 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "strimziStatus": {
+    "noData": "Strimziクラスターデータがありません",
+    "noDataHint": "Strimzi Kafkaクラスターがここに表示されます",
+    "topics": "トピック",
+    "partitions": "パーティション",
+    "consumerLag": "コンシューマー遅延",
+    "kafkaTopics": "Kafkaトピック",
+    "consumerGroups": "コンシューマーグループ",
+    "summary": "{{topics}}トピック、{{groups}}コンシューマーグループ",
+    "summary_one": "{{topics}}トピック、{{groups}}コンシューマーグループ",
+    "summary_other": "{{topics}}トピック、{{groups}}コンシューマーグループ",
+    "topicStatus_active": "アクティブ",
+    "topicStatus_inactive": "非アクティブ",
+    "topicStatus_error": "エラー",
+    "groupStatus_ok": "OK",
+    "groupStatus_warning": "警告",
+    "groupStatus_error": "エラー",
+    "partitions_short": "パーツ",
+    "lag": "遅延"
   }
 }

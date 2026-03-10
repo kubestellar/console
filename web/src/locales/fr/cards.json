@@ -2666,5 +2666,25 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "strimziStatus": {
+    "noData": "Aucune donnée de cluster Strimzi",
+    "noDataHint": "Les clusters Kafka Strimzi apparaîtront ici",
+    "topics": "Sujets",
+    "partitions": "Partitions",
+    "consumerLag": "Retard du consommateur",
+    "kafkaTopics": "Sujets Kafka",
+    "consumerGroups": "Groupes de consommateurs",
+    "summary": "{{topics}} sujets, {{groups}} groupes de consommateurs",
+    "summary_one": "{{topics}} sujet, {{groups}} groupe de consommateur",
+    "summary_other": "{{topics}} sujets, {{groups}} groupes de consommateurs",
+    "topicStatus_active": "Actif",
+    "topicStatus_inactive": "Inactif",
+    "topicStatus_error": "Erreur",
+    "groupStatus_ok": "OK",
+    "groupStatus_warning": "Avertissement",
+    "groupStatus_error": "Erreur",
+    "partitions_short": "parts",
+    "lag": "Retard"
   }
 }
