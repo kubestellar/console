@@ -1418,35 +1418,12 @@ export function useCachedWorkloads(
       return []
     },
     progressiveFetcher: async (onProgress) => {
+      // Try agent first (progressive via kc-agent)
       const agentData = await fetchWorkloadsFromAgent(onProgress)
       if (agentData) return agentData
-      // REST fallback is not progressive (single response)
-      const token = getToken()
-      const hasRealToken = token && token !== 'demo-token'
-      if (hasRealToken && !isBackendUnavailable()) {
-        const res = await fetch('/api/workloads', {
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          const items = (data.items || data) as Array<Record<string, unknown>>
-          return items.map(d => ({
-            name: String(d.name || ''),
-            namespace: String(d.namespace || 'default'),
-            type: (String(d.type || 'Deployment')) as Workload['type'],
-            cluster: String(d.cluster || ''),
-            targetClusters: (d.targetClusters as string[]) || (d.cluster ? [String(d.cluster)] : []),
-            replicas: Number(d.replicas || 1),
-            readyReplicas: Number(d.readyReplicas || 0),
-            status: (String(d.status || 'Running')) as Workload['status'],
-            image: String(d.image || ''),
-            labels: (d.labels as Record<string, string>) || {},
-            createdAt: String(d.createdAt || new Date().toISOString()),
-          }))
-        }
-      }
-      return []
+
+      // Fall back to SSE streaming -> progressive per-cluster
+      return await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
     },
   })
 

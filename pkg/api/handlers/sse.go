@@ -506,6 +506,29 @@ func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
 	})
 }
 
+// GetWorkloadsStream streams workloads per cluster via SSE.
+func (h *MCPHandlers) GetWorkloadsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "workloads", getDemoWorkloads())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	workloadType := c.Query("type")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "workloads",
+		clusterTimeout: ssePerClusterTimeout,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		workloads, err := h.k8sClient.ListWorkloadsForCluster(ctx, cluster, namespace, workloadType)
+		if err != nil {
+			return nil, err
+		}
+		return workloads, nil
+	})
+}
+
 // GetNVIDIAOperatorStatusStream streams NVIDIA operator status per cluster via SSE.
 func (h *MCPHandlers) GetNVIDIAOperatorStatusStream(c *fiber.Ctx) error {
 	if isDemoMode(c) {
