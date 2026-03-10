@@ -333,9 +333,9 @@ Please:
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<DeployMission, SortByOption>(rawMissions, {
+    containerRef,
+    containerStyle,
+  } = useCardData<DeployMission, SortByOption>(rawMissions, {
     filter: {
       searchFields: ['workload', 'namespace', 'sourceCluster', 'groupName'],
       customPredicate: (mission, query) =>

@@ -342,9 +342,9 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       clusterFilterRef,
     },
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<ClusterCostItem, SortByOption>(allClusterCosts, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ClusterCostItem, SortByOption>(allClusterCosts, {
     filter: {
       searchFields: ['name', 'context'] as (keyof ClusterCostItem)[],
       clusterField: 'cluster' as keyof ClusterCostItem,

@@ -119,9 +119,9 @@ export function ClusterHealth() {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<ClusterInfo, SortByOption>(rawClusters, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ClusterInfo, SortByOption>(rawClusters, {
     filter: {
       searchFields: ['name', 'context', 'server'],
       clusterField: 'name',

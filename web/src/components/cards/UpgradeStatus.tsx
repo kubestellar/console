@@ -523,9 +523,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<UpgradeItem, SortByOption>(clusterVersionData, {
+    containerRef,
+    containerStyle,
+  } = useCardData<UpgradeItem, SortByOption>(clusterVersionData, {
     filter: {
       searchFields: ['name', 'currentVersion'],
       clusterField: 'name',

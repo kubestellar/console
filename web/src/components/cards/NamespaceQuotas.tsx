@@ -497,9 +497,9 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     setItemsPerPage: quotaSetItemsPerPage,
     filters: quotaFilters,
     sorting: quotaSorting,
-  containerRef,
-  containerStyle,
-} = useCardData<QuotaUsage, SortByOption>(quotaUsages, {
+    containerRef,
+    containerStyle,
+  } = useCardData<QuotaUsage, SortByOption>(quotaUsages, {
     filter: {
       searchFields: ['resource', 'rawResource', 'cluster', 'namespace', 'quotaName'] as (keyof QuotaUsage)[],
       clusterField: 'cluster' as keyof QuotaUsage,

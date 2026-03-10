@@ -106,9 +106,9 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<Operator, SortByOption>(rawOperators, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Operator, SortByOption>(rawOperators, {
     filter: {
       searchFields: ['name', 'namespace', 'version'] as (keyof Operator)[],
       clusterField: 'cluster',

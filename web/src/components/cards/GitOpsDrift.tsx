@@ -151,9 +151,9 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<GitOpsDriftType, SortByOption>(severityFilteredDrifts, {
+    containerRef,
+    containerStyle,
+  } = useCardData<GitOpsDriftType, SortByOption>(severityFilteredDrifts, {
     filter: {
       searchFields: ['resource', 'kind', 'cluster', 'namespace'],
       clusterField: 'cluster',

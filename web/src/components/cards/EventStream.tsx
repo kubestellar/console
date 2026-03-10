@@ -70,9 +70,9 @@ function EventStreamInternal() {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<ClusterEvent, SortByOption>(rawEvents, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ClusterEvent, SortByOption>(rawEvents, {
     filter: {
       searchFields: ['message', 'object', 'namespace', 'type'],
       clusterField: 'cluster',

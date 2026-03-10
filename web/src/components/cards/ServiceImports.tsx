@@ -142,9 +142,9 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<ServiceImport, SortByOption>(DEMO_IMPORTS, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ServiceImport, SortByOption>(DEMO_IMPORTS, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'sourceCluster', 'dnsName', 'type'],
       clusterField: 'cluster',

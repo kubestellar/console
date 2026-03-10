@@ -120,9 +120,9 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<CRD, SortByOption>(groupFilteredCRDs, {
+    containerRef,
+    containerStyle,
+  } = useCardData<CRD, SortByOption>(groupFilteredCRDs, {
     filter: {
       searchFields: ['name', 'group', 'cluster'] as (keyof CRD)[],
       clusterField: 'cluster' as keyof CRD,

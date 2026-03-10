@@ -52,9 +52,9 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     items: filteredNodes,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData(rawNodes, {
+    containerRef,
+    containerStyle,
+  } = useCardData(rawNodes, {
     filter: {
       searchFields: ['gpuType' as keyof typeof rawNodes[number]],
       clusterField: 'cluster' as keyof typeof rawNodes[number],

@@ -154,9 +154,9 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<RBACItem, SortByOption>(activeTabItems, {
+    containerRef,
+    containerStyle,
+  } = useCardData<RBACItem, SortByOption>(activeTabItems, {
     filter: {
       searchFields: ['name'] as (keyof RBACItem)[],
       storageKey: 'namespace-rbac',

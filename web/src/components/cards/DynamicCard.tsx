@@ -118,9 +118,9 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     needsPagination,
     itemsPerPage,
     filters,
-  containerRef,
-  containerStyle,
-} = useCardData(data, {
+    containerRef,
+    containerStyle,
+  } = useCardData(data, {
     filter: {
       searchFields,
     },

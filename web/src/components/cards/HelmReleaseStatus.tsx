@@ -134,9 +134,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<HelmReleaseDisplay, SortByOption>(namespacedReleases, {
+    containerRef,
+    containerStyle,
+  } = useCardData<HelmReleaseDisplay, SortByOption>(namespacedReleases, {
     filter: {
       searchFields: ['name', 'namespace', 'chart', 'version'] as (keyof HelmReleaseDisplay)[],
       clusterField: 'cluster' as keyof HelmReleaseDisplay,

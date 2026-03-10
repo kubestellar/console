@@ -129,9 +129,9 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<ArgoApplication, SortByOption>(preFiltered, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ArgoApplication, SortByOption>(preFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'],
       clusterField: 'cluster',

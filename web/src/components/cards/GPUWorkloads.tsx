@@ -144,9 +144,9 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<PodInfo, SortByOption>(gpuWorkloadSource, {
+    containerRef,
+    containerStyle,
+  } = useCardData<PodInfo, SortByOption>(gpuWorkloadSource, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'node'] as (keyof PodInfo)[],
       clusterField: 'cluster' as keyof PodInfo,

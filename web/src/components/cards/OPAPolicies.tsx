@@ -293,9 +293,9 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       clusterFilterRef,
     },
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<OPAClusterItem, SortByOption>(clusterItems, {
+    containerRef,
+    containerStyle,
+  } = useCardData<OPAClusterItem, SortByOption>(clusterItems, {
     filter: {
       searchFields: ['name'] as (keyof OPAClusterItem)[],
       clusterField: 'cluster' as keyof OPAClusterItem,

@@ -162,9 +162,9 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<ServiceExport, SortByOption>(DEMO_EXPORTS, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ServiceExport, SortByOption>(DEMO_EXPORTS, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'serviceName', 'status'],
       clusterField: 'cluster',

@@ -188,9 +188,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     setItemsPerPage: setOpenShiftUserItemsPerPage,
     filters: openshiftUserFilters,
     sorting: openshiftUserSorting,
-  containerRef,
-  containerStyle,
-} = useCardData<OpenShiftUser, OpenShiftUserSortBy>(openshiftUsersPreFiltered, {
+    containerRef,
+    containerStyle,
+  } = useCardData<OpenShiftUser, OpenShiftUserSortBy>(openshiftUsersPreFiltered, {
     filter: {
       searchFields: ['name', 'cluster'] as (keyof OpenShiftUser)[],
       clusterField: 'cluster' as keyof OpenShiftUser,

@@ -129,9 +129,9 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<Deployment, SortByOption>(statusFilteredDeployments, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Deployment, SortByOption>(statusFilteredDeployments, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
       clusterField: 'cluster' as keyof Deployment,

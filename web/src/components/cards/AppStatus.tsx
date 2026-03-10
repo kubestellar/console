@@ -158,9 +158,9 @@ export function AppStatus(_props: AppStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<AppData, SortByOption>(preFilteredApps, {
+    containerRef,
+    containerStyle,
+  } = useCardData<AppData, SortByOption>(preFilteredApps, {
     filter: {
       searchFields: ['name', 'namespace'],
       // No clusterField -- array cluster filtering is handled in preFilteredApps

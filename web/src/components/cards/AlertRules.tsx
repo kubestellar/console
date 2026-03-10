@@ -74,9 +74,9 @@ export function AlertRulesCard() {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<AlertRule, SortField>(rules, {
+    containerRef,
+    containerStyle,
+  } = useCardData<AlertRule, SortField>(rules, {
     filter: {
       searchFields: ['name', 'severity'],
       customPredicate: (rule, query) =>

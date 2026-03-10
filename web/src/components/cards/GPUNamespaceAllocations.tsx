@@ -117,9 +117,9 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<NamespaceGPUAllocation, SortByOption>(namespaceAllocations, {
+    containerRef,
+    containerStyle,
+  } = useCardData<NamespaceGPUAllocation, SortByOption>(namespaceAllocations, {
     filter: {
       searchFields: ['namespace'] as (keyof NamespaceGPUAllocation)[],
       storageKey: 'gpu-namespace-allocations',

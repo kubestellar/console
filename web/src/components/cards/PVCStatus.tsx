@@ -110,9 +110,9 @@ function PVCStatusInternal() {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<PVC, SortByOption>(pvcs, {
+    containerRef,
+    containerStyle,
+  } = useCardData<PVC, SortByOption>(pvcs, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'storageClass'],
       clusterField: 'cluster',

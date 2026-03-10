@@ -198,9 +198,9 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<HelmHistoryEntry, SortByOption>(rawHistory, {
+    containerRef,
+    containerStyle,
+  } = useCardData<HelmHistoryEntry, SortByOption>(rawHistory, {
     filter: {
       searchFields: ['chart', 'status', 'description'] as (keyof HelmHistoryEntry)[],
       customPredicate: (item, query) => String(item.revision).includes(query),

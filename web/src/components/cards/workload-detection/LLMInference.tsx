@@ -89,9 +89,9 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   const {
     items, totalItems, currentPage, totalPages, goToPage, needsPagination,
     itemsPerPage, setItemsPerPage, filters, sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<LLMdServer, LLMdSortByOption>(componentFiltered, {
+    containerRef,
+    containerStyle,
+  } = useCardData<LLMdServer, LLMdSortByOption>(componentFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'status', 'componentType', 'type'] as (keyof LLMdServer)[],
       clusterField: 'cluster' as keyof LLMdServer,

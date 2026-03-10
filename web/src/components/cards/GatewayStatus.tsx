@@ -204,9 +204,9 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<Gateway, SortByOption>(DEMO_GATEWAYS, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Gateway, SortByOption>(DEMO_GATEWAYS, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'gatewayClass', 'status'],
       clusterField: 'cluster',

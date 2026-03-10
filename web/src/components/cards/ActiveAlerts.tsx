@@ -176,9 +176,9 @@ export function ActiveAlerts() {
       sortBy,
       setSortBy,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<Alert, SortField>(severityFilteredAlerts, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Alert, SortField>(severityFilteredAlerts, {
     filter: {
       searchFields: ['ruleName', 'message', 'cluster'],
       clusterField: 'cluster',

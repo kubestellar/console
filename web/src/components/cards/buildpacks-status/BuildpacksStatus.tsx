@@ -141,9 +141,9 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<BuildpackImage, SortByOption>(namespacedBuilds, {
+    containerRef,
+    containerStyle,
+  } = useCardData<BuildpackImage, SortByOption>(namespacedBuilds, {
     filter: {
       searchFields: ['name', 'namespace', 'builder', 'image'],
       clusterField: 'cluster',

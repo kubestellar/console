@@ -197,9 +197,9 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<FeedItem, SortByOption>(preFilteredItems, {
+    containerRef,
+    containerStyle,
+  } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
     filter: {
       searchFields: ['title', 'description', 'author'] as (keyof FeedItem)[],
       customPredicate: (item, query) => {

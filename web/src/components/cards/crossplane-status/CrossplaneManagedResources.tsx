@@ -86,9 +86,9 @@ export function CrossplaneManagedResources() {
     setItemsPerPage,
     filters: { search, setSearch },
     sorting: { sortBy, setSortBy, sortDirection, setSortDirection },
-  containerRef,
-  containerStyle,
-} = useCardData<ManagedResourceView, SortByOption>(viewResources, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ManagedResourceView, SortByOption>(viewResources, {
     filter: {
       searchFields: ['name', 'kind', 'namespace'],
       storageKey: 'crossplane-managed'

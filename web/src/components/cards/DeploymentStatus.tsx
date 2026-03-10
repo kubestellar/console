@@ -147,9 +147,9 @@ export function DeploymentStatus() {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<Deployment, SortByOption>(statusPreFiltered, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Deployment, SortByOption>(statusPreFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
       clusterField: 'cluster',

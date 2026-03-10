@@ -80,9 +80,9 @@ export function WarningEvents() {
       clusterFilterRef,
     },
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<ClusterEvent, SortByOption>(warningOnly, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ClusterEvent, SortByOption>(warningOnly, {
     filter: {
       searchFields: ['reason', 'message', 'object', 'namespace'],
       clusterField: 'cluster',

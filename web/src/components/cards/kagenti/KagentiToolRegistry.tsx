@@ -38,9 +38,9 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
-  containerRef,
-  containerStyle,
-} = useCardData(tools, {
+    containerRef,
+    containerStyle,
+  } = useCardData(tools, {
     filter: {
       searchFields: ['name', 'namespace', 'toolPrefix', 'targetRef', 'cluster'],
       clusterField: 'cluster',

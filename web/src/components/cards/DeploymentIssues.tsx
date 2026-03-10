@@ -92,9 +92,9 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<DeploymentIssue, SortByOption>(rawIssues, {
+    containerRef,
+    containerStyle,
+  } = useCardData<DeploymentIssue, SortByOption>(rawIssues, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'reason', 'message'],
       clusterField: 'cluster',

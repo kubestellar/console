@@ -107,9 +107,9 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<MonitoredResource, SortField>(preFiltered, {
+    containerRef,
+    containerStyle,
+  } = useCardData<MonitoredResource, SortField>(preFiltered, {
     filter: {
       searchFields: ['name', 'kind', 'status', 'category', 'message'] as (keyof MonitoredResource)[],
     },

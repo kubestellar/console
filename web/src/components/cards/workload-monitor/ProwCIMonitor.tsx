@@ -106,9 +106,9 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData(jobs, {
+    containerRef,
+    containerStyle,
+  } = useCardData(jobs, {
     filter: {
       searchFields: ['name', 'state', 'type', 'cluster'] as (keyof typeof jobs[0])[],
     },

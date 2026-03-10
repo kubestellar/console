@@ -50,9 +50,9 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
-  containerRef,
-  containerStyle,
-} = useCardData(cards, {
+    containerRef,
+    containerStyle,
+  } = useCardData(cards, {
     filter: {
       searchFields: ['name', 'agentName', 'namespace', 'cluster'],
       clusterField: 'cluster',

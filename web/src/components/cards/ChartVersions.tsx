@@ -99,9 +99,9 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<ChartInfo, SortByOption>(allCharts, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ChartInfo, SortByOption>(allCharts, {
     filter: {
       searchFields: ['name', 'chart', 'namespace', 'version'],
       clusterField: 'cluster',

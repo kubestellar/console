@@ -150,9 +150,9 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<SecurityIssue, SortByOption>(rawIssues, {
+    containerRef,
+    containerStyle,
+  } = useCardData<SecurityIssue, SortByOption>(rawIssues, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'issue', 'severity', 'details'],
       clusterField: 'cluster',

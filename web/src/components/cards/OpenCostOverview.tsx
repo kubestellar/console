@@ -72,9 +72,9 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<NamespaceCost, SortByOption>(DEMO_NAMESPACE_COSTS, {
+    containerRef,
+    containerStyle,
+  } = useCardData<NamespaceCost, SortByOption>(DEMO_NAMESPACE_COSTS, {
     filter: {
       searchFields: ['namespace'],
       storageKey: 'opencost-overview',

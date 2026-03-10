@@ -206,9 +206,9 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<Kustomization, SortByOption>(namespacedKustomizations, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Kustomization, SortByOption>(namespacedKustomizations, {
     filter: {
       searchFields: ['name', 'namespace', 'path', 'sourceRef'] as (keyof Kustomization)[],
       storageKey: 'kustomization-status',

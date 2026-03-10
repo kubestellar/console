@@ -79,9 +79,9 @@ export function PodIssues() {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<PodIssue, SortByOption>(rawIssues, {
+    containerRef,
+    containerStyle,
+  } = useCardData<PodIssue, SortByOption>(rawIssues, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'status'],
       clusterField: 'cluster',

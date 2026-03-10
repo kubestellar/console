@@ -590,9 +590,9 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     itemsPerPage,
     setItemsPerPage,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<StockData, SortByOption>(stockData, {
+    containerRef,
+    containerStyle,
+  } = useCardData<StockData, SortByOption>(stockData, {
     filter: {
       searchFields: ['symbol', 'name'] as (keyof StockData)[],
       storageKey: 'stock-ticker',

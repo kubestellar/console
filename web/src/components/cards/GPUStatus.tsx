@@ -112,9 +112,9 @@ export function GPUStatus({ config }: GPUStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<ClusterGPUStats, SortByOption>(clusterStatsList, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ClusterGPUStats, SortByOption>(clusterStatsList, {
     filter: {
       searchFields: ['clusterName'],
       clusterField: 'clusterName',

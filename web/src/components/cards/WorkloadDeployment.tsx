@@ -550,9 +550,9 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<Workload, SortByOption>(preFiltered, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Workload, SortByOption>(preFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'image'] as (keyof Workload)[],
       customPredicate: (w, query) =>

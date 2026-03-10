@@ -71,9 +71,9 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<ProwJob, 'name' | 'state' | 'started'>(preFilteredJobs, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ProwJob, 'name' | 'state' | 'started'>(preFilteredJobs, {
     filter: {
       searchFields: ['name', 'state', 'type'] as (keyof ProwJob)[],
       customPredicate: (j, q) => !!(j.pr && String(j.pr).includes(q)),

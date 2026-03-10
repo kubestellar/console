@@ -255,9 +255,9 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<ValueEntry, SortByOption>(rawValueEntries, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ValueEntry, SortByOption>(rawValueEntries, {
     filter: {
       searchFields: ['path', 'value'],
     },

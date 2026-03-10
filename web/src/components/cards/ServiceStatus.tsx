@@ -97,9 +97,9 @@ export function ServiceStatus() {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<Service, SortByOption>(services, {
+    containerRef,
+    containerStyle,
+  } = useCardData<Service, SortByOption>(services, {
     filter: {
       searchFields: ['name', 'namespace', 'type'],
       clusterField: 'cluster',

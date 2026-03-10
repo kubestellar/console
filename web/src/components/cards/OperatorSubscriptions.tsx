@@ -101,9 +101,9 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
+    containerRef,
+    containerStyle,
+  } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
     filter: {
       searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
       clusterField: 'cluster',

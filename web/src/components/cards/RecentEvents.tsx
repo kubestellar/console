@@ -69,9 +69,9 @@ export function RecentEvents() {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<ClusterEvent, SortByOption>(recentEventsCandidates, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ClusterEvent, SortByOption>(recentEventsCandidates, {
     filter: {
       searchFields: ['reason', 'object', 'message', 'namespace'],
       clusterField: 'cluster',

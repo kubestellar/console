@@ -126,9 +126,9 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<ClusterEvent, SortByOption>(preFilteredEvents, {
+    containerRef,
+    containerStyle,
+  } = useCardData<ClusterEvent, SortByOption>(preFilteredEvents, {
     filter: {
       searchFields: ['message', 'object', 'namespace', 'type', 'reason'],
       clusterField: 'cluster',

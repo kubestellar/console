@@ -54,9 +54,9 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
-  containerRef,
-  containerStyle,
-} = useCardData(agents, {
+    containerRef,
+    containerStyle,
+  } = useCardData(agents, {
     filter: {
       searchFields: ['name', 'namespace', 'framework', 'cluster', 'status'],
       clusterField: 'cluster',

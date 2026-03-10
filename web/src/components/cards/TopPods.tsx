@@ -115,9 +115,9 @@ export function TopPods({ config }: TopPodsProps) {
       sortDirection,
       setSortDirection,
     },
-  containerRef,
-  containerStyle,
-} = useCardData<(typeof rawPods)[0], SortByOption>(rawPods, {
+    containerRef,
+    containerStyle,
+  } = useCardData<(typeof rawPods)[0], SortByOption>(rawPods, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'status'],
       clusterField: 'cluster',

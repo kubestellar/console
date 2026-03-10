@@ -53,9 +53,9 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<LLMdModel, SortByOption>(models, {
+    containerRef,
+    containerStyle,
+  } = useCardData<LLMdModel, SortByOption>(models, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof LLMdModel)[],
       clusterField: 'cluster' as keyof LLMdModel,

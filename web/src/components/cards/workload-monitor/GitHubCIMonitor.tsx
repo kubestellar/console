@@ -271,9 +271,9 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
     setItemsPerPage,
     filters,
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData(workflows, {
+    containerRef,
+    containerStyle,
+  } = useCardData(workflows, {
     filter: {
       searchFields: ['name', 'repo', 'branch', 'event'] as (keyof WorkflowRun)[],
     },

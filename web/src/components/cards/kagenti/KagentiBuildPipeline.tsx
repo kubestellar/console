@@ -69,9 +69,9 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
-  containerRef,
-  containerStyle,
-} = useCardData(builds, {
+    containerRef,
+    containerStyle,
+  } = useCardData(builds, {
     filter: {
       searchFields: ['name', 'namespace', 'source', 'pipeline', 'status', 'cluster'],
       clusterField: 'cluster',

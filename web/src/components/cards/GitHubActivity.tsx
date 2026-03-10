@@ -640,9 +640,9 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       setSearch: setSearchQuery,
     },
     sorting,
-  containerRef,
-  containerStyle,
-} = useCardData<GitHubItem, SortByOption>(preFilteredData, {
+    containerRef,
+    containerStyle,
+  } = useCardData<GitHubItem, SortByOption>(preFilteredData, {
     filter: {
       searchFields: [] as (keyof GitHubItem)[],
       customPredicate: githubSearchPredicate,
