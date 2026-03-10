@@ -62,7 +62,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
           <p className="text-green-400 font-medium">Kubecost Integration</p>
           <p className="text-muted-foreground">
             Install Kubecost for detailed cost allocation and optimization recommendations.{' '}
-            <a href="https://docs.kubecost.com/install-and-configure/install/first-time-user-guide" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-flex items-center min-h-11">
+            <a href="https://docs.kubecost.com/install-and-configure/install/first-time-user-guide" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-block py-2">
               Install guide →
             </a>
           </p>

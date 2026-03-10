@@ -153,7 +153,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
           <p className="text-blue-400 font-medium">OpenCost Integration</p>
           <p className="text-muted-foreground">
             Install OpenCost in your cluster to get real cost allocation data.{' '}
-            <a href="https://www.opencost.io/docs/installation/install" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-flex items-center min-h-11">
+            <a href="https://www.opencost.io/docs/installation/install" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-block py-2">
               Install guide →
             </a>
           </p>

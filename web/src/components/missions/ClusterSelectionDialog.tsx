@@ -48,7 +48,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
             <h3 className="text-sm font-semibold text-foreground">Select Target Cluster</h3>
             <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[320px]">{missionTitle}</p>
           </div>
-          <Button variant="ghost" onClick={onCancel} className="p-1 rounded-md" icon={<X className="w-4 h-4" />} />
+          <Button variant="ghost" onClick={onCancel} className="p-1 rounded-md min-h-11 min-w-11" icon={<X className="w-4 h-4" />} />
         </div>
 
         {/* Cluster list */}

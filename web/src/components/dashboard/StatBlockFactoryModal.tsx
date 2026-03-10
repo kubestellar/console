@@ -605,7 +605,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                           {/* Remove */}
                           <button
                             onClick={() => removeBlock(idx)}
-                            className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
+                            className="p-1 text-muted-foreground hover:text-red-400 transition-colors min-h-11 min-w-11 flex items-center justify-center"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -670,14 +670,14 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                   <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => setPreviewSize(previewSize === 'card' ? 'full' : 'card')}
-                      className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
+                      className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors min-h-11 min-w-11 flex items-center justify-center"
                       title={previewSize === 'card' ? t('dashboard.preview.fullWidth') : t('dashboard.preview.cardWidth')}
                     >
                       {previewSize === 'card' ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
                     </button>
                     <button
                       onClick={() => setPreviewCollapsed(true)}
-                      className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
+                      className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors min-h-11 min-w-11 flex items-center justify-center"
                       title={t('dashboard.preview.hidePreview')}
                     >
                       <EyeOff className="w-3 h-3" />

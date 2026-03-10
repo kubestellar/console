@@ -99,7 +99,7 @@ export function GettingStartedBanner({
         </div>
         <button
           onClick={handleDismiss}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 min-h-11 min-w-11 flex items-center justify-center"
           aria-label="Dismiss"
         >
           <X className="w-3.5 h-3.5" />

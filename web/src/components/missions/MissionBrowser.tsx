@@ -1295,8 +1295,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         autoFocus
                         onKeyDown={(e) => { if (e.key === 'Escape') { setAddingRepo(false); setNewRepoValue('') } }}
                       />
-                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300"><CheckCircle className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => { setAddingRepo(false); setNewRepoValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground"><X className="w-3.5 h-3.5" /></button>
+                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => { setAddingRepo(false); setNewRepoValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
                     </form>
                   </div>
                 )}
@@ -1324,8 +1324,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         autoFocus
                         onKeyDown={(e) => { if (e.key === 'Escape') { setAddingPath(false); setNewPathValue('') } }}
                       />
-                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300"><CheckCircle className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => { setAddingPath(false); setNewPathValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground"><X className="w-3.5 h-3.5" /></button>
+                      <button type="submit" className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => { setAddingPath(false); setNewPathValue('') }} className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
                     </form>
                   </div>
                 )}

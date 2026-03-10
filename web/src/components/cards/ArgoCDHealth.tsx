@@ -96,7 +96,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
           <p className="text-orange-400 font-medium">{t('argoCDHealth.argocdIntegration')}</p>
           <p className="text-muted-foreground">
             {t('argoCDHealth.installArgoCD')}{' '}
-            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-flex items-center min-h-11">
+            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-block py-2">
               {t('argoCDHealth.installGuide')}
             </a>
           </p>
