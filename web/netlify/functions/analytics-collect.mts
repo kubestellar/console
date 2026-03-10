@@ -85,18 +85,21 @@ export default async (req: Request) => {
     gaParams.set("_uip", clientIp);
   }
 
-  const targetUrl = `https://www.google-analytics.com/g/collect?${gaParams.toString()}`;
+  // Send params as POST body (not URL query string) so GA4 respects _uip
+  // for geolocation. The /g/collect endpoint ignores _uip in query params
+  // when the request comes from a server IP.
+  const targetUrl = "https://www.google-analytics.com/g/collect";
+  const postBody = gaParams.toString();
 
   try {
-    const body = req.method === "POST" ? await req.text() : undefined;
     const resp = await fetch(targetUrl, {
-      method: req.method,
+      method: "POST",
       headers: {
-        "Content-Type": req.headers.get("content-type") || "text/plain",
+        "Content-Type": "text/plain",
         "User-Agent": req.headers.get("user-agent") || "",
         ...(clientIp && { "X-Forwarded-For": clientIp }),
       },
-      body,
+      body: postBody,
     });
 
     // 204/304 are null-body statuses — Response constructor throws if body is non-null

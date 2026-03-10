@@ -101,12 +101,15 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 		qs = params.Encode()
 	}
 
-	target := "https://www.google-analytics.com/g/collect?" + qs
-	req, err := http.NewRequest(c.Method(), target, bytes.NewReader(c.Body()))
+	// Send params as POST body (not URL query string) so GA4 respects _uip
+	// for geolocation. The /g/collect endpoint ignores _uip in query params
+	// when the request comes from a server IP.
+	target := "https://www.google-analytics.com/g/collect"
+	req, err := http.NewRequest(http.MethodPost, target, bytes.NewReader([]byte(qs)))
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
-	req.Header.Set("Content-Type", c.Get("Content-Type", "text/plain"))
+	req.Header.Set("Content-Type", "text/plain")
 	req.Header.Set("User-Agent", c.Get("User-Agent"))
 	if clientIP != "" && !isPrivateIP(clientIP) {
 		req.Header.Set("X-Forwarded-For", clientIP)
