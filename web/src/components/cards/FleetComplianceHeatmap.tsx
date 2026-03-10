@@ -52,14 +52,14 @@ const STATUS_COLORS: Record<CellStatus, string> = {
   good: 'bg-green-500/20 text-green-400 border-green-500/30',
   warning: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   critical: 'bg-red-500/20 text-red-400 border-red-500/30',
-  'not-installed': 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20',
+  'not-installed': 'text-zinc-700 border-transparent',
 }
 
 const STATUS_DOTS: Record<CellStatus, string> = {
   good: 'bg-green-400',
   warning: 'bg-yellow-400',
   critical: 'bg-red-400',
-  'not-installed': 'bg-zinc-500',
+  'not-installed': 'hidden',
 }
 
 /** Install mission definitions for each compliance tool */
@@ -164,7 +164,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       const ks = kyvernoStatuses?.[cluster]
       let kyvernoCell: HeatmapCell
       if (!ks || !ks.installed) {
-        kyvernoCell = { status: 'not-installed', label: 'N/A', tooltip: 'Kyverno not installed' }
+        kyvernoCell = { status: 'not-installed', label: '—', tooltip: 'Kyverno not installed' }
       } else if (ks.totalPolicies === 0) {
         kyvernoCell = { status: 'warning', label: 'No policies', tooltip: 'Kyverno installed but no policies configured' }
       } else {
@@ -183,7 +183,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       const ts = trivyStatuses?.[cluster]
       let trivyCell: HeatmapCell
       if (!ts || !ts.installed) {
-        trivyCell = { status: 'not-installed', label: 'N/A', tooltip: 'Trivy not installed' }
+        trivyCell = { status: 'not-installed', label: '—', tooltip: 'Trivy not installed' }
       } else if (ts.totalReports === 0) {
         trivyCell = { status: 'warning', label: 'No reports', tooltip: 'Trivy installed but no vulnerability reports generated' }
       } else {
@@ -201,7 +201,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       const kss = kubescapeStatuses?.[cluster]
       let kubescapeCell: HeatmapCell
       if (!kss || !kss.installed) {
-        kubescapeCell = { status: 'not-installed', label: 'N/A', tooltip: 'Kubescape not installed' }
+        kubescapeCell = { status: 'not-installed', label: '—', tooltip: 'Kubescape not installed' }
       } else if (kss.totalControls === 0) {
         kubescapeCell = { status: 'warning', label: 'No scans', tooltip: 'Kubescape installed but no scan data generated' }
       } else {
@@ -282,7 +282,6 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-0.5" /> Good</span>
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-400 mr-0.5" /> Warning</span>
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-0.5" /> Critical</span>
-        <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-500 mr-0.5" /> N/A</span>
       </div>
     </div>
   )
