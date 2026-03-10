@@ -277,35 +277,53 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isDemoData: kyvernoDemoData } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
 
-  // Aggregate violations from Kyverno (and OPA could be added here too)
+  /** Maximum number of violation entries to display */
+  const MAX_VIOLATION_ENTRIES = 10
+
+  // Aggregate violations from Kyverno reports (policy.violations is always 0
+  // because the hook doesn't back-populate per-policy counts from PolicyReports;
+  // instead use totalViolations and reports for the real data)
   const violations = useMemo(() => {
     const result: Array<{ policy: string; count: number; tool: string; clusters: string[] }> = []
-    const policyMap = new Map<string, { count: number; tool: string; clusters: string[] }>()
+    const clusterViolations = new Map<string, { count: number; clusters: string[] }>()
 
     for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
       if (!status.installed) continue
       if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
 
-      for (const policy of (status.policies || [])) {
-        if (policy.violations === 0) continue
-        const key = `kyverno:${policy.name}`
-        if (!policyMap.has(key)) {
-          policyMap.set(key, { count: 0, tool: 'Kyverno', clusters: [] })
+      // Use reports for per-namespace breakdown when available
+      if ((status.reports || []).length > 0) {
+        for (const report of (status.reports || [])) {
+          if (report.fail === 0) continue
+          const key = report.namespace || 'cluster-scoped'
+          if (!clusterViolations.has(key)) {
+            clusterViolations.set(key, { count: 0, clusters: [] })
+          }
+          const entry = clusterViolations.get(key)!
+          entry.count += report.fail
+          if (!entry.clusters.includes(clusterName)) {
+            entry.clusters.push(clusterName)
+          }
         }
-        const entry = policyMap.get(key)!
-        entry.count += policy.violations
+      } else if (status.totalViolations > 0) {
+        // Fallback: aggregate totalViolations when reports array is empty
+        const key = 'all-policies'
+        if (!clusterViolations.has(key)) {
+          clusterViolations.set(key, { count: 0, clusters: [] })
+        }
+        const entry = clusterViolations.get(key)!
+        entry.count += status.totalViolations
         if (!entry.clusters.includes(clusterName)) {
           entry.clusters.push(clusterName)
         }
       }
     }
 
-    for (const [key, data] of policyMap.entries()) {
-      const policyName = key.split(':')[1]
-      result.push({ policy: policyName, ...data })
+    for (const [key, data] of clusterViolations.entries()) {
+      result.push({ policy: key, tool: 'Kyverno', ...data })
     }
 
-    return result.sort((a, b) => b.count - a.count).slice(0, 10)
+    return result.sort((a, b) => b.count - a.count).slice(0, MAX_VIOLATION_ENTRIES)
   }, [kyvernoStatuses, selectedClusters])
 
   const hasData = violations.length > 0 || kyvernoDemoData
@@ -371,14 +389,19 @@ export function ComplianceScore({ config: _config }: CardConfig) {
       totalPolicies += status.totalPolicies
     }
     if (totalPolicies > 0) {
-      // Compliance rate: policies with zero violations / total policies
-      let compliant = 0
+      // Compliance rate based on totalViolations from PolicyReports
+      // (individual policy.violations is always 0 — hook doesn't back-populate)
+      let totalViolations = 0
       for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
         if (!status.installed) continue
         if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
-        compliant += (status.policies || []).filter(p => p.violations === 0).length
+        totalViolations += status.totalViolations
       }
-      const rate = Math.round((compliant / totalPolicies) * 100)
+      // Score: 100% when no violations, 0% when violations >= totalPolicies
+      // Scale: each violation reduces score proportionally
+      const rate = totalViolations === 0
+        ? 100
+        : Math.max(0, Math.round(100 - (totalViolations / totalPolicies) * 100))
       scores.push({ name: 'Kyverno', value: rate })
     }
 

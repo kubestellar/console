@@ -166,7 +166,8 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       if (!ks || !ks.installed) {
         kyvernoCell = { status: 'not-installed', label: 'N/A', tooltip: 'Kyverno not installed' }
       } else {
-        const violations = (ks.policies || []).reduce((sum, p) => sum + p.violations, 0)
+        // Use totalViolations from cluster status — individual policy violations aren't populated from reports
+        const violations = ks.totalViolations ?? 0
         const status: CellStatus = violations >= POLICY_CRITICAL_THRESHOLD ? 'critical'
           : violations >= POLICY_WARNING_THRESHOLD ? 'warning' : 'good'
         kyvernoCell = {

@@ -162,6 +162,8 @@ export function useKyverno() {
     cachedData.current?.timestamp ? new Date(cachedData.current.timestamp) : null
   )
   const initialLoadDone = useRef(!!cachedData.current)
+  /** Guard to prevent concurrent refetch calls from flooding the request queue */
+  const fetchInProgress = useRef(false)
 
   const clusters = useMemo(() =>
     allClusters.filter(c => c.reachable !== false).map(c => c.name),
@@ -173,6 +175,10 @@ export function useKyverno() {
       setIsLoading(false)
       return
     }
+
+    // Skip if a fetch is already in progress to prevent queue flooding
+    if (fetchInProgress.current) return
+    fetchInProgress.current = true
 
     if (!silent) {
       setIsRefreshing(true)
@@ -317,6 +323,7 @@ export function useKyverno() {
     initialLoadDone.current = true
     setIsLoading(false)
     setIsRefreshing(false)
+    fetchInProgress.current = false
   }, [clusters])
 
   // Demo mode

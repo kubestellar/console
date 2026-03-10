@@ -51,9 +51,8 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
       const lower = customFilter.toLowerCase()
       result = result.filter(c => c.toLowerCase().includes(lower))
     }
-    // Only include clusters that have Kyverno data
-    const kyvernoKeys = new Set(Object.keys(kyvernoStatuses || {}))
-    result = result.filter(c => kyvernoKeys.has(c))
+    // Only include clusters where Kyverno is actually installed
+    result = result.filter(c => kyvernoStatuses?.[c]?.installed)
     return result.sort()
   }, [rawClusters, globalSelectedClusters, isAllClustersSelected, customFilter, kyvernoStatuses])
 
