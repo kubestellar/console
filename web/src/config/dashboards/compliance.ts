@@ -10,6 +10,7 @@ export const complianceDashboardConfig: UnifiedDashboardConfig = {
   route: '/compliance',
   statsType: 'compliance',
   cards: [
+    { id: 'recommended-policies-1', cardType: 'recommended_policies', position: { w: 6, h: 4 } },
     { id: 'compliance-score-1', cardType: 'compliance_score', position: { w: 4, h: 3 } },
     { id: 'policy-violations-1', cardType: 'policy_violations', position: { w: 8, h: 4 } },
     { id: 'fleet-compliance-heatmap-1', cardType: 'fleet_compliance_heatmap', position: { w: 12, h: 4 } },

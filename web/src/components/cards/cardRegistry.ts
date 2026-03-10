@@ -76,6 +76,7 @@ const OPAPolicies = lazy(() => import('./OPAPolicies').then(m => ({ default: m.O
 const FleetComplianceHeatmap = lazy(() => import('./FleetComplianceHeatmap').then(m => ({ default: m.FleetComplianceHeatmap })))
 const ComplianceDrift = lazy(() => import('./ComplianceDrift').then(m => ({ default: m.ComplianceDrift })))
 const CrossClusterPolicyComparison = lazy(() => import('./CrossClusterPolicyComparison').then(m => ({ default: m.CrossClusterPolicyComparison })))
+const RecommendedPolicies = lazy(() => import('./RecommendedPolicies').then(m => ({ default: m.RecommendedPolicies })))
 const KyvernoPolicies = lazy(() => import('./KyvernoPolicies').then(m => ({ default: m.KyvernoPolicies })))
 // Eagerly import demo-only compliance cards — they're tiny (~255 lines total),
 // contain only hardcoded demo data, and lazy loading them causes blank cards
@@ -327,6 +328,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   fleet_compliance_heatmap: FleetComplianceHeatmap,
   compliance_drift: ComplianceDrift,
   cross_cluster_policy_comparison: CrossClusterPolicyComparison,
+  recommended_policies: RecommendedPolicies,
   // Data compliance tool cards
   vault_secrets: VaultSecrets,
   external_secrets: ExternalSecrets,
@@ -717,6 +719,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   fleet_compliance_heatmap: () => import('./FleetComplianceHeatmap'),
   compliance_drift: () => import('./ComplianceDrift'),
   cross_cluster_policy_comparison: () => import('./CrossClusterPolicyComparison'),
+  recommended_policies: () => import('./RecommendedPolicies'),
   vault_secrets: () => import('./DataComplianceCards'),
   external_secrets: () => import('./DataComplianceCards'),
   cert_manager: () => import('./DataComplianceCards'),
@@ -1062,6 +1065,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   fleet_compliance_heatmap: 6,
   compliance_drift: 5,
   cross_cluster_policy_comparison: 5,
+  recommended_policies: 6,
   vault_secrets: 4,
   external_secrets: 4,
   cert_manager: 4,
