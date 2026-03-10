@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import type { ClusterInfo, MCPStatus } from '../types'
+import type { ClusterInfo, ClusterHealth, MCPStatus } from '../types'
+import { STORAGE_KEY_TOKEN } from '../../../lib/constants'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — must be created before any import resolution
@@ -8,10 +9,12 @@ import type { ClusterInfo, MCPStatus } from '../types'
 const mockFullFetchClusters = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const mockConnectSharedWebSocket = vi.hoisted(() => vi.fn())
 const mockUseDemoMode = vi.hoisted(() => vi.fn().mockReturnValue({ isDemoMode: false }))
+const mockIsDemoMode = vi.hoisted(() => vi.fn(() => false))
 const mockApiGet = vi.hoisted(() => vi.fn())
 const mockTriggerAggressiveDetection = vi.hoisted(() =>
   vi.fn().mockResolvedValue(undefined),
 )
+const mockFetchSingleClusterHealth = vi.hoisted(() => vi.fn<() => Promise<ClusterHealth | null>>().mockResolvedValue(null))
 
 // ---------------------------------------------------------------------------
 // Partially mock ../shared: keep real state & pure-util implementations via
@@ -60,7 +63,7 @@ vi.mock('../shared', async () => {
     subscribeClusterCache: m.subscribeClusterCache,
     clusterCacheRef: m.clusterCacheRef,
     // Stubbed to prevent real network calls
-    fetchSingleClusterHealth: vi.fn().mockResolvedValue(null),
+    fetchSingleClusterHealth: mockFetchSingleClusterHealth,
     fullFetchClusters: mockFullFetchClusters,
     connectSharedWebSocket: mockConnectSharedWebSocket,
   }
@@ -69,6 +72,13 @@ vi.mock('../shared', async () => {
 vi.mock('../../../lib/api', () => ({
   api: { get: mockApiGet },
   isBackendUnavailable: vi.fn(() => false),
+}))
+
+vi.mock('../../../lib/demoMode', () => ({
+  isDemoMode: mockIsDemoMode,
+  isDemoToken: vi.fn(() => false),
+  isNetlifyDeployment: false,
+  subscribeDemoMode: vi.fn(),
 }))
 
 vi.mock('../../useDemoMode', () => ({
@@ -85,7 +95,7 @@ vi.mock('../../useLocalAgent', () => ({
 // ---------------------------------------------------------------------------
 // Imports (resolved after mocks are installed)
 // ---------------------------------------------------------------------------
-import { useMCPStatus, useClusters } from '../clusters'
+import { useMCPStatus, useClusters, useClusterHealth } from '../clusters'
 import {
   clusterSubscribers,
   updateClusterCache,
@@ -463,7 +473,7 @@ describe('Shared WebSocket singleton', () => {
   })
 
   it('only one connection is attempted for multiple hook instances', () => {
-    localStorage.setItem('token', 'test-token')
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'test-token')
     // jsdom default hostname is 'localhost' – satisfies the isLocalhost check
     renderHook(() => useClusters()) // sets initialFetchStarted → true, calls connectSharedWebSocket
     renderHook(() => useClusters()) // initialFetchStarted is now true → block skipped
@@ -473,7 +483,7 @@ describe('Shared WebSocket singleton', () => {
   })
 
   it('connection is not attempted when not on localhost', () => {
-    localStorage.setItem('token', 'test-token')
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'test-token')
     // Stub location so hostname is not localhost/127.0.0.1
     vi.stubGlobal('location', { hostname: 'production.example.com', protocol: 'http:' })
 
@@ -490,7 +500,7 @@ describe('Shared WebSocket singleton', () => {
   })
 
   it('unmounting one hook instance does not disrupt remaining subscribers', async () => {
-    localStorage.setItem('token', 'test-token')
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'test-token')
 
     const { unmount: u1 } = renderHook(() => useClusters())
     const { result: r2 } = renderHook(() => useClusters())
@@ -503,5 +513,105 @@ describe('Shared WebSocket singleton', () => {
     })
 
     expect(r2.current.clusters[0].name).toBe('persists')
+  })
+})
+
+// ===========================================================================
+// useClusterHealth
+// ===========================================================================
+describe('useClusterHealth', () => {
+  const CLUSTER = 'test-cluster'
+
+  beforeEach(() => {
+    resetSharedState()
+    mockFetchSingleClusterHealth.mockReset()
+    mockIsDemoMode.mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    clearClusterFailure(CLUSTER)
+    vi.useRealTimers()
+  })
+
+  it('starts with isLoading: true and null health', () => {
+    // fetch never resolves so state stays at initial
+    mockFetchSingleClusterHealth.mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.health).toBeNull()
+    expect(result.current.error).toBeNull()
+  })
+
+  it('populates health on successful fetch', async () => {
+    const healthData: ClusterHealth = {
+      cluster: CLUSTER,
+      healthy: true,
+      reachable: true,
+      nodeCount: 3,
+      readyNodes: 3,
+      podCount: 20,
+    }
+    mockFetchSingleClusterHealth.mockResolvedValue(healthData)
+
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.health).toEqual(healthData)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('retains stale data on transient failure (stale-while-revalidate)', async () => {
+    const goodHealth: ClusterHealth = {
+      cluster: CLUSTER,
+      healthy: true,
+      reachable: true,
+      nodeCount: 2,
+      readyNodes: 2,
+      podCount: 10,
+    }
+
+    // First fetch succeeds → sets prevHealthRef
+    mockFetchSingleClusterHealth.mockResolvedValueOnce(goodHealth)
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    await waitFor(() => expect(result.current.health).toEqual(goodHealth))
+
+    // Second fetch returns null (transient failure, below 5-min threshold)
+    mockFetchSingleClusterHealth.mockResolvedValueOnce(null)
+    await act(async () => { await result.current.refetch() })
+
+    // Must still show the previous good health
+    expect(result.current.health).toEqual(goodHealth)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('marks cluster offline (reachable: false) after 5 minutes of failures', async () => {
+    vi.useFakeTimers()
+    mockFetchSingleClusterHealth.mockResolvedValue(null)
+
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    // Drive the first refetch (called on mount)
+    await act(() => Promise.resolve())
+
+    // Simulate 5+ minutes passing since first failure
+    vi.advanceTimersByTime(5 * 60_000 + 1)
+
+    // Trigger another refetch after the threshold
+    await act(async () => { await result.current.refetch() })
+
+    expect(result.current.health?.reachable).toBe(false)
+    expect(result.current.health?.healthy).toBe(false)
+  })
+
+  it('returns demo health data when demo mode is active', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockFetchSingleClusterHealth.mockResolvedValue(null)
+
+    const { result } = renderHook(() => useClusterHealth('kind-local'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // getDemoHealth for 'kind-local' returns nodeCount: 1
+    expect(result.current.health?.cluster).toBe('kind-local')
+    expect(result.current.health?.nodeCount).toBe(1)
+    expect(result.current.error).toBeNull()
   })
 })
