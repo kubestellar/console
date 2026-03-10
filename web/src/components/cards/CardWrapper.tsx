@@ -20,7 +20,7 @@ import { CardDataReportContext, ForceLiveContext, type CardDataState } from './C
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 import { isCardExportable } from '../../lib/widgets/widgetRegistry'
-import { emitCardExpanded } from '../../lib/analytics'
+import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = lazy(() =>
   import('../widgets/WidgetExportModal').then(m => ({ default: m.WidgetExportModal }))
@@ -787,7 +787,7 @@ export function CardWrapper({
                 {/* Manual refresh button */}
                 {onRefresh && (
                   <button
-                    onClick={onRefresh}
+                    onClick={() => { onRefresh(); emitCardRefreshed(cardType) }}
                     disabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
                     className={cn(
                       'p-1.5 rounded-lg transition-colors',

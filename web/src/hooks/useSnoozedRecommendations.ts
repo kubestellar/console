@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CardRecommendation } from './useCardRecommendations'
+import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 export interface SnoozedRecommendation {
   id: string
@@ -40,6 +41,7 @@ export function useSnoozedRecommendations() {
     }
     snoozedRecs = [...snoozedRecs, newSnoozed]
     notifyListeners()
+    emitSnoozed('recommendation')
     return newSnoozed
   }, [])
 
@@ -47,6 +49,7 @@ export function useSnoozedRecommendations() {
     const rec = snoozedRecs.find((r) => r.id === id)
     snoozedRecs = snoozedRecs.filter((r) => r.id !== id)
     notifyListeners()
+    emitUnsnoozed('recommendation')
     return rec
   }, [])
 

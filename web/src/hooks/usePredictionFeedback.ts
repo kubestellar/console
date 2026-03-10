@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { PredictionFeedback, StoredFeedback, PredictionType, PredictionStats } from '../types/predictions'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { emitPredictionFeedbackSubmitted } from '../lib/analytics'
 
 const STORAGE_KEY = 'kubestellar-prediction-feedback'
 const FEEDBACK_CHANGED_EVENT = 'kubestellar-prediction-feedback-changed'
@@ -109,6 +110,7 @@ export function usePredictionFeedback() {
     feedbackMap.set(predictionId, entry)
     notifySubscribers()
     persistFeedback()
+    emitPredictionFeedbackSubmitted(feedback, predictionType, provider)
 
     // Also send to backend if available
     sendFeedbackToBackend(predictionId, feedback).catch(() => {

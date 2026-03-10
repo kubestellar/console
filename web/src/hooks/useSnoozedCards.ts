@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 export interface SnoozedSwap {
   id: string
@@ -40,6 +41,7 @@ export function useSnoozedCards() {
     }
     snoozedSwaps = [...snoozedSwaps, newSwap]
     notifyListeners()
+    emitSnoozed('card')
     return newSwap
   }, [])
 
@@ -47,6 +49,7 @@ export function useSnoozedCards() {
     const swap = snoozedSwaps.find((s) => s.id === id)
     snoozedSwaps = snoozedSwaps.filter((s) => s.id !== id)
     notifyListeners()
+    emitUnsnoozed('card')
     return swap
   }, [])
 

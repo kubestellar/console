@@ -4,6 +4,7 @@ import { api } from '../../../lib/api'
 import { useToast } from '../../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { emitDataExported } from '../../../lib/analytics'
 
 interface Props {
   data: Record<string, unknown>
@@ -58,6 +59,7 @@ export function YAMLDrillDown({ data }: Props) {
       setCopied(true)
       clearTimeout(copiedTimerRef.current)
       copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+      emitDataExported('yaml_copy', resourceType)
     } catch (err) {
       console.error('Failed to copy:', err)
       showToast('Failed to copy to clipboard', 'error')
@@ -74,6 +76,7 @@ export function YAMLDrillDown({ data }: Props) {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    emitDataExported('yaml_download', resourceType)
   }
 
   if (isLoading) {

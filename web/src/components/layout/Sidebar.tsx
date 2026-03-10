@@ -18,6 +18,7 @@ import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
 import { ROUTES } from '../../config/routes'
 import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
+import { emitSidebarNavigated, emitDashboardRenamed } from '../../lib/analytics'
 
 // Lazy-load SidebarCustomizer — it pulls in dnd-kit and heavy UI (~50 KB)
 const SidebarCustomizer = lazy(() =>
@@ -149,6 +150,7 @@ export function Sidebar() {
     const trimmed = editingName.trim()
     if (trimmed) {
       updateItem(itemId, { name: trimmed })
+      emitDashboardRenamed()
     }
     setEditingItemId(null)
     setEditingName('')
@@ -301,6 +303,7 @@ export function Sidebar() {
           // Normal navigation mode
           <NavLink
             to={item.href}
+            onClick={() => emitSidebarNavigated(item.href)}
             onDoubleClick={(e) => handleDoubleClick(item, e)}
             className={({ isActive }) => cn(
               'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',

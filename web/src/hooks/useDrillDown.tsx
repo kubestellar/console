@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { emitDrillDownOpened, emitDrillDownClosed } from '../lib/analytics'
 
 // Types for drill-down navigation
 export type DrillDownViewType =
@@ -101,6 +102,7 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
       stack: [view],
       currentView: view,
     })
+    emitDrillDownOpened(view.type)
   }, [])
 
   const push = useCallback((view: DrillDownView) => {
@@ -138,7 +140,12 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const close = useCallback(() => {
-    setState({ isOpen: false, stack: [], currentView: null })
+    setState(prev => {
+      if (prev.currentView) {
+        emitDrillDownClosed(prev.currentView.type, prev.stack.length)
+      }
+      return { isOpen: false, stack: [], currentView: null }
+    })
   }, [])
 
   const replace = useCallback((view: DrillDownView) => {

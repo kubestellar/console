@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
+import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 const STORAGE_KEY = 'kubestellar-snoozed-alerts'
 
@@ -99,6 +100,7 @@ export function useSnoozedAlerts() {
     state.snoozed = [...state.snoozed, newSnoozed]
     saveState()
     notifyListeners()
+    emitSnoozed('alert', duration)
     return newSnoozed
   }, [])
 
@@ -126,6 +128,7 @@ export function useSnoozedAlerts() {
     state.snoozed = state.snoozed.filter(s => s.alertId !== alertId)
     saveState()
     notifyListeners()
+    emitUnsnoozed('alert')
   }, [])
 
   const isSnoozed = useCallback((alertId: string): boolean => {

@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { emitUserRoleChanged, emitUserRemoved } from '../../lib/analytics'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -295,6 +296,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     try {
       await updateUserRole(userId, newRole)
       showToast('User role updated successfully', 'success')
+      emitUserRoleChanged(newRole)
     } catch (error) {
       console.error('Failed to update role:', error)
       showToast('Failed to update user role', 'error')
@@ -306,6 +308,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     try {
       await deleteUser(userId)
       showToast('User deleted successfully', 'success')
+      emitUserRemoved()
     } catch (error) {
       console.error('Failed to delete user:', error)
       showToast('Failed to delete user', 'error')

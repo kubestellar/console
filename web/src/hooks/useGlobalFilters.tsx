@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, R
 // (~254 KB). Only clusters.ts + shared.ts are needed here.
 import { useClusters } from './mcp/clusters'
 import type { ClusterInfo } from './mcp/types'
+import { emitGlobalClusterFilterChanged, emitGlobalSeverityFilterChanged, emitGlobalStatusFilterChanged } from '../lib/analytics'
 
 // Severity levels
 export type SeverityLevel = 'critical' | 'warning' | 'high' | 'medium' | 'low' | 'info'
@@ -206,7 +207,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // Cluster filtering
   const setSelectedClusters = useCallback((clusters: string[]) => {
     setSelectedClustersState(clusters)
-  }, [])
+    emitGlobalClusterFilterChanged(clusters.length, availableClusters.length)
+  }, [availableClusters.length])
 
   const toggleCluster = useCallback((cluster: string) => {
     setSelectedClustersState(prev => {
@@ -270,6 +272,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // Severity filtering
   const setSelectedSeverities = useCallback((severities: SeverityLevel[]) => {
     setSelectedSeveritiesState(severities)
+    emitGlobalSeverityFilterChanged(severities.length)
   }, [])
 
   const toggleSeverity = useCallback((severity: SeverityLevel) => {
@@ -312,6 +315,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // Status filtering
   const setSelectedStatuses = useCallback((statuses: StatusLevel[]) => {
     setSelectedStatusesState(statuses)
+    emitGlobalStatusFilterChanged(statuses.length)
   }, [])
 
   const toggleStatus = useCallback((status: StatusLevel) => {

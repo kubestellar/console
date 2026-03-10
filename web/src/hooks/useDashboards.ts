@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
+import { emitDashboardCreated, emitDashboardDeleted, emitDashboardImported, emitDashboardExported } from '../lib/analytics'
 
 export interface DashboardCard {
   id: string
@@ -45,6 +46,7 @@ export function useDashboards() {
     try {
       const { data } = await api.post<Dashboard>('/api/dashboards', { name, is_default: isDefault })
       setDashboards((prev) => [...prev, data])
+      emitDashboardCreated(name)
       return data
     } catch (err) {
       // Silently fail - backend may be unavailable in demo mode
@@ -67,6 +69,7 @@ export function useDashboards() {
     try {
       await api.delete(`/api/dashboards/${id}`)
       setDashboards((prev) => prev.filter((d) => d.id !== id))
+      emitDashboardDeleted()
     } catch (err) {
       // Silently fail - backend may be unavailable in demo mode
       throw err
@@ -116,6 +119,7 @@ export function useDashboards() {
 
   const exportDashboard = useCallback(async (dashboardId: string) => {
     const { data } = await api.get(`/api/dashboards/${dashboardId}/export`)
+    emitDashboardExported()
     return data
   }, [])
 
@@ -124,6 +128,7 @@ export function useDashboards() {
     if (data) {
       setDashboards((prev) => [...prev, data])
     }
+    emitDashboardImported()
     return data
   }, [])
 

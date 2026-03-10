@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { MissionSuggestion } from './useMissionSuggestions'
+import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 const STORAGE_KEY = 'kubestellar-snoozed-missions'
 const SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hours
@@ -81,6 +82,7 @@ export function useSnoozedMissions() {
     state.snoozed = [...state.snoozed, newSnoozed]
     saveState()
     notifyListeners()
+    emitSnoozed('mission')
     return newSnoozed
   }, [])
 
@@ -89,6 +91,7 @@ export function useSnoozedMissions() {
     state.snoozed = state.snoozed.filter((s) => s.id !== id)
     saveState()
     notifyListeners()
+    emitUnsnoozed('mission')
     return mission
   }, [])
 

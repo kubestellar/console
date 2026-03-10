@@ -915,6 +915,128 @@ export function emitUpdateStalled() {
   send('ksc_update_stalled')
 }
 
+// ── Drill-Down ───────────────────────────────────────────────────
+
+/** Fired when user opens a drill-down view (pod, cluster, namespace, etc.) */
+export function emitDrillDownOpened(viewType: string) {
+  send('ksc_drill_down_opened', { view_type: viewType })
+}
+
+/** Fired when user closes the drill-down modal */
+export function emitDrillDownClosed(viewType: string, depth: number) {
+  send('ksc_drill_down_closed', { view_type: viewType, depth })
+}
+
+// ── Card Refresh ─────────────────────────────────────────────────
+
+/** Fired when user clicks the manual refresh button on a card */
+export function emitCardRefreshed(cardType: string) {
+  send('ksc_card_refreshed', { card_type: cardType })
+}
+
+// ── Global Filters ───────────────────────────────────────────────
+
+/** Fired when user changes global cluster filter */
+export function emitGlobalClusterFilterChanged(selectedCount: number, totalCount: number) {
+  send('ksc_global_cluster_filter_changed', { selected_count: selectedCount, total_count: totalCount })
+}
+
+/** Fired when user changes global severity filter */
+export function emitGlobalSeverityFilterChanged(selectedCount: number) {
+  send('ksc_global_severity_filter_changed', { selected_count: selectedCount })
+}
+
+/** Fired when user changes global status filter */
+export function emitGlobalStatusFilterChanged(selectedCount: number) {
+  send('ksc_global_status_filter_changed', { selected_count: selectedCount })
+}
+
+// ── Prediction Feedback ──────────────────────────────────────────
+
+/** Fired when user gives thumbs up/down on a prediction */
+export function emitPredictionFeedbackSubmitted(feedback: string, predictionType: string, provider?: string) {
+  send('ksc_prediction_feedback', { feedback, prediction_type: predictionType, provider: provider ?? 'unknown' })
+}
+
+// ── Snooze ───────────────────────────────────────────────────────
+
+/** Fired when user snoozes a card, alert, mission, or recommendation */
+export function emitSnoozed(targetType: string, duration?: string) {
+  send('ksc_snoozed', { target_type: targetType, duration: duration ?? 'default' })
+}
+
+/** Fired when user unsnoozes an item */
+export function emitUnsnoozed(targetType: string) {
+  send('ksc_unsnoozed', { target_type: targetType })
+}
+
+// ── Dashboard CRUD ───────────────────────────────────────────────
+
+/** Fired when user creates a new dashboard */
+export function emitDashboardCreated(name: string) {
+  send('ksc_dashboard_created', { dashboard_name: name })
+}
+
+/** Fired when user deletes a dashboard */
+export function emitDashboardDeleted() {
+  send('ksc_dashboard_deleted')
+}
+
+/** Fired when user renames a dashboard */
+export function emitDashboardRenamed() {
+  send('ksc_dashboard_renamed')
+}
+
+/** Fired when user imports a dashboard */
+export function emitDashboardImported() {
+  send('ksc_dashboard_imported')
+}
+
+/** Fired when user exports a dashboard */
+export function emitDashboardExported() {
+  send('ksc_dashboard_exported')
+}
+
+// ── Data Export ──────────────────────────────────────────────────
+
+/** Fired when user downloads or copies data from a drill-down view */
+export function emitDataExported(exportType: string, resourceType?: string) {
+  send('ksc_data_exported', { export_type: exportType, resource_type: resourceType ?? '' })
+}
+
+// ── User Management ──────────────────────────────────────────────
+
+/** Fired when admin changes a user's role */
+export function emitUserRoleChanged(newRole: string) {
+  send('ksc_user_role_changed', { new_role: newRole })
+}
+
+/** Fired when admin removes a user */
+export function emitUserRemoved() {
+  send('ksc_user_removed')
+}
+
+// ── Marketplace Browsing ─────────────────────────────────────────
+
+/** Fired when user views a marketplace item detail */
+export function emitMarketplaceItemViewed(itemType: string, itemName: string) {
+  send('ksc_marketplace_item_viewed', { item_type: itemType, item_name: itemName })
+}
+
+// ── Insights ─────────────────────────────────────────────────────
+
+/** Fired when user views an insight card detail */
+export function emitInsightViewed(insightCategory: string) {
+  send('ksc_insight_viewed', { insight_category: insightCategory })
+}
+
+// ── Sidebar Navigation ──────────────────────────────────────────
+
+/** Fired when user clicks a sidebar navigation item */
+export function emitSidebarNavigated(destination: string) {
+  send('ksc_sidebar_navigated', { destination })
+}
+
 // ── Local Cluster ─────────────────────────────────────────────────
 
 /** Fired when user creates a local cluster (kind, k3d, minikube) */
