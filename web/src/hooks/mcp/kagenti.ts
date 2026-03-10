@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react'
-import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from '../useLocalAgent'
+import { isAgentUnavailable, reportAgentDataSuccess } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL } from './shared'
 import { useCache } from '../../lib/cache'
 
@@ -184,8 +184,7 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
       const agents = await agentFetchAllClusters<KagentiAgent>(
         '/kagenti/agents', 'agents', options?.namespace, options?.cluster,
       )
-      if (agents.length > 0) reportAgentDataSuccess()
-      else reportAgentDataError('/kagenti/agents', 'empty response')
+      reportAgentDataSuccess()
       return agents
     },
   })
@@ -203,8 +202,7 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
       const builds = await agentFetchAllClusters<KagentiBuild>(
         '/kagenti/builds', 'builds', options?.namespace, options?.cluster,
       )
-      if (builds.length > 0) reportAgentDataSuccess()
-      else reportAgentDataError('/kagenti/builds', 'empty response')
+      reportAgentDataSuccess()
       return builds
     },
   })
@@ -222,8 +220,7 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
       const cards = await agentFetchAllClusters<KagentiCard>(
         '/kagenti/cards', 'cards', options?.namespace, options?.cluster,
       )
-      if (cards.length > 0) reportAgentDataSuccess()
-      else reportAgentDataError('/kagenti/cards', 'empty response')
+      reportAgentDataSuccess()
       return cards
     },
   })
@@ -241,8 +238,7 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
       const tools = await agentFetchAllClusters<KagentiTool>(
         '/kagenti/tools', 'tools', options?.namespace, options?.cluster,
       )
-      if (tools.length > 0) reportAgentDataSuccess()
-      else reportAgentDataError('/kagenti/tools', 'empty response')
+      reportAgentDataSuccess()
       return tools
     },
   })
