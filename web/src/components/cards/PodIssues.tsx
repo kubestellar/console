@@ -23,7 +23,8 @@ const SORT_OPTIONS = [
   { value: 'cluster' as const, label: 'Cluster' },
 ]
 
-const getIssueIcon = (status: string): { icon: typeof MemoryStick; tooltip: string } => {
+const getIssueIcon = (status: string | undefined): { icon: typeof MemoryStick; tooltip: string } => {
+  if (!status) return { icon: RefreshCw, tooltip: 'Unknown status' }
   if (status.includes('OOM')) return { icon: MemoryStick, tooltip: 'Out of Memory - Pod exceeded memory limits' }
   if (status.includes('Image')) return { icon: ImageOff, tooltip: 'Image Pull Error - Failed to pull container image' }
   if (status.includes('Pending')) return { icon: Clock, tooltip: 'Pending - Pod is waiting to be scheduled' }

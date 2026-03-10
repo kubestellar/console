@@ -549,15 +549,31 @@ export function emitError(category: string, detail: string) {
 
 /** Track unhandled promise rejections and runtime errors globally */
 export function startGlobalErrorTracking() {
+  // Re-entrancy guard: if emitError() → send() triggers another error,
+  // the global handler must NOT call emitError() again (infinite recursion → max call stack)
+  let isEmitting = false
+
   window.addEventListener('unhandledrejection', (event) => {
-    const msg = event.reason?.message || String(event.reason || 'unknown')
-    emitError('unhandled_rejection', msg)
+    if (isEmitting) return
+    isEmitting = true
+    try {
+      const msg = event.reason?.message || String(event.reason || 'unknown')
+      emitError('unhandled_rejection', msg)
+    } finally {
+      isEmitting = false
+    }
   })
 
   window.addEventListener('error', (event) => {
     // Skip errors from cross-origin scripts (no useful info)
     if (!event.message || event.message === 'Script error.') return
-    emitError('runtime', event.message)
+    if (isEmitting) return
+    isEmitting = true
+    try {
+      emitError('runtime', event.message)
+    } finally {
+      isEmitting = false
+    }
   })
 }
 

@@ -605,7 +605,7 @@ class KubectlProxy {
           name: pod.metadata.name,
           namespace: pod.metadata.namespace,
           cluster: context,
-          status: reason || phase,
+          status: reason || phase || 'Unknown',
           reason,
           issues: problems,
           restarts,
