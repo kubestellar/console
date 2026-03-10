@@ -343,15 +343,14 @@ export function useKyverno() {
     }
   }, [clusters.length, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh
+  // Auto-refresh — always poll when clusters exist so we detect tools
+  // that get installed later or clusters that become reachable
   useEffect(() => {
-    if (isDemoMode) return
-    const hasInstalled = Object.values(statuses).some(s => s.installed)
-    if (!hasInstalled) return
+    if (isDemoMode || clusters.length === 0) return
 
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [statuses, refetch, isDemoMode])
+  }, [clusters.length, refetch, isDemoMode])
 
   const isDemoData = isDemoMode
   const installed = Object.values(statuses).some(s => s.installed)
