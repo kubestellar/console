@@ -251,7 +251,7 @@ Please proceed step by step.`,
             onClick={() => setModalCluster(policy.cluster)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter') setModalCluster(policy.cluster) }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalCluster(policy.cluster) } }}
           >
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">

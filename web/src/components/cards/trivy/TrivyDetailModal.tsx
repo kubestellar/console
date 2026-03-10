@@ -41,9 +41,9 @@ export function TrivyDetailModal({
     if (!search.trim()) return images
     const q = search.toLowerCase()
     return images.filter(img =>
-      img.image.toLowerCase().includes(q) ||
-      img.tag.toLowerCase().includes(q) ||
-      img.namespace.toLowerCase().includes(q)
+      (img.image || '').toLowerCase().includes(q) ||
+      (img.tag || '').toLowerCase().includes(q) ||
+      (img.namespace || '').toLowerCase().includes(q)
     )
   }, [status.images, search])
 

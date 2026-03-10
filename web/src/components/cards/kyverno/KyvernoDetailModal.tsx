@@ -53,10 +53,10 @@ export function KyvernoDetailModal({
     if (!search.trim()) return policies
     const q = search.toLowerCase()
     return policies.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      p.description.toLowerCase().includes(q) ||
-      p.status.toLowerCase().includes(q)
+      p.name?.toLowerCase().includes(q) ||
+      p.category?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q) ||
+      p.status?.toLowerCase().includes(q)
     )
   }, [status.policies, search])
 

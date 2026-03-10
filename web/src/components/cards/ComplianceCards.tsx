@@ -246,15 +246,20 @@ Please proceed step by step.`,
       <div
         className="grid grid-cols-2 gap-2 cursor-pointer"
         onClick={() => {
-          // Open modal for first installed cluster
-          const first = Object.values(statuses).find(s => s.installed)
+          // Open modal for first installed cluster matching filter
+          const first = Object.values(statuses).find(s =>
+            s.installed && (selectedClusters.length === 0 || selectedClusters.includes(s.cluster))
+          )
           if (first) setModalCluster(first.cluster)
         }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            const first = Object.values(statuses).find(s => s.installed)
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            const first = Object.values(statuses).find(s =>
+              s.installed && (selectedClusters.length === 0 || selectedClusters.includes(s.cluster))
+            )
             if (first) setModalCluster(first.cluster)
           }
         }}
@@ -408,14 +413,19 @@ Please proceed step by step.`,
       <div
         className="cursor-pointer"
         onClick={() => {
-          const first = Object.values(statuses).find(s => s.installed)
+          const first = Object.values(statuses).find(s =>
+            s.installed && (selectedClusters.length === 0 || selectedClusters.includes(s.cluster))
+          )
           if (first) setModalCluster(first.cluster)
         }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            const first = Object.values(statuses).find(s => s.installed)
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            const first = Object.values(statuses).find(s =>
+              s.installed && (selectedClusters.length === 0 || selectedClusters.includes(s.cluster))
+            )
             if (first) setModalCluster(first.cluster)
           }
         }}
@@ -577,7 +587,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
                 const cluster = (v.clusters || [])[0]
                 if (cluster) setModalCluster(cluster)
               }

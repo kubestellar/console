@@ -39,7 +39,6 @@ export function KubescapeDetailModal({
 
   const score = status.overallScore
   const scoreColor = score >= SCORE_GOOD_THRESHOLD ? 'text-green-400' : score >= SCORE_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
-  const scoreRingColor = score >= SCORE_GOOD_THRESHOLD ? 'text-green-400' : score >= SCORE_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
 
   // Filter controls by search
   const filteredControls = useMemo(() => {
@@ -87,7 +86,7 @@ export function KubescapeDetailModal({
                   <circle
                     cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3"
                     strokeDasharray={`${score}, 100`}
-                    className={scoreRingColor}
+                    className={scoreColor}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">

@@ -1,7 +1,7 @@
 /**
  * Compliance Drift Card
  *
- * Computes fleet baseline (median across clusters per tool) and flags
+ * Computes fleet baseline (mean across clusters per tool) and flags
  * clusters deviating beyond 1 standard deviation. Lists clusters sorted
  * by severity: cluster name, drift direction, which tools, magnitude.
  * Empty state: "All clusters within baseline" with green checkmark.
@@ -26,6 +26,9 @@ interface CardConfig {
 
 /** Minimum number of clusters needed for meaningful drift detection */
 const MIN_CLUSTERS_FOR_DRIFT = 2
+
+/** Standard deviation threshold for flagging drift (1 = outside 1σ) */
+const DRIFT_STDDEV_THRESHOLD = 1
 
 interface DriftEntry {
   cluster: string
@@ -79,7 +82,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
         kyvernoEntries.forEach(([cluster], i) => {
           const val = values[i]
           const deviation = Math.abs(val - mean) / stdDev
-          if (deviation > 1) {
+          if (deviation > DRIFT_STDDEV_THRESHOLD) {
             result.push({
               cluster,
               tool: 'Kyverno',
@@ -103,7 +106,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
         trivyEntries.forEach(([cluster], i) => {
           const val = values[i]
           const deviation = Math.abs(val - mean) / stdDev
-          if (deviation > 1) {
+          if (deviation > DRIFT_STDDEV_THRESHOLD) {
             result.push({
               cluster,
               tool: 'Trivy',
@@ -127,7 +130,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
         kubescapeEntries.forEach(([cluster], i) => {
           const val = values[i]
           const deviation = Math.abs(val - mean) / stdDev
-          if (deviation > 1) {
+          if (deviation > DRIFT_STDDEV_THRESHOLD) {
             result.push({
               cluster,
               tool: 'Kubescape',
@@ -179,7 +182,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
             onClick={() => handleDriftClick(d)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleDriftClick(d) }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDriftClick(d) } }}
           >
             {d.direction === 'above' ? (
               <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isBad ? 'text-red-400' : 'text-yellow-400'}`} />

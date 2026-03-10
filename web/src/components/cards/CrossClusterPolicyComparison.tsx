@@ -208,6 +208,9 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
                   key={`${row.kind}/${row.name}`}
                   className={`border-b border-border/20 cursor-pointer hover:bg-secondary/30 transition-colors ${row.discrepancies > 0 ? 'bg-yellow-500/5' : ''}`}
                   onClick={() => handleRowClick(row)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(row) } }}
                 >
                   <td className="py-1 px-1">
                     <span className="font-mono truncate block max-w-[120px]" title={`${row.kind}/${row.name}`}>

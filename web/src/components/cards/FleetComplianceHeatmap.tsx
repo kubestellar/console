@@ -1,7 +1,7 @@
 /**
  * Fleet Compliance Heatmap
  *
- * Grid view: rows = clusters, columns = tool categories (Kyverno, Kubescape, Trivy, OPA).
+ * Grid view: rows = clusters, columns = tool categories (Kyverno, Kubescape, Trivy).
  * Cells colored green/yellow/red based on violation thresholds or posture scores.
  * Click any installed cell to open the tool's detail modal for that cluster.
  * Consumes all compliance hooks for a cross-cluster compliance overview.
@@ -316,7 +316,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
                 onClick={() => isClickable && handleCellClick(key, row.cluster)}
                 role={isClickable ? 'button' : undefined}
                 tabIndex={isClickable ? 0 : undefined}
-                onKeyDown={isClickable ? (e) => { if (e.key === 'Enter') handleCellClick(key, row.cluster) } : undefined}
+                onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCellClick(key, row.cluster) } } : undefined}
               >
                 <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${STATUS_DOTS[cell.status]}`} />
                 {cell.label}
