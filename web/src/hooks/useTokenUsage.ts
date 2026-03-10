@@ -7,6 +7,9 @@ import { QUICK_ABORT_TIMEOUT_MS } from '../lib/constants/network'
 /** Maximum token delta to attribute in a single poll cycle (prevents init spikes) */
 const MAX_SINGLE_DELTA_TOKENS = 50_000
 
+/** Minimum valid stop threshold — prevents "AI Disabled" at 0% from corrupted localStorage */
+const MIN_STOP_THRESHOLD = 0.01
+
 export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
 
 export interface TokenUsageByCategory {
@@ -96,6 +99,16 @@ if (typeof window !== 'undefined') {
     sharedUsage = { ...sharedUsage, ...parsedSettings }
     // Ensure limit is never zero/negative (causes NaN in percentage calculations)
     if (sharedUsage.limit <= 0) sharedUsage.limit = DEFAULT_SETTINGS.limit
+    // Ensure thresholds are sane — corrupted stopThreshold=0 causes "AI Disabled" at 0% usage
+    if (!sharedUsage.stopThreshold || sharedUsage.stopThreshold < MIN_STOP_THRESHOLD) {
+      sharedUsage.stopThreshold = DEFAULT_SETTINGS.stopThreshold
+    }
+    if (!sharedUsage.criticalThreshold || sharedUsage.criticalThreshold <= 0) {
+      sharedUsage.criticalThreshold = DEFAULT_SETTINGS.criticalThreshold
+    }
+    if (!sharedUsage.warningThreshold || sharedUsage.warningThreshold <= 0) {
+      sharedUsage.warningThreshold = DEFAULT_SETTINGS.warningThreshold
+    }
   }
   // Load persisted category data
   const categoryData = localStorage.getItem(CATEGORY_KEY)
@@ -264,7 +277,9 @@ export function useTokenUsage() {
   const getAlertLevel = useCallback((): TokenAlertLevel => {
     if (usage.limit <= 0) return 'normal'
     const percentage = usage.used / usage.limit
-    if (percentage >= usage.stopThreshold) return 'stopped'
+    // Guard: stopThreshold must be positive — 0 would falsely disable AI at 0% usage
+    const stop = usage.stopThreshold > 0 ? usage.stopThreshold : DEFAULT_SETTINGS.stopThreshold
+    if (percentage >= stop) return 'stopped'
     if (percentage >= usage.criticalThreshold) return 'critical'
     if (percentage >= usage.warningThreshold) return 'warning'
     return 'normal'
@@ -287,8 +302,11 @@ export function useTokenUsage() {
         limit: settings.limit ?? sharedUsage.limit,
         warningThreshold: settings.warningThreshold ?? sharedUsage.warningThreshold,
         criticalThreshold: settings.criticalThreshold ?? sharedUsage.criticalThreshold,
-        stopThreshold: settings.stopThreshold ?? sharedUsage.stopThreshold,
+        // Always preserve stopThreshold at 100% — not user-configurable, prevents corruption
+        stopThreshold: DEFAULT_SETTINGS.stopThreshold,
       }
+      // Ensure limit is always positive
+      if (newSettings.limit <= 0) newSettings.limit = DEFAULT_SETTINGS.limit
       updateSharedUsage(newSettings)
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings))
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
@@ -342,12 +360,16 @@ function getNextResetDate(): string {
 /**
  * Global function to add category tokens without needing a hook.
  * Use this from contexts/providers that can't call hooks directly.
+ * Also increments the total `used` count so the widget reflects real usage
+ * even when the kc-agent health poll doesn't return token data.
+ * (The agent poll sets `used` to an absolute value, which corrects any drift.)
  */
 export function addCategoryTokens(tokens: number, category: TokenCategory = 'other') {
   if (tokens <= 0) return
   const newByCategory = { ...sharedUsage.byCategory }
   newByCategory[category] += tokens
   updateSharedUsage({
+    used: sharedUsage.used + tokens,
     byCategory: newByCategory,
   })
 }
