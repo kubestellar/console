@@ -163,17 +163,17 @@ export function PodBrothers() {
     const keys = keysRef.current
 
     // Handle input
-    if (keys.has('ArrowLeft') || keys.has('a')) {
+    if (keys.has('ArrowLeft') || keys.has('a') || keys.has('A')) {
       player.vx = -MOVE_SPEED
       player.facingRight = false
-    } else if (keys.has('ArrowRight') || keys.has('d')) {
+    } else if (keys.has('ArrowRight') || keys.has('d') || keys.has('D')) {
       player.vx = MOVE_SPEED
       player.facingRight = true
     } else {
       player.vx = 0
     }
 
-    if ((keys.has('ArrowUp') || keys.has('w') || keys.has(' ')) && player.onGround) {
+    if ((keys.has('ArrowUp') || keys.has('w') || keys.has('W') || keys.has(' ')) && player.onGround) {
       player.vy = JUMP_FORCE
       player.onGround = false
     }
@@ -456,11 +456,11 @@ export function PodBrothers() {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault()
       }
-      keysRef.current.add(e.key.toLowerCase())
+      keysRef.current.add(e.key)
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      keysRef.current.delete(e.key.toLowerCase())
+      keysRef.current.delete(e.key)
     }
 
     window.addEventListener('keydown', handleKeyDown)

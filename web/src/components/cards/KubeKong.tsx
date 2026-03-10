@@ -12,7 +12,7 @@ const CANVAS_HEIGHT = 320
 const GRAVITY = 0.4
 const JUMP_FORCE = -8
 const MOVE_SPEED = 2
-const BARREL_SPEED = 1.5
+const BARREL_SPEED = 2.5
 const PLAYER_WIDTH = 16
 const PLAYER_HEIGHT = 24
 const BARREL_SIZE = 14
@@ -500,7 +500,7 @@ export function KubeKong(_props: CardComponentProps) {
 
       // Spawn barrels from Kong
       barrelSpawnCounter++
-      const spawnRate = Math.max(60, 150 - level * 20)
+      const spawnRate = Math.max(40, 120 - level * 15)
       if (barrelSpawnCounter >= spawnRate) {
         barrelSpawnCounter = 0
         setBossFrame(1)
