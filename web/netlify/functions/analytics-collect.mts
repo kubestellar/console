@@ -85,6 +85,23 @@ export default async (req: Request) => {
     gaParams.set("_uip", clientIp);
   }
 
+  // Netlify provides pre-computed geolocation via x-nf-geo header.
+  // GA4 ignores _uip from serverless IPs (AWS Lambda), so we inject
+  // Netlify's geo as custom event parameters as a reliable fallback.
+  // These appear as custom dimensions in GA4 Explore reports.
+  const nfGeo = req.headers.get("x-nf-geo");
+  if (nfGeo) {
+    try {
+      const geo = JSON.parse(atob(nfGeo));
+      if (geo.country?.name) gaParams.set("ep.geo_country", geo.country.name);
+      if (geo.city) gaParams.set("ep.geo_city", geo.city);
+      if (geo.subdivision?.name) gaParams.set("ep.geo_region", geo.subdivision.name);
+      if (geo.country?.code) gaParams.set("ep.geo_country_code", geo.country.code);
+    } catch {
+      /* ignore parse errors */
+    }
+  }
+
   // Send params as POST body (not URL query string) so GA4 respects _uip
   // for geolocation. The /g/collect endpoint ignores _uip in query params
   // when the request comes from a server IP.
