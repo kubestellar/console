@@ -477,6 +477,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     cards: [
       { card_type: 'flappy_pod', title: 'Flappy Pod', position: { w: 4, h: 4 } },
       { card_type: 'node_invaders', title: 'Node Invaders', position: { w: 4, h: 4 } },
+      { card_type: 'missile_command', title: 'Missile Command', position: { w: 4, h: 4 } },
       { card_type: 'kube_kong', title: 'Kube Kong', position: { w: 4, h: 4 } },
       { card_type: 'pod_pitfall', title: 'Pod Pitfall', position: { w: 6, h: 4 } },
       { card_type: 'kube_man', title: 'Kube Man', position: { w: 6, h: 4 } },
@@ -513,6 +514,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'kubedle', title: 'Kubedle', position: { w: 4, h: 4 } },
       { card_type: 'solitaire', title: 'Kube Solitaire', position: { w: 4, h: 4 } },
       { card_type: 'node_invaders', title: 'Node Invaders', position: { w: 4, h: 4 } },
+      { card_type: 'missile_command', title: 'Missile Command', position: { w: 4, h: 4 } },
       { card_type: 'kube_kong', title: 'Kube Kong', position: { w: 4, h: 4 } },
       { card_type: 'kube_man', title: 'Kube Man', position: { w: 4, h: 4 } },
       { card_type: 'pod_pitfall', title: 'Pod Pitfall', position: { w: 4, h: 4 } },

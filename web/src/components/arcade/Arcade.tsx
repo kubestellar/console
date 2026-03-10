@@ -36,6 +36,7 @@ const DEFAULT_ARCADE_CARDS = [
   // Classic arcade games
   { type: 'container_tetris', title: 'Container Tetris', position: { w: 6, h: 4 } },
   { type: 'node_invaders', title: 'Node Invaders', position: { w: 6, h: 4 } },
+  { type: 'missile_command', title: 'Missile Command', position: { w: 6, h: 4 } },
   { type: 'kube_man', title: 'Kube-Man', position: { w: 6, h: 4 } },
   { type: 'kube_kong', title: 'Kube Kong', position: { w: 6, h: 4 } },
   { type: 'pod_crosser', title: 'Pod Crosser', position: { w: 6, h: 4 } },

@@ -100,6 +100,7 @@ import { networkOverviewConfig } from './network-overview'
 import { networkPolicyStatusConfig } from './network-policy-status'
 import { networkUtilsConfig } from './network-utils'
 import { nodeInvadersConfig } from './node-invaders'
+import { missileCommandConfig } from './missile-command'
 import { nodeStatusConfig } from './node-status'
 import { opaPoliciesConfig } from './opa-policies'
 import { opencostOverviewConfig } from './opencost-overview'
@@ -259,6 +260,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   network_policy_status: networkPolicyStatusConfig,
   network_utils: networkUtilsConfig,
   node_invaders: nodeInvadersConfig,
+  missile_command: missileCommandConfig,
   node_status: nodeStatusConfig,
   opa_policies: opaPoliciesConfig,
   opencost_overview: opencostOverviewConfig,
@@ -432,6 +434,7 @@ export {
   networkPolicyStatusConfig,
   networkUtilsConfig,
   nodeInvadersConfig,
+  missileCommandConfig,
   nodeStatusConfig,
   opaPoliciesConfig,
   opencostOverviewConfig,

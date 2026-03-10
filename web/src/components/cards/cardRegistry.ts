@@ -111,6 +111,7 @@ const KubeMan = lazy(() => import('./KubeMan').then(m => ({ default: m.KubeMan }
 const KubeKong = lazy(() => import('./KubeKong').then(m => ({ default: m.KubeKong })))
 const PodPitfall = lazy(() => import('./PodPitfall').then(m => ({ default: m.PodPitfall })))
 const NodeInvaders = lazy(() => import('./NodeInvaders').then(m => ({ default: m.NodeInvaders })))
+const MissileCommand = lazy(() => import('./MissileCommand').then(m => ({ default: m.MissileCommand })))
 const PodCrosser = lazy(() => import('./PodCrosser').then(m => ({ default: m.PodCrosser })))
 const PodBrothers = lazy(() => import('./PodBrothers').then(m => ({ default: m.PodBrothers })))
 const KubeKart = lazy(() => import('./KubeKart').then(m => ({ default: m.KubeKart })))
@@ -372,6 +373,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kube_kong: KubeKong,
   pod_pitfall: PodPitfall,
   node_invaders: NodeInvaders,
+  missile_command: MissileCommand,
   pod_crosser: PodCrosser,
   // Pod Brothers (Mario Bros) card
   pod_brothers: PodBrothers,
@@ -1107,6 +1109,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kube_kong: 6,
   pod_pitfall: 6,
   node_invaders: 6,
+  missile_command: 6,
   pod_crosser: 6,
   pod_brothers: 6,
   kube_kart: 5,

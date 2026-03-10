@@ -17,6 +17,7 @@ export const arcadeDashboardConfig: UnifiedDashboardConfig = {
     // Classic arcade games
     { id: 'tetris-1', cardType: 'container_tetris', title: 'Container Tetris', position: { w: 6, h: 4 } },
     { id: 'invaders-1', cardType: 'node_invaders', title: 'Node Invaders', position: { w: 6, h: 4 } },
+    { id: 'missile-1', cardType: 'missile_command', title: 'Missile Command', position: { w: 6, h: 4 } },
     { id: 'pacman-1', cardType: 'kube_man', title: 'Kube-Man', position: { w: 6, h: 4 } },
     { id: 'kong-1', cardType: 'kube_kong', title: 'Kube Kong', position: { w: 6, h: 4 } },
     { id: 'crosser-1', cardType: 'pod_crosser', title: 'Pod Crosser', position: { w: 6, h: 4 } },
