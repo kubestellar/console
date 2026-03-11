@@ -367,6 +367,10 @@
       <h1>KubeStellar Console Analytics</h1>
     </div>
     <div class="header-right">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" title="Include dev traffic from localhost (Vite HMR inflates user counts)">
+        <input type="checkbox" id="include-localhost" style="accent-color:var(--accent);cursor:pointer">
+        <span style="font-size:12px;color:var(--text-muted)">Include localhost</span>
+      </label>
       <span id="cache-status"></span>
       <span class="status-dot" id="status-dot"></span>
       <button class="refresh-btn" id="refresh-btn" onclick="loadData(true)">Refresh</button>
@@ -1085,6 +1089,10 @@
       charts.push(chart);
     }
 
+    function getFilterMode() {
+      return document.getElementById('include-localhost').checked ? 'all' : 'production';
+    }
+
     async function loadData(forceRefresh = false) {
       const btn = document.getElementById('refresh-btn');
       const status = document.getElementById('cache-status');
@@ -1094,7 +1102,10 @@
       btn.textContent = 'Loading...';
 
       try {
-        const url = forceRefresh ? API_URL + '?bust=' + Date.now() : API_URL;
+        const filter = getFilterMode();
+        const params = new URLSearchParams({ filter });
+        if (forceRefresh) params.set('bust', String(Date.now()));
+        const url = API_URL + '?' + params.toString();
         const resp = await fetch(url);
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({ error: resp.statusText }));
@@ -1106,7 +1117,8 @@
 
         const cached = data.fromCache ? 'Cached' : 'Fresh';
         const time = new Date(data.cachedAt).toLocaleTimeString();
-        status.textContent = `${cached} · ${time}`;
+        const modeLabel = filter === 'all' ? ' (all traffic)' : ' (production only)';
+        status.textContent = `${cached} · ${time}${modeLabel}`;
         dot.style.background = '#22c55e';
       } catch (err) {
         document.getElementById('content').innerHTML = `
@@ -1122,6 +1134,9 @@
         btn.textContent = 'Refresh';
       }
     }
+
+    // Reload when filter toggle changes
+    document.getElementById('include-localhost').addEventListener('change', () => loadData(true));
 
     // Auto-refresh every 15 minutes
     const AUTO_REFRESH_MS = 15 * 60 * 1000;

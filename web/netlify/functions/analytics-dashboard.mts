@@ -16,7 +16,7 @@ import { getStore } from "@netlify/blobs";
 // ---------------------------------------------------------------------------
 
 const CACHE_STORE = "analytics-dashboard";
-const CACHE_KEY = "dashboard-data";
+const CACHE_KEY_PREFIX = "dashboard-data"; // suffixed with filter mode
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const TOKEN_CACHE_KEY = "access-token";
 const GA4_DATA_API = "https://analyticsdata.googleapis.com/v1beta";
@@ -243,10 +243,44 @@ function metVal(row: GA4Row, idx: number): number {
   return parseFloat((row.metricValues || [])[idx]?.value || "0");
 }
 
+type FilterMode = "production" | "all";
+
+/** Exclusion filter: NOT (deployment_type = "localhost") */
+const LOCALHOST_EXCLUSION = {
+  notExpression: {
+    filter: {
+      fieldName: "customUser:deployment_type",
+      stringFilter: { matchType: "EXACT" as const, value: "localhost" },
+    },
+  },
+};
+
+/**
+ * Wrap a GA4 query body with localhost exclusion when in production filter mode.
+ * Merges with any existing dimensionFilter using andGroup.
+ */
+function withFilter(
+  body: Record<string, unknown>,
+  mode: FilterMode
+): Record<string, unknown> {
+  if (mode === "all") return body;
+  const existing = body.dimensionFilter as Record<string, unknown> | undefined;
+  if (!existing) {
+    return { ...body, dimensionFilter: LOCALHOST_EXCLUSION };
+  }
+  return {
+    ...body,
+    dimensionFilter: {
+      andGroup: { expressions: [existing, LOCALHOST_EXCLUSION] },
+    },
+  };
+}
+
 /** Fetch all dashboard data in parallel */
 async function fetchDashboardData(
   propertyId: string,
-  accessToken: string
+  accessToken: string,
+  filterMode: FilterMode = "production"
 ): Promise<DashboardData> {
   const currentRange = { startDate: "28daysAgo", endDate: "today" };
   const previousRange = { startDate: "56daysAgo", endDate: "29daysAgo" };
@@ -273,7 +307,7 @@ async function fetchDashboardData(
     errorDailyRows,
   ] = await Promise.all([
     // 1. Overview metrics (current period)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       metrics: [
         { name: "activeUsers" },
@@ -283,10 +317,10 @@ async function fetchDashboardData(
         { name: "bounceRate" },
         { name: "eventCount" },
       ],
-    }),
+    }, filterMode)),
 
     // 2. Overview metrics (previous period for comparison)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [previousRange],
       metrics: [
         { name: "activeUsers" },
@@ -296,18 +330,18 @@ async function fetchDashboardData(
         { name: "bounceRate" },
         { name: "eventCount" },
       ],
-    }),
+    }, filterMode)),
 
     // 3. Daily users/sessions
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "date" }],
       metrics: [{ name: "activeUsers" }, { name: "sessions" }],
       orderBys: [{ dimension: { dimensionName: "date", orderType: "ALPHANUMERIC" } }],
-    }),
+    }, filterMode)),
 
     // 4. Top pages
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "pageTitle" }],
       metrics: [
@@ -316,28 +350,28 @@ async function fetchDashboardData(
       ],
       orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
       limit: 15,
-    }),
+    }, filterMode)),
 
     // 5. Top events
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "eventName" }],
       metrics: [{ name: "eventCount" }, { name: "totalUsers" }],
       orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
       limit: 20,
-    }),
+    }, filterMode)),
 
     // 6. Countries
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "country" }],
       metrics: [{ name: "activeUsers" }, { name: "sessions" }],
       orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
       limit: 15,
-    }),
+    }, filterMode)),
 
     // 7. Traffic sources
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [
         { name: "sessionSource" },
@@ -346,18 +380,18 @@ async function fetchDashboardData(
       metrics: [{ name: "sessions" }, { name: "totalUsers" }],
       orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
       limit: 10,
-    }),
+    }, filterMode)),
 
     // 8. Devices
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "deviceCategory" }],
       metrics: [{ name: "activeUsers" }],
       orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
-    }),
+    }, filterMode)),
 
     // 9. Funnel events (custom KSC events)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "eventName" }],
       metrics: [{ name: "totalUsers" }],
@@ -379,10 +413,10 @@ async function fetchDashboardData(
           })),
         },
       },
-    }),
+    }, filterMode)),
 
     // 10. CNCF outreach (by utm_term = project slug)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "sessionManualTerm" }],
       metrics: [
@@ -398,10 +432,10 @@ async function fetchDashboardData(
       },
       orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
       limit: 30,
-    }),
+    }, filterMode)),
 
     // 11. Engagement by page
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "pageTitle" }],
       metrics: [
@@ -412,17 +446,17 @@ async function fetchDashboardData(
       ],
       orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
       limit: 15,
-    }),
+    }, filterMode)),
 
     // 12. New vs returning users
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "newVsReturning" }],
       metrics: [{ name: "activeUsers" }, { name: "sessions" }],
-    }),
+    }, filterMode)),
 
     // 13. Mission events (started/completed/error/rated)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "eventName" }],
       metrics: [{ name: "eventCount" }, { name: "totalUsers" }],
@@ -441,10 +475,10 @@ async function fetchDashboardData(
           })),
         },
       },
-    }),
+    }, filterMode)),
 
     // 14. Mission types breakdown (by customEvent:mission_type)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "customEvent:mission_type" }],
       metrics: [{ name: "eventCount" }],
@@ -456,10 +490,10 @@ async function fetchDashboardData(
       },
       orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
       limit: 15,
-    }),
+    }, filterMode)),
 
     // 15. Card popularity (added/expanded/clicked by card_type)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [
         { name: "customEvent:card_type" },
@@ -482,10 +516,10 @@ async function fetchDashboardData(
       },
       orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
       limit: 100,
-    }),
+    }, filterMode)),
 
     // 16. Feature adoption events
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "eventName" }],
       metrics: [{ name: "eventCount" }, { name: "totalUsers" }],
@@ -519,18 +553,18 @@ async function fetchDashboardData(
       },
       orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
       limit: 20,
-    }),
+    }, filterMode)),
 
     // 17. Weekly retention (new vs returning by week)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "week" }, { name: "newVsReturning" }],
       metrics: [{ name: "activeUsers" }],
       orderBys: [{ dimension: { dimensionName: "week", orderType: "ALPHANUMERIC" } }],
-    }),
+    }, filterMode)),
 
     // 18. Error events
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "eventName" }, { name: "customEvent:error_category" }],
       metrics: [{ name: "eventCount" }],
@@ -553,10 +587,10 @@ async function fetchDashboardData(
       },
       orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
       limit: 30,
-    }),
+    }, filterMode)),
 
     // 19. Daily error trends (for sparklines)
-    runReport(propertyId, accessToken, {
+    runReport(propertyId, accessToken, withFilter({
       dateRanges: [currentRange],
       dimensions: [{ name: "date" }, { name: "eventName" }, { name: "customEvent:error_category" }],
       metrics: [{ name: "eventCount" }],
@@ -578,7 +612,7 @@ async function fetchDashboardData(
         },
       },
       orderBys: [{ dimension: { dimensionName: "date", orderType: "ALPHANUMERIC" } }],
-    }),
+    }, filterMode)),
   ]);
 
   // Parse overview
@@ -837,14 +871,20 @@ export default async (req: Request) => {
     );
   }
 
+  // Parse filter mode: ?filter=production (default) or ?filter=all
+  const url = new URL(req.url);
+  const filterParam = url.searchParams.get("filter");
+  const filterMode: FilterMode = filterParam === "all" ? "all" : "production";
+  const cacheKey = `${CACHE_KEY_PREFIX}-${filterMode}`;
+
   // Check blob cache
   const store = getStore(CACHE_STORE);
   try {
-    const cached = await store.get(CACHE_KEY, { type: "text" });
+    const cached = await store.get(cacheKey, { type: "text" });
     if (cached) {
       const entry = JSON.parse(cached);
       if (Date.now() < entry.expiresAt) {
-        return new Response(JSON.stringify({ ...entry.data, fromCache: true }), {
+        return new Response(JSON.stringify({ ...entry.data, fromCache: true, filterMode }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -857,17 +897,17 @@ export default async (req: Request) => {
   // Fetch fresh data
   try {
     const accessToken = await getAccessToken(serviceAccount, store);
-    const data = await fetchDashboardData(propertyId, accessToken);
+    const data = await fetchDashboardData(propertyId, accessToken, filterMode);
 
     // Cache result
     store
       .set(
-        CACHE_KEY,
+        cacheKey,
         JSON.stringify({ data, expiresAt: Date.now() + CACHE_TTL_MS })
       )
       .catch(() => {});
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ ...data, filterMode }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
