@@ -569,8 +569,7 @@ export const DEMO_DATA_CARDS = new Set([
   'service_imports',
   // Gateway API cards - demo until Gateway API is installed
   'gateway_status',
-  // Service Topology - demo visualization
-  'service_topology',
+  // Note: service_topology removed — now reports isDemoData via useTopology hook
   // Note: buildpacks_status removed — reports isDemoData via useBuildpackImages hook
   'flatcar_status',
   'thanos_status',
@@ -580,10 +579,9 @@ export const DEMO_DATA_CARDS = new Set([
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
-  // ArgoCD cards - all use mock data
-  'argocd_applications',
-  'argocd_health',
-  // Note: argocd_sync_status removed — reports isDemoData via demoMode check
+  // Note: argocd_applications removed — now reports isDemoData via useArgoCDApplications hook
+  // Note: argocd_health removed — now reports isDemoData via useArgoCDHealth hook
+  // Note: argocd_sync_status removed — reports isDemoData via useArgoCDSyncStatus hook
   // GitOps cards - use mock data
   // Note: kustomization_status removed — reports isDemoData via demoMode check
   // Helm cards - all now use real data via helm CLI backend

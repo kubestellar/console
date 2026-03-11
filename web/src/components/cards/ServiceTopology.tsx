@@ -2,53 +2,12 @@ import { useState, useMemo, useCallback } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, ArrowRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Skeleton } from '../ui/Skeleton'
 import type { TopologyNode, TopologyEdge, TopologyHealthStatus } from '../../types/topology'
 import { useReportCardDataState } from './CardDataContext'
+import { useTopology } from '../../hooks/useTopology'
 import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
-
-// Demo topology data
-const DEMO_NODES: TopologyNode[] = [
-  // Clusters
-  { id: 'cluster:us-east-1', type: 'cluster', label: 'us-east-1', cluster: 'us-east-1', health: 'healthy' },
-  { id: 'cluster:us-west-2', type: 'cluster', label: 'us-west-2', cluster: 'us-west-2', health: 'healthy' },
-  { id: 'cluster:eu-central-1', type: 'cluster', label: 'eu-central-1', cluster: 'eu-central-1', health: 'healthy' },
-  // Services in us-east-1
-  { id: 'service:us-east-1:production:api-gateway', type: 'service', label: 'api-gateway', cluster: 'us-east-1', namespace: 'production', health: 'healthy', metadata: { exported: true, endpoints: 3 } },
-  { id: 'service:us-east-1:production:auth-service', type: 'service', label: 'auth-service', cluster: 'us-east-1', namespace: 'production', health: 'healthy', metadata: { exported: true, endpoints: 2 } },
-  { id: 'service:us-east-1:production:user-service', type: 'service', label: 'user-service', cluster: 'us-east-1', namespace: 'production', health: 'healthy', metadata: { endpoints: 4 } },
-  // Services in us-west-2
-  { id: 'service:us-west-2:production:api-gateway', type: 'service', label: 'api-gateway', cluster: 'us-west-2', namespace: 'production', health: 'healthy', metadata: { imported: true, sourceCluster: 'us-east-1' } },
-  { id: 'service:us-west-2:infrastructure:cache-redis', type: 'service', label: 'cache-redis', cluster: 'us-west-2', namespace: 'infrastructure', health: 'healthy', metadata: { exported: true, endpoints: 1 } },
-  // Services in eu-central-1
-  { id: 'service:eu-central-1:production:auth-service', type: 'service', label: 'auth-service', cluster: 'eu-central-1', namespace: 'production', health: 'healthy', metadata: { imported: true, sourceCluster: 'us-east-1' } },
-  { id: 'service:eu-central-1:production:payment-processor', type: 'service', label: 'payment-processor', cluster: 'eu-central-1', namespace: 'production', health: 'degraded', metadata: { endpoints: 0 } },
-  // Gateways
-  { id: 'gateway:us-east-1:gateway-system:prod-gateway', type: 'gateway', label: 'prod-gateway', cluster: 'us-east-1', namespace: 'gateway-system', health: 'healthy', metadata: { gatewayClass: 'istio', addresses: ['34.102.136.180'] } },
-  { id: 'gateway:us-west-2:gateway-system:api-gateway', type: 'gateway', label: 'api-gateway', cluster: 'us-west-2', namespace: 'gateway-system', health: 'healthy', metadata: { gatewayClass: 'envoy-gateway', addresses: ['10.0.0.50'] } },
-]
-
-const DEMO_EDGES: TopologyEdge[] = [
-  // MCS cross-cluster connections
-  { id: 'mcs:api-gateway:east-west', source: 'service:us-east-1:production:api-gateway', target: 'service:us-west-2:production:api-gateway', type: 'mcs-export', label: 'MCS', health: 'healthy', animated: true },
-  { id: 'mcs:auth:east-eu', source: 'service:us-east-1:production:auth-service', target: 'service:eu-central-1:production:auth-service', type: 'mcs-export', label: 'MCS', health: 'healthy', animated: true },
-  // Internal connections
-  { id: 'internal:api-user:east', source: 'service:us-east-1:production:api-gateway', target: 'service:us-east-1:production:user-service', type: 'internal', health: 'healthy', animated: false },
-  { id: 'internal:api-auth:east', source: 'service:us-east-1:production:api-gateway', target: 'service:us-east-1:production:auth-service', type: 'internal', health: 'healthy', animated: false },
-  // Gateway routes
-  { id: 'route:prod-gateway:api', source: 'gateway:us-east-1:gateway-system:prod-gateway', target: 'service:us-east-1:production:api-gateway', type: 'http-route', label: 'HTTPRoute', health: 'healthy', animated: true },
-  { id: 'route:api-gateway:west', source: 'gateway:us-west-2:gateway-system:api-gateway', target: 'service:us-west-2:production:api-gateway', type: 'http-route', label: 'HTTPRoute', health: 'healthy', animated: true },
-]
-
-const DEMO_STATS = {
-  totalNodes: 12,
-  totalEdges: 8,
-  healthyConnections: 7,
-  degradedConnections: 1,
-  clusters: 3,
-  services: 8,
-  gateways: 2,
-}
 
 // Color mapping for node types
 const getNodeColor = (type: TopologyNode['type'], health: TopologyHealthStatus) => {
@@ -84,36 +43,71 @@ interface ServiceTopologyProps {
 
 export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
   const { t } = useTranslation(['cards', 'common'])
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  const {
+    graph,
+    stats,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
+  } = useTopology()
+
+  useReportCardDataState({
+    hasData: !!graph,
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
+    isLoading,
+  })
+
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
+  // Use nodes and edges from the topology hook (guarded against undefined)
+  const nodes = useMemo<TopologyNode[]>(() => graph?.nodes || [], [graph?.nodes])
+  const edges = useMemo<TopologyEdge[]>(() => graph?.edges || [], [graph?.edges])
+
+  // Derive stat counts from nodes when API stats don't include per-type breakdowns
+  const derivedStats = useMemo(() => {
+    const clusterCount = nodes.filter(n => n.type === 'cluster').length
+    const serviceCount = nodes.filter(n => n.type === 'service').length
+    const gatewayCount = nodes.filter(n => n.type === 'gateway').length
+    const totalEdges = stats?.totalEdges ?? edges.length
+    return { clusters: clusterCount, services: serviceCount, gateways: gatewayCount, totalEdges }
+  }, [nodes, edges, stats])
+
   // Group nodes by cluster for layout
   const nodesByCluster = useMemo(() => {
     const grouped: Record<string, TopologyNode[]> = {}
-    DEMO_NODES.forEach(node => {
+    for (const node of nodes) {
       if (!grouped[node.cluster]) {
         grouped[node.cluster] = []
       }
       grouped[node.cluster].push(node)
-    })
+    }
     return grouped
-  }, [])
+  }, [nodes])
 
   // Calculate node positions for simple visualization
   const nodePositions = useMemo(() => {
     const positions: Record<string, { x: number; y: number }> = {}
-    const clusters = Object.keys(nodesByCluster)
-    const clusterWidth = 100 / (clusters.length + 1)
+    const clusterKeys = Object.keys(nodesByCluster)
+    const clusterWidth = 100 / (clusterKeys.length + 1)
 
-    clusters.forEach((cluster, clusterIndex) => {
-      const nodes = nodesByCluster[cluster]
+    clusterKeys.forEach((cluster, clusterIndex) => {
+      const clusterNodes = nodesByCluster[cluster] || []
       const clusterX = (clusterIndex + 1) * clusterWidth
 
-      nodes.forEach((node, nodeIndex) => {
-        const nodeY = 15 + (nodeIndex * 18)
-        positions[node.id] = { x: clusterX, y: Math.min(nodeY, 85) }
+      clusterNodes.forEach((node, nodeIndex) => {
+        /** Vertical spacing between nodes within a cluster (percentage units) */
+        const NODE_VERTICAL_SPACING = 18
+        /** Starting vertical offset for the first node in a cluster */
+        const NODE_VERTICAL_START = 15
+        /** Maximum vertical position to prevent nodes from going off-screen */
+        const NODE_MAX_Y = 85
+        const nodeY = NODE_VERTICAL_START + (nodeIndex * NODE_VERTICAL_SPACING)
+        positions[node.id] = { x: clusterX, y: Math.min(nodeY, NODE_MAX_Y) }
       })
     })
 
@@ -124,7 +118,18 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
   const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 0.2, 0.5)), [])
   const handleResetZoom = useCallback(() => setZoom(1), [])
 
-  const selectedNodeData = selectedNode ? DEMO_NODES.find(n => n.id === selectedNode) : null
+  const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null
+
+  // Loading skeleton
+  if (isLoading && nodes.length === 0) {
+    return (
+      <div className="h-full flex flex-col min-h-card p-2 space-y-2">
+        <Skeleton className="h-4 w-1/3" />
+        <Skeleton className="h-3 w-2/3" />
+        <Skeleton className="flex-1 w-full rounded-lg" />
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col min-h-card">
@@ -162,19 +167,19 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
       <div className="flex items-center gap-3 mb-2 text-2xs">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-purple-500" />
-          <span className="text-muted-foreground">{t('serviceTopology.nClusters', { count: DEMO_STATS.clusters })}</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nClusters', { count: derivedStats.clusters })}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <span className="text-muted-foreground">{t('serviceTopology.nServices', { count: DEMO_STATS.services })}</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nServices', { count: derivedStats.services })}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-muted-foreground">{t('serviceTopology.nGateways', { count: DEMO_STATS.gateways })}</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nGateways', { count: derivedStats.gateways })}</span>
         </div>
         <div className="flex items-center gap-1">
           <ArrowRight className="w-3 h-3 text-cyan-400" />
-          <span className="text-muted-foreground">{t('serviceTopology.nConnections', { count: DEMO_STATS.totalEdges })}</span>
+          <span className="text-muted-foreground">{t('serviceTopology.nConnections', { count: derivedStats.totalEdges })}</span>
         </div>
       </div>
 
@@ -221,7 +226,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
           </defs>
 
           {/* Render edges */}
-          {DEMO_EDGES.map(edge => {
+          {(edges).map(edge => {
             const sourcePos = nodePositions[edge.source]
             const targetPos = nodePositions[edge.target]
             if (!sourcePos || !targetPos) return null
@@ -266,14 +271,18 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
           })}
 
           {/* Render nodes */}
-          {DEMO_NODES.map(node => {
+          {(nodes).map(node => {
             const pos = nodePositions[node.id]
             if (!pos) return null
 
             const isSelected = selectedNode === node.id
             const isHovered = hoveredNode === node.id
             const colorClass = getNodeColor(node.type, node.health)
-            const radius = node.type === 'cluster' ? 4 : 2.5
+            /** Radius for cluster-type nodes (larger to visually distinguish) */
+            const CLUSTER_NODE_RADIUS = 4
+            /** Radius for non-cluster nodes (services, gateways, external) */
+            const DEFAULT_NODE_RADIUS = 2.5
+            const radius = node.type === 'cluster' ? CLUSTER_NODE_RADIUS : DEFAULT_NODE_RADIUS
 
             return (
               <g

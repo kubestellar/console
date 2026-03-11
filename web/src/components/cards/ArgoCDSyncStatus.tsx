@@ -3,7 +3,6 @@ import { Skeleton } from '../ui/Skeleton'
 import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useArgoCDSyncStatus } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 interface ArgoCDSyncStatusProps {
@@ -12,7 +11,6 @@ interface ArgoCDSyncStatusProps {
 
 export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
   const { t } = useTranslation('cards')
-  const { isDemoMode: demoMode } = useDemoMode()
   // Local cluster filter
   const {
     localClusterFilter,
@@ -34,6 +32,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
     isLoading,
     isFailed,
     consecutiveFailures,
+    isDemoData,
   } = useArgoCDSyncStatus(localClusterFilter)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -42,7 +41,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
     hasAnyData: total > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData: demoMode,
+    isDemoData,
   })
 
   if (showSkeleton) {

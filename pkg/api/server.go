@@ -607,6 +607,11 @@ func (s *Server) setupRoutes() {
 	api.Get("/gitops/helm-releases/stream", gitopsHandlers.StreamHelmReleases)
 	api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
 	api.Post("/gitops/sync", gitopsHandlers.Sync)
+	// ArgoCD routes (Application CRD discovery and sync)
+	api.Get("/gitops/argocd/applications", gitopsHandlers.ListArgoApplications)
+	api.Get("/gitops/argocd/health", gitopsHandlers.GetArgoHealthSummary)
+	api.Get("/gitops/argocd/sync", gitopsHandlers.GetArgoSyncSummary)
+	api.Post("/gitops/argocd/sync", gitopsHandlers.TriggerArgoSync)
 	// Frontend compatibility alias
 	api.Get("/mcp/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
 

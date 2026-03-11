@@ -69,6 +69,7 @@ const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m
 const Insights = lazy(() => import('./components/insights/Insights').then(m => ({ default: m.Insights })))
 const Marketplace = lazy(() => import('./components/marketplace/Marketplace').then(m => ({ default: m.Marketplace })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
+const FromLens = lazy(() => import('./pages/FromLens').then(m => ({ default: m.FromLens })))
 const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => ({ default: m.UnifiedCardTest })))
 const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m => ({ default: m.UnifiedStatsTest })))
 const UnifiedDashboardTest = lazy(() => import('./pages/UnifiedDashboardTest').then(m => ({ default: m.UnifiedDashboardTest })))
@@ -332,6 +333,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/settings': 'Settings',
   '/users': 'User Management',
   '/login': 'Login',
+  '/from-lens': 'Switching from Lens',
 }
 
 const APP_NAME = 'KubeStellar Console'
@@ -441,6 +443,7 @@ function App() {
       <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/from-lens" element={<FromLens />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path="/widget" element={<MiniDashboard />} />

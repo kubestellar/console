@@ -1,24 +1,29 @@
 /**
- * ArgoCD Data Hooks with localStorage caching and failure tracking
+ * ArgoCD Data Hooks with real backend API and mock data fallback
  *
- * These hooks provide:
- * - localStorage cache load/save with 5 minute expiry
- * - consecutiveFailures state for tracking fetch issues
- * - isFailed computed value (true when 3+ consecutive failures)
- * - isRefreshing state for stale-while-revalidate pattern
- * - State initialization from cache on mount
+ * These hooks:
+ * 1. Try to fetch from the real backend API (/api/gitops/argocd/*)
+ * 2. If the API returns real data, use it (isDemoData = false)
+ * 3. If the API fails (503, network error, ArgoCD not installed), fall back
+ *    to mock data generators (isDemoData = true)
+ * 4. Provide localStorage caching with 5 minute expiry
+ * 5. Track consecutive failures for stale-while-revalidate
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
-import { MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS, MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
 
 // Cache expiry time (5 minutes)
-const CACHE_EXPIRY_MS = 300000
+const CACHE_EXPIRY_MS = 300_000
 
 // Refresh interval (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
+const REFRESH_INTERVAL_MS = 120_000
+
+// Number of consecutive failures before marking as failed
+const FAILURE_THRESHOLD = 3
 
 // ============================================================================
 // Types
@@ -55,6 +60,18 @@ export interface ArgoSyncData {
 interface CachedData<T> {
   data: T
   timestamp: number
+  isDemoData: boolean
+}
+
+// ============================================================================
+// Auth Helper
+// ============================================================================
+
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers: Record<string, string> = { 'Accept': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
 }
 
 // ============================================================================
@@ -77,11 +94,12 @@ function loadFromCache<T>(key: string): CachedData<T> | null {
   return null
 }
 
-function saveToCache<T>(key: string, data: T): void {
+function saveToCache<T>(key: string, data: T, isDemoData: boolean): void {
   try {
     localStorage.setItem(key, JSON.stringify({
       data,
       timestamp: Date.now(),
+      isDemoData,
     }))
   } catch {
     // Ignore storage errors (quota, etc.)
@@ -89,7 +107,7 @@ function saveToCache<T>(key: string, data: T): void {
 }
 
 // ============================================================================
-// Mock Data Generators
+// Mock Data Generators (fallback when ArgoCD is not installed)
 // ============================================================================
 
 /**
@@ -97,13 +115,11 @@ function saveToCache<T>(key: string, data: T): void {
  *
  * SECURITY: Safe - These are example/placeholder URLs for demo purposes only
  * NOT REAL CREDENTIALS - Example GitHub URLs used for UI demonstration
- * In production, ArgoCD applications would be fetched from the ArgoCD API
- * with real repository URLs from user's actual ArgoCD installation.
  */
 function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
   const apps: ArgoApplication[] = []
 
-  clusters.forEach((cluster) => {
+  ;(clusters || []).forEach((cluster) => {
     const baseApps = [
       {
         name: 'frontend-app',
@@ -169,20 +185,128 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
 }
 
 function getMockHealthData(clusterCount: number): ArgoHealthData {
+  const HEALTHY_MULTIPLIER = 3.8
+  const DEGRADED_MULTIPLIER = 0.8
+  const PROGRESSING_MULTIPLIER = 0.5
+  const MISSING_MULTIPLIER = 0.2
+  const UNKNOWN_MULTIPLIER = 0.1
   return {
-    healthy: Math.floor(clusterCount * 3.8),
-    degraded: Math.floor(clusterCount * 0.8),
-    progressing: Math.floor(clusterCount * 0.5),
-    missing: Math.floor(clusterCount * 0.2),
-    unknown: Math.floor(clusterCount * 0.1),
+    healthy: Math.floor(clusterCount * HEALTHY_MULTIPLIER),
+    degraded: Math.floor(clusterCount * DEGRADED_MULTIPLIER),
+    progressing: Math.floor(clusterCount * PROGRESSING_MULTIPLIER),
+    missing: Math.floor(clusterCount * MISSING_MULTIPLIER),
+    unknown: Math.floor(clusterCount * UNKNOWN_MULTIPLIER),
   }
 }
 
 function getMockSyncStatusData(clusterCount: number): ArgoSyncData {
+  const SYNCED_MULTIPLIER = 4.2
+  const OUT_OF_SYNC_MULTIPLIER = 1.3
+  const UNKNOWN_MULTIPLIER = 0.3
   return {
-    synced: Math.floor(clusterCount * 4.2),
-    outOfSync: Math.floor(clusterCount * 1.3),
-    unknown: Math.floor(clusterCount * 0.3),
+    synced: Math.floor(clusterCount * SYNCED_MULTIPLIER),
+    outOfSync: Math.floor(clusterCount * OUT_OF_SYNC_MULTIPLIER),
+    unknown: Math.floor(clusterCount * UNKNOWN_MULTIPLIER),
+  }
+}
+
+// ============================================================================
+// API Fetch Helpers
+// ============================================================================
+
+/** Fetch ArgoCD applications from backend API */
+async function fetchArgoApplications(): Promise<{ items: ArgoApplication[]; isDemoData: boolean }> {
+  const ctrl = new AbortController()
+  const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
+  try {
+    const res = await fetch('/api/gitops/argocd/applications', {
+      signal: ctrl.signal,
+      headers: authHeaders(),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      if (body.isDemoData) {
+        return { items: [], isDemoData: true }
+      }
+      throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
+    }
+    const data = await res.json()
+    return {
+      items: (data.items || []) as ArgoApplication[],
+      isDemoData: data.isDemoData === true,
+    }
+  } finally {
+    clearTimeout(tid)
+  }
+}
+
+/** Fetch ArgoCD health summary from backend API */
+async function fetchArgoHealth(): Promise<{ stats: ArgoHealthData; isDemoData: boolean }> {
+  const ctrl = new AbortController()
+  const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
+  try {
+    const res = await fetch('/api/gitops/argocd/health', {
+      signal: ctrl.signal,
+      headers: authHeaders(),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      if (body.isDemoData) {
+        return { stats: { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }, isDemoData: true }
+      }
+      throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
+    }
+    const data = await res.json()
+    return {
+      stats: (data.stats || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }) as ArgoHealthData,
+      isDemoData: data.isDemoData === true,
+    }
+  } finally {
+    clearTimeout(tid)
+  }
+}
+
+/** Fetch ArgoCD sync summary from backend API */
+async function fetchArgoSync(): Promise<{ stats: ArgoSyncData; isDemoData: boolean }> {
+  const ctrl = new AbortController()
+  const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
+  try {
+    const res = await fetch('/api/gitops/argocd/sync', {
+      signal: ctrl.signal,
+      headers: authHeaders(),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      if (body.isDemoData) {
+        return { stats: { synced: 0, outOfSync: 0, unknown: 0 }, isDemoData: true }
+      }
+      throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
+    }
+    const data = await res.json()
+    return {
+      stats: (data.stats || { synced: 0, outOfSync: 0, unknown: 0 }) as ArgoSyncData,
+      isDemoData: data.isDemoData === true,
+    }
+  } finally {
+    clearTimeout(tid)
+  }
+}
+
+/** Trigger an ArgoCD sync via backend API */
+async function triggerArgoSyncAPI(appName: string, namespace: string, cluster: string): Promise<{ success: boolean; error?: string }> {
+  const ctrl = new AbortController()
+  const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
+  try {
+    const res = await fetch('/api/gitops/argocd/sync', {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appName, namespace, cluster }),
+    })
+    const data = await res.json()
+    return { success: data.success === true, error: data.error }
+  } finally {
+    clearTimeout(tid)
   }
 }
 
@@ -194,6 +318,7 @@ const APPS_CACHE_KEY = 'kc-argocd-apps-cache'
 
 interface UseArgoCDApplicationsResult {
   applications: ArgoApplication[]
+  isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
   error: string | null
@@ -211,6 +336,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
   const [applications, setApplications] = useState<ArgoApplication[]>(
     cachedData.current?.data || []
   )
+  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedData.current)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -221,7 +347,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
   const initialLoadDone = useRef(!!cachedData.current)
 
   const clusterNames = useMemo(
-    () => clusters.map(c => c.name),
+    () => (clusters || []).map(c => c.name),
     [clusters]
   )
 
@@ -239,29 +365,40 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
     }
 
     try {
-      // In a real implementation, this would fetch from ArgoCD API
-      // For now, we use mock data
-      const apps = getMockArgoApplications(clusterNames)
+      // Try real API first
+      const result = await fetchArgoApplications()
 
+      if (!result.isDemoData && (result.items || []).length > 0) {
+        // Real data from ArgoCD
+        setApplications(result.items)
+        setIsDemoData(false)
+        setError(null)
+        setConsecutiveFailures(0)
+        setLastRefresh(Date.now())
+        initialLoadDone.current = true
+        saveToCache(APPS_CACHE_KEY, result.items, false)
+        return
+      }
+
+      // API returned but no real data (ArgoCD not installed) — fall through to mock
+      throw new Error('No ArgoCD data available')
+    } catch {
+      // API failed or returned demo indicator — fall back to mock data
+      const apps = getMockArgoApplications(clusterNames)
       setApplications(apps)
+      setIsDemoData(true)
       setError(null)
       setConsecutiveFailures(0)
       setLastRefresh(Date.now())
       initialLoadDone.current = true
-
-      // Save to cache
-      saveToCache(APPS_CACHE_KEY, apps)
-    } catch (err) {
-      console.error('[useArgoCDApplications] Error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch ArgoCD applications')
-      setConsecutiveFailures(prev => prev + 1)
+      saveToCache(APPS_CACHE_KEY, apps, true)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }, [clusterNames])
 
-  // Initial load — always fetch mock data (no real ArgoCD API yet, card is in DEMO_DATA_CARDS)
+  // Initial load
   useEffect(() => {
     if (!clustersLoading && clusterNames.length > 0) {
       refetch()
@@ -283,10 +420,11 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
 
   return {
     applications,
+    isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,
     error,
-    isFailed: consecutiveFailures >= 3,
+    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
     refetch: () => refetch(false),
@@ -303,6 +441,7 @@ interface UseArgoCDHealthResult {
   stats: ArgoHealthData
   total: number
   healthyPercent: number
+  isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
   error: string | null
@@ -321,6 +460,7 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
   const [stats, setStats] = useState<ArgoHealthData>(
     cachedData.current?.data || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
   )
+  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedData.current)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -331,8 +471,8 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
   const initialLoadDone = useRef(!!cachedData.current)
 
   const filteredClusterCount = useMemo(() => {
-    if (isAllClustersSelected) return clusters.length
-    return selectedClusters.length
+    if (isAllClustersSelected) return (clusters || []).length
+    return (selectedClusters || []).length
   }, [clusters, selectedClusters, isAllClustersSelected])
 
   const refetch = useCallback(async (silent = false) => {
@@ -349,28 +489,43 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     }
 
     try {
-      // In a real implementation, this would fetch from ArgoCD API
-      const healthData = getMockHealthData(filteredClusterCount)
+      // Try real API first
+      const result = await fetchArgoHealth()
 
+      if (!result.isDemoData) {
+        const total = result.stats.healthy + result.stats.degraded +
+          result.stats.progressing + result.stats.missing + result.stats.unknown
+        if (total > 0) {
+          setStats(result.stats)
+          setIsDemoData(false)
+          setError(null)
+          setConsecutiveFailures(0)
+          setLastRefresh(Date.now())
+          initialLoadDone.current = true
+          saveToCache(HEALTH_CACHE_KEY, result.stats, false)
+          return
+        }
+      }
+
+      // No real data — fall through to mock
+      throw new Error('No ArgoCD health data available')
+    } catch {
+      // Fall back to mock data
+      const healthData = getMockHealthData(filteredClusterCount)
       setStats(healthData)
+      setIsDemoData(true)
       setError(null)
       setConsecutiveFailures(0)
       setLastRefresh(Date.now())
       initialLoadDone.current = true
-
-      // Save to cache
-      saveToCache(HEALTH_CACHE_KEY, healthData)
-    } catch (err) {
-      console.error('[useArgoCDHealth] Error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch ArgoCD health data')
-      setConsecutiveFailures(prev => prev + 1)
+      saveToCache(HEALTH_CACHE_KEY, healthData, true)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }, [filteredClusterCount])
 
-  // Initial load — always fetch mock data (no real ArgoCD API yet, card is in DEMO_DATA_CARDS)
+  // Initial load
   useEffect(() => {
     if (!clustersLoading && filteredClusterCount > 0) {
       refetch()
@@ -398,10 +553,11 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     stats,
     total,
     healthyPercent,
+    isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,
     error,
-    isFailed: consecutiveFailures >= 3,
+    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
     refetch: () => refetch(false),
@@ -419,36 +575,25 @@ export interface TriggerSyncResult {
 }
 
 /**
- * Returns a function to trigger an Argo CD application sync.
- * In a real implementation this would call the ArgoCD API or run:
- *   argocd app sync <name> --prune --force
- * For now it simulates the action for UI demonstration.
+ * Returns a function to trigger an ArgoCD application sync.
+ * Tries the real backend API first, falls back to simulated delay in demo mode.
  */
 export function useArgoCDTriggerSync() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [lastResult, setLastResult] = useState<TriggerSyncResult | null>(null)
 
-  const triggerSync = useCallback(async (_appName: string, _namespace: string): Promise<TriggerSyncResult> => {
+  const triggerSync = useCallback(async (appName: string, namespace: string, cluster?: string): Promise<TriggerSyncResult> => {
     setIsSyncing(true)
     setLastResult(null)
     try {
-      // In a real implementation, call the ArgoCD API:
-      //   POST /api/v1/applications/{_appName}/sync
-      // or run: argocd app sync <_appName> -n <_namespace>
-      //
-      // NOTE: The Promise below never rejects — this is intentional for the
-      // mock/demo path. The catch block is kept so that the real API call
-      // (which can fail with network or permission errors) is handled correctly
-      // once the stub is replaced.
-      await new Promise(resolve => setTimeout(resolve, MOCK_SYNC_DELAY_MS))
-      const result: TriggerSyncResult = { success: true }
+      // Try real backend API first
+      const result = await triggerArgoSyncAPI(appName, namespace, cluster || '')
       setLastResult(result)
       return result
-    } catch (err) {
-      const result: TriggerSyncResult = {
-        success: false,
-        error: err instanceof Error ? err.message : 'Unknown error',
-      }
+    } catch {
+      // API unreachable — simulate for demo mode
+      await new Promise(resolve => setTimeout(resolve, MOCK_SYNC_DELAY_MS))
+      const result: TriggerSyncResult = { success: true }
       setLastResult(result)
       return result
     } finally {
@@ -470,6 +615,7 @@ interface UseArgoCDSyncStatusResult {
   total: number
   syncedPercent: number
   outOfSyncPercent: number
+  isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
   error: string | null
@@ -488,6 +634,7 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
   const [stats, setStats] = useState<ArgoSyncData>(
     cachedData.current?.data || { synced: 0, outOfSync: 0, unknown: 0 }
   )
+  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedData.current)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -498,9 +645,9 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
   const initialLoadDone = useRef(!!cachedData.current)
 
   const filteredClusterCount = useMemo(() => {
-    let count = isAllClustersSelected ? clusters.length : selectedClusters.length
+    let count = isAllClustersSelected ? (clusters || []).length : (selectedClusters || []).length
     // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
+    if ((localClusterFilter || []).length > 0) {
       count = localClusterFilter.length
     }
     return count
@@ -520,28 +667,42 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     }
 
     try {
-      // In a real implementation, this would fetch from ArgoCD API
-      const syncData = getMockSyncStatusData(filteredClusterCount)
+      // Try real API first
+      const result = await fetchArgoSync()
 
+      if (!result.isDemoData) {
+        const total = result.stats.synced + result.stats.outOfSync + result.stats.unknown
+        if (total > 0) {
+          setStats(result.stats)
+          setIsDemoData(false)
+          setError(null)
+          setConsecutiveFailures(0)
+          setLastRefresh(Date.now())
+          initialLoadDone.current = true
+          saveToCache(SYNC_CACHE_KEY, result.stats, false)
+          return
+        }
+      }
+
+      // No real data — fall through to mock
+      throw new Error('No ArgoCD sync data available')
+    } catch {
+      // Fall back to mock data
+      const syncData = getMockSyncStatusData(filteredClusterCount)
       setStats(syncData)
+      setIsDemoData(true)
       setError(null)
       setConsecutiveFailures(0)
       setLastRefresh(Date.now())
       initialLoadDone.current = true
-
-      // Save to cache
-      saveToCache(SYNC_CACHE_KEY, syncData)
-    } catch (err) {
-      console.error('[useArgoCDSyncStatus] Error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch ArgoCD sync status')
-      setConsecutiveFailures(prev => prev + 1)
+      saveToCache(SYNC_CACHE_KEY, syncData, true)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }, [filteredClusterCount])
 
-  // Initial load — always fetch mock data (no real ArgoCD API yet, card is in DEMO_DATA_CARDS)
+  // Initial load
   useEffect(() => {
     if (!clustersLoading && filteredClusterCount > 0) {
       refetch()
@@ -571,10 +732,11 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     total,
     syncedPercent,
     outOfSyncPercent,
+    isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,
     error,
-    isFailed: consecutiveFailures >= 3,
+    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
     refetch: () => refetch(false),

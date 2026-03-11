@@ -3,7 +3,6 @@ import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDHealth } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
@@ -35,8 +34,8 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
     isLoading,
     isFailed,
     consecutiveFailures,
+    isDemoData,
   } = useArgoCDHealth()
-  const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -44,7 +43,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
     hasAnyData: total > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoMode,
+    isDemoData,
   })
 
   if (showSkeleton) {

@@ -14,6 +14,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 )
@@ -1651,4 +1654,268 @@ func (h *GitOpsHandlers) findReleaseNamespace(ctx context.Context, cluster, rele
 		}
 	}
 	return ""
+}
+
+// ============================================================================
+// ArgoCD Endpoints
+// ============================================================================
+
+// argocdQueryTimeout is the timeout for querying ArgoCD Application CRDs across clusters
+const argocdQueryTimeout = 15 * time.Second
+
+// ListArgoApplications returns all ArgoCD Application resources across all clusters.
+// GET /api/gitops/argocd/applications
+// Query params: ?cluster=<name> (optional, filter by cluster)
+func (h *GitOpsHandlers) ListArgoApplications(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{
+			"error":   "Kubernetes client not configured",
+			"isDemoData": true,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), argocdQueryTimeout)
+	defer cancel()
+
+	appList, err := h.k8sClient.ListArgoApplications(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   fmt.Sprintf("Failed to list ArgoCD applications: %v", err),
+			"isDemoData": true,
+		})
+	}
+
+	// Optional cluster filter
+	clusterFilter := c.Query("cluster")
+	if clusterFilter != "" {
+		filtered := make([]interface{}, 0)
+		for _, app := range appList.Items {
+			if app.Cluster == clusterFilter {
+				filtered = append(filtered, app)
+			}
+		}
+		return c.JSON(fiber.Map{
+			"items":      filtered,
+			"totalCount": len(filtered),
+			"isDemoData": false,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"items":      appList.Items,
+		"totalCount": appList.TotalCount,
+		"isDemoData": false,
+	})
+}
+
+// GetArgoHealthSummary returns aggregated health status counts for all ArgoCD applications.
+// GET /api/gitops/argocd/health
+func (h *GitOpsHandlers) GetArgoHealthSummary(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{
+			"error":   "Kubernetes client not configured",
+			"isDemoData": true,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), argocdQueryTimeout)
+	defer cancel()
+
+	appList, err := h.k8sClient.ListArgoApplications(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   fmt.Sprintf("Failed to list ArgoCD applications: %v", err),
+			"isDemoData": true,
+		})
+	}
+
+	// Aggregate health statuses
+	summary := fiber.Map{
+		"healthy":     0,
+		"degraded":    0,
+		"progressing": 0,
+		"missing":     0,
+		"unknown":     0,
+	}
+
+	for _, app := range appList.Items {
+		switch app.HealthStatus {
+		case "Healthy":
+			summary["healthy"] = summary["healthy"].(int) + 1
+		case "Degraded":
+			summary["degraded"] = summary["degraded"].(int) + 1
+		case "Progressing":
+			summary["progressing"] = summary["progressing"].(int) + 1
+		case "Missing":
+			summary["missing"] = summary["missing"].(int) + 1
+		default:
+			summary["unknown"] = summary["unknown"].(int) + 1
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"stats":      summary,
+		"isDemoData": false,
+	})
+}
+
+// GetArgoSyncSummary returns aggregated sync status counts for all ArgoCD applications.
+// GET /api/gitops/argocd/sync
+func (h *GitOpsHandlers) GetArgoSyncSummary(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{
+			"error":   "Kubernetes client not configured",
+			"isDemoData": true,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), argocdQueryTimeout)
+	defer cancel()
+
+	appList, err := h.k8sClient.ListArgoApplications(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   fmt.Sprintf("Failed to list ArgoCD applications: %v", err),
+			"isDemoData": true,
+		})
+	}
+
+	// Aggregate sync statuses
+	summary := fiber.Map{
+		"synced":    0,
+		"outOfSync": 0,
+		"unknown":   0,
+	}
+
+	for _, app := range appList.Items {
+		switch app.SyncStatus {
+		case "Synced":
+			summary["synced"] = summary["synced"].(int) + 1
+		case "OutOfSync":
+			summary["outOfSync"] = summary["outOfSync"].(int) + 1
+		default:
+			summary["unknown"] = summary["unknown"].(int) + 1
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"stats":      summary,
+		"isDemoData": false,
+	})
+}
+
+// TriggerArgoSync triggers a sync operation for an ArgoCD Application.
+// This is a best-effort operation that patches the Application's operation field.
+// POST /api/gitops/argocd/sync
+func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{
+			"error":   "Kubernetes client not configured",
+			"success": false,
+		})
+	}
+
+	var req struct {
+		AppName   string `json:"appName"`
+		Namespace string `json:"namespace"`
+		Cluster   string `json:"cluster"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error":   "Invalid request body",
+			"success": false,
+		})
+	}
+
+	if req.AppName == "" || req.Cluster == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"error":   "appName and cluster are required",
+			"success": false,
+		})
+	}
+
+	// Default namespace for ArgoCD applications
+	namespace := req.Namespace
+	if namespace == "" {
+		namespace = "argocd"
+	}
+
+	log.Printf("[ArgoCD] Triggering sync for %s/%s on cluster %s", namespace, req.AppName, req.Cluster)
+
+	// Use argocd CLI if available, otherwise try kubectl annotation refresh
+	if _, err := exec.LookPath("argocd"); err == nil {
+		cmd := exec.CommandContext(c.Context(), "argocd", "app", "sync", req.AppName,
+			"--namespace", namespace,
+			"--prune",
+			"--timeout", "30",
+		)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("[ArgoCD] CLI sync failed: %v, output: %s", err, string(output))
+			return c.Status(500).JSON(fiber.Map{
+				"error":   fmt.Sprintf("ArgoCD sync failed: %v", err),
+				"success": false,
+			})
+		}
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Sync triggered via ArgoCD CLI",
+		})
+	}
+
+	// Fallback: annotate the Application to trigger a refresh
+	dynamicClient, err := h.k8sClient.GetDynamicClient(req.Cluster)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   fmt.Sprintf("Failed to get dynamic client: %v", err),
+			"success": false,
+		})
+	}
+
+	// Fetch the current Application to patch it
+	ctx, cancel := context.WithTimeout(c.Context(), argocdQueryTimeout)
+	defer cancel()
+
+	app, err := dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Get(ctx, req.AppName, metav1.GetOptions{})
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error":   fmt.Sprintf("Application %s not found in %s/%s: %v", req.AppName, req.Cluster, namespace, err),
+			"success": false,
+		})
+	}
+
+	// Set the refresh annotation to trigger ArgoCD's reconciliation
+	annotations := app.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["argocd.argoproj.io/refresh"] = "hard"
+	app.SetAnnotations(annotations)
+
+	// Also set the operation field to trigger a sync
+	content := app.UnstructuredContent()
+	operation := map[string]interface{}{
+		"initiatedBy": map[string]interface{}{
+			"username":  "kubestellar-console",
+			"automated": false,
+		},
+		"sync": map[string]interface{}{
+			"prune": true,
+		},
+	}
+	content["operation"] = operation
+	app.SetUnstructuredContent(content)
+
+	_, err = dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Update(ctx, app, metav1.UpdateOptions{})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   fmt.Sprintf("Failed to trigger sync: %v", err),
+			"success": false,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Sync triggered via Application resource annotation",
+	})
 }

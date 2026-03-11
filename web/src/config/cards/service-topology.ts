@@ -16,7 +16,7 @@ export const serviceTopologyConfig: UnifiedCardConfig = {
   content: { type: 'custom', component: 'ServiceTopologyGraph' },
   emptyState: { icon: 'Network', title: 'No Topology', message: 'Service topology data unavailable', variant: 'info' },
   loadingState: { type: 'custom' },
-  isDemoData: true,
-  isLive: false,
+  isDemoData: false,
+  isLive: true,
 }
 export default serviceTopologyConfig

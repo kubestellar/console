@@ -69,6 +69,9 @@ export const ROUTES = {
 
   // Widget
   WIDGET: '/widget',
+
+  // Marketing / competitive landing pages
+  FROM_LENS: '/from-lens',
 } as const
 
 /**
