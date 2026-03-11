@@ -346,18 +346,6 @@
 
     .back-link:hover { text-decoration: underline; }
 
-    /* TODO banner */
-    .todo-banner {
-      background: rgba(234, 179, 8, 0.1);
-      border: 1px solid rgba(234, 179, 8, 0.3);
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 24px;
-      font-size: 13px;
-      color: var(--yellow);
-    }
-
-    .todo-banner strong { color: var(--text); }
   </style>
 </head>
 <body>
@@ -501,15 +489,6 @@
       const insights = generateInsights(data);
 
       let html = '';
-
-      // TODO banner for error rate
-      html += `<div class="todo-banner">
-        <strong>TODO:</strong> Address error rate — The "error rate" in analytics refers to the ratio of failed event hits
-        (HTTP 4xx/5xx responses from the analytics proxy) to total event hits. A high error rate means analytics data is being
-        lost — events fired by the browser are not reaching GA4. Common causes: ad blockers (mitigated by our proxy),
-        network timeouts, or proxy misconfiguration. Current proxy: <code>/api/m</code> → GA4.
-        Check Netlify Function logs for <code>analytics-collect</code> errors.
-      </div>`;
 
       // KPI cards
       const kpis = [
