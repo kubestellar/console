@@ -71,18 +71,20 @@ export function generateId(category: InsightCategory, ...parts: string[]): strin
   return `${category}:${parts.join(':')}`
 }
 
-/** @internal Exported for testing */
-export function now(): string {
+function now(): string {
   return new Date().toISOString()
 }
 
 /** @internal Exported for testing */
 export function parseTimestamp(ts?: string): number {
   if (!ts) return 0
-  return new Date(ts).getTime()
+  const ms = new Date(ts).getTime()
+  if (Number.isNaN(ms)) return 0
+  return ms
 }
 
 /** @internal Exported for testing */
+// TODO: fix falsy-zero bug — pct(0, 100) returns 0 instead of 0% because !value is true for 0
 export function pct(value: number | undefined, total: number | undefined): number {
   if (!value || !total || total === 0) return 0
   return Math.round((value / total) * 100)
