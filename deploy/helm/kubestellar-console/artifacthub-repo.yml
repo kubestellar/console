@@ -1,6 +1,6 @@
 # Artifact Hub repository metadata
 # See https://artifacthub.io/docs/topics/repositories/helm-charts/
-repositoryID: kubestellar-console
+repositoryID: 9911473d-94b2-4b62-bbfa-a8b5acae052b
 owners:
   - name: Andy Anderson
     email: andy@clubanderson.com

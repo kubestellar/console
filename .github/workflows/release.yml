@@ -319,8 +319,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Copy chart package and build index
+          # Copy chart package, Artifact Hub metadata, and build index
           cp ../.helm-releases/*.tgz .
+          cp ../deploy/helm/kubestellar-console/artifacthub-repo.yml .
           helm repo index . --url https://kubestellar.github.io/console
           git add .
           git commit -m "Release Helm chart ${{ needs.determine-version.outputs.version }}" || echo "No changes"
