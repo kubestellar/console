@@ -8,7 +8,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { Info } from 'lucide-react'
+import { Info, Loader2 } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useTrivy } from '../../hooks/useTrivy'
@@ -257,6 +257,15 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
   if (rows.length === 0) {
+    // Still scanning — show loading state instead of definitive empty state
+    if (isLoading || isRefreshing) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
+          <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+          <p>Scanning clusters...</p>
+        </div>
+      )
+    }
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         No clusters available
@@ -294,7 +303,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
           return (
             <div key={tool} className="px-2 py-1 text-center">
               <span>{tool}</span>
-              {!installed && !isLoading && (
+              {!installed && !isLoading && !isRefreshing && (
                 <button
                   onClick={() => handleInstall(key)}
                   className="ml-1 inline-flex items-center gap-0.5 text-cyan-400 hover:text-cyan-300 transition-colors"

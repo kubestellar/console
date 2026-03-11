@@ -167,8 +167,8 @@ Please proceed step by step.`,
         </a>
       </div>
 
-      {/* Install prompt when not detected */}
-      {!installed && (
+      {/* Install prompt when not detected (only after scanning completes) */}
+      {!installed && !isLoading && !isRefreshing && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
           <div>

@@ -150,8 +150,8 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     return result
   }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, selectedClusters, isAllClustersSelected])
 
-  // Empty state: all clusters within baseline
-  if (!isLoading && drifts.length === 0) {
+  // Empty state: all clusters within baseline (only show after all hooks finish)
+  if (!isLoading && !isRefreshing && drifts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 text-center p-4">
         <CheckCircle2 className="w-8 h-8 text-green-400" />

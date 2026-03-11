@@ -144,7 +144,7 @@ interface WorkloadConfigScanResource {
 
 export function useKubescape() {
   const { isDemoMode } = useDemoMode()
-  const { clusters: allClusters } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
 
   const cachedData = useRef(loadFromCache())
   const [statuses, setStatuses] = useState<Record<string, KubescapeClusterStatus>>(
@@ -372,10 +372,12 @@ export function useKubescape() {
 
     if (clusters.length > 0) {
       refetch()
-    } else {
+    } else if (!clustersLoading) {
+      // Only clear loading when cluster list has actually been fetched
+      // (prevents premature empty state while useClusters is still resolving)
       setIsLoading(false)
     }
-  }, [clusters.length, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clusters.length, isDemoMode, clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-refresh — always poll when clusters exist so we detect tools
   // that get installed later or clusters that become reachable

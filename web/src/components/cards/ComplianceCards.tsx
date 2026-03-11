@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -199,8 +199,8 @@ Please proceed step by step.`,
 
   return (
     <div className="space-y-3">
-      {/* Install prompt when not detected */}
-      {!installed && (
+      {/* Install prompt when not detected (only after scanning completes) */}
+      {!installed && !isLoading && !isRefreshing && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
           <div>
@@ -378,8 +378,8 @@ Please proceed step by step.`,
 
   return (
     <div className="space-y-3">
-      {/* Install prompt when not detected */}
-      {!installed && (
+      {/* Install prompt when not detected (only after scanning completes) */}
+      {!installed && !isLoading && !isRefreshing && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
           <div>
@@ -615,6 +615,18 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   useCardLoadingState({ isLoading: kyvernoLoading, hasAnyData: hasData, isDemoData: kyvernoDemoData })
 
   if (violations.length === 0 && !kyvernoDemoData) {
+    // Still scanning — show loading state instead of definitive empty state
+    if (kyvernoLoading || kyvernoRefreshing) {
+      return (
+        <div className="space-y-3">
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+            <Loader2 className="w-8 h-8 mb-2 opacity-50 animate-spin" />
+            <p className="text-sm">Scanning for policy violations...</p>
+            <p className="text-xs mt-1">Checking Kyverno reports across clusters</p>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="space-y-3">
         {/* Degraded state: installed but no policies */}

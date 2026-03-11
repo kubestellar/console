@@ -8,7 +8,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Sparkles, Shield, ChevronRight, CheckCircle2, AlertTriangle, Zap } from 'lucide-react'
+import { Sparkles, Shield, ChevronRight, CheckCircle2, AlertTriangle, Zap, Loader2 } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useKubescape } from '../../hooks/useKubescape'
@@ -254,9 +254,9 @@ Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
 // ─── Component ──────────────────────────────────────────────────────
 
 function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, installed: kyvernoInstalled, isDemoData: kyvernoDemoData } = useKyverno()
-  const { isLoading: kubescapeLoading, installed: kubescapeInstalled, isDemoData: kubescapeDemoData } = useKubescape()
-  const { isLoading: trivyLoading, installed: trivyInstalled, isDemoData: trivyDemoData } = useTrivy()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, installed: kyvernoInstalled, isDemoData: kyvernoDemoData } = useKyverno()
+  const { isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, installed: kubescapeInstalled, isDemoData: kubescapeDemoData } = useKubescape()
+  const { isLoading: trivyLoading, isRefreshing: trivyRefreshing, installed: trivyInstalled, isDemoData: trivyDemoData } = useTrivy()
   const { deduplicatedClusters } = useClusters()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -264,6 +264,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   const [expandedCategory, setExpandedCategory] = useState<RecommendationCategory | null>(null)
 
   const isLoading = kyvernoLoading || kubescapeLoading || trivyLoading
+  const isRefreshing = kyvernoRefreshing || kubescapeRefreshing || trivyRefreshing
   const isDemoData = isDemoMode || kyvernoDemoData || kubescapeDemoData || trivyDemoData
 
   // Build recommendations from real cluster data
@@ -385,8 +386,22 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
     })
   }
 
-  // No tools installed — prompt to get started
+  // No tools installed — prompt to get started (but only after scanning is complete)
   if (!kyvernoInstalled && !kubescapeInstalled && !trivyInstalled && !isDemoData) {
+    // Still scanning — show loading state instead of definitive empty state
+    if (isLoading || isRefreshing) {
+      return (
+        <div className="space-y-3">
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <Loader2 className="w-8 h-8 text-muted-foreground/50 mb-3 animate-spin" />
+            <p className="text-sm font-medium text-foreground">Scanning clusters...</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-[250px]">
+              Checking for compliance tools across your fleet
+            </p>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="space-y-3">
         <div className="flex flex-col items-center justify-center py-6 text-center">
