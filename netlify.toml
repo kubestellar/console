@@ -100,6 +100,17 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# HTML files must always revalidate to pick up new chunk references after deploys
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
 # Context-specific settings
 [context.production]
   # Production builds (main branch) - still use demo mode for now

@@ -23,6 +23,24 @@ import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dy
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
 import { initAnalytics } from './lib/analytics'
 
+// ── Chunk load error recovery ─────────────────────────────────────────────
+// When a new build is deployed, chunk filenames change (content hashes).
+// Browsers with cached HTML reference old chunks that no longer exist.
+// Vite fires `vite:preloadError` before React error boundaries see the error.
+// Auto-reload once to pick up fresh HTML with correct chunk references.
+const CHUNK_RELOAD_KEY = 'chunk-reload-ts'
+const CHUNK_RELOAD_COOLDOWN_MS = 30_000
+window.addEventListener('vite:preloadError', (event) => {
+  const lastReload = sessionStorage.getItem(CHUNK_RELOAD_KEY)
+  const now = Date.now()
+  if (!lastReload || now - parseInt(lastReload) > CHUNK_RELOAD_COOLDOWN_MS) {
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now))
+    // Prevent the error from propagating to error boundaries
+    event.preventDefault()
+    window.location.reload()
+  }
+})
+
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn
 console.warn = (...args) => {
