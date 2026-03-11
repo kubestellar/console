@@ -92,6 +92,7 @@ interface DashboardData {
   featureAdoption: { feature: string; count: number; users: number }[];
   weeklyRetention: { week: string; newUsers: number; returning: number }[];
   errors: { event: string; count: number; detail: string; daily: number[] }[];
+  cardErrors: { card: string; count: number; daily: number[] }[];
   cachedAt: string;
   propertyId: string;
   dateRange: string;
@@ -271,6 +272,7 @@ async function fetchDashboardData(
     weeklyRetRows,
     errorRows,
     errorDailyRows,
+    cardErrorRows,
   ] = await Promise.all([
     // 1. Overview metrics (current period)
     runReport(propertyId, accessToken, {
@@ -579,6 +581,21 @@ async function fetchDashboardData(
       },
       orderBys: [{ dimension: { dimensionName: "date", orderType: "ALPHANUMERIC" } }],
     }),
+
+    // 20. Card-level error breakdown (by customEvent:card_id)
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [{ name: "customEvent:card_id" }, { name: "date" }],
+      metrics: [{ name: "eventCount" }],
+      dimensionFilter: {
+        filter: {
+          fieldName: "eventName",
+          stringFilter: { matchType: "EXACT", value: "ksc_error" },
+        },
+      },
+      orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
+      limit: 200,
+    }),
   ]);
 
   // Parse overview
@@ -709,6 +726,26 @@ async function fetchDashboardData(
       return { event, count: metVal(r, 0), detail, daily };
     });
 
+  // Parse card-level errors with sparklines
+  const cardErrorMap = new Map<string, { count: number; dayMap: Map<string, number> }>();
+  for (const row of cardErrorRows) {
+    const card = dimVal(row, 0);
+    if (card === "(not set)") continue;
+    const date = dimVal(row, 1);
+    const count = metVal(row, 0);
+    if (!cardErrorMap.has(card)) cardErrorMap.set(card, { count: 0, dayMap: new Map() });
+    const entry = cardErrorMap.get(card)!;
+    entry.count += count;
+    entry.dayMap.set(date, (entry.dayMap.get(date) || 0) + count);
+  }
+  const cardErrors = [...cardErrorMap.entries()]
+    .map(([card, { count, dayMap }]) => ({
+      card,
+      count,
+      daily: allDates.map((d) => dayMap.get(d) || 0),
+    }))
+    .sort((a, b) => b.count - a.count);
+
   return {
     overview,
     overviewPrevious,
@@ -780,6 +817,7 @@ async function fetchDashboardData(
     featureAdoption,
     weeklyRetention,
     errors,
+    cardErrors,
     cachedAt: new Date().toISOString(),
     propertyId,
     dateRange: "Last 28 days",

@@ -550,11 +550,12 @@ export function emitFeedbackSubmitted(type: string) {
 // Maximum length for error detail strings to avoid oversized payloads
 const ERROR_DETAIL_MAX_LEN = 100
 
-export function emitError(category: string, detail: string) {
+export function emitError(category: string, detail: string, cardId?: string) {
   send('ksc_error', {
     error_category: category,
     error_detail: detail.slice(0, ERROR_DETAIL_MAX_LEN),
     error_page: window.location.pathname,
+    ...(cardId && { card_id: cardId }),
   })
 }
 
