@@ -29,7 +29,17 @@ const GTAG_SCRIPT_PATH = '/api/gtag'
 // only populates standard reports with a 24-48h delay.
 
 let gtagAvailable = false
+let gtagDecided = false  // true once we know whether gtag.js loaded or was blocked
 let realMeasurementId = ''
+
+// Events queued while waiting for gtag.js load verdict.
+// Without queuing, events fire via the proxy (with our custom client ID) AND
+// gtag.js creates its own _ga cookie client ID — GA4 sees two separate users,
+// inflating active user counts.
+let pendingEvents: Array<{ name: string; params?: Record<string, string | number | boolean> }> = []
+
+// Maximum time to wait for gtag.js before falling back to proxy
+const GTAG_LOAD_TIMEOUT_MS = 5_000
 
 // Extend window for gtag globals
 declare global {
@@ -344,11 +354,46 @@ function sendViaProxy(
   }
 }
 
+/**
+ * Flush all queued events once we know whether gtag.js is available.
+ * Called exactly once when gtagDecided transitions to true.
+ */
+function flushPendingEvents() {
+  const queue = pendingEvents
+  pendingEvents = []
+  for (const evt of queue) {
+    if (gtagAvailable) {
+      sendViaGtag(evt.name, evt.params)
+    } else {
+      sendViaProxy(evt.name, evt.params)
+    }
+  }
+}
+
+/**
+ * Mark gtag.js availability and flush any queued events.
+ * Idempotent — only the first call takes effect.
+ */
+function markGtagDecided(available: boolean) {
+  if (gtagDecided) return
+  gtagAvailable = available
+  gtagDecided = true
+  flushPendingEvents()
+}
+
 function send(
   eventName: string,
   params?: Record<string, string | number | boolean>,
 ) {
   if (!initialized || isOptedOut()) return
+
+  // While waiting for gtag.js to load, queue events instead of sending
+  // via the proxy. This prevents GA4 from seeing two different client IDs
+  // (our _ksc_cid via proxy vs gtag's _ga cookie) for the same user.
+  if (!gtagDecided) {
+    pendingEvents.push({ name: eventName, params })
+    return
+  }
 
   // Primary path: gtag.js (appears in GA4 Realtime)
   if (gtagAvailable) {
@@ -391,25 +436,38 @@ function loadGtagScript() {
     window.dataLayer.push(arguments)
   }
   window.gtag('js', new Date())
+
+  // Pass our custom client_id so gtag.js uses the SAME identity as
+  // our proxy fallback. Without this, gtag creates its own _ga cookie
+  // client ID — GA4 sees two different users for the same person,
+  // inflating active user counts.
   window.gtag('config', mid, {
     send_page_view: false, // We control page_view timing
     cookie_domain: 'auto',
-    user_properties: { ...userProperties },
+    client_id: getClientId(),
   })
+
+  // Set user properties explicitly via gtag('set') — more reliable than
+  // passing them in the config call. This ensures deployment_type and
+  // other user-scoped dimensions appear correctly in Realtime reports.
+  window.gtag('set', 'user_properties', { ...userProperties })
+
+  // Timeout: if gtag.js hasn't loaded in GTAG_LOAD_TIMEOUT_MS, fall back to proxy
+  setTimeout(() => markGtagDecided(false), GTAG_LOAD_TIMEOUT_MS)
 
   // Try first-party proxy first (Go backend serves gtag.js from same origin)
   const script = document.createElement('script')
   script.async = true
   script.src = `${GTAG_SCRIPT_PATH}?id=${mid}`
-  script.onload = () => { gtagAvailable = true }
+  script.onload = () => { markGtagDecided(true) }
   script.onerror = () => {
     // First-party proxy unavailable (Netlify deploy, or proxy error)
     // Fall back to Google CDN directly
     const cdnScript = document.createElement('script')
     cdnScript.async = true
     cdnScript.src = `${GTAG_CDN_URL}?id=${mid}`
-    cdnScript.onload = () => { gtagAvailable = true }
-    cdnScript.onerror = () => { gtagAvailable = false } // Ad blocker blocked both
+    cdnScript.onload = () => { markGtagDecided(true) }
+    cdnScript.onerror = () => { markGtagDecided(false) } // Ad blocker blocked both
     document.head.appendChild(cdnScript)
   }
   document.head.appendChild(script)
@@ -471,9 +529,9 @@ export async function setAnalyticsUserId(uid: string) {
 
 export function setAnalyticsUserProperties(props: Record<string, string>) {
   userProperties = { ...userProperties, ...props }
-  // Propagate to gtag if available
-  if (gtagAvailable && window.gtag && realMeasurementId) {
-    window.gtag('config', realMeasurementId, { user_properties: props })
+  // Propagate to gtag — use 'set' for reliable user property delivery
+  if (gtagAvailable && window.gtag) {
+    window.gtag('set', 'user_properties', props)
   }
 }
 
