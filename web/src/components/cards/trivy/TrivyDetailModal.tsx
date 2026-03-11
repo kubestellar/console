@@ -3,15 +3,18 @@
  *
  * Shows per-image vulnerability table sorted by critical+high severity,
  * plus a severity summary header with colored bars.
+ * Each image row has a "Fix" action that launches an AI Mission.
  *
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useMemo, useState } from 'react'
-import { Shield, Search, ExternalLink } from 'lucide-react'
+import { useMemo, useState, useCallback } from 'react'
+import { Shield, Search, ExternalLink, Rocket } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { RefreshButton } from '../../ui/RefreshIndicator'
+import { useMissions } from '../../../hooks/useMissions'
+import { emitActionClicked } from '../../../lib/analytics'
 import type { TrivyClusterStatus } from '../../../hooks/useTrivy'
 
 interface TrivyDetailModalProps {
@@ -23,6 +26,9 @@ interface TrivyDetailModalProps {
   isRefreshing?: boolean
 }
 
+/** Minimum critical+high count to show the per-row fix button */
+const MIN_VULNS_FOR_FIX = 1
+
 export function TrivyDetailModal({
   isOpen,
   onClose,
@@ -32,6 +38,7 @@ export function TrivyDetailModal({
   isRefreshing = false,
 }: TrivyDetailModalProps) {
   const [search, setSearch] = useState('')
+  const { startMission, openSidebar } = useMissions()
 
   const { critical, high, medium, low } = status.vulnerabilities
 
@@ -55,6 +62,77 @@ export function TrivyDetailModal({
     { label: 'Medium', count: medium, color: 'bg-yellow-500', textColor: 'text-yellow-400' },
     { label: 'Low', count: low, color: 'bg-blue-500', textColor: 'text-blue-400' },
   ] : []
+
+  const handleFixImage = useCallback((img: { image: string; tag: string; namespace: string; critical: number; high: number; medium: number; low: number }) => {
+    emitActionClicked('fix_vulns', 'trivy_scan', 'compliance')
+    startMission({
+      title: `Fix vulns: ${img.image}:${img.tag}`,
+      description: `${img.critical}C/${img.high}H vulnerabilities in ${img.image}:${img.tag} (ns: ${img.namespace}) on ${clusterName}`,
+      type: 'repair',
+      cluster: clusterName,
+      initialPrompt: `Image ${img.image}:${img.tag} in namespace ${img.namespace} on cluster ${clusterName} has vulnerabilities:
+- Critical: ${img.critical}
+- High: ${img.high}
+- Medium: ${img.medium}
+- Low: ${img.low}
+
+Help me remediate these vulnerabilities:
+1. Get the detailed Trivy vulnerability report for this image: \`kubectl get vulnerabilityreports -n ${img.namespace} -o json | jq '.items[] | select(.report.artifact.repository=="${img.image}")'\`
+2. List the specific CVEs, especially critical and high severity
+3. Check if newer image versions are available that fix these CVEs
+4. Show me how to update the deployment/pod spec to use the patched image
+5. Verify the fix after applying
+
+Please proceed step by step.`,
+      context: {
+        image: `${img.image}:${img.tag}`,
+        namespace: img.namespace,
+        cluster: clusterName,
+        critical: img.critical,
+        high: img.high,
+      },
+    })
+    openSidebar()
+    onClose()
+  }, [clusterName, startMission, openSidebar, onClose])
+
+  const handleTriageCritical = useCallback(() => {
+    emitActionClicked('triage_critical', 'trivy_scan', 'compliance')
+    const criticalImages = (status.images || [])
+      .filter(img => img.critical > 0)
+      .sort((a, b) => b.critical - a.critical)
+      .slice(0, 10)
+    const imageList = criticalImages
+      .map(img => `- ${img.image}:${img.tag} (ns: ${img.namespace}) — ${img.critical} critical`)
+      .join('\n')
+
+    startMission({
+      title: `Triage: ${critical} critical vulns on ${clusterName}`,
+      description: `${criticalImages.length} images with critical vulnerabilities on ${clusterName}`,
+      type: 'troubleshoot',
+      cluster: clusterName,
+      initialPrompt: `Cluster ${clusterName} has ${critical} critical vulnerabilities across ${criticalImages.length} images.
+
+Top images by critical count:
+${imageList}
+
+Help me triage and prioritize remediation:
+1. For each image, check if a patched version exists
+2. Identify which vulnerabilities are exploitable (network-accessible vs local)
+3. Prioritize by: exploitability, exposure, and ease of fix
+4. Create a remediation plan starting with the highest-risk images
+5. For images we control, show the Dockerfile/deployment changes needed
+
+Please proceed step by step.`,
+      context: {
+        cluster: clusterName,
+        totalCritical: critical,
+        imageCount: criticalImages.length,
+      },
+    })
+    openSidebar()
+    onClose()
+  }, [status.images, critical, clusterName, startMission, openSidebar, onClose])
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
@@ -85,6 +163,17 @@ export function TrivyDetailModal({
             <SeverityBox label="Medium" count={medium} color="text-yellow-400" bg="bg-yellow-500/10" />
             <SeverityBox label="Low" count={low} color="text-blue-400" bg="bg-blue-500/10" />
           </div>
+
+          {/* Triage critical vulns action */}
+          {critical > 0 && (
+            <button
+              onClick={handleTriageCritical}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+            >
+              <Rocket className="w-4 h-4" />
+              Triage {critical} Critical Vulnerabilities with AI
+            </button>
+          )}
 
           {/* Severity bar */}
           {total > 0 && (
@@ -139,13 +228,14 @@ export function TrivyDetailModal({
                     <th className="text-center py-2 px-1 font-medium text-orange-400">H</th>
                     <th className="text-center py-2 px-1 font-medium text-yellow-400">M</th>
                     <th className="text-center py-2 px-1 font-medium text-blue-400">L</th>
+                    <th className="w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredImages.map((img, i) => (
                     <tr
                       key={`${img.image}-${img.namespace}-${i}`}
-                      className="border-b border-border/20 hover:bg-secondary/30 transition-colors"
+                      className="group border-b border-border/20 hover:bg-secondary/30 transition-colors"
                     >
                       <td className="py-2 px-2">
                         <span className="font-mono text-xs text-foreground">{img.image}</span>
@@ -163,6 +253,17 @@ export function TrivyDetailModal({
                       </td>
                       <td className="py-2 px-1 text-center">
                         <SeverityCell count={img.low} level="low" />
+                      </td>
+                      <td className="py-2 px-1 text-center">
+                        {(img.critical + img.high) >= MIN_VULNS_FOR_FIX && (
+                          <button
+                            onClick={() => handleFixImage(img)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-blue-500/20 text-blue-400"
+                            title="Fix with AI Mission"
+                          >
+                            <Rocket className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
