@@ -23,6 +23,44 @@ const GA_MEASUREMENT_ID = 'G-0000000000'
 const PROXY_PATH = '/api/m'
 const GTAG_SCRIPT_PATH = '/api/gtag'
 
+// ── Umami Integration ─────────────────────────────────────────────
+// Umami runs in parallel with GA4 for a 2-week validation period.
+// Events flow to both platforms via the send() function.
+// Umami auto-tracks pageviews; custom events use umami.track().
+
+const UMAMI_SCRIPT_URL = 'https://analytics.kubestellar.io/ksc'
+const UMAMI_WEBSITE_ID_PROD = '07111027-162f-4e37-a0bb-067b9d08b88a'
+const UMAMI_WEBSITE_ID_LOCAL = '1339e1d0-b491-4157-9942-037bc9dd4e80'
+
+// Window.umami type is merged with gtag globals below
+
+/** Get the correct Umami website ID based on deployment */
+function getUmamiWebsiteId(): string {
+  const h = window.location.hostname
+  if (h === 'localhost' || h === '127.0.0.1') return UMAMI_WEBSITE_ID_LOCAL
+  return UMAMI_WEBSITE_ID_PROD
+}
+
+/** Load Umami tracking script (async, non-blocking) */
+function loadUmamiScript() {
+  const script = document.createElement('script')
+  script.src = UMAMI_SCRIPT_URL
+  script.defer = true
+  script.dataset.websiteId = getUmamiWebsiteId()
+  document.head.appendChild(script)
+}
+
+/** Send event to Umami (fire-and-forget, never blocks GA4) */
+function sendToUmami(eventName: string, params?: Record<string, string | number | boolean>) {
+  try {
+    if (window.umami?.track) {
+      window.umami.track(eventName, params)
+    }
+  } catch {
+    // Umami failures must never affect GA4 tracking
+  }
+}
+
 // ── gtag.js Integration ─────────────────────────────────────────────
 // gtag.js sends events directly from browser → GA4, which is required
 // for GA4 Realtime reports. The custom proxy approach (server → GA4)
@@ -43,12 +81,15 @@ const GTAG_LOAD_TIMEOUT_MS = 5_000
 // Delay after script.onload to verify gtag.js actually initialized
 const GTAG_INIT_CHECK_MS = 100
 
-// Extend window for gtag globals
+// Extend window for gtag + Umami globals
 declare global {
   interface Window {
     dataLayer: unknown[]
     gtag: (...args: unknown[]) => void
     google_tag_manager: unknown // Defined by gtag.js when it initializes
+    umami?: {
+      track: (eventName: string, data?: Record<string, string | number | boolean>) => void
+    }
   }
 }
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 min
@@ -390,6 +431,10 @@ function send(
 ) {
   if (!initialized || isOptedOut()) return
 
+  // Umami: send every event immediately (no queuing needed — Umami has its
+  // own session management and doesn't conflict with GA4 client IDs)
+  sendToUmami(eventName, params)
+
   // While waiting for gtag.js to load, queue events instead of sending
   // via the proxy. This prevents GA4 from seeing two different client IDs
   // (our _ksc_cid via proxy vs gtag's _ga cookie) for the same user.
@@ -518,6 +563,9 @@ export function initAnalytics() {
 
   // Load gtag.js for GA4 Realtime support (async, non-blocking)
   loadGtagScript()
+
+  // Load Umami tracking script (parallel analytics validation)
+  loadUmamiScript()
 
   // Start tracking user engagement for GA4 engagement time metrics
   startEngagementTracking()
