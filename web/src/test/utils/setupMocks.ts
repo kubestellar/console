@@ -5,7 +5,7 @@ vi.mock('../../lib/demoMode', () => ({
     isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
     toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => { },
     isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-    useDemoMode: () => false
+    useDemoMode: () => true
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
@@ -19,9 +19,16 @@ vi.mock('../../lib/analytics', () => ({
 
 vi.mock('../../hooks/useTokenUsage', () => ({
     useTokenUsage: () => ({
-        used: 0,
-        limit: 1000,
-        warningThreshold: 0.8,
-        criticalThreshold: 0.9
-    })
+        usage: { used: 0, limit: 1000, warningThreshold: 0.8, criticalThreshold: 0.9, stopThreshold: 1.0, resetDate: new Date().toISOString(), byCategory: {} },
+        alertLevel: 'normal',
+        percentage: 0,
+        remaining: 1000,
+        addTokens: () => { },
+        updateSettings: () => { },
+        resetUsage: () => { },
+        isAIDisabled: () => false,
+        isDemoData: true,
+    }),
+    addCategoryTokens: () => { },
+    setActiveTokenCategory: () => { },
 }))

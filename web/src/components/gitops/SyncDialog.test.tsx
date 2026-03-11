@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+/// <reference types="@testing-library/jest-dom/vitest" />
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import '../../test/utils/setupMocks'
@@ -32,6 +33,10 @@ describe('SyncDialog Component', () => {
         })
       )
     )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   const defaultProps = {

@@ -1,3 +1,4 @@
+/// <reference types="@testing-library/jest-dom/vitest" />
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -46,11 +47,11 @@ describe('AuthCallback Component', () => {
   })
 
   it('renders a loading spinner', () => {
-    render(
+    const { container } = render(
       <MemoryRouter>
         <AuthCallback />
       </MemoryRouter>
     )
-    expect(screen.getByText('authCallback.signingIn')).toBeInTheDocument()
+    expect(container.querySelector('.spinner')).toBeInTheDocument()
   })
 })
