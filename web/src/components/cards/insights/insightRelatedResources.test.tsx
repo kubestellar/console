@@ -18,11 +18,15 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
 }))
+const mockStartMission = vi.fn()
+const mockOpenSidebar = vi.fn()
+const mockMissions: unknown[] = []
+
 vi.mock('../../../hooks/useMissions', () => ({
   useMissions: () => ({
-    startMission: vi.fn(),
-    openSidebar: vi.fn(),
-    missions: [],
+    startMission: mockStartMission,
+    openSidebar: mockOpenSidebar,
+    missions: mockMissions,
     activeMission: null,
   }),
 }))
