@@ -234,7 +234,7 @@ Please proceed step by step.`,
       )}
 
       {/* Per-cluster badges — click to open detail modal */}
-      {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
+      {installed && Object.values(statuses).some(s => s.installed) && (
         <div className="flex flex-wrap gap-1">
           {Object.values(statuses).filter(s => s.installed).map(s => (
             <button key={s.cluster} onClick={() => setModalCluster(s.cluster)} className="cursor-pointer">
@@ -413,7 +413,7 @@ Please proceed step by step.`,
       )}
 
       {/* Per-cluster scores — click to open detail modal */}
-      {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
+      {installed && Object.values(statuses).some(s => s.installed) && (
         <div className="flex flex-wrap gap-1">
           {Object.values(statuses).filter(s => s.installed).map(s => (
             <button key={s.cluster} onClick={() => setModalCluster(s.cluster)} className="cursor-pointer">
@@ -656,8 +656,23 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     )
   }
 
+  // Clusters contributing Kyverno data
+  const participatingClusters = useMemo(() =>
+    Object.values(kyvernoStatuses).filter(s => s.installed).map(s => s.cluster),
+    [kyvernoStatuses],
+  )
+
   return (
     <div className="space-y-3">
+      {/* Participating clusters */}
+      {participatingClusters.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {participatingClusters.map(cluster => (
+            <StatusBadge key={cluster} color="purple" size="xs">{cluster}</StatusBadge>
+          ))}
+        </div>
+      )}
+
       {/* Context banner */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
@@ -723,7 +738,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 // ── Compliance Score Gauge ──────────────────────────────────────────────
 
 export function ComplianceScore({ config: _config }: CardConfig) {
-  const { aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData } = useKubescape()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData } = useKubescape()
   const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
   const [showBreakdown, setShowBreakdown] = useState(false)
@@ -805,8 +820,29 @@ export function ComplianceScore({ config: _config }: CardConfig) {
 
   const scoreCtx = getScoreContext(score)
 
+  // Clusters contributing to the composite score
+  const scoreClusters = useMemo(() => {
+    const clusters = new Set<string>()
+    for (const s of Object.values(kubescapeStatuses)) {
+      if (s.installed) clusters.add(s.cluster)
+    }
+    for (const s of Object.values(kyvernoStatuses)) {
+      if (s.installed) clusters.add(s.cluster)
+    }
+    return Array.from(clusters)
+  }, [kubescapeStatuses, kyvernoStatuses])
+
   return (
     <div className="space-y-3">
+      {/* Participating clusters */}
+      {scoreClusters.length > 0 && !isDemoData && (
+        <div className="flex flex-wrap gap-1">
+          {scoreClusters.map(cluster => (
+            <StatusBadge key={cluster} color="purple" size="xs">{cluster}</StatusBadge>
+          ))}
+        </div>
+      )}
+
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
