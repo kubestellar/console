@@ -201,6 +201,8 @@ export function useKyverno() {
             cluster, installed: false, loading: false, policies: [], reports: [],
             totalPolicies: 0, totalViolations: 0, enforcingCount: 0, auditCount: 0,
           }
+          // Progressive update — show not-installed immediately
+          setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
           continue
         }
 
@@ -316,9 +318,18 @@ export function useKyverno() {
           totalPolicies: 0, totalViolations: 0, enforcingCount: 0, auditCount: 0,
         }
       }
+
+      // Progressive update: stream each cluster's data to the UI as it arrives
+      setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
+
+      // Clear loading state once first cluster with data arrives
+      if (!initialLoadDone.current && newStatuses[cluster].installed) {
+        initialLoadDone.current = true
+        setIsLoading(false)
+      }
     }
 
-    setStatuses(newStatuses)
+    // Final: save complete cache and clear refresh state
     saveToCache(newStatuses)
     setLastRefresh(new Date())
     initialLoadDone.current = true

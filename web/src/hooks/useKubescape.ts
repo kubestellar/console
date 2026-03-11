@@ -208,6 +208,8 @@ export function useKubescape() {
               overallScore: 0, frameworks: [], controls: [],
               totalControls: 0, passedControls: 0, failedControls: 0,
             }
+            // Progressive update — show not-installed immediately
+            setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
             continue
           }
         }
@@ -329,9 +331,18 @@ export function useKubescape() {
           totalControls: 0, passedControls: 0, failedControls: 0,
         }
       }
+
+      // Progressive update: stream each cluster's data to the UI as it arrives
+      setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
+
+      // Clear loading state once first cluster with data arrives
+      if (!initialLoadDone.current && newStatuses[cluster].installed) {
+        initialLoadDone.current = true
+        setIsLoading(false)
+      }
     }
 
-    setStatuses(newStatuses)
+    // Final: save complete cache and clear refresh state
     saveToCache(newStatuses)
     setLastRefresh(new Date())
     initialLoadDone.current = true

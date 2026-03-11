@@ -192,6 +192,8 @@ export function useTrivy() {
             vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
             totalReports: 0, scannedImages: 0, images: [],
           }
+          // Progressive update — show not-installed immediately
+          setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
           continue
         }
 
@@ -262,9 +264,18 @@ export function useTrivy() {
           totalReports: 0, scannedImages: 0, images: [],
         }
       }
+
+      // Progressive update: stream each cluster's data to the UI as it arrives
+      setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
+
+      // Clear loading state once first cluster with data arrives
+      if (!initialLoadDone.current && newStatuses[cluster].installed) {
+        initialLoadDone.current = true
+        setIsLoading(false)
+      }
     }
 
-    setStatuses(newStatuses)
+    // Final: save complete cache and clear refresh state
     saveToCache(newStatuses)
     setLastRefresh(new Date())
     initialLoadDone.current = true
