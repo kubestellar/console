@@ -215,6 +215,9 @@ export const CARD_TITLES: Record<string, string> = {
   resource_imbalance_detector: 'Resource Imbalance Detector',
   restart_correlation_matrix: 'Restart Correlation Matrix',
   deployment_rollout_tracker: 'Deployment Rollout Tracker',
+  // KEDA
+  keda_status: 'KEDA',
+
 }
 
 // Short descriptions shown via info icon tooltip in the card header
@@ -379,6 +382,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   resource_imbalance_detector: 'Detects CPU/memory utilization skew across the fleet.',
   restart_correlation_matrix: 'Detects horizontal (app bug) vs vertical (infra issue) restart patterns.',
   deployment_rollout_tracker: 'Tracks deployment rollout progress across clusters.',
+  // KEDA
+  keda_status: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths.',
 }
 
 /**
