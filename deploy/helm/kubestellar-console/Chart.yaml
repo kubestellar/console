@@ -6,12 +6,38 @@ version: 0.0.0
 appVersion: "0.0.0"
 keywords:
   - kubernetes
-  - multi-cluster
   - dashboard
+  - monitoring
+  - cncf
+  - ai
+  - missions
   - kubestellar
+  - multi-cluster
 home: https://kubestellar.io/docs/console
 sources:
   - https://github.com/kubestellar/console
+icon: https://raw.githubusercontent.com/kubestellar/console/main/web/public/kubestellar-logo.svg
 maintainers:
-  - name: KubeStellar
-    url: https://github.com/kubestellar
+  - name: Andy Anderson
+    email: andy@clubanderson.com
+    url: https://github.com/clubanderson
+annotations:
+  artifacthub.io/description: >-
+    Kubernetes dashboard with 30+ dashboards, 150+ monitoring cards,
+    AI-guided install missions for 186 CNCF projects, and an AI mission
+    explorer. Connects to live clusters via kubeconfig.
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: Website
+      url: https://kubestellar.io
+    - name: Source
+      url: https://github.com/kubestellar/console
+    - name: Live Demo
+      url: https://console.kubestellar.io
+    - name: Documentation
+      url: https://kubestellar.io/docs/console
+  artifacthub.io/maintainers: |
+    - name: Andy Anderson
+      email: andy@clubanderson.com
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/containsSecurityUpdates: "false"
