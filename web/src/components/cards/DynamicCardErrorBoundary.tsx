@@ -50,7 +50,7 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
     }
 
     console.error(`[DynamicCard:${this.props.cardId}] Render error:`, error, errorInfo)
-    emitError('card_render', error.message, this.props.cardId)
+    emitError('card_render', `[${this.props.cardId}] ${error.message}`, this.props.cardId)
     this.props.onError?.(error, errorInfo)
     // Only increment retryCount when the error happens during a retry attempt,
     // so successful retries do not consume the retry budget.

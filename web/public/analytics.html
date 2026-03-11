@@ -752,22 +752,6 @@
         html += '</div>';
       }
 
-      // Card Error Breakdown
-      if (data.cardErrors && data.cardErrors.length > 0) {
-        html += '<div class="section-title">Card Error Breakdown</div>';
-        html += '<div class="chart-grid">';
-        html += '<div class="chart-card"><h3>Errors by Card</h3><div class="chart-wrapper"><canvas id="cardErrorChart"></canvas></div></div>';
-        html += '<div class="table-card"><h3>Per-Card Render Errors (28 days)</h3><table><thead><tr><th>Card ID</th><th style="width:120px">Trend (28d)</th><th class="num">Errors</th></tr></thead><tbody>';
-        for (const c of data.cardErrors.slice(0, 20)) {
-          const color = c.count > 20 ? 'var(--red)' : c.count > 5 ? 'var(--yellow)' : 'var(--text)';
-          const sparkline = buildSparklineSVG(c.daily || [], color);
-          const trend = getTrend(c.daily || []);
-          html += `<tr><td><code>${c.card}</code></td><td>${sparkline}<span class="trend-indicator ${trend.dir}">${trend.label}</span></td><td class="num" style="color:${color}">${fmt(c.count)}</td></tr>`;
-        }
-        html += '</tbody></table></div>';
-        html += '</div>';
-      }
-
       container.innerHTML = html;
 
       // Render charts
@@ -792,9 +776,6 @@
       }
       if (data.errors && data.errors.length > 0) {
         renderErrorChart(data.errors.slice(0, 8));
-      }
-      if (data.cardErrors && data.cardErrors.length > 0) {
-        renderCardErrorChart(data.cardErrors.slice(0, 12));
       }
     }
 
@@ -1098,35 +1079,6 @@
           maintainAspectRatio: false,
           plugins: {
             legend: { position: 'right', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
-          },
-        },
-      });
-      charts.push(chart);
-    }
-
-    function renderCardErrorChart(cardErrors) {
-      const ctx = document.getElementById('cardErrorChart');
-      if (!ctx) return;
-      const CARD_ERR_COLORS = ['#ef4444', '#f97316', '#eab308', '#a855f7', '#6366f1', '#3b82f6', '#06b6d4', '#22c55e'];
-      const chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: cardErrors.map(c => c.card),
-          datasets: [{
-            label: 'Errors',
-            data: cardErrors.map(c => c.count),
-            backgroundColor: CARD_ERR_COLORS.slice(0, cardErrors.length),
-            borderRadius: 4,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { beginAtZero: true },
-            y: { grid: { display: false }, ticks: { font: { size: 10 } } },
           },
         },
       });
