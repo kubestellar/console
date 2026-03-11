@@ -18,6 +18,14 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
 }))
+vi.mock('../../../hooks/useMissions', () => ({
+  useMissions: () => ({
+    startMission: vi.fn(),
+    openSidebar: vi.fn(),
+    missions: [],
+    activeMission: null,
+  }),
+}))
 
 /** Factory for a minimal insight whose relatedResources are objects, not strings */
 function objectResourceInsight(
