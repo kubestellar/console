@@ -141,9 +141,19 @@ interface KyvernoPolicyResource {
   }
 }
 
+interface PolicyReportResult {
+  policy: string
+  rule: string
+  result: 'pass' | 'fail' | 'warn' | 'error' | 'skip'
+  message?: string
+  source?: string
+  resources?: Array<{ name: string; namespace?: string; kind: string }>
+}
+
 interface PolicyReportResource {
   metadata: { name: string; namespace: string }
   summary?: { pass: number; fail: number; warn: number; error: number; skip: number }
+  results?: PolicyReportResult[]
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────
@@ -278,6 +288,18 @@ export function useKyverno() {
               skip: summary.skip,
             })
             totalViolations += summary.fail
+
+            // Back-populate per-policy violation counts from report results
+            if (item.results) {
+              for (const result of (item.results || [])) {
+                if (result.result === 'fail' && result.policy) {
+                  const matchingPolicy = policies.find(p => p.name === result.policy)
+                  if (matchingPolicy) {
+                    matchingPolicy.violations += 1
+                  }
+                }
+              }
+            }
           }
         }
 
@@ -292,6 +314,18 @@ export function useKyverno() {
           for (const item of (data.items || []) as PolicyReportResource[]) {
             const summary = item.summary || { pass: 0, fail: 0, warn: 0, error: 0, skip: 0 }
             totalViolations += summary.fail
+
+            // Back-populate per-policy violation counts from cluster report results
+            if (item.results) {
+              for (const result of (item.results || [])) {
+                if (result.result === 'fail' && result.policy) {
+                  const matchingPolicy = policies.find(p => p.name === result.policy)
+                  if (matchingPolicy) {
+                    matchingPolicy.violations += 1
+                  }
+                }
+              }
+            }
           }
         }
 

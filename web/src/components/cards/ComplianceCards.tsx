@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2 } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2, ChevronRight } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -20,6 +20,8 @@ import { TrivyDetailModal } from './trivy/TrivyDetailModal'
 import { KubescapeDetailModal } from './kubescape/KubescapeDetailModal'
 import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
 import { getFrameworkInfo, getScoreContext, TRIVY_SEVERITY, CARD_DESCRIPTIONS } from '../../lib/constants/compliance'
+import { ComplianceScoreBreakdownModal } from './compliance/ComplianceScoreBreakdownModal'
+import { PolicyViolationDetailModal } from './compliance/PolicyViolationDetailModal'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -546,6 +548,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
+  const [selectedViolation, setSelectedViolation] = useState<{ policy: string; count: number; tool: string; clusters: string[] } | null>(null)
 
   // Aggregate violations from Kyverno reports (policy.violations is always 0
   // because the hook doesn't back-populate per-policy counts from PolicyReports;
@@ -665,19 +668,14 @@ export function PolicyViolations({ config: _config }: CardConfig) {
         {(violations || []).map((v, i) => (
           <div
             key={i}
-            className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
-            onClick={() => {
-              // Open modal for the first cluster associated with this violation
-              const cluster = (v.clusters || [])[0]
-              if (cluster) setModalCluster(cluster)
-            }}
+            className="group flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+            onClick={() => setSelectedViolation(v)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                const cluster = (v.clusters || [])[0]
-                if (cluster) setModalCluster(cluster)
+                setSelectedViolation(v)
               }
             }}
           >
@@ -690,14 +688,17 @@ export function PolicyViolations({ config: _config }: CardConfig) {
                 )}
               </div>
             </div>
-            <StatusBadge color="orange" size="md">
-              {v.count}
-            </StatusBadge>
+            <div className="flex items-center gap-2">
+              <StatusBadge color="orange" size="md">
+                {v.count}
+              </StatusBadge>
+              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Detail Modal */}
+      {/* Kyverno Detail Modal */}
       {modalCluster && kyvernoStatuses[modalCluster] && (
         <KyvernoDetailModal
           isOpen={!!modalCluster}
@@ -708,6 +709,13 @@ export function PolicyViolations({ config: _config }: CardConfig) {
           isRefreshing={kyvernoRefreshing}
         />
       )}
+
+      {/* Policy Violation Detail Modal */}
+      <PolicyViolationDetailModal
+        isOpen={!!selectedViolation}
+        onClose={() => setSelectedViolation(null)}
+        violation={selectedViolation}
+      />
     </div>
   )
 }
@@ -718,6 +726,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   const { aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData } = useKubescape()
   const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
+  const [showBreakdown, setShowBreakdown] = useState(false)
 
   const isLoading = ksLoading || kyLoading
 
@@ -787,8 +796,20 @@ export function ComplianceScore({ config: _config }: CardConfig) {
         <span>{CARD_DESCRIPTIONS.compliance_score.description}</span>
       </div>
 
-      <div className="flex items-center justify-center py-4">
-        <div className="relative w-24 h-24">
+      <div
+        className="flex items-center justify-center py-4 cursor-pointer group"
+        onClick={() => setShowBreakdown(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setShowBreakdown(true)
+          }
+        }}
+        title="Click for detailed breakdown"
+      >
+        <div className="relative w-24 h-24 group-hover:scale-105 transition-transform">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
             <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-secondary" />
             <circle
@@ -826,6 +847,35 @@ export function ComplianceScore({ config: _config }: CardConfig) {
           </div>
         ))}
       </div>
+
+      {/* Breakdown Modal */}
+      <ComplianceScoreBreakdownModal
+        isOpen={showBreakdown}
+        onClose={() => setShowBreakdown(false)}
+        score={score}
+        breakdown={breakdown}
+        kubescapeData={kubescapeAgg.totalControls > 0 ? {
+          totalControls: kubescapeAgg.totalControls,
+          passedControls: kubescapeAgg.passedControls,
+          failedControls: kubescapeAgg.failedControls,
+          frameworks: kubescapeAgg.frameworks || [],
+        } : undefined}
+        kyvernoData={(() => {
+          let totalPolicies = 0
+          let totalViolations = 0
+          let enforcingCount = 0
+          let auditCount = 0
+          for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
+            if (!status.installed) continue
+            if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
+            totalPolicies += status.totalPolicies
+            totalViolations += status.totalViolations
+            enforcingCount += status.enforcingCount
+            auditCount += status.auditCount
+          }
+          return totalPolicies > 0 ? { totalPolicies, totalViolations, enforcingCount, auditCount } : undefined
+        })()}
+      />
     </div>
   )
 }

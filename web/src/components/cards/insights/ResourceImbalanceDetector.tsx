@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Scale } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Scale, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
@@ -9,6 +9,8 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { InsightDetailModal } from './InsightDetailModal'
+import type { MultiClusterInsight } from '../../../types/insights'
 
 /** Percentage threshold for coloring bars as overloaded */
 const OVERLOADED_THRESHOLD_PCT = 75
@@ -22,6 +24,7 @@ const CHART_LABEL_TRUNCATE_LEN = 12
 export function ResourceImbalanceDetector() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
+  const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
   const imbalanceInsightsRaw = useMemo(() => insightsByCategory['resource-imbalance'] || [], [insightsByCategory])
   const {
@@ -79,7 +82,11 @@ export function ResourceImbalanceDetector() {
       />
 
       {(imbalanceInsights || []).map(insight => (
-        <div key={insight.id} className="space-y-2">
+        <div
+          key={insight.id}
+          onClick={() => setModalInsight(insight)}
+          className="group space-y-2 cursor-pointer hover:bg-secondary/30 rounded-lg p-1 -m-1 transition-colors"
+        >
           <div className="flex items-center gap-2">
             <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
             <StatusBadge
@@ -89,6 +96,7 @@ export function ResourceImbalanceDetector() {
               {insight.severity}
             </StatusBadge>
             <span className="text-xs text-muted-foreground flex-1">{insight.title}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-xs text-muted-foreground">{insight.description}</p>
         </div>
@@ -119,6 +127,12 @@ export function ResourceImbalanceDetector() {
           <p className="text-xs text-muted-foreground">{insight.remediation}</p>
         </div>
       ))}
+
+      <InsightDetailModal
+        isOpen={!!modalInsight}
+        onClose={() => setModalInsight(null)}
+        insight={modalInsight}
+      />
     </div>
   )
 }

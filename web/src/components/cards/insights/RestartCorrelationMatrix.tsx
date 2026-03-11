@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { RefreshCcw, Bug, Server } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { RefreshCcw, Bug, Server, ChevronRight } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -7,10 +7,13 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
+import { InsightDetailModal } from './InsightDetailModal'
+import type { MultiClusterInsight } from '../../../types/insights'
 
 export function RestartCorrelationMatrix() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
+  const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
   const restartInsightsRaw = useMemo(() => {
     const all = insightsByCategory['restart-correlation'] || []
@@ -75,7 +78,8 @@ export function RestartCorrelationMatrix() {
           {(appBugInsights || []).map(insight => (
             <div
               key={insight.id}
-              className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-2.5 space-y-1"
+              onClick={() => setModalInsight(insight)}
+              className="group bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-2.5 space-y-1 cursor-pointer hover:bg-yellow-500/10 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
@@ -86,6 +90,7 @@ export function RestartCorrelationMatrix() {
                   {insight.severity}
                 </StatusBadge>
                 <span className="text-xs font-medium flex-1">{insight.title}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <p className="text-xs text-muted-foreground">{insight.description}</p>
               <div className="flex flex-wrap gap-1 mt-1">
@@ -115,7 +120,8 @@ export function RestartCorrelationMatrix() {
           {(infraInsights || []).map(insight => (
             <div
               key={insight.id}
-              className="bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 space-y-1"
+              onClick={() => setModalInsight(insight)}
+              className="group bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 space-y-1 cursor-pointer hover:bg-red-500/10 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
@@ -126,6 +132,7 @@ export function RestartCorrelationMatrix() {
                   {insight.severity}
                 </StatusBadge>
                 <span className="text-xs font-medium flex-1">{insight.title}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <p className="text-xs text-muted-foreground">{insight.description}</p>
               {insight.relatedResources && insight.relatedResources.length > 0 && (
@@ -145,6 +152,12 @@ export function RestartCorrelationMatrix() {
           ))}
         </div>
       )}
+
+      <InsightDetailModal
+        isOpen={!!modalInsight}
+        onClose={() => setModalInsight(null)}
+        insight={modalInsight}
+      />
     </div>
   )
 }

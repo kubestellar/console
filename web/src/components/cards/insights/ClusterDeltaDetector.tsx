@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { GitCompare } from 'lucide-react'
+import { GitCompare, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
@@ -8,6 +8,8 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { InsightDetailModal } from './InsightDetailModal'
+import type { MultiClusterInsight } from '../../../types/insights'
 
 
 /** Color for cluster A bars */
@@ -39,6 +41,7 @@ export function ClusterDeltaDetector() {
   // Use first insight's clusters as default selection
   const [selectedInsight, setSelectedInsight] = useState(0)
   const insight = deltaInsights[selectedInsight] || deltaInsights[0]
+  const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
   const numericDeltas = useMemo(() => {
     if (!insight?.deltas) return []
@@ -185,8 +188,23 @@ export function ClusterDeltaDetector() {
               <p className="text-xs text-muted-foreground">{insight.remediation}</p>
             </div>
           )}
+
+          {/* View details link */}
+          <button
+            onClick={() => setModalInsight(insight)}
+            className="group flex items-center gap-1 text-2xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+          >
+            View details
+            <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
         </>
       )}
+
+      <InsightDetailModal
+        isOpen={!!modalInsight}
+        onClose={() => setModalInsight(null)}
+        insight={modalInsight}
+      />
     </div>
   )
 }

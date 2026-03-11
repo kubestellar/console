@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Workflow, ArrowRight, AlertTriangle } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Workflow, ArrowRight, AlertTriangle, ChevronRight } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -7,7 +7,8 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import type { InsightSeverity } from '../../../types/insights'
+import { InsightDetailModal } from './InsightDetailModal'
+import type { InsightSeverity, MultiClusterInsight } from '../../../types/insights'
 
 const SEVERITY_COLORS: Record<InsightSeverity, string> = {
   critical: 'border-red-500/40 bg-red-500/10',
@@ -24,6 +25,7 @@ const SEVERITY_DOT_COLORS: Record<InsightSeverity, string> = {
 export function CascadeImpactMap() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
+  const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
   const cascadeInsightsRaw = useMemo(() => {
     const all = insightsByCategory['cascade-impact'] || []
@@ -68,7 +70,11 @@ export function CascadeImpactMap() {
       />
 
       {(cascadeInsights || []).map(insight => (
-        <div key={insight.id} className="space-y-2">
+        <div
+          key={insight.id}
+          onClick={() => setModalInsight(insight)}
+          className="group space-y-2 cursor-pointer hover:bg-secondary/30 rounded-lg p-1 -m-1 transition-colors"
+        >
           {/* Header */}
           <div className="flex items-center gap-2">
             <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
@@ -79,6 +85,7 @@ export function CascadeImpactMap() {
               {insight.severity}
             </StatusBadge>
             <span className="text-xs font-medium flex-1">{insight.title}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-xs text-muted-foreground">{insight.description}</p>
 
@@ -125,6 +132,12 @@ export function CascadeImpactMap() {
           )}
         </div>
       ))}
+
+      <InsightDetailModal
+        isOpen={!!modalInsight}
+        onClose={() => setModalInsight(null)}
+        insight={modalInsight}
+      />
     </div>
   )
 }

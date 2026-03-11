@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Rocket, CheckCircle2, AlertTriangle, Clock } from 'lucide-react'
+import { Rocket, CheckCircle2, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
@@ -9,6 +9,8 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { InsightDetailModal } from './InsightDetailModal'
+import type { MultiClusterInsight } from '../../../types/insights'
 
 /** Color for completed rollout progress */
 const COMPLETE_COLOR = '#22c55e'
@@ -60,6 +62,7 @@ export function DeploymentRolloutTracker() {
 
   const [selectedRollout, setSelectedRollout] = useState(0)
   const insight = rolloutInsights[selectedRollout] || rolloutInsights[0]
+  const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
   // Build per-cluster progress data from insight metrics
   const clusterProgress = useMemo(() => {
@@ -208,8 +211,23 @@ export function DeploymentRolloutTracker() {
               <p className="text-xs text-muted-foreground">{insight.remediation}</p>
             </div>
           )}
+
+          {/* View details link */}
+          <button
+            onClick={() => setModalInsight(insight)}
+            className="group flex items-center gap-1 text-2xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+          >
+            View details
+            <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
         </>
       )}
+
+      <InsightDetailModal
+        isOpen={!!modalInsight}
+        onClose={() => setModalInsight(null)}
+        insight={modalInsight}
+      />
     </div>
   )
 }

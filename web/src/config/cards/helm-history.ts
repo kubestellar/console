@@ -27,6 +27,6 @@ export const helmHistoryConfig: UnifiedCardConfig = {
   emptyState: { icon: 'History', title: 'No History', message: 'No release history available', variant: 'info' },
   loadingState: { type: 'list', rows: 5 },
   isDemoData: false,
-  isLive: false,
+  isLive: true,
 }
 export default helmHistoryConfig

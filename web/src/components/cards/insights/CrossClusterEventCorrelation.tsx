@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Activity } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Activity, ChevronRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCachedWarningEvents } from '../../../hooks/useCachedData'
@@ -10,6 +10,8 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { InsightDetailModal } from './InsightDetailModal'
+import type { MultiClusterInsight } from '../../../types/insights'
 
 /** Time bucket size for the timeline chart (2 minutes) */
 const TIMELINE_BUCKET_MS = 2 * 60 * 1000
@@ -26,6 +28,7 @@ export function CrossClusterEventCorrelation() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { events: warningEvents } = useCachedWarningEvents()
   const { selectedClusters } = useGlobalFilters()
+  const [selectedInsight, setSelectedInsight] = useState<MultiClusterInsight | null>(null)
 
   const correlationInsightsRaw = insightsByCategory['event-correlation'] || []
   const {
@@ -150,7 +153,8 @@ export function CrossClusterEventCorrelation() {
           {(correlationInsights || []).map(insight => (
             <div
               key={insight.id}
-              className="bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 space-y-1"
+              onClick={() => setSelectedInsight(insight)}
+              className="group bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 space-y-1 cursor-pointer hover:bg-red-500/10 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
@@ -161,6 +165,7 @@ export function CrossClusterEventCorrelation() {
                   {insight.severity}
                 </StatusBadge>
                 <span className="text-xs font-medium flex-1">{insight.title}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <p className="text-xs text-muted-foreground">{insight.description}</p>
               {insight.remediation && (
@@ -173,6 +178,12 @@ export function CrossClusterEventCorrelation() {
           ))}
         </div>
       )}
+
+      <InsightDetailModal
+        isOpen={!!selectedInsight}
+        onClose={() => setSelectedInsight(null)}
+        insight={selectedInsight}
+      />
     </div>
   )
 }

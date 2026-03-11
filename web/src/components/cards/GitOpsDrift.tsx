@@ -1,15 +1,15 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, ChevronRight, Server } from 'lucide-react'
 import { GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useCachedGitOpsDrifts } from '../../hooks/useCachedData'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
-import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData, CardClusterFilter, CardSearchInput } from '../../lib/cards'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
+import { GitOpsDriftDetailModal } from './deploy/GitOpsDriftDetailModal'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
@@ -65,6 +65,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
+  const [modalDrift, setModalDrift] = useState<GitOpsDriftType | null>(null)
   const cluster = config?.cluster
   const namespace = config?.namespace
 
@@ -270,7 +271,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       ) : (
         <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
           {displayDrifts.map((drift, index) => (
-            <DriftItem key={`${drift.cluster}-${drift.namespace}-${drift.resource}-${index}`} drift={drift} />
+            <DriftItem key={`${drift.cluster}-${drift.namespace}-${drift.resource}-${index}`} drift={drift} onOpenModal={setModalDrift} />
           ))}
         </div>
       )}
@@ -288,28 +289,25 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
           />
         </div>
       )}
+
+      <GitOpsDriftDetailModal
+        isOpen={!!modalDrift}
+        onClose={() => setModalDrift(null)}
+        drift={modalDrift}
+      />
     </div>
   )
 }
 
-function DriftItem({ drift }: { drift: GitOpsDriftType }) {
+function DriftItem({ drift, onOpenModal }: { drift: GitOpsDriftType; onOpenModal?: (d: GitOpsDriftType) => void }) {
   const { t } = useTranslation(['cards', 'common'])
   const typeConfig = driftTypeConfig[drift.driftType]
   const TypeIcon = typeConfig.icon
-  const { drillToDrift } = useDrillDownActions()
 
   return (
     <div
       className={`group p-3 rounded-lg bg-secondary/30 border border-border/50 border-l-2 ${severityColors[drift.severity]} cursor-pointer hover:bg-secondary/50 transition-colors`}
-      onClick={() => drillToDrift(drift.cluster, {
-        resource: drift.resource,
-        kind: drift.kind,
-        namespace: drift.namespace,
-        driftType: drift.driftType,
-        severity: drift.severity,
-        gitVersion: drift.gitVersion,
-        details: drift.details,
-      })}
+      onClick={() => onOpenModal?.(drift)}
       title={`Click to view drift details for ${drift.resource}`}
     >
       <div className="flex items-start justify-between mb-1">

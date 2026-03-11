@@ -1293,3 +1293,40 @@ export function captureUtmParams() {
 export function getUtmParams(): UtmParams {
   return { ...utmParams }
 }
+
+// ── Dashboard Excellence: Modal & Action Events ─────────────────────
+
+/** Fired when any detail modal is opened */
+export function emitModalOpened(modalType: string, sourceCard: string) {
+  send('ksc_modal_opened', { modal_type: modalType, source_card: sourceCard })
+}
+
+/** Fired when a tab is viewed within a modal */
+export function emitModalTabViewed(modalType: string, tabName: string) {
+  send('ksc_modal_tab_viewed', { modal_type: modalType, tab_name: tabName })
+}
+
+/** Fired when a modal is closed, with duration */
+export function emitModalClosed(modalType: string, durationMs: number) {
+  send('ksc_modal_closed', { modal_type: modalType, duration_ms: durationMs })
+}
+
+/** Fired when an insight is acknowledged */
+export function emitInsightAcknowledged(insightCategory: string, insightSeverity: string) {
+  send('ksc_insight_acknowledged', { insight_category: insightCategory, insight_severity: insightSeverity })
+}
+
+/** Fired when an insight is dismissed */
+export function emitInsightDismissed(insightCategory: string, insightSeverity: string) {
+  send('ksc_insight_dismissed', { insight_category: insightCategory, insight_severity: insightSeverity })
+}
+
+/** Fired when an inline action button is clicked */
+export function emitActionClicked(actionType: string, sourceCard: string, dashboard: string) {
+  send('ksc_action_clicked', { action_type: actionType, source_card: sourceCard, dashboard })
+}
+
+/** Fired when the AI suggestion/remediation tab is viewed */
+export function emitAISuggestionViewed(insightCategory: string, hasAIEnrichment: boolean) {
+  send('ksc_ai_suggestion_viewed', { insight_category: insightCategory, has_ai_enrichment: hasAIEnrichment })
+}

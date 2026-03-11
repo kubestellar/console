@@ -13,6 +13,7 @@ import {
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { HelmHistoryDetailModal } from './deploy/HelmHistoryDetailModal'
 
 interface HelmHistoryProps {
   config?: {
@@ -60,6 +61,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     customFilter,
   } = useGlobalFilters()
   const { drillToHelm } = useDrillDownActions()
+  const [modalEntry, setModalEntry] = useState<HelmHistoryEntry | null>(null)
 
   // Sync local selection with global filter changes
   useEffect(() => {
@@ -394,11 +396,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                       <div
                         key={idx}
                         className="relative pl-6 group cursor-pointer"
-                        onClick={() => drillToHelm(selectedCluster, selectedReleaseNamespace || 'default', selectedRelease, {
-                          history: rawHistory,
-                          currentRevision: entry.revision,
-                          selectedRevision: entry,
-                        })}
+                        onClick={() => setModalEntry(entry)}
                         title={`Click to view details for revision ${entry.revision}`}
                       >
                         {/* Timeline dot */}
@@ -457,6 +455,16 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           </div>
         </>
       )}
+
+      <HelmHistoryDetailModal
+        isOpen={!!modalEntry}
+        onClose={() => setModalEntry(null)}
+        entry={modalEntry}
+        releaseName={selectedRelease}
+        clusterName={selectedCluster}
+        namespace={selectedReleaseNamespace || 'default'}
+        currentRevision={rawHistory.find(h => h.status === 'deployed')?.revision}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Diff } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Diff, ChevronRight } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -7,6 +7,8 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
+import { InsightDetailModal } from './InsightDetailModal'
+import type { MultiClusterInsight } from '../../../types/insights'
 
 /** Maximum clusters to show in the heatmap grid */
 const MAX_HEATMAP_CLUSTERS = 12
@@ -26,6 +28,7 @@ const MEDIUM_DRIFT_THRESHOLD = 0.3
 export function ConfigDriftHeatmap() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
+  const [selectedInsight, setSelectedInsight] = useState<MultiClusterInsight | null>(null)
 
   const driftInsightsRaw = useMemo(() => insightsByCategory['config-drift'] || [], [insightsByCategory])
   const {
@@ -172,7 +175,8 @@ export function ConfigDriftHeatmap() {
         {(driftInsights || []).map(insight => (
           <div key={insight.id} className="space-y-1">
             <div
-              className="flex items-center gap-2 text-xs py-1 hover:bg-secondary/30 rounded px-1"
+              onClick={() => setSelectedInsight(insight)}
+              className="group flex items-center gap-2 text-xs py-1 hover:bg-secondary/30 rounded px-1 cursor-pointer"
             >
               <InsightSourceBadge source={insight.source} confidence={insight.confidence} />
               <StatusBadge
@@ -183,6 +187,7 @@ export function ConfigDriftHeatmap() {
               </StatusBadge>
               <span className="flex-1 truncate">{insight.title}</span>
               <span className="text-2xs text-muted-foreground">{insight.affectedClusters.length} clusters</span>
+              <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             {insight.remediation && (
               <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 mt-1">
@@ -193,6 +198,12 @@ export function ConfigDriftHeatmap() {
           </div>
         ))}
       </div>
+
+      <InsightDetailModal
+        isOpen={!!selectedInsight}
+        onClose={() => setSelectedInsight(null)}
+        insight={selectedInsight}
+      />
     </div>
   )
 }
