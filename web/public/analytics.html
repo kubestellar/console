@@ -346,6 +346,18 @@
 
     .back-link:hover { text-decoration: underline; }
 
+    /* Sparkline trend indicators */
+    .trend-indicator {
+      display: inline-block;
+      font-size: 10px;
+      margin-left: 6px;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+    .trend-indicator.up { color: var(--red); }
+    .trend-indicator.down { color: var(--green); }
+    .trend-indicator.flat { color: var(--text-muted); }
+
   </style>
 </head>
 <body>
@@ -415,6 +427,41 @@
       const m = dateStr.slice(4, 6);
       const d = dateStr.slice(6, 8);
       return m + '/' + d;
+    }
+
+    /** Build an inline SVG sparkline from an array of daily counts */
+    function buildSparklineSVG(data, color) {
+      const SPARK_W = 100;
+      const SPARK_H = 24;
+      const SPARK_PAD = 1;
+      if (!data || data.length === 0) return '';
+      const max = Math.max(...data, 1);
+      const points = data.map((v, i) => {
+        const x = SPARK_PAD + (i / Math.max(data.length - 1, 1)) * (SPARK_W - SPARK_PAD * 2);
+        const y = SPARK_H - SPARK_PAD - (v / max) * (SPARK_H - SPARK_PAD * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      // Fill area
+      const firstX = SPARK_PAD;
+      const lastX = SPARK_PAD + ((data.length - 1) / Math.max(data.length - 1, 1)) * (SPARK_W - SPARK_PAD * 2);
+      const fillPoints = `${firstX},${SPARK_H} ${points} ${lastX.toFixed(1)},${SPARK_H}`;
+      return `<svg width="${SPARK_W}" height="${SPARK_H}" viewBox="0 0 ${SPARK_W} ${SPARK_H}" style="vertical-align:middle;display:inline-block"><polygon points="${fillPoints}" fill="${color}" opacity="0.15"/><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    }
+
+    /** Compute trend direction from daily data (last 7d vs prior 7d) */
+    function getTrend(data) {
+      const TREND_WINDOW = 7;
+      if (!data || data.length < TREND_WINDOW * 2) return { label: '', dir: 'flat' };
+      const recent = data.slice(-TREND_WINDOW).reduce((s, v) => s + v, 0);
+      const prior = data.slice(-TREND_WINDOW * 2, -TREND_WINDOW).reduce((s, v) => s + v, 0);
+      if (prior === 0 && recent === 0) return { label: 'flat', dir: 'flat' };
+      if (prior === 0) return { label: '+' + recent, dir: 'up' };
+      const pct = ((recent - prior) / prior * 100).toFixed(0);
+      const TREND_THRESHOLD = 10;
+      if (Math.abs(pct) < TREND_THRESHOLD) return { label: 'flat', dir: 'flat' };
+      return pct > 0
+        ? { label: '&#9650; +' + pct + '%', dir: 'up' }
+        : { label: '&#9660; ' + pct + '%', dir: 'down' };
     }
 
     function destroyCharts() {
@@ -694,10 +741,12 @@
         html += `<div class="chart-card"><h3>Error Summary</h3>`;
         html += `<div class="kpi-grid" style="margin-bottom:16px"><div class="kpi-card"><div class="kpi-label">Total Errors</div><div class="kpi-value" style="color:${totalErrors > 50 ? 'var(--red)' : totalErrors > 10 ? 'var(--yellow)' : 'var(--green)'}">${fmt(totalErrors)}</div></div></div>`;
         html += '<div class="chart-wrapper"><canvas id="errorChart"></canvas></div></div>';
-        html += '<div class="table-card"><h3>Error Details (28 days)</h3><table><thead><tr><th>Error Type</th><th>Category</th><th class="num">Count</th></tr></thead><tbody>';
+        html += '<div class="table-card"><h3>Error Details (28 days)</h3><table><thead><tr><th>Error Type</th><th>Category</th><th style="width:120px">Trend (28d)</th><th class="num">Count</th></tr></thead><tbody>';
         for (const e of data.errors) {
           const color = e.count > 20 ? 'var(--red)' : e.count > 5 ? 'var(--yellow)' : 'var(--text)';
-          html += `<tr><td style="text-transform:capitalize">${e.event}</td><td><code>${e.detail !== '(not set)' ? e.detail : '—'}</code></td><td class="num" style="color:${color}">${fmt(e.count)}</td></tr>`;
+          const sparkline = buildSparklineSVG(e.daily || [], color);
+          const trend = getTrend(e.daily || []);
+          html += `<tr><td style="text-transform:capitalize">${e.event}</td><td><code>${e.detail !== '(not set)' ? e.detail : '—'}</code></td><td>${sparkline}<span class="trend-indicator ${trend.dir}">${trend.label}</span></td><td class="num" style="color:${color}">${fmt(e.count)}</td></tr>`;
         }
         html += '</tbody></table></div>';
         html += '</div>';

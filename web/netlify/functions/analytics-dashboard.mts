@@ -91,7 +91,7 @@ interface DashboardData {
   cardPopularity: { card: string; added: number; expanded: number; clicked: number }[];
   featureAdoption: { feature: string; count: number; users: number }[];
   weeklyRetention: { week: string; newUsers: number; returning: number }[];
-  errors: { event: string; count: number; detail: string }[];
+  errors: { event: string; count: number; detail: string; daily: number[] }[];
   cachedAt: string;
   propertyId: string;
   dateRange: string;
@@ -270,6 +270,7 @@ async function fetchDashboardData(
     featureRows,
     weeklyRetRows,
     errorRows,
+    errorDailyRows,
   ] = await Promise.all([
     // 1. Overview metrics (current period)
     runReport(propertyId, accessToken, {
@@ -553,6 +554,31 @@ async function fetchDashboardData(
       orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
       limit: 30,
     }),
+
+    // 19. Daily error trends (for sparklines)
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [{ name: "date" }, { name: "eventName" }, { name: "customEvent:error_category" }],
+      metrics: [{ name: "eventCount" }],
+      dimensionFilter: {
+        orGroup: {
+          expressions: [
+            "ksc_error",
+            "ksc_mission_error",
+            "ksc_update_failed",
+            "ksc_chunk_reload_recovery_failed",
+            "ksc_marketplace_install_failed",
+            "ksc_update_stalled",
+          ].map((ev) => ({
+            filter: {
+              fieldName: "eventName",
+              stringFilter: { matchType: "EXACT", value: ev },
+            },
+          })),
+        },
+      },
+      orderBys: [{ dimension: { dimensionName: "date", orderType: "ALPHANUMERIC" } }],
+    }),
   ]);
 
   // Parse overview
@@ -654,14 +680,34 @@ async function fetchDashboardData(
     .map(([week, data]) => ({ week, ...data }))
     .sort((a, b) => a.week.localeCompare(b.week));
 
-  // Parse errors
+  // Parse errors with daily sparkline data
+  // Build a map of all dates in the range for consistent sparkline lengths
+  const allDates = dailyRows.map((r) => dimVal(r, 0)).sort();
+  const SPARKLINE_DAYS = allDates.length;
+
+  // Build daily counts per error key (event + detail combo)
+  const errorDailyMap = new Map<string, Map<string, number>>();
+  for (const row of errorDailyRows) {
+    const date = dimVal(row, 0);
+    const event = dimVal(row, 1).replace("ksc_", "").replace(/_/g, " ");
+    const detail = dimVal(row, 2);
+    const count = metVal(row, 0);
+    const key = `${event}|||${detail}`;
+    if (!errorDailyMap.has(key)) errorDailyMap.set(key, new Map());
+    const dayMap = errorDailyMap.get(key)!;
+    dayMap.set(date, (dayMap.get(date) || 0) + count);
+  }
+
   const errors = errorRows
     .filter((r) => dimVal(r, 0) !== "(not set)")
-    .map((r) => ({
-      event: dimVal(r, 0).replace("ksc_", "").replace(/_/g, " "),
-      count: metVal(r, 0),
-      detail: dimVal(r, 1),
-    }));
+    .map((r) => {
+      const event = dimVal(r, 0).replace("ksc_", "").replace(/_/g, " ");
+      const detail = dimVal(r, 1);
+      const key = `${event}|||${detail}`;
+      const dayMap = errorDailyMap.get(key);
+      const daily = allDates.map((d) => dayMap?.get(d) || 0);
+      return { event, count: metVal(r, 0), detail, daily };
+    });
 
   return {
     overview,
