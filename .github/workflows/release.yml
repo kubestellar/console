@@ -30,6 +30,9 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  helm-test:
+    uses: ./.github/workflows/helm-test.yml
+
   determine-version:
     runs-on: ubuntu-latest
     outputs:
@@ -262,7 +265,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   helm-release:
-    needs: [determine-version, release]
+    needs: [determine-version, release, helm-test]
     runs-on: ubuntu-latest
     if: needs.release.result == 'success'
     permissions:
