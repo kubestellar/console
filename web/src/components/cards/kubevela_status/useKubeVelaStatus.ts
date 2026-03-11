@@ -34,7 +34,7 @@ function isKubeVelaPod(pod: BackendPodInfo): boolean {
     labels['app'] === 'kubevela' ||
     labels['app.kubernetes.io/name'] === 'vela-core' ||
     labels['app.kubernetes.io/name'] === 'kubevela' ||
-    labels['control-plane'] === 'controller-manager' && name.includes('vela') ||
+    (labels['control-plane'] === 'controller-manager' && name.includes('vela')) ||
     name.startsWith('kubevela-') ||
     name.startsWith('vela-core-')
   )

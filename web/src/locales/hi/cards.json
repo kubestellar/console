@@ -2666,5 +2666,16 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "kubevela": {
+    "healthy": "स्वस्थ",
+    "degraded": "निम्नस्तरीय",
+    "notInstalled": "KubeVela नहीं मिला",
+    "notInstalledHint": "कोई KubeVela कंट्रोलर पॉड नहीं मिला। OAM एप्लिकेशन प्रबंधित करने के लिए KubeVela इंस्टॉल करें।",
+    "fetchError": "KubeVela स्थिति प्राप्त करने में विफल",
+    "apps": "ऐप्स",
+    "components": "घटक",
+    "traits": "विशेषताएं",
+    "applications": "एप्लिकेशन"
   }
 }

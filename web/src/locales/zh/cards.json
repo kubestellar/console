@@ -2666,5 +2666,16 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "kubevela": {
+    "healthy": "健康",
+    "degraded": "降级",
+    "notInstalled": "未检测到KubeVela",
+    "notInstalledHint": "未找到KubeVela控制器Pod。请安装KubeVela以管理OAM应用程序。",
+    "fetchError": "无法获取KubeVela状态",
+    "apps": "应用",
+    "components": "组件",
+    "traits": "特征",
+    "applications": "应用程序"
   }
 }

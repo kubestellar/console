@@ -2666,5 +2666,16 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "kubevela": {
+    "healthy": "Gesund",
+    "degraded": "Beeinträchtigt",
+    "notInstalled": "KubeVela nicht erkannt",
+    "notInstalledHint": "Keine KubeVela-Controller-Pods gefunden. Installieren Sie KubeVela, um OAM-Anwendungen zu verwalten.",
+    "fetchError": "KubeVela-Status konnte nicht abgerufen werden",
+    "apps": "Apps",
+    "components": "Komponenten",
+    "traits": "Traits",
+    "applications": "Anwendungen"
   }
 }

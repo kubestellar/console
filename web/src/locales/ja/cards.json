@@ -2666,5 +2666,16 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "kubevela": {
+    "healthy": "正常",
+    "degraded": "低下",
+    "notInstalled": "KubeVelaが検出されません",
+    "notInstalledHint": "KubeVelaコントローラーのポッドが見つかりません。OAMアプリケーションを管理するにはKubeVelaをインストールしてください。",
+    "fetchError": "KubeVelaのステータスを取得できませんでした",
+    "apps": "アプリ",
+    "components": "コンポーネント",
+    "traits": "トレイト",
+    "applications": "アプリケーション"
   }
 }

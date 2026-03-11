@@ -2738,5 +2738,16 @@
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",
     "savingsRecommendations": "Savings Recommendations"
+  },
+  "kubevela": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "KubeVela not detected",
+    "notInstalledHint": "No KubeVela controller pods found. Install KubeVela to manage OAM applications.",
+    "fetchError": "Failed to fetch KubeVela status",
+    "apps": "Apps",
+    "components": "Components",
+    "traits": "Traits",
+    "applications": "Applications"
   }
 }
