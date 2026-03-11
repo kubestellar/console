@@ -87,6 +87,11 @@ interface DashboardData {
     views: number;
   }[];
   newVsReturning: { type: string; users: number; sessions: number }[];
+  missions: { started: number; completed: number; errored: number; rated: number; topTypes: { type: string; count: number }[] };
+  cardPopularity: { card: string; added: number; expanded: number; clicked: number }[];
+  featureAdoption: { feature: string; count: number; users: number }[];
+  weeklyRetention: { week: string; newUsers: number; returning: number }[];
+  errors: { event: string; count: number; detail: string }[];
   cachedAt: string;
   propertyId: string;
   dateRange: string;
@@ -259,6 +264,12 @@ async function fetchDashboardData(
     cncfRows,
     engagementRows,
     newReturnRows,
+    missionEventRows,
+    missionTypeRows,
+    cardPopRows,
+    featureRows,
+    weeklyRetRows,
+    errorRows,
   ] = await Promise.all([
     // 1. Overview metrics (current period)
     runReport(propertyId, accessToken, {
@@ -408,6 +419,140 @@ async function fetchDashboardData(
       dimensions: [{ name: "newVsReturning" }],
       metrics: [{ name: "activeUsers" }, { name: "sessions" }],
     }),
+
+    // 13. Mission events (started/completed/error/rated)
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [{ name: "eventName" }],
+      metrics: [{ name: "eventCount" }, { name: "totalUsers" }],
+      dimensionFilter: {
+        orGroup: {
+          expressions: [
+            "ksc_mission_started",
+            "ksc_mission_completed",
+            "ksc_mission_error",
+            "ksc_mission_rated",
+          ].map((ev) => ({
+            filter: {
+              fieldName: "eventName",
+              stringFilter: { matchType: "EXACT", value: ev },
+            },
+          })),
+        },
+      },
+    }),
+
+    // 14. Mission types breakdown (by customEvent:mission_type)
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [{ name: "customEvent:mission_type" }],
+      metrics: [{ name: "eventCount" }],
+      dimensionFilter: {
+        filter: {
+          fieldName: "eventName",
+          stringFilter: { matchType: "EXACT", value: "ksc_mission_started" },
+        },
+      },
+      orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
+      limit: 15,
+    }),
+
+    // 15. Card popularity (added/expanded/clicked by card_type)
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [
+        { name: "customEvent:card_type" },
+        { name: "eventName" },
+      ],
+      metrics: [{ name: "eventCount" }],
+      dimensionFilter: {
+        orGroup: {
+          expressions: [
+            "ksc_card_added",
+            "ksc_card_expanded",
+            "ksc_card_list_item_clicked",
+          ].map((ev) => ({
+            filter: {
+              fieldName: "eventName",
+              stringFilter: { matchType: "EXACT", value: ev },
+            },
+          })),
+        },
+      },
+      orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
+      limit: 100,
+    }),
+
+    // 16. Feature adoption events
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [{ name: "eventName" }],
+      metrics: [{ name: "eventCount" }, { name: "totalUsers" }],
+      dimensionFilter: {
+        orGroup: {
+          expressions: [
+            "ksc_global_search_opened",
+            "ksc_global_search_queried",
+            "ksc_theme_changed",
+            "ksc_language_changed",
+            "ksc_demo_mode_toggled",
+            "ksc_dashboard_created",
+            "ksc_data_exported",
+            "ksc_marketplace_install",
+            "ksc_drill_down_opened",
+            "ksc_card_refreshed",
+            "ksc_tour_started",
+            "ksc_tour_completed",
+            "ksc_feedback_submitted",
+            "ksc_linkedin_share",
+            "ksc_pwa_prompt_shown",
+            "ksc_sidebar_navigated",
+            "ksc_add_card_modal_opened",
+          ].map((ev) => ({
+            filter: {
+              fieldName: "eventName",
+              stringFilter: { matchType: "EXACT", value: ev },
+            },
+          })),
+        },
+      },
+      orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
+      limit: 20,
+    }),
+
+    // 17. Weekly retention (new vs returning by week)
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [{ name: "week" }, { name: "newVsReturning" }],
+      metrics: [{ name: "activeUsers" }],
+      orderBys: [{ dimension: { dimensionName: "week", orderType: "ALPHANUMERIC" } }],
+    }),
+
+    // 18. Error events
+    runReport(propertyId, accessToken, {
+      dateRanges: [currentRange],
+      dimensions: [{ name: "eventName" }, { name: "customEvent:error_category" }],
+      metrics: [{ name: "eventCount" }],
+      dimensionFilter: {
+        orGroup: {
+          expressions: [
+            "ksc_error",
+            "ksc_mission_error",
+            "ksc_update_failed",
+            "ksc_chunk_reload_recovery_failed",
+            "ksc_marketplace_install_failed",
+            "ksc_update_stalled",
+          ].map((ev) => ({
+            filter: {
+              fieldName: "eventName",
+              stringFilter: { matchType: "EXACT", value: ev },
+            },
+          })),
+        },
+      },
+      orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
+      limit: 30,
+    }),
   ]);
 
   // Parse overview
@@ -456,6 +601,67 @@ async function fetchDashboardData(
   for (const row of funnelRows) {
     funnelMap[dimVal(row, 0)] = metVal(row, 0);
   }
+
+  // Parse mission events
+  const missionMap: Record<string, number> = {};
+  for (const row of missionEventRows) {
+    missionMap[dimVal(row, 0)] = metVal(row, 0);
+  }
+
+  // Parse mission types
+  const missionTopTypes = missionTypeRows
+    .filter((r) => dimVal(r, 0) !== "(not set)")
+    .map((r) => ({ type: dimVal(r, 0), count: metVal(r, 0) }));
+
+  // Parse card popularity — pivot by card_type
+  const cardMap = new Map<string, { added: number; expanded: number; clicked: number }>();
+  for (const row of cardPopRows) {
+    const card = dimVal(row, 0);
+    const event = dimVal(row, 1);
+    const count = metVal(row, 0);
+    if (card === "(not set)") continue;
+    if (!cardMap.has(card)) cardMap.set(card, { added: 0, expanded: 0, clicked: 0 });
+    const entry = cardMap.get(card)!;
+    if (event === "ksc_card_added") entry.added += count;
+    else if (event === "ksc_card_expanded") entry.expanded += count;
+    else if (event === "ksc_card_list_item_clicked") entry.clicked += count;
+  }
+  const cardPopularity = [...cardMap.entries()]
+    .map(([card, stats]) => ({ card, ...stats }))
+    .sort((a, b) => (b.added + b.expanded + b.clicked) - (a.added + a.expanded + a.clicked));
+
+  // Parse feature adoption
+  const featureAdoption = featureRows
+    .filter((r) => dimVal(r, 0) !== "(not set)")
+    .map((r) => ({
+      feature: dimVal(r, 0).replace("ksc_", "").replace(/_/g, " "),
+      count: metVal(r, 0),
+      users: metVal(r, 1),
+    }));
+
+  // Parse weekly retention
+  const weekMap = new Map<string, { newUsers: number; returning: number }>();
+  for (const row of weeklyRetRows) {
+    const week = dimVal(row, 0);
+    const type = dimVal(row, 1);
+    const users = metVal(row, 0);
+    if (!weekMap.has(week)) weekMap.set(week, { newUsers: 0, returning: 0 });
+    const entry = weekMap.get(week)!;
+    if (type === "new") entry.newUsers = users;
+    else if (type === "returning") entry.returning = users;
+  }
+  const weeklyRetention = [...weekMap.entries()]
+    .map(([week, data]) => ({ week, ...data }))
+    .sort((a, b) => a.week.localeCompare(b.week));
+
+  // Parse errors
+  const errors = errorRows
+    .filter((r) => dimVal(r, 0) !== "(not set)")
+    .map((r) => ({
+      event: dimVal(r, 0).replace("ksc_", "").replace(/_/g, " "),
+      count: metVal(r, 0),
+      detail: dimVal(r, 1),
+    }));
 
   return {
     overview,
@@ -517,6 +723,17 @@ async function fetchDashboardData(
       users: metVal(r, 0),
       sessions: metVal(r, 1),
     })),
+    missions: {
+      started: missionMap["ksc_mission_started"] || 0,
+      completed: missionMap["ksc_mission_completed"] || 0,
+      errored: missionMap["ksc_mission_error"] || 0,
+      rated: missionMap["ksc_mission_rated"] || 0,
+      topTypes: missionTopTypes,
+    },
+    cardPopularity,
+    featureAdoption,
+    weeklyRetention,
+    errors,
     cachedAt: new Date().toISOString(),
     propertyId,
     dateRange: "Last 28 days",

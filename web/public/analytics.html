@@ -619,6 +619,85 @@
       html += '</tbody></table></div>';
       html += '</div>'; // end chart-grid
 
+      // Mission Completion Rate
+      if (data.missions && data.missions.started > 0) {
+        html += '<div class="section-title">AI Missions</div>';
+        html += '<div class="chart-grid">';
+
+        // Mission KPIs
+        const m = data.missions;
+        const completionRate = m.started > 0 ? (m.completed / m.started * 100).toFixed(1) : '0';
+        const errorRate = m.started > 0 ? (m.errored / m.started * 100).toFixed(1) : '0';
+        const ratedPct = m.completed > 0 ? (m.rated / m.completed * 100).toFixed(1) : '0';
+
+        html += '<div class="chart-card"><h3>Mission Performance</h3>';
+        html += '<div class="kpi-grid" style="margin-bottom:0">';
+        html += `<div class="kpi-card"><div class="kpi-label">Started</div><div class="kpi-value">${fmt(m.started)}</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Completed</div><div class="kpi-value" style="color:var(--green)">${fmt(m.completed)}</div><div class="kpi-change up">${completionRate}% completion</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Errors</div><div class="kpi-value" style="color:${m.errored > 0 ? 'var(--red)' : 'var(--text)'}">${fmt(m.errored)}</div><div class="kpi-change ${m.errored > 0 ? 'down' : 'flat'}">${errorRate}% error rate</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Rated</div><div class="kpi-value">${fmt(m.rated)}</div><div class="kpi-change flat">${ratedPct}% of completed</div></div>`;
+        html += '</div></div>';
+
+        // Mission types breakdown
+        if (m.topTypes && m.topTypes.length > 0) {
+          html += '<div class="chart-card"><h3>Mission Types</h3><div class="chart-wrapper"><canvas id="missionTypesChart"></canvas></div></div>';
+        }
+
+        html += '</div>';
+      }
+
+      // Card Popularity
+      if (data.cardPopularity && data.cardPopularity.length > 0) {
+        html += '<div class="section-title">Card Popularity</div>';
+        html += '<div class="chart-grid">';
+        html += '<div class="chart-card"><h3>Most Popular Cards</h3><div class="chart-wrapper"><canvas id="cardPopChart"></canvas></div></div>';
+        html += '<div class="table-card"><h3>Card Interactions (28 days)</h3><table><thead><tr><th>Card</th><th class="num">Added</th><th class="num">Expanded</th><th class="num">Clicked</th><th class="num">Total</th></tr></thead><tbody>';
+        for (const c of data.cardPopularity.slice(0, 20)) {
+          const total = c.added + c.expanded + c.clicked;
+          html += `<tr><td><code>${c.card}</code></td><td class="num">${fmt(c.added)}</td><td class="num">${fmt(c.expanded)}</td><td class="num">${fmt(c.clicked)}</td><td class="num"><strong>${fmt(total)}</strong></td></tr>`;
+        }
+        html += '</tbody></table></div>';
+        html += '</div>';
+      }
+
+      // Feature Adoption
+      if (data.featureAdoption && data.featureAdoption.length > 0) {
+        html += '<div class="section-title">Feature Adoption</div>';
+        html += '<div class="chart-grid">';
+        html += '<div class="chart-card"><h3>Feature Usage</h3><div class="chart-wrapper"><canvas id="featureChart"></canvas></div></div>';
+        html += '<div class="table-card"><h3>Feature Events (28 days)</h3><table><thead><tr><th>Feature</th><th class="num">Events</th><th class="num">Users</th></tr></thead><tbody>';
+        for (const f of data.featureAdoption) {
+          html += `<tr><td style="text-transform:capitalize">${f.feature}</td><td class="num">${fmt(f.count)}</td><td class="num">${fmt(f.users)}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+        html += '</div>';
+      }
+
+      // Weekly Retention
+      if (data.weeklyRetention && data.weeklyRetention.length > 0) {
+        html += '<div class="section-title">Retention Cohorts</div>';
+        html += '<div class="chart-grid">';
+        html += '<div class="chart-card full-width"><h3>Weekly New vs Returning Users</h3><div class="chart-wrapper"><canvas id="retentionChart"></canvas></div></div>';
+        html += '</div>';
+      }
+
+      // Error Tracking
+      if (data.errors && data.errors.length > 0) {
+        const totalErrors = data.errors.reduce((sum, e) => sum + e.count, 0);
+        html += '<div class="section-title">Error Tracking</div>';
+        html += '<div class="chart-grid">';
+        html += `<div class="chart-card"><h3>Error Summary</h3>`;
+        html += `<div class="kpi-grid" style="margin-bottom:16px"><div class="kpi-card"><div class="kpi-label">Total Errors</div><div class="kpi-value" style="color:${totalErrors > 50 ? 'var(--red)' : totalErrors > 10 ? 'var(--yellow)' : 'var(--green)'}">${fmt(totalErrors)}</div></div></div>`;
+        html += '<div class="chart-wrapper"><canvas id="errorChart"></canvas></div></div>';
+        html += '<div class="table-card"><h3>Error Details (28 days)</h3><table><thead><tr><th>Error Type</th><th>Category</th><th class="num">Count</th></tr></thead><tbody>';
+        for (const e of data.errors) {
+          const color = e.count > 20 ? 'var(--red)' : e.count > 5 ? 'var(--yellow)' : 'var(--text)';
+          html += `<tr><td style="text-transform:capitalize">${e.event}</td><td><code>${e.detail !== '(not set)' ? e.detail : '—'}</code></td><td class="num" style="color:${color}">${fmt(e.count)}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+        html += '</div>';
+      }
+
       container.innerHTML = html;
 
       // Render charts
@@ -627,6 +706,23 @@
       renderCountryChart(data.countries.slice(0, 8));
       renderSourceChart(data.trafficSources.slice(0, 6));
       renderDeviceChart(data.devices);
+
+      // New charts
+      if (data.missions && data.missions.topTypes && data.missions.topTypes.length > 0) {
+        renderMissionTypesChart(data.missions.topTypes);
+      }
+      if (data.cardPopularity && data.cardPopularity.length > 0) {
+        renderCardPopChart(data.cardPopularity.slice(0, 12));
+      }
+      if (data.featureAdoption && data.featureAdoption.length > 0) {
+        renderFeatureChart(data.featureAdoption.slice(0, 10));
+      }
+      if (data.weeklyRetention && data.weeklyRetention.length > 0) {
+        renderRetentionChart(data.weeklyRetention);
+      }
+      if (data.errors && data.errors.length > 0) {
+        renderErrorChart(data.errors.slice(0, 8));
+      }
     }
 
     function renderDailyChart(dailyUsers) {
@@ -773,6 +869,162 @@
           maintainAspectRatio: false,
           plugins: {
             legend: { position: 'right', labels: { boxWidth: 12, padding: 12 } },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderMissionTypesChart(topTypes) {
+      const ctx = document.getElementById('missionTypesChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: topTypes.map(t => t.type),
+          datasets: [{
+            label: 'Missions Started',
+            data: topTypes.map(t => t.count),
+            backgroundColor: CHART_COLORS.slice(0, topTypes.length),
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true },
+            y: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderCardPopChart(cards) {
+      const ctx = document.getElementById('cardPopChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: cards.map(c => c.card),
+          datasets: [
+            { label: 'Added', data: cards.map(c => c.added), backgroundColor: '#6366f1', borderRadius: 4 },
+            { label: 'Expanded', data: cards.map(c => c.expanded), backgroundColor: '#06b6d4', borderRadius: 4 },
+            { label: 'Clicked', data: cards.map(c => c.clicked), backgroundColor: '#22c55e', borderRadius: 4 },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+          scales: {
+            x: { beginAtZero: true, stacked: true },
+            y: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderFeatureChart(features) {
+      const ctx = document.getElementById('featureChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: features.map(f => f.feature),
+          datasets: [
+            { label: 'Events', data: features.map(f => f.count), backgroundColor: '#a855f7', borderRadius: 4 },
+            { label: 'Users', data: features.map(f => f.users), backgroundColor: '#06b6d4', borderRadius: 4 },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+          scales: {
+            x: { beginAtZero: true },
+            y: { grid: { display: false }, ticks: { font: { size: 10 }, callback: function(val) { const l = this.getLabelForValue(val); return l.length > 20 ? l.slice(0, 18) + '...' : l; } } },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderRetentionChart(weeks) {
+      const ctx = document.getElementById('retentionChart');
+      if (!ctx) return;
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: weeks.map(w => 'W' + w.week),
+          datasets: [
+            {
+              label: 'New Users',
+              data: weeks.map(w => w.newUsers),
+              backgroundColor: '#6366f1',
+              borderRadius: 4,
+              stack: 'stack0',
+            },
+            {
+              label: 'Returning Users',
+              data: weeks.map(w => w.returning),
+              backgroundColor: '#22c55e',
+              borderRadius: 4,
+              stack: 'stack0',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12 } },
+            tooltip: {
+              callbacks: {
+                afterBody: function(items) {
+                  const idx = items[0].dataIndex;
+                  const w = weeks[idx];
+                  const total = w.newUsers + w.returning;
+                  const retPct = total > 0 ? (w.returning / total * 100).toFixed(1) : '0';
+                  return 'Retention: ' + retPct + '%';
+                }
+              }
+            }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, beginAtZero: true },
+          },
+        },
+      });
+      charts.push(chart);
+    }
+
+    function renderErrorChart(errors) {
+      const ctx = document.getElementById('errorChart');
+      if (!ctx) return;
+      const ERROR_COLORS = ['#ef4444', '#f97316', '#eab308', '#a855f7', '#6366f1', '#3b82f6', '#06b6d4', '#22c55e'];
+      const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: errors.map(e => e.event),
+          datasets: [{
+            data: errors.map(e => e.count),
+            backgroundColor: ERROR_COLORS.slice(0, errors.length),
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
           },
         },
       });
