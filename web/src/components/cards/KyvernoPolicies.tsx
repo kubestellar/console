@@ -184,7 +184,7 @@ Please proceed step by step.`,
       )}
 
       {/* Per-cluster badges — click to open detail modal */}
-      {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
+      {installed && Object.values(statuses).some(s => s.installed) && (
         <div className="flex flex-wrap gap-1 mb-3">
           {Object.values(statuses).filter(s => s.installed).map(s => (
             <button key={s.cluster} onClick={() => setModalCluster(s.cluster)} className="cursor-pointer">
@@ -271,9 +271,7 @@ Please proceed step by step.`,
               <span className={getCategoryColor(policy.category)}>{policy.category}</span>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span>{policy.kind}</span>
-                {Object.values(statuses).filter(s => s.installed).length > 1 && (
-                  <span className="text-2xs">{policy.cluster}</span>
-                )}
+                <span className="text-2xs">{policy.cluster}</span>
               </div>
             </div>
           </div>

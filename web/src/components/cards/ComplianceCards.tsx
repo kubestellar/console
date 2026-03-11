@@ -234,7 +234,7 @@ Please proceed step by step.`,
       )}
 
       {/* Per-cluster badges — click to open detail modal */}
-      {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
+      {installed && Object.values(statuses).some(s => s.installed) && (
         <div className="flex flex-wrap gap-1">
           {Object.values(statuses).filter(s => s.installed).map(s => (
             <button key={s.cluster} onClick={() => setModalCluster(s.cluster)} className="cursor-pointer">
@@ -413,7 +413,7 @@ Please proceed step by step.`,
       )}
 
       {/* Per-cluster scores — click to open detail modal */}
-      {installed && Object.values(statuses).filter(s => s.installed).length > 1 && (
+      {installed && Object.values(statuses).some(s => s.installed) && (
         <div className="flex flex-wrap gap-1">
           {Object.values(statuses).filter(s => s.installed).map(s => (
             <button key={s.cluster} onClick={() => setModalCluster(s.cluster)} className="cursor-pointer">
