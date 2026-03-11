@@ -1,5 +1,8 @@
 import { CheckCircle, AlertTriangle, RefreshCw, Database, Activity, Users, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
+const GROUP_LAG_WARNING_THRESHOLD = 100
+const TOTAL_LAG_WARNING_THRESHOLD = 200
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useStrimziStatus } from './useStrimziStatus'
@@ -56,7 +59,7 @@ function ConsumerGroupRow({ group }: { group: StrimziConsumerGroup }) {
 
   const lagColor =
     group.lag === 0 ? 'text-green-400' :
-    group.lag < 100 ? 'text-yellow-400' : 'text-red-400'
+    group.lag < GROUP_LAG_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
 
   const statusLabel =
     group.status === 'ok' ? t('strimziStatus.groupStatus_ok', 'OK') :
@@ -177,7 +180,7 @@ export function StrimziStatus() {
         <MetricTile
           label={t('strimziStatus.totalLag', 'Total Lag')}
           value={totalLag.toLocaleString()}
-          colorClass={totalLag === 0 ? 'text-green-400' : totalLag < 200 ? 'text-yellow-400' : 'text-red-400'}
+          colorClass={totalLag === 0 ? 'text-green-400' : totalLag < TOTAL_LAG_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'}
           icon={<Users className="w-3 h-3" />}
         />
       </div>
