@@ -861,27 +861,39 @@ export function useCache<T>({
     }
   }, [shared])
 
+  // Stabilize demoData and initialData references — callers typically pass
+  // inline expressions (e.g. `demoData: getDemoX()`) which create new arrays
+  // on every render.  In demo mode the return value used this new reference
+  // directly, causing all downstream hooks to recalculate every render.
+  // Combined with useLayoutEffect state reports this caused React error #185
+  // (Maximum update depth exceeded).  Capturing via ref keeps the identity
+  // stable across renders while still picking up the first provided value.
+  const demoDataRef = useRef(demoData)
+  const initialDataRef = useRef(initialData)
+  const stableDemoData = demoDataRef.current
+  const stableInitialData = initialDataRef.current
+
   // When disabled (demo mode), return demoData (or initialData) instead of cached live data
   // This ensures demo mode shows demo content while preserving cache for live mode
-  const demoDisplayData = demoData !== undefined ? demoData : initialData
+  const demoDisplayData = stableDemoData !== undefined ? stableDemoData : stableInitialData
 
   // demoWhenEmpty: fall back to demoData when live fetch returned empty results.
   // This handles "demo until X is installed" cards (e.g., Kagenti) that are in DEMO_DATA_CARDS
   // but fetch live data that returns empty when the feature isn't installed.
-  const shouldFallbackToDemo = effectiveEnabled && demoWhenEmpty && demoData !== undefined
+  const shouldFallbackToDemo = effectiveEnabled && demoWhenEmpty && stableDemoData !== undefined
     && !state.isLoading && Array.isArray(state.data) && (state.data as unknown[]).length === 0
 
   // Optimistic demo: for demoWhenEmpty hooks, show demoData immediately while
   // the live fetch runs in the background.  This avoids skeleton flicker for
   // "demo until X is installed" cards — they render demo content instantly and
   // swap to real data only if the fetch returns non-empty results.
-  const showOptimisticDemo = effectiveEnabled && demoWhenEmpty && demoData !== undefined
+  const showOptimisticDemo = effectiveEnabled && demoWhenEmpty && stableDemoData !== undefined
     && state.isLoading
 
   return {
     data: !effectiveEnabled ? demoDisplayData
-      : shouldFallbackToDemo ? demoData
-      : showOptimisticDemo ? demoData
+      : shouldFallbackToDemo ? stableDemoData
+      : showOptimisticDemo ? stableDemoData
       : state.data,
     isLoading: effectiveEnabled ? (state.isLoading && !shouldFallbackToDemo && !showOptimisticDemo) : false,
     isRefreshing: state.isRefreshing || showOptimisticDemo,
