@@ -216,6 +216,10 @@ const CARD_CATALOG = {
     { type: 'kubescape_scan', title: 'Kubescape', description: 'Security posture management and NSA/CISA hardening compliance', visualization: 'status' },
     { type: 'policy_violations', title: 'Policy Violations', description: 'Aggregated policy violations across all enforcement tools', visualization: 'table' },
     { type: 'compliance_score', title: 'Compliance Score', description: 'Overall compliance posture with drill-down by framework (CIS, NSA, PCI-DSS)', visualization: 'gauge' },
+    { type: 'recommended_policies', title: 'Recommended Policies', description: 'AI-powered policy gap analysis with one-click fleet-wide deployment', visualization: 'status' },
+    { type: 'fleet_compliance_heatmap', title: 'Fleet Compliance Heatmap', description: 'Cross-cluster compliance grid showing tool status per cluster', visualization: 'status' },
+    { type: 'compliance_drift', title: 'Compliance Drift', description: 'Detect clusters deviating from fleet compliance baseline', visualization: 'status' },
+    { type: 'cross_cluster_policy_comparison', title: 'Cross-Cluster Policy Comparison', description: 'Compare Kyverno policy deployment across clusters', visualization: 'table' },
   ],
   'Data Compliance': [
     { type: 'vault_secrets', title: 'HashiCorp Vault', description: 'Secrets management, dynamic credentials, and encryption-as-a-service', visualization: 'status' },
