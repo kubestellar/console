@@ -34,9 +34,16 @@ on:
           - pok-prod
           - none
 
+# Only one deploy at a time — newer commits cancel in-progress deploys
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # Helm release name used across both clusters
+  HELM_RELEASE_NAME: kc
 
 jobs:
   build:
@@ -135,9 +142,17 @@ jobs:
             --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Recover stuck Helm release
+        run: |
+          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kc -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+          if [[ "$RELEASE_STATUS" == "pending-"* ]]; then
+            echo "::warning::Helm release stuck in '$RELEASE_STATUS' — rolling back to recover"
+            helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m || true
+          fi
+
       - name: Deploy with Helm
         run: |
-          helm upgrade --install kc ./deploy/helm/kubestellar-console \
+          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
             --namespace kc \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
@@ -150,6 +165,7 @@ jobs:
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --set clusterName=vllm-d \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+            --atomic \
             --wait \
             --timeout 5m
 
@@ -206,9 +222,17 @@ jobs:
             --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Recover stuck Helm release
+        run: |
+          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+          if [[ "$RELEASE_STATUS" == "pending-"* ]]; then
+            echo "::warning::Helm release stuck in '$RELEASE_STATUS' — rolling back to recover"
+            helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m || true
+          fi
+
       - name: Deploy with Helm
         run: |
-          helm upgrade --install kc ./deploy/helm/kubestellar-console \
+          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
             --namespace kubestellar-console \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
@@ -221,6 +245,7 @@ jobs:
             --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
             --set clusterName=pok-prod-001 \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+            --atomic \
             --wait \
             --timeout 5m
 
