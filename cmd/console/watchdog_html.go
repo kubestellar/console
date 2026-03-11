@@ -83,8 +83,8 @@ async function checkNow(){
           // Beacon fallback if gtag not loaded yet
           try{navigator.sendBeacon('/api/telemetry/watchdog',JSON.stringify({event:'watchdog_reconnect',attempts:attempts,wait_seconds:waitSec}))}catch(e){}
         }
-        // Small delay to let the backend fully settle
-        setTimeout(function(){location.href='/';},500);
+        // Small delay to let the backend fully settle, then reload the original page
+        setTimeout(function(){location.reload();},500);
         return;
       }
     }
