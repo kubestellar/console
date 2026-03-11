@@ -40,12 +40,15 @@ let pendingEvents: Array<{ name: string; params?: Record<string, string | number
 
 // Maximum time to wait for gtag.js before falling back to proxy
 const GTAG_LOAD_TIMEOUT_MS = 5_000
+// Delay after script.onload to verify gtag.js actually initialized
+const GTAG_INIT_CHECK_MS = 100
 
 // Extend window for gtag globals
 declare global {
   interface Window {
     dataLayer: unknown[]
     gtag: (...args: unknown[]) => void
+    google_tag_manager: unknown // Defined by gtag.js when it initializes
   }
 }
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 min
@@ -455,20 +458,44 @@ function loadGtagScript() {
   // Timeout: if gtag.js hasn't loaded in GTAG_LOAD_TIMEOUT_MS, fall back to proxy
   setTimeout(() => markGtagDecided(false), GTAG_LOAD_TIMEOUT_MS)
 
+  // Helper: verify gtag.js actually initialized (not just HTTP 200 with wrong content).
+  // On Netlify, /api/gtag returns HTML (SPA fallback) with HTTP 200 — the browser
+  // fires onload but MIME-type checking prevents execution. We detect this by
+  // checking for google_tag_manager, which real gtag.js always defines.
+  const isGtagInitialized = () => typeof window.google_tag_manager !== 'undefined'
+
+  // Helper: load gtag.js from Google CDN (used as fallback)
+  const loadCdnFallback = () => {
+    const cdnScript = document.createElement('script')
+    cdnScript.async = true
+    cdnScript.src = `${GTAG_CDN_URL}?id=${mid}`
+    cdnScript.onload = () => {
+      // Small delay to let gtag.js initialize before checking
+      setTimeout(() => markGtagDecided(isGtagInitialized()), GTAG_INIT_CHECK_MS)
+    }
+    cdnScript.onerror = () => { markGtagDecided(false) } // Ad blocker blocked CDN too
+    document.head.appendChild(cdnScript)
+  }
+
   // Try first-party proxy first (Go backend serves gtag.js from same origin)
   const script = document.createElement('script')
   script.async = true
   script.src = `${GTAG_SCRIPT_PATH}?id=${mid}`
-  script.onload = () => { markGtagDecided(true) }
+  script.onload = () => {
+    // Verify the script actually initialized gtag.js — not just HTTP 200 with HTML.
+    // On Netlify the SPA catch-all returns index.html for /api/gtag, which loads
+    // (HTTP 200) but gets blocked by strict MIME type checking (nosniff).
+    setTimeout(() => {
+      if (isGtagInitialized()) {
+        markGtagDecided(true)
+      } else {
+        loadCdnFallback()
+      }
+    }, GTAG_INIT_CHECK_MS)
+  }
   script.onerror = () => {
-    // First-party proxy unavailable (Netlify deploy, or proxy error)
-    // Fall back to Google CDN directly
-    const cdnScript = document.createElement('script')
-    cdnScript.async = true
-    cdnScript.src = `${GTAG_CDN_URL}?id=${mid}`
-    cdnScript.onload = () => { markGtagDecided(true) }
-    cdnScript.onerror = () => { markGtagDecided(false) } // Ad blocker blocked both
-    document.head.appendChild(cdnScript)
+    // First-party proxy returned non-200 — try Google CDN
+    loadCdnFallback()
   }
   document.head.appendChild(script)
 }

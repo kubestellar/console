@@ -60,6 +60,15 @@
   to = "/.netlify/functions/missions-browse"
   status = 200
 
+# GA4 gtag.js proxy — only exists on Go backend, not Netlify.
+# Return 404 so the browser's onerror fires and the CDN fallback loads.
+# Without this, the SPA catch-all returns index.html (HTML with nosniff),
+# which triggers onload instead of onerror, breaking the CDN fallback chain.
+[[redirects]]
+  from = "/api/gtag"
+  to = "/404.html"
+  status = 404
+
 # GA4 event collection — custom lightweight tracker sends directly to /api/m
 # (Netlify Function via Config.path, no gtag.js loaded)
 
