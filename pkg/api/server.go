@@ -437,6 +437,7 @@ func (s *Server) setupRoutes() {
 	// GA4 analytics proxy (public — no auth required, has its own origin validation)
 	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept it
 	s.app.All("/api/m", handlers.GA4CollectProxy)
+	s.app.Get("/api/gtag", handlers.GA4ScriptProxy)
 
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)

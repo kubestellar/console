@@ -51,12 +51,7 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	// GA4 Measurement ID — env var overrides the built-in default.
-	// This is a public identifier (not a secret), same as any website's GA ID.
-	realMeasurementID := os.Getenv("GA4_REAL_MEASUREMENT_ID")
-	if realMeasurementID == "" {
-		realMeasurementID = "G-PXWNVQ8D1T"
-	}
+	realMeasurementID := ga4RealMeasurementID()
 
 	// Decode base64-encoded payload from `d` parameter.
 	// Browser sends: /api/m?d=<base64(v=2&tid=G-0000000000&cid=...)>
@@ -125,6 +120,15 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	return c.Status(resp.StatusCode).Send(body)
+}
+
+// ga4RealMeasurementID returns the real GA4 measurement ID from env or default.
+func ga4RealMeasurementID() string {
+	id := os.Getenv("GA4_REAL_MEASUREMENT_ID")
+	if id == "" {
+		id = "G-PXWNVQ8D1T"
+	}
+	return id
 }
 
 // isAllowedOrigin checks if the request comes from an allowed hostname.

@@ -1,13 +1,16 @@
 /**
  * Anonymous Product Feedback — Lightweight Event Emitter
  *
- * Stealth event delivery that bypasses ALL blocking:
- *   - No external scripts (immune to content-based ad blockers)
- *   - First-party proxy path /api/m (immune to domain-based blockers)
- *   - Base64-encoded payload (immune to parameter-pattern network filters)
+ * Dual-path event delivery for maximum coverage:
+ *   1. PRIMARY: gtag.js loaded via first-party proxy (/api/gtag) — events
+ *      go directly from browser to GA4, appearing in Realtime reports.
+ *   2. FALLBACK: Custom proxy path /api/m with base64-encoded payloads —
+ *      used when ad blockers prevent gtag.js from loading. Events appear
+ *      in standard GA4 reports but NOT in Realtime.
  *
- * The proxy decodes the payload, rewrites the measurement ID, and forwards
- * to GA4's collection endpoint.
+ * The first-party proxy serves gtag.js from the console's own domain,
+ * bypassing domain-based ad blockers. Content-based blockers may still
+ * block it, in which case the custom proxy fallback kicks in.
  */
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
@@ -18,6 +21,23 @@ import { isDemoMode } from './demoMode'
 const GA_MEASUREMENT_ID = 'G-0000000000'
 
 const PROXY_PATH = '/api/m'
+const GTAG_SCRIPT_PATH = '/api/gtag'
+
+// ── gtag.js Integration ─────────────────────────────────────────────
+// gtag.js sends events directly from browser → GA4, which is required
+// for GA4 Realtime reports. The custom proxy approach (server → GA4)
+// only populates standard reports with a 24-48h delay.
+
+let gtagAvailable = false
+let realMeasurementId = ''
+
+// Extend window for gtag globals
+declare global {
+  interface Window {
+    dataLayer: unknown[]
+    gtag: (...args: unknown[]) => void
+  }
+}
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 min
 const CID_KEY = '_ksc_cid'
 const SID_KEY = '_ksc_sid'
@@ -199,12 +219,54 @@ let initialized = false
 const ENGAGED_SESSION_THRESHOLD_MS = 10_000
 let sessionEngaged = false
 
-function send(
+/**
+ * sendViaGtag sends an event through gtag.js (direct browser → GA4).
+ * This path appears in GA4 Realtime reports because GA4 sees a real
+ * browser session, not a server-side proxy request.
+ */
+function sendViaGtag(
   eventName: string,
   params?: Record<string, string | number | boolean>,
 ) {
-  if (!initialized || isOptedOut()) return
+  if (!window.gtag) return
 
+  // Build gtag event parameters — gtag.js handles session management,
+  // client ID, engagement time, etc. automatically. We only need to
+  // pass event-specific params and user properties.
+  const gtagParams: Record<string, string | number | boolean> = {
+    ...(params || {}),
+  }
+
+  // Include engagement time for user_engagement events
+  if (eventName === 'user_engagement') {
+    const engagementMs = getAndResetEngagementMs()
+    if (engagementMs > 0) {
+      gtagParams.engagement_time_msec = engagementMs
+    }
+  } else {
+    const engagementMs = peekEngagementMs()
+    if (engagementMs > 0) {
+      gtagParams.engagement_time_msec = engagementMs
+    }
+  }
+
+  // Pass user ID if set
+  if (userId) {
+    gtagParams.user_id = userId
+  }
+
+  window.gtag('event', eventName, gtagParams)
+}
+
+/**
+ * sendViaProxy sends an event through the custom first-party proxy
+ * (/api/m). This fallback is used when gtag.js is blocked by ad blockers.
+ * Events appear in standard GA4 reports but NOT in Realtime.
+ */
+function sendViaProxy(
+  eventName: string,
+  params?: Record<string, string | number | boolean>,
+) {
   const { sid, sc, isNew } = getSession()
 
   const p = new URLSearchParams()
@@ -223,15 +285,12 @@ function send(
   if (isNew) {
     p.set('_ss', '1')
     p.set('_nsi', '1')
-    sessionEngaged = false // Reset engaged flag for new sessions
+    sessionEngaged = false
   }
   if (sc === 1 && isNew) {
     p.set('_fv', '1')
   }
 
-  // Mark session as engaged after 10s of active use (GA4 standard threshold).
-  // Check BEFORE resetting the accumulator so user_engagement events can
-  // still trigger the threshold. Once engaged, stays true for the session.
   if (!sessionEngaged && peekEngagementMs() >= ENGAGED_SESSION_THRESHOLD_MS) {
     sessionEngaged = true
   }
@@ -239,10 +298,6 @@ function send(
     p.set('seg', '1')
   }
 
-  // Engagement time — GA4 uses _et on user_engagement events to calculate
-  // Engaged Sessions and Average Engagement Time. Only consume (reset) the
-  // accumulator for user_engagement events so the full engagement duration
-  // is attributed to them. Other events get a non-resetting peek.
   if (eventName === 'user_engagement') {
     const engagementMs = getAndResetEngagementMs()
     if (engagementMs > 0) {
@@ -255,7 +310,6 @@ function send(
     }
   }
 
-  // Event parameters (ep.key=val)
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       if (typeof v === 'number') {
@@ -266,7 +320,6 @@ function send(
     }
   }
 
-  // User properties (up.key=val)
   for (const [k, v] of Object.entries(userProperties)) {
     p.set(`up.${k}`, v)
   }
@@ -275,17 +328,12 @@ function send(
     p.set('uid', userId)
   }
 
-  // Campaign attribution — GA4 MP v2 requires explicit campaign params.
-  // gtag.js extracts these from the URL automatically, but when using the
-  // Measurement Protocol directly we must set cs/cm/cn/ck/cc ourselves.
   if (utmParams.utm_source) p.set('cs', utmParams.utm_source)
   if (utmParams.utm_medium) p.set('cm', utmParams.utm_medium)
   if (utmParams.utm_campaign) p.set('cn', utmParams.utm_campaign)
   if (utmParams.utm_term) p.set('ck', utmParams.utm_term)
   if (utmParams.utm_content) p.set('cc', utmParams.utm_content)
 
-  // Encode the entire payload as base64 so network-level filters
-  // can't match on GA4 parameter patterns (tid=G-*, en=, cid=, etc.)
   const encoded = btoa(p.toString())
   const url = `${PROXY_PATH}?d=${encodeURIComponent(encoded)}`
 
@@ -296,7 +344,76 @@ function send(
   }
 }
 
+function send(
+  eventName: string,
+  params?: Record<string, string | number | boolean>,
+) {
+  if (!initialized || isOptedOut()) return
+
+  // Primary path: gtag.js (appears in GA4 Realtime)
+  if (gtagAvailable) {
+    sendViaGtag(eventName, params)
+    return
+  }
+
+  // Fallback: custom proxy (standard reports only, no Realtime)
+  sendViaProxy(eventName, params)
+}
+
 // ── Initialization ─────────────────────────────────────────────────
+
+// Public GA4 measurement ID — same as any website's GA tag in page source.
+// Overridable via GA4_REAL_MEASUREMENT_ID env var on the backend.
+const GTAG_MEASUREMENT_ID = 'G-PXWNVQ8D1T'
+
+// Google Tag Manager CDN — used when first-party proxy is unavailable (Netlify)
+const GTAG_CDN_URL = 'https://www.googletagmanager.com/gtag/js'
+
+/**
+ * loadGtagScript loads gtag.js so events go directly from the browser to GA4.
+ * This is required for GA4 Realtime — the custom proxy only populates standard
+ * reports because GA4 can't see a real browser session through a server proxy.
+ *
+ * Loading order:
+ *   1. Try first-party proxy (/api/gtag) — works with Go backend, bypasses
+ *      domain-based ad blockers since it's same-origin.
+ *   2. Fall back to Google CDN — works on Netlify (CSP allows it).
+ *   3. If both fail (aggressive ad blocker) — custom proxy handles events.
+ */
+function loadGtagScript() {
+  const mid = GTAG_MEASUREMENT_ID
+  realMeasurementId = mid
+
+  // Initialize dataLayer and gtag function before script loads
+  window.dataLayer = window.dataLayer || []
+  window.gtag = function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer.push(arguments)
+  }
+  window.gtag('js', new Date())
+  window.gtag('config', mid, {
+    send_page_view: false, // We control page_view timing
+    cookie_domain: 'auto',
+    user_properties: { ...userProperties },
+  })
+
+  // Try first-party proxy first (Go backend serves gtag.js from same origin)
+  const script = document.createElement('script')
+  script.async = true
+  script.src = `${GTAG_SCRIPT_PATH}?id=${mid}`
+  script.onload = () => { gtagAvailable = true }
+  script.onerror = () => {
+    // First-party proxy unavailable (Netlify deploy, or proxy error)
+    // Fall back to Google CDN directly
+    const cdnScript = document.createElement('script')
+    cdnScript.async = true
+    cdnScript.src = `${GTAG_CDN_URL}?id=${mid}`
+    cdnScript.onload = () => { gtagAvailable = true }
+    cdnScript.onerror = () => { gtagAvailable = false } // Ad blocker blocked both
+    document.head.appendChild(cdnScript)
+  }
+  document.head.appendChild(script)
+}
 
 export function initAnalytics() {
   measurementId = (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID
@@ -313,6 +430,9 @@ export function initAnalytics() {
     demo_mode: String(isDemoMode()),
     ...(tz && { timezone: tz }),
   }
+
+  // Load gtag.js for GA4 Realtime support (async, non-blocking)
+  loadGtagScript()
 
   // Start tracking user engagement for GA4 engagement time metrics
   startEngagementTracking()
@@ -343,10 +463,18 @@ async function hashUserId(uid: string): Promise<string> {
 export async function setAnalyticsUserId(uid: string) {
   if (!uid || uid === 'demo-user') return
   userId = await hashUserId(uid)
+  // Propagate to gtag if available
+  if (gtagAvailable && window.gtag && realMeasurementId) {
+    window.gtag('config', realMeasurementId, { user_id: userId })
+  }
 }
 
 export function setAnalyticsUserProperties(props: Record<string, string>) {
   userProperties = { ...userProperties, ...props }
+  // Propagate to gtag if available
+  if (gtagAvailable && window.gtag && realMeasurementId) {
+    window.gtag('config', realMeasurementId, { user_properties: props })
+  }
 }
 
 // ── Opt-out management ─────────────────────────────────────────────
