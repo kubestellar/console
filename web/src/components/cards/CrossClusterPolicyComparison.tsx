@@ -8,7 +8,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { CheckCircle2, XCircle, Minus } from 'lucide-react'
+import { CheckCircle2, XCircle, Minus, Info } from 'lucide-react'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
@@ -157,6 +157,12 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-2 p-1">
+      {/* Context description */}
+      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <span>Compares Kyverno policy deployment across clusters. Missing policies (gray) mean inconsistent enforcement.</span>
+      </div>
+
       {/* Refresh indicator */}
       <div className="flex justify-end">
         <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />

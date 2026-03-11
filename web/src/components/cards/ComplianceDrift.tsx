@@ -8,7 +8,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { CheckCircle2, TrendingDown, TrendingUp, ChevronRight } from 'lucide-react'
+import { CheckCircle2, TrendingDown, TrendingUp, ChevronRight, Info } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
@@ -165,6 +165,12 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-1.5 p-1">
+      {/* Context description */}
+      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5 mb-1">
+        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <span>Flags clusters deviating from fleet average. Drift indicates inconsistent security posture that needs investigation.</span>
+      </div>
+
       {/* Refresh indicator */}
       <div className="flex justify-end">
         <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />

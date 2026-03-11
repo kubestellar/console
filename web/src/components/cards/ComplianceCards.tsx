@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { AlertTriangle, AlertCircle, Shield } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +19,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { TrivyDetailModal } from './trivy/TrivyDetailModal'
 import { KubescapeDetailModal } from './kubescape/KubescapeDetailModal'
 import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
+import { getFrameworkInfo, getScoreContext, TRIVY_SEVERITY, CARD_DESCRIPTIONS } from '../../lib/constants/compliance'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -264,23 +265,35 @@ Please proceed step by step.`,
           }
         }}
       >
-        <div className="p-2 rounded-lg bg-red-500/10 text-center hover:bg-red-500/20 transition-colors">
+        <div className="p-2 rounded-lg bg-red-500/10 text-center hover:bg-red-500/20 transition-colors group/sev relative">
           <p className="text-xl font-bold text-red-400">{filtered.critical}</p>
           <p className="text-xs text-muted-foreground">{t('common.critical')}</p>
+          <p className="text-[9px] text-red-400/70 mt-0.5 leading-tight">{TRIVY_SEVERITY.critical.description}</p>
         </div>
-        <div className="p-2 rounded-lg bg-orange-500/10 text-center hover:bg-orange-500/20 transition-colors">
+        <div className="p-2 rounded-lg bg-orange-500/10 text-center hover:bg-orange-500/20 transition-colors group/sev relative">
           <p className="text-xl font-bold text-orange-400">{filtered.high}</p>
           <p className="text-xs text-muted-foreground">High</p>
+          <p className="text-[9px] text-orange-400/70 mt-0.5 leading-tight">{TRIVY_SEVERITY.high.description}</p>
         </div>
-        <div className="p-2 rounded-lg bg-yellow-500/10 text-center hover:bg-yellow-500/20 transition-colors">
+        <div className="p-2 rounded-lg bg-yellow-500/10 text-center hover:bg-yellow-500/20 transition-colors group/sev relative">
           <p className="text-xl font-bold text-yellow-400">{filtered.medium}</p>
           <p className="text-xs text-muted-foreground">Medium</p>
+          <p className="text-[9px] text-yellow-400/70 mt-0.5 leading-tight">{TRIVY_SEVERITY.medium.description}</p>
         </div>
-        <div className="p-2 rounded-lg bg-blue-500/10 text-center hover:bg-blue-500/20 transition-colors">
+        <div className="p-2 rounded-lg bg-blue-500/10 text-center hover:bg-blue-500/20 transition-colors group/sev relative">
           <p className="text-xl font-bold text-blue-400">{filtered.low}</p>
           <p className="text-xs text-muted-foreground">Low</p>
+          <p className="text-[9px] text-blue-400/70 mt-0.5 leading-tight">{TRIVY_SEVERITY.low.description}</p>
         </div>
       </div>
+
+      {/* Action guidance */}
+      {filtered.critical > 0 && (
+        <div className="flex items-start gap-1.5 px-1 text-[10px] text-red-400/80">
+          <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+          <span>{TRIVY_SEVERITY.critical.action}</span>
+        </div>
+      )}
 
       {/* Detail Modal */}
       {modalCluster && statuses[modalCluster] && (
@@ -430,6 +443,7 @@ Please proceed step by step.`,
           }
         }}
       >
+        {/* Score gauge with context */}
         <div className="flex items-center justify-center py-2">
           <div className="relative w-20 h-20">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
@@ -445,13 +459,68 @@ Please proceed step by step.`,
             </div>
           </div>
         </div>
-        <div className="space-y-1">
-          {(filtered.frameworks || []).map((fw, i) => (
-            <div key={i} className="flex items-center justify-between text-xs hover:bg-secondary/30 rounded px-1 transition-colors">
-              <span className="text-muted-foreground">{fw.name}</span>
-              <span className="font-medium text-foreground">{fw.score}%</span>
+
+        {/* Score context label */}
+        {(() => {
+          const ctx = getScoreContext(score)
+          return (
+            <div className="text-center mb-2">
+              <span className={`text-xs font-semibold ${ctx.color}`}>{ctx.label}</span>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{ctx.description}</p>
             </div>
-          ))}
+          )
+        })()}
+
+        {/* Controls summary */}
+        <div className="flex items-center justify-center gap-3 mb-2 text-[10px] text-muted-foreground">
+          <span>{filtered.passedControls} passed</span>
+          <span className="text-muted-foreground/30">|</span>
+          <span className={filtered.failedControls > 0 ? 'text-red-400' : ''}>{filtered.failedControls} failed</span>
+          <span className="text-muted-foreground/30">|</span>
+          <span>{filtered.totalControls} total</span>
+        </div>
+
+        {/* Framework list with descriptions */}
+        <div className="space-y-1.5">
+          {(filtered.frameworks || []).map((fw, i) => {
+            const info = getFrameworkInfo(fw.name)
+            return (
+              <div key={i} className="rounded-md px-2 py-1.5 hover:bg-secondary/30 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-medium text-foreground truncate">
+                      {info?.label || fw.name}
+                    </span>
+                    {info?.url && (
+                      <a
+                        href={info.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-muted-foreground/50 hover:text-blue-400 transition-colors flex-shrink-0"
+                        title="View framework specification"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                  </div>
+                  <span className={`text-xs font-bold ${fw.score >= 80 ? 'text-green-400' : fw.score >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {fw.score}%
+                  </span>
+                </div>
+                {info && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{info.description}</p>
+                )}
+                {/* Score bar */}
+                <div className="mt-1 h-1 rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${fw.score >= 80 ? 'bg-green-400/60' : fw.score >= 60 ? 'bg-yellow-400/60' : 'bg-red-400/60'}`}
+                    style={{ width: `${fw.score}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -574,6 +643,12 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
+      {/* Context banner */}
+      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <span>{CARD_DESCRIPTIONS.policy_violations.description}</span>
+      </div>
+
       <div className="space-y-2">
         {(violations || []).map((v, i) => (
           <div
@@ -690,8 +765,16 @@ export function ComplianceScore({ config: _config }: CardConfig) {
 
   useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
 
+  const scoreCtx = getScoreContext(score)
+
   return (
     <div className="space-y-3">
+      {/* Context description */}
+      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <span>{CARD_DESCRIPTIONS.compliance_score.description}</span>
+      </div>
+
       <div className="flex items-center justify-center py-4">
         <div className="relative w-24 h-24">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
@@ -707,11 +790,27 @@ export function ComplianceScore({ config: _config }: CardConfig) {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+
+      {/* Score context */}
+      <div className="text-center">
+        <span className={`text-xs font-semibold ${scoreCtx.color}`}>{scoreCtx.label}</span>
+        <p className="text-[10px] text-muted-foreground mt-0.5">{scoreCtx.description}</p>
+      </div>
+
+      {/* Breakdown by tool */}
+      <div className="space-y-1.5">
         {(breakdown || []).map((item, i) => (
-          <div key={i}>
-            <p className="font-medium text-foreground">{item.name}</p>
-            <p className="text-muted-foreground">{item.value}%</p>
+          <div key={i} className="flex items-center gap-2 px-1">
+            <span className="text-xs text-muted-foreground w-20 truncate">{item.name}</span>
+            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${item.value >= 80 ? 'bg-green-400/60' : item.value >= 60 ? 'bg-yellow-400/60' : 'bg-red-400/60'}`}
+                style={{ width: `${item.value}%` }}
+              />
+            </div>
+            <span className={`text-xs font-medium w-10 text-right ${item.value >= 80 ? 'text-green-400' : item.value >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+              {item.value}%
+            </span>
           </div>
         ))}
       </div>

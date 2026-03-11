@@ -266,9 +266,20 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
 
   const tools = ['Kyverno', 'Kubescape', 'Trivy'] as const
   const toolKeys = ['kyverno', 'kubescape', 'trivy'] as const
+  const toolTaglines: Record<string, string> = {
+    kyverno: 'Policy engine',
+    kubescape: 'Security posture',
+    trivy: 'CVE scanner',
+  }
 
   return (
     <div className="space-y-2 p-1">
+      {/* Context description */}
+      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <span>Each cell shows tool health per cluster. Click any cell for details. Gray cells mean the tool is not installed.</span>
+      </div>
+
       {/* Refresh indicator */}
       <div className="flex justify-end">
         <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />
@@ -292,6 +303,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
                   <Info className="w-3 h-3" />
                 </button>
               )}
+              <p className="text-[9px] text-muted-foreground/60 font-normal mt-0.5">{toolTaglines[key]}</p>
             </div>
           )
         })}
