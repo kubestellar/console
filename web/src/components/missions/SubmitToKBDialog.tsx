@@ -31,6 +31,108 @@ const CONSOLE_KB_BRANCH = 'master'
 /** Max URL length for GitHub new-file links (browsers typically support ~8000) */
 const MAX_GITHUB_URL_LENGTH = 7500
 
+/**
+ * Map of keywords found in resolution titles, error patterns, namespaces, and
+ * operator lists to their canonical CNCF project name.
+ * Checked against title, steps, namespace, operators, and resourceKind.
+ */
+const CNCF_PROJECT_KEYWORDS: Record<string, string> = {
+  kyverno: 'Kyverno',
+  kubescape: 'Kubescape',
+  kubevuln: 'Kubescape',
+  trivy: 'Trivy',
+  istio: 'Istio',
+  'argo cd': 'Argo CD',
+  argocd: 'Argo CD',
+  argo: 'Argo CD',
+  'argo-rollouts': 'Argo Rollouts',
+  prometheus: 'Prometheus',
+  grafana: 'Grafana',
+  jaeger: 'Jaeger',
+  linkerd: 'Linkerd',
+  envoy: 'Envoy',
+  contour: 'Contour',
+  'cert-manager': 'cert-manager',
+  certmanager: 'cert-manager',
+  falco: 'Falco',
+  flux: 'Flux',
+  fluxcd: 'Flux',
+  'open policy agent': 'OPA',
+  opa: 'OPA',
+  gatekeeper: 'OPA Gatekeeper',
+  etcd: 'etcd',
+  coredns: 'CoreDNS',
+  helm: 'Helm',
+  harbor: 'Harbor',
+  'cloud native buildpacks': 'Buildpacks',
+  buildpack: 'Buildpacks',
+  crossplane: 'Crossplane',
+  thanos: 'Thanos',
+  fluentd: 'Fluentd',
+  'fluent bit': 'Fluent Bit',
+  cilium: 'Cilium',
+  calico: 'Calico',
+  rook: 'Rook',
+  vitess: 'Vitess',
+  tikv: 'TiKV',
+  nats: 'NATS',
+  knative: 'Knative',
+  dapr: 'Dapr',
+  'open telemetry': 'OpenTelemetry',
+  opentelemetry: 'OpenTelemetry',
+  otel: 'OpenTelemetry',
+  spiffe: 'SPIFFE',
+  spire: 'SPIRE',
+  longhorn: 'Longhorn',
+  backstage: 'Backstage',
+  'kube-virt': 'KubeVirt',
+  kubevirt: 'KubeVirt',
+  'virtual machine': 'KubeVirt',
+  volcano: 'Volcano',
+  keptn: 'Keptn',
+  'kubestellar': 'KubeStellar',
+}
+
+/** Try to detect the CNCF project from a resolution's context */
+function detectCNCFProject(resolution: Resolution): string {
+  // Collect all text to search through
+  const searchTexts = [
+    resolution.title,
+    resolution.issueSignature.type,
+    resolution.issueSignature.errorPattern || '',
+    resolution.issueSignature.namespace || '',
+    resolution.issueSignature.resourceKind || '',
+    resolution.resolution.summary || '',
+    ...resolution.resolution.steps,
+    ...(resolution.context.operators || []),
+  ].join(' ').toLowerCase()
+
+  // Check operators first (most reliable signal)
+  for (const op of (resolution.context.operators || [])) {
+    const opLower = op.toLowerCase()
+    for (const [keyword, project] of Object.entries(CNCF_PROJECT_KEYWORDS)) {
+      if (opLower === keyword || opLower.includes(keyword)) return project
+    }
+  }
+
+  // Check title and namespace (next most reliable)
+  const titleAndNs = [
+    resolution.title,
+    resolution.issueSignature.namespace || '',
+  ].join(' ').toLowerCase()
+
+  for (const [keyword, project] of Object.entries(CNCF_PROJECT_KEYWORDS)) {
+    if (titleAndNs.includes(keyword)) return project
+  }
+
+  // Broader search across all text
+  for (const [keyword, project] of Object.entries(CNCF_PROJECT_KEYWORDS)) {
+    if (searchTexts.includes(keyword)) return project
+  }
+
+  return ''
+}
+
 interface SubmitToKBDialogProps {
   resolution: Resolution
   isOpen: boolean
@@ -137,14 +239,15 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   const [scanning, setScanning] = useState(false)
   const scanRanRef = useRef(false)
 
-  // Generate default filename when inputs change
+  // Generate default filename and auto-detect CNCF project when dialog opens
   useEffect(() => {
     if (isOpen) {
       setFilename(generateFilename(resolution.title, missionClass))
+      setCncfProject(detectCNCFProject(resolution))
       setScanResult(null)
       scanRanRef.current = false
     }
-  }, [isOpen, resolution.title, missionClass])
+  }, [isOpen, resolution.title, missionClass, resolution])
 
   // Build the console-kb formatted JSON
   const kbContent = useMemo(
@@ -373,9 +476,9 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             <button
               onClick={handleSubmit}
               disabled={!filename.trim()}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-4 h-4" />
               Submit to KB
             </button>
           </div>

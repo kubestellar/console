@@ -343,10 +343,10 @@ function ResolutionCard({
                     e.stopPropagation()
                     onSubmitToKB()
                   }}
-                  className="flex items-center justify-center gap-1 px-2 py-1.5 text-2xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border border-purple-500/30 rounded transition-colors"
-                  title="Submit to console-kb"
+                  className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-2xs font-medium bg-gradient-to-r from-purple-500/20 to-purple-400/20 hover:from-purple-500/30 hover:to-purple-400/30 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 rounded-md shadow-sm shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-200"
+                  title="Submit to Knowledge Base"
                 >
-                  <BookUp className="w-3 h-3" />
+                  <BookUp className="w-3.5 h-3.5" />
                 </button>
               )}
               <button
