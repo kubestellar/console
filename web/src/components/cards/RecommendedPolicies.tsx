@@ -16,6 +16,7 @@ import { useTrivy } from '../../hooks/useTrivy'
 import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { StatusBadge } from '../ui/StatusBadge'
 
@@ -259,10 +260,11 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   const { deduplicatedClusters } = useClusters()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
+  const { isDemoMode } = useDemoMode()
   const [expandedCategory, setExpandedCategory] = useState<RecommendationCategory | null>(null)
 
   const isLoading = kyvernoLoading || kubescapeLoading || trivyLoading
-  const isDemoData = kyvernoDemoData || kubescapeDemoData || trivyDemoData
+  const isDemoData = isDemoMode || kyvernoDemoData || kubescapeDemoData || trivyDemoData
 
   // Build recommendations from real cluster data
   const { recommendations, fleetCoverage, totalGaps } = useMemo(() => {
