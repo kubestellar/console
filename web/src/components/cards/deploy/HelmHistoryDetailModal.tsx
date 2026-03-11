@@ -49,6 +49,7 @@ export function HelmHistoryDetailModal({
   const handleClose = useCallback(() => {
     if (openTimeRef.current > 0) {
       emitModalClosed(MODAL_TYPE, Date.now() - openTimeRef.current)
+      openTimeRef.current = 0
     }
     onClose()
   }, [onClose])

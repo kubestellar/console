@@ -84,7 +84,10 @@ export function ResourceImbalanceDetector() {
       {(imbalanceInsights || []).map(insight => (
         <div
           key={insight.id}
+          role="button"
+          tabIndex={0}
           onClick={() => setModalInsight(insight)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalInsight(insight) } }}
           className="group space-y-2 cursor-pointer hover:bg-secondary/30 rounded-lg p-1 -m-1 transition-colors"
         >
           <div className="flex items-center gap-2">

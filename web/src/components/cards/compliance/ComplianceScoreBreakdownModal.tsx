@@ -60,6 +60,7 @@ export function ComplianceScoreBreakdownModal({
   const handleClose = useCallback(() => {
     if (openTimeRef.current > 0) {
       emitModalClosed(MODAL_TYPE, Date.now() - openTimeRef.current)
+      openTimeRef.current = 0
     }
     onClose()
   }, [onClose])
@@ -104,11 +105,15 @@ export function ComplianceScoreBreakdownModal({
         {activeTab === 'Overview' && (
           <OverviewTab score={score} breakdown={breakdown} scoreCtx={scoreCtx} />
         )}
-        {activeTab === 'Kubescape' && kubescapeData && (
-          <KubescapeTab data={kubescapeData} />
+        {activeTab === 'Kubescape' && (
+          kubescapeData
+            ? <KubescapeTab data={kubescapeData} />
+            : <ToolDataUnavailable tool="Kubescape" />
         )}
-        {activeTab === 'Kyverno' && kyvernoData && (
-          <KyvernoTab data={kyvernoData} />
+        {activeTab === 'Kyverno' && (
+          kyvernoData
+            ? <KyvernoTab data={kyvernoData} />
+            : <ToolDataUnavailable tool="Kyverno" />
         )}
         {/* Fallback for tools without detailed data */}
         {activeTab !== 'Overview' && activeTab !== 'Kubescape' && activeTab !== 'Kyverno' && (
@@ -207,7 +212,7 @@ function KubescapeTab({ data }: { data: NonNullable<ComplianceScoreBreakdownModa
 function KyvernoTab({ data }: { data: NonNullable<ComplianceScoreBreakdownModalProps['kyvernoData']> }) {
   const complianceRate = data.totalPolicies > 0
     ? Math.max(0, Math.round(100 - (data.totalViolations / data.totalPolicies) * 100))
-    : 100
+    : null
 
   return (
     <div className="space-y-4">
@@ -221,13 +226,28 @@ function KyvernoTab({ data }: { data: NonNullable<ComplianceScoreBreakdownModalP
 
       {/* Compliance rate */}
       <div className="text-center py-2">
-        <span className={`text-lg font-bold ${complianceRate >= 80 ? 'text-green-400' : complianceRate >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-          {complianceRate}% Compliance Rate
-        </span>
-        <p className="text-xs text-muted-foreground mt-1">
-          Based on {data.totalViolations} violations across {data.totalPolicies} policies
-        </p>
+        {complianceRate !== null ? (
+          <>
+            <span className={`text-lg font-bold ${complianceRate >= 80 ? 'text-green-400' : complianceRate >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+              {complianceRate}% Compliance Rate
+            </span>
+            <p className="text-xs text-muted-foreground mt-1">
+              Based on {data.totalViolations} violations across {data.totalPolicies} policies
+            </p>
+          </>
+        ) : (
+          <span className="text-sm text-muted-foreground">No policies configured</span>
+        )}
       </div>
+    </div>
+  )
+}
+
+function ToolDataUnavailable({ tool }: { tool: string }) {
+  return (
+    <div className="text-center py-8 text-muted-foreground">
+      <p className="text-sm">{tool} data not available</p>
+      <p className="text-xs mt-1">No data from connected clusters</p>
     </div>
   )
 }

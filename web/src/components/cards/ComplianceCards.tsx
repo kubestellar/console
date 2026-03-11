@@ -550,9 +550,9 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   const [modalCluster, setModalCluster] = useState<string | null>(null)
   const [selectedViolation, setSelectedViolation] = useState<{ policy: string; count: number; tool: string; clusters: string[] } | null>(null)
 
-  // Aggregate violations from Kyverno reports (policy.violations is always 0
-  // because the hook doesn't back-populate per-policy counts from PolicyReports;
-  // instead use totalViolations and reports for the real data)
+  // Aggregate violations from Kyverno reports. Per-policy violation counts are
+  // back-populated from PolicyReport results in the hook, but we also use
+  // reports for namespace-level breakdown since some policies may lack result data.
   const violations = useMemo(() => {
     const result: Array<{ policy: string; count: number; tool: string; clusters: string[] }> = []
     const clusterViolations = new Map<string, { count: number; clusters: string[] }>()
@@ -781,6 +781,23 @@ export function ComplianceScore({ config: _config }: CardConfig) {
     return { score: avg, breakdown: scores, usingFallback: false }
   }, [kubescapeAgg, kyvernoStatuses, selectedClusters])
 
+  // Kyverno aggregation for breakdown modal
+  const kyvernoBreakdownData = useMemo(() => {
+    let totalPolicies = 0
+    let totalViolations = 0
+    let enforcingCount = 0
+    let auditCount = 0
+    for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
+      if (!status.installed) continue
+      if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
+      totalPolicies += status.totalPolicies
+      totalViolations += status.totalViolations
+      enforcingCount += status.enforcingCount
+      auditCount += status.auditCount
+    }
+    return totalPolicies > 0 ? { totalPolicies, totalViolations, enforcingCount, auditCount } : undefined
+  }, [kyvernoStatuses, selectedClusters])
+
   // Mark as demo data when hooks report demo OR when using hardcoded fallback values
   const isDemoData = ksDemoData || kyDemoData || usingFallback
 
@@ -860,21 +877,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
           failedControls: kubescapeAgg.failedControls,
           frameworks: kubescapeAgg.frameworks || [],
         } : undefined}
-        kyvernoData={(() => {
-          let totalPolicies = 0
-          let totalViolations = 0
-          let enforcingCount = 0
-          let auditCount = 0
-          for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
-            if (!status.installed) continue
-            if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
-            totalPolicies += status.totalPolicies
-            totalViolations += status.totalViolations
-            enforcingCount += status.enforcingCount
-            auditCount += status.auditCount
-          }
-          return totalPolicies > 0 ? { totalPolicies, totalViolations, enforcingCount, auditCount } : undefined
-        })()}
+        kyvernoData={kyvernoBreakdownData}
       />
     </div>
   )

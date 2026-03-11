@@ -54,6 +54,7 @@ export function InsightDetailModal({ isOpen, onClose, insight }: InsightDetailMo
     if (openTimeRef.current > 0) {
       const durationMs = Date.now() - openTimeRef.current
       emitModalClosed(MODAL_TYPE, durationMs)
+      openTimeRef.current = 0
     }
     onClose()
   }, [onClose])

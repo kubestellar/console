@@ -16,8 +16,14 @@ function loadSet(storage: Storage, key: string): Set<string> {
   try {
     const raw = storage.getItem(key)
     if (!raw) return new Set()
-    return new Set(JSON.parse(raw) as string[])
-  } catch {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      console.warn(`[useInsightActions] Invalid data in ${key}: expected array, got ${typeof parsed}`)
+      return new Set()
+    }
+    return new Set(parsed.filter((v): v is string => typeof v === 'string'))
+  } catch (err) {
+    console.warn(`[useInsightActions] Failed to load ${key} from storage:`, err)
     return new Set()
   }
 }
@@ -25,8 +31,8 @@ function loadSet(storage: Storage, key: string): Set<string> {
 function saveSet(storage: Storage, key: string, set: Set<string>): void {
   try {
     storage.setItem(key, JSON.stringify(Array.from(set)))
-  } catch {
-    // Ignore storage errors
+  } catch (err) {
+    console.warn(`[useInsightActions] Failed to save ${key} to storage:`, err)
   }
 }
 

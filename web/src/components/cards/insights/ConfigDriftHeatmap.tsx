@@ -175,7 +175,10 @@ export function ConfigDriftHeatmap() {
         {(driftInsights || []).map(insight => (
           <div key={insight.id} className="space-y-1">
             <div
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedInsight(insight)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedInsight(insight) } }}
               className="group flex items-center gap-2 text-xs py-1 hover:bg-secondary/30 rounded px-1 cursor-pointer"
             >
               <InsightSourceBadge source={insight.source} confidence={insight.confidence} />

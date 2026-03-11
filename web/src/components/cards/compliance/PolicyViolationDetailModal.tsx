@@ -39,6 +39,7 @@ export function PolicyViolationDetailModal({ isOpen, onClose, violation }: Polic
   const handleClose = useCallback(() => {
     if (openTimeRef.current > 0) {
       emitModalClosed(MODAL_TYPE, Date.now() - openTimeRef.current)
+      openTimeRef.current = 0
     }
     onClose()
   }, [onClose])
@@ -113,7 +114,7 @@ Please proceed step by step.`,
           <div className="bg-secondary/30 rounded-lg p-3">
             <p className="text-xs text-muted-foreground">
               This policy has {violation.count} resource{violation.count !== 1 ? 's' : ''} in violation
-              across {violation.clusters.length} cluster{violation.clusters.length !== 1 ? 's' : ''}.
+              across {(violation.clusters || []).length} cluster{(violation.clusters || []).length !== 1 ? 's' : ''}.
               Use an AI Mission to investigate and remediate.
             </p>
           </div>
