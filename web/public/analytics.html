@@ -373,6 +373,11 @@
     const CHART_COLORS = ['#6366f1', '#06b6d4', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#eab308', '#3b82f6'];
     const FUNNEL_COLORS = ['#6366f1', '#818cf8', '#3b82f6', '#06b6d4', '#22c55e'];
 
+    if (typeof Chart === 'undefined') {
+      document.getElementById('content').innerHTML = '<div class="error-box"><strong>Chart.js failed to load</strong><br>The charting library could not be loaded. This may be due to a Content Security Policy restriction or network issue. Try refreshing the page.</div>';
+      throw new Error('Chart.js not loaded — CDN may be blocked by CSP');
+    }
+
     Chart.defaults.color = '#9ca3af';
     Chart.defaults.borderColor = 'rgba(42, 45, 58, 0.8)';
     Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
