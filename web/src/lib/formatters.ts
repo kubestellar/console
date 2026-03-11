@@ -121,7 +121,7 @@ export function createRelativeTimeFormatter(
 ): (isoString: string) => string {
   return (isoString: string): string => {
     const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('common.justNow')
+    if (isNaN(diff) || diff < 0) return t('time.justNow')
     
     const minute = 60_000
     const hour = 60 * minute
