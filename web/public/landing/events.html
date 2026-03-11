@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes Event Monitoring &amp; Alerting - KubeStellar Console</title>
+  <meta name="description" content="Monitor Kubernetes events across all clusters in real time. Filter, search, and correlate warning and error events. Detect patterns, identify root causes, and set up event-based alerts." />
+  <meta name="keywords" content="kubernetes events, event monitoring, kubernetes warning events, kubernetes alerting, event correlation, multi-cluster events, kubernetes troubleshooting" />
+  <link rel="canonical" href="https://console.kubestellar.io/events" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Kubernetes Event Monitoring &amp; Alerting - KubeStellar Console" />
+  <meta property="og:description" content="Monitor Kubernetes events across all clusters in real time. Filter, correlate, and alert on warning and error events fleet-wide." />
+  <meta property="og:url" content="https://console.kubestellar.io/events" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kubernetes Event Monitoring &amp; Alerting - KubeStellar Console" />
+  <meta name="twitter:description" content="Monitor Kubernetes events across all clusters in real time. Filter, correlate, and alert on warning and error events." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Event Monitoring",
+    "description": "Monitor Kubernetes events across all clusters in real time. Filter, search, and correlate warning and error events. Detect patterns, identify root causes, and set up event-based alerts.",
+    "url": "https://console.kubestellar.io/events",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Real-time event stream, Warning event filtering, Event correlation, Pattern detection, Event-based alerting, Cross-cluster event search"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Kubernetes <span class="accent">Event</span> Monitoring</h1>
+    <p class="subtitle">Stream, filter, and analyze Kubernetes events from every cluster in your fleet. Catch warning events before they escalate, correlate patterns across namespaces, and set up smart alerts for critical event types.</p>
+    <div class="hero-actions">
+      <a href="/events" class="btn-primary">View Events</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Never Miss a Critical Event</h2>
+      <p>Kubernetes events tell the story of what is happening in your clusters. Make that story visible, searchable, and actionable.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4E1;</div>
+        <h3>Real-Time Event Stream</h3>
+        <p>Watch events flow in from all clusters as they happen. Color-coded by severity so you can instantly distinguish Normal events from Warning events that need attention.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F50D;</div>
+        <h3>Smart Filtering</h3>
+        <p>Filter events by type, reason, involved object, namespace, or cluster. Save filter presets for common investigations like &ldquo;all FailedScheduling events&rdquo; or &ldquo;OOMKilled in production.&rdquo;</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F517;</div>
+        <h3>Event Correlation</h3>
+        <p>Automatically group related events to reconstruct incident timelines. See how a node becoming NotReady cascades into pod evictions, rescheduling, and service endpoint changes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4C8;</div>
+        <h3>Pattern Detection</h3>
+        <p>Identify recurring event patterns such as periodic OOMKills, repeated image pull failures, or scheduling flaps. Historical trend analysis reveals patterns invisible in real-time streams.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F514;</div>
+        <h3>Event-Based Alerts</h3>
+        <p>Configure alerts that fire when specific event types exceed a threshold. Get notified when BackOff events spike, FailedMount errors appear, or nodes report conditions across any cluster.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4CA;</div>
+        <h3>Event Analytics</h3>
+        <p>Aggregate event counts by reason, type, and cluster over time. Understand which clusters generate the most warnings, which namespaces are noisiest, and where to focus attention.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Event Stream</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">All Clusters</div>
+        <div class="stat-label">Aggregated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Pattern</div>
+        <div class="stat-label">Detection</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Smart</div>
+        <div class="stat-label">Alerts</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Events are signals. Start listening across every cluster.</h2>
+    <p>Transform the noisy stream of Kubernetes events into actionable intelligence with filtering, correlation, and smart alerting.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

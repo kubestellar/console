@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deployment Management &amp; Rollouts - KubeStellar Console</title>
+  <meta name="description" content="Manage Kubernetes deployments across multiple clusters. Monitor rollout status, track replica sets, perform canary deployments, and scale workloads from a unified dashboard." />
+  <meta name="keywords" content="kubernetes deployments, deployment management, rolling updates kubernetes, canary deployment, kubernetes rollback, multi-cluster deployment, replica management" />
+  <link rel="canonical" href="https://console.kubestellar.io/deployments" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Deployment Management &amp; Rollouts - KubeStellar Console" />
+  <meta property="og:description" content="Manage Kubernetes deployments across multiple clusters. Monitor rollout status, track replica sets, perform canary deployments, and scale workloads." />
+  <meta property="og:url" content="https://console.kubestellar.io/deployments" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Deployment Management &amp; Rollouts - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage Kubernetes deployments across multiple clusters. Monitor rollout status, track replica sets, and scale workloads." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Deployment Management",
+    "description": "Manage Kubernetes deployments across multiple clusters. Monitor rollout status, track replica sets, perform canary deployments, and scale workloads from a unified dashboard.",
+    "url": "https://console.kubestellar.io/deployments",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Deployment monitoring, Rolling update tracking, Canary deployments, Replica management, Rollback support, Multi-cluster scaling"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Deployment <span class="accent">Rollout</span> Management</h1>
+    <p class="subtitle">Track and control Kubernetes deployments across your fleet. Monitor rolling updates in real time, manage replica counts, execute canary releases, and roll back instantly when needed.</p>
+    <div class="hero-actions">
+      <a href="/deployments" class="btn-primary">View Deployments</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Full Deployment Lifecycle Control</h2>
+      <p>From initial rollout to production scaling, manage every aspect of your Kubernetes deployments with confidence.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F504;</div>
+        <h3>Rollout Progress</h3>
+        <p>Watch rolling updates propagate across clusters in real time. See new and old replica set counts, track surge and unavailable pods, and know exactly when a rollout completes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4C4;</div>
+        <h3>Revision History</h3>
+        <p>View every revision of a deployment with the changes that triggered it. Compare container images, environment variables, and resource limits between any two revisions side by side.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F3AF;</div>
+        <h3>Canary Releases</h3>
+        <p>Execute canary deployments by controlling traffic split between old and new versions. Monitor error rates and latency per version before promoting the new release fleet-wide.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2194;</div>
+        <h3>Horizontal Scaling</h3>
+        <p>Scale deployments across clusters with a single action. View current vs. desired replicas, HPA configurations, and scaling events to ensure workloads meet demand without over-provisioning.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x26A0;</div>
+        <h3>Stalled Rollout Detection</h3>
+        <p>Automatically detect deployments stuck in a rollout due to image pull errors, insufficient resources, or failing readiness probes. Get alerted before stalled deployments impact availability.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x21A9;</div>
+        <h3>Instant Rollback</h3>
+        <p>Roll back to any previous revision with one click. The console triggers the rollback and monitors the revert process across all targeted clusters until the previous state is restored.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Rollout Tracking</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">One-Click</div>
+        <div class="stat-label">Rollback</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Canary</div>
+        <div class="stat-label">Release Support</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Fleet-Wide</div>
+        <div class="stat-label">Scaling</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Ship with confidence across every cluster.</h2>
+    <p>Monitor every deployment, catch stalled rollouts early, and roll back in seconds when things go wrong.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

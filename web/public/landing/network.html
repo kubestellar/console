@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Network Policy &amp; Service Mesh Visibility - KubeStellar Console</title>
+  <meta name="description" content="Manage Kubernetes network policies and service mesh configurations across clusters. Visualize traffic flow, audit network segmentation, and monitor Istio, Cilium, and Calico policies." />
+  <meta name="keywords" content="kubernetes network policy, service mesh dashboard, istio monitoring, cilium network policy, kubernetes networking, network segmentation, multi-cluster networking" />
+  <link rel="canonical" href="https://console.kubestellar.io/network" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Network Policy &amp; Service Mesh Visibility - KubeStellar Console" />
+  <meta property="og:description" content="Manage Kubernetes network policies and service mesh configurations across clusters. Visualize traffic flow, audit network segmentation, and monitor mesh health." />
+  <meta property="og:url" content="https://console.kubestellar.io/network" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Network Policy &amp; Service Mesh Visibility - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage Kubernetes network policies and service mesh configurations. Visualize traffic flow and audit network segmentation." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Network Management",
+    "description": "Manage Kubernetes network policies and service mesh configurations across clusters. Visualize traffic flow, audit network segmentation, and monitor Istio, Cilium, and Calico policies.",
+    "url": "https://console.kubestellar.io/network",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Network policy management, Service mesh monitoring, Traffic flow visualization, Network segmentation audit, Cross-cluster connectivity, Ingress and egress tracking"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Network <span class="accent">Policy</span> &amp; Service Mesh</h1>
+    <p class="subtitle">Visualize and manage Kubernetes networking across your fleet. Audit network policies, monitor service mesh health, trace traffic flow, and ensure secure communication between services and clusters.</p>
+    <div class="hero-actions">
+      <a href="/network" class="btn-primary">View Network</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Kubernetes Networking Made Visible</h2>
+      <p>Network policies and service mesh configurations are notoriously hard to reason about. Make them visual, auditable, and manageable.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F6E1;</div>
+        <h3>Network Policy Viewer</h3>
+        <p>Visualize ingress and egress rules for every namespace. See which pods can communicate with which, identify overly permissive policies, and detect namespaces with no policies at all.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F578;</div>
+        <h3>Service Mesh Dashboard</h3>
+        <p>Monitor Istio, Linkerd, or Cilium service mesh health. Track sidecar injection status, mTLS coverage, and proxy resource consumption across all meshed clusters.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x27A1;</div>
+        <h3>Traffic Flow Map</h3>
+        <p>Interactive topology map showing real-time traffic between services. Visualize request rates, error percentages, and latency on each communication path to identify bottlenecks.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F50D;</div>
+        <h3>Segmentation Audit</h3>
+        <p>Audit network segmentation against compliance requirements. Verify that production namespaces are isolated from development, and that sensitive workloads have deny-all default policies.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F310;</div>
+        <h3>Cross-Cluster Connectivity</h3>
+        <p>Monitor connectivity between clusters in a multi-cluster mesh. Track VPN tunnels, gateway health, and cross-cluster latency to ensure reliable inter-cluster communication.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4CA;</div>
+        <h3>DNS &amp; Resolution Monitoring</h3>
+        <p>Track CoreDNS performance and resolution rates across clusters. Detect DNS lookup failures, high latency queries, and misconfigured service records before they cause application errors.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Policy</div>
+        <div class="stat-label">Visualization</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Service Mesh</div>
+        <div class="stat-label">Monitoring</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Traffic</div>
+        <div class="stat-label">Flow Maps</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">mTLS</div>
+        <div class="stat-label">Coverage</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>See how your services communicate, across every cluster.</h2>
+    <p>Replace guesswork with visibility. Audit network policies, trace traffic, and ensure secure communication across your Kubernetes fleet.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

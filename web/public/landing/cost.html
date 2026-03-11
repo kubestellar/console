@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes Cost Management &amp; FinOps - KubeStellar Console</title>
+  <meta name="description" content="Kubernetes cost management and FinOps dashboard. Track cloud spending per cluster, namespace, and workload. Identify waste, right-size resources, and optimize GPU costs." />
+  <meta name="keywords" content="kubernetes cost management, finops kubernetes, kubernetes cost optimization, cloud cost tracking, gpu cost management, kubernetes resource waste, multi-cluster cost" />
+  <link rel="canonical" href="https://console.kubestellar.io/cost" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Kubernetes Cost Management &amp; FinOps - KubeStellar Console" />
+  <meta property="og:description" content="Kubernetes cost management and FinOps dashboard. Track cloud spending per cluster, namespace, and workload. Identify waste, right-size resources, and optimize GPU costs." />
+  <meta property="og:url" content="https://console.kubestellar.io/cost" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kubernetes Cost Management &amp; FinOps - KubeStellar Console" />
+  <meta name="twitter:description" content="Kubernetes cost management and FinOps dashboard. Track cloud spending, identify waste, and optimize GPU costs across clusters." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Cost Management",
+    "description": "Kubernetes cost management and FinOps dashboard. Track cloud spending per cluster, namespace, and workload. Identify waste, right-size resources, and optimize GPU costs.",
+    "url": "https://console.kubestellar.io/cost",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Cost allocation, Resource waste detection, GPU cost tracking, Namespace cost breakdown, Right-sizing recommendations, Multi-cloud cost comparison"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Kubernetes <span class="accent">Cost</span> Management</h1>
+    <p class="subtitle">Track, allocate, and optimize cloud spending across your entire Kubernetes fleet. Identify resource waste, right-size workloads, and reduce GPU costs with actionable FinOps insights.</p>
+    <div class="hero-actions">
+      <a href="/cost" class="btn-primary">View Cost Dashboard</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>FinOps for Multi-Cluster Kubernetes</h2>
+      <p>Know exactly where every dollar goes. Break down costs by cluster, namespace, team, and individual workload with full chargeback support.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4B0;</div>
+        <h3>Cost Allocation</h3>
+        <p>Attribute infrastructure costs to specific teams, projects, and namespaces. Generate chargeback and showback reports that map Kubernetes resource consumption to actual cloud spend.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4C9;</div>
+        <h3>Waste Detection</h3>
+        <p>Identify idle workloads, over-provisioned containers, and unused persistent volumes. Get specific recommendations to reclaim resources and reduce monthly costs by up to 40%.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F4BB;</div>
+        <h3>GPU Cost Tracking</h3>
+        <p>Track GPU utilization and cost per workload for AI/ML teams. Identify expensive GPU instances running at low utilization and optimize scheduling to maximize GPU efficiency.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4CA;</div>
+        <h3>Spending Trends</h3>
+        <p>Visualize cost trends over time with daily, weekly, and monthly breakdowns. Set budget alerts and forecast future spending based on current consumption patterns and growth rates.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x2696;</div>
+        <h3>Right-Sizing Engine</h3>
+        <p>Automated recommendations for CPU and memory requests based on actual usage. Reduce over-provisioning without risking OOM kills by analyzing percentile-based resource consumption.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2601;</div>
+        <h3>Multi-Cloud Comparison</h3>
+        <p>Compare costs across AWS EKS, Google GKE, Azure AKS, and bare metal. See which provider delivers the best price-performance for your specific workload profiles.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Per-Pod</div>
+        <div class="stat-label">Cost Tracking</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Up to 40%</div>
+        <div class="stat-label">Savings Found</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">GPU</div>
+        <div class="stat-label">Cost Visibility</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Multi-Cloud</div>
+        <div class="stat-label">Support</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Stop overpaying for Kubernetes infrastructure.</h2>
+    <p>Gain full visibility into where your cloud dollars go and get actionable recommendations to cut waste and optimize spending.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

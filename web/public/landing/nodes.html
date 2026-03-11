@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes Node Management &amp; Monitoring - KubeStellar Console</title>
+  <meta name="description" content="Monitor Kubernetes node health, capacity, and performance across clusters. Track node conditions, resource pressure, scheduling status, and plan capacity with real-time metrics." />
+  <meta name="keywords" content="kubernetes node management, node monitoring, kubernetes node health, node capacity planning, kubernetes node conditions, multi-cluster node management" />
+  <link rel="canonical" href="https://console.kubestellar.io/nodes" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Kubernetes Node Management &amp; Monitoring - KubeStellar Console" />
+  <meta property="og:description" content="Monitor Kubernetes node health, capacity, and performance across clusters. Track node conditions, resource pressure, scheduling status, and plan capacity." />
+  <meta property="og:url" content="https://console.kubestellar.io/nodes" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kubernetes Node Management &amp; Monitoring - KubeStellar Console" />
+  <meta name="twitter:description" content="Monitor Kubernetes node health, capacity, and performance across clusters. Track conditions, resource pressure, and plan capacity." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Node Management",
+    "description": "Monitor Kubernetes node health, capacity, and performance across clusters. Track node conditions, resource pressure, scheduling status, and plan capacity with real-time metrics.",
+    "url": "https://console.kubestellar.io/nodes",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Node health monitoring, Capacity planning, Resource pressure tracking, Cordon and drain, Node pool management, Multi-cluster node view"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Kubernetes <span class="accent">Node</span> Management</h1>
+    <p class="subtitle">Complete visibility into every node across your Kubernetes fleet. Monitor health conditions, track resource utilization, detect pressure events, and plan capacity from a single dashboard.</p>
+    <div class="hero-actions">
+      <a href="/nodes" class="btn-primary">View Nodes</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Infrastructure Visibility at the Node Level</h2>
+      <p>Understand the health and capacity of your compute infrastructure across every cluster, provider, and region.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2764;</div>
+        <h3>Health Condition Tracking</h3>
+        <p>Monitor Ready, MemoryPressure, DiskPressure, PIDPressure, and NetworkUnavailable conditions for every node. Color-coded indicators make it easy to spot problems instantly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4CA;</div>
+        <h3>Capacity Planning</h3>
+        <p>Visualize allocatable vs. requested resources per node. See CPU, memory, and pod capacity to determine when clusters need additional nodes or when existing nodes are underutilized.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F50B;</div>
+        <h3>Resource Pressure Alerts</h3>
+        <p>Detect nodes under memory, disk, or PID pressure before workloads are evicted. Historical pressure data helps identify recurring bottlenecks and inform scaling decisions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F6AB;</div>
+        <h3>Cordon &amp; Drain</h3>
+        <p>Safely cordon nodes for maintenance and drain workloads to healthy nodes. Track cordoned nodes across clusters and ensure no workload is left running on nodes marked for decommission.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F3F7;</div>
+        <h3>Label &amp; Taint Management</h3>
+        <p>View and manage node labels and taints across your fleet. Filter nodes by labels, identify scheduling constraints, and ensure workload placement policies are correctly configured.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2699;</div>
+        <h3>Node Pool Overview</h3>
+        <p>Group nodes by pool, instance type, or availability zone. Compare resource distribution across pools and identify which node pools are under the most pressure or best suited for specific workloads.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">All Nodes</div>
+        <div class="stat-label">Across Clusters</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">5 Conditions</div>
+        <div class="stat-label">Monitored</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Capacity Data</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Automated</div>
+        <div class="stat-label">Pressure Alerts</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Know every node in your fleet, from one place.</h2>
+    <p>Stop SSH-ing into nodes to check health. Get real-time node status, capacity metrics, and pressure alerts across all clusters.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

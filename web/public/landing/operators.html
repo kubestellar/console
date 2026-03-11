@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operator &amp; OLM Management - KubeStellar Console</title>
+  <meta name="description" content="Manage Kubernetes operators and OLM subscriptions across clusters. Monitor operator health, track custom resources, manage upgrades, and ensure consistent operator deployments fleet-wide." />
+  <meta name="keywords" content="kubernetes operators, operator lifecycle manager, olm kubernetes, custom resource management, operator upgrade, kubernetes operator monitoring, operator hub" />
+  <link rel="canonical" href="https://console.kubestellar.io/operators" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Operator &amp; OLM Management - KubeStellar Console" />
+  <meta property="og:description" content="Manage Kubernetes operators and OLM subscriptions across clusters. Monitor operator health, track custom resources, and manage upgrades fleet-wide." />
+  <meta property="og:url" content="https://console.kubestellar.io/operators" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Operator &amp; OLM Management - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage Kubernetes operators and OLM subscriptions across clusters. Monitor health, track custom resources, and manage upgrades." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Operator Management",
+    "description": "Manage Kubernetes operators and OLM subscriptions across clusters. Monitor operator health, track custom resources, manage upgrades, and ensure consistent operator deployments fleet-wide.",
+    "url": "https://console.kubestellar.io/operators",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "OLM subscription management, Operator health monitoring, Custom resource tracking, Upgrade management, CRD version tracking, Multi-cluster operator consistency"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Kubernetes <span class="accent">Operator</span> Management</h1>
+    <p class="subtitle">Manage the operator ecosystem across your Kubernetes fleet. Monitor OLM subscriptions, track CRD versions, ensure consistent operator deployments, and control upgrade rollouts from a single console.</p>
+    <div class="hero-actions">
+      <a href="/operators" class="btn-primary">View Operators</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Operator Lifecycle Across Your Fleet</h2>
+      <p>From installation to upgrade, maintain visibility and control over every operator running in your multi-cluster environment.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4E6;</div>
+        <h3>Operator Catalog</h3>
+        <p>Browse available operators from OperatorHub, community catalogs, and private registries. Compare operator capabilities, maturity levels, and supported Kubernetes versions before installing.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2764;</div>
+        <h3>Health Monitoring</h3>
+        <p>Track operator pod health, reconciliation loops, and error rates. Detect operators stuck in failed states, identify reconciliation bottlenecks, and monitor controller manager resource usage.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F4DD;</div>
+        <h3>Custom Resource Explorer</h3>
+        <p>Browse all custom resources managed by installed operators. View CR status, conditions, and spec details. Understand which CRDs are installed per cluster and their version compatibility.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2B06;</div>
+        <h3>Upgrade Management</h3>
+        <p>Track available operator upgrades across clusters. Review changelogs and breaking changes before approving upgrades. Execute coordinated rollouts or cluster-by-cluster upgrades with rollback support.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F50E;</div>
+        <h3>Version Consistency</h3>
+        <p>Detect operator version drift across clusters. See which clusters are running different versions of the same operator and enforce fleet-wide version consistency through automated policies.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F512;</div>
+        <h3>RBAC &amp; Permission Review</h3>
+        <p>Audit the permissions requested by each operator. Review ClusterRoles, ServiceAccounts, and RoleBindings created by operators to ensure they follow the principle of least privilege.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">OLM</div>
+        <div class="stat-label">Integration</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">CRD</div>
+        <div class="stat-label">Version Tracking</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Coordinated</div>
+        <div class="stat-label">Upgrades</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Fleet</div>
+        <div class="stat-label">Consistency</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Keep every operator healthy, updated, and consistent.</h2>
+    <p>Manage the growing complexity of Kubernetes operators across your fleet with a dashboard built for operator lifecycle management.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

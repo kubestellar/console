@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitOps Dashboard &amp; Argo CD Integration - KubeStellar Console</title>
+  <meta name="description" content="Multi-cluster GitOps dashboard with Argo CD integration. Monitor sync status, detect configuration drift, and manage Git-driven deployments across Kubernetes clusters." />
+  <meta name="keywords" content="gitops dashboard, argo cd integration, kubernetes gitops, configuration drift detection, git driven deployment, multi-cluster gitops, flux cd" />
+  <link rel="canonical" href="https://console.kubestellar.io/gitops" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="GitOps Dashboard &amp; Argo CD Integration - KubeStellar Console" />
+  <meta property="og:description" content="Multi-cluster GitOps dashboard with Argo CD integration. Monitor sync status, detect configuration drift, and manage Git-driven deployments across Kubernetes clusters." />
+  <meta property="og:url" content="https://console.kubestellar.io/gitops" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="GitOps Dashboard &amp; Argo CD Integration - KubeStellar Console" />
+  <meta name="twitter:description" content="Multi-cluster GitOps dashboard with Argo CD integration. Monitor sync status, detect configuration drift, and manage Git-driven deployments across clusters." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - GitOps Dashboard",
+    "description": "Multi-cluster GitOps dashboard with Argo CD integration. Monitor sync status, detect configuration drift, and manage Git-driven deployments across Kubernetes clusters.",
+    "url": "https://console.kubestellar.io/gitops",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Argo CD integration, Sync status monitoring, Drift detection, Git repository tracking, Application health, Multi-cluster GitOps"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Multi-Cluster <span class="accent">GitOps</span> Dashboard</h1>
+    <p class="subtitle">Visualize and manage Git-driven deployments across your entire Kubernetes fleet. Integrated with Argo CD and Flux for real-time sync status, drift detection, and automated remediation.</p>
+    <div class="hero-actions">
+      <a href="/gitops" class="btn-primary">View GitOps Status</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Git as the Single Source of Truth</h2>
+      <p>Ensure every cluster matches its declared state with continuous reconciliation monitoring and drift alerting.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2B06;</div>
+        <h3>Sync Status Overview</h3>
+        <p>Track the sync status of every Argo CD application across all clusters. See which applications are synced, out-of-sync, or degraded at a glance with color-coded indicators.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F50D;</div>
+        <h3>Drift Detection</h3>
+        <p>Automatically detect when live cluster state diverges from the Git repository. View detailed diffs showing exactly what changed and when, with one-click remediation options.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F4C2;</div>
+        <h3>Repository Tracking</h3>
+        <p>Monitor all connected Git repositories, their branches, and latest commits. See which commits are deployed to which clusters and trace deployments back to specific pull requests.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2764;</div>
+        <h3>Application Health</h3>
+        <p>Beyond sync status, monitor the actual health of deployed applications. Detect CrashLoopBackOff pods, pending resources, and degraded services that may be synced but unhealthy.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F501;</div>
+        <h3>Rollback History</h3>
+        <p>View complete deployment history with Git commit references. Roll back to any previous state with a single click, and the change propagates across all targeted clusters automatically.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F512;</div>
+        <h3>Policy Enforcement</h3>
+        <p>Enforce GitOps policies that prevent manual cluster modifications. Ensure all changes flow through Git with audit trails, approval workflows, and compliance guardrails.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Argo CD</div>
+        <div class="stat-label">Native Integration</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Continuous</div>
+        <div class="stat-label">Drift Detection</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">One-Click</div>
+        <div class="stat-label">Rollbacks</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Full</div>
+        <div class="stat-label">Audit Trail</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Git-driven deployments, fleet-wide visibility.</h2>
+    <p>Bring GitOps best practices to your multi-cluster environment with a dashboard that keeps everything in sync.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

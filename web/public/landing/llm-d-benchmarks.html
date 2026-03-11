@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Inference Benchmarks on Kubernetes - KubeStellar Console</title>
+  <meta name="description" content="Live LLM inference benchmarks on Kubernetes GPU clusters. Compare throughput, latency, and token generation rates across models, hardware configurations, and serving frameworks." />
+  <meta name="keywords" content="llm benchmarks, kubernetes gpu benchmarks, llm inference performance, vllm benchmarks, gpu kubernetes, large language model performance, ai inference kubernetes" />
+  <link rel="canonical" href="https://console.kubestellar.io/llm-d-benchmarks" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="LLM Inference Benchmarks on Kubernetes - KubeStellar Console" />
+  <meta property="og:description" content="Live LLM inference benchmarks on Kubernetes GPU clusters. Compare throughput, latency, and token generation rates across models, hardware, and serving frameworks." />
+  <meta property="og:url" content="https://console.kubestellar.io/llm-d-benchmarks" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="LLM Inference Benchmarks on Kubernetes - KubeStellar Console" />
+  <meta name="twitter:description" content="Live LLM inference benchmarks on Kubernetes GPU clusters. Compare throughput, latency, and token generation rates across models, hardware, and serving frameworks." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - LLM Inference Benchmarks",
+    "description": "Live LLM inference benchmarks on Kubernetes GPU clusters. Compare throughput, latency, and token generation rates across models, hardware configurations, and serving frameworks.",
+    "url": "https://console.kubestellar.io/llm-d-benchmarks",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "LLM inference benchmarks, GPU performance tracking, Hardware leaderboard, Throughput comparison, Latency breakdown, Performance timeline"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>LLM Inference <span class="accent">Benchmarks</span> on Kubernetes</h1>
+    <p class="subtitle">Compare large language model performance across GPU hardware, serving frameworks, and Kubernetes configurations. Real benchmark data from nightly E2E test runs with live streaming results.</p>
+    <div class="hero-actions">
+      <a href="/llm-d-benchmarks" class="btn-primary">View Benchmarks</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Data-Driven GPU Performance Insights</h2>
+      <p>Make informed decisions about hardware selection, model deployment, and inference optimization with comprehensive benchmark data.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x26A1;</div>
+        <h3>Throughput Comparison</h3>
+        <p>Compare tokens per second across GPU configurations including A100, H100, L40S, and more. See how different hardware handles various model sizes from 7B to 70B+ parameters.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x23F3;</div>
+        <h3>Latency Breakdown</h3>
+        <p>Analyze time-to-first-token (TTFT) and inter-token latency across configurations. Understand how batch sizes, tensor parallelism, and quantization affect response times.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F3C6;</div>
+        <h3>Hardware Leaderboard</h3>
+        <p>Ranked performance tables showing which GPU configurations deliver the best throughput, lowest latency, and highest efficiency for each model and workload type.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4C8;</div>
+        <h3>Performance Timeline</h3>
+        <p>Track benchmark performance over time with historical trend lines. Detect regressions from framework updates, driver changes, or configuration drift across nightly runs.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F4BB;</div>
+        <h3>Resource Utilization</h3>
+        <p>Monitor GPU memory usage, compute utilization, and power consumption during benchmark runs. Identify bottlenecks and optimize serving configurations for maximum efficiency.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4E1;</div>
+        <h3>Live Streaming Results</h3>
+        <p>Watch benchmark results stream in real time via WebSocket as nightly E2E tests execute. See throughput, latency, and status updates the moment they are generated.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Nightly</div>
+        <div class="stat-label">E2E Runs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Multi-GPU</div>
+        <div class="stat-label">Hardware Tested</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Live</div>
+        <div class="stat-label">Streaming Data</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Open Source</div>
+        <div class="stat-label">Benchmarks</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Stop guessing. Start benchmarking.</h2>
+    <p>Make data-driven decisions about GPU hardware and model deployment with real-world Kubernetes benchmark data.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

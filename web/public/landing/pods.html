@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pod Monitoring &amp; Debugging - KubeStellar Console</title>
+  <meta name="description" content="Monitor and debug Kubernetes pods across multiple clusters. View pod status, container logs, resource usage, restart counts, and troubleshoot issues from a single dashboard." />
+  <meta name="keywords" content="kubernetes pod monitoring, pod debugging, kubernetes logs, pod troubleshooting, container logs dashboard, multi-cluster pod management, crashloopbackoff" />
+  <link rel="canonical" href="https://console.kubestellar.io/pods" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Pod Monitoring &amp; Debugging - KubeStellar Console" />
+  <meta property="og:description" content="Monitor and debug Kubernetes pods across multiple clusters. View pod status, container logs, resource usage, and troubleshoot issues." />
+  <meta property="og:url" content="https://console.kubestellar.io/pods" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Pod Monitoring &amp; Debugging - KubeStellar Console" />
+  <meta name="twitter:description" content="Monitor and debug Kubernetes pods across multiple clusters. View pod status, container logs, and troubleshoot issues." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Pod Monitoring",
+    "description": "Monitor and debug Kubernetes pods across multiple clusters. View pod status, container logs, resource usage, restart counts, and troubleshoot issues from a single dashboard.",
+    "url": "https://console.kubestellar.io/pods",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Pod status monitoring, Container log streaming, Restart tracking, OOMKill detection, Multi-container pod support, Cross-cluster pod search"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Pod <span class="accent">Monitoring</span> &amp; Debugging</h1>
+    <p class="subtitle">Gain complete visibility into every pod across your Kubernetes fleet. Stream container logs, track restart patterns, detect OOMKills, and troubleshoot issues without touching kubectl.</p>
+    <div class="hero-actions">
+      <a href="/pods" class="btn-primary">View Pods</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Deep Pod-Level Troubleshooting</h2>
+      <p>Everything you need to understand what is happening inside your pods, across every cluster, in one place.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F7E2;</div>
+        <h3>Status Overview</h3>
+        <p>View Running, Pending, Succeeded, Failed, and Unknown pod states across all clusters. Filter by phase, namespace, or node to zero in on problem areas and track patterns over time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4DC;</div>
+        <h3>Live Log Streaming</h3>
+        <p>Stream container logs in real time from any pod in any cluster. Support for multi-container pods, init containers, and previous container logs for debugging restart loops.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F504;</div>
+        <h3>Restart Analysis</h3>
+        <p>Track pod restart counts and reasons. Identify CrashLoopBackOff patterns, OOMKilled containers, and liveness probe failures with timelines showing when and why restarts occurred.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4CA;</div>
+        <h3>Resource Consumption</h3>
+        <p>Compare actual CPU and memory usage against requests and limits for each container. Identify containers hitting their memory ceiling or barely using their allocated CPU.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F50D;</div>
+        <h3>Event Correlation</h3>
+        <p>View Kubernetes events associated with each pod: scheduling decisions, image pulls, volume mounts, and probe outcomes. Understand the full lifecycle of a pod from creation to termination.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F310;</div>
+        <h3>Cross-Cluster Pod Search</h3>
+        <p>Find any pod across your entire fleet by name, label, image, or IP address. Instantly locate pods regardless of which cluster or namespace they are running in.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Live</div>
+        <div class="stat-label">Log Streaming</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">All Phases</div>
+        <div class="stat-label">Tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">OOMKill</div>
+        <div class="stat-label">Detection</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Fleet-Wide</div>
+        <div class="stat-label">Pod Search</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Debug any pod, any cluster, any time.</h2>
+    <p>Replace scattered kubectl commands with a single dashboard that gives you logs, events, and metrics for every pod in your fleet.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

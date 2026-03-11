@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compute Resource Management - KubeStellar Console</title>
+  <meta name="description" content="Manage and optimize Kubernetes compute resources across clusters. Monitor CPU, memory, and GPU allocation. Right-size workloads, manage resource quotas, and prevent over-provisioning." />
+  <meta name="keywords" content="kubernetes compute resources, resource management kubernetes, cpu memory management, kubernetes resource quota, compute optimization, kubernetes capacity management" />
+  <link rel="canonical" href="https://console.kubestellar.io/compute" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Compute Resource Management - KubeStellar Console" />
+  <meta property="og:description" content="Manage and optimize Kubernetes compute resources across clusters. Monitor CPU, memory, and GPU allocation. Right-size workloads and prevent over-provisioning." />
+  <meta property="og:url" content="https://console.kubestellar.io/compute" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Compute Resource Management - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage and optimize Kubernetes compute resources across clusters. Monitor CPU, memory, GPU allocation and prevent over-provisioning." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Compute Resource Management",
+    "description": "Manage and optimize Kubernetes compute resources across clusters. Monitor CPU, memory, and GPU allocation. Right-size workloads, manage resource quotas, and prevent over-provisioning.",
+    "url": "https://console.kubestellar.io/compute",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "CPU utilization tracking, Memory allocation analysis, GPU resource management, Resource quota monitoring, Right-sizing recommendations, Compute capacity planning"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Compute <span class="accent">Resource</span> Management</h1>
+    <p class="subtitle">Optimize CPU, memory, and GPU utilization across your Kubernetes fleet. Prevent over-provisioning, enforce resource quotas, and ensure workloads have exactly the resources they need to perform.</p>
+    <div class="hero-actions">
+      <a href="/compute" class="btn-primary">View Compute Resources</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Right-Size Every Workload Across Every Cluster</h2>
+      <p>Gain precise control over compute allocation with tools that show exactly how resources are requested, consumed, and wasted.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4BB;</div>
+        <h3>CPU Utilization Dashboard</h3>
+        <p>Compare CPU requests versus actual usage for every pod and namespace. Identify containers that request 2 cores but use 200 millicores, and right-size them to free up capacity.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4BE;</div>
+        <h3>Memory Analysis</h3>
+        <p>Track memory requests, limits, and actual working set size. Detect containers approaching their memory limits before OOMKills occur, and spot over-allocated memory across the fleet.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F3AE;</div>
+        <h3>GPU Allocation View</h3>
+        <p>Visualize GPU allocation per node, namespace, and workload. See which GPUs are idle, partially utilized, or fully committed. Plan GPU capacity across clusters for AI/ML workloads.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4CF;</div>
+        <h3>Resource Quota Monitoring</h3>
+        <p>Track namespace resource quota usage across clusters. See which namespaces are approaching their limits, which have excess headroom, and enforce consistent quota policies fleet-wide.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F4A1;</div>
+        <h3>Right-Sizing Recommendations</h3>
+        <p>AI-driven recommendations for CPU and memory requests based on observed usage patterns. Apply suggestions in bulk across clusters to eliminate waste without risking performance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4CA;</div>
+        <h3>Capacity Forecasting</h3>
+        <p>Project future compute needs based on historical growth trends. Know when clusters will run out of capacity and plan node additions or workload redistribution before it happens.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">CPU + Memory</div>
+        <div class="stat-label">Tracking</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">GPU</div>
+        <div class="stat-label">Allocation View</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Automated</div>
+        <div class="stat-label">Right-Sizing</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Capacity</div>
+        <div class="stat-label">Forecasting</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Every core, every gigabyte, accounted for.</h2>
+    <p>Stop guessing how much compute your workloads need. Use data-driven insights to right-size every container in your fleet.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

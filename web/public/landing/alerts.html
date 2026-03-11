@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alert Management &amp; Prometheus Integration - KubeStellar Console</title>
+  <meta name="description" content="Manage Kubernetes alerts from Prometheus, Alertmanager, and Thanos across clusters. View firing alerts, silences, and routing rules from a unified multi-cluster alert dashboard." />
+  <meta name="keywords" content="kubernetes alerts, prometheus alerting, alertmanager dashboard, kubernetes monitoring alerts, multi-cluster alerts, thanos alerting, prometheus integration" />
+  <link rel="canonical" href="https://console.kubestellar.io/alerts" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Alert Management &amp; Prometheus Integration - KubeStellar Console" />
+  <meta property="og:description" content="Manage Kubernetes alerts from Prometheus, Alertmanager, and Thanos across clusters. View firing alerts, silences, and routing rules from a unified dashboard." />
+  <meta property="og:url" content="https://console.kubestellar.io/alerts" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Alert Management &amp; Prometheus Integration - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage Kubernetes alerts from Prometheus and Alertmanager across clusters. View firing alerts, silences, and routing rules." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Alert Management",
+    "description": "Manage Kubernetes alerts from Prometheus, Alertmanager, and Thanos across clusters. View firing alerts, silences, and routing rules from a unified multi-cluster alert dashboard.",
+    "url": "https://console.kubestellar.io/alerts",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Prometheus alert integration, Alertmanager dashboard, Firing alert tracking, Silence management, Alert routing rules, Multi-cluster alert aggregation"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Multi-Cluster <span class="accent">Alert</span> Management</h1>
+    <p class="subtitle">Aggregate alerts from Prometheus, Alertmanager, and Thanos across your entire Kubernetes fleet. See every firing alert, manage silences, review routing rules, and reduce alert fatigue from one dashboard.</p>
+    <div class="hero-actions">
+      <a href="/alerts" class="btn-primary">View Alerts</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Alerting That Scales With Your Fleet</h2>
+      <p>As your cluster count grows, so does alert noise. Cut through the noise with aggregation, deduplication, and intelligent grouping.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F6A8;</div>
+        <h3>Firing Alert Dashboard</h3>
+        <p>See all currently firing alerts across every cluster. Prioritize by severity (critical, warning, info), group by alert name or cluster, and drill into the metrics that triggered each alert.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F515;</div>
+        <h3>Silence Management</h3>
+        <p>Create, extend, and expire silences across multiple Alertmanager instances. Apply silences during maintenance windows and track which alerts are currently suppressed fleet-wide.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F4E8;</div>
+        <h3>Routing Rule Viewer</h3>
+        <p>Inspect Alertmanager routing trees across clusters. See which alerts go to which receivers (Slack, PagerDuty, email) and identify misconfigured routes that may be dropping alerts.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4CA;</div>
+        <h3>Alert Trends</h3>
+        <p>Track alert frequency over time to identify noisy rules and alert storms. See which clusters generate the most alerts, which alert names fire most often, and how patterns change week over week.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F501;</div>
+        <h3>Alert Deduplication</h3>
+        <p>Identify duplicate alerts firing across multiple clusters for the same root cause. Group related alerts to reduce noise and focus on distinct issues rather than duplicated notifications.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2699;</div>
+        <h3>PrometheusRule Tracking</h3>
+        <p>Browse and compare PrometheusRule resources across clusters. Detect rule version drift, identify missing rules in specific clusters, and ensure consistent alerting policies fleet-wide.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Prometheus</div>
+        <div class="stat-label">Native</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">All Clusters</div>
+        <div class="stat-label">Aggregated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Silence</div>
+        <div class="stat-label">Management</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Reduced</div>
+        <div class="stat-label">Alert Fatigue</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>One alert dashboard to rule them all.</h2>
+    <p>Aggregate, deduplicate, and manage alerts from every Prometheus instance in your fleet without switching between Alertmanager UIs.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

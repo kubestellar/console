@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI/ML Workload Management on Kubernetes - KubeStellar Console</title>
+  <meta name="description" content="Manage AI and machine learning workloads on Kubernetes. Monitor training jobs, inference services, GPU allocation, model serving, and MLOps pipelines across clusters." />
+  <meta name="keywords" content="ai ml kubernetes, machine learning kubernetes, gpu workload management, model serving kubernetes, mlops dashboard, training job monitoring, inference kubernetes" />
+  <link rel="canonical" href="https://console.kubestellar.io/ai-ml" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="AI/ML Workload Management on Kubernetes - KubeStellar Console" />
+  <meta property="og:description" content="Manage AI and machine learning workloads on Kubernetes. Monitor training jobs, inference services, GPU allocation, model serving, and MLOps pipelines across clusters." />
+  <meta property="og:url" content="https://console.kubestellar.io/ai-ml" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="AI/ML Workload Management on Kubernetes - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage AI and machine learning workloads on Kubernetes. Monitor training jobs, inference services, GPU allocation, and MLOps pipelines." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - AI/ML Workload Management",
+    "description": "Manage AI and machine learning workloads on Kubernetes. Monitor training jobs, inference services, GPU allocation, model serving, and MLOps pipelines across clusters.",
+    "url": "https://console.kubestellar.io/ai-ml",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "GPU workload management, Training job monitoring, Model serving dashboard, MLOps pipeline tracking, Inference scaling, Multi-cluster GPU scheduling"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>AI/ML <span class="accent">Workloads</span> on Kubernetes</h1>
+    <p class="subtitle">A purpose-built dashboard for managing machine learning workloads across Kubernetes clusters. Track training jobs, monitor inference endpoints, allocate GPU resources, and streamline your MLOps pipeline.</p>
+    <div class="hero-actions">
+      <a href="/ai-ml" class="btn-primary">View AI/ML Dashboard</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Built for Machine Learning Teams</h2>
+      <p>From model training to production inference, manage every stage of the ML lifecycle on Kubernetes with full GPU visibility.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4BB;</div>
+        <h3>GPU Resource Management</h3>
+        <p>Visualize GPU allocation across nodes and namespaces. See which training jobs and inference pods consume GPU resources, identify fragmentation, and optimize scheduling across clusters.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F3CB;</div>
+        <h3>Training Job Monitoring</h3>
+        <p>Track distributed training jobs across multiple nodes and GPUs. Monitor epoch progress, loss curves, checkpointing, and resource consumption in real time with multi-cluster support.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F680;</div>
+        <h3>Model Serving Dashboard</h3>
+        <p>Monitor inference endpoints powered by vLLM, TGI, Triton, and KServe. Track request latency, throughput, queue depth, and auto-scaling decisions across serving clusters.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F504;</div>
+        <h3>MLOps Pipeline View</h3>
+        <p>Visualize end-to-end ML pipelines from data preparation through model deployment. Track pipeline runs, stage durations, and failure points with integration for Kubeflow and Argo Workflows.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F4C8;</div>
+        <h3>Auto-Scaling Analytics</h3>
+        <p>Monitor Horizontal Pod Autoscaler and custom metrics scaling for inference workloads. Visualize scaling events, queue buildup, and request patterns to fine-tune scaling policies.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4BE;</div>
+        <h3>Model Registry Integration</h3>
+        <p>Connect to model registries to track which model versions are deployed where. View model lineage, compare serving performance across versions, and manage canary deployments.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Multi-GPU</div>
+        <div class="stat-label">Visibility</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Training Metrics</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">vLLM</div>
+        <div class="stat-label">Integration</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Full</div>
+        <div class="stat-label">MLOps Pipeline</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>From training to inference, one dashboard for your ML platform.</h2>
+    <p>Give your ML engineering team the visibility they need to build, deploy, and scale models on Kubernetes with confidence.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

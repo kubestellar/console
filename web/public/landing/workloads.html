@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes Workload Management - KubeStellar Console</title>
+  <meta name="description" content="Manage Kubernetes workloads across multiple clusters. Monitor deployments, pods, services, and jobs from a unified multi-cluster workload dashboard." />
+  <meta name="keywords" content="kubernetes workloads, workload management, kubernetes deployments, multi-cluster workloads, pod management, kubernetes services" />
+  <link rel="canonical" href="https://console.kubestellar.io/workloads" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Kubernetes Workload Management - KubeStellar Console" />
+  <meta property="og:description" content="Manage Kubernetes workloads across multiple clusters. Monitor deployments, pods, services, and jobs from a unified multi-cluster workload dashboard." />
+  <meta property="og:url" content="https://console.kubestellar.io/workloads" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kubernetes Workload Management - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage Kubernetes workloads across multiple clusters. Monitor deployments, pods, services, and jobs from a unified multi-cluster workload dashboard." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Workload Management",
+    "description": "Manage Kubernetes workloads across multiple clusters. Monitor deployments, pods, services, and jobs from a unified multi-cluster workload dashboard.",
+    "url": "https://console.kubestellar.io/workloads",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Multi-cluster workload monitoring, Deployment tracking, Pod health visibility, Service discovery, Job scheduling, Resource quota management"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Unified <span class="accent">Workload</span> Management</h1>
+    <p class="subtitle">Monitor and manage all Kubernetes workloads across your entire fleet. Track deployments, pods, services, and jobs from a single pane of glass with real-time health and status indicators.</p>
+    <div class="hero-actions">
+      <a href="/workloads" class="btn-primary">View Workloads</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Complete Workload Lifecycle Management</h2>
+      <p>From deployment to decommission, gain full visibility and control over every workload in your multi-cluster environment.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2B22;</div>
+        <h3>Multi-Cluster Overview</h3>
+        <p>See every workload running across all connected clusters in one consolidated view. Filter by namespace, cluster, status, or workload type to find exactly what you need.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2714;</div>
+        <h3>Health Status Tracking</h3>
+        <p>Monitor workload health with color-coded status indicators. Quickly identify failing pods, pending deployments, and stuck jobs before they impact your users.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x21C4;</div>
+        <h3>Rolling Updates</h3>
+        <p>Track deployment rollout progress in real time. View revision history, rollback to previous versions, and monitor update strategies across multiple clusters simultaneously.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2699;</div>
+        <h3>Resource Quotas</h3>
+        <p>Monitor CPU and memory requests versus limits for every workload. Identify over-provisioned and under-provisioned containers to optimize resource allocation and reduce costs.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x23F1;</div>
+        <h3>Job &amp; CronJob Tracking</h3>
+        <p>Monitor batch job execution, completion rates, and scheduling. View CronJob history, detect failures early, and ensure scheduled tasks run reliably across your fleet.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4CB;</div>
+        <h3>Namespace Organization</h3>
+        <p>Group and filter workloads by namespace across clusters. Apply consistent resource policies, labels, and annotations to keep workloads organized at scale.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">All Types</div>
+        <div class="stat-label">Workload Resources</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Status Updates</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Multi-Cluster</div>
+        <div class="stat-label">Visibility</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Instant</div>
+        <div class="stat-label">Rollbacks</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Every workload, every cluster, one dashboard.</h2>
+    <p>Stop switching between clusters to check workload status. Get a complete view of your entire Kubernetes fleet.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

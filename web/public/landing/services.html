@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Service Management &amp; Load Balancing - KubeStellar Console</title>
+  <meta name="description" content="Manage Kubernetes services, endpoints, and load balancers across clusters. Monitor service discovery, track ingress routes, and visualize traffic flow in a multi-cluster environment." />
+  <meta name="keywords" content="kubernetes service management, kubernetes load balancer, service discovery, kubernetes ingress, endpoint monitoring, multi-cluster services, kubernetes networking" />
+  <link rel="canonical" href="https://console.kubestellar.io/services" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Service Management &amp; Load Balancing - KubeStellar Console" />
+  <meta property="og:description" content="Manage Kubernetes services, endpoints, and load balancers across clusters. Monitor service discovery, track ingress routes, and visualize traffic flow." />
+  <meta property="og:url" content="https://console.kubestellar.io/services" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Service Management &amp; Load Balancing - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage Kubernetes services, endpoints, and load balancers across clusters. Monitor service discovery and visualize traffic flow." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Service Management",
+    "description": "Manage Kubernetes services, endpoints, and load balancers across clusters. Monitor service discovery, track ingress routes, and visualize traffic flow in a multi-cluster environment.",
+    "url": "https://console.kubestellar.io/services",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Service monitoring, Endpoint tracking, Ingress management, Load balancer status, Cross-cluster service discovery, Traffic flow visualization"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Service <span class="accent">Discovery</span> &amp; Load Balancing</h1>
+    <p class="subtitle">Monitor and manage Kubernetes services, endpoints, and ingress routes across your multi-cluster fleet. Visualize traffic flow, track load balancer health, and ensure reliable service connectivity.</p>
+    <div class="hero-actions">
+      <a href="/services" class="btn-primary">View Services</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Network Connectivity at a Glance</h2>
+      <p>Understand how traffic reaches your workloads with complete visibility into services, endpoints, and routing across clusters.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F310;</div>
+        <h3>Service Catalog</h3>
+        <p>Browse all ClusterIP, NodePort, LoadBalancer, and ExternalName services across every cluster. Filter by type, namespace, or port to find specific services instantly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F517;</div>
+        <h3>Endpoint Health</h3>
+        <p>Monitor endpoint readiness for every service. See which pods are backing each service, identify services with zero ready endpoints, and track endpoint churn over time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x2197;</div>
+        <h3>Ingress &amp; Route Tracking</h3>
+        <p>View all ingress resources and OpenShift routes across clusters. Track TLS certificate expiry, hostname mappings, path rules, and backend service connectivity status.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x2696;</div>
+        <h3>Load Balancer Status</h3>
+        <p>Monitor external load balancer provisioning, IP assignment, and health checks. Detect stuck LoadBalancer services waiting for IP allocation and track cloud provider load balancer costs.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F6E0;</div>
+        <h3>Port Mapping Visibility</h3>
+        <p>See the complete port chain from service port to target port to container port. Identify port conflicts, misconfigurations, and protocol mismatches before they cause connectivity issues.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F50C;</div>
+        <h3>Cross-Cluster Services</h3>
+        <p>Visualize services that span multiple clusters via multi-cluster service discovery. Track service export and import status, and monitor cross-cluster traffic routing health.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">All Types</div>
+        <div class="stat-label">Service Coverage</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Endpoint</div>
+        <div class="stat-label">Health Checks</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Ingress</div>
+        <div class="stat-label">Route Tracking</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Cross-Cluster</div>
+        <div class="stat-label">Discovery</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Every service, every endpoint, every cluster.</h2>
+    <p>Ensure reliable connectivity across your entire Kubernetes fleet with a dashboard that makes service networking visible and manageable.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

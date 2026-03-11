@@ -51,6 +51,29 @@ const LANDING_PAGE_MAP: Record<string, string> = {
   "/gpu-reservations": "/landing/gpu.html",
   "/deploy": "/landing/deploy.html",
   "/security": "/landing/security.html",
+  "/workloads": "/landing/workloads.html",
+  "/llm-d-benchmarks": "/landing/llm-d-benchmarks.html",
+  "/gitops": "/landing/gitops.html",
+  "/marketplace": "/landing/marketplace.html",
+  "/ai-agents": "/landing/ai-agents.html",
+  "/cost": "/landing/cost.html",
+  "/ai-ml": "/landing/ai-ml.html",
+  "/nodes": "/landing/nodes.html",
+  "/deployments": "/landing/deployments.html",
+  "/pods": "/landing/pods.html",
+  "/services": "/landing/services.html",
+  "/operators": "/landing/operators.html",
+  "/helm": "/landing/helm.html",
+  "/events": "/landing/events.html",
+  "/logs": "/landing/logs.html",
+  "/compute": "/landing/compute.html",
+  "/storage": "/landing/storage.html",
+  "/network": "/landing/network.html",
+  "/alerts": "/landing/alerts.html",
+  "/security-posture": "/landing/security-posture.html",
+  "/data-compliance": "/landing/data-compliance.html",
+  "/ci-cd": "/landing/ci-cd.html",
+  "/arcade": "/landing/arcade.html",
 };
 
 /** Check if the user-agent belongs to a search engine crawler or social bot */
@@ -211,6 +234,193 @@ const ROUTE_META: Record<string, RouteMeta> = {
       "kubernetes cost optimization",
       "cluster cost tracking",
       "kubernetes FinOps",
+    ],
+  },
+  "/ai-ml": {
+    title: "AI/ML Workload Management on Kubernetes - KubeStellar Console",
+    description:
+      "Manage AI and machine learning workloads across Kubernetes clusters. GPU scheduling, model serving, training job orchestration, and inference optimization.",
+    keywords: [
+      "kubernetes AI ML",
+      "kubernetes machine learning",
+      "GPU workload management",
+      "kubernetes model serving",
+    ],
+  },
+  "/nodes": {
+    title: "Kubernetes Node Management - KubeStellar Console",
+    description:
+      "Monitor and manage Kubernetes nodes across clusters. Node health, capacity planning, resource pressure conditions, and scheduling status.",
+    keywords: [
+      "kubernetes node management",
+      "kubernetes node monitoring",
+      "node capacity planning",
+      "kubernetes node health",
+    ],
+  },
+  "/deployments": {
+    title: "Kubernetes Deployment Management - KubeStellar Console",
+    description:
+      "Manage Kubernetes deployments across clusters. Rolling updates, rollback history, replica scaling, and deployment health monitoring.",
+    keywords: [
+      "kubernetes deployment management",
+      "kubernetes rolling update",
+      "deployment scaling",
+      "kubernetes deployment monitoring",
+    ],
+  },
+  "/pods": {
+    title: "Kubernetes Pod Monitoring - KubeStellar Console",
+    description:
+      "Monitor pods across all Kubernetes clusters. Real-time pod status, container logs, resource usage, and debugging tools.",
+    keywords: [
+      "kubernetes pod monitoring",
+      "kubernetes pod logs",
+      "pod debugging",
+      "kubernetes pod status",
+    ],
+  },
+  "/services": {
+    title: "Kubernetes Service Management - KubeStellar Console",
+    description:
+      "Manage Kubernetes services across clusters. Service discovery, endpoint health, load balancing configuration, and ingress management.",
+    keywords: [
+      "kubernetes service management",
+      "kubernetes service discovery",
+      "kubernetes load balancing",
+      "kubernetes ingress",
+    ],
+  },
+  "/operators": {
+    title: "Kubernetes Operator Management - KubeStellar Console",
+    description:
+      "Manage Kubernetes operators and custom resources across clusters. OLM integration, operator lifecycle, CRD management, and operator health monitoring.",
+    keywords: [
+      "kubernetes operators",
+      "kubernetes OLM",
+      "custom resource management",
+      "operator lifecycle",
+    ],
+  },
+  "/helm": {
+    title: "Helm Chart Management - KubeStellar Console",
+    description:
+      "Manage Helm releases across Kubernetes clusters. Chart repository browsing, release history, upgrade management, and values configuration.",
+    keywords: [
+      "helm chart management",
+      "kubernetes helm dashboard",
+      "helm release management",
+      "helm repository",
+    ],
+  },
+  "/events": {
+    title: "Kubernetes Event Monitoring - KubeStellar Console",
+    description:
+      "Monitor Kubernetes events across all clusters in real-time. Warning detection, event correlation, and automated alerting for cluster issues.",
+    keywords: [
+      "kubernetes events",
+      "kubernetes event monitoring",
+      "kubernetes warning events",
+      "cluster event alerting",
+    ],
+  },
+  "/logs": {
+    title: "Kubernetes Log Aggregation - KubeStellar Console",
+    description:
+      "Centralized log viewing across all Kubernetes clusters. Container logs, pod logs, and cluster-wide log search with filtering and streaming.",
+    keywords: [
+      "kubernetes logs",
+      "kubernetes log aggregation",
+      "container log viewer",
+      "kubernetes log search",
+    ],
+  },
+  "/compute": {
+    title: "Kubernetes Compute Resources - KubeStellar Console",
+    description:
+      "Manage compute resources across Kubernetes clusters. CPU and memory utilization, resource quotas, limit ranges, and capacity planning.",
+    keywords: [
+      "kubernetes compute resources",
+      "kubernetes resource management",
+      "kubernetes capacity planning",
+      "CPU memory utilization",
+    ],
+  },
+  "/storage": {
+    title: "Kubernetes Storage Management - KubeStellar Console",
+    description:
+      "Manage storage across Kubernetes clusters. Persistent volumes, storage classes, PVC monitoring, and storage capacity tracking.",
+    keywords: [
+      "kubernetes storage management",
+      "kubernetes persistent volumes",
+      "kubernetes PVC",
+      "kubernetes storage class",
+    ],
+  },
+  "/network": {
+    title: "Kubernetes Network Management - KubeStellar Console",
+    description:
+      "Manage network policies and service mesh across Kubernetes clusters. Network policy visualization, traffic flow analysis, and connectivity debugging.",
+    keywords: [
+      "kubernetes network policy",
+      "kubernetes service mesh",
+      "kubernetes networking",
+      "network policy management",
+    ],
+  },
+  "/alerts": {
+    title: "Kubernetes Alert Management - KubeStellar Console",
+    description:
+      "Manage alerts across Kubernetes clusters. Prometheus and Alertmanager integration, alert routing, silencing, and incident management.",
+    keywords: [
+      "kubernetes alerts",
+      "kubernetes prometheus alerts",
+      "kubernetes alertmanager",
+      "kubernetes incident management",
+    ],
+  },
+  "/security-posture": {
+    title: "Kubernetes Security Posture Assessment - KubeStellar Console",
+    description:
+      "Assess security posture across Kubernetes clusters. CIS benchmarks, pod security standards, image vulnerability scanning, and compliance scoring.",
+    keywords: [
+      "kubernetes security posture",
+      "kubernetes CIS benchmark",
+      "kubernetes compliance",
+      "pod security standards",
+    ],
+  },
+  "/data-compliance": {
+    title: "Kubernetes Data Compliance - KubeStellar Console",
+    description:
+      "Monitor data compliance across Kubernetes clusters. GDPR, HIPAA, SOC 2 compliance tracking, data residency policies, and audit reporting.",
+    keywords: [
+      "kubernetes compliance",
+      "kubernetes GDPR",
+      "kubernetes data governance",
+      "kubernetes audit",
+    ],
+  },
+  "/ci-cd": {
+    title: "CI/CD Pipeline Monitoring - KubeStellar Console",
+    description:
+      "Monitor CI/CD pipelines across Kubernetes clusters. Build status tracking, deployment frequency, lead time metrics, and pipeline health dashboards.",
+    keywords: [
+      "kubernetes CI CD",
+      "kubernetes pipeline monitoring",
+      "kubernetes deployment frequency",
+      "CI CD dashboard",
+    ],
+  },
+  "/arcade": {
+    title: "Kubernetes Learning Arcade - KubeStellar Console",
+    description:
+      "Interactive games and challenges for learning Kubernetes concepts. Practice cluster operations, debugging scenarios, and resource management in a safe environment.",
+    keywords: [
+      "kubernetes learning",
+      "kubernetes training",
+      "kubernetes interactive tutorial",
+      "kubernetes practice",
     ],
   },
 };

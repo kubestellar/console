@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Centralized Log Aggregation - KubeStellar Console</title>
+  <meta name="description" content="Aggregate and search container logs across all Kubernetes clusters. Stream logs in real time, correlate across services, and debug distributed applications from a single interface." />
+  <meta name="keywords" content="kubernetes logs, centralized logging, container log aggregation, kubernetes log search, multi-cluster logs, log streaming, kubernetes debugging" />
+  <link rel="canonical" href="https://console.kubestellar.io/logs" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Centralized Log Aggregation - KubeStellar Console" />
+  <meta property="og:description" content="Aggregate and search container logs across all Kubernetes clusters. Stream logs in real time, correlate across services, and debug distributed applications." />
+  <meta property="og:url" content="https://console.kubestellar.io/logs" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Centralized Log Aggregation - KubeStellar Console" />
+  <meta name="twitter:description" content="Aggregate and search container logs across all Kubernetes clusters. Stream logs in real time and debug distributed applications." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Centralized Logging",
+    "description": "Aggregate and search container logs across all Kubernetes clusters. Stream logs in real time, correlate across services, and debug distributed applications from a single interface.",
+    "url": "https://console.kubestellar.io/logs",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Centralized log aggregation, Real-time log streaming, Cross-cluster log search, Service correlation, Log level filtering, Previous container logs"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Centralized <span class="accent">Log</span> Aggregation</h1>
+    <p class="subtitle">Search, stream, and analyze container logs from every cluster in your fleet. Correlate log entries across microservices, filter by severity, and trace request flows through distributed applications.</p>
+    <div class="hero-actions">
+      <a href="/logs" class="btn-primary">View Logs</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Logs from Every Container, One Search Bar</h2>
+      <p>Stop running kubectl logs across dozens of clusters. Bring all your container output together and find what you need in seconds.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4DC;</div>
+        <h3>Live Log Streaming</h3>
+        <p>Stream logs in real time from any container across any cluster. Support for following multiple containers simultaneously, with auto-scroll and pause controls for detailed analysis.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F50E;</div>
+        <h3>Full-Text Search</h3>
+        <p>Search across all container logs with regex support. Find error messages, stack traces, request IDs, and specific patterns across your entire fleet in milliseconds.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F517;</div>
+        <h3>Service Correlation</h3>
+        <p>Trace requests across microservices by correlating log entries using request IDs, trace IDs, or timestamps. See the full journey of a request as it passes through multiple services and clusters.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F3AF;</div>
+        <h3>Level Filtering</h3>
+        <p>Filter logs by severity level: DEBUG, INFO, WARN, ERROR, FATAL. Quickly surface error logs from noisy applications and focus on the messages that matter during incident response.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F4C1;</div>
+        <h3>Previous Container Logs</h3>
+        <p>Access logs from crashed and restarted containers. View previous container output to understand why a container exited, even after the pod has been rescheduled to a different node.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4E5;</div>
+        <h3>Log Export</h3>
+        <p>Export filtered log results for offline analysis or sharing with team members. Download as plain text or structured JSON, and integrate with external log management platforms.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">All Clusters</div>
+        <div class="stat-label">Aggregated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Real-Time</div>
+        <div class="stat-label">Streaming</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Regex</div>
+        <div class="stat-label">Search</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Cross-Service</div>
+        <div class="stat-label">Correlation</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>One search bar for every log in your fleet.</h2>
+    <p>Debug faster with centralized logs that let you trace issues across services, clusters, and time from a single dashboard.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

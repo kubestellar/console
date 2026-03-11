@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Kubernetes Learning Arcade - KubeStellar Console</title>
+  <meta name="description" content="Learn Kubernetes through interactive games and challenges. Practice cluster management, pod scheduling, network policies, and troubleshooting in a safe, gamified environment." />
+  <meta name="keywords" content="kubernetes learning, kubernetes games, interactive kubernetes training, kubernetes practice, kubernetes challenges, learn kubernetes online, kubernetes education, gamified learning" />
+  <link rel="canonical" href="https://console.kubestellar.io/arcade" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Interactive Kubernetes Learning Arcade - KubeStellar Console" />
+  <meta property="og:description" content="Learn Kubernetes through interactive games and challenges. Practice cluster management, pod scheduling, and troubleshooting in a gamified environment." />
+  <meta property="og:url" content="https://console.kubestellar.io/arcade" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Interactive Kubernetes Learning Arcade - KubeStellar Console" />
+  <meta name="twitter:description" content="Learn Kubernetes through interactive games and challenges. Practice cluster management, scheduling, and troubleshooting." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Kubernetes Learning Arcade",
+    "description": "Learn Kubernetes through interactive games and challenges. Practice cluster management, pod scheduling, network policies, and troubleshooting in a safe, gamified environment.",
+    "url": "https://console.kubestellar.io/arcade",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Interactive Kubernetes games, Pod scheduling challenges, Network policy puzzles, Troubleshooting scenarios, Achievement system, Leaderboard"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Kubernetes <span class="accent">Learning</span> Arcade</h1>
+    <p class="subtitle">Master Kubernetes concepts through interactive games and challenges. Schedule pods, configure network policies, troubleshoot failures, and compete on leaderboards in a safe, gamified environment embedded in your console.</p>
+    <div class="hero-actions">
+      <a href="/arcade" class="btn-primary">Play Now</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Learn by Playing, Not Just Reading</h2>
+      <p>Interactive challenges that build real Kubernetes skills. No sandbox cluster required. Play directly in your console and learn at your own pace.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F3AE;</div>
+        <h3>Pod Scheduling Game</h3>
+        <p>Place pods on nodes while respecting resource constraints, node affinity, taints, and tolerations. Race against the clock to schedule workloads efficiently and earn a high score.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F6E1;</div>
+        <h3>Network Policy Puzzle</h3>
+        <p>Build network policies to allow or deny traffic between services. Each level introduces new concepts: namespace isolation, port restrictions, CIDR blocks, and egress rules.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x1F527;</div>
+        <h3>Troubleshooting Scenarios</h3>
+        <p>Diagnose and fix broken deployments with only the clues a real cluster would give you. Investigate events, logs, and resource status to resolve CrashLoopBackOff, ImagePullBackOff, and more.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F3C6;</div>
+        <h3>Achievement System</h3>
+        <p>Unlock achievements as you master Kubernetes concepts. From &ldquo;First Pod&rdquo; to &ldquo;Multi-Cluster Master,&rdquo; track your progress and showcase your skills with badges on your profile.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x1F4C8;</div>
+        <h3>Skill Progression</h3>
+        <p>Challenges are organized by difficulty and topic. Start with basic pod concepts and progress through deployments, services, RBAC, storage, and advanced scheduling as your skills grow.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F465;</div>
+        <h3>Team Leaderboard</h3>
+        <p>Compete with colleagues and the community on global leaderboards. Track speed, accuracy, and total challenges completed. Great for team training sessions and onboarding new engineers.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">Interactive</div>
+        <div class="stat-label">Challenges</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Progressive</div>
+        <div class="stat-label">Difficulty</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Achievements</div>
+        <div class="stat-label">&amp; Badges</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Team</div>
+        <div class="stat-label">Leaderboards</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>The most fun way to learn Kubernetes.</h2>
+    <p>Build real skills through interactive challenges, not just documentation. Play games that teach you how Kubernetes actually works.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>

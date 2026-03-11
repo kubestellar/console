@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Helm Chart Management &amp; Releases - KubeStellar Console</title>
+  <meta name="description" content="Manage Helm releases and chart repositories across Kubernetes clusters. Track installed charts, monitor release health, compare values, and upgrade Helm deployments fleet-wide." />
+  <meta name="keywords" content="helm chart management, helm releases, kubernetes helm, helm repository, helm upgrade, multi-cluster helm, helm dashboard, helm rollback" />
+  <link rel="canonical" href="https://console.kubestellar.io/helm" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Helm Chart Management &amp; Releases - KubeStellar Console" />
+  <meta property="og:description" content="Manage Helm releases and chart repositories across Kubernetes clusters. Track installed charts, monitor release health, and upgrade deployments fleet-wide." />
+  <meta property="og:url" content="https://console.kubestellar.io/helm" />
+  <meta property="og:image" content="https://console.kubestellar.io/kubestellar.png" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="400" />
+  <meta property="og:site_name" content="KubeStellar Console" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Helm Chart Management &amp; Releases - KubeStellar Console" />
+  <meta name="twitter:description" content="Manage Helm releases and chart repositories across Kubernetes clusters. Track charts, monitor health, and upgrade fleet-wide." />
+  <meta name="twitter:image" content="https://console.kubestellar.io/kubestellar.png" />
+
+  <link rel="stylesheet" href="/landing/style.css" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KubeStellar Console - Helm Chart Management",
+    "description": "Manage Helm releases and chart repositories across Kubernetes clusters. Track installed charts, monitor release health, compare values, and upgrade Helm deployments fleet-wide.",
+    "url": "https://console.kubestellar.io/helm",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "screenshot": "https://console.kubestellar.io/kubestellar.png",
+    "softwareVersion": "1.0",
+    "author": {
+      "@type": "Organization",
+      "name": "KubeStellar Contributors",
+      "url": "https://kubestellar.io"
+    },
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/kubestellar/console",
+    "featureList": "Helm release tracking, Chart repository management, Values comparison, Fleet-wide upgrades, Release rollback, Multi-cluster Helm overview"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      KubeStellar Console
+    </a>
+    <div class="nav-links">
+      <a href="/clusters">Clusters</a>
+      <a href="/workloads">Workloads</a>
+      <a href="/missions">Missions</a>
+      <a href="/deploy">Deploy</a>
+    </div>
+    <a href="/" class="nav-cta">Open Console &rarr;</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Helm <span class="accent">Chart</span> Management</h1>
+    <p class="subtitle">Track, upgrade, and manage Helm releases across your entire Kubernetes fleet. Compare chart values between clusters, detect version drift, and execute coordinated upgrades from one dashboard.</p>
+    <div class="hero-actions">
+      <a href="/helm" class="btn-primary">View Helm Releases</a>
+      <a href="https://github.com/kubestellar/console" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Helm at Scale, Across Clusters</h2>
+      <p>Managing Helm releases in a single cluster is easy. Managing them across dozens of clusters requires a different approach.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4CB;</div>
+        <h3>Release Inventory</h3>
+        <p>See every Helm release installed across all clusters in one table. Filter by chart name, version, namespace, or status to quickly locate specific releases and their health.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4CA;</div>
+        <h3>Values Comparison</h3>
+        <p>Compare Helm values files across clusters to spot configuration differences. Detect when the same chart is deployed with different settings in production versus staging environments.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">&#x2B06;</div>
+        <h3>Upgrade Orchestration</h3>
+        <p>Upgrade Helm releases across multiple clusters in a controlled sequence. Define upgrade order, pause between clusters for validation, and automatically roll back on failure detection.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#x1F4E6;</div>
+        <h3>Repository Management</h3>
+        <p>Manage Helm chart repositories across your fleet. Add, remove, and sync repositories. Browse available charts with version history and dependency information before installing.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon yellow">&#x26A0;</div>
+        <h3>Failed Release Detection</h3>
+        <p>Identify Helm releases in failed, pending-install, or pending-upgrade states across clusters. View error messages, attempted values, and hooks that failed to guide remediation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#x1F4C5;</div>
+        <h3>Release History</h3>
+        <p>View the complete history of every Helm release including install, upgrade, and rollback events. Compare any two revisions to see exactly what changed between deployments.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">All Releases</div>
+        <div class="stat-label">Tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Cross-Cluster</div>
+        <div class="stat-label">Values Diff</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Orchestrated</div>
+        <div class="stat-label">Upgrades</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Full</div>
+        <div class="stat-label">History</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Helm management that scales with your fleet.</h2>
+    <p>Stop running helm list across every cluster. See all your releases, values, and upgrade paths in one place.</p>
+    <a href="/" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/kubestellar/console" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://docs.kubestellar.io" target="_blank" rel="noopener noreferrer">Documentation</a>
+      <a href="https://kubestellar.io" target="_blank" rel="noopener noreferrer">Community</a>
+    </div>
+    <p>&copy; 2024 KubeStellar Contributors</p>
+  </footer>
+
+</body>
+</html>
