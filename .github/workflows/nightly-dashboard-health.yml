@@ -33,6 +33,7 @@ concurrency:
 
 jobs:
   health-check:
+    if: github.repository == 'kubestellar/console'
     name: Dashboard Health Check
     runs-on: ubuntu-latest
     timeout-minutes: 20

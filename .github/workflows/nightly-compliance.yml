@@ -31,6 +31,7 @@ permissions:
 
 jobs:
   build:
+    if: github.repository == 'kubestellar/console'
     name: Build
     runs-on: ubuntu-latest
     defaults:
