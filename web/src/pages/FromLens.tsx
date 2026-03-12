@@ -117,15 +117,12 @@ const LOCALHOST_STEPS: InstallStep[] = [
     step: 1,
     title: 'Install and run',
     commands: [
-      'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash',
+      'curl -sSL \\',
+      '  https://raw.githubusercontent.com/kubestellar/console/main/start.sh \\',
+      '  | bash',
     ],
-    description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser. No Go, Node.js, or build tools required.',
-  },
-  {
-    step: 2,
-    title: 'That\'s it',
-    note: 'Or install via Homebrew: brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
-    description: 'Console auto-detects your kubeconfig and discovers all cluster contexts immediately. Opens at http://localhost:8080.',
+    note: 'Or via Homebrew: brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
+    description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser at http://localhost:8080. No Go, Node.js, or build tools required.',
   },
 ]
 
