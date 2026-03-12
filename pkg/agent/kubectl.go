@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -572,6 +573,7 @@ func (k *KubectlProxy) TestClusterConnection(req TestConnectionRequest) (*TestCo
 		cfg.TLSClientConfig.CAData = caBytes
 	}
 	cfg.TLSClientConfig.Insecure = req.SkipTLSVerify
+	k8s.DisableHTTP2(cfg)
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {

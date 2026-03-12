@@ -40,6 +40,13 @@ const (
 	slowClusterTTL            = 2 * time.Minute
 )
 
+// DisableHTTP2 forces HTTP/1.1 on a rest.Config to avoid a known Go runtime
+// panic in the HTTP/2 hpack encoder (id <= evictCount) that occurs under
+// concurrent connections to Kubernetes API servers.
+func DisableHTTP2(config *rest.Config) {
+	config.NextProtos = []string{"http/1.1"}
+}
+
 // MultiClusterClient manages connections to multiple Kubernetes clusters
 type MultiClusterClient struct {
 	mu              sync.RWMutex
@@ -646,6 +653,7 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 		// No kubeconfig file, try in-cluster config
 		if inClusterConfig, err := rest.InClusterConfig(); err == nil {
 			log.Println("Using in-cluster config (no kubeconfig file found)")
+			DisableHTTP2(inClusterConfig)
 			client.inClusterConfig = inClusterConfig
 			client.inClusterName = detectInClusterName(inClusterConfig)
 			log.Printf("Detected in-cluster name: %s", client.inClusterName)
@@ -1195,6 +1203,7 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 	// Set reasonable timeouts — large OpenShift clusters (18+ nodes) can return
 	// 800KB+ node payloads that take >10s over higher-latency links
 	config.Timeout = k8sClientTimeout
+	DisableHTTP2(config)
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -1255,6 +1264,7 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 			}
 		}
 		config.Timeout = k8sClientTimeout
+		DisableHTTP2(config)
 		m.configs[contextName] = config
 	}
 
