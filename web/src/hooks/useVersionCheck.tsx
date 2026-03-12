@@ -728,8 +728,14 @@ function useVersionCheckCore() {
 
     if (!latestRelease || currentVersion === 'unknown') return false
     if (skippedVersions.includes(latestRelease.tag)) return false
+
+    // Helm installs with unset VITE_APP_VERSION report '0.0.0' which isDevVersion
+    // treats as a dev build. For Helm self-upgrade we still want to show the update
+    // button whenever a newer release exists on the selected channel.
+    if (installMethod === 'helm' && isDevVersion(currentVersion)) return true
+
     return isNewerVersion(currentVersion, latestRelease.tag, channel)
-  }, [latestRelease, currentVersion, skippedVersions, channel, autoUpdateStatus, latestMainSHA, commitHash])
+  }, [latestRelease, currentVersion, skippedVersions, channel, autoUpdateStatus, latestMainSHA, commitHash, installMethod])
 
   // Load cached data on mount
   useEffect(() => {
