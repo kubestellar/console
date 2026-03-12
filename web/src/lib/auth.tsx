@@ -3,6 +3,7 @@ import { api, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
+import { setDemoMode as setGlobalDemoMode } from './demoMode'
 
 interface User {
   id: string
@@ -169,6 +170,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(demoUser)
     cacheUser(demoUser)
     setAnalyticsUserProperties({ auth_mode: 'demo' })
+    // Sync the global demoMode singleton so Layout banners and useDemoMode() hook
+    // reflect demo state immediately — without this, the in-cluster banner won't
+    // render because Layout's auto-demo-enable effect skips when isInClusterMode.
+    setGlobalDemoMode(true)
   }, [])
 
   const refreshUser = useCallback(async (overrideToken?: string) => {
