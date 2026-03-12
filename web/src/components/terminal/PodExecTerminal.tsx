@@ -1,0 +1,358 @@
+/**
+ * PodExecTerminal - Interactive terminal for pod exec sessions
+ *
+ * Wraps xterm.js to provide an in-browser terminal connected via WebSocket
+ * to the backend /api/exec endpoint for SPDY-bridged pod exec.
+ */
+
+import { useEffect, useRef, useCallback, useState } from 'react'
+import { Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import { useExecSession, type ExecSessionConfig, type SessionStatus } from '../../hooks/useExecSession'
+import { Loader2, AlertCircle, RotateCcw, Power, ChevronDown } from 'lucide-react'
+import '@xterm/xterm/css/xterm.css'
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Debounce delay for terminal resize events */
+const RESIZE_DEBOUNCE_MS = 100
+
+/** Default terminal font size in pixels */
+const TERMINAL_FONT_SIZE = 13
+
+/** Default terminal line height */
+const TERMINAL_LINE_HEIGHT = 1.2
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface PodExecTerminalProps {
+  cluster: string
+  namespace: string
+  pod: string
+  /** Available container names */
+  containers?: string[]
+  /** Pre-selected container (defaults to first in list) */
+  defaultContainer?: string
+}
+
+// ============================================================================
+// Component
+// ============================================================================
+
+export function PodExecTerminal({
+  cluster,
+  namespace,
+  pod,
+  containers = [],
+  defaultContainer,
+}: PodExecTerminalProps) {
+  const terminalRef = useRef<HTMLDivElement>(null)
+  const xtermRef = useRef<Terminal | null>(null)
+  const fitAddonRef = useRef<FitAddon | null>(null)
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [selectedContainer, setSelectedContainer] = useState(
+    defaultContainer || (containers.length > 0 ? containers[0] : '')
+  )
+  const [showContainerPicker, setShowContainerPicker] = useState(false)
+  const [exitCode, setExitCode] = useState<number | null>(null)
+
+  const {
+    status,
+    error,
+    connect,
+    disconnect,
+    sendInput,
+    resize,
+    onData,
+    onExit,
+  } = useExecSession()
+
+  // Initialize xterm.js terminal
+  useEffect(() => {
+    if (!terminalRef.current) return
+
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: TERMINAL_FONT_SIZE,
+      lineHeight: TERMINAL_LINE_HEIGHT,
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      theme: {
+        background: '#0d1117',
+        foreground: '#c9d1d9',
+        cursor: '#58a6ff',
+        selectionBackground: '#264f78',
+        black: '#0d1117',
+        red: '#ff7b72',
+        green: '#7ee787',
+        yellow: '#d29922',
+        blue: '#58a6ff',
+        magenta: '#bc8cff',
+        cyan: '#39c5cf',
+        white: '#b1bac4',
+        brightBlack: '#484f58',
+        brightRed: '#ffa198',
+        brightGreen: '#56d364',
+        brightYellow: '#e3b341',
+        brightBlue: '#79c0ff',
+        brightMagenta: '#d2a8ff',
+        brightCyan: '#56d4dd',
+        brightWhite: '#f0f6fc',
+      },
+    })
+
+    const fitAddon = new FitAddon()
+    term.loadAddon(fitAddon)
+    term.open(terminalRef.current)
+
+    // Initial fit after a frame to ensure container is sized
+    requestAnimationFrame(() => {
+      fitAddon.fit()
+    })
+
+    xtermRef.current = term
+    fitAddonRef.current = fitAddon
+
+    return () => {
+      term.dispose()
+      xtermRef.current = null
+      fitAddonRef.current = null
+    }
+  }, [])
+
+  // Wire xterm input → WebSocket
+  useEffect(() => {
+    const term = xtermRef.current
+    if (!term) return
+
+    const disposable = term.onData((data) => {
+      sendInput(data)
+    })
+
+    return () => disposable.dispose()
+  }, [sendInput])
+
+  // Wire WebSocket output → xterm
+  useEffect(() => {
+    onData((data) => {
+      xtermRef.current?.write(data)
+    })
+  }, [onData])
+
+  // Wire exit callback
+  useEffect(() => {
+    onExit((code) => {
+      setExitCode(code)
+      xtermRef.current?.write(`\r\n\x1b[33m[Process exited with code ${code}]\x1b[0m\r\n`)
+    })
+  }, [onExit])
+
+  // Handle window resize → fit terminal → send resize to backend
+  useEffect(() => {
+    const handleResize = () => {
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current)
+      }
+      resizeTimerRef.current = setTimeout(() => {
+        const fitAddon = fitAddonRef.current
+        const term = xtermRef.current
+        if (fitAddon && term) {
+          fitAddon.fit()
+          resize(term.cols, term.rows)
+        }
+      }, RESIZE_DEBOUNCE_MS)
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    // Also observe the terminal container for size changes
+    const observer = new ResizeObserver(handleResize)
+    if (terminalRef.current) {
+      observer.observe(terminalRef.current)
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      observer.disconnect()
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current)
+      }
+    }
+  }, [resize])
+
+  // Connect to exec session
+  const handleConnect = useCallback(() => {
+    setExitCode(null)
+    const term = xtermRef.current
+    const fitAddon = fitAddonRef.current
+
+    // Clear terminal
+    term?.reset()
+
+    // Fit to get accurate dimensions
+    if (fitAddon) {
+      fitAddon.fit()
+    }
+
+    const config: ExecSessionConfig = {
+      cluster,
+      namespace,
+      pod,
+      container: selectedContainer,
+      command: ['/bin/sh'],
+      tty: true,
+      cols: term?.cols || 80,
+      rows: term?.rows || 24,
+    }
+    connect(config)
+  }, [cluster, namespace, pod, selectedContainer, connect])
+
+  // Auto-connect on mount if container is known
+  useEffect(() => {
+    if (selectedContainer && status === 'disconnected' && exitCode === null) {
+      handleConnect()
+    }
+    // Only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleDisconnect = useCallback(() => {
+    disconnect()
+  }, [disconnect])
+
+  const handleReconnect = useCallback(() => {
+    handleConnect()
+  }, [handleConnect])
+
+  // Focus terminal when connected
+  useEffect(() => {
+    if (status === 'connected') {
+      xtermRef.current?.focus()
+    }
+  }, [status])
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-[#30363d]">
+        <div className="flex items-center gap-3">
+          {/* Container picker */}
+          {containers.length > 1 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowContainerPicker(!showContainerPicker)}
+                className="flex items-center gap-2 px-3 py-1 text-xs rounded bg-[#21262d] border border-[#30363d] text-[#c9d1d9] hover:border-[#58a6ff] transition-colors"
+              >
+                <span className="text-[#8b949e]">container:</span>
+                <span className="font-mono">{selectedContainer || 'none'}</span>
+                <ChevronDown className="w-3 h-3 text-[#8b949e]" />
+              </button>
+              {showContainerPicker && (
+                <div className="absolute top-full left-0 mt-1 z-50 bg-[#161b22] border border-[#30363d] rounded shadow-lg">
+                  {containers.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setSelectedContainer(c)
+                        setShowContainerPicker(false)
+                      }}
+                      className={`block w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-[#21262d] transition-colors ${
+                        c === selectedContainer ? 'text-[#58a6ff]' : 'text-[#c9d1d9]'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Status indicator */}
+          <StatusIndicatorDot status={status} />
+        </div>
+
+        <div className="flex items-center gap-2">
+          {(status === 'disconnected' || status === 'error') && (
+            <button
+              onClick={handleReconnect}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs rounded bg-[#238636] hover:bg-[#2ea043] text-white transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              {exitCode !== null ? 'Reconnect' : 'Connect'}
+            </button>
+          )}
+          {status === 'connected' && (
+            <button
+              onClick={handleDisconnect}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs rounded bg-[#da3633] hover:bg-[#f85149] text-white transition-colors"
+            >
+              <Power className="w-3 h-3" />
+              Disconnect
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Terminal area */}
+      <div className="flex-1 relative bg-[#0d1117]">
+        {/* Overlay for connecting/error states */}
+        {status === 'connecting' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]/80 z-10">
+            <div className="flex items-center gap-3 text-[#8b949e]">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Connecting to {pod}...</span>
+            </div>
+          </div>
+        )}
+        {status === 'error' && error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]/80 z-10">
+            <div className="flex flex-col items-center gap-3 text-center max-w-md">
+              <AlertCircle className="w-8 h-8 text-[#f85149]" />
+              <div className="text-sm text-[#f85149]">{error}</div>
+              <button
+                onClick={handleReconnect}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] border border-[#30363d] transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* xterm.js container */}
+        <div
+          ref={terminalRef}
+          className="absolute inset-0 p-2"
+          style={{ minHeight: 0 }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Sub-Components
+// ============================================================================
+
+function StatusIndicatorDot({ status }: { status: SessionStatus }) {
+  const config = {
+    disconnected: { color: 'bg-[#484f58]', label: 'Disconnected' },
+    connecting: { color: 'bg-[#d29922] animate-pulse', label: 'Connecting...' },
+    connected: { color: 'bg-[#56d364]', label: 'Connected' },
+    error: { color: 'bg-[#f85149]', label: 'Error' },
+  }
+
+  const { color, label } = config[status]
+
+  return (
+    <div className="flex items-center gap-2 text-xs text-[#8b949e]">
+      <div className={`w-2 h-2 rounded-full ${color}`} />
+      <span>{label}</span>
+    </div>
+  )
+}

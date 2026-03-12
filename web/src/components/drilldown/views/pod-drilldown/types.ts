@@ -2,7 +2,7 @@ export interface PodDrillDownProps {
   data: Record<string, unknown>
 }
 
-export type TabType = 'overview' | 'labels' | 'related' | 'describe' | 'logs' | 'events' | 'yaml'
+export type TabType = 'overview' | 'labels' | 'related' | 'describe' | 'logs' | 'exec' | 'events' | 'yaml'
 
 export interface RelatedResource {
   kind: string

@@ -5,7 +5,8 @@ import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw, Stethoscope, Wrench, Sparkles } from 'lucide-react'
+import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw, Stethoscope, Wrench, Sparkles, TerminalSquare } from 'lucide-react'
+import { PodExecTerminal } from '../../terminal/PodExecTerminal'
 import { cn } from '../../../lib/cn'
 import { Button } from '../../ui/Button'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
@@ -1161,9 +1162,26 @@ Please proceed step by step and ask for confirmation before making any changes.`
     { id: 'related', label: t('drilldown.tabs.related'), icon: Layers },
     { id: 'describe', label: t('drilldown.tabs.describe'), icon: FileText },
     { id: 'logs', label: t('drilldown.tabs.logs'), icon: Terminal },
+    { id: 'exec', label: 'Exec', icon: TerminalSquare },
     { id: 'events', label: t('drilldown.tabs.events'), icon: Zap },
     { id: 'yaml', label: t('drilldown.tabs.yaml'), icon: Code },
   ]
+
+  // Extract container names from YAML output for exec tab
+  const containerNames = useMemo(() => {
+    if (!yamlOutput) return []
+    const names: string[] = []
+    // Match "- name: <container>" lines under "containers:" section
+    const containerNameRegex = /^\s+- name:\s+(.+)$/gm
+    let match
+    while ((match = containerNameRegex.exec(yamlOutput)) !== null) {
+      const name = match[1].trim()
+      if (name && !names.includes(name)) {
+        names.push(name)
+      }
+    }
+    return names
+  }, [yamlOutput])
 
   const labelEntries = Object.entries(labels || {})
   const annotationEntries = Object.entries(annotations || {})
@@ -2094,6 +2112,18 @@ Please proceed step by step and ask for confirmation before making any changes.`
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'exec' && (
+        <div className="h-[500px] rounded-lg overflow-hidden border border-border">
+          <PodExecTerminal
+            cluster={cluster}
+            namespace={namespace}
+            pod={podName}
+            containers={containerNames}
+            defaultContainer={containerNames[0]}
+          />
         </div>
       )}
 

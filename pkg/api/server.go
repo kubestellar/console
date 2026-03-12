@@ -761,6 +761,13 @@ func (s *Server) setupRoutes() {
 		s.hub.HandleConnection(c)
 	}))
 
+	// WebSocket for pod exec terminal
+	execHandlers := handlers.NewExecHandlers(s.k8sClient)
+	s.app.Use("/api/exec", middleware.WebSocketUpgrade())
+	s.app.Get("/api/exec", websocket.New(func(c *websocket.Conn) {
+		execHandlers.HandleExec(c)
+	}))
+
 	// Serve static files in production
 	if !s.config.DevMode {
 		// Serve pre-compressed assets (.gz/.br) with Content-Length to avoid chunked encoding
