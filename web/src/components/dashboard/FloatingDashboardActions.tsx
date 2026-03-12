@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Layout, RotateCcw, Download, Upload, Pencil, Undo2, Redo2 } from 'lucide-react'
+import { Plus, Layout, RotateCcw, Download, Pencil, Undo2, Redo2 } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
@@ -22,7 +22,7 @@ interface FloatingDashboardActionsProps {
   isCustomized?: boolean
   /** Export current dashboard as JSON file */
   onExport?: () => void
-  /** Import a dashboard from JSON file */
+  /** Import a dashboard from JSON file (not shown in FAB menu, reserved for future use) */
   onImport?: (json: unknown) => void
   /** Undo last card mutation */
   onUndo?: () => void
@@ -45,7 +45,8 @@ export function FloatingDashboardActions({
   onResetToDefaults,
   isCustomized,
   onExport,
-  onImport,
+  // onImport accepted but not rendered in FAB menu (reserved for future use)
+  onImport: _,
   onUndo,
   onRedo,
   canUndo = false,
@@ -60,7 +61,6 @@ export function FloatingDashboardActions({
   const resetDialog = useModalState()
   const customizer = useModalState()
   const menuRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const { isOpen: menuIsOpen, close: closeMenu } = menu
   const { open: openCustomizer } = customizer
 
@@ -115,40 +115,12 @@ export function FloatingDashboardActions({
     }
   }
 
-  const handleImportClick = () => {
-    menu.close()
-    fileInputRef.current?.click()
-  }
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !onImport) return
-    try {
-      const text = await file.text()
-      const json = JSON.parse(text)
-      onImport(json)
-    } catch {
-      // Invalid JSON — ignore
-    }
-    // Reset input so the same file can be re-selected
-    e.target.value = ''
-  }
-
   const showResetOption = isCustomized && (onReset || onResetToDefaults)
 
   const menuBtnClass = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card hover:bg-secondary border border-border rounded-md shadow-md transition-all hover:shadow-lg whitespace-nowrap"
 
   return (
     <>
-      {/* Hidden file input for import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
       <div ref={menuRef} className={`fixed ${positionClasses} z-40 flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
         {/* Expanded menu items */}
         {menu.isOpen && (
@@ -165,17 +137,6 @@ export function FloatingDashboardActions({
               else items[Math.max(idx - 1, 0)]?.focus()
             }}
           >
-            {onImport && (
-              <button
-                role="menuitem"
-                onClick={handleImportClick}
-                className={menuBtnClass}
-                title={t('dashboard.actions.importTitle')}
-              >
-                <Upload className="w-3.5 h-3.5" />
-                {t('dashboard.actions.import')}
-              </button>
-            )}
             {onExport && (
               <button
                 role="menuitem"
