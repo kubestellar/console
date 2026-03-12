@@ -24,6 +24,7 @@ import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '..
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { InClusterAgentDialog } from '../setup/InClusterAgentDialog'
 import { KeepAliveOutlet } from './KeepAliveOutlet'
 import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
@@ -99,6 +100,7 @@ export function Layout({ children }: LayoutProps) {
   const { status: backendStatus, versionChanged, isInClusterMode } = useBackendHealth()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [showInClusterAgentDialog, setShowInClusterAgentDialog] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
   const [restartState, setRestartState] = useState<'idle' | 'restarting' | 'waiting' | 'copied'>('idle')
   const [restartError, setRestartError] = useState<string | null>(null)
@@ -229,17 +231,21 @@ export function Layout({ children }: LayoutProps) {
   // Show offline banner only when agent is confirmed disconnected (not during 'connecting' state)
   // This prevents flickering during initial connection attempts
   const showOfflineBanner = !isDemoMode && agentStatus === 'disconnected' && backendStatus !== 'connected' && !offlineBannerDismissed
+  // Show in-cluster agent banner when running in a cluster (Helm) and no agent connection detected.
+  // This is distinct from the offline banner (which requires backend to be down too).
+  const showInClusterBanner = isInClusterMode && agentStatus === 'disconnected' && !isDemoMode
 
   // Banner stacking: each banner's top offset depends on how many banners above it are visible.
   // Navbar is 64px (top-16). Each banner is ~36px tall.
-  // Z-index hierarchy: Navbar + dropdowns (z-50) > Network banner (z-40) > Demo banner (z-30) > Offline banner (z-20)
+  // Z-index hierarchy: Navbar + dropdowns (z-50) > Network banner (z-40) > Demo banner (z-30) > In-cluster / Offline banner (z-20)
   const NAVBAR_HEIGHT = 64
   const BANNER_HEIGHT = 36
-  // Stack order: Network (top) → Demo → Agent Offline (bottom)
+  // Stack order: Network (top) → Demo → In-cluster agent / Agent Offline (bottom)
   const networkBannerTop = NAVBAR_HEIGHT
   const demoBannerTop = NAVBAR_HEIGHT + (showNetworkBanner ? BANNER_HEIGHT : 0)
-  const offlineBannerTop = NAVBAR_HEIGHT + (showNetworkBanner ? BANNER_HEIGHT : 0) + (isDemoMode ? BANNER_HEIGHT : 0)
-  const activeBannerCount = (showNetworkBanner ? 1 : 0) + (isDemoMode ? 1 : 0) + (showOfflineBanner ? 1 : 0)
+  const inClusterBannerTop = NAVBAR_HEIGHT + (showNetworkBanner ? BANNER_HEIGHT : 0) + (isDemoMode ? BANNER_HEIGHT : 0)
+  const offlineBannerTop = NAVBAR_HEIGHT + (showNetworkBanner ? BANNER_HEIGHT : 0) + (isDemoMode ? BANNER_HEIGHT : 0) + (showInClusterBanner ? BANNER_HEIGHT : 0)
+  const activeBannerCount = (showNetworkBanner ? 1 : 0) + (isDemoMode ? 1 : 0) + (showInClusterBanner ? 1 : 0) + (showOfflineBanner ? 1 : 0)
   const totalBannerHeight = activeBannerCount * BANNER_HEIGHT
 
   // Show bottom snackbar when backend is down, or briefly after reconnecting.
@@ -388,6 +394,43 @@ export function Layout({ children }: LayoutProps) {
         )
       })()}
 
+      {/* In-Cluster Agent Banner — shown when running in a Kubernetes cluster (Helm) with no agent connection */}
+      {showInClusterBanner && (
+        <div
+          style={{ top: inClusterBannerTop, left: sidebarWidthPx }}
+          className={cn(
+            "fixed right-0 z-20 bg-background border-b border-blue-500/20 transition-[left] duration-300",
+          )}>
+          <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
+            <Plug className="w-4 h-4 text-blue-400" aria-hidden="true" />
+            <span className="text-sm text-blue-400 font-medium">
+              Agent Not Detected
+            </span>
+            <span className="hidden md:inline text-xs text-blue-400/70">
+              Install the kc-agent or configure CORS to connect your clusters
+            </span>
+            <Button
+              variant="accent"
+              size="sm"
+              onClick={() => setShowInClusterAgentDialog(true)}
+              className="hidden sm:flex ml-2 rounded-full"
+            >
+              <Plug className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden lg:inline">Setup Guide</span>
+              <span className="lg:hidden">Setup</span>
+            </Button>
+            <button
+              onClick={() => setShowInClusterAgentDialog(true)}
+              className="sm:hidden ml-1 p-2 min-h-11 min-w-11 hover:bg-blue-500/20 rounded transition-colors"
+              aria-label="Open agent setup guide"
+              title="Open agent setup guide"
+            >
+              <Plug className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Offline Mode Banner - positioned in main content area only */}
       {showOfflineBanner && (
         <div
@@ -464,6 +507,12 @@ export function Layout({ children }: LayoutProps) {
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
         onClose={() => setShowSetupDialog(false)}
+      />
+
+      {/* In-Cluster Agent Dialog — install agent or configure CORS */}
+      <InClusterAgentDialog
+        isOpen={showInClusterAgentDialog}
+        onClose={() => setShowInClusterAgentDialog(false)}
       />
 
       {/* Backend connection lost snackbar — fixed bottom center */}
