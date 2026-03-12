@@ -6,6 +6,7 @@ import { useVersionCheck } from '../../../hooks/useVersionCheck'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
 import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
 import { getSettingsWithHash } from '../../../config/routes'
+import { isDemoMode } from '../../../lib/demoMode'
 
 export function UpdateIndicator() {
   const navigate = useNavigate()
@@ -26,7 +27,8 @@ export function UpdateIndicator() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  if (!hasUpdate) {
+  // Don't show update indicator in demo mode — demo users can't update
+  if (!hasUpdate || isDemoMode()) {
     return null
   }
 

@@ -739,6 +739,16 @@ function useVersionCheckCore() {
     }
   }, [agentHealth?.install_method])
 
+  // Auto-reset channel when it's no longer valid for the detected install method.
+  // Example: localhost defaults to 'developer', but backend reports 'helm' install —
+  // developer channel is only valid for 'dev' installs, so fall back to 'stable'.
+  useEffect(() => {
+    if (channel === 'developer' && installMethod !== 'dev' && installMethod !== 'unknown') {
+      console.debug('[version-check] Resetting channel from developer to stable — installMethod is', installMethod)
+      setChannel('stable')
+    }
+  }, [installMethod, channel, setChannel])
+
   // Fetch install_method from backend /health as fallback (one-time on mount)
   useEffect(() => {
     async function fetchBackendInstallMethod() {
