@@ -94,8 +94,13 @@ export function DeploymentDrillDown({ data }: Props) {
         setReadyReplicas(deploy.status?.readyReplicas || 0)
         setLabels(deploy.metadata?.labels || {})
 
-        // Get ReplicaSets owned by this Deployment
-        const rsOutput = await runKubectl(['get', 'replicasets', '-n', namespace, '-l', `app=${deploymentName}`, '-o', 'json'])
+        // Get ReplicaSets using the deployment's actual selector labels
+        const rsSelector = Object.entries(deploy.spec?.selector?.matchLabels || {})
+          .map(([k, v]: [string, unknown]) => `${k}=${v}`)
+          .join(',')
+        const rsOutput = rsSelector
+          ? await runKubectl(['get', 'replicasets', '-n', namespace, '-l', rsSelector, '-o', 'json'])
+          : null
         if (rsOutput) {
           const rsList = JSON.parse(rsOutput)
           const rsInfo = rsList.items?.map((rs: { metadata: { name: string }; spec: { replicas: number }; status: { readyReplicas?: number } }) => ({
