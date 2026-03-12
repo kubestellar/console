@@ -172,8 +172,9 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		Accessibility: sm.settings.Settings.Accessibility,
 		Profile:       sm.settings.Settings.Profile,
 		Widget:        sm.settings.Settings.Widget,
-		APIKeys:       make(map[string]APIKeyEntry),
-		Notifications: NotificationSecrets{},
+		APIKeys:             make(map[string]APIKeyEntry),
+		FeedbackGitHubToken: "",
+		Notifications:       NotificationSecrets{},
 	}
 
 	// Cannot decrypt without an encryption key (init may have failed)
@@ -207,11 +208,30 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		}
 	}
 
-	// Fall back to FEEDBACK_GITHUB_TOKEN env var if no user token is stored
+	// Fall back to GITHUB_TOKEN env var if no user token is stored
 	if all.GitHubToken == "" {
-		if envToken := FeedbackGitHubToken(); envToken != "" {
+		if envToken := os.Getenv("GITHUB_TOKEN"); envToken != "" {
 			all.GitHubToken = envToken
 			all.GitHubTokenSource = GitHubTokenSourceEnv
+		}
+	}
+
+	// Decrypt feedback GitHub token (user-configured via UI)
+	if sm.settings.Encrypted.FeedbackGitHubToken != nil {
+		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.FeedbackGitHubToken)
+		if err != nil {
+			log.Printf("[settings] failed to decrypt feedback GitHub token: %v", err)
+		} else if plaintext != nil {
+			all.FeedbackGitHubToken = string(plaintext)
+			all.FeedbackGitHubTokenSource = GitHubTokenSourceSettings
+		}
+	}
+
+	// Fall back to FEEDBACK_GITHUB_TOKEN env var if no user token is stored
+	if all.FeedbackGitHubToken == "" {
+		if envToken := FeedbackGitHubToken(); envToken != "" {
+			all.FeedbackGitHubToken = envToken
+			all.FeedbackGitHubTokenSource = GitHubTokenSourceEnv
 		}
 	}
 
@@ -276,6 +296,17 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 		sm.settings.Encrypted.GitHubToken = enc
 	} else if all.GitHubTokenSource != GitHubTokenSourceEnv {
 		sm.settings.Encrypted.GitHubToken = nil
+	}
+
+	// Encrypt feedback GitHub token — skip if sourced from env var
+	if all.FeedbackGitHubToken != "" && all.FeedbackGitHubTokenSource != GitHubTokenSourceEnv {
+		enc, err := encrypt(sm.key, []byte(all.FeedbackGitHubToken))
+		if err != nil {
+			return fmt.Errorf("failed to encrypt feedback GitHub token: %w", err)
+		}
+		sm.settings.Encrypted.FeedbackGitHubToken = enc
+	} else if all.FeedbackGitHubTokenSource != GitHubTokenSourceEnv {
+		sm.settings.Encrypted.FeedbackGitHubToken = nil
 	}
 
 	// Encrypt notification secrets (only if any field is set)

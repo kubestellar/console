@@ -13,6 +13,8 @@ import {
   STORAGE_KEY_ACCESSIBILITY,
   STORAGE_KEY_GITHUB_TOKEN,
   STORAGE_KEY_GITHUB_TOKEN_SOURCE,
+  STORAGE_KEY_FEEDBACK_GITHUB_TOKEN,
+  STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE,
   STORAGE_KEY_NOTIFICATION_CONFIG,
   STORAGE_KEY_TOUR_COMPLETED,
 } from './constants'
@@ -32,6 +34,7 @@ const LS_KEYS = {
   [STORAGE_KEY_CUSTOM_THEMES]: 'customThemes',
   [STORAGE_KEY_ACCESSIBILITY]: 'accessibility',
   [STORAGE_KEY_GITHUB_TOKEN]: 'githubToken',
+  [STORAGE_KEY_FEEDBACK_GITHUB_TOKEN]: 'feedbackGithubToken',
   [STORAGE_KEY_NOTIFICATION_CONFIG]: 'notifications',
   [STORAGE_KEY_TOUR_COMPLETED]: 'tourCompleted',
 } as const
@@ -91,6 +94,18 @@ export function collectFromLocalStorage(): Partial<AllSettings> {
     result.githubTokenSource = githubTokenSource
   }
 
+  // Feedback GitHub token (base64 encoded in localStorage)
+  const feedbackGithubToken = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
+  if (feedbackGithubToken) {
+    try { result.feedbackGithubToken = atob(feedbackGithubToken) } catch { result.feedbackGithubToken = feedbackGithubToken }
+  }
+
+  // Feedback GitHub token source ("settings" or "env")
+  const feedbackGithubTokenSource = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
+  if (feedbackGithubTokenSource === 'settings' || feedbackGithubTokenSource === 'env') {
+    result.feedbackGithubTokenSource = feedbackGithubTokenSource
+  }
+
   // Notification config (JSON)
   const notifications = localStorage.getItem(STORAGE_KEY_NOTIFICATION_CONFIG)
   if (notifications) {
@@ -146,6 +161,13 @@ export function restoreToLocalStorage(settings: AllSettings): void {
   // Persist token source so the UI can show a badge for env-sourced tokens
   if (settings.githubTokenSource) {
     localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, settings.githubTokenSource)
+  }
+
+  if (settings.feedbackGithubToken) {
+    localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, btoa(settings.feedbackGithubToken))
+  }
+  if (settings.feedbackGithubTokenSource) {
+    localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, settings.feedbackGithubTokenSource)
   }
 
   if (settings.notifications) {

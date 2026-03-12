@@ -21,6 +21,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -1534,8 +1535,14 @@ func extractLinkedIssueNumbers(body string) []int {
 
 // LoadFeedbackConfigFromEnv loads feedback configuration from environment
 func LoadFeedbackConfigFromEnv() FeedbackConfig {
+	githubToken := os.Getenv("FEEDBACK_GITHUB_TOKEN")
+	if sm := settings.GetSettingsManager(); sm != nil {
+		if all, err := sm.GetAll(); err == nil && all.FeedbackGitHubToken != "" {
+			githubToken = all.FeedbackGitHubToken
+		}
+	}
 	return FeedbackConfig{
-		GitHubToken:   os.Getenv("FEEDBACK_GITHUB_TOKEN"),
+		GitHubToken:   githubToken,
 		WebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
 		RepoOwner:     getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
 		RepoName:      getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),

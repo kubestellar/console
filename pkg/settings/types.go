@@ -80,9 +80,10 @@ type EncryptedField struct {
 
 // EncryptedSettings groups all sensitive fields (stored encrypted on disk)
 type EncryptedSettings struct {
-	APIKeys       *EncryptedField `json:"apiKeys,omitempty"`
-	GitHubToken   *EncryptedField `json:"githubToken,omitempty"`
-	Notifications *EncryptedField `json:"notifications,omitempty"`
+	APIKeys             *EncryptedField `json:"apiKeys,omitempty"`
+	GitHubToken         *EncryptedField `json:"githubToken,omitempty"`
+	FeedbackGitHubToken *EncryptedField `json:"feedbackGithubToken,omitempty"`
+	Notifications       *EncryptedField `json:"notifications,omitempty"`
 }
 
 // AllSettings is the combined decrypted view sent to/from the frontend
@@ -103,15 +104,18 @@ type AllSettings struct {
 	AutoUpdateChannel string `json:"autoUpdateChannel"`
 
 	// Sensitive (decrypted for transit, encrypted at rest)
-	APIKeys       map[string]APIKeyEntry `json:"apiKeys"`
-	GitHubToken   string                 `json:"githubToken"`
-	Notifications NotificationSecrets    `json:"notifications"`
+	APIKeys             map[string]APIKeyEntry `json:"apiKeys"`
+	GitHubToken         string                 `json:"githubToken"`
+	FeedbackGitHubToken string                 `json:"feedbackGithubToken,omitempty"`
+	Notifications       NotificationSecrets    `json:"notifications"`
 
-	// GitHubTokenSource indicates where the GitHub token came from:
+	// GitHubTokenSource indicates where the main GitHub token came from:
 	// "settings" = user-configured via UI (encrypted in settings file),
-	// "env" = auto-detected from FEEDBACK_GITHUB_TOKEN environment variable,
+	// "env" = auto-detected from environment,
 	// "" = no token available.
 	GitHubTokenSource string `json:"githubTokenSource,omitempty"`
+	// FeedbackGitHubTokenSource indicates where the feedback token came from.
+	FeedbackGitHubTokenSource string `json:"feedbackGithubTokenSource,omitempty"`
 }
 
 // GitHubTokenSource constants

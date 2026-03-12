@@ -75,8 +75,11 @@ export interface AllSettings {
   // Sensitive (decrypted in transit over localhost)
   apiKeys: Record<string, APIKeyEntry>
   githubToken: string
+  feedbackGithubToken?: string
   notifications: NotificationSecrets
 
-  /** Where the GitHub token came from: "settings" (user UI), "env" (.env file), or undefined */
+  /** Where the main GitHub token came from: "settings" (user UI), "env" (.env file), or undefined */
   githubTokenSource?: 'settings' | 'env'
+  /** Where the feedback GitHub token came from: "settings" (user UI), "env" (.env file), or undefined */
+  feedbackGithubTokenSource?: 'settings' | 'env'
 }

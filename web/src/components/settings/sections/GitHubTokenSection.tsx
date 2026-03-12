@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
+import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
 import type { AllSettings } from '../../../lib/settingsTypes'
@@ -30,12 +30,19 @@ const AGENT_FETCH_TIMEOUT_MS = 5000
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {
   const { t } = useTranslation()
   const [githubToken, setGithubToken] = useState('')
+  const [feedbackGithubToken, setFeedbackGithubToken] = useState('')
   const [hasGithubToken, setHasGithubToken] = useState(false)
+  const [hasFeedbackGithubToken, setHasFeedbackGithubToken] = useState(false)
   const [tokenSource, setTokenSource] = useState<string | null>(null)
+  const [feedbackTokenSource, setFeedbackTokenSource] = useState<string | null>(null)
   const [githubTokenSaved, setGithubTokenSaved] = useState(false)
+  const [feedbackGithubTokenSaved, setFeedbackGithubTokenSaved] = useState(false)
   const [githubTokenTesting, setGithubTokenTesting] = useState(false)
+  const [feedbackGithubTokenTesting, setFeedbackGithubTokenTesting] = useState(false)
   const [githubTokenError, setGithubTokenError] = useState<string | null>(null)
+  const [feedbackGithubTokenError, setFeedbackGithubTokenError] = useState<string | null>(null)
   const [githubRateLimit, setGithubRateLimit] = useState<{ limit: number; remaining: number; reset: Date } | null>(null)
+  const [feedbackGithubRateLimit, setFeedbackGithubRateLimit] = useState<{ limit: number; remaining: number; reset: Date } | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
 
   // Load GitHub token status on mount — check localStorage first, then backend
@@ -43,13 +50,22 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     const loadToken = async () => {
       const encodedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
       const storedSource = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
+      const encodedFeedbackToken = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
+      const storedFeedbackSource = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
 
       if (encodedToken) {
-        // Token exists in localStorage
         setHasGithubToken(true)
         setTokenSource(storedSource)
         const token = decodeToken(encodedToken)
         await testGithubToken(token)
+      }
+      if (encodedFeedbackToken) {
+        setHasFeedbackGithubToken(true)
+        setFeedbackTokenSource(storedFeedbackSource)
+        const token = decodeToken(encodedFeedbackToken)
+        await testFeedbackGithubToken(token)
+      }
+      if (encodedToken || encodedFeedbackToken) {
         setIsInitializing(false)
         return
       }
@@ -68,15 +84,22 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         if (response.ok) {
           const data: AllSettings = await response.json()
           if (data?.githubToken) {
-            // Backend has a token — store in localStorage and use it
             localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(data.githubToken))
             const source = data.githubTokenSource || TOKEN_SOURCE_SETTINGS
             localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, source)
-            window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
             setHasGithubToken(true)
             setTokenSource(source)
             await testGithubToken(data.githubToken)
           }
+          if (data?.feedbackGithubToken) {
+            localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(data.feedbackGithubToken))
+            const source = data.feedbackGithubTokenSource || TOKEN_SOURCE_SETTINGS
+            localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, source)
+            setHasFeedbackGithubToken(true)
+            setFeedbackTokenSource(source)
+            await testFeedbackGithubToken(data.feedbackGithubToken)
+          }
+          window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
         }
       } catch {
         // Agent unavailable — no token available
@@ -130,31 +153,36 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     }
   }, [isInitializing])
 
+  const validateToken = async (token: string) => {
+    const response = await fetch('https://api.github.com/rate_limit', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+      signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid token - authentication failed')
+      }
+      throw new Error(`GitHub API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return {
+      limit: data.rate.limit,
+      remaining: data.rate.remaining,
+      reset: new Date(data.rate.reset * 1000),
+    }
+  }
+
   const testGithubToken = async (token: string) => {
     setGithubTokenTesting(true)
     setGithubTokenError(null)
     try {
-      const response = await fetch('https://api.github.com/rate_limit', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-        },
-        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
-      })
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid token - authentication failed')
-        }
-        throw new Error(`GitHub API error: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setGithubRateLimit({
-        limit: data.rate.limit,
-        remaining: data.rate.remaining,
-        reset: new Date(data.rate.reset * 1000),
-      })
+      const rate = await validateToken(token)
+      setGithubRateLimit(rate)
       return true
     } catch (err) {
       setGithubTokenError(err instanceof Error ? err.message : 'Failed to validate token')
@@ -162,6 +190,22 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       return false
     } finally {
       setGithubTokenTesting(false)
+    }
+  }
+
+  const testFeedbackGithubToken = async (token: string) => {
+    setFeedbackGithubTokenTesting(true)
+    setFeedbackGithubTokenError(null)
+    try {
+      const rate = await validateToken(token)
+      setFeedbackGithubRateLimit(rate)
+      return true
+    } catch (err) {
+      setFeedbackGithubTokenError(err instanceof Error ? err.message : 'Failed to validate token')
+      setFeedbackGithubRateLimit(null)
+      return false
+    } finally {
+      setFeedbackGithubTokenTesting(false)
     }
   }
 
@@ -197,7 +241,6 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const handleClearGithubToken = () => {
     localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN)
     localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
-    // If clearing an env-sourced token, remember the dismissal so it doesn't reappear
     if (isEnvToken) {
       localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED, 'true')
     }
@@ -205,10 +248,40 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     setTokenSource(null)
     setGithubRateLimit(null)
     setGithubTokenError(null)
+    window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
     emitGitHubTokenRemoved()
   }
 
+  const handleSaveFeedbackGithubToken = async () => {
+    if (!feedbackGithubToken.trim()) return
+
+    setFeedbackGithubTokenTesting(true)
+    const isValid = await testFeedbackGithubToken(feedbackGithubToken.trim())
+    if (isValid) {
+      localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(feedbackGithubToken.trim()))
+      localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
+      window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
+      setHasFeedbackGithubToken(true)
+      setFeedbackTokenSource(TOKEN_SOURCE_SETTINGS)
+      setFeedbackGithubToken('')
+      setFeedbackGithubTokenSaved(true)
+      setTimeout(() => setFeedbackGithubTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+    }
+    setFeedbackGithubTokenTesting(false)
+  }
+
+  const handleClearFeedbackGithubToken = () => {
+    localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
+    localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
+    setHasFeedbackGithubToken(false)
+    setFeedbackTokenSource(null)
+    setFeedbackGithubRateLimit(null)
+    setFeedbackGithubTokenError(null)
+    window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
+  }
+
   const isEnvToken = tokenSource === TOKEN_SOURCE_ENV
+  const isFeedbackEnvToken = feedbackTokenSource === TOKEN_SOURCE_ENV
 
   return (
     <div id="github-token-settings" className="glass rounded-xl p-6">
@@ -314,6 +387,54 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                   </button>
                 )}
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="feedback-github-token" className="block text-sm text-muted-foreground mb-2">
+                Feedback GitHub Token (FEEDBACK_GITHUB_TOKEN)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="feedback-github-token"
+                  type="password"
+                  value={feedbackGithubToken}
+                  onChange={(e) => setFeedbackGithubToken(e.target.value)}
+                  placeholder={hasFeedbackGithubToken ? '••••••••••••••••' : 'ghp_... or github_pat_...'}
+                  className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+                />
+                <button
+                  onClick={handleSaveFeedbackGithubToken}
+                  disabled={!feedbackGithubToken.trim() || feedbackGithubTokenTesting}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {feedbackGithubTokenTesting ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {feedbackGithubTokenTesting ? 'Testing...' : feedbackGithubTokenSaved ? 'Saved!' : 'Save & Test'}
+                </button>
+                {hasFeedbackGithubToken && (
+                  <button
+                    onClick={handleClearFeedbackGithubToken}
+                    className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Used by the feedback / bug submission integration. This should stay separate from the main GitHub Activity token.
+                {isFeedbackEnvToken ? ' Currently sourced from .env.' : ''}
+              </p>
+              {feedbackGithubTokenError && (
+                <p className="text-xs text-red-400 mt-2">{feedbackGithubTokenError}</p>
+              )}
+              {hasFeedbackGithubToken && feedbackGithubRateLimit && !feedbackGithubTokenError && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {feedbackGithubRateLimit.remaining.toLocaleString()}/{feedbackGithubRateLimit.limit.toLocaleString()} requests remaining · resets at {feedbackGithubRateLimit.reset.toLocaleTimeString()}
+                </p>
+              )}
             </div>
 
             {/* Instructions */}
