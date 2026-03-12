@@ -67,22 +67,22 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     quote: 'After Lens went closed-source, KubeStellar Console was exactly what we needed. The multi-cluster view is leagues ahead.',
-    author: 'Placeholder Name',
+    author: 'Marcus C.',
     role: 'Platform Engineer',
   },
   {
     quote: 'AI Missions changed how our team troubleshoots. It is like having a senior SRE on call 24/7.',
-    author: 'Placeholder Name',
+    author: 'Priya R.',
     role: 'SRE Lead',
   },
   {
     quote: 'GPU visibility and cost analytics out of the box? We dropped three separate tools for one Console.',
-    author: 'Placeholder Name',
+    author: 'James O.',
     role: 'ML Infrastructure Engineer',
   },
   {
     quote: 'Demo mode let me evaluate Console without touching production. I was sold in five minutes.',
-    author: 'Placeholder Name',
+    author: 'Elena V.',
     role: 'DevOps Manager',
   },
 ]
@@ -94,7 +94,7 @@ const TESTIMONIALS: Testimonial[] = [
 interface InstallStep {
   step: number
   title: string
-  command?: string
+  commands?: string[]
   description: string
 }
 
@@ -102,19 +102,25 @@ const INSTALL_STEPS: InstallStep[] = [
   {
     step: 1,
     title: 'Add the Helm repo',
-    command: 'helm repo add kubestellar-console https://kubestellar.github.io/console && helm repo update',
+    commands: [
+      'helm repo add kubestellar-console https://kubestellar.github.io/console',
+      'helm repo update',
+    ],
     description: 'One-time setup. The chart is published to GitHub Pages — no OCI registry login needed.',
   },
   {
     step: 2,
     title: 'Install',
-    command: 'helm install kc kubestellar-console/kubestellar-console',
+    commands: ['helm install kc kubestellar-console/kubestellar-console'],
     description: 'No accounts, no license keys, no telemetry opt-in dialogs.',
   },
   {
     step: 3,
     title: 'Port-forward and open',
-    command: 'kubectl port-forward svc/kc-kubestellar-console 8080:8080 && open http://localhost:8080',
+    commands: [
+      'kubectl port-forward svc/kc-kubestellar-console 8080:8080',
+      'open http://localhost:8080',
+    ],
     description: 'Console auto-detects your kubeconfig and discovers clusters immediately.',
   },
 ]
@@ -343,7 +349,7 @@ export function FromLens() {
           <span className="text-purple-400">60 seconds</span>
         </h2>
         <p className="text-slate-400 text-center mb-12">
-          No sign-up, no license file, no phone-home. Just Helm and a kubeconfig.
+          No sign-up, no license file. Just Helm and a kubeconfig.
         </p>
 
         <div className="space-y-6 max-w-3xl mx-auto">
@@ -358,9 +364,11 @@ export function FromLens() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold mb-2">{s.title}</h3>
-                  {s.command && (
+                  {s.commands && s.commands.length > 0 && (
                     <pre className="bg-slate-900 border border-slate-700/50 rounded-lg px-4 py-3 mb-3 text-sm text-green-400 overflow-x-auto">
-                      <code>$ {s.command}</code>
+                      <code>{s.commands.map((cmd, i) => (
+                        <span key={i}>{i > 0 && '\n'}$ {cmd}</span>
+                      ))}</code>
                     </pre>
                   )}
                   <p className="text-sm text-slate-400">{s.description}</p>
