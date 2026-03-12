@@ -2759,6 +2759,10 @@
     "groupStatus_ok": "OK",
     "groupStatus_warning": "Warning",
     "groupStatus_error": "Error",
-    "lag": "lag"
+    "lag": "lag",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }

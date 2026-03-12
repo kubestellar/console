@@ -2685,6 +2685,10 @@
     "groupStatus_ok": "OK",
     "groupStatus_warning": "Advertencia",
     "groupStatus_error": "Error",
-    "lag": "retraso"
+    "lag": "retraso",
+    "syncedJustNow": "justo ahora",
+    "syncedMinutesAgo": "hace {{count}}m",
+    "syncedHoursAgo": "hace {{count}}h",
+    "syncedDaysAgo": "hace {{count}}d"
   }
 }

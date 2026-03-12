@@ -1,7 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { STRIMZI_DEMO_DATA, type StrimziDemoData } from './demoData'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 export type StrimziStatus = StrimziDemoData
 
@@ -131,6 +131,7 @@ export function useStrimziStatus(): UseStrimziStatusResult {
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,

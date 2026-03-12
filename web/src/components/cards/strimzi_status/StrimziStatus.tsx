@@ -1,24 +1,25 @@
 import { CheckCircle, AlertTriangle, RefreshCw, Database, Activity, Users, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-
-const GROUP_LAG_WARNING_THRESHOLD = 100
-const TOTAL_LAG_WARNING_THRESHOLD = 200
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useStrimziStatus } from './useStrimziStatus'
 import type { StrimziTopic, StrimziConsumerGroup } from './demoData'
 
+const GROUP_LAG_WARNING_THRESHOLD = 100
+const TOTAL_LAG_WARNING_THRESHOLD = 200
+
 function useFormatRelativeTime() {
+  const { t } = useTranslation('cards')
   return (isoString: string): string => {
     const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return 'just now'
+    if (isNaN(diff) || diff < 0) return t('strimziStatus.syncedJustNow', 'just now')
     const minute = 60_000
     const hour = 60 * minute
     const day = 24 * hour
-    if (diff < minute) return 'just now'
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`
-    return `${Math.floor(diff / day)}d ago`
+    if (diff < minute) return t('strimziStatus.syncedJustNow', 'just now')
+    if (diff < hour) return t('strimziStatus.syncedMinutesAgo', '{{count}}m ago', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('strimziStatus.syncedHoursAgo', '{{count}}h ago', { count: Math.floor(diff / hour) })
+    return t('strimziStatus.syncedDaysAgo', '{{count}}d ago', { count: Math.floor(diff / day) })
   }
 }
 

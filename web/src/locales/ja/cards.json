@@ -2685,6 +2685,10 @@
     "groupStatus_ok": "OK",
     "groupStatus_warning": "警告",
     "groupStatus_error": "エラー",
-    "lag": "遅延"
+    "lag": "遅延",
+    "syncedJustNow": "たった今",
+    "syncedMinutesAgo": "{{count}}分前",
+    "syncedHoursAgo": "{{count}}時間前",
+    "syncedDaysAgo": "{{count}}日前"
   }
 }
