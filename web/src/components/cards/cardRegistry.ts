@@ -12,7 +12,7 @@ const ResourceUsage = lazy(() => import('./ResourceUsage').then(m => ({ default:
 const ClusterMetrics = lazy(() => import('./ClusterMetrics').then(m => ({ default: m.ClusterMetrics })))
 // Deploy dashboard cards — eagerly start loading the barrel at module parse time
 // so all 16 cards share one chunk download instead of 16 separate HTTP requests.
-const _deployBundle = import('./deploy-bundle')
+const _deployBundle = import('./deploy-bundle').catch(() => undefined as never)
 const DeploymentStatus = lazy(() => _deployBundle.then(m => ({ default: m.DeploymentStatus })))
 const DeploymentProgress = lazy(() => _deployBundle.then(m => ({ default: m.DeploymentProgress })))
 const DeploymentIssues = lazy(() => _deployBundle.then(m => ({ default: m.DeploymentIssues })))
@@ -86,7 +86,7 @@ const VaultSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ def
 const ExternalSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.ExternalSecrets })))
 const CertManager = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.CertManager })))
 // Workload detection cards — share one chunk via barrel import
-const _workloadDetectionBundle = import('./workload-detection')
+const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
 const ProwJobs = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.ProwJobs })))
 const ProwStatus = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.ProwStatus })))
 const ProwHistory = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.ProwHistory })))
@@ -137,7 +137,7 @@ const ClusterGroups = lazy(() => _deployBundle.then(m => ({ default: m.ClusterGr
 const Missions = lazy(() => _deployBundle.then(m => ({ default: m.Missions })))
 const ResourceMarshall = lazy(() => _deployBundle.then(m => ({ default: m.ResourceMarshall })))
 // Workload monitor cards — share one chunk via barrel import
-const _workloadMonitorBundle = import('./workload-monitor')
+const _workloadMonitorBundle = import('./workload-monitor').catch(() => undefined as never)
 const WorkloadMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.WorkloadMonitor })))
 const DynamicCard = lazy(() => import('./DynamicCard').then(m => ({ default: m.DynamicCard })))
 const LLMdStackMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.LLMdStackMonitor })))
@@ -146,7 +146,7 @@ const ProwCIMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.
 // LLM-d stunning visualization cards — eagerly start loading the barrel at
 // module parse time so all 7 heavy chunks (194KB total source) are pre-warmed
 // before the AI/ML dashboard renders, shared across all lazy() references.
-const _llmdBundle = import('./llmd')
+const _llmdBundle = import('./llmd').catch(() => undefined as never)
 const LLMdFlow = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdFlow })))
 const KVCacheMonitor = lazy(() => _llmdBundle.then(m => ({ default: m.KVCacheMonitor })))
 const EPPRouting = lazy(() => _llmdBundle.then(m => ({ default: m.EPPRouting })))
@@ -168,7 +168,7 @@ const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ defaul
 
 // Kagenti AI Agent Platform cards — share one chunk via barrel import
 const KagentiStatusCard = lazy(() => import('./KagentiStatusCard').then(m => ({ default: m.KagentiStatusCard })))
-const _kagentiBundle = import('./kagenti')
+const _kagentiBundle = import('./kagenti').catch(() => undefined as never)
 const KagentiAgentFleet = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiAgentFleet })))
 const KagentiBuildPipeline = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiBuildPipeline })))
 const KagentiToolRegistry = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiToolRegistry })))
@@ -183,7 +183,7 @@ const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ d
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
 
 // Multi-cluster insights cards — share one chunk via barrel import
-const _insightsBundle = import('./insights')
+const _insightsBundle = import('./insights').catch(() => undefined as never)
 const CrossClusterEventCorrelation = lazy(() => _insightsBundle.then(m => ({ default: m.CrossClusterEventCorrelation })))
 const ClusterDeltaDetector = lazy(() => _insightsBundle.then(m => ({ default: m.ClusterDeltaDetector })))
 const CascadeImpactMap = lazy(() => _insightsBundle.then(m => ({ default: m.CascadeImpactMap })))
@@ -193,7 +193,7 @@ const RestartCorrelationMatrix = lazy(() => _insightsBundle.then(m => ({ default
 const DeploymentRolloutTracker = lazy(() => _insightsBundle.then(m => ({ default: m.DeploymentRolloutTracker })))
 
 // Cluster admin cards — share one chunk via barrel import
-const _clusterAdminBundle = import('./cluster-admin-bundle')
+const _clusterAdminBundle = import('./cluster-admin-bundle').catch(() => undefined as never)
 const PredictiveHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.PredictiveHealth })))
 const NodeDebug = lazy(() => _clusterAdminBundle.then(m => ({ default: m.NodeDebug })))
 const ControlPlaneHealth = lazy(() => _clusterAdminBundle.then(m => ({ default: m.ControlPlaneHealth })))
