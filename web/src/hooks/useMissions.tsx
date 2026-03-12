@@ -164,12 +164,34 @@ function loadMissions(): Mission[] {
   return []
 }
 
-// Save missions to localStorage
+// Maximum number of missions to keep in localStorage to avoid QuotaExceededError
+const MAX_STORED_MISSIONS = 50
+
+// Save missions to localStorage, pruning old completed missions if quota is exceeded
 function saveMissions(missions: Mission[]) {
   try {
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
   } catch (e) {
-    console.error('Failed to save missions to localStorage:', e)
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      console.warn('[Missions] localStorage quota exceeded, pruning old missions')
+      // Keep active missions and most recent completed ones
+      const active = missions.filter(m => m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input')
+      const completed = missions
+        .filter(m => m.status === 'completed' || m.status === 'failed')
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, MAX_STORED_MISSIONS)
+      const pruned = [...active, ...completed]
+      try {
+        localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(pruned))
+        return
+      } catch {
+        // Still too large — clear missions storage as last resort
+        console.error('[Missions] localStorage still full after pruning, clearing missions')
+        localStorage.removeItem(MISSIONS_STORAGE_KEY)
+      }
+    } else {
+      console.error('Failed to save missions to localStorage:', e)
+    }
   }
 }
 
