@@ -89,7 +89,7 @@ export function useExecSession(): UseExecSessionResult {
     // Build WebSocket URL
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-    const wsUrl = `${protocol}//${window.location.host}/api/exec${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    const wsUrl = `${protocol}//${window.location.host}/ws/exec${token ? `?token=${encodeURIComponent(token)}` : ''}`
 
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
