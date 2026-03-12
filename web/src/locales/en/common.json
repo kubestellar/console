@@ -520,7 +520,7 @@
       "agentRequiredDesc": "Start kc-agent to enable automatic updates",
       "helmDisabled": "Auto-update not available for Helm installs",
       "helmDisabledDesc": "Use 'helm upgrade' to update your cluster deployment",
-      "helmSelfUpgradeHint": "Enable in-console upgrades: helm upgrade --set selfUpgrade.enabled=true",
+      "helmSelfUpgradeHint": "Re-enable in-console upgrades: helm upgrade --set selfUpgrade.enabled=true",
       "helmSelfUpgradeReady": "In-console upgrade available",
       "helmSelfUpgradeDesc": "Self-upgrade is enabled — you can upgrade directly from this page",
       "helmUpgradeNow": "Upgrade to {{tag}}",

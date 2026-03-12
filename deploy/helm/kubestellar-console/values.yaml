@@ -170,10 +170,10 @@ watchdog:
   enabled: true
 
 # Self-upgrade: allow the console to upgrade its own Deployment image tag
-# from the UI. Requires additional RBAC (namespaced Role) to patch Deployments.
-# Default: false (users must run 'helm upgrade' manually).
+# from the UI. Creates a namespaced Role granting patch access to Deployments
+# in the release namespace only.
 selfUpgrade:
-  enabled: false
+  enabled: true
 
 # Additional environment variables
 extraEnv: []
