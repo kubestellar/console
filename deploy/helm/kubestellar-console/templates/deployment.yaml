@@ -146,11 +146,15 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           volumeMounts:
+            - name: kc-config
+              mountPath: /app/.kc
             {{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /app/data
             {{- end }}
       volumes:
+        - name: kc-config
+          emptyDir: {}
         {{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
