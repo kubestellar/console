@@ -2678,6 +2678,10 @@
     "providerStatus": "Provider Status",
     "highErrorRate": "High error rate: {{rate}}%",
     "learnMore": "Learn more about OpenFeature",
-    "fetchError": "Failed to fetch OpenFeature status"
+    "fetchError": "Failed to fetch OpenFeature status",
+    "syncedJustNow": "अभी",
+    "syncedMinutesAgo": "{{count}} मिनट पहले",
+    "syncedHoursAgo": "{{count}} घंटे पहले",
+    "syncedDaysAgo": "{{count}} दिन पहले"
   }
 }

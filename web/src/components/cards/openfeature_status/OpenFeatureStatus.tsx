@@ -3,14 +3,27 @@ import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { useOpenFeatureStatus } from './useOpenFeatureStatus'
 import { MetricTile } from '../../../lib/cards/CardComponents'
-import { createRelativeTimeFormatter } from '../../../lib/formatters'
 
 const ERROR_RATE_WARNING_PCT = 5 // Show warning when error rate exceeds this percentage
 
+function useFormatRelativeTime() {
+  const { t } = useTranslation('cards')
+  return (isoString: string): string => {
+    const diff = Date.now() - new Date(isoString).getTime()
+    if (isNaN(diff) || diff < 0) return t('openfeature.syncedJustNow')
+    const minute = 60_000
+    const hour = 60 * minute
+    const day = 24 * hour
+    if (diff < minute) return t('openfeature.syncedJustNow')
+    if (diff < hour) return t('openfeature.syncedMinutesAgo', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('openfeature.syncedHoursAgo', { count: Math.floor(diff / hour) })
+    return t('openfeature.syncedDaysAgo', { count: Math.floor(diff / day) })
+  }
+}
+
 export function OpenFeatureStatus() {
   const { t } = useTranslation('cards')
-  const { t: tc } = useTranslation('common')
-  const formatRelativeTime = createRelativeTimeFormatter(tc as (key: string, options?: { count?: number }) => string)
+  const formatRelativeTime = useFormatRelativeTime()
   const { data, error, showSkeleton, showEmptyState } = useOpenFeatureStatus()
 
   if (showSkeleton) {

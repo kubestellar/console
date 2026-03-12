@@ -2700,7 +2700,11 @@
     "providerStatus": "Provider Status",
     "highErrorRate": "High error rate: {{rate}}%",
     "learnMore": "Learn more about OpenFeature",
-    "fetchError": "Failed to fetch OpenFeature status"
+    "fetchError": "Failed to fetch OpenFeature status",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   },
   "lima": {
     "healthy": "Healthy",
