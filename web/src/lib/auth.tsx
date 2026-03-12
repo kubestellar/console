@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { api, checkBackendAvailability, checkOAuthConfigured } from './api'
+import { api, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
@@ -128,9 +128,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() =>
     localStorage.getItem(STORAGE_KEY_TOKEN)
   )
-  // Skip loading if we have both a token and a cached user (stale-while-revalidate)
+  // Start loading until refreshUser() resolves — this prevents a flash of the login
+  // page while we check whether to auto-enable demo mode (Helm installs / from-lens).
+  // Exception: if we already have a token AND cached user, skip loading (stale-while-revalidate).
   const [isLoading, setIsLoading] = useState(() => {
-    return !!localStorage.getItem(STORAGE_KEY_TOKEN) && !getCachedUser()
+    const hasToken = !!localStorage.getItem(STORAGE_KEY_TOKEN)
+    const hasCachedUser = !!getCachedUser()
+    // No token: still loading — refreshUser() will check OAuth and may auto-demo
+    // Has token + no cache: loading — refreshUser() will fetch user
+    // Has token + cache: not loading — show cached data immediately
+    return !hasToken || (hasToken && !hasCachedUser)
   })
 
   const logout = useCallback(() => {
@@ -167,6 +174,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async (overrideToken?: string) => {
     const effectiveToken = overrideToken || localStorage.getItem(STORAGE_KEY_TOKEN)
     if (!effectiveToken) {
+      // Check if backend requires OAuth login — if so, show the login page instead
+      // of auto-enabling demo mode. For Helm installs (no OAuth), auto-demo gives
+      // the same instant-dashboard experience as console.kubestellar.io.
+      try {
+        const { backendUp, oauthConfigured } = await checkOAuthConfigured()
+        if (backendUp && oauthConfigured) {
+          // OAuth configured — user should authenticate via login page
+          return
+        }
+      } catch {
+        // Backend unreachable — fall through to demo mode
+      }
       setDemoMode()
       return
     }
@@ -181,8 +200,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { backendUp, oauthConfigured } = await checkOAuthConfigured()
         if (backendUp) {
           if (!oauthConfigured) {
-            // No OAuth — auto-login to get a real dev-user JWT
-            window.location.href = '/auth/github'
+            // No OAuth — stay in demo mode. The Layout will auto-enable demo mode
+            // when the agent is disconnected, providing the same experience as
+            // console.kubestellar.io. If an agent connects later, demo mode will
+            // auto-disable and the user gets live data.
+            setDemoMode()
             return
           }
           // OAuth configured — clear demo token so login page appears
@@ -231,15 +253,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 1. Explicit environment variable VITE_DEMO_MODE=true
     // 2. Netlify deploy previews (deploy-preview-* hostnames) - safe because these are ephemeral test environments
     // 3. Backend is unavailable (graceful fallback for local development)
+    // 4. Backend has no OAuth configured (Helm install / from-lens — same UX as console.kubestellar.io)
     const explicitDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' ||
       window.location.hostname.includes('deploy-preview-') ||
       window.location.hostname.includes('netlify.app')
 
-    // Check backend availability (async, force fresh check) - this ensures we don't redirect to broken OAuth
-    const backendAvailable = await checkBackendAvailability(true)
-    const isDemoMode = explicitDemoMode || !backendAvailable
+    // Single check: backend availability + OAuth config (the /health endpoint returns both)
+    const { backendUp, oauthConfigured } = await checkOAuthConfigured()
 
-    if (isDemoMode) {
+    // When backend is up but no OAuth is configured (e.g. Helm install with no agent),
+    // go straight to demo mode — same auto-login behavior as console.kubestellar.io.
+    // If an agent connects later, Layout will auto-disable demo mode for live data.
+    const shouldUseDemoMode = explicitDemoMode || !backendUp || !oauthConfigured
+
+    if (shouldUseDemoMode) {
       emitLogin('demo')
       emitConversionStep(2, 'login', { method: 'demo' })
       setDemoMode()
@@ -321,12 +348,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
+  // Always attempt to resolve the user on mount — even with no token.
+  // When there's no token, refreshUser() auto-enables demo mode so the user
+  // lands on the dashboard immediately (same UX as console.kubestellar.io)
+  // instead of flashing through the login page.
   useEffect(() => {
-    if (token) {
-      refreshUser().finally(() => setIsLoading(false))
-    } else {
-      setIsLoading(false)
-    }
+    refreshUser().finally(() => setIsLoading(false))
   }, []) // Empty deps - only run on mount
 
   return (
