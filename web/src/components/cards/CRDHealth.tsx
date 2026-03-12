@@ -1,28 +1,18 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, Database } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCRDs } from '../../hooks/useCRDs'
+import type { CRDData } from '../../hooks/useCRDs'
 
 interface CRDHealthProps {
   config?: {
     cluster?: string
   }
-}
-
-interface CRD {
-  name: string
-  group: string
-  version: string
-  scope: 'Namespaced' | 'Cluster'
-  status: 'Established' | 'NotEstablished' | 'Terminating'
-  instances: number
-  cluster: string
 }
 
 type SortByOption = 'status' | 'name' | 'group' | 'instances'
@@ -43,48 +33,15 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
-  const { isLoading, deduplicatedClusters } = useClusters()
-  const { isDemoMode } = useDemoMode()
+  const { crds: allCRDs, isLoading, isDemoData } = useCRDs()
 
   const [filterGroup, setFilterGroup] = useState<string>('')
-
-  // Generate cluster-specific CRD data
-  const getClusterCRDs = useCallback((clusterName: string): CRD[] => {
-    // Generate cluster-specific data using hash of cluster name
-    const hash = clusterName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    const crdCount = 5 + (hash % 6) // 5-10 CRDs per cluster
-
-    const baseCRDs: CRD[] = [
-      { name: 'certificates', group: 'cert-manager.io', version: 'v1', scope: 'Namespaced', status: 'Established', instances: 20 + (hash % 30), cluster: clusterName },
-      { name: 'clusterissuers', group: 'cert-manager.io', version: 'v1', scope: 'Cluster', status: 'Established', instances: 1 + (hash % 3), cluster: clusterName },
-      { name: 'issuers', group: 'cert-manager.io', version: 'v1', scope: 'Namespaced', status: hash % 7 === 0 ? 'NotEstablished' : 'Established', instances: hash % 7 === 0 ? 0 : 5 + (hash % 10), cluster: clusterName },
-      { name: 'prometheuses', group: 'monitoring.coreos.com', version: 'v1', scope: 'Namespaced', status: 'Established', instances: 1 + (hash % 5), cluster: clusterName },
-      { name: 'servicemonitors', group: 'monitoring.coreos.com', version: 'v1', scope: 'Namespaced', status: 'Established', instances: 50 + (hash % 100), cluster: clusterName },
-      { name: 'alertmanagers', group: 'monitoring.coreos.com', version: 'v1', scope: 'Namespaced', status: hash % 5 === 0 ? 'Terminating' : 'Established', instances: 1 + (hash % 3), cluster: clusterName },
-      { name: 'kafkas', group: 'kafka.strimzi.io', version: 'v1beta2', scope: 'Namespaced', status: 'Established', instances: 2 + (hash % 5), cluster: clusterName },
-      { name: 'kafkatopics', group: 'kafka.strimzi.io', version: 'v1beta2', scope: 'Namespaced', status: hash % 4 === 0 ? 'NotEstablished' : 'Established', instances: hash % 4 === 0 ? 0 : 10 + (hash % 20), cluster: clusterName },
-      { name: 'applications', group: 'argoproj.io', version: 'v1alpha1', scope: 'Namespaced', status: 'Established', instances: 20 + (hash % 50), cluster: clusterName },
-      { name: 'appprojects', group: 'argoproj.io', version: 'v1alpha1', scope: 'Namespaced', status: 'Established', instances: 2 + (hash % 5), cluster: clusterName },
-    ]
-
-    return baseCRDs.slice(0, crdCount)
-  }, [])
-
-  // Generate CRDs for all reachable clusters (useCardData handles cluster filtering)
-  const allCRDs: CRD[] = useMemo(() => {
-    const reachable = deduplicatedClusters.filter(c => c.reachable !== false)
-    const crdsWithClusters: CRD[] = []
-    reachable.forEach(c => {
-      crdsWithClusters.push(...getClusterCRDs(c.name))
-    })
-    return crdsWithClusters
-  }, [deduplicatedClusters, getClusterCRDs])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allCRDs.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData,
   })
 
   // Apply group filter before passing to useCardData
@@ -122,10 +79,10 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     },
     containerRef,
     containerStyle,
-  } = useCardData<CRD, SortByOption>(groupFilteredCRDs, {
+  } = useCardData<CRDData, SortByOption>(groupFilteredCRDs, {
     filter: {
-      searchFields: ['name', 'group', 'cluster'] as (keyof CRD)[],
-      clusterField: 'cluster' as keyof CRD,
+      searchFields: ['name', 'group', 'cluster'] as (keyof CRDData)[],
+      clusterField: 'cluster' as keyof CRDData,
       storageKey: 'crd-health',
     },
     sort: {
@@ -147,7 +104,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     return Array.from(groupSet).sort()
   }, [allCRDs])
 
-  const getStatusIcon = (status: CRD['status']) => {
+  const getStatusIcon = (status: CRDData['status']) => {
     switch (status) {
       case 'Established': return CheckCircle
       case 'NotEstablished': return XCircle
@@ -155,7 +112,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     }
   }
 
-  const getStatusColor = (status: CRD['status']) => {
+  const getStatusColor = (status: CRDData['status']) => {
     switch (status) {
       case 'Established': return 'green'
       case 'NotEstablished': return 'red'

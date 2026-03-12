@@ -633,6 +633,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/gateway/httproutes", gatewayHandlers.ListHTTPRoutes)
 	api.Get("/gateway/httproutes/:cluster/:namespace/:name", gatewayHandlers.GetHTTPRoute)
 
+	// CRD routes (Custom Resource Definition browser)
+	crdHandlers := handlers.NewCRDHandlers(s.k8sClient)
+	api.Get("/crds", crdHandlers.ListCRDs)
+
 	// Service Topology routes
 	topologyHandlers := handlers.NewTopologyHandlers(s.k8sClient, s.hub)
 	api.Get("/topology", topologyHandlers.GetTopology)
