@@ -2676,6 +2676,10 @@
     "apps": "アプリ",
     "components": "コンポーネント",
     "traits": "トレイト",
-    "applications": "アプリケーション"
+    "applications": "アプリケーション",
+    "syncedJustNow": "たった今",
+    "syncedMinutesAgo": "{{count}}分前",
+    "syncedHoursAgo": "{{count}}時間前",
+    "syncedDaysAgo": "{{count}}日前"
   }
 }

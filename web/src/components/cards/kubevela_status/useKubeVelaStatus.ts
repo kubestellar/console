@@ -114,6 +114,7 @@ export function useKubeVelaStatus(): UseKubeVelaStatusResult {
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,

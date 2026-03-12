@@ -2748,6 +2748,10 @@
     "apps": "Apps",
     "components": "Components",
     "traits": "Traits",
-    "applications": "Applications"
+    "applications": "Applications",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }

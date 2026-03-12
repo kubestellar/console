@@ -2676,6 +2676,10 @@
     "apps": "应用",
     "components": "组件",
     "traits": "特征",
-    "applications": "应用程序"
+    "applications": "应用程序",
+    "syncedJustNow": "刚刚",
+    "syncedMinutesAgo": "{{count}}分钟前",
+    "syncedHoursAgo": "{{count}}小时前",
+    "syncedDaysAgo": "{{count}}天前"
   }
 }

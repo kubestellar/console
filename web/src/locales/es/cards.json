@@ -2676,6 +2676,10 @@
     "apps": "Apps",
     "components": "Componentes",
     "traits": "Traits",
-    "applications": "Aplicaciones"
+    "applications": "Aplicaciones",
+    "syncedJustNow": "justo ahora",
+    "syncedMinutesAgo": "hace {{count}}m",
+    "syncedHoursAgo": "hace {{count}}h",
+    "syncedDaysAgo": "hace {{count}}d"
   }
 }

@@ -6,16 +6,17 @@ import { useKubeVelaStatus } from './useKubeVelaStatus'
 import type { KubeVelaApplication } from './demoData'
 
 function useFormatRelativeTime() {
+  const { t } = useTranslation('cards')
   return (isoString: string): string => {
     const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return 'just now'
+    if (isNaN(diff) || diff < 0) return t('kubevela.syncedJustNow', 'just now')
     const minute = 60_000
     const hour = 60 * minute
     const day = 24 * hour
-    if (diff < minute) return 'just now'
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`
-    return `${Math.floor(diff / day)}d ago`
+    if (diff < minute) return t('kubevela.syncedJustNow', 'just now')
+    if (diff < hour) return t('kubevela.syncedMinutesAgo', '{{count}}m ago', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('kubevela.syncedHoursAgo', '{{count}}h ago', { count: Math.floor(diff / hour) })
+    return t('kubevela.syncedDaysAgo', '{{count}}d ago', { count: Math.floor(diff / day) })
   }
 }
 
