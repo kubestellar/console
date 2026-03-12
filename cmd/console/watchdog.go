@@ -75,9 +75,19 @@ func runWatchdog(cfg WatchdogConfig) error {
 		IdleConnTimeout:       watchdogIdleConnTimeout,
 	}
 
-	// Custom error handler: serve fallback page instead of 502 when backend dies mid-request
+	// Custom error handler: serve fallback page on connection failures.
+	// Only mark backend unhealthy on hard connection errors (refused, reset, EOF),
+	// NOT on request timeouts — slow requests don't mean the backend is down.
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("[Watchdog] Proxy error: %v", err)
+		errMsg := err.Error()
+		isTimeout := strings.Contains(errMsg, "timeout awaiting response headers") ||
+			strings.Contains(errMsg, "context deadline exceeded")
+		if isTimeout {
+			log.Printf("[Watchdog] Proxy timeout (backend still healthy): %v", err)
+			http.Error(w, "Gateway Timeout", http.StatusGatewayTimeout)
+			return
+		}
+		log.Printf("[Watchdog] Proxy error (backend down): %v", err)
 		atomic.StoreInt32(&backendHealthy, 0)
 		serveFallback(w, r)
 	}
