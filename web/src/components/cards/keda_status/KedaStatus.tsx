@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
+import { createRelativeTimeFormatter } from '../../../lib/formatters'
 import { useKedaStatus } from './useKedaStatus'
 import type { KedaScaledObject, KedaScaledObjectStatus, KedaTriggerType } from './demoData'
 
@@ -59,18 +60,8 @@ const TRIGGER_LABELS: Record<KedaTriggerType, string> = {
 }
 
 function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('keda.syncedJustNow', 'just now')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('keda.syncedJustNow', 'just now')
-    if (diff < hour) return t('keda.syncedMinutesAgo', { count: Math.floor(diff / minute), defaultValue: '{{count}}m ago' })
-    if (diff < day) return t('keda.syncedHoursAgo', { count: Math.floor(diff / hour), defaultValue: '{{count}}h ago' })
-    return t('keda.syncedDaysAgo', { count: Math.floor(diff / day), defaultValue: '{{count}}d ago' })
-  }
+  const { t } = useTranslation('common')
+  return createRelativeTimeFormatter(t as (key: string, options?: { count?: number }) => string)
 }
 
 // ---------------------------------------------------------------------------
@@ -134,11 +125,13 @@ function ReplicaBar({
 }
 
 function ScaledObjectRow({ obj }: { obj: KedaScaledObject }) {
+  const { t } = useTranslation('cards')
   const cfg = STATUS_CONFIG[obj.status]
   const triggerLabel =
     obj.triggers.length > 0
       ? TRIGGER_LABELS[obj.triggers[0].type] ?? obj.triggers[0].type
       : '—'
+  const extraTriggers = obj.triggers.length > 1 ? obj.triggers.length - 1 : 0
   const triggerSource =
     obj.triggers.length > 0 ? obj.triggers[0].source : ''
   const currentVal =
@@ -168,6 +161,9 @@ function ScaledObjectRow({ obj }: { obj: KedaScaledObject }) {
         <span className="shrink-0 ml-2">
           {triggerLabel}
           {triggerSource ? `: ${triggerSource}` : ''}
+          {extraTriggers > 0 && (
+            <span className="text-muted-foreground/60 ml-1">+{extraTriggers} {t('keda.moreTriggersLabel', 'more')}</span>
+          )}
         </span>
       </div>
 
@@ -373,7 +369,9 @@ export function KedaStatus() {
       {/* ── Footer ── */}
       {data.totalScaledJobs > 0 && (
         <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground">
-          +{data.totalScaledJobs} ScaledJob{data.totalScaledJobs !== 1 ? 's' : ''}
+          +{data.totalScaledJobs} {data.totalScaledJobs === 1
+            ? t('keda.scaledJob', 'ScaledJob')
+            : t('keda.scaledJobs', 'ScaledJobs')}
         </div>
       )}
     </div>
