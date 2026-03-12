@@ -274,7 +274,11 @@ function respondError(id: number, message: string): void {
   self.postMessage(msg)
 }
 
-self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+// Queue of messages received before the database is ready
+const pendingMessages: MessageEvent<WorkerRequest>[] = []
+let dbReady = false
+
+function processMessage(event: MessageEvent<WorkerRequest>): void {
   const msg = event.data
 
   try {
@@ -332,17 +336,38 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
   }
 }
 
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  if (!dbReady) {
+    // Queue messages until database initialization completes
+    pendingMessages.push(event)
+    return
+  }
+  processMessage(event)
+}
+
 // ---------------------------------------------------------------------------
 // Initialize SQLite and signal readiness
 // ---------------------------------------------------------------------------
 
 initDatabase()
   .then(() => {
+    dbReady = true
+    // Drain any messages that arrived during initialization
+    for (const queued of pendingMessages) {
+      processMessage(queued)
+    }
+    pendingMessages.length = 0
     const msg: WorkerResponse = { id: -1, type: 'ready' }
     self.postMessage(msg)
   })
   .catch((e) => {
     console.error('[CacheWorker] Init failed:', e)
+    dbReady = true
+    // Drain queued messages — handlers return null/empty when db is null
+    for (const queued of pendingMessages) {
+      processMessage(queued)
+    }
+    pendingMessages.length = 0
     // Signal ready anyway — the main thread will fall back to IndexedDB
     const msg: WorkerResponse = { id: -1, type: 'ready' }
     self.postMessage(msg)
