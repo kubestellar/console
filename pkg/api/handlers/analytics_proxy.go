@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,21 +25,70 @@ var allowedOrigins = map[string]bool{
 	"console.kubestellar.io": true,
 }
 
+const (
+	// gtagCacheTTL is how long the gtag.js script is cached server-side.
+	// The script is ~376KB — without caching, each browser request allocates
+	// a fresh 376KB buffer, which under rapid polling (e.g. login redirect loop)
+	// causes memory to grow faster than GC can reclaim.
+	gtagCacheTTL = 1 * time.Hour
+)
+
+// gtagCache holds a server-side cache of the gtag.js script to avoid
+// re-fetching 376KB from Google on every request.
+var gtagCache struct {
+	sync.RWMutex
+	body        []byte
+	contentType string
+	fetchedAt   time.Time
+	queryString string // cache key — different measurement IDs get different scripts
+}
+
 // GA4ScriptProxy proxies the gtag.js script through the console's own domain
-// so that ad blockers do not block it.
+// so that ad blockers do not block it. The response is cached server-side
+// to prevent memory pressure from repeated fetches of the ~376KB script.
 func GA4ScriptProxy(c *fiber.Ctx) error {
-	target := "https://www.googletagmanager.com/gtag/js?" + string(c.Context().QueryArgs().QueryString())
+	qs := string(c.Context().QueryArgs().QueryString())
+
+	// Check cache
+	gtagCache.RLock()
+	if gtagCache.body != nil && gtagCache.queryString == qs && time.Since(gtagCache.fetchedAt) < gtagCacheTTL {
+		body := gtagCache.body
+		ct := gtagCache.contentType
+		gtagCache.RUnlock()
+		c.Set("Content-Type", ct)
+		c.Set("Cache-Control", "public, max-age=3600")
+		return c.Send(body)
+	}
+	gtagCache.RUnlock()
+
+	// Cache miss — fetch from Google
+	target := "https://www.googletagmanager.com/gtag/js?" + qs
 	resp, err := ga4Client.Get(target)
 	if err != nil {
+		log.Printf("[GA4] Failed to fetch gtag.js: %v", err)
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	defer resp.Body.Close()
-	c.Set("Content-Type", resp.Header.Get("Content-Type"))
-	c.Set("Cache-Control", "public, max-age=3600")
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
+
+	ct := resp.Header.Get("Content-Type")
+
+	// Update cache
+	if resp.StatusCode == http.StatusOK {
+		gtagCache.Lock()
+		gtagCache.body = body
+		gtagCache.contentType = ct
+		gtagCache.fetchedAt = time.Now()
+		gtagCache.queryString = qs
+		gtagCache.Unlock()
+	}
+
+	c.Set("Content-Type", ct)
+	c.Set("Cache-Control", "public, max-age=3600")
 	return c.Status(resp.StatusCode).Send(body)
 }
 
