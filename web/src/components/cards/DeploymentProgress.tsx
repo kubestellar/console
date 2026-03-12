@@ -23,7 +23,7 @@ const SORT_OPTIONS = [
 
 const statusOrder: Record<string, number> = { failed: 0, deploying: 1, running: 2 }
 
-const statusConfig = {
+const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; bg: string; barColor: string; label: string }> = {
   running: {
     icon: CheckCircle,
     color: 'text-green-400',
@@ -46,6 +46,14 @@ const statusConfig = {
     label: 'Failed',
   },
 }
+
+const UNKNOWN_STATUS_STYLE = {
+  icon: Loader2,
+  color: 'text-muted-foreground',
+  bg: 'bg-secondary/20',
+  barColor: 'bg-secondary',
+  label: 'Unknown',
+} as const
 
 interface DeploymentProgressProps {
   config?: {
@@ -282,7 +290,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
           </div>
         ) : (
           paginatedDeployments.map((deployment) => {
-            const statusStyle = statusConfig[deployment.status]
+            const statusStyle = statusConfig[deployment.status] || UNKNOWN_STATUS_STYLE
             const StatusIcon = statusStyle.icon
             const clusterName = deployment.cluster || 'unknown'
             const version = extractVersion(deployment.image)
