@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -110,6 +110,16 @@ export function Settings() {
   const [activeSection, setActiveSection] = useState<string>('ai-mode-settings')
   const [showRestoredToast, setShowRestoredToast] = useState(false)
 
+  // Suppresses IntersectionObserver updates during programmatic scrolls
+  // so the sidebar highlight stays on the clicked item instead of flickering
+  // through intermediate sections while the smooth scroll animates.
+  const isNavScrollingRef = useRef(false)
+  const navScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /** Duration to suppress observer after a nav click (covers smooth scroll animation).
+   *  Long scrolls (e.g. AI Mode → Updates) can exceed 800ms on some browsers. */
+  const NAV_SCROLL_SUPPRESS_MS = 1200
+
   // Show toast when settings are restored from backup file (after cache clear)
   useEffect(() => {
     if (restoredFromFile) {
@@ -125,7 +135,7 @@ export function Settings() {
 
   const getScrollContainer = () => document.getElementById('main-content')
 
-  const scrollToSection = (sectionId: string, smooth = true) => {
+  const scrollToSection = useCallback((sectionId: string, smooth = true) => {
     const element = document.getElementById(sectionId)
     const container = getScrollContainer()
     if (!element || !container) return
@@ -133,14 +143,16 @@ export function Settings() {
     const elementRect = element.getBoundingClientRect()
     const y = elementRect.top - containerRect.top + container.scrollTop - SCROLL_OFFSET
     container.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' })
-  }
+  }, [])
 
-  // Handle deep linking - scroll to section based on URL hash.
+  // Handle deep linking — scroll to section based on URL hash.
   // Depends on both pathname and hash so it fires when navigating TO settings
   // from another page (KeepAlive keeps Settings mounted, so location updates
   // for all routes — we only act when actually on /settings).
+  // Skipped when isNavScrollingRef is set (handleNavClick already scrolled).
   useEffect(() => {
     if (location.pathname !== '/settings') return
+    if (isNavScrollingRef.current) return
     const hash = location.hash.replace('#', '')
     if (!hash) return
 
@@ -152,6 +164,11 @@ export function Settings() {
       const element = document.getElementById(hash)
       const container = getScrollContainer()
       if (element && container && element.getBoundingClientRect().height > 0) {
+        // Suppress observer while deep-link scroll settles
+        isNavScrollingRef.current = true
+        if (navScrollTimerRef.current) clearTimeout(navScrollTimerRef.current)
+        navScrollTimerRef.current = setTimeout(() => { isNavScrollingRef.current = false }, NAV_SCROLL_SUPPRESS_MS)
+
         scrollToSection(hash, false)
         setActiveSection(hash)
         element.classList.add('ring-2', 'ring-purple-500/50')
@@ -163,7 +180,7 @@ export function Settings() {
     // Initial delay for route transition, then retry with rAF
     const timer = setTimeout(tryScroll, TOOLTIP_HIDE_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [location.pathname, location.hash])
+  }, [location.pathname, location.hash, scrollToSection])
 
   // Track active section on scroll using IntersectionObserver
   useEffect(() => {
@@ -175,6 +192,8 @@ export function Settings() {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        // Always keep visibleSections accurate so stale data doesn't
+        // cause wrong highlights after programmatic scrolls end.
         for (const entry of entries) {
           if (entry.isIntersecting) {
             visibleSections.set(entry.target.id, entry.intersectionRatio)
@@ -182,6 +201,10 @@ export function Settings() {
             visibleSections.delete(entry.target.id)
           }
         }
+        // Skip activeSection updates during programmatic scrolls
+        // (nav click or deep link) — handleNavClick already set it.
+        if (isNavScrollingRef.current) return
+
         // Pick the first visible section in document order
         for (const id of allSectionIds) {
           if (visibleSections.has(id)) {
@@ -206,8 +229,14 @@ export function Settings() {
   }, [])
 
   const handleNavClick = (sectionId: string) => {
+    // Suppress IntersectionObserver while the smooth scroll animates
+    isNavScrollingRef.current = true
+    if (navScrollTimerRef.current) clearTimeout(navScrollTimerRef.current)
+    navScrollTimerRef.current = setTimeout(() => { isNavScrollingRef.current = false }, NAV_SCROLL_SUPPRESS_MS)
+
     scrollToSection(sectionId)
     setActiveSection(sectionId)
+    // Update URL hash without triggering the deep link effect (isNavScrollingRef guards it)
     navigate(`#${sectionId}`, { replace: true })
   }
 
