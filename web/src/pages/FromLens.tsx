@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -12,6 +12,8 @@ import {
   Quote,
   ExternalLink,
   Sparkles,
+  Monitor,
+  Globe,
 } from 'lucide-react'
 import { emitFromLensViewed, emitFromLensActioned } from '../lib/analytics'
 
@@ -22,8 +24,8 @@ import { emitFromLensViewed, emitFromLensActioned } from '../lib/analytics'
 /** Number of testimonial placeholder cards to render */
 const TESTIMONIAL_COUNT = 4
 
-/** Number of install steps to display */
-const INSTALL_STEP_COUNT = 3
+/** Deployment option tab identifiers */
+type DeployTab = 'localhost' | 'cluster'
 
 /* ------------------------------------------------------------------ */
 /*  Comparison table data                                             */
@@ -88,26 +90,31 @@ const TESTIMONIALS: Testimonial[] = [
 ]
 
 /* ------------------------------------------------------------------ */
-/*  Install steps                                                     */
+/*  Install steps — localhost (port-forward) & cluster (ingress)      */
 /* ------------------------------------------------------------------ */
 
 interface InstallStep {
   step: number
   title: string
   commands?: string[]
+  /** Optional note shown in a muted box below the commands */
+  note?: string
   description: string
 }
 
-const INSTALL_STEPS: InstallStep[] = [
-  {
-    step: 1,
-    title: 'Add the Helm repo',
-    commands: [
-      'helm repo add kubestellar-console https://kubestellar.github.io/console',
-      'helm repo update',
-    ],
-    description: 'One-time setup. The chart is published to GitHub Pages — no OCI registry login needed.',
-  },
+/** Shared first step — adding the Helm repo */
+const HELM_REPO_STEP: InstallStep = {
+  step: 1,
+  title: 'Add the Helm repo',
+  commands: [
+    'helm repo add kubestellar-console https://kubestellar.github.io/console',
+    'helm repo update',
+  ],
+  description: 'One-time setup. The chart is published to GitHub Pages — no OCI registry login needed.',
+}
+
+const LOCALHOST_STEPS: InstallStep[] = [
+  HELM_REPO_STEP,
   {
     step: 2,
     title: 'Install',
@@ -122,6 +129,34 @@ const INSTALL_STEPS: InstallStep[] = [
       'open http://localhost:8080',
     ],
     description: 'Console auto-detects your kubeconfig and discovers clusters immediately.',
+  },
+]
+
+const CLUSTER_STEPS: InstallStep[] = [
+  HELM_REPO_STEP,
+  {
+    step: 2,
+    title: 'Install with ingress',
+    commands: [
+      'helm install kc kubestellar-console/kubestellar-console \\',
+      '  --set ingress.enabled=true \\',
+      '  --set ingress.className=nginx \\',
+      '  --set ingress.hosts[0].host=console.example.com \\',
+      '  --set ingress.hosts[0].paths[0].path=/ \\',
+      '  --set ingress.hosts[0].paths[0].pathType=Prefix',
+    ],
+    note: 'Replace console.example.com with your domain. For OpenShift, use --set route.enabled=true --set route.host=console.example.com instead.',
+    description: 'The console runs as a Deployment + Service. The ingress exposes it to your network.',
+  },
+  {
+    step: 3,
+    title: 'Connect the kc-agent',
+    commands: [
+      'brew tap kubestellar/tap && brew install --head kc-agent',
+      'KC_ALLOWED_ORIGINS=https://console.example.com kc-agent',
+    ],
+    note: 'The kc-agent bridges your browser to your Kubernetes clusters via the in-cluster console. Set KC_ALLOWED_ORIGINS to your console\'s URL so the agent accepts cross-origin requests.',
+    description: 'Run the agent on any machine with access to your kubeconfig. It streams live cluster data to the console.',
   },
 ]
 
@@ -194,6 +229,103 @@ function ComparisonCell({ value, note, isConsole }: { value: string | boolean; n
       <span className={isConsole ? 'text-green-400 font-medium' : 'text-red-400/80'}>{value}</span>
       {note && <span className="text-xs text-muted-foreground">{note}</span>}
     </span>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Deployment section with tabbed localhost / cluster options         */
+/* ------------------------------------------------------------------ */
+
+function DeploymentSection() {
+  const [activeTab, setActiveTab] = useState<DeployTab>('localhost')
+  const steps = activeTab === 'localhost' ? LOCALHOST_STEPS : CLUSTER_STEPS
+
+  return (
+    <section className="max-w-5xl mx-auto px-6 py-16">
+      <h2 className="text-3xl font-bold text-center mb-4">
+        Getting started in{' '}
+        <span className="text-purple-400">60 seconds</span>
+      </h2>
+      <p className="text-slate-400 text-center mb-12">
+        No sign-up, no license file. Just Helm and a kubeconfig.
+      </p>
+
+      {/* Deployment mode tabs */}
+      <div className="max-w-3xl mx-auto mb-8">
+        <div className="flex rounded-lg border border-slate-700/50 overflow-hidden">
+          <button
+            onClick={() => setActiveTab('localhost')}
+            className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
+              activeTab === 'localhost'
+                ? 'bg-purple-500/20 text-purple-300 border-b-2 border-purple-400'
+                : 'bg-slate-800/30 text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+            }`}
+          >
+            <Monitor className="w-4 h-4" />
+            Localhost
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">port-forward</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('cluster')}
+            className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
+              activeTab === 'cluster'
+                ? 'bg-purple-500/20 text-purple-300 border-b-2 border-purple-400'
+                : 'bg-slate-800/30 text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            Cluster
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">ingress / route</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-6 max-w-3xl mx-auto">
+        {steps.map((s) => (
+          <div
+            key={`${activeTab}-${s.step}`}
+            className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">
+                {s.step}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-2">{s.title}</h3>
+                {s.commands && s.commands.length > 0 && (
+                  <pre className="bg-slate-900 border border-slate-700/50 rounded-lg px-4 py-3 mb-3 text-sm text-green-400 overflow-x-auto">
+                    <code>{s.commands.map((cmd, i) => (
+                      <span key={i}>{i > 0 && '\n'}$ {cmd}</span>
+                    ))}</code>
+                  </pre>
+                )}
+                {s.note && (
+                  <div className="rounded-lg border border-slate-600/30 bg-slate-900/50 px-4 py-2.5 mb-3 text-xs text-slate-400">
+                    {s.note}
+                  </div>
+                )}
+                <p className="text-sm text-slate-400">{s.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 text-center">
+        {activeTab === 'localhost' ? (
+          <p className="text-slate-400 text-sm">
+            Console auto-detects your standard <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded">~/.kube/config</code> and discovers all contexts.
+            No manual cluster registration needed.
+          </p>
+        ) : (
+          <p className="text-slate-400 text-sm">
+            The kc-agent streams cluster data to the console over WebSocket.{' '}
+            <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded">KC_ALLOWED_ORIGINS</code>{' '}
+            must include your console&apos;s URL for cross-origin requests to work.
+          </p>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -343,48 +475,7 @@ export function FromLens() {
       </section>
 
       {/* ---- Getting Started ---- */}
-      <section className="max-w-5xl mx-auto px-6 py-16">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          Getting started in{' '}
-          <span className="text-purple-400">60 seconds</span>
-        </h2>
-        <p className="text-slate-400 text-center mb-12">
-          No sign-up, no license file. Just Helm and a kubeconfig.
-        </p>
-
-        <div className="space-y-6 max-w-3xl mx-auto">
-          {INSTALL_STEPS.slice(0, INSTALL_STEP_COUNT).map((s) => (
-            <div
-              key={s.step}
-              className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">
-                  {s.step}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-2">{s.title}</h3>
-                  {s.commands && s.commands.length > 0 && (
-                    <pre className="bg-slate-900 border border-slate-700/50 rounded-lg px-4 py-3 mb-3 text-sm text-green-400 overflow-x-auto">
-                      <code>{s.commands.map((cmd, i) => (
-                        <span key={i}>{i > 0 && '\n'}$ {cmd}</span>
-                      ))}</code>
-                    </pre>
-                  )}
-                  <p className="text-sm text-slate-400">{s.description}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-slate-400 text-sm">
-            Console auto-detects your standard <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded">~/.kube/config</code> and discovers all contexts.
-            No manual cluster registration needed.
-          </p>
-        </div>
-      </section>
+      <DeploymentSection />
 
       {/* ---- Footer CTA ---- */}
       <section className="border-t border-slate-700/50 bg-gradient-to-b from-slate-900/50 to-[#0f172a]">
