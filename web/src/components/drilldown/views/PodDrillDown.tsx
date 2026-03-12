@@ -1171,13 +1171,28 @@ Please proceed step by step and ask for confirmation before making any changes.`
   const containerNames = useMemo(() => {
     if (!yamlOutput) return []
     const names: string[] = []
-    // Match "- name: <container>" lines under "containers:" section
-    const containerNameRegex = /^\s+- name:\s+(.+)$/gm
-    let match
-    while ((match = containerNameRegex.exec(yamlOutput)) !== null) {
-      const name = match[1].trim()
-      if (name && !names.includes(name)) {
-        names.push(name)
+    // In kubectl YAML, container objects live under "  containers:" or "  initContainers:"
+    // and have "    name: <value>" (4-space indent, no dash prefix).
+    // Env vars/volumes use "    - name:" (with dash) — we must NOT match those.
+    const lines = yamlOutput.split('\n')
+    let inContainerSection = false
+    for (const line of lines) {
+      if (/^ {2}(?:init)?containers:\s*$/.test(line)) {
+        inContainerSection = true
+        continue
+      }
+      // Exit section at next spec-level key (2-space indent, not a list item)
+      if (inContainerSection && /^ {2}[a-z]/.test(line)) {
+        inContainerSection = false
+      }
+      if (inContainerSection) {
+        const match = line.match(/^ {4}name:\s+(.+)$/)
+        if (match) {
+          const name = match[1].trim()
+          if (name && !names.includes(name)) {
+            names.push(name)
+          }
+        }
       }
     }
     return names
