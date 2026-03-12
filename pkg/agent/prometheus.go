@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/client-go/rest"
 )
 
@@ -84,7 +83,6 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	fullURL := fmt.Sprintf("%s%s?%s", config.Host, proxyPath, params.Encode())
 
 	// Create an HTTP client with the cluster's TLS/auth config
-	k8s.DisableHTTP2(config)
 	transport, err := rest.TransportFor(config)
 	if err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
