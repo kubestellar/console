@@ -1592,3 +1592,15 @@ export function emitActionClicked(actionType: string, sourceCard: string, dashbo
 export function emitAISuggestionViewed(insightCategory: string, hasAIEnrichment: boolean) {
   send('ksc_ai_suggestion_viewed', { insight_category: insightCategory, has_ai_enrichment: hasAIEnrichment })
 }
+
+// ── From Lens Landing Page ──────────────────────────────────────────
+
+/** Fired when a user views the /from-lens landing page */
+export function emitFromLensViewed() {
+  send('ksc_from_lens_viewed')
+}
+
+/** Fired when a user interacts with a CTA on the /from-lens page */
+export function emitFromLensActioned(action: string) {
+  send('ksc_from_lens_actioned', { action })
+}

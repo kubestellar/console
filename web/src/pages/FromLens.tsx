@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   ExternalLink,
   Sparkles,
 } from 'lucide-react'
+import { emitFromLensViewed, emitFromLensActioned } from '../lib/analytics'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -99,21 +101,21 @@ interface InstallStep {
 const INSTALL_STEPS: InstallStep[] = [
   {
     step: 1,
-    title: 'Install with Helm',
-    command: 'helm install kc oci://ghcr.io/kubestellar/console/chart',
-    description: 'One command. No accounts, no license keys, no telemetry opt-in dialogs.',
+    title: 'Add the Helm repo',
+    command: 'helm repo add kubestellar-console https://kubestellar.github.io/console && helm repo update',
+    description: 'One-time setup. The chart is published to GitHub Pages — no OCI registry login needed.',
   },
   {
     step: 2,
-    title: 'Port-forward or expose',
-    command: 'kubectl port-forward svc/kubestellar-console 8080:8080',
-    description: 'Console auto-detects your kubeconfig and discovers clusters immediately.',
+    title: 'Install',
+    command: 'helm install kc kubestellar-console/kubestellar-console',
+    description: 'No accounts, no license keys, no telemetry opt-in dialogs.',
   },
   {
     step: 3,
-    title: 'Open your browser',
-    command: 'open http://localhost:8080',
-    description: 'That is it. Your clusters, pods, and deployments are waiting for you.',
+    title: 'Port-forward and open',
+    command: 'kubectl port-forward svc/kc-kubestellar-console 8080:8080 && open http://localhost:8080',
+    description: 'Console auto-detects your kubeconfig and discovers clusters immediately.',
   },
 ]
 
@@ -194,6 +196,10 @@ function ComparisonCell({ value, note, isConsole }: { value: string | boolean; n
 /* ------------------------------------------------------------------ */
 
 export function FromLens() {
+  useEffect(() => {
+    emitFromLensViewed()
+  }, [])
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-white">
       {/* ---- Hero Section ---- */}
@@ -224,6 +230,7 @@ export function FromLens() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/"
+              onClick={() => emitFromLensActioned('hero_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >
               Try Demo Mode
@@ -233,6 +240,7 @@ export function FromLens() {
               href="https://github.com/kubestellar/console"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => emitFromLensActioned('hero_view_github')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
             >
               View on GitHub
@@ -381,6 +389,7 @@ export function FromLens() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/"
+              onClick={() => emitFromLensActioned('footer_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >
               Try Demo
@@ -390,6 +399,7 @@ export function FromLens() {
               href="https://github.com/kubestellar/console"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => emitFromLensActioned('footer_view_github')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
             >
               View on GitHub
