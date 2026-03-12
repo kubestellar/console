@@ -1393,12 +1393,29 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		var totalCPU int64
 		var totalMemory int64
 		var totalStorage int64
+		var diskPressureNodes []string
+		var memoryPressureNodes []string
+		var pidPressureNodes []string
 		for _, node := range nodes.Items {
-			// Count ready nodes
+			// Count ready nodes and check node conditions
 			for _, condition := range node.Status.Conditions {
-				if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
-					health.ReadyNodes++
-					break
+				switch condition.Type {
+				case corev1.NodeReady:
+					if condition.Status == corev1.ConditionTrue {
+						health.ReadyNodes++
+					}
+				case corev1.NodeDiskPressure:
+					if condition.Status == corev1.ConditionTrue {
+						diskPressureNodes = append(diskPressureNodes, node.Name)
+					}
+				case corev1.NodeMemoryPressure:
+					if condition.Status == corev1.ConditionTrue {
+						memoryPressureNodes = append(memoryPressureNodes, node.Name)
+					}
+				case corev1.NodePIDPressure:
+					if condition.Status == corev1.ConditionTrue {
+						pidPressureNodes = append(pidPressureNodes, node.Name)
+					}
 				}
 			}
 			if cpu := node.Status.Allocatable.Cpu(); cpu != nil {
@@ -1418,6 +1435,15 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		health.StorageGB = float64(totalStorage) / (1024 * 1024 * 1024)
 		if health.ReadyNodes < health.NodeCount {
 			health.Issues = append(health.Issues, fmt.Sprintf("%d/%d nodes not ready", health.NodeCount-health.ReadyNodes, health.NodeCount))
+		}
+		if len(diskPressureNodes) > 0 {
+			health.Issues = append(health.Issues, fmt.Sprintf("DiskPressure on %d node(s): %s", len(diskPressureNodes), strings.Join(diskPressureNodes, ", ")))
+		}
+		if len(memoryPressureNodes) > 0 {
+			health.Issues = append(health.Issues, fmt.Sprintf("MemoryPressure on %d node(s): %s", len(memoryPressureNodes), strings.Join(memoryPressureNodes, ", ")))
+		}
+		if len(pidPressureNodes) > 0 {
+			health.Issues = append(health.Issues, fmt.Sprintf("PIDPressure on %d node(s): %s", len(pidPressureNodes), strings.Join(pidPressureNodes, ", ")))
 		}
 	}
 

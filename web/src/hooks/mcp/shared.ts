@@ -1107,6 +1107,7 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           storageGB: health.storageGB,
           pvcCount: health.pvcCount,
           pvcBoundCount: health.pvcBoundCount,
+          issues: health.issues,
           errorType: undefined,
           errorMessage: undefined,
           refreshing: false,

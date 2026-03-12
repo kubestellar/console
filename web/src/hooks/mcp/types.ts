@@ -43,6 +43,8 @@ export interface ClusterInfo {
   namespaces?: string[]
   // Aliases - other context names pointing to the same server (populated by deduplication)
   aliases?: string[]
+  // Node condition issues (DiskPressure, MemoryPressure, PIDPressure, etc.)
+  issues?: string[]
 }
 
 export interface ClusterHealth {

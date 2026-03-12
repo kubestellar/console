@@ -177,6 +177,18 @@ export const PRESET_ALERT_RULES: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt
     aiDiagnose: false,
   },
   {
+    name: 'Disk Pressure',
+    description: 'Alert when nodes report DiskPressure condition (ephemeral storage exhaustion)',
+    enabled: true,
+    condition: {
+      type: 'disk_pressure',
+      duration: 0, // Immediate — DiskPressure is already critical when reported
+    },
+    severity: 'critical',
+    channels: [{ type: 'browser', enabled: true, config: {} }],
+    aiDiagnose: true,
+  },
+  {
     name: 'GPU Health CronJob',
     description: 'Alert when GPU health CronJob detects issues (requires CronJob installed)',
     enabled: false,

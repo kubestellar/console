@@ -849,6 +849,116 @@ Please provide:
     [createAlert]
   )
 
+  // Evaluate disk pressure condition — checks for DiskPressure in cluster issues
+  const evaluateDiskPressure = useCallback(
+    (rule: AlertRule) => {
+      const currentClusters = clustersRef.current
+      const relevantClusters = rule.condition.clusters?.length
+        ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
+        : currentClusters
+
+      for (const cluster of relevantClusters) {
+        const diskPressureIssue = (cluster.issues || []).find(issue =>
+          typeof issue === 'string' && issue.includes('DiskPressure')
+        )
+
+        if (diskPressureIssue) {
+          createAlert(
+            rule,
+            `${cluster.name}: ${diskPressureIssue}`,
+            {
+              clusterName: cluster.name,
+              issue: diskPressureIssue,
+              nodeCount: cluster.nodeCount,
+            },
+            cluster.name,
+            undefined,
+            cluster.name,
+            'Cluster'
+          )
+
+          // Send browser notification with deep link
+          if (rule.channels?.some(ch => ch.type === 'browser' && ch.enabled)) {
+            sendNotificationWithDeepLink(
+              `Disk Pressure: ${cluster.name}`,
+              diskPressureIssue,
+              { card: 'cluster_health' }
+            )
+          }
+        } else {
+          // Auto-resolve if DiskPressure clears
+          setAlerts(prev => {
+            const firingAlert = prev.find(
+              a =>
+                a.ruleId === rule.id &&
+                a.status === 'firing' &&
+                a.cluster === cluster.name
+            )
+            if (firingAlert) {
+              return prev.map(a =>
+                a.id === firingAlert.id
+                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
+                  : a
+              )
+            }
+            return prev
+          })
+        }
+      }
+    },
+    [createAlert]
+  )
+
+  // Evaluate memory pressure condition — checks for MemoryPressure in cluster issues
+  const evaluateMemoryPressure = useCallback(
+    (rule: AlertRule) => {
+      const currentClusters = clustersRef.current
+      const relevantClusters = rule.condition.clusters?.length
+        ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
+        : currentClusters
+
+      for (const cluster of relevantClusters) {
+        const memPressureIssue = (cluster.issues || []).find(issue =>
+          typeof issue === 'string' && issue.includes('MemoryPressure')
+        )
+
+        if (memPressureIssue) {
+          createAlert(
+            rule,
+            `${cluster.name}: ${memPressureIssue}`,
+            {
+              clusterName: cluster.name,
+              issue: memPressureIssue,
+              nodeCount: cluster.nodeCount,
+            },
+            cluster.name,
+            undefined,
+            cluster.name,
+            'Cluster'
+          )
+        } else {
+          setAlerts(prev => {
+            const firingAlert = prev.find(
+              a =>
+                a.ruleId === rule.id &&
+                a.status === 'firing' &&
+                a.cluster === cluster.name
+            )
+            if (firingAlert) {
+              return prev.map(a =>
+                a.id === firingAlert.id
+                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
+                  : a
+              )
+            }
+            return prev
+          })
+        }
+      }
+    },
+    [createAlert]
+  )
+
   // Evaluate nightly E2E failures — reads cached run data from ref
   const evaluateNightlyE2EFailure = useCallback(
     (rule: AlertRule) => {
@@ -942,6 +1052,12 @@ Please provide:
           case 'pod_crash':
             evaluatePodCrash(rule)
             break
+          case 'disk_pressure':
+            evaluateDiskPressure(rule)
+            break
+          case 'memory_pressure':
+            evaluateMemoryPressure(rule)
+            break
           case 'weather_alerts':
             evaluateWeatherAlerts(rule)
             break
@@ -956,7 +1072,7 @@ Please provide:
       isEvaluatingRef.current = false
       setIsEvaluating(false)
     }
-  }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateWeatherAlerts, evaluateNightlyE2EFailure])
+  }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateDiskPressure, evaluateMemoryPressure, evaluateWeatherAlerts, evaluateNightlyE2EFailure])
 
   // Stable ref for evaluateConditions so the interval never resets
   const evaluateConditionsRef = useRef(evaluateConditions)
