@@ -76,10 +76,23 @@ func runWatchdog(cfg WatchdogConfig) error {
 	}
 
 	// Custom error handler: serve fallback page on connection failures.
-	// Only mark backend unhealthy on hard connection errors (refused, reset, EOF),
-	// NOT on request timeouts — slow requests don't mean the backend is down.
+	// Only mark backend unhealthy on hard connection errors (refused, reset, EOF).
+	// Client-side disconnects (context canceled) and timeouts do NOT mean the
+	// backend is down — the client navigated away or the request was slow.
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		errMsg := err.Error()
+
+		// Client disconnected (e.g. browser navigated away, closed SSE stream).
+		// This is normal — do NOT mark backend unhealthy.
+		isClientGone := strings.Contains(errMsg, "context canceled") ||
+			strings.Contains(errMsg, "client disconnected") ||
+			strings.Contains(errMsg, "write: broken pipe")
+		if isClientGone {
+			log.Printf("[Watchdog] Client disconnected (backend still healthy): %v", err)
+			return
+		}
+
+		// Backend slow but still running — don't mark unhealthy.
 		isTimeout := strings.Contains(errMsg, "timeout awaiting response headers") ||
 			strings.Contains(errMsg, "context deadline exceeded")
 		if isTimeout {
@@ -87,6 +100,8 @@ func runWatchdog(cfg WatchdogConfig) error {
 			http.Error(w, "Gateway Timeout", http.StatusGatewayTimeout)
 			return
 		}
+
+		// Hard connection failure — backend is genuinely down.
 		log.Printf("[Watchdog] Proxy error (backend down): %v", err)
 		atomic.StoreInt32(&backendHealthy, 0)
 		serveFallback(w, r)
