@@ -223,7 +223,7 @@ export function Login() {
       </div>
 
       {/* Right side - Globe animation */}
-      <div className="hidden lg:flex flex-1 items-center justify-center relative">
+      <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden">
         {/* Subtle gradient background for the globe side */}
         <div className="absolute inset-0 bg-gradient-to-l from-[#0a0f1c] to-transparent" />
         <Suspense fallback={
@@ -237,6 +237,7 @@ export function Login() {
             showLoader={true}
             enableControls={true}
             className="absolute inset-0"
+            style={{ transform: 'scale(0.65)', transformOrigin: 'center center' }}
           />
         </Suspense>
       </div>
