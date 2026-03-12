@@ -260,6 +260,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.release_type }}
           build-args: |
+            APP_VERSION=${{ needs.determine-version.outputs.version }}
             COMMIT_HASH=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

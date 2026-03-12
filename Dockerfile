@@ -18,7 +18,8 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
-# Build arg for commit hash
+# Build args for version and commit hash
+ARG APP_VERSION=0.0.0
 ARG COMMIT_HASH=unknown
 
 # Copy package files
@@ -28,7 +29,8 @@ RUN npm ci
 # Copy source
 COPY web/ ./
 
-# Build with commit hash
+# Build with version and commit hash baked into the JS bundle
+ENV VITE_APP_VERSION=${APP_VERSION}
 ENV VITE_COMMIT_HASH=${COMMIT_HASH}
 RUN npm run build
 
