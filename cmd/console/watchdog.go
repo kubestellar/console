@@ -64,11 +64,16 @@ func runWatchdog(cfg WatchdogConfig) error {
 	// Create reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(backendURL)
 
-	// Custom transport with managed connection pool and timeouts
+	// Custom transport with managed connection pool and timeouts.
+	// DisableCompression prevents the Transport from adding Accept-Encoding: gzip
+	// to proxied requests. Without this, fasthttp's SendFile tries to create
+	// compressed file caches (.fiber.gz) which fails on read-only filesystems,
+	// causing 404s for static assets like manifest.json and favicon.ico.
 	proxy.Transport = &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout: watchdogHealthTimeout,
 		}).DialContext,
+		DisableCompression:    true,
 		ResponseHeaderTimeout: watchdogProxyHeaderTimeout,
 		MaxIdleConns:          watchdogMaxIdleConns,
 		MaxIdleConnsPerHost:   watchdogMaxIdleConnsPerHost,

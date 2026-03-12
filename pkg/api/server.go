@@ -840,7 +840,7 @@ func preCompressedStatic(root string) fiber.Handler {
 				c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
 				c.Set("Content-Length", fmt.Sprintf("%d", brInfo.Size()))
 				c.Set("Vary", "Accept-Encoding")
-				return c.SendFile(brPath, true)
+				return c.SendFile(brPath)
 			}
 		}
 		if strings.Contains(accept, "gzip") {
@@ -851,7 +851,7 @@ func preCompressedStatic(root string) fiber.Handler {
 				c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
 				c.Set("Content-Length", fmt.Sprintf("%d", gzInfo.Size()))
 				c.Set("Vary", "Accept-Encoding")
-				return c.SendFile(gzPath, true)
+				return c.SendFile(gzPath)
 			}
 		}
 
@@ -860,7 +860,7 @@ func preCompressedStatic(root string) fiber.Handler {
 			c.Set("Content-Type", contentType)
 		}
 		c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
-		return c.SendFile(filePath, true)
+		return c.SendFile(filePath)
 	}
 }
 
