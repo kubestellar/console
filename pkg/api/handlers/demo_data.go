@@ -127,6 +127,7 @@ func getDemoDeployments() []k8s.Deployment {
 		{Name: "frontend", Namespace: "production", Cluster: "eks-prod-us-east-1", Status: "running", Replicas: 3, ReadyReplicas: 3, UpdatedReplicas: 3, AvailableReplicas: 3, Progress: 100},
 		{Name: "api-server", Namespace: "production", Cluster: "eks-prod-us-east-1", Status: "running", Replicas: 5, ReadyReplicas: 5, UpdatedReplicas: 5, AvailableReplicas: 5, Progress: 100},
 		{Name: "worker", Namespace: "production", Cluster: "gke-staging", Status: "deploying", Replicas: 2, ReadyReplicas: 1, UpdatedReplicas: 2, AvailableReplicas: 1, Progress: 50},
+		{Name: "batch-processor", Namespace: "batch", Cluster: "eks-prod-us-east-1", Status: "failed", Replicas: 3, ReadyReplicas: 0, UpdatedReplicas: 3, AvailableReplicas: 0, Progress: 0},
 		{Name: "nginx-ingress-controller", Namespace: "ingress-nginx", Cluster: "openshift-prod", Status: "running", Replicas: 2, ReadyReplicas: 2, UpdatedReplicas: 2, AvailableReplicas: 2, Progress: 100},
 		{Name: "prometheus", Namespace: "monitoring", Cluster: "rancher-mgmt", Status: "running", Replicas: 1, ReadyReplicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1, Progress: 100},
 		{Name: "grafana", Namespace: "monitoring", Cluster: "rancher-mgmt", Status: "running", Replicas: 1, ReadyReplicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1, Progress: 100},
