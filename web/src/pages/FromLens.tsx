@@ -121,7 +121,6 @@ const LOCALHOST_STEPS: InstallStep[] = [
       '  https://raw.githubusercontent.com/kubestellar/console/main/start.sh \\',
       '  | bash',
     ],
-    note: 'Or via Homebrew: brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
     description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser at http://localhost:8080. No Go, Node.js, or build tools required.',
   },
 ]
