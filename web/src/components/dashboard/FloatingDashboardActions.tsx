@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Layout, RotateCcw, Download, Upload, Pencil } from 'lucide-react'
+import { Plus, Layout, RotateCcw, Download, Upload, Pencil, Undo2, Redo2 } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
@@ -24,6 +24,14 @@ interface FloatingDashboardActionsProps {
   onExport?: () => void
   /** Import a dashboard from JSON file */
   onImport?: (json: unknown) => void
+  /** Undo last card mutation */
+  onUndo?: () => void
+  /** Redo last undone mutation */
+  onRedo?: () => void
+  /** Whether undo is available */
+  canUndo?: boolean
+  /** Whether redo is available */
+  canRedo?: boolean
 }
 
 /**
@@ -38,6 +46,10 @@ export function FloatingDashboardActions({
   isCustomized,
   onExport,
   onImport,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }: FloatingDashboardActionsProps) {
   const { t } = useTranslation()
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
@@ -174,6 +186,30 @@ export function FloatingDashboardActions({
                 <Download className="w-3.5 h-3.5" />
                 {t('dashboard.actions.export')}
               </button>
+            )}
+            {(canUndo || canRedo) && (
+              <div className="flex gap-1">
+                <button
+                  role="menuitem"
+                  onClick={() => { onUndo?.() }}
+                  disabled={!canUndo}
+                  className={`${menuBtnClass} ${!canUndo ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  title={`${t('dashboard.actions.undo')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+Z)`}
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                  {t('dashboard.actions.undo')}
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => { onRedo?.() }}
+                  disabled={!canRedo}
+                  className={`${menuBtnClass} ${!canRedo ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  title={`${t('dashboard.actions.redo')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+Shift+Z)`}
+                >
+                  <Redo2 className="w-3.5 h-3.5" />
+                  {t('dashboard.actions.redo')}
+                </button>
+              </div>
             )}
             {showResetOption && (
               <button

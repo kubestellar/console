@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, SetStateAction } from 'react'
 import {
   KeyboardSensor,
   PointerSensor,
@@ -10,6 +10,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { dashboardSync } from './dashboardSync'
 import { DashboardCard, DashboardCardPlacement, NewCardInput } from './types'
+import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 
 // Re-export dashboardSync for use in auth context (clear cache on logout)
 export { dashboardSync } from './dashboardSync'
@@ -98,14 +99,20 @@ export interface UseDashboardCardsResult {
   updateCardWidth: (id: string, width: number) => void
   /** Reset to default cards */
   reset: () => void
-  /** Whether layout has been customized */
+  /** Whether layout has been customized from defaults */
   isCustomized: boolean
-  /** Mark as customized */
-  setCustomized: (value: boolean) => void
   /** Whether currently syncing with backend */
   isSyncing: boolean
   /** Manually trigger a sync with backend */
   syncWithBackend: () => Promise<void>
+  /** Undo last card mutation */
+  undo: () => void
+  /** Redo last undone mutation */
+  redo: () => void
+  /** Whether undo is available */
+  canUndo: boolean
+  /** Whether redo is available */
+  canRedo: boolean
 }
 
 export function useDashboardCards(
@@ -141,8 +148,15 @@ export function useDashboardCards(
     return defaultCardInstances
   })
 
-  const [isCustomized, setCustomized] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+
+  // Compute isCustomized by comparing current card types to defaults
+  const isCustomized = useMemo(() => {
+    if (cards.length !== defaultCardInstances.length) return true
+    const currentTypes = cards.map(c => c.card_type).sort()
+    const defaultTypes = defaultCardInstances.map(c => c.card_type).sort()
+    return currentTypes.some((t, i) => t !== defaultTypes[i])
+  }, [cards, defaultCardInstances])
 
   // On mount, sync with backend if authenticated
   useEffect(() => {
@@ -179,11 +193,28 @@ export function useDashboardCards(
 
     // Always save to localStorage (fast, works offline)
     localStorage.setItem(storageKey, JSON.stringify(cards))
-    setCustomized(true)
 
     // Sync to backend (debounced in the sync service)
     dashboardSync.saveCards(storageKey, cards)
   }, [cards, storageKey])
+
+  // Ref to always have current cards for undo/redo without stale closures
+  const cardsRef = useRef(cards)
+  cardsRef.current = cards
+
+  // Undo/redo support
+  const {
+    snapshot, undo, redo, canUndo, canRedo,
+  } = useDashboardUndoRedo<DashboardCard>(
+    (restored) => setCards(restored),
+    () => cardsRef.current,
+  )
+
+  // Wrapper that snapshots before calling setCards
+  const setCardsWithSnapshot = useCallback((action: SetStateAction<DashboardCard[]>) => {
+    snapshot(cardsRef.current)
+    setCards(action)
+  }, [snapshot])
 
   // Generate unique ID for new cards
   const generateId = useCallback(() =>
@@ -202,6 +233,8 @@ export function useDashboardCards(
       config: card.config || {},
       title: card.title,
     }))
+
+    snapshot(cardsRef.current)
 
     // If small number of cards, add all at once
     if (cardsToAdd.length <= BATCH_SIZE) {
@@ -223,30 +256,33 @@ export function useDashboardCards(
       }
     }
     addBatch()
-  }, [generateId])
+  }, [generateId, snapshot])
 
   const removeCard = useCallback((id: string) => {
+    snapshot(cardsRef.current)
     setCards(prev => prev.filter(c => c.id !== id))
-  }, [])
+  }, [snapshot])
 
   const configureCard = useCallback((id: string, config: Record<string, unknown>) => {
+    snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === id ? { ...c, config } : c
     ))
-  }, [])
+  }, [snapshot])
 
   const updateCardWidth = useCallback((id: string, width: number) => {
+    snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === id
         ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), w: width } }
         : c
     ))
-  }, [])
+  }, [snapshot])
 
   const reset = useCallback(() => {
+    snapshot(cardsRef.current)
     setCards(defaultCardInstances)
-    setCustomized(false)
-  }, [defaultCardInstances])
+  }, [defaultCardInstances, snapshot])
 
   // Manual sync with backend
   const syncWithBackend = useCallback(async () => {
@@ -267,16 +303,19 @@ export function useDashboardCards(
 
   return {
     cards,
-    setCards,
+    setCards: setCardsWithSnapshot,
     addCards,
     removeCard,
     configureCard,
     updateCardWidth,
     reset,
     isCustomized,
-    setCustomized,
     isSyncing,
     syncWithBackend,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   }
 }
 

@@ -676,7 +676,9 @@
       "addCard": "Add Card",
       "addCardTitle": "Add a new card",
       "closeMenu": "Close menu",
-      "dashboardActions": "Dashboard actions"
+      "dashboardActions": "Dashboard actions",
+      "undo": "Undo",
+      "redo": "Redo"
     },
     "welcome": {
       "gettingStarted": "Getting Started",

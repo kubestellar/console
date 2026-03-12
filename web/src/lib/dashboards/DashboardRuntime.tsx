@@ -177,6 +177,10 @@ export function DashboardRuntime({
     closeConfigureCard,
     autoRefresh,
     setAutoRefresh,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = dashboard
 
   // Workload drag-drop state for deploying to clusters
@@ -387,6 +391,10 @@ export function DashboardRuntime({
           onOpenTemplates={() => enableTemplates && setShowTemplates(true)}
           onResetToDefaults={reset}
           isCustomized={isCustomized}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
 import {
@@ -47,6 +47,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
+import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 
 interface Card {
   id: string
@@ -248,6 +249,16 @@ export function CustomDashboard() {
   // Storage key for this dashboard's cards
   const storageKey = `kubestellar-custom-dashboard-${id}-cards`
 
+  // Undo/redo support
+  const cardsRef = useRef(cards)
+  cardsRef.current = cards
+  const {
+    snapshot, undo, redo, canUndo, canRedo,
+  } = useDashboardUndoRedo<Card>(
+    (restored) => setCards(restored),
+    () => cardsRef.current,
+  )
+
   // Load dashboard
   const loadDashboard = useCallback(async (isRefresh = false) => {
     if (!id) return
@@ -331,6 +342,7 @@ export function CustomDashboard() {
     }))
 
     // Add to local state
+    snapshot(cardsRef.current)
     setCards(prev => [...prev, ...cardsToAdd])
 
     // Persist to backend
@@ -347,9 +359,10 @@ export function CustomDashboard() {
 
     closeAddCard()
     showToast(`Added ${newCards.length} card${newCards.length > 1 ? 's' : ''}`, 'success')
-  }, [id, showToast, closeAddCard])
+  }, [id, showToast, closeAddCard, snapshot])
 
   const handleRemoveCard = useCallback(async (cardId: string) => {
+    snapshot(cardsRef.current)
     setCards(prev => prev.filter(c => c.id !== cardId))
 
     if (id) {
@@ -360,7 +373,7 @@ export function CustomDashboard() {
         showToast('Failed to delete card from backend', 'error')
       }
     }
-  }, [id])
+  }, [id, snapshot])
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
@@ -368,18 +381,20 @@ export function CustomDashboard() {
   }, [openConfigureCard])
 
   const handleCardConfigured = useCallback(async (cardId: string, config: Record<string, unknown>) => {
+    snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === cardId ? { ...c, config } : c
     ))
     closeConfigureCard()
     setSelectedCard(null)
-  }, [closeConfigureCard])
+  }, [closeConfigureCard, snapshot])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
+    snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === cardId ? { ...c, position: { ...c.position, w: newWidth } } : c
     ))
-  }, [])
+  }, [snapshot])
 
   const handleApplyTemplate = useCallback(async (template: DashboardTemplate) => {
     const templateCards = template.cards.map((tc, index) => ({
@@ -390,6 +405,7 @@ export function CustomDashboard() {
       position: { x: 0, y: 0, w: tc.position.w, h: tc.position.h }
     }))
 
+    snapshot(cardsRef.current)
     setCards(templateCards)
     closeTemplates()
 
@@ -406,17 +422,18 @@ export function CustomDashboard() {
     }
 
     showToast(`Applied template "${template.name}" with ${templateCards.length} cards`, 'success')
-  }, [id, showToast, closeTemplates])
+  }, [id, showToast, closeTemplates, snapshot])
 
   const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>) => {
     handleAddCards([{ type: cardType, title: formatCardTitle(cardType), config: config || {} }])
   }, [handleAddCards])
 
   const handleReset = useCallback(() => {
+    snapshot(cardsRef.current)
     setCards([])
     safeRemoveItem(storageKey)
     showToast('Dashboard reset to empty', 'info')
-  }, [storageKey, showToast])
+  }, [storageKey, showToast, snapshot])
 
   const handleDeleteDashboard = useCallback(() => {
     if (!id) return
@@ -449,13 +466,14 @@ export function CustomDashboard() {
     setActiveId(null)
 
     if (over && active.id !== over.id) {
+      snapshot(cardsRef.current)
       setCards(prev => {
         const oldIndex = prev.findIndex(c => c.id === active.id)
         const newIndex = prev.findIndex(c => c.id === over.id)
         return arrayMove(prev, oldIndex, newIndex)
       })
     }
-  }, [])
+  }, [snapshot])
 
   // Current card types for recommendations
   const currentCardTypes = useMemo(() => cards.map(c => {
@@ -619,6 +637,10 @@ export function CustomDashboard() {
             showToast('Failed to import dashboard', 'error')
           }
         }}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
 
       {/* Add Card Modal */}

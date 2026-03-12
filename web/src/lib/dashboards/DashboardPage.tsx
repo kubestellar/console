@@ -134,6 +134,10 @@ export function DashboardPage({
     dnd: { sensors, activeId, handleDragStart, handleDragEnd },
     autoRefresh,
     setAutoRefresh,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useDashboard({
     storageKey,
     defaultCards,
@@ -337,6 +341,10 @@ export function DashboardPage({
         onOpenTemplates={() => setShowTemplates(true)}
         onResetToDefaults={reset}
         isCustomized={isCustomized}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
 
       {/* Add Card Modal */}
