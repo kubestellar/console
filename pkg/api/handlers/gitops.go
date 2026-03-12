@@ -1657,6 +1657,195 @@ func (h *GitOpsHandlers) findReleaseNamespace(ctx context.Context, cluster, rele
 }
 
 // ============================================================================
+// Helm Write Operations
+// ============================================================================
+
+/** helmWriteTimeout is the timeout for helm write operations (rollback, uninstall, upgrade). */
+const helmWriteTimeout = 60 * time.Second
+
+// HelmRollbackRequest is the request body for rolling back a release
+type HelmRollbackRequest struct {
+	Release   string `json:"release"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster"`
+	Revision  int    `json:"revision"`
+}
+
+// HelmUninstallRequest is the request body for uninstalling a release
+type HelmUninstallRequest struct {
+	Release   string `json:"release"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster"`
+}
+
+// HelmUpgradeRequest is the request body for upgrading a release
+type HelmUpgradeRequest struct {
+	Release   string `json:"release"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster"`
+	Chart     string `json:"chart"`
+	Version   string `json:"version,omitempty"`
+	Values    string `json:"values,omitempty"` // YAML string of override values
+	ReuseValues bool `json:"reuseValues,omitempty"`
+}
+
+// RollbackHelmRelease rolls back a Helm release to a specific revision
+func (h *GitOpsHandlers) RollbackHelmRelease(c *fiber.Ctx) error {
+	var req HelmRollbackRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if req.Release == "" || req.Namespace == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "release and namespace are required"})
+	}
+	if req.Revision <= 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "revision must be a positive integer"})
+	}
+
+	args := []string{"rollback", req.Release, fmt.Sprintf("%d", req.Revision), "-n", req.Namespace}
+	if req.Cluster != "" {
+		args = append(args, "--kube-context", req.Cluster)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), helmWriteTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "helm", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	log.Printf("helm rollback: %s to revision %d in %s/%s", req.Release, req.Revision, req.Cluster, req.Namespace)
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("helm rollback failed for %s: %v, stderr: %s", req.Release, err, stderr.String())
+		return c.Status(500).JSON(fiber.Map{
+			"error":  "rollback failed",
+			"detail": stderr.String(),
+		})
+	}
+
+	log.Printf("helm rollback succeeded: %s to revision %d", req.Release, req.Revision)
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": fmt.Sprintf("Rolled back %s to revision %d", req.Release, req.Revision),
+		"output":  stdout.String(),
+	})
+}
+
+// UninstallHelmRelease uninstalls a Helm release
+func (h *GitOpsHandlers) UninstallHelmRelease(c *fiber.Ctx) error {
+	var req HelmUninstallRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if req.Release == "" || req.Namespace == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "release and namespace are required"})
+	}
+
+	args := []string{"uninstall", req.Release, "-n", req.Namespace}
+	if req.Cluster != "" {
+		args = append(args, "--kube-context", req.Cluster)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), helmWriteTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "helm", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	log.Printf("helm uninstall: %s in %s/%s", req.Release, req.Cluster, req.Namespace)
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("helm uninstall failed for %s: %v, stderr: %s", req.Release, err, stderr.String())
+		return c.Status(500).JSON(fiber.Map{
+			"error":  "uninstall failed",
+			"detail": stderr.String(),
+		})
+	}
+
+	log.Printf("helm uninstall succeeded: %s", req.Release)
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": fmt.Sprintf("Uninstalled release %s", req.Release),
+		"output":  stdout.String(),
+	})
+}
+
+// UpgradeHelmRelease upgrades a Helm release
+func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
+	var req HelmUpgradeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if req.Release == "" || req.Namespace == "" || req.Chart == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "release, namespace, and chart are required"})
+	}
+
+	args := []string{"upgrade", req.Release, req.Chart, "-n", req.Namespace}
+	if req.Version != "" {
+		args = append(args, "--version", req.Version)
+	}
+	if req.ReuseValues {
+		args = append(args, "--reuse-values")
+	}
+	if req.Cluster != "" {
+		args = append(args, "--kube-context", req.Cluster)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), helmWriteTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "helm", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// If values provided, write to temp file and pass via -f
+	if req.Values != "" {
+		tmpFile, err := os.CreateTemp("", "helm-values-*.yaml")
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "failed to create temp values file"})
+		}
+		defer os.Remove(tmpFile.Name())
+
+		if _, err := tmpFile.WriteString(req.Values); err != nil {
+			tmpFile.Close()
+			return c.Status(500).JSON(fiber.Map{"error": "failed to write values"})
+		}
+		tmpFile.Close()
+
+		args = append(args, "-f", tmpFile.Name())
+		// Rebuild command with values file
+		cmd = exec.CommandContext(ctx, "helm", args...)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+	}
+
+	log.Printf("helm upgrade: %s with chart %s in %s/%s", req.Release, req.Chart, req.Cluster, req.Namespace)
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("helm upgrade failed for %s: %v, stderr: %s", req.Release, err, stderr.String())
+		return c.Status(500).JSON(fiber.Map{
+			"error":  "upgrade failed",
+			"detail": stderr.String(),
+		})
+	}
+
+	log.Printf("helm upgrade succeeded: %s", req.Release)
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": fmt.Sprintf("Upgraded release %s", req.Release),
+		"output":  stdout.String(),
+	})
+}
+
+// ============================================================================
 // ArgoCD Endpoints
 // ============================================================================
 

@@ -7,8 +7,10 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
   Ship, Info, Tag, Loader2, Copy, Check,
   Layers, Server, Clock, GitBranch, FileText,
-  RefreshCw, Stethoscope, History, Box
+  RefreshCw, Stethoscope, History, Box, RotateCcw,
+  Trash2, AlertTriangle, CheckCircle, XCircle,
 } from 'lucide-react'
+import { useHelmActions } from '../../../hooks/useHelmActions'
 import { cn } from '../../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
@@ -124,6 +126,37 @@ export function HelmReleaseDrillDown({ data }: Props) {
       releaseRevision,
     },
   })
+
+  // Helm write operations
+  const { rollback, uninstall, isLoading: helmActionLoading } = useHelmActions()
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'rollback' | 'uninstall'
+    label: string
+    revision?: number
+  } | null>(null)
+  const [actionFeedback, setActionFeedback] = useState<{ success: boolean; message: string } | null>(null)
+
+  /** Timeout to auto-clear action feedback */
+  const ACTION_FEEDBACK_CLEAR_MS = 5_000
+
+  const handleRollback = async (revision: number) => {
+    const result = await rollback({ release: releaseName, namespace, cluster, revision })
+    setConfirmAction(null)
+    setActionFeedback({ success: result.success, message: result.message })
+    setTimeout(() => setActionFeedback(null), ACTION_FEEDBACK_CLEAR_MS)
+    if (result.success) {
+      // Refresh data after rollback
+      fetchReleaseInfo()
+      fetchHistory()
+    }
+  }
+
+  const handleUninstall = async () => {
+    const result = await uninstall({ release: releaseName, namespace, cluster })
+    setConfirmAction(null)
+    setActionFeedback({ success: result.success, message: result.message })
+    setTimeout(() => setActionFeedback(null), ACTION_FEEDBACK_CLEAR_MS)
+  }
 
   // Helper to run helm commands via the agent
   const runHelm = (args: string[]): Promise<string> => {
@@ -377,6 +410,67 @@ Please:
         />
       </div>
 
+      {/* Action Feedback Banner */}
+      {actionFeedback && (
+        <div className={cn(
+          'mx-6 mb-2 px-4 py-2 rounded-lg flex items-center gap-2 text-sm',
+          actionFeedback.success
+            ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+            : 'bg-red-500/10 border border-red-500/20 text-red-400'
+        )}>
+          {actionFeedback.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+          {actionFeedback.message}
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmAction && (
+        <div className="mx-6 mb-2 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            <span className="font-medium text-yellow-400">Confirm {confirmAction.type}</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">
+            {confirmAction.type === 'rollback'
+              ? `Roll back "${releaseName}" to revision ${confirmAction.revision}? This will create a new revision.`
+              : `Uninstall "${releaseName}" from ${namespace}? This will remove all associated resources.`}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (confirmAction.type === 'rollback' && confirmAction.revision) {
+                  handleRollback(confirmAction.revision)
+                } else if (confirmAction.type === 'uninstall') {
+                  handleUninstall()
+                }
+              }}
+              disabled={helmActionLoading}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50',
+                confirmAction.type === 'uninstall'
+                  ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                  : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+              )}
+            >
+              {helmActionLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : confirmAction.type === 'rollback' ? (
+                <RotateCcw className="w-4 h-4" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              {helmActionLoading ? 'Processing...' : confirmAction.label}
+            </button>
+            <button
+              onClick={() => setConfirmAction(null)}
+              className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="border-b border-border px-6">
         <div className="flex gap-1">
@@ -496,6 +590,25 @@ Please:
                 </div>
               </div>
             )}
+
+            {/* Danger Zone */}
+            <div className="p-4 rounded-lg border border-red-500/20 bg-red-500/5">
+              <h4 className="text-sm font-medium text-red-400 mb-2">Danger Zone</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Uninstalling this release will remove all associated Kubernetes resources.
+              </p>
+              <button
+                onClick={() => setConfirmAction({
+                  type: 'uninstall',
+                  label: `Uninstall ${releaseName}`,
+                })}
+                disabled={helmActionLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                Uninstall Release
+              </button>
+            </div>
           </div>
         )}
 
@@ -567,6 +680,25 @@ Please:
                         <span className="text-xs text-muted-foreground">
                           {new Date(rev.updated).toLocaleDateString()}
                         </span>
+                        {/* Show rollback button for non-current revisions */}
+                        {String(rev.revision) !== (releaseRevision || releaseInfo?.revision) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setConfirmAction({
+                                type: 'rollback',
+                                label: `Rollback to #${rev.revision}`,
+                                revision: rev.revision,
+                              })
+                            }}
+                            disabled={helmActionLoading}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-colors disabled:opacity-50"
+                            title={`Roll back to revision ${rev.revision}`}
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            Rollback
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
