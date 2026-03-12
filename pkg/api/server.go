@@ -637,6 +637,14 @@ func (s *Server) setupRoutes() {
 	crdHandlers := handlers.NewCRDHandlers(s.k8sClient)
 	api.Get("/crds", crdHandlers.ListCRDs)
 
+	// MCS ServiceExport routes
+	svcExportHandlers := handlers.NewServiceExportHandlers(s.k8sClient)
+	api.Get("/service-exports", svcExportHandlers.ListServiceExports)
+
+	// Admission webhook routes
+	webhookHandlers := handlers.NewWebhookHandlers(s.k8sClient)
+	api.Get("/admission-webhooks", webhookHandlers.ListWebhooks)
+
 	// Service Topology routes
 	topologyHandlers := handlers.NewTopologyHandlers(s.k8sClient, s.hub)
 	api.Get("/topology", topologyHandlers.GetTopology)

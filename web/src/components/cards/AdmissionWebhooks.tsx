@@ -1,33 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from './CardDataContext'
-
-interface Webhook {
-  name: string
-  type: 'mutating' | 'validating'
-  failurePolicy: 'Fail' | 'Ignore'
-  matchPolicy: string
-  rules: number
-  cluster: string
-}
-
-const DEMO_WEBHOOKS: Webhook[] = [
-  { name: 'gatekeeper-validating', type: 'validating', failurePolicy: 'Ignore', matchPolicy: 'Exact', rules: 3, cluster: 'prod-us-east' },
-  { name: 'kyverno-resource-validating', type: 'validating', failurePolicy: 'Fail', matchPolicy: 'Equivalent', rules: 12, cluster: 'prod-us-east' },
-  { name: 'cert-manager-webhook', type: 'mutating', failurePolicy: 'Fail', matchPolicy: 'Exact', rules: 2, cluster: 'prod-us-east' },
-  { name: 'istio-sidecar-injector', type: 'mutating', failurePolicy: 'Ignore', matchPolicy: 'Exact', rules: 1, cluster: 'prod-us-east' },
-  { name: 'vault-agent-injector', type: 'mutating', failurePolicy: 'Ignore', matchPolicy: 'Exact', rules: 1, cluster: 'prod-eu-west' },
-  { name: 'gatekeeper-validating', type: 'validating', failurePolicy: 'Ignore', matchPolicy: 'Exact', rules: 5, cluster: 'prod-eu-west' },
-  { name: 'kyverno-resource-validating', type: 'validating', failurePolicy: 'Fail', matchPolicy: 'Equivalent', rules: 8, cluster: 'staging' },
-  { name: 'webhook-admission-controller', type: 'validating', failurePolicy: 'Fail', matchPolicy: 'Exact', rules: 4, cluster: 'staging' },
-]
+import { useAdmissionWebhooks } from '../../hooks/useAdmissionWebhooks'
 
 export function AdmissionWebhooks() {
   const { t } = useTranslation('cards')
   const [tab, setTab] = useState<'all' | 'mutating' | 'validating'>('all')
-  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
-
-  const webhooks = DEMO_WEBHOOKS
+  const { webhooks, isLoading, isDemoData } = useAdmissionWebhooks()
+  useCardLoadingState({ isLoading, hasAnyData: webhooks.length > 0, isDemoData })
   const filtered = tab === 'all' ? webhooks : webhooks.filter(w => w.type === tab)
   const mutatingCount = webhooks.filter(w => w.type === 'mutating').length
   const validatingCount = webhooks.filter(w => w.type === 'validating').length
