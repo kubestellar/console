@@ -14,6 +14,9 @@ import {
   Sparkles,
   Monitor,
   Globe,
+  Lock,
+  KeyRound,
+  Wifi,
 } from 'lucide-react'
 import { emitFromLensViewed, emitFromLensActioned } from '../lib/analytics'
 
@@ -25,7 +28,7 @@ import { emitFromLensViewed, emitFromLensActioned } from '../lib/analytics'
 const TESTIMONIAL_COUNT = 4
 
 /** Deployment option tab identifiers */
-type DeployTab = 'localhost' | 'cluster'
+type DeployTab = 'localhost' | 'cluster-portforward' | 'cluster-ingress'
 
 /* ------------------------------------------------------------------ */
 /*  Comparison table data                                             */
@@ -102,7 +105,30 @@ interface InstallStep {
   description: string
 }
 
-/** Shared first step — adding the Helm repo */
+/* -- Localhost: brew / build-from-source install ---------------------- */
+
+const LOCALHOST_STEPS: InstallStep[] = [
+  {
+    step: 1,
+    title: 'Install via Homebrew',
+    commands: [
+      'brew tap kubestellar/tap && brew install --head kc-agent',
+    ],
+    note: 'Or build from source: git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent',
+    description: 'The kc-agent reads your kubeconfig and serves the console UI on localhost.',
+  },
+  {
+    step: 2,
+    title: 'Run the agent',
+    commands: [
+      'kc-agent',
+    ],
+    description: 'Opens http://localhost:8585 in your browser. The agent discovers all kubeconfig contexts and streams live cluster data.',
+  },
+]
+
+/* -- Cluster: shared Helm repo step ---------------------------------- */
+
 const HELM_REPO_STEP: InstallStep = {
   step: 1,
   title: 'Add the Helm repo',
@@ -113,7 +139,9 @@ const HELM_REPO_STEP: InstallStep = {
   description: 'One-time setup. The chart is published to GitHub Pages — no OCI registry login needed.',
 }
 
-const LOCALHOST_STEPS: InstallStep[] = [
+/* -- Cluster option A: port-forward ---------------------------------- */
+
+const CLUSTER_PORTFORWARD_STEPS: InstallStep[] = [
   HELM_REPO_STEP,
   {
     step: 2,
@@ -128,11 +156,13 @@ const LOCALHOST_STEPS: InstallStep[] = [
       'kubectl port-forward svc/kc-kubestellar-console 8080:8080',
       'open http://localhost:8080',
     ],
-    description: 'Console auto-detects your kubeconfig and discovers clusters immediately.',
+    description: 'Access the console locally. Great for evaluation or single-user access.',
   },
 ]
 
-const CLUSTER_STEPS: InstallStep[] = [
+/* -- Cluster option B: ingress / route ------------------------------- */
+
+const CLUSTER_INGRESS_STEPS: InstallStep[] = [
   HELM_REPO_STEP,
   {
     step: 2,
@@ -146,7 +176,7 @@ const CLUSTER_STEPS: InstallStep[] = [
       '  --set ingress.hosts[0].paths[0].pathType=Prefix',
     ],
     note: 'Replace console.example.com with your domain. For OpenShift, use --set route.enabled=true --set route.host=console.example.com instead.',
-    description: 'The console runs as a Deployment + Service. The ingress exposes it to your network.',
+    description: 'Exposes the console to your network via an Ingress or OpenShift Route.',
   },
   {
     step: 3,
@@ -238,7 +268,14 @@ function ComparisonCell({ value, note, isConsole }: { value: string | boolean; n
 
 function DeploymentSection() {
   const [activeTab, setActiveTab] = useState<DeployTab>('localhost')
-  const steps = activeTab === 'localhost' ? LOCALHOST_STEPS : CLUSTER_STEPS
+
+  const steps = activeTab === 'localhost'
+    ? LOCALHOST_STEPS
+    : activeTab === 'cluster-portforward'
+      ? CLUSTER_PORTFORWARD_STEPS
+      : CLUSTER_INGRESS_STEPS
+
+  const isCluster = activeTab === 'cluster-portforward' || activeTab === 'cluster-ingress'
 
   return (
     <section className="max-w-5xl mx-auto px-6 py-16">
@@ -263,12 +300,24 @@ function DeploymentSection() {
           >
             <Monitor className="w-4 h-4" />
             Localhost
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">brew</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('cluster-portforward')}
+            className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
+              activeTab === 'cluster-portforward'
+                ? 'bg-purple-500/20 text-purple-300 border-b-2 border-purple-400'
+                : 'bg-slate-800/30 text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+            }`}
+          >
+            <Terminal className="w-4 h-4" />
+            Cluster
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">port-forward</span>
           </button>
           <button
-            onClick={() => setActiveTab('cluster')}
+            onClick={() => setActiveTab('cluster-ingress')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
-              activeTab === 'cluster'
+              activeTab === 'cluster-ingress'
                 ? 'bg-purple-500/20 text-purple-300 border-b-2 border-purple-400'
                 : 'bg-slate-800/30 text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
             }`}
@@ -311,18 +360,51 @@ function DeploymentSection() {
         ))}
       </div>
 
-      <div className="mt-8 text-center">
-        {activeTab === 'localhost' ? (
-          <p className="text-slate-400 text-sm">
-            Console auto-detects your standard <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded">~/.kube/config</code> and discovers all contexts.
-            No manual cluster registration needed.
-          </p>
+      {/* Post-install guidance */}
+      <div className="mt-8 max-w-3xl mx-auto">
+        {!isCluster ? (
+          <div className="text-center">
+            <p className="text-slate-400 text-sm">
+              The agent auto-detects your standard <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded">~/.kube/config</code> and discovers all contexts.
+              No manual cluster registration needed.
+            </p>
+          </div>
         ) : (
-          <p className="text-slate-400 text-sm">
-            The kc-agent streams cluster data to the console over WebSocket.{' '}
-            <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded">KC_ALLOWED_ORIGINS</code>{' '}
-            must include your console&apos;s URL for cross-origin requests to work.
-          </p>
+          <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-6">
+            <h4 className="font-semibold text-sm mb-4 text-purple-300">For the full experience</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-start gap-3">
+                <Lock className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-slate-200">TLS</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Add a TLS certificate to your ingress for HTTPS. Required for secure WebSocket connections to the kc-agent.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <KeyRound className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-slate-200">OAuth</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Configure GitHub OAuth for multi-user authentication. Set{' '}
+                    <code className="text-purple-300/80 bg-slate-800 px-1 rounded">GITHUB_CLIENT_ID</code> and{' '}
+                    <code className="text-purple-300/80 bg-slate-800 px-1 rounded">GITHUB_CLIENT_SECRET</code> in the Helm values.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Wifi className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-slate-200">CORS</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Set{' '}
+                    <code className="text-purple-300/80 bg-slate-800 px-1 rounded">KC_ALLOWED_ORIGINS</code> on the kc-agent to your console&apos;s URL so cross-origin requests work from the browser.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </section>
