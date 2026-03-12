@@ -7,13 +7,13 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box, Minus, Plus } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { StatusIndicator } from '../../charts/StatusIndicator'
+import { Gauge } from '../../charts/Gauge'
+import { useTranslation } from 'react-i18next'
 
 // Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
 // up to 2^31-1 but most real deployments won't exceed a few hundred.
 const MAX_SCALE_REPLICAS = 100
-import { StatusIndicator } from '../../charts/StatusIndicator'
-import { Gauge } from '../../charts/Gauge'
-import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
