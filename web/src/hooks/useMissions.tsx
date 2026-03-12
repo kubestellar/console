@@ -223,7 +223,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   /**
    * Send a message over the WebSocket with retry logic.
    * If the socket is not open, retries up to WS_SEND_MAX_RETRIES times
-   * with WS_SEND_RETRY_DELAY_MS between attempts. Returns true on success.
+   * with WS_SEND_RETRY_DELAY_MS between attempts. Calls onFailure if all
+   * retries are exhausted.
    */
   const wsSend = useCallback((data: string, onFailure?: () => void): void => {
     let attempts = 0
