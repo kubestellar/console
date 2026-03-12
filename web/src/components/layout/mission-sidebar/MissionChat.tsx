@@ -596,24 +596,40 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <Send className="w-4 h-4" />
               </button>
             </div>
+            <button
+              onClick={() => setActiveMission(null)}
+              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="w-3 h-3" />
+              {t('missionChat.backToMissions')}
+            </button>
           </div>
         ) : (
-          <div className="flex gap-2 min-w-0">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t('missionChat.typeMessage')}
-              className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 min-w-0">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={t('missionChat.typeMessage')}
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="flex-shrink-0 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
             <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="flex-shrink-0 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setActiveMission(null)}
+              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
-              <Send className="w-4 h-4" />
+              <ChevronLeft className="w-3 h-3" />
+              {t('missionChat.backToMissions')}
             </button>
           </div>
         )}
