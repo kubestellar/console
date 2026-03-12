@@ -126,7 +126,15 @@ export function getEnabledDashboardIds(): string[] | null {
 function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
   if (!enabledDashboardIds) return config
   const enabledSet = new Set(enabledDashboardIds)
-  const filtered = config.primaryNav.filter(
+  const existingIds = new Set(config.primaryNav.map(item => item.id))
+
+  // Promote discoverable dashboards into primaryNav when ENABLED_DASHBOARDS includes them
+  const promoted = DISCOVERABLE_DASHBOARDS.filter(
+    item => enabledSet.has(item.id) && !existingIds.has(item.id)
+  )
+
+  const combined = [...config.primaryNav, ...promoted]
+  const filtered = combined.filter(
     item => item.isCustom || enabledSet.has(item.id)
   )
   // Sort filtered items to match the order specified in ENABLED_DASHBOARDS
