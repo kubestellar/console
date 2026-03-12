@@ -355,6 +355,7 @@ func (s *Server) setupRoutes() {
 			"oauth_configured": s.config.GitHubClientID != "",
 			"in_cluster":       inCluster,
 			"install_method":   detectInstallMethod(inCluster),
+			"self_upgrade":     os.Getenv("SELF_UPGRADE_ENABLED") == "true",
 		}
 		if s.config.EnabledDashboards != "" {
 			dashboards := strings.Split(s.config.EnabledDashboards, ",")
@@ -611,6 +612,10 @@ func (s *Server) setupRoutes() {
 	api.Post("/gitops/helm-rollback", gitopsHandlers.RollbackHelmRelease)
 	api.Post("/gitops/helm-uninstall", gitopsHandlers.UninstallHelmRelease)
 	api.Post("/gitops/helm-upgrade", gitopsHandlers.UpgradeHelmRelease)
+	// Helm self-upgrade (in-cluster Deployment patch)
+	selfUpgradeHandler := handlers.NewSelfUpgradeHandler(s.k8sClient, s.hub)
+	api.Get("/self-upgrade/status", selfUpgradeHandler.GetStatus)
+	api.Post("/self-upgrade/trigger", selfUpgradeHandler.TriggerUpgrade)
 	// ArgoCD routes (Application CRD discovery and sync)
 	api.Get("/gitops/argocd/applications", gitopsHandlers.ListArgoApplications)
 	api.Get("/gitops/argocd/health", gitopsHandlers.GetArgoHealthSummary)

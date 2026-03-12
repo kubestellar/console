@@ -169,5 +169,11 @@ podDisruptionBudget:
 watchdog:
   enabled: true
 
+# Self-upgrade: allow the console to upgrade its own Deployment image tag
+# from the UI. Requires additional RBAC (namespaced Role) to patch Deployments.
+# Default: false (users must run 'helm upgrade' manually).
+selfUpgrade:
+  enabled: false
+
 # Additional environment variables
 extraEnv: []

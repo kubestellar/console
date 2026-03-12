@@ -1,0 +1,15 @@
+{{- if and .Values.rbac.create .Values.selfUpgrade.enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-self-upgrade
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+rules:
+  # Patch own Deployment image tag to trigger a rolling update
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+    verbs: ["get", "list", "patch"]
+{{- end }}

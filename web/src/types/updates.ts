@@ -120,6 +120,20 @@ export interface UpdateState {
 }
 
 /**
+ * Self-upgrade status from the backend (Deployment patch approach).
+ * Only available when running in-cluster as a Helm install with selfUpgrade.enabled.
+ */
+export interface SelfUpgradeStatus {
+  available: boolean
+  canPatch: boolean
+  namespace: string
+  deploymentName: string
+  currentImage: string
+  releaseName: string
+  reason?: string
+}
+
+/**
  * Storage keys for localStorage persistence.
  */
 export const UPDATE_STORAGE_KEYS = {

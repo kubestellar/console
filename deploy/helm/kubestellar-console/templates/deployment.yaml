@@ -142,6 +142,16 @@ spec:
             - name: CLUSTER_NAME
               value: {{ .Values.clusterName | quote }}
             {{- end }}
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HELM_RELEASE_NAME
+              value: {{ .Release.Name | quote }}
+            {{- if .Values.selfUpgrade.enabled }}
+            - name: SELF_UPGRADE_ENABLED
+              value: "true"
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

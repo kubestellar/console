@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
+import { useSelfUpgrade } from '../../hooks/useSelfUpgrade'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../lib/auth'
 import type { UpdateChannel } from '../../types/updates'
@@ -95,6 +96,9 @@ export function UpdateSettings() {
   // OAuth is configured if the user is authenticated (no backend call needed)
   const { isAuthenticated } = useAuth()
   const oauthConfigured = isAuthenticated
+
+  // Helm self-upgrade via Deployment image patch
+  const { isAvailable: selfUpgradeAvailable, triggerUpgrade: triggerSelfUpgrade, isTriggering: isSelfUpgrading, triggerError: selfUpgradeError } = useSelfUpgrade()
 
   const CHANNEL_OPTIONS: { value: UpdateChannel; label: string; description: string; devOnly?: boolean }[] = [
     {
@@ -449,14 +453,28 @@ export function UpdateSettings() {
         </div>
       )}
 
-      {/* Helm Install Notice */}
-      {isHelmInstall && (
+      {/* Helm Install Notice — self-upgrade available or manual instructions */}
+      {isHelmInstall && !selfUpgradeAvailable && (
         <div className="mb-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
           <div className="flex items-center gap-2">
             <Ship className="w-4 h-4 text-purple-400 shrink-0" />
             <div>
               <p className="text-sm font-medium text-purple-400">{t('settings.updates.helmDisabled')}</p>
               <p className="text-xs text-muted-foreground mt-1">{t('settings.updates.helmDisabledDesc')}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('settings.updates.helmSelfUpgradeHint')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {isHelmInstall && selfUpgradeAvailable && (
+        <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+          <div className="flex items-center gap-2">
+            <Ship className="w-4 h-4 text-green-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-green-400">{t('settings.updates.helmSelfUpgradeReady')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('settings.updates.helmSelfUpgradeDesc')}</p>
             </div>
           </div>
         </div>
@@ -684,6 +702,43 @@ export function UpdateSettings() {
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                 <p className="text-sm text-red-400">{triggerError}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Helm Self-Upgrade Button (when self-upgrade available and update detected) */}
+      {hasUpdate && isHelmInstall && selfUpgradeAvailable && !isUpdating && latestRelease && (
+        <div className="mb-4">
+          <button
+            onClick={async () => {
+              if (isSelfUpgrading) return
+              const result = await triggerSelfUpgrade(latestRelease.tag)
+              if (!result.success) {
+                // Error is tracked in the hook's triggerError state
+              }
+            }}
+            disabled={isSelfUpgrading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isSelfUpgrading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isSelfUpgrading
+              ? t('settings.updates.upgrading')
+              : t('settings.updates.helmUpgradeNow', { tag: latestRelease.tag })}
+          </button>
+          <p className="text-xs text-muted-foreground mt-2">
+            {t('settings.updates.helmUpgradeWarning')}
+          </p>
+          {selfUpgradeError && (
+            <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <p className="text-sm text-red-400">{selfUpgradeError}</p>
               </div>
             </div>
           )}
