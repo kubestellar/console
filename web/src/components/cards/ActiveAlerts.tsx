@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   AlertTriangle,
+  Bell,
   CheckCircle,
   Clock,
   ChevronRight,
@@ -25,6 +26,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { isBrowserNotifVerified, setBrowserNotifVerified } from '../../lib/notificationStatus'
 
 // Severity color map — defined at module level to avoid re-creation on each render
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
@@ -87,6 +89,9 @@ function formatRelativeTime(dateString: string, t: TFunction<'cards'>): string {
   return t('activeAlerts.daysAgo', { count: diffDays })
 }
 
+/** Notification verification flow state */
+type NotifVerifyState = 'idle' | 'asked' | 'verified' | 'failed'
+
 type SortField = 'severity' | 'time'
 
 export function ActiveAlerts() {
@@ -105,6 +110,42 @@ export function ActiveAlerts() {
   const { missions, setActiveMission, openSidebar } = useMissions()
 
   const [showAcknowledged, setShowAcknowledged] = useState(false)
+
+  // Browser notification verification state
+  const [notifVerifyState, setNotifVerifyState] = useState<NotifVerifyState>('idle')
+  const [notifVerified, setNotifVerified] = useState(() => isBrowserNotifVerified())
+
+  /** Whether the notification indicator should be visible */
+  const showNotifIndicator =
+    typeof Notification !== 'undefined' &&
+    Notification.permission === 'granted' &&
+    !notifVerified &&
+    notifVerifyState !== 'verified'
+
+  /** Send a test notification and ask user to confirm receipt */
+  const handleSendTestNotif = () => {
+    try {
+      new Notification('KubeStellar Console', {
+        body: 'Test notification — can you see this?', // TODO: i18n
+        icon: '/favicon.ico',
+      })
+    } catch {
+      // Notification constructor may throw in some environments
+    }
+    setNotifVerifyState('asked')
+  }
+
+  /** User confirmed they saw the test notification */
+  const handleNotifYes = () => {
+    setBrowserNotifVerified(true)
+    setNotifVerified(true)
+    setNotifVerifyState('verified')
+  }
+
+  /** User did NOT see the test notification */
+  const handleNotifNo = () => {
+    setNotifVerifyState('failed')
+  }
 
   // Combine active and acknowledged alerts when toggle is on
   const allAlertsToShow = useMemo(() => {
@@ -249,6 +290,42 @@ export function ActiveAlerts() {
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
               {localClusterFilter.length}/{availableClustersForFilter.length}
+            </span>
+          )}
+          {/* Subtle browser notification verification indicator */}
+          {showNotifIndicator && notifVerifyState === 'idle' && (
+            <button
+              onClick={handleSendTestNotif}
+              title="Browser notifications not verified — click to test" // TODO: i18n
+              className="relative flex items-center p-1 rounded hover:bg-secondary/60 transition-colors"
+            >
+              <Bell className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400" />
+            </button>
+          )}
+          {notifVerifyState === 'asked' && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {/* TODO: i18n */}
+              <span>Did you see it?</span>
+              <button
+                onClick={handleNotifYes}
+                className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors text-xs"
+              >
+                Yes
+              </button>
+              <button
+                onClick={handleNotifNo}
+                className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs"
+              >
+                No
+              </button>
+            </span>
+          )}
+          {notifVerifyState === 'failed' && (
+            <span className="flex items-center gap-1 text-xs text-amber-400">
+              <Bell className="w-3 h-3" />
+              {/* TODO: i18n */}
+              <span>Check System Settings &rarr; Notifications &rarr; Chrome</span>
             </span>
           )}
         </div>

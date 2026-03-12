@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, Mail, Slack, Check, X } from 'lucide-react'
+import { Bell, Globe, Mail, Slack, Check, X } from 'lucide-react'
 import { useNotificationAPI } from '../../../hooks/useNotificationAPI'
 import { NotificationConfig } from '../../../types/alerts'
+import { isBrowserNotifVerified, setBrowserNotifVerified } from '../../../lib/notificationStatus'
 
 const STORAGE_KEY = 'kc_notification_config'
 
@@ -29,11 +30,57 @@ function saveConfig(config: NotificationConfig): void {
   }
 }
 
+/** Browser notification verification flow state */
+type BrowserNotifState = 'idle' | 'asked' | 'verified' | 'failed'
+
 export function NotificationSettingsSection() {
   const { t } = useTranslation()
   const [config, setConfig] = useState<NotificationConfig>(loadConfig())
   const [testResult, setTestResult] = useState<{ type: string; success: boolean; message: string } | null>(null)
   const { testNotification, isLoading } = useNotificationAPI()
+
+  // Browser notification verification state
+  const [browserNotifState, setBrowserNotifState] = useState<BrowserNotifState>(
+    () => (isBrowserNotifVerified() ? 'verified' : 'idle'),
+  )
+
+  const browserPermission =
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+
+  const handleRequestPermission = async () => {
+    if (typeof Notification === 'undefined') return
+    try {
+      const result = await Notification.requestPermission()
+      if (result === 'granted') {
+        setBrowserNotifState('idle')
+      }
+    } catch {
+      // Permission request may fail in some environments
+    }
+  }
+
+  const handleSendBrowserTest = () => {
+    try {
+      new Notification('KubeStellar Console Test', {
+        body: 'If you see this, browser notifications are working!', // TODO: i18n
+        requireInteraction: true,
+        icon: '/favicon.ico',
+      })
+    } catch {
+      // Notification constructor may throw in some environments
+    }
+    setBrowserNotifState('asked')
+  }
+
+  const handleBrowserNotifYes = () => {
+    setBrowserNotifVerified(true)
+    setBrowserNotifState('verified')
+  }
+
+  const handleBrowserNotifNo = () => {
+    setBrowserNotifVerified(false)
+    setBrowserNotifState('failed')
+  }
 
   const updateConfig = (updates: Partial<NotificationConfig>) => {
     const newConfig = { ...config, ...updates }
@@ -104,6 +151,116 @@ export function NotificationSettingsSection() {
       <p className="text-sm text-muted-foreground mb-6">
         {t('settings.notifications.description')}
       </p>
+
+      {/* Browser Notifications */}
+      <div className="space-y-4 mb-6">
+        <div className="flex items-center gap-2 pb-2 border-b border-border">
+          <Globe className="w-4 h-4 text-foreground" />
+          {/* TODO: i18n */}
+          <h3 className="text-sm font-medium text-foreground">Browser Notifications</h3>
+        </div>
+
+        {/* Permission status */}
+        <div className="flex items-center gap-2">
+          {/* TODO: i18n */}
+          <span className="text-sm text-muted-foreground">Permission status:</span>
+          <span
+            className={`px-2 py-0.5 text-xs rounded-full border ${
+              browserPermission === 'granted'
+                ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                : browserPermission === 'denied'
+                  ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                  : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+            }`}
+          >
+            {browserPermission}
+          </span>
+        </div>
+
+        {browserPermission === 'granted' ? (
+          <>
+            {browserNotifState === 'idle' && (
+              <button
+                onClick={handleSendBrowserTest}
+                className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
+              >
+                {/* TODO: i18n */}
+                Send Test Notification
+              </button>
+            )}
+
+            {browserNotifState === 'asked' && (
+              <div className="space-y-2">
+                {/* TODO: i18n */}
+                <p className="text-sm text-muted-foreground">Did you see the notification?</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleBrowserNotifYes}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={handleBrowserNotifNo}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {browserNotifState === 'verified' && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                {/* TODO: i18n */}
+                <p className="text-sm text-green-400">
+                  Browser notifications verified and working.
+                </p>
+              </div>
+            )}
+
+            {browserNotifState === 'failed' && (
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <X className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  {/* TODO: i18n */}
+                  <p className="text-sm text-amber-400">
+                    Make sure notifications are enabled: System Settings &rarr; Notifications &rarr; Google Chrome &rarr; Allow Notifications
+                  </p>
+                </div>
+                <button
+                  onClick={handleSendBrowserTest}
+                  className="px-4 py-2 text-sm rounded-lg bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
+                >
+                  {/* TODO: i18n */}
+                  Try Again
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="space-y-2">
+            {browserPermission === 'denied' ? (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                {/* TODO: i18n */}
+                <p className="text-sm text-red-400">
+                  Browser notifications are blocked. Enable them in your browser&apos;s site settings for this page, then reload.
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={handleRequestPermission}
+                className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
+              >
+                {/* TODO: i18n */}
+                Request Permission
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Slack Configuration */}
       <div className="space-y-4 mb-6">
