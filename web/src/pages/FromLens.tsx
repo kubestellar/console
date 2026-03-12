@@ -224,7 +224,7 @@ export function FromLens() {
 
           <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
             KubeStellar Console is the open-source, AI-powered alternative.{' '}
-            <span className="text-white font-medium">No account required. No subscription. No telemetry.</span>
+            <span className="text-white font-medium">No account required. No subscription.</span>
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
