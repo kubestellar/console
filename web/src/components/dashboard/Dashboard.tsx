@@ -46,6 +46,7 @@ import { DashboardTemplate } from './templates'
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
+import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { WelcomeCard } from './WelcomeCard'
 
 import { PostConnectBanner } from './PostConnectBanner'
@@ -147,6 +148,14 @@ export function Dashboard() {
     setCards: setLocalCards,
     cards: localCards,
   })
+
+  // Undo/redo for card mutations
+  const localCardsRef = useRef(localCards)
+  localCardsRef.current = localCards
+  const { snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<Card>(
+    setLocalCards,
+    () => localCardsRef.current,
+  )
 
   // Contextual nudges (replaces traditional tour with in-context hints)
   const { activeNudge, showDragHint, dismissNudge, actionNudge, recordVisit } = useContextualNudges(isCustomized)
@@ -314,6 +323,7 @@ export function Dashboard() {
         try {
           await moveCardToDashboard(active.id as string, targetDashboardId)
           // Remove card from local state
+          snapshot(localCards)
           setLocalCards((items) => items.filter((item) => item.id !== active.id))
           // Show success toast
           showToast(`Card moved to "${targetDashboardName}"`, 'success')
@@ -329,6 +339,7 @@ export function Dashboard() {
     if (active.id !== over.id) {
       const draggedCard = localCards.find(c => c.id === active.id)
       if (draggedCard) emitCardDragged(draggedCard.card_type)
+      snapshot(localCards)
       setLocalCards((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id)
         const newIndex = items.findIndex((item) => item.id === over.id)
@@ -487,6 +498,7 @@ export function Dashboard() {
         dashboard?.name
       )
       // Add the card at the TOP
+      snapshot(localCards)
       setLocalCards((prev) => [newCard, ...prev])
       // Clear the pending card
       clearPendingRestoreCard()
@@ -616,6 +628,7 @@ export function Dashboard() {
       emitCardAdded(card.card_type, 'add_modal')
     })
     // Add new cards at the TOP of the dashboard (prepend)
+    snapshot(localCards)
     setLocalCards((prev) => [...newCards, ...prev])
 
     // Persist to backend if dashboard exists
@@ -645,6 +658,7 @@ export function Dashboard() {
         dashboard?.name
       )
     }
+    snapshot(localCards)
     setLocalCards((prev) => prev.filter((c) => c.id !== cardId))
 
     // Persist deletion to backend
@@ -656,7 +670,7 @@ export function Dashboard() {
         showToast('Failed to delete card from backend', 'error')
       }
     }
-  }, [localCards, dashboard, recordCardRemoved])
+  }, [localCards, dashboard, recordCardRemoved, snapshot])
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
@@ -664,6 +678,7 @@ export function Dashboard() {
   }, [openConfigureCard])
 
   const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
+    snapshot(localCards)
     setLocalCards((prev) =>
       prev.map((c) =>
         c.id === cardId
@@ -686,7 +701,7 @@ export function Dashboard() {
         showToast('Failed to update card width', 'error')
       }
     }
-  }, [dashboard, localCards])
+  }, [dashboard, localCards, snapshot])
 
   const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     const card = localCards.find((c) => c.id === cardId)
@@ -701,6 +716,7 @@ export function Dashboard() {
         dashboard?.name
       )
     }
+    snapshot(localCards)
     setLocalCards((prev) =>
       prev.map((c) =>
         c.id === cardId
@@ -720,9 +736,10 @@ export function Dashboard() {
         showToast('Failed to update card configuration', 'error')
       }
     }
-  }, [localCards, dashboard, recordCardConfigured, closeConfigureCard])
+  }, [localCards, dashboard, recordCardConfigured, closeConfigureCard, snapshot])
 
   const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
+    snapshot(localCards)
     setLocalCards((prev) => {
       // Check if a card with the same type already exists
       const existingIndex = prev.findIndex((c) => c.card_type === cardType)
@@ -745,7 +762,7 @@ export function Dashboard() {
       recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
       return [newCard, ...prev]
     })
-  }, [dashboard, recordCardAdded])
+  }, [dashboard, recordCardAdded, snapshot, localCards])
 
   // Create a new card from AI configuration
   const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
@@ -760,10 +777,11 @@ export function Dashboard() {
     // Record in history
     recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
     // Add at TOP and close the configure modal
+    snapshot(localCards)
     setLocalCards((prev) => [newCard, ...prev])
     closeConfigureCard()
     setSelectedCard(null)
-  }, [dashboard, recordCardAdded, closeConfigureCard])
+  }, [dashboard, recordCardAdded, closeConfigureCard, snapshot, localCards])
 
   // Apply template - add all template cards to dashboard
   const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
@@ -779,9 +797,10 @@ export function Dashboard() {
       recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
     })
     // Add template cards at the top
+    snapshot(localCards)
     setLocalCards((prev) => [...newCards, ...prev])
     showToast(`Applied "${template.name}" template with ${newCards.length} cards`, 'success')
-  }, [dashboard, recordCardAdded, showToast])
+  }, [dashboard, recordCardAdded, showToast, snapshot, localCards])
 
   // Handle single card addition from smart suggestions or discover placeholder
   const handleAddSingleCard = useCallback((cardType: string) => {
@@ -794,8 +813,9 @@ export function Dashboard() {
     }
     recordCardAdded(newCard.id, cardType, undefined, {}, dashboard?.id, dashboard?.name)
     emitCardAdded(cardType, 'smart_suggestion')
+    snapshot(localCards)
     setLocalCards((prev) => [newCard, ...prev])
-  }, [dashboard, recordCardAdded])
+  }, [dashboard, recordCardAdded, snapshot, localCards])
 
   // Handle nudge CTA actions
   const handleNudgeAction = useCallback(() => {
@@ -1002,6 +1022,10 @@ export function Dashboard() {
         onOpenTemplates={openTemplatesModal}
         onReset={reset}
         isCustomized={isCustomized}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onExport={dashboard?.id ? async () => {
           try {
             const data = await exportDashboard(dashboard.id)

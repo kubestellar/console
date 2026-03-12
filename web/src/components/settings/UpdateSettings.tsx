@@ -21,13 +21,11 @@ import {
   Shield,
   HardDrive,
   GitCommitHorizontal,
-  Github,
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../lib/auth'
-import { STORAGE_KEY_GITHUB_TOKEN } from '../../lib/constants'
 import type { UpdateChannel } from '../../types/updates'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import {
@@ -123,12 +121,12 @@ export function UpdateSettings() {
   )
 
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
+  const [showPrereqs, setShowPrereqs] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
   const [triggerState, setTriggerState] = useState<'idle' | 'triggered' | 'error'>('idle')
   const [triggerError, setTriggerError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState(ESTIMATED_UPDATE_SECS)
-  const [hasGithubToken, setHasGithubToken] = useState(() => Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)))
   const triggerGuardRef = useRef(false) // prevents rapid double-clicks from firing multiple triggers
   const triggerTimestampRef = useRef(0) // when "Update Now" was clicked (for duration tracking)
 
@@ -196,13 +194,6 @@ export function UpdateSettings() {
     return () => clearTimeout(timer)
   }, [triggerState])
 
-
-  // Re-check GitHub token when settings change (e.g. env token auto-detected by GitHubTokenSection)
-  useEffect(() => {
-    const handler = () => setHasGithubToken(Boolean(localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)))
-    window.addEventListener('kubestellar-settings-changed', handler)
-    return () => window.removeEventListener('kubestellar-settings-changed', handler)
-  }, [])
 
   useEffect(() => {
     return () => {
@@ -347,75 +338,72 @@ export function UpdateSettings() {
         </div>
       </div>
 
-      {/* Environment Prerequisites — always visible on developer channel */}
-      {isDeveloperChannel && (
-        <div className="mb-4 p-4 rounded-lg bg-secondary/30 border border-border">
-          <h3 className="text-sm font-medium text-foreground mb-3">
-            {t('settings.updates.environment')}
-          </h3>
-          <div className="space-y-2">
-            <PrereqRow
-              ok={agentConnected}
-              label={t('settings.updates.prereqKCAgent')}
-              okText={t('settings.updates.prereqKCAgentOk')}
-              failText={t('settings.updates.prereqKCAgentFail')}
-              fixText={t('settings.updates.prereqKCAgentFix')}
-              onFix={() => scrollToSettingsSection('agent-settings')}
-              icon={<Terminal className="w-3.5 h-3.5" />}
-            />
-            <PrereqRow
-              ok={hasCodingAgent}
-              label={t('settings.updates.prereqCodingAgent')}
-              okText={t('settings.updates.prereqCodingAgentOk')}
-              failText={t('settings.updates.prereqCodingAgentFail')}
-              fixText={t('settings.updates.prereqCodingAgentFix')}
-              onFix={() => scrollToSettingsSection('agent-settings')}
-              icon={<Bot className="w-3.5 h-3.5" />}
-            />
-            <PrereqRow
-              ok={oauthConfigured}
-              label={t('settings.updates.prereqOAuth')}
-              okText={t('settings.updates.prereqOAuthOk')}
-              failText={t('settings.updates.prereqOAuthFail')}
-              icon={<Shield className="w-3.5 h-3.5" />}
-            />
-            <PrereqRow
-              ok={hasGithubToken}
-              label={t('settings.updates.prereqGithubToken')}
-              okText={t('settings.updates.prereqGithubTokenOk')}
-              failText={t('settings.updates.prereqGithubTokenFail')}
-              fixText={t('settings.updates.prereqGithubTokenFix')}
-              onFix={() => scrollToSettingsSection('github-token-settings')}
-              icon={<Github className="w-3.5 h-3.5" />}
-            />
-            <PrereqRow
-              ok={installMethod === 'dev'}
-              label={t('settings.updates.prereqInstall')}
-              okText={t('settings.updates.prereqInstallOk')}
-              failText={t('settings.updates.prereqInstallFail')}
-              icon={<HardDrive className="w-3.5 h-3.5" />}
-            />
-          </div>
-          {/* Summary line */}
-          {(() => {
-            const checks = [
-              agentConnected,
-              hasCodingAgent,
-              oauthConfigured,
-              hasGithubToken,
-              installMethod === 'dev',
-            ]
-            const failCount = checks.filter((c) => !c).length
-            return (
-              <div className={`mt-3 pt-3 border-t border-border text-xs ${failCount === 0 ? 'text-green-400' : 'text-yellow-400'}`}>
-                {failCount === 0
-                  ? t('settings.updates.allPrereqsMet')
-                  : t('settings.updates.prereqsMissing', { count: failCount })}
+      {/* Environment Prerequisites — collapsible, developer channel only */}
+      {isDeveloperChannel && (() => {
+        const prereqChecks = [
+          agentConnected,
+          hasCodingAgent,
+          oauthConfigured,
+          installMethod === 'dev',
+        ]
+        const failCount = prereqChecks.filter((c) => !c).length
+        return (
+          <div className="mb-4 rounded-lg bg-secondary/30 border border-border overflow-hidden">
+            <button
+              onClick={() => setShowPrereqs(!showPrereqs)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-secondary/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">
+                  {t('settings.updates.environment')}
+                </span>
+                <span className={`text-xs ${failCount === 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {failCount === 0
+                    ? t('settings.updates.allPrereqsMet')
+                    : t('settings.updates.prereqsMissing', { count: failCount })}
+                </span>
               </div>
-            )
-          })()}
-        </div>
-      )}
+              {showPrereqs ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </button>
+            {showPrereqs && (
+              <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
+                <PrereqRow
+                  ok={agentConnected}
+                  label={t('settings.updates.prereqKCAgent')}
+                  okText={t('settings.updates.prereqKCAgentOk')}
+                  failText={t('settings.updates.prereqKCAgentFail')}
+                  fixText={t('settings.updates.prereqKCAgentFix')}
+                  onFix={() => scrollToSettingsSection('agent-settings')}
+                  icon={<Terminal className="w-3.5 h-3.5" />}
+                />
+                <PrereqRow
+                  ok={hasCodingAgent}
+                  label={t('settings.updates.prereqCodingAgent')}
+                  okText={t('settings.updates.prereqCodingAgentOk')}
+                  failText={t('settings.updates.prereqCodingAgentFail')}
+                  fixText={t('settings.updates.prereqCodingAgentFix')}
+                  onFix={() => scrollToSettingsSection('agent-settings')}
+                  icon={<Bot className="w-3.5 h-3.5" />}
+                />
+                <PrereqRow
+                  ok={oauthConfigured}
+                  label={t('settings.updates.prereqOAuth')}
+                  okText={t('settings.updates.prereqOAuthOk')}
+                  failText={t('settings.updates.prereqOAuthFail')}
+                  icon={<Shield className="w-3.5 h-3.5" />}
+                />
+                <PrereqRow
+                  ok={installMethod === 'dev'}
+                  label={t('settings.updates.prereqInstall')}
+                  okText={t('settings.updates.prereqInstallOk')}
+                  failText={t('settings.updates.prereqInstallFail')}
+                  icon={<HardDrive className="w-3.5 h-3.5" />}
+                />
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Auto-Update Toggle — requires kc-agent + coding agent (Claude Code, etc.) */}
       {!isHelmInstall && agentConnected && hasCodingAgent && (
