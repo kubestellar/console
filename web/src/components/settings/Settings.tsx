@@ -239,10 +239,22 @@ export function Settings() {
     // Update URL hash without triggering the deep link effect (isNavScrollingRef guards it)
     navigate(`#${sectionId}`, { replace: true })
 
-    // Keep the clicked item visible in the sidebar's own scroll area
+    // Keep the clicked item visible in the sidebar's own scroll area.
+    // NOTE: scrollIntoView cascades to ALL ancestor scroll containers
+    // (including #main-content), which cancels the smooth scroll set by
+    // scrollToSection above. Instead, manually scroll only the sidebar's
+    // own overflow container so #main-content is unaffected.
     requestAnimationFrame(() => {
-      const btn = document.querySelector(`[data-settings-nav="${sectionId}"]`)
-      btn?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      const btn = document.querySelector<HTMLElement>(`[data-settings-nav="${sectionId}"]`)
+      if (!btn) return
+      const sidebar = btn.closest<HTMLElement>('.overflow-y-auto')
+      if (!sidebar || sidebar.id === 'main-content') return
+      const btnRect = btn.getBoundingClientRect()
+      const sidebarRect = sidebar.getBoundingClientRect()
+      if (btnRect.top < sidebarRect.top || btnRect.bottom > sidebarRect.bottom) {
+        const scrollDelta = btnRect.top - sidebarRect.top - sidebarRect.height / 2 + btnRect.height / 2
+        sidebar.scrollBy({ top: scrollDelta, behavior: 'smooth' })
+      }
     })
   }
 
