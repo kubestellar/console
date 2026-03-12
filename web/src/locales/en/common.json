@@ -681,8 +681,14 @@
       "redo": "Redo"
     },
     "welcome": {
-      "gettingStarted": "Getting Started",
-      "subtitle": "You're up and running — just a few optional steps left",
+      "gettingStarted": "Welcome to KubeStellar Console!",
+      "subtitle": "You're up and running — let's get your first cluster connected",
+      "noClustersHero": "No active clusters detected yet",
+      "noClustersHint": "Create a new test cluster or connect an existing one to start managing your multi-cluster workloads.",
+      "createCluster": "Create a Test Cluster",
+      "createClusterDesc": "Spin up a local kind/k3d cluster for testing",
+      "connectCluster": "Connect Existing Cluster",
+      "connectClusterDesc": "Configure kubeconfig path in Settings",
       "dismiss": "Dismiss",
       "step1Title": "Console is running",
       "step1Desc": "Your KubeStellar Console is up and ready.",
