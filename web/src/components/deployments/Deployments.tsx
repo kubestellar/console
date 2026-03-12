@@ -10,7 +10,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
 
-const DEPLOYMENTS_CARDS_KEY = 'kubestellar-deployments-cards'
+const DEPLOYMENTS_CARDS_KEY = 'deployments-dashboard-cards'
 
 // Default cards for the deployments dashboard
 const DEFAULT_DEPLOYMENTS_CARDS = getDefaultCards('deployments')
