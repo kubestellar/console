@@ -224,7 +224,7 @@ func (h *GitOpsHandlers) getHelmReleasesForCluster(ctx context.Context, cluster 
 		return []HelmRelease{}
 	}
 
-	var releases []HelmRelease
+	releases := make([]HelmRelease, 0)
 	if err := json.Unmarshal(stdout.Bytes(), &releases); err != nil {
 		log.Printf("failed to parse helm ls output for cluster %s: %v", cluster, err)
 		return []HelmRelease{}
@@ -258,7 +258,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		var allKustomizations []Kustomization
+		allKustomizations := make([]Kustomization, 0)
 		clusterTimeout := gitopsClusterTimeout
 
 		for _, cl := range clusters {
@@ -1383,7 +1383,7 @@ func cleanupTempDir(dir string) {
 }
 
 func parseDiffOutput(output, namespace string) []DriftedResource {
-	var resources []DriftedResource
+	resources := make([]DriftedResource, 0)
 	resourceMap := make(map[string]*DriftedResource) // key: kind/name
 
 	lines := strings.Split(output, "\n")
@@ -1468,7 +1468,7 @@ func truncateValue(s string) string {
 }
 
 func parseApplyOutput(output string) []string {
-	var applied []string
+	applied := make([]string, 0)
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -1541,7 +1541,7 @@ func getDemoDrifts(cluster, namespace string) []GitOpsDrift {
 		return allDrifts
 	}
 
-	var filtered []GitOpsDrift
+	filtered := make([]GitOpsDrift, 0)
 	for _, d := range allDrifts {
 		if (cluster == "" || d.Cluster == cluster) && (namespace == "" || d.Namespace == namespace) {
 			filtered = append(filtered, d)
@@ -1584,7 +1584,7 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": stderr.String()})
 	}
 
-	var history []HelmHistoryEntry
+	history := make([]HelmHistoryEntry, 0)
 	if err := json.Unmarshal(stdout.Bytes(), &history); err != nil {
 		log.Printf("failed to parse helm history output for release %s: %v", release, err)
 		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": "failed to parse history"})

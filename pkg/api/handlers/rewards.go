@@ -238,7 +238,7 @@ type searchResponse struct {
 // itemType is "issue" or "pr".
 func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchItem, error) {
 	query := fmt.Sprintf("author:%s %s type:%s", login, h.orgs, itemType)
-	var allItems []searchItem
+	allItems := make([]searchItem, 0)
 
 	for page := 1; page <= rewardsMaxPages; page++ {
 		apiURL := fmt.Sprintf("https://api.github.com/search/issues?q=%s&per_page=%d&page=%d&sort=created&order=desc",

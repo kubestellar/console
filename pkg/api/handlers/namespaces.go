@@ -139,7 +139,7 @@ func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 	}
 
 	// Convert to access list format
-	var accessList []models.NamespaceAccessEntry
+	accessList := make([]models.NamespaceAccessEntry, 0)
 	for _, binding := range bindings {
 		for _, subject := range binding.Subjects {
 			accessList = append(accessList, models.NamespaceAccessEntry{

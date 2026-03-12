@@ -64,7 +64,7 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 		clusters, _ = h.k8sClient.ListClusters(c.Context())
 	}
 
-	var allExports []ServiceExportSummary
+	allExports := make([]ServiceExportSummary, 0)
 
 	for _, cluster := range clusters {
 		client, err := h.k8sClient.GetDynamicClient(cluster.Name)

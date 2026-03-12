@@ -181,7 +181,7 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list clusters")
 	}
 
-	var allSAs []models.K8sServiceAccount
+	allSAs := make([]models.K8sServiceAccount, 0)
 	for _, cl := range clusters {
 		sas, err := h.k8sClient.ListServiceAccounts(ctx, cl.Name, namespace)
 		if err != nil {
@@ -207,7 +207,7 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 
 	if cluster != "" {
 		// Get roles from specific cluster
-		var roles []models.K8sRole
+		roles := make([]models.K8sRole, 0)
 		if namespace != "" {
 			nsRoles, err := h.k8sClient.ListRoles(ctx, cluster, namespace)
 			if err != nil {
@@ -243,7 +243,7 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
 
-	var bindings []models.K8sRoleBinding
+	bindings := make([]models.K8sRoleBinding, 0)
 
 	if namespace != "" {
 		nsBindings, err := h.k8sClient.ListRoleBindings(ctx, cluster, namespace)

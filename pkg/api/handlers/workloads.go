@@ -564,7 +564,7 @@ func clusterGPUCount(nodes []k8s.NodeInfo) int {
 // clusterGPUTypes returns the set of GPU types across all nodes in a cluster
 func clusterGPUTypes(nodes []k8s.NodeInfo) []string {
 	seen := make(map[string]bool)
-	var types []string
+	types := make([]string, 0)
 	for _, n := range nodes {
 		if n.GPUType != "" && !seen[n.GPUType] {
 			seen[n.GPUType] = true
@@ -905,7 +905,7 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	}
 
 	// Collect k8s events for the deployment and its pods
-	var eventLines []string
+	eventLines := make([]string, 0)
 
 	// Events for the deployment itself
 	deployEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
