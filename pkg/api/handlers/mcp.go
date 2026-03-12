@@ -229,7 +229,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			var allPods []k8s.PodInfo
+			allPods := make([]k8s.PodInfo, 0)
 			clusterTimeout := mcpExtendedTimeout
 
 			for _, cl := range clusters {
@@ -294,7 +294,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			var allIssues []k8s.PodIssue
+			allIssues := make([]k8s.PodIssue, 0)
 			clusterTimeout := mcpExtendedTimeout
 
 			for _, cl := range clusters {
@@ -671,7 +671,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			var allIssues []k8s.DeploymentIssue
+			allIssues := make([]k8s.DeploymentIssue, 0)
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -726,7 +726,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			var allDeployments []k8s.Deployment
+			allDeployments := make([]k8s.Deployment, 0)
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -780,7 +780,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			var allServices []k8s.Service
+			allServices := make([]k8s.Service, 0)
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1581,7 +1581,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			var allIssues []k8s.SecurityIssue
+			allIssues := make([]k8s.SecurityIssue, 0)
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
