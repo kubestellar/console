@@ -301,3 +301,44 @@ func TestFindDeploymentIssues(t *testing.T) {
 		t.Error("Expected error for list failure")
 	}
 }
+
+// TestFindDeploymentIssuesNilReplicas verifies that FindDeploymentIssues
+// treats Spec.Replicas == nil as 1 replica (the Kubernetes default) and
+// correctly detects issues when the single replica is not ready.
+func TestFindDeploymentIssuesNilReplicas(t *testing.T) {
+	m, _ := NewMultiClusterClient("")
+	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}}}
+
+	fakeCS := fake.NewSimpleClientset(
+		// nil Replicas, ready=1 → healthy, should NOT be an issue
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "nil-healthy", Namespace: "default"},
+			Spec:       appsv1.DeploymentSpec{},
+			Status:     appsv1.DeploymentStatus{ReadyReplicas: 1},
+		},
+		// nil Replicas, ready=0 → degraded, SHOULD be an issue
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "nil-degraded", Namespace: "default"},
+			Spec:       appsv1.DeploymentSpec{},
+			Status:     appsv1.DeploymentStatus{ReadyReplicas: 0},
+		},
+	)
+	m.clients["c1"] = fakeCS
+
+	issues, err := m.FindDeploymentIssues(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("FindDeploymentIssues failed: %v", err)
+	}
+
+	issueMap := make(map[string]bool)
+	for _, i := range issues {
+		issueMap[i.Name] = true
+	}
+
+	if issueMap["nil-healthy"] {
+		t.Error("nil-healthy (ready=1, nil replicas) should not be flagged as an issue")
+	}
+	if !issueMap["nil-degraded"] {
+		t.Error("nil-degraded (ready=0, nil replicas) should be flagged as an issue")
+	}
+}
