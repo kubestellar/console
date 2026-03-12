@@ -2667,23 +2667,17 @@
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
   },
-  "lima": {
+  "openfeature": {
     "healthy": "Healthy",
     "degraded": "Degraded",
-    "notDetected": "Lima Not Detected",
-    "notDetectedHint": "Install Lima to manage local virtual machines. Run 'brew install lima' or visit lima-vm.io.",
-    "totalInstances": "Instances",
-    "totalCpu": "Total CPU",
-    "totalMemory": "Total Memory",
-    "instances": "Instances",
-    "status_running": "Running",
-    "status_stopped": "Stopped",
-    "status_broken": "Broken",
-    "fetchError": "Failed to fetch Lima status",
-    "openDocs": "Open Lima Docs",
-    "syncedJustNow": "just now",
-    "syncedMinutesAgo": "{{count}}m ago",
-    "syncedHoursAgo": "{{count}}h ago",
-    "syncedDaysAgo": "{{count}}d ago"
+    "notInstalled": "OpenFeature not detected",
+    "notInstalledHint": "Install flagd or an OpenFeature provider to see feature flag status",
+    "providers": "Providers",
+    "flags": "Flags",
+    "evaluations": "Evaluations",
+    "providerStatus": "Provider Status",
+    "highErrorRate": "High error rate: {{rate}}%",
+    "learnMore": "Learn more about OpenFeature",
+    "fetchError": "Failed to fetch OpenFeature status"
   }
 }

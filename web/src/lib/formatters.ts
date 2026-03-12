@@ -121,15 +121,15 @@ export function createRelativeTimeFormatter(
 ): (isoString: string) => string {
   return (isoString: string): string => {
     const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('time.justNow')
+    if (isNaN(diff) || diff < 0) return t('common.justNow')
     
     const minute = 60_000
     const hour = 60 * minute
     const day = 24 * hour
     
-    if (diff < minute) return t('time.justNow')
-    if (diff < hour) return t('time.minutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('time.hoursAgo', { count: Math.floor(diff / hour) })
-    return t('time.daysAgo', { count: Math.floor(diff / day) })
+    if (diff < minute) return t('common.justNow')
+    if (diff < hour) return t('common.minutesAgo', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('common.hoursAgo', { count: Math.floor(diff / hour) })
+    return t('common.daysAgo', { count: Math.floor(diff / day) })
   }
 }

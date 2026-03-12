@@ -277,6 +277,7 @@
     "crio_status": "CRI-O",
     "coredns_status": "CoreDNS",
     "fluentd_status": "Fluentd",
+    "lima_status": "Lima",
     "openfeature_status": "OpenFeature"
   },
   "descriptions": {

@@ -113,6 +113,8 @@ export interface CardLoadingStateOptions {
   errorMessage?: string
   /** Whether the card is displaying demo/mock data. Set to false to opt-out of demo indicator. */
   isDemoData?: boolean
+  /** Whether the card is refreshing cached data in the background */
+  isRefreshing?: boolean
 }
 
 /**
@@ -151,6 +153,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     // Default to undefined (not false) so cards don't accidentally opt-out of demo indicator.
     // Only cards that explicitly set isDemoData: false will opt-out.
     isDemoData,
+    isRefreshing: isRefreshingOverride,
   } = options
 
   // Data is considered "real" (displayable) if there is any data at all.
@@ -165,7 +168,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     consecutiveFailures,
     errorMessage,
     isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
+    isRefreshing: isRefreshingOverride ?? (isLoading && hasData),
     hasData,
     isDemoData,
   })
