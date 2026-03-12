@@ -438,7 +438,7 @@ export function Layout({ children }: LayoutProps) {
           id="main-content"
           style={{ marginLeft: sidebarWidthPx }}
           className={cn(
-            'relative flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0',
+            'relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0',
             // Don't apply right margin when fullscreen is active or on mobile
             !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[580px]',
             !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
