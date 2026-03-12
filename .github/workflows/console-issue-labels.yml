@@ -27,8 +27,9 @@ jobs:
             const typeLabel = isBug ? 'kind/bug' : 'enhancement';
 
             // Labels that should be present on all console-created issues
-            // Note: triage/accepted is intentionally omitted — only humans should add it
-            const requiredLabels = [typeLabel, 'ai-fix-requested', 'help wanted'];
+            // triage/needed signals the issue awaits human triage; once a maintainer
+            // reviews and adds triage/accepted, the Copilot assignment workflow kicks in
+            const requiredLabels = [typeLabel, 'ai-fix-requested', 'help wanted', 'triage/needed'];
 
             const labelsToAdd = requiredLabels.filter(l => !existingLabels.includes(l));
 
