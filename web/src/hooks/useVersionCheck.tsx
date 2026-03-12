@@ -763,14 +763,15 @@ function useVersionCheckCore() {
   }, [agentConnected, agentSupportsAutoUpdate, channel, fetchAutoUpdateStatus])
 
   // Periodic poll: re-fetch auto-update status every 60s so the UI picks up
-  // new commits detected by kc-agent without requiring manual "Check Now"
+  // new commits detected by kc-agent without requiring manual "Check Now".
+  // Includes autoUpdateEnabled so toggling the setting restarts polling.
   useEffect(() => {
-    if (!agentConnected || !agentSupportsAutoUpdate) return
+    if (!agentConnected || !agentSupportsAutoUpdate || !autoUpdateEnabled) return
     const id = setInterval(() => {
       fetchAutoUpdateStatus()
     }, AUTO_UPDATE_POLL_MS)
     return () => clearInterval(id)
-  }, [agentConnected, agentSupportsAutoUpdate, fetchAutoUpdateStatus])
+  }, [agentConnected, agentSupportsAutoUpdate, autoUpdateEnabled, fetchAutoUpdateStatus])
 
   // For developer channel: fetch latest main SHA client-side (fallback when kc-agent doesn't support auto-update)
   useEffect(() => {
