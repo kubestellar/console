@@ -178,9 +178,6 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   github_ci_monitor: { icon: GitBranch, color: 'text-purple-400' },
   cluster_health_monitor: { icon: Server, color: 'text-green-400' },
 
-  // Runtime cards
-  wasmcloud_status: { icon: Box, color: 'text-purple-400' },
-
   // Provider health
   provider_health: { icon: Activity, color: 'text-green-400' },
   // CoreDNS

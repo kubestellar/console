@@ -179,20 +179,8 @@ const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.Kagent
 const CrossplaneManagedResources = lazy(() => import('./crossplane-status/CrossplaneManagedResources').then(m => ({ default: m.CrossplaneManagedResources })))
 // Cloud Native Buildpacks card
 const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
-// Flatcar Container Linux card
-const FlatcarStatus = lazy(() => import('./flatcar_status').then(m => ({ default: m.FlatcarStatus })))
-// Thanos global view metrics card
-const ThanosStatus = lazy(() => import('./thanos_status').then(m => ({ default: m.ThanosStatus })))
-// Contour ingress controller card
-const ContourStatus = lazy(() => import('./contour-status').then(m => ({ default: m.ContourStatus })))
-// CRI-O container runtime card
-const CrioStatus = lazy(() => import('./crio_status').then(m => ({ default: m.CrioStatus })))
 // CoreDNS card
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
-// Fluentd log collector card
-const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default: m.FluentdStatus })))
-// Lima VM card
-const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
 
 // Multi-cluster insights cards — share one chunk via barrel import
 const _insightsBundle = import('./insights')
@@ -217,7 +205,6 @@ const RBACExplorer = lazy(() => _clusterAdminBundle.then(m => ({ default: m.RBAC
 const MaintenanceWindows = lazy(() => _clusterAdminBundle.then(m => ({ default: m.MaintenanceWindows })))
 const ClusterChangelog = lazy(() => _clusterAdminBundle.then(m => ({ default: m.ClusterChangelog })))
 const QuotaHeatmap = lazy(() => _clusterAdminBundle.then(m => ({ default: m.QuotaHeatmap })))
-const WasmCloudStatus = lazy(() => import('./wasmcloud_status').then(m => ({ default: m.WasmCloudStatus })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -448,20 +435,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   quota_heatmap: QuotaHeatmap,
   // Cloud Native Buildpacks
   buildpacks_status: BuildpacksStatus,
-  // Flatcar Container Linux
-  flatcar_status: FlatcarStatus,
-  // Thanos global view metrics
-  thanos_status: ThanosStatus,
-  // Contour ingress controller
-  contour_status: ContourStatus,
-  // CRI-O container runtime
-  crio_status: CrioStatus,
   // CoreDNS
   coredns_status: CoreDNSStatus,
-  // Fluentd log collector
-  fluentd_status: FluentdStatus,
-  // Lima VM
-  lima_status: LimaStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -506,7 +481,6 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   error_count: PodIssues,
   security_overview: SecurityIssues,
   rbac_summary: NamespaceRBAC,
-  wasmcloud_status: WasmCloudStatus,
 }
 
 // Lazy-load UnifiedCard — keeps it out of the main bundle for fast page load
@@ -571,11 +545,6 @@ export const DEMO_DATA_CARDS = new Set([
   'gateway_status',
   // Note: service_topology removed — now reports isDemoData via useTopology hook
   // Note: buildpacks_status removed — reports isDemoData via useBuildpackImages hook
-  'flatcar_status',
-  'thanos_status',
-  'contour_status',
-  'fluentd_status',
-  'lima_status',
 
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
@@ -794,18 +763,6 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   crossplane_managed_resources: () => import('./crossplane-status'),
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
-  //wasmcloud
-  wasmcloud_status: () => import('./wasmcloud_status'),
-  // Flatcar Container Linux
-  flatcar_status: () => import('./flatcar_status'),
-  // Thanos global view metrics
-  thanos_status: () => import('./thanos_status'),
-  // Contour ingress controller
-  contour_status: () => import('./contour-status'),
-  // CRI-O container runtime
-  crio_status: () => import('./crio_status'),
-  // Lima VM
-  lima_status: () => import('./lima_status'),
 }
 
 /**
@@ -942,12 +899,6 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   upgrade_status: 4,
   crossplane_managed_resources: 4,
   buildpacks_status: 6,
-  flatcar_status: 6,
-  thanos_status: 6,
-  contour_status: 6,
-  crio_status: 6,
-  fluentd_status: 6,
-  lima_status: 6,
 
   // MCS cards
   service_exports: 6,
@@ -1149,7 +1100,6 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   // Full width cards (12 columns) - complex visualizations
   cluster_comparison: 12,
   cluster_resource_tree: 12,
-  wasmcloud_status: 6,
 }
 
 // Default width for cards not in the map

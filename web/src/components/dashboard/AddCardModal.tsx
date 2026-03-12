@@ -124,7 +124,6 @@ const CARD_CATALOG = {
     { type: 'service_imports', title: 'Service Imports (MCS)', description: 'Multi-cluster service imports receiving cross-cluster traffic', visualization: 'table' },
     { type: 'gateway_status', title: 'Gateway API', description: 'Kubernetes Gateway API resources and HTTPRoutes', visualization: 'status' },
     { type: 'service_topology', title: 'Service Topology', description: 'Animated service mesh visualization with cross-cluster traffic', visualization: 'status' },
-    { type: 'contour_status', title: 'Contour', description: 'Contour ingress proxy status, HTTPProxy resources', visualization: 'status' },
     { type: 'ingress_status', title: 'Ingress Status', description: 'Ingress resources with hosts, paths, and backend services', visualization: 'table' },
     { type: 'network_policy_status', title: 'Network Policy Status', description: 'NetworkPolicy resources with pod selectors and rules', visualization: 'table' },
   ],
@@ -274,19 +273,11 @@ const CARD_CATALOG = {
   ],
   'Misc': [
     { type: 'buildpacks_status', title: 'Buildpacks Status', description: 'Cloud Native Buildpacks detection, builders, and image build status', visualization: 'status' },
-    { type: 'flatcar_status', title: 'Flatcar Container Linux', description: 'Flatcar node OS versions, update status, and version distribution', visualization: 'status' },
-    { type: 'thanos_status', title: 'Thanos', description: 'Thanos global view metrics, store gateway status, and target health', visualization: 'status' },
-    { type: 'fluentd_status', title: 'Fluentd', description: 'Log pipeline status, buffer utilization, and output plugin health', visualization: 'status' },
     { type: 'weather', title: 'Weather', description: 'Weather conditions with multi-day forecasts and animated backgrounds', visualization: 'status' },
     { type: 'github_activity', title: 'GitHub Activity', description: 'Monitor GitHub repository activity - PRs, issues, releases, and contributors', visualization: 'table' },
     { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
     { type: 'stock_market_ticker', title: 'Stock Market Ticker', description: 'Track multiple stocks with real-time sparkline charts and iPhone-style design', visualization: 'timeseries' },
   ],
-  'Runtime': [
-    { type: 'wasmcloud_status', title: 'WasmCloud Status', description: 'wasmCloud host status, actor inventory.', visualization: 'status' },
-    { type: 'crio_status', title: 'CRI-O', description: 'CRI-O container runtime metrics, image pulls, and pod sandbox status', visualization: 'status' },
-    { type: 'lima_status', title: 'Lima', description: 'Lima virtual machine instances and resource usage', visualization: 'status' },
-  ]
 } as const
 
 /**
