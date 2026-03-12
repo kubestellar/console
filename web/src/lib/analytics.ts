@@ -1604,3 +1604,13 @@ export function emitFromLensViewed() {
 export function emitFromLensActioned(action: string) {
   send('ksc_from_lens_actioned', { action })
 }
+
+/** Fired when a user switches deployment tabs (localhost / cluster-portforward / cluster-ingress) */
+export function emitFromLensTabSwitch(tab: string) {
+  send('ksc_from_lens_tab_switch', { tab })
+}
+
+/** Fired when a user copies an install command from the /from-lens page */
+export function emitFromLensCommandCopy(tab: string, step: number, command: string) {
+  send('ksc_from_lens_command_copy', { tab, step, command })
+}

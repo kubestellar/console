@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -17,8 +17,10 @@ import {
   Lock,
   KeyRound,
   Wifi,
+  Copy,
+  Check,
 } from 'lucide-react'
-import { emitFromLensViewed, emitFromLensActioned } from '../lib/analytics'
+import { emitFromLensViewed, emitFromLensActioned, emitFromLensTabSwitch, emitFromLensCommandCopy } from '../lib/analytics'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -29,6 +31,9 @@ const TESTIMONIAL_COUNT = 4
 
 /** Deployment option tab identifiers */
 type DeployTab = 'localhost' | 'cluster-portforward' | 'cluster-ingress'
+
+/** How long the "Copied!" checkmark shows (ms) */
+const COPY_FEEDBACK_MS = 2000
 
 /* ------------------------------------------------------------------ */
 /*  Comparison table data                                             */
@@ -268,6 +273,28 @@ function ComparisonCell({ value, note, isConsole }: { value: string | boolean; n
 
 function DeploymentSection() {
   const [activeTab, setActiveTab] = useState<DeployTab>('localhost')
+  const [copiedStep, setCopiedStep] = useState<string | null>(null)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
+
+  const switchTab = useCallback((tab: DeployTab) => {
+    if (tab === activeTab) return
+    setActiveTab(tab)
+    emitFromLensTabSwitch(tab)
+  }, [activeTab])
+
+  const copyCommands = useCallback(async (commands: string[], step: number) => {
+    const text = commands.join('\n')
+    await navigator.clipboard.writeText(text)
+    const key = `${activeTab}-${step}`
+    setCopiedStep(key)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
+    emitFromLensCommandCopy(activeTab, step, commands[0])
+  }, [activeTab])
 
   const steps = activeTab === 'localhost'
     ? LOCALHOST_STEPS
@@ -291,7 +318,7 @@ function DeploymentSection() {
       <div className="max-w-3xl mx-auto mb-8">
         <div className="flex rounded-lg border border-slate-700/50 overflow-hidden">
           <button
-            onClick={() => setActiveTab('localhost')}
+            onClick={() => switchTab('localhost')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'localhost'
                 ? 'bg-purple-500/20 text-purple-300 border-b-2 border-purple-400'
@@ -303,7 +330,7 @@ function DeploymentSection() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">brew</span>
           </button>
           <button
-            onClick={() => setActiveTab('cluster-portforward')}
+            onClick={() => switchTab('cluster-portforward')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'cluster-portforward'
                 ? 'bg-purple-500/20 text-purple-300 border-b-2 border-purple-400'
@@ -315,7 +342,7 @@ function DeploymentSection() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">port-forward</span>
           </button>
           <button
-            onClick={() => setActiveTab('cluster-ingress')}
+            onClick={() => switchTab('cluster-ingress')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'cluster-ingress'
                 ? 'bg-purple-500/20 text-purple-300 border-b-2 border-purple-400'
@@ -330,34 +357,51 @@ function DeploymentSection() {
       </div>
 
       <div className="space-y-6 max-w-3xl mx-auto">
-        {steps.map((s) => (
-          <div
-            key={`${activeTab}-${s.step}`}
-            className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6"
-          >
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">
-                {s.step}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold mb-2">{s.title}</h3>
-                {s.commands && s.commands.length > 0 && (
-                  <pre className="bg-slate-900 border border-slate-700/50 rounded-lg px-4 py-3 mb-3 text-sm text-green-400 overflow-x-auto">
-                    <code>{s.commands.map((cmd, i) => (
-                      <span key={i}>{i > 0 && '\n'}$ {cmd}</span>
-                    ))}</code>
-                  </pre>
-                )}
-                {s.note && (
-                  <div className="rounded-lg border border-slate-600/30 bg-slate-900/50 px-4 py-2.5 mb-3 text-xs text-slate-400">
-                    {s.note}
-                  </div>
-                )}
-                <p className="text-sm text-slate-400">{s.description}</p>
+        {steps.map((s) => {
+          const copyKey = `${activeTab}-${s.step}`
+          const isCopied = copiedStep === copyKey
+          return (
+            <div
+              key={copyKey}
+              className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">
+                  {s.step}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-2">{s.title}</h3>
+                  {s.commands && s.commands.length > 0 && (
+                    <div className="relative group">
+                      <pre className="bg-slate-900 border border-slate-700/50 rounded-lg px-4 py-3 mb-3 text-sm text-green-400 overflow-x-auto pr-12">
+                        <code>{s.commands.map((cmd, i) => (
+                          <span key={i}>{i > 0 && '\n'}$ {cmd}</span>
+                        ))}</code>
+                      </pre>
+                      <button
+                        onClick={() => copyCommands(s.commands!, s.step)}
+                        className="absolute top-2.5 right-2.5 p-1.5 rounded-md bg-slate-800 border border-slate-700/50 text-slate-400 hover:text-white hover:border-slate-600 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Copy commands"
+                      >
+                        {isCopied ? (
+                          <Check className="w-3.5 h-3.5 text-green-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  {s.note && (
+                    <div className="rounded-lg border border-slate-600/30 bg-slate-900/50 px-4 py-2.5 mb-3 text-xs text-slate-400">
+                      {s.note}
+                    </div>
+                  )}
+                  <p className="text-sm text-slate-400">{s.description}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Post-install guidance */}
