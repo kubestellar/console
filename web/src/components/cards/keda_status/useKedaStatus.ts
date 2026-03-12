@@ -146,6 +146,7 @@ export function useKedaStatus(): UseKedaStatusResult {
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,
