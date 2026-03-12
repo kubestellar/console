@@ -106,9 +106,9 @@ export function Login() {
   }
 
   return (
-    <div data-testid="login-page" className="min-h-screen flex bg-[#0a0a0a] relative overflow-hidden">
+    <div data-testid="login-page" className="h-screen flex bg-[#0a0a0a] relative overflow-hidden">
       {/* Left side - Login form */}
-      <div className="flex-1 flex items-center justify-center relative z-10">
+      <div className="flex-1 h-full flex items-center justify-center relative z-10">
         {/* Star field background (left side only) */}
         <div className="star-field absolute inset-0">
           {Array.from({ length: 30 }).map((_, i) => (
@@ -223,23 +223,26 @@ export function Login() {
       </div>
 
       {/* Right side - Globe animation */}
-      <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden">
+      <div className="hidden lg:block flex-1 h-full relative overflow-hidden">
         {/* Subtle gradient background for the globe side */}
         <div className="absolute inset-0 bg-gradient-to-l from-[#0a0f1c] to-transparent" />
-        <Suspense fallback={
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
-          </div>
-        }>
-          <GlobeAnimation
-            width="100%"
-            height="100%"
-            showLoader={true}
-            enableControls={true}
-            className="absolute inset-0"
-            style={{ transform: 'scale(0.65)', transformOrigin: 'center center' }}
-          />
-        </Suspense>
+        {/* Wrapper div ensures the globe is absolutely positioned (GlobeAnimation
+            internally prepends "relative" to className which overrides "absolute"
+            in Tailwind's CSS ordering, causing layout breakage). */}
+        <div className="absolute inset-0">
+          <Suspense fallback={
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
+            </div>
+          }>
+            <GlobeAnimation
+              width="100%"
+              height="100%"
+              showLoader={true}
+              enableControls={true}
+            />
+          </Suspense>
+        </div>
       </div>
 
       {/* Version info - bottom right */}
