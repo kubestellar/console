@@ -338,9 +338,9 @@ export const handlers = [
     await delay(100)
     return HttpResponse.json({
       deployments: [
-        { name: 'nginx', namespace: 'default', replicas: 3, ready: 3, cluster: 'kind-local' },
-        { name: 'redis', namespace: 'cache', replicas: 2, ready: 2, cluster: 'kind-local' },
-        { name: 'api-server', namespace: 'backend', replicas: 5, ready: 5, cluster: 'kind-local' },
+        { name: 'nginx', namespace: 'default', cluster: 'kind-local', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+        { name: 'redis', namespace: 'cache', cluster: 'kind-local', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+        { name: 'api-server', namespace: 'backend', cluster: 'kind-local', status: 'deploying', replicas: 5, readyReplicas: 3, updatedReplicas: 5, availableReplicas: 3, progress: 60 },
       ],
     })
   }),
