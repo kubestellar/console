@@ -28,7 +28,7 @@ interface ShareMissionDialogProps {
   onClose: () => void
 }
 
-type ExportChannel = 'json' | 'clipboard' | 'markdown'
+type ExportChannel = 'json' | 'clipboard' | 'markdown' | 'yaml'
 
 function resolutionToMissionExport(resolution: Resolution): MissionExport {
   return {
@@ -57,6 +57,57 @@ function resolutionToMissionExport(resolution: Resolution): MissionExport {
       updatedAt: resolution.updatedAt,
     },
   }
+}
+
+function missionToYaml(mission: MissionExport): string {
+  const lines: string[] = []
+  const indent = (depth: number) => '  '.repeat(depth)
+
+  function serialize(value: unknown, depth: number): void {
+    if (value === null || value === undefined) return
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      // Multi-line strings use block scalar
+      const str = String(value)
+      if (str.includes('\n')) {
+        lines[lines.length - 1] += ' |'
+        str.split('\n').forEach(line => lines.push(`${indent(depth)}${line}`))
+      } else if (/[:#{}[\],&*?|>!'"%@`]/.test(str) || str === '') {
+        lines[lines.length - 1] += ` "${str.replace(/"/g, '\\"')}"`
+      } else {
+        lines[lines.length - 1] += ` ${str}`
+      }
+    } else if (Array.isArray(value)) {
+      if (value.length === 0) {
+        lines[lines.length - 1] += ' []'
+        return
+      }
+      value.forEach(item => {
+        if (typeof item === 'object' && item !== null) {
+          lines.push(`${indent(depth)}-`)
+          const entries = Object.entries(item)
+          entries.forEach(([k, v], i) => {
+            if (i === 0) {
+              lines[lines.length - 1] += ` ${k}:`
+            } else {
+              lines.push(`${indent(depth + 1)}${k}:`)
+            }
+            serialize(v, depth + 2)
+          })
+        } else {
+          lines.push(`${indent(depth)}-`)
+          serialize(item, depth + 1)
+        }
+      })
+    } else if (typeof value === 'object') {
+      Object.entries(value).forEach(([k, v]) => {
+        lines.push(`${indent(depth)}${k}:`)
+        serialize(v, depth + 1)
+      })
+    }
+  }
+
+  serialize(mission, 0)
+  return lines.join('\n')
 }
 
 function missionToMarkdown(mission: MissionExport): string {
@@ -141,6 +192,17 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
       case 'markdown':
         await navigator.clipboard.writeText(missionToMarkdown(mission))
         break
+      case 'yaml': {
+        const yamlContent = missionToYaml(mission)
+        const yamlBlob = new Blob([yamlContent], { type: 'application/x-yaml' })
+        const yamlUrl = URL.createObjectURL(yamlBlob)
+        const yamlAnchor = document.createElement('a')
+        yamlAnchor.href = yamlUrl
+        yamlAnchor.download = `${mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)}.yaml`
+        yamlAnchor.click()
+        URL.revokeObjectURL(yamlUrl)
+        break
+      }
     }
 
     setExported(channel)
@@ -221,6 +283,13 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
             description="Human-readable format"
             active={exported === 'markdown'}
             onClick={() => handleExport('markdown')}
+          />
+          <ExportButton
+            icon={<Download className="w-4 h-4" />}
+            label="Download YAML"
+            description="Save as .yaml file"
+            active={exported === 'yaml'}
+            onClick={() => handleExport('yaml')}
           />
         </div>
       </div>
