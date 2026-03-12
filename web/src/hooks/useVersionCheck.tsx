@@ -26,6 +26,13 @@ const MIN_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes minimum between check
 const AUTO_UPDATE_POLL_MS = 60 * 1000 // Poll kc-agent for update status every 60s
 const DEV_SHA_CACHE_KEY = 'kc-dev-latest-sha'
 
+/** Timeout for the /health fetch during install-method detection (ms) */
+const HEALTH_FETCH_TIMEOUT_MS = 3000
+/** Max retries for /health when the backend is still warming up */
+const HEALTH_FETCH_MAX_RETRIES = 2
+/** Delay between /health retries (ms) — gives the backend time to finish warmup */
+const HEALTH_FETCH_RETRY_DELAY_MS = 3000
+
 /**
  * Parse a release tag to determine its type and extract date.
  *
@@ -749,20 +756,29 @@ function useVersionCheckCore() {
     }
   }, [installMethod, channel, setChannel])
 
-  // Fetch install_method from backend /health as fallback (one-time on mount)
+  // Fetch install_method from backend /health as fallback.
+  // Retries once after a short delay because the backend may still be warming up
+  // (returns 503 during cluster probe phase) when the SPA mounts.
   useEffect(() => {
-    async function fetchBackendInstallMethod() {
+    let cancelled = false
+    async function fetchBackendInstallMethod(attempt: number) {
       try {
-        const resp = await fetch('/health', { signal: AbortSignal.timeout(3000) })
+        const resp = await fetch('/health', { signal: AbortSignal.timeout(HEALTH_FETCH_TIMEOUT_MS) })
         if (resp.ok) {
           const data = await resp.json()
-          if (data.install_method) {
+          if (data.install_method && !cancelled) {
             setInstallMethod(data.install_method as InstallMethod)
+            return // success — no retry needed
           }
         }
       } catch { /* Backend not available */ }
+      // Retry once after a delay (backend may still be warming up)
+      if (attempt < HEALTH_FETCH_MAX_RETRIES && !cancelled) {
+        setTimeout(() => fetchBackendInstallMethod(attempt + 1), HEALTH_FETCH_RETRY_DELAY_MS)
+      }
     }
-    fetchBackendInstallMethod()
+    fetchBackendInstallMethod(0)
+    return () => { cancelled = true }
   }, [])
 
   // Fetch auto-update status when channel changes or on mount
