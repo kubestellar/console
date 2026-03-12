@@ -275,11 +275,10 @@ function respondError(id: number, message: string): void {
 }
 
 // Queue of messages received before the database is ready
-const pendingMessages: MessageEvent<WorkerRequest>[] = []
-let dbReady = false
+const pendingMessages: WorkerRequest[] = []
+let initComplete = false
 
-function processMessage(event: MessageEvent<WorkerRequest>): void {
-  const msg = event.data
+function processMessage(msg: WorkerRequest): void {
 
   try {
     switch (msg.type) {
@@ -337,12 +336,12 @@ function processMessage(event: MessageEvent<WorkerRequest>): void {
 }
 
 self.onmessage = (event: MessageEvent<WorkerRequest>) => {
-  if (!dbReady) {
+  if (!initComplete) {
     // Queue messages until database initialization completes
-    pendingMessages.push(event)
+    pendingMessages.push(event.data)
     return
   }
-  processMessage(event)
+  processMessage(event.data)
 }
 
 // ---------------------------------------------------------------------------
@@ -351,7 +350,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
 
 initDatabase()
   .then(() => {
-    dbReady = true
+    initComplete = true
     // Drain any messages that arrived during initialization
     for (const queued of pendingMessages) {
       processMessage(queued)
@@ -362,7 +361,7 @@ initDatabase()
   })
   .catch((e) => {
     console.error('[CacheWorker] Init failed:', e)
-    dbReady = true
+    initComplete = true
     // Drain queued messages — handlers return null/empty when db is null
     for (const queued of pendingMessages) {
       processMessage(queued)
