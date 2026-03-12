@@ -114,7 +114,7 @@ const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
   { key: 'kubestellar-main-dashboard-cards', route: '/', name: 'Main' },
   { key: 'kubestellar-clusters-cards', route: '/clusters', name: 'My Clusters' },
   { key: 'kubestellar-workloads-cards', route: '/workloads', name: 'Workloads' },
-  { key: 'kubestellar-deployments-cards', route: '/deployments', name: 'Deployments' },
+  { key: 'deployments-dashboard-cards', route: '/deployments', name: 'Deployments' },
   { key: 'kubestellar-pods-cards', route: '/pods', name: 'Pods' },
   { key: 'kubestellar-services-cards', route: '/services', name: 'Services' },
   { key: 'kubestellar-compute-cards', route: '/compute', name: 'Compute' },
