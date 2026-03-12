@@ -105,6 +105,8 @@ export interface CardLoadingStateOptions {
   isLoading: boolean
   /** Whether the card has any data to display (e.g., data.length > 0) */
   hasAnyData: boolean
+  /** Whether a background refresh is in progress (from useCache). Falls back to isLoading && hasData when omitted. */
+  isRefreshing?: boolean
   /** Whether 3+ consecutive fetch failures have occurred (default: false) */
   isFailed?: boolean
   /** Number of consecutive fetch failures (default: 0) */
@@ -145,6 +147,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
   const {
     isLoading,
     hasAnyData,
+    isRefreshing: isRefreshingProp,
     isFailed = false,
     consecutiveFailures = 0,
     errorMessage,
@@ -158,14 +161,15 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
   // When refreshing with cached data, show cached content + refresh animation.
   const hasRealData = hasAnyData
   const hasData = !isLoading || hasRealData
-
+  // Use the explicit isRefreshing from useCache when provided, otherwise compute it.
+  const isRefreshing = isRefreshingProp ?? (isLoading && hasData)
   // Report state to CardWrapper for refresh animation and status badges
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
     errorMessage,
     isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
+    isRefreshing,
     hasData,
     isDemoData,
   })
@@ -178,7 +182,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     /** Whether to show empty state (loading finished but no data exists) */
     showEmptyState: !isLoading && !hasAnyData,
     /** Whether data is being refreshed (has cache, fetching update) */
-    isRefreshing: isLoading && hasRealData,
+    isRefreshing,
   }
 }
 
