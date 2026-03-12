@@ -123,6 +123,15 @@ const LOCALHOST_STEPS: InstallStep[] = [
     ],
     description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser at http://localhost:8080. No Go, Node.js, or build tools required.',
   },
+  {
+    step: 2,
+    title: 'Or install the agent separately',
+    commands: [
+      'brew tap kubestellar/tap && brew install --head kc-agent',
+      'kc-agent',
+    ],
+    description: 'The kc-agent connects to your clusters via kubeconfig. Without it, the console runs in demo mode only.',
+  },
 ]
 
 /* -- Cluster: shared Helm repo step ---------------------------------- */
