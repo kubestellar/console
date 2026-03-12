@@ -238,6 +238,12 @@ export function Settings() {
     setActiveSection(sectionId)
     // Update URL hash without triggering the deep link effect (isNavScrollingRef guards it)
     navigate(`#${sectionId}`, { replace: true })
+
+    // Keep the clicked item visible in the sidebar's own scroll area
+    requestAnimationFrame(() => {
+      const btn = document.querySelector(`[data-settings-nav="${sectionId}"]`)
+      btn?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
   }
 
   const SYNC_LABELS: Record<SyncStatus, string> = {
@@ -261,7 +267,7 @@ export function Settings() {
       )}
       {/* Sidebar Navigation */}
       <nav className="hidden lg:block w-56 shrink-0">
-        <div className="sticky top-20 space-y-4">
+        <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto scroll-enhanced space-y-4">
           <div className="mb-4">
             <h1 data-testid="settings-title" className="text-xl font-bold text-foreground">{t('settings.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('settings.subtitle')}</p>
@@ -282,6 +288,7 @@ export function Settings() {
                   return (
                     <button
                       key={item.id}
+                      data-settings-nav={item.id}
                       onClick={() => handleNavClick(item.id)}
                       className={cn(
                         'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors text-left',
