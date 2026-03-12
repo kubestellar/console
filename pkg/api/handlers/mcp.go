@@ -694,7 +694,9 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
-		issues, err := h.k8sClient.FindDeploymentIssues(c.Context(), cluster, namespace)
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+		issues, err := h.k8sClient.FindDeploymentIssues(ctx, cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -749,7 +751,9 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"deployments": allDeployments, "source": "k8s"})
 		}
 
-		deployments, err := h.k8sClient.GetDeployments(c.Context(), cluster, namespace)
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+		deployments, err := h.k8sClient.GetDeployments(ctx, cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
