@@ -259,7 +259,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.hostname.includes('netlify.app')
 
     // Single check: backend availability + OAuth config (the /health endpoint returns both)
-    const { backendUp, oauthConfigured } = await checkOAuthConfigured()
+    let backendUp = false
+    let oauthConfigured = false
+    try {
+      ({ backendUp, oauthConfigured } = await checkOAuthConfigured())
+    } catch {
+      // Backend unreachable — fall through to demo mode
+    }
 
     // When backend is up but no OAuth is configured (e.g. Helm install with no agent),
     // go straight to demo mode — same auto-login behavior as console.kubestellar.io.
