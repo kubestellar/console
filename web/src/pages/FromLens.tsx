@@ -110,25 +110,22 @@ interface InstallStep {
   description: string
 }
 
-/* -- Localhost: brew / build-from-source install ---------------------- */
+/* -- Localhost: curl-to-bash install ---------------------------------- */
 
 const LOCALHOST_STEPS: InstallStep[] = [
   {
     step: 1,
-    title: 'Install via Homebrew',
+    title: 'Install and run',
     commands: [
-      'brew tap kubestellar/tap && brew install --head kc-agent',
+      'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash',
     ],
-    note: 'Or build from source: git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent',
-    description: 'The kc-agent reads your kubeconfig and serves the console UI on localhost.',
+    description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser. No Go, Node.js, or build tools required.',
   },
   {
     step: 2,
-    title: 'Run the agent',
-    commands: [
-      'kc-agent',
-    ],
-    description: 'Opens http://localhost:8585 in your browser. The agent discovers all kubeconfig contexts and streams live cluster data.',
+    title: 'That\'s it',
+    note: 'Or install via Homebrew: brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
+    description: 'Console auto-detects your kubeconfig and discovers all cluster contexts immediately. Opens at http://localhost:8080.',
   },
 ]
 
@@ -327,7 +324,7 @@ function DeploymentSection() {
           >
             <Monitor className="w-4 h-4" />
             Localhost
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">brew</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">curl | bash</span>
           </button>
           <button
             onClick={() => switchTab('cluster-portforward')}
