@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { SelfUpgradeStatus } from '../types/updates'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
 /** Timeout for self-upgrade API calls (ms) */
 const SELF_UPGRADE_TIMEOUT_MS = 15_000
+
+/** Read the JWT token from localStorage for authenticated API calls */
+const getToken = () => localStorage.getItem(STORAGE_KEY_TOKEN)
 
 /**
  * Hook for Helm self-upgrade via Deployment image patch.
@@ -20,7 +24,9 @@ export function useSelfUpgrade() {
   const checkStatus = useCallback(async () => {
     setIsLoading(true)
     try {
+      const token = getToken()
       const resp = await fetch('/api/self-upgrade/status', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS),
       })
       if (resp.ok) {
@@ -41,9 +47,13 @@ export function useSelfUpgrade() {
     setIsTriggering(true)
     setTriggerError(null)
     try {
+      const token = getToken()
       const resp = await fetch('/api/self-upgrade/trigger', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ imageTag }),
         signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS),
       })
