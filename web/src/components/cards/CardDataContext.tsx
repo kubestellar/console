@@ -103,6 +103,8 @@ export function useReportCardDataState(state: CardDataState) {
 export interface CardLoadingStateOptions {
   /** Whether data is currently being fetched from the source */
   isLoading: boolean
+  /** Whether data is being refreshed in the background (stale-while-revalidate) */
+  isRefreshing?: boolean
   /** Whether the card has any data to display (e.g., data.length > 0) */
   hasAnyData: boolean
   /** Whether 3+ consecutive fetch failures have occurred (default: false) */
