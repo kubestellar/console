@@ -92,6 +92,67 @@ func (h *FeedbackHandler) HasToken(c *fiber.Ctx) error {
 	})
 }
 
+// SaveToken handles POST /api/feedback/token — saves a user-provided
+// feedback GitHub PAT to the encrypted server-side settings file.
+func (h *FeedbackHandler) SaveToken(c *fiber.Ctx) error {
+	var body struct {
+		Token string `json:"token"`
+	}
+	if err := c.BodyParser(&body); err != nil || body.Token == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Token is required",
+		})
+	}
+
+	sm := settings.GetSettingsManager()
+	if sm == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Settings manager not available",
+		})
+	}
+
+	all, err := sm.GetAll()
+	if err != nil {
+		all = &settings.AllSettings{}
+	}
+	all.FeedbackGitHubToken = body.Token
+	all.FeedbackGitHubTokenSource = settings.GitHubTokenSourceSettings
+	if err := sm.SaveAll(all); err != nil {
+		log.Printf("[Feedback] Failed to save feedback token: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to save token",
+		})
+	}
+
+	log.Printf("[Feedback] Feedback GitHub token saved to encrypted settings")
+	return c.JSON(fiber.Map{"success": true})
+}
+
+// DeleteToken handles DELETE /api/feedback/token — removes the user-provided
+// feedback GitHub PAT from server-side settings.
+func (h *FeedbackHandler) DeleteToken(c *fiber.Ctx) error {
+	sm := settings.GetSettingsManager()
+	if sm == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Settings manager not available",
+		})
+	}
+
+	all, err := sm.GetAll()
+	if err != nil {
+		return c.JSON(fiber.Map{"success": true}) // Nothing to delete
+	}
+	all.FeedbackGitHubToken = ""
+	all.FeedbackGitHubTokenSource = ""
+	if err := sm.SaveAll(all); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to clear token",
+		})
+	}
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
 // CreateFeatureRequest creates a new feature request and GitHub issue
 func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)

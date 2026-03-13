@@ -740,6 +740,8 @@ func (s *Server) setupRoutes() {
 	feedbackCfg := handlers.LoadFeedbackConfig()
 	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
 	api.Get("/feedback/token/status", feedback.HasToken)
+	api.Post("/feedback/token", feedback.SaveToken)
+	api.Delete("/feedback/token", feedback.DeleteToken)
 	api.Post("/feedback/requests", feedback.CreateFeatureRequest)
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
 	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)

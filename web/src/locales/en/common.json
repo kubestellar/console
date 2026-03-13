@@ -281,11 +281,15 @@
       "createClassic": "Create Classic Token",
       "fineGrainedInstructions": "Set expiration, select 'Public repositories (read-only)'. No additional permissions needed for public repos.",
       "classicInstructions": "No scopes needed for public repos. For private repos, check the 'repo' scope.",
-      "securityWarning": "Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date.",
+      "securityWarning": "Token is stored in encrypted server-side settings. Use a token with minimal permissions and set an expiration date.",
       "envBadge": "from .env",
       "feedbackToken": "Feedback GitHub Token (FEEDBACK_GITHUB_TOKEN)",
-      "feedbackTokenDescription": "Used by the feedback / bug submission integration. This should stay separate from the main GitHub Activity token.",
+      "feedbackTokenLabel": "Feedback Token",
+      "feedbackTokenDescription": "Used by the feedback / bug submission integration. Requires a PAT with repo scope. This should stay separate from the main GitHub Activity token.",
       "feedbackTokenEnvSource": "Currently sourced from .env.",
+      "feedbackTokenNotConfigured": "Not Configured",
+      "feedbackTokenNotConfiguredHint": "Bug/feature submission is disabled",
+      "feedbackTokenSetupHint": "To enable bug/feature submission, add a GitHub PAT with repo scope here or set FEEDBACK_GITHUB_TOKEN in your .env file.",
       "feedbackRateLimit": "{{remaining}}/{{limit}} requests remaining · resets at {{time}}"
     },
     "predictions": {

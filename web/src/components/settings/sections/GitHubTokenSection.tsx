@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from 'lucide-react'
+import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server, MessageSquare } from 'lucide-react'
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
@@ -9,23 +9,18 @@ interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
 }
 
-// Helper functions for base64 encoding (obfuscation, not encryption)
-// Used only for the feedback token which remains in localStorage
-const encodeToken = (token: string) => btoa(token)
-const decodeToken = (encoded: string) => {
-  try {
-    return atob(encoded)
-  } catch {
-    return encoded // Return as-is if not encoded (migration from old format)
-  }
-}
-
 /** Token source values matching backend GitHubTokenSource constants */
 const TOKEN_SOURCE_SETTINGS = 'settings'
 const TOKEN_SOURCE_ENV = 'env'
 
 /** Timeout for fetching settings from the backend */
 const AGENT_FETCH_TIMEOUT_MS = 5000
+
+/** Delay before applying deep link highlight effect */
+const HIGHLIGHT_DELAY_MS = 400
+
+/** Delay before trying to render deep-link scroll */
+const DEEP_LINK_RENDER_DELAY_MS = 300
 
 /** Build JWT auth headers for backend proxy requests */
 function authHeaders(): Record<string, string> {
@@ -51,19 +46,40 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const [feedbackGithubRateLimit, setFeedbackGithubRateLimit] = useState<{ limit: number; remaining: number; reset: Date } | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
 
-  // Load GitHub token status on mount — check backend proxy for main token, localStorage for feedback token
+  // Load GitHub token status on mount — check backend for both main and feedback tokens
   useEffect(() => {
     const loadToken = async () => {
-      // Load feedback token from localStorage
-      const encodedFeedbackToken = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
-      const storedFeedbackSource = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
-      const feedbackDismissed = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED) === 'true'
+      // Check backend for feedback token status (env var or settings-saved)
+      let feedbackTokenFound = false
+      try {
+        const fbResponse = await fetch('/api/feedback/token/status', {
+          headers: authHeaders(),
+          signal: AbortSignal.timeout(AGENT_FETCH_TIMEOUT_MS),
+        })
+        if (fbResponse.ok) {
+          const fbData = await fbResponse.json() as { hasToken: boolean; source: string }
+          if (fbData.hasToken) {
+            const source = fbData.source || TOKEN_SOURCE_SETTINGS
+            localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, source)
+            setHasFeedbackGithubToken(true)
+            setFeedbackTokenSource(source)
+            feedbackTokenFound = true
+          }
+        }
+      } catch {
+        // Backend unavailable — fall back to localStorage check below
+      }
 
-      if (encodedFeedbackToken && !feedbackDismissed) {
-        setHasFeedbackGithubToken(true)
-        setFeedbackTokenSource(storedFeedbackSource)
-        const token = decodeToken(encodedFeedbackToken)
-        await testFeedbackGithubToken(token)
+      // Fallback: also check localStorage for legacy feedback tokens
+      if (!feedbackTokenFound) {
+        const encodedFeedbackToken = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
+        const storedFeedbackSource = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
+        const feedbackDismissed = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED) === 'true'
+
+        if (encodedFeedbackToken && !feedbackDismissed) {
+          setHasFeedbackGithubToken(true)
+          setFeedbackTokenSource(storedFeedbackSource)
+        }
       }
 
       // Check backend proxy for main token status
@@ -124,7 +140,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
           setTimeout(() => {
             section.classList.add('ring-2', 'ring-purple-500/50')
             setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), UI_FEEDBACK_TIMEOUT_MS)
-          }, 400)
+          }, HIGHLIGHT_DELAY_MS)
         }
 
         if (input) {
@@ -135,7 +151,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         if (hash || params.get('focus')) {
           window.history.replaceState({}, '', window.location.pathname)
         }
-      }, 300)
+      }, DEEP_LINK_RENDER_DELAY_MS)
 
       return () => clearTimeout(timer)
     }
@@ -296,23 +312,60 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     if (!feedbackGithubToken.trim()) return
 
     setFeedbackGithubTokenTesting(true)
-    const isValid = await testFeedbackGithubToken(feedbackGithubToken.trim())
-    if (isValid) {
-      localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(feedbackGithubToken.trim()))
-      localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
-      // Clear any previous env-token dismissal
-      localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED)
-      window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
-      setHasFeedbackGithubToken(true)
-      setFeedbackTokenSource(TOKEN_SOURCE_SETTINGS)
-      setFeedbackGithubToken('')
-      setFeedbackGithubTokenSaved(true)
-      setTimeout(() => setFeedbackGithubTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+    setFeedbackGithubTokenError(null)
+
+    try {
+      // Save token to backend (encrypted storage)
+      const saveResponse = await fetch('/api/feedback/token', {
+        method: 'POST',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: feedbackGithubToken.trim() }),
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
+
+      if (!saveResponse.ok) {
+        throw new Error(`Failed to save token: ${saveResponse.status}`)
+      }
+
+      // Validate the token directly against GitHub API
+      const isValid = await testFeedbackGithubToken(feedbackGithubToken.trim())
+
+      if (isValid) {
+        // Clear legacy localStorage token (now stored server-side)
+        localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
+        localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
+        // Clear any previous env-token dismissal
+        localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED)
+        window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
+        setHasFeedbackGithubToken(true)
+        setFeedbackTokenSource(TOKEN_SOURCE_SETTINGS)
+        setFeedbackGithubToken('')
+        setFeedbackGithubTokenSaved(true)
+        setTimeout(() => setFeedbackGithubTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+      }
+    } catch (err) {
+      setFeedbackGithubTokenError(err instanceof Error ? err.message : 'Failed to save token')
+    } finally {
+      setFeedbackGithubTokenTesting(false)
     }
-    setFeedbackGithubTokenTesting(false)
   }
 
-  const handleClearFeedbackGithubToken = () => {
+  const handleClearFeedbackGithubToken = async () => {
+    try {
+      // Remove token from backend
+      await fetch('/api/feedback/token', {
+        method: 'DELETE',
+        headers: authHeaders(),
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
+    } catch {
+      // Best-effort — clear local state regardless
+    }
+
+    // Clear legacy localStorage entries
     localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
     localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
     if (isFeedbackEnvToken) {
@@ -347,7 +400,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         </div>
       ) : (
         <>
-          {/* Status */}
+          {/* Main Token Status */}
           <div className={`p-4 rounded-lg mb-4 ${
         githubTokenError ? 'bg-red-500/10 border border-red-500/20' :
         hasGithubToken ? 'bg-green-500/10 border border-green-500/20' :
@@ -395,6 +448,61 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
           </p>
         )}
       </div>
+
+          {/* Feedback Token Status */}
+          <div className={`p-4 rounded-lg mb-4 ${
+            feedbackGithubTokenError ? 'bg-red-500/10 border border-red-500/20' :
+            hasFeedbackGithubToken ? 'bg-green-500/10 border border-green-500/20' :
+            'bg-yellow-500/10 border border-yellow-500/20'
+          }`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('settings.github.feedbackTokenLabel')}</span>
+              <span className="text-muted-foreground">|</span>
+              {feedbackGithubTokenTesting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
+                  <span className="text-sm font-medium text-blue-400">{t('settings.github.testingToken')}</span>
+                </>
+              ) : feedbackGithubTokenError ? (
+                <>
+                  <X className="w-4 h-4 text-red-400" />
+                  <span className="text-sm font-medium text-red-400">{t('settings.github.tokenError')}</span>
+                  <span className="text-sm text-muted-foreground">- {feedbackGithubTokenError}</span>
+                </>
+              ) : hasFeedbackGithubToken && feedbackGithubRateLimit ? (
+                <>
+                  <Check className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-medium text-green-400">{t('settings.github.tokenValid')}</span>
+                  <span className="text-sm text-muted-foreground">
+                    - {feedbackGithubRateLimit.remaining.toLocaleString()}/{feedbackGithubRateLimit.limit.toLocaleString()} {t('settings.github.requestsRemaining')}
+                  </span>
+                  {isFeedbackEnvToken && <EnvBadge />}
+                </>
+              ) : hasFeedbackGithubToken ? (
+                <>
+                  <Check className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-medium text-green-400">{t('settings.github.tokenConfigured')}</span>
+                  {isFeedbackEnvToken && <EnvBadge />}
+                </>
+              ) : (
+                <>
+                  <X className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm font-medium text-yellow-400">{t('settings.github.feedbackTokenNotConfigured')}</span>
+                  <span className="text-sm text-muted-foreground">- {t('settings.github.feedbackTokenNotConfiguredHint')}</span>
+                </>
+              )}
+            </div>
+            {feedbackGithubRateLimit && hasFeedbackGithubToken && !feedbackGithubTokenError && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {t('settings.github.feedbackRateLimit', {
+                  remaining: feedbackGithubRateLimit.remaining.toLocaleString(),
+                  limit: feedbackGithubRateLimit.limit.toLocaleString(),
+                  time: feedbackGithubRateLimit.reset.toLocaleTimeString(),
+                })}
+              </p>
+            )}
+          </div>
 
           {/* Token Input */}
           <div className="space-y-4">
@@ -472,16 +580,9 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                 {t('settings.github.feedbackTokenDescription')}
                 {isFeedbackEnvToken ? ` ${t('settings.github.feedbackTokenEnvSource')}` : ''}
               </p>
-              {feedbackGithubTokenError && (
-                <p className="text-xs text-red-400 mt-2">{feedbackGithubTokenError}</p>
-              )}
-              {hasFeedbackGithubToken && feedbackGithubRateLimit && !feedbackGithubTokenError && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {t('settings.github.feedbackRateLimit', {
-                    remaining: feedbackGithubRateLimit.remaining.toLocaleString(),
-                    limit: feedbackGithubRateLimit.limit.toLocaleString(),
-                    time: feedbackGithubRateLimit.reset.toLocaleTimeString(),
-                  })}
+              {!hasFeedbackGithubToken && (
+                <p className="text-xs text-yellow-400/70 mt-2">
+                  {t('settings.github.feedbackTokenSetupHint')}
                 </p>
               )}
             </div>
@@ -541,7 +642,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   )
 }
 
-/** Badge shown when the token was auto-detected from FEEDBACK_GITHUB_TOKEN in .env */
+/** Badge shown when the token was auto-detected from environment variable in .env */
 function EnvBadge() {
   const { t } = useTranslation()
   return (
