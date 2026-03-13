@@ -5,6 +5,7 @@
  */
 
 import type { UnifiedDashboardConfig, DashboardConfigRegistry } from '../../lib/unified/types'
+import { isVisibleForProject } from '../../lib/project/context'
 import { mainDashboardConfig } from './main'
 import { computeDashboardConfig } from './compute'
 import { securityDashboardConfig } from './security'
@@ -75,6 +76,20 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
  */
 export function getDashboardConfig(dashboardId: string): UnifiedDashboardConfig | undefined {
   return DASHBOARD_CONFIGS[dashboardId]
+}
+
+/**
+ * Get all dashboard configs visible for the active project.
+ * Dashboards without a `projects` field are always included.
+ */
+export function getVisibleDashboardConfigs(): DashboardConfigRegistry {
+  const result: DashboardConfigRegistry = {}
+  for (const [key, config] of Object.entries(DASHBOARD_CONFIGS)) {
+    if (isVisibleForProject(config.projects)) {
+      result[key] = config
+    }
+  }
+  return result
 }
 
 /**

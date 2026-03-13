@@ -75,6 +75,10 @@ type Config struct {
 	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
 	// Sidebar configuration
 	EnabledDashboards string // Comma-separated list of dashboard IDs to show in sidebar (empty = all)
+	// White-label project context (e.g., "kubestellar", "crossplane", "istio")
+	// Controls which project-specific cards, dashboards, and routes are active.
+	// Default: "kubestellar"
+	ConsoleProject string
 	// Watchdog support: when set, the backend listens on this port instead of Port
 	BackendPort int
 }
@@ -367,8 +371,10 @@ func (s *Server) setupRoutes() {
 			"in_cluster":       inCluster,
 			"install_method":   detectInstallMethod(inCluster),
 			"self_upgrade":     os.Getenv("SELF_UPGRADE_ENABLED") == "true",
+			"project":          s.config.ConsoleProject,
 		}
 		if s.config.EnabledDashboards != "" {
+			// Explicit ENABLED_DASHBOARDS takes precedence over project presets
 			dashboards := strings.Split(s.config.EnabledDashboards, ",")
 			trimmed := make([]string, 0, len(dashboards))
 			for _, d := range dashboards {
@@ -379,6 +385,9 @@ func (s *Server) setupRoutes() {
 			if len(trimmed) > 0 {
 				resp["enabled_dashboards"] = trimmed
 			}
+		} else if presetDashboards := getProjectDashboards(s.config.ConsoleProject); presetDashboards != nil {
+			// Fall back to project preset dashboard list
+			resp["enabled_dashboards"] = presetDashboards
 		}
 		return c.JSON(resp)
 	})
@@ -1055,6 +1064,8 @@ func LoadConfigFromEnv() Config {
 		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
 		// Sidebar dashboard filter
 		EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
+		// White-label project context
+		ConsoleProject: getEnvOrDefault("CONSOLE_PROJECT", "kubestellar"),
 		// Watchdog backend port override
 		BackendPort: backendPort,
 	}

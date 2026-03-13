@@ -79,6 +79,15 @@ export interface UnifiedCardConfig {
   isDemoData?: boolean
   /** Whether card has live/real-time data */
   isLive?: boolean
+
+  // White-label project context
+  /**
+   * Project contexts this card belongs to.
+   * ['*'] or omitted = universal (visible to all projects)
+   * ['kubestellar'] = only visible when CONSOLE_PROJECT=kubestellar
+   * Multiple values = visible in any listed project
+   */
+  projects?: string[]
 }
 
 export type CardWidth = 3 | 4 | 5 | 6 | 8 | 12
@@ -637,6 +646,14 @@ export interface UnifiedDashboardConfig {
   // Persistence
   /** Storage key for card positions */
   storageKey?: string
+
+  // White-label project context
+  /**
+   * Project contexts this dashboard belongs to.
+   * ['*'] or omitted = universal (visible to all projects)
+   * ['kubestellar'] = only visible when CONSOLE_PROJECT=kubestellar
+   */
+  projects?: string[]
 }
 
 export interface DashboardCardPlacement {

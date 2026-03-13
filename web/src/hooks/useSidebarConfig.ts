@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { setActiveProject } from '../lib/project/context'
 
 /** Width of the collapsed sidebar in pixels (w-20 = 5rem = 80px) */
 export const SIDEBAR_COLLAPSED_WIDTH_PX = 80
@@ -160,6 +161,10 @@ export async function fetchEnabledDashboards(): Promise<void> {
   try {
     const resp = await fetch('/health', { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     const data = await resp.json()
+    // Set active project context for white-label filtering
+    if (data.project && typeof data.project === 'string') {
+      setActiveProject(data.project)
+    }
     if (data.enabled_dashboards && Array.isArray(data.enabled_dashboards) && data.enabled_dashboards.length > 0) {
       enabledDashboardIds = data.enabled_dashboards as string[]
       if (sharedConfig) {

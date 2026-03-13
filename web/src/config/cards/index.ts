@@ -3,6 +3,7 @@
  */
 
 import type { UnifiedCardConfig, CardConfigRegistry } from '../../lib/unified/types'
+import { isVisibleForProject } from '../../lib/project/context'
 
 import { activeAlertsConfig } from './active-alerts'
 import { alertRulesConfig } from './alert-rules'
@@ -338,6 +339,20 @@ export function hasUnifiedConfig(cardType: string): boolean {
 
 export function getUnifiedCardTypes(): string[] {
   return Object.keys(CARD_CONFIGS)
+}
+
+/**
+ * Get all card configs visible for the active project.
+ * Cards without a `projects` field are always included.
+ */
+export function getVisibleCardConfigs(): CardConfigRegistry {
+  const result: CardConfigRegistry = {}
+  for (const [key, config] of Object.entries(CARD_CONFIGS)) {
+    if (isVisibleForProject(config.projects)) {
+      result[key] = config
+    }
+  }
+  return result
 }
 
 // Re-export configs
