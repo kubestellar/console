@@ -11,6 +11,10 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
 
+/** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
+ *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
+const MAX_SCALE_REPLICAS = 100
+
 interface Props {
   data: Record<string, unknown>
 }
@@ -187,7 +191,9 @@ export function DeploymentDrillDown({ data }: Props) {
   // Handle scale deployment - directly scales to the specified count
   const handleScaleTo = async (targetReplicas: number) => {
     if (!agentConnected || !canScale || targetReplicas === replicas) return
-    if (targetReplicas < 0 || targetReplicas > 10) return
+    if (targetReplicas < 0) return
+    // Allow scaling down even when current replicas exceed the UI limit
+    if (targetReplicas > MAX_SCALE_REPLICAS && targetReplicas > replicas) return
 
     setIsScaling(true)
     setScaleError(null)
@@ -397,16 +403,16 @@ export function DeploymentDrillDown({ data }: Props) {
                   </div>
                   <button
                     onClick={handleIncrement}
-                    disabled={!canScale || replicas >= 10 || isScaling}
+                    disabled={!canScale || replicas >= MAX_SCALE_REPLICAS || isScaling}
                     className={cn(
                       'p-2 rounded-lg transition-colors',
-                      canScale && replicas < 10 && !isScaling
+                      canScale && replicas < MAX_SCALE_REPLICAS && !isScaling
                         ? 'bg-secondary hover:bg-secondary/80 text-foreground'
                         : 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
                     )}
                     title={
                       canScale === false ? 'No permission to scale deployments in this namespace' :
-                      replicas >= 10 ? 'Maximum is 10 replicas' :
+                      replicas >= MAX_SCALE_REPLICAS ? `Maximum is ${MAX_SCALE_REPLICAS} replicas` :
                       isScaling ? 'Scaling in progress...' :
                       `Scale up to ${replicas + 1} replica${replicas + 1 !== 1 ? 's' : ''}`
                     }
@@ -427,7 +433,7 @@ export function DeploymentDrillDown({ data }: Props) {
                       Scaling deployment...
                     </span>
                   ) : (
-                    <span>Click +/- to scale (0-10 replicas)</span>
+                    <span>Click +/- to scale (0-{MAX_SCALE_REPLICAS} replicas)</span>
                   )}
                 </div>
               </div>
