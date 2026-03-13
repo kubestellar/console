@@ -507,7 +507,7 @@ export function CardWrapper({
   // Merge isDemoData from child-reported state with prop.
   // When forceLive is true, ignore child-reported isDemoData — the child checks global
   // demo mode independently but we know the data is real (in-cluster with OAuth).
-  const effectiveIsDemoData = forceLive ? false : (isDemoData || childDataState?.isDemoData || false)
+  const effectiveIsDemoData = forceLive ? false : (childDataState?.isDemoData ?? isDemoData ?? false)
 
   // Child can explicitly opt-out of demo indicator by reporting isDemoData: false
   // This is used by stack-dependent cards that use stack data even in global demo mode
