@@ -58,7 +58,6 @@ jobs:
           # go install was causing exit code 8 (signal kill during compilation)
           # that poisoned subsequent steps on the CI runner.
           GOSEC_VERSION: '2.21.4'
-          GOVULNCHECK_VERSION: '1.1.4'
           GITLEAKS_VERSION: '8.21.2'
           TRIVY_VERSION: '0.58.1'
           SEMGREP_VERSION: '1.102.0'
@@ -67,8 +66,9 @@ jobs:
           wget -q "https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/gosec_${GOSEC_VERSION}_linux_amd64.tar.gz" -O /tmp/gosec.tar.gz
           tar -xzf /tmp/gosec.tar.gz -C /usr/local/bin gosec
 
-          # govulncheck (go install is safe for this small tool)
-          go install "golang.org/x/vuln/cmd/govulncheck@v${GOVULNCHECK_VERSION}"
+          # govulncheck: intentionally omitted from workflow install.
+          # go install causes exit code 8 (OOM/signal kill) on CI runners.
+          # dependency-audit-test.sh installs it on-demand with graceful fallback.
 
           # Secret scanning
           wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
