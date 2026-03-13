@@ -435,10 +435,12 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/api/public/nightly-e2e/runs", nightlyE2EPublic.GetRuns)
 	s.app.Get("/api/public/nightly-e2e/run-logs", nightlyE2EPublic.GetRunLogs)
 
-	// GA4 analytics proxy (public — no auth required, has its own origin validation)
-	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept it
+	// Analytics proxies (public — no auth required, have their own origin validation)
+	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept them
 	s.app.All("/api/m", handlers.GA4CollectProxy)
 	s.app.Get("/api/gtag", handlers.GA4ScriptProxy)
+	s.app.Get("/api/ksc", handlers.UmamiScriptProxy)
+	s.app.Post("/api/send", handlers.UmamiCollectProxy)
 
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)

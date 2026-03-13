@@ -28,16 +28,22 @@ const GTAG_SCRIPT_PATH = '/api/gtag'
 // Events flow to both platforms via the send() function.
 // Umami auto-tracks pageviews; custom events use umami.track().
 
-const UMAMI_SCRIPT_URL = 'https://analytics.kubestellar.io/ksc'
+/** First-party proxy path for the Umami tracking script — bypasses ad blockers */
+const UMAMI_SCRIPT_PATH = '/api/ksc'
 /** Single Umami website ID — all environments report here, filterable by hostname */
 const UMAMI_WEBSITE_ID = '07111027-162f-4e37-a0bb-067b9d08b88a'
 
-/** Load Umami tracking script (async, non-blocking) */
+/** Load Umami tracking script via first-party proxy (async, non-blocking).
+ *  data-host-url tells Umami to POST events to our own origin (which proxies
+ *  to analytics.kubestellar.io/api/send) instead of the script's source domain. */
 function loadUmamiScript() {
   const script = document.createElement('script')
-  script.src = UMAMI_SCRIPT_URL
+  script.src = UMAMI_SCRIPT_PATH
   script.defer = true
   script.dataset.websiteId = UMAMI_WEBSITE_ID
+  // Umami appends /api/send internally — set host to our origin so events
+  // go through the first-party proxy at /api/send → analytics.kubestellar.io
+  script.dataset.hostUrl = window.location.origin
   document.head.appendChild(script)
 }
 
