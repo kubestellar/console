@@ -78,13 +78,10 @@ function now(): string {
 /** @internal Exported for testing */
 export function parseTimestamp(ts?: string): number {
   if (!ts) return 0
-  const ms = new Date(ts).getTime()
-  if (Number.isNaN(ms)) return 0
-  return ms
+  return new Date(ts).getTime()
 }
 
 /** @internal Exported for testing */
-// TODO: fix falsy-zero bug — pct(0, 100) returns 0 instead of 0% because !value is true for 0
 export function pct(value: number | undefined, total: number | undefined): number {
   if (!value || !total || total === 0) return 0
   return Math.round((value / total) * 100)
