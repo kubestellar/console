@@ -31,6 +31,7 @@ permissions:
 
 jobs:
   build:
+    if: github.repository == 'kubestellar/console'
     name: Build
     runs-on: ubuntu-latest
     defaults:
@@ -62,6 +63,7 @@ jobs:
   # ── Compliance Suites ────────────────────────────────────────────────
 
   compliance:
+    if: github.repository == 'kubestellar/console'
     name: Compliance (${{ matrix.suite }})
     needs: build
     runs-on: ubuntu-latest
@@ -190,6 +192,7 @@ jobs:
   # ── Performance Suites ───────────────────────────────────────────────
 
   perf:
+    if: github.repository == 'kubestellar/console'
     name: Perf (${{ matrix.suite }})
     needs: build
     runs-on: ubuntu-latest
@@ -315,7 +318,7 @@ jobs:
   report:
     name: Report & Create Issues
     needs: [compliance, perf]
-    if: always()
+    if: always() && github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
