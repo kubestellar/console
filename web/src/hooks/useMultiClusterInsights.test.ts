@@ -120,10 +120,9 @@ describe('parseTimestamp', () => {
     expect(parseTimestamp(ts)).toBe(new Date(ts).getTime())
   })
 
-  it('returns NaN for malformed date string (known bug — NaN guard not yet added)', () => {
-    // TODO: parseTimestamp should return 0 for invalid dates — add isNaN guard after Date.parse
-    expect(parseTimestamp('not-a-date')).toBeNaN()
-    expect(parseTimestamp('abc123')).toBeNaN()
+  it('returns 0 for malformed date strings', () => {
+    expect(parseTimestamp('not-a-date')).toBe(0)
+    expect(parseTimestamp('abc123')).toBe(0)
   })
 })
 
@@ -213,14 +212,13 @@ describe('detectEventCorrelations', () => {
     expect(detectEventCorrelations(events)).toEqual([])
   })
 
-  it('throws on malformed timestamps (known bug — NaN guard not yet added)', () => {
+  it('skips events with malformed timestamps instead of crashing', () => {
     const events = [
       makeEvent({ cluster: 'cluster-1', lastSeen: 'not-a-date' }),
       makeEvent({ cluster: 'cluster-2', lastSeen: 'also-bad' }),
     ]
-    // TODO: parseTimestamp returns NaN for malformed strings — add isNaN guard so these are skipped
-    // Without NaN guard, `new Date(NaN).toISOString()` throws RangeError when building the insight.
-    expect(() => detectEventCorrelations(events)).toThrow(RangeError)
+    // parseTimestamp returns 0 for invalid dates, and the ts === 0 guard skips them
+    expect(detectEventCorrelations(events)).toEqual([])
   })
 
   it('truncates results to MAX_INSIGHTS_PER_CATEGORY', () => {

@@ -86,7 +86,8 @@ function now(): string {
 /** @internal Exported for testing */
 export function parseTimestamp(ts?: string): number {
   if (!ts) return 0
-  return new Date(ts).getTime()
+  const time = new Date(ts).getTime()
+  return isNaN(time) ? 0 : time
 }
 
 /** @internal Exported for testing */
