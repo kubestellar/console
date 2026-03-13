@@ -578,6 +578,17 @@ export default async (request: Request, context: Context) => {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
+  // Redirect the default Netlify subdomain to the canonical custom domain.
+  // localStorage (tour state, settings) is per-domain, so having two origins
+  // causes confusing state divergence. Deploy previews are unaffected because
+  // their hostnames include a prefix (e.g. deploy-preview-123--...).
+  if (url.hostname === "kubestellarconsole.netlify.app") {
+    return Response.redirect(
+      `https://console.kubestellar.io${pathname}${url.search}`,
+      301,
+    );
+  }
+
   // Only process HTML page requests (not assets, API calls, etc.)
   if (
     pathname.startsWith("/api/") ||
