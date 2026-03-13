@@ -17,6 +17,7 @@ import {
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useResolutions, detectIssueSignature, type Resolution } from '../../../hooks/useResolutions'
 import { cn } from '../../../lib/cn'
+import { MAX_MESSAGE_SIZE_CHARS } from '../../../lib/constants'
 import { AgentBadge, AgentIcon } from '../../agent/AgentIcon'
 import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
 import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
@@ -46,6 +47,8 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const [appliedResolutionId, setAppliedResolutionId] = useState<string | null>(null)
   const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  // Message validation error (e.g. too long)
+  const [inputError, setInputError] = useState<string | null>(null)
 
   // Find related resolutions based on mission content
   const relatedResolutions = useMemo(() => {
@@ -205,6 +208,17 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
   const handleSend = () => {
     if (!input.trim()) return
+    // Validate message size before sending
+    if (input.length > MAX_MESSAGE_SIZE_CHARS) {
+      setInputError(
+        t('missionChat.messageTooLong', {
+          current: input.length.toLocaleString(),
+          max: MAX_MESSAGE_SIZE_CHARS.toLocaleString(),
+          defaultValue: `Message is too long ({{current}} characters). Maximum is {{max}} characters.`,
+        })
+      )
+      return
+    }
     // Add to command history
     setCommandHistory(prev => [...prev, input.trim()])
     setHistoryIndex(-1)
@@ -466,7 +480,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 ref={inputRef}
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => { setInput(e.target.value); setInputError(null) }}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.typeNextMessage')}
                 className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -583,7 +597,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 ref={inputRef}
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => { setInput(e.target.value); setInputError(null) }}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.retryWithMessage')}
                 className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -611,7 +625,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 ref={inputRef}
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => { setInput(e.target.value); setInputError(null) }}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.typeMessage')}
                 className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -631,6 +645,13 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <ChevronLeft className="w-3 h-3" />
               {t('missionChat.backToMissions')}
             </button>
+          </div>
+        )}
+
+        {/* Message size validation error */}
+        {inputError && (
+          <div className="mt-2 px-1 text-xs text-red-400 flex items-center gap-1.5">
+            <span>{inputError}</span>
           </div>
         )}
       </div>

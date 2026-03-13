@@ -43,6 +43,31 @@ interface SaveResolutionDialogProps {
   onSaved?: () => void
 }
 
+/** Timeout for AI summary generation WebSocket request */
+const AI_SUMMARY_TIMEOUT_MS = 30_000
+
+/**
+ * Detect whether an error message indicates an AI provider rate limit / quota error.
+ * Matches HTTP 429 status codes, "rate limit", "quota", and "too many requests" patterns.
+ */
+function isRateLimitError(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes('429') ||
+    lower.includes('rate limit') ||
+    lower.includes('rate_limit') ||
+    lower.includes('quota') ||
+    lower.includes('too many requests') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('tokens per min') ||
+    lower.includes('requests per min')
+  )
+}
+
+/** User-friendly rate limit error message */
+const RATE_LIMIT_MESSAGE =
+  'AI provider rate limit exceeded. Please wait a minute and try again, or switch to a different AI provider in Settings.'
+
 /**
  * Request AI to generate a resolution summary from the mission conversation
  */
@@ -52,7 +77,7 @@ async function generateAISummary(mission: Mission): Promise<AISummary> {
     const timeout = setTimeout(() => {
       ws.close()
       reject(new Error('Timeout waiting for AI summary'))
-    }, 30000)
+    }, AI_SUMMARY_TIMEOUT_MS)
 
     let responseContent = ''
 
@@ -104,6 +129,12 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
 
           const content = message.payload?.content || message.payload?.output || responseContent
 
+          // Check if the result content itself indicates a rate limit error
+          if (isRateLimitError(content)) {
+            reject(new Error(RATE_LIMIT_MESSAGE))
+            return
+          }
+
           // Try to parse JSON from response
           try {
             // Extract JSON if wrapped in code blocks
@@ -128,7 +159,13 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
         } else if (message.type === 'error') {
           clearTimeout(timeout)
           ws.close()
-          reject(new Error(message.payload?.message || 'AI request failed'))
+          const errorMsg = message.payload?.message || 'AI request failed'
+          // Surface a clear rate-limit message instead of the generic backend error
+          if (isRateLimitError(errorMsg) || isRateLimitError(message.payload?.code || '')) {
+            reject(new Error(RATE_LIMIT_MESSAGE))
+          } else {
+            reject(new Error(errorMsg))
+          }
         }
       } catch {
         // Ignore parse errors for non-JSON messages

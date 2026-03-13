@@ -223,3 +223,10 @@ export const POPUP_HIDE_DELAY_MS = 150
 
 /** Hover tooltip hide delay (50ms) */
 export const TOOLTIP_HIDE_DELAY_MS = 50
+
+// ============================================================================
+// AI Mission Chat Limits
+// ============================================================================
+
+/** Maximum number of characters allowed in a single mission chat message */
+export const MAX_MESSAGE_SIZE_CHARS = 10_000

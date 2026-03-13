@@ -687,6 +687,22 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           errorContent = `${payload.message}\n\n[Configure API Keys →](/settings)\n\nAdd your API key for Claude, OpenAI, or Gemini to use AI missions.`
         }
 
+        // Detect rate limit / quota errors from the AI provider (HTTP 429)
+        const combinedErrorText = `${payload.code || ''} ${payload.message || ''}`.toLowerCase()
+        const isRateLimit =
+          combinedErrorText.includes('429') ||
+          combinedErrorText.includes('rate limit') ||
+          combinedErrorText.includes('rate_limit') ||
+          combinedErrorText.includes('quota') ||
+          combinedErrorText.includes('too many requests') ||
+          combinedErrorText.includes('resource_exhausted') ||
+          combinedErrorText.includes('tokens per min') ||
+          combinedErrorText.includes('requests per min')
+
+        if (isRateLimit) {
+          errorContent = '**AI Provider Rate Limit Exceeded**\n\nThe AI provider returned a quota/rate limit error (HTTP 429). Please wait a minute before retrying, or switch to a different AI provider.\n\n[Configure API Keys →](/settings)'
+        }
+
         return {
           ...m,
           status: 'failed' as MissionStatus,
