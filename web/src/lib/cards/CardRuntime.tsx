@@ -143,6 +143,17 @@ export interface CardRuntimeProps {
 // CardRuntime Component
 // ============================================================================
 
+// Noop data hook used when the requested hook is not registered.
+// This ensures hooks are called unconditionally to satisfy the Rules of Hooks.
+const NOOP_HOOK_RESULT: DataHookResult<unknown> = {
+  data: [],
+  isLoading: false,
+  isRefreshing: false,
+  error: undefined,
+  refetch: () => {},
+}
+const noopDataHook = () => NOOP_HOOK_RESULT
+
 export function CardRuntime({ definition, config: _config, title }: CardRuntimeProps) {
   const {
     type,
@@ -156,15 +167,9 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     loadingState,
   } = definition
 
-  // Get the data hook
-  const useDataHook = dataHookRegistry.get(dataSource.hook)
-  if (!useDataHook) {
-    return (
-      <CardErrorState
-        error={`Data hook "${dataSource.hook}" not registered for card "${type}"`}
-      />
-    )
-  }
+  // Get the data hook (fall back to noop so hooks are always called unconditionally)
+  const useDataHook = dataHookRegistry.get(dataSource.hook) || noopDataHook
+  const hookMissing = !dataHookRegistry.has(dataSource.hook)
 
   // Call the data hook
   const {
@@ -241,6 +246,15 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     filters,
     sorting,
   } = cardData
+
+  // If the data hook was not registered, render an error after all hooks have been called
+  if (hookMissing) {
+    return (
+      <CardErrorState
+        error={`Data hook "${dataSource.hook}" not registered for card "${type}"`}
+      />
+    )
+  }
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawData.length === 0

@@ -229,17 +229,14 @@ export function StackSelector() {
     }
   }, [isOpen])
 
-  // If no context, show placeholder
-  if (!stackContext) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary/50 text-muted-foreground text-sm">
-        <Layers className="w-4 h-4" />
-        <span>{t('common.noStackData')}</span>
-      </div>
-    )
-  }
-
-  const { stacks, isLoading, selectedStack, selectedStackId, setSelectedStackId, refetch, isDemoMode } = stackContext
+  // Extract values from context (use defaults when context is missing so hooks below run unconditionally)
+  const stacks = stackContext?.stacks || []
+  const isLoading = stackContext?.isLoading ?? false
+  const selectedStack = stackContext?.selectedStack
+  const selectedStackId = stackContext?.selectedStackId
+  const setSelectedStackId = stackContext?.setSelectedStackId
+  const refetch = stackContext?.refetch
+  const isDemoMode = stackContext?.isDemoMode ?? false
 
   // Filter and sort stacks
   const filteredAndSortedStacks = useMemo(() => {
@@ -296,7 +293,7 @@ export function StackSelector() {
   const handleRefetch = async () => {
     setFetchError(null)
     try {
-      await refetch()
+      await refetch?.()
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to refresh stacks')
     }
@@ -325,9 +322,19 @@ export function StackSelector() {
 
   // Memoize stack selection handler to prevent re-renders
   const handleSelectStack = useCallback((stackId: string) => {
-    setSelectedStackId(stackId)
+    setSelectedStackId?.(stackId)
     setIsOpen(false)
   }, [setSelectedStackId])
+
+  // If no context, show placeholder (after all hooks have been called)
+  if (!stackContext) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary/50 text-muted-foreground text-sm">
+        <Layers className="w-4 h-4" />
+        <span>{t('common.noStackData')}</span>
+      </div>
+    )
+  }
 
   const totalAccelerators = stacks.reduce((sum, s) => sum + estimateAccelerators(s).count, 0)
 
