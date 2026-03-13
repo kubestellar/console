@@ -64,6 +64,14 @@ vi.mock('../../../hooks/useMultiClusterInsights', () => ({
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
 }))
+vi.mock('./useInsightActions', () => ({
+  useInsightActions: () => ({
+    acknowledgeInsight: vi.fn(),
+    dismissInsight: vi.fn(),
+    isAcknowledged: () => false,
+    isDismissed: () => false,
+  }),
+}))
 vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({
     selectedClusters: [], isAllClustersSelected: true,
