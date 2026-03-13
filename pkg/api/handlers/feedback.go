@@ -188,10 +188,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	// Resolve the actual GitHub repo name based on target
-	targetRepoName := h.repoName // default: "console"
-	if targetRepo == models.TargetRepoDocs {
-		targetRepoName = "docs"
-	}
+	targetRepoName := h.resolveRepoName(targetRepo)
 
 	// Get user info for the issue
 	user, err := h.store.GetUser(userID)
@@ -720,7 +717,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 
 		// Close the GitHub issue
 		if h.getEffectiveToken() != "" {
-			go h.closeGitHubIssue(issueNum)
+			go h.closeGitHubIssue(issueNum, h.repoName)
 		}
 
 		// Return a minimal response for GitHub items
@@ -757,7 +754,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 
 	// Close the GitHub issue if we have one
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
-		go h.closeGitHubIssue(*request.GitHubIssueNumber)
+		go h.closeGitHubIssue(*request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo))
 	}
 
 	// Refresh and return the updated request
@@ -779,7 +776,7 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 
 		// Add a comment to the GitHub issue requesting an update
 		if h.getEffectiveToken() != "" {
-			go h.addIssueComment(issueNum, "The user has requested an update on this issue.")
+			go h.addIssueComment(issueNum, "The user has requested an update on this issue.", h.repoName)
 		}
 
 		// Return a minimal response for GitHub items
@@ -810,14 +807,25 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 
 	// Add a comment to the GitHub issue requesting an update
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
-		go h.addIssueComment(*request.GitHubIssueNumber, "The user has requested an update on this issue.")
+		go h.addIssueComment(*request.GitHubIssueNumber, "The user has requested an update on this issue.", h.resolveRepoName(request.TargetRepo))
 	}
 
 	return c.JSON(request)
 }
 
-// closeGitHubIssue closes an issue on GitHub
-func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
+// docsRepoName is the GitHub repository name for console documentation issues.
+const docsRepoName = "docs"
+
+// resolveRepoName returns the GitHub repo name for the given target repo.
+func (h *FeedbackHandler) resolveRepoName(target models.TargetRepo) string {
+	if target == models.TargetRepoDocs {
+		return docsRepoName
+	}
+	return h.repoName
+}
+
+// closeGitHubIssue closes an issue on GitHub in the specified repo
+func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) {
 	payload := map[string]string{"state": "closed"}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -826,7 +834,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d",
-		h.repoOwner, h.repoName, issueNumber)
+		h.repoOwner, repoName, issueNumber)
 
 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -855,8 +863,8 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
 	}
 }
 
-// addIssueComment adds a comment to a GitHub issue
-func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string) {
+// addIssueComment adds a comment to a GitHub issue in the specified repo
+func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string, repoName string) {
 	payload := map[string]string{"body": comment}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -865,7 +873,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string) {
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d/comments",
-		h.repoOwner, h.repoName, issueNumber)
+		h.repoOwner, repoName, issueNumber)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -1169,7 +1177,7 @@ func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL s
 	h.store.UpdateFeatureRequestStatus(request.ID, models.RequestStatusUnableToFix)
 
 	// Get the most recent bot comment to summarize the status
-	summary := h.getLatestBotComment(issueNumber)
+	summary := h.getLatestBotComment(issueNumber, h.resolveRepoName(request.TargetRepo))
 	if summary == "" {
 		summary = "AI analysis complete. A human developer will review this issue."
 	}
@@ -1226,14 +1234,14 @@ func (h *FeedbackHandler) handleIssueClosed(issueNumber int, issueURL string, is
 	return nil
 }
 
-// getLatestBotComment fetches the most recent bot comment from the issue
-func (h *FeedbackHandler) getLatestBotComment(issueNumber int) string {
+// getLatestBotComment fetches the most recent bot comment from the issue in the specified repo
+func (h *FeedbackHandler) getLatestBotComment(issueNumber int, repoName string) string {
 	if h.getEffectiveToken() == "" {
 		return ""
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d/comments?per_page=10&sort=created&direction=desc",
-		h.repoOwner, h.repoName, issueNumber)
+		h.repoOwner, repoName, issueNumber)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
