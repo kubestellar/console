@@ -125,18 +125,29 @@ resolve_version() {
 }
 
 # --- Download and extract ---
+# Downloads to a temp file then atomically moves into place to prevent
+# partial writes from corrupting a running binary.
 download_binary() {
     local name="$1" version="$2" platform="$3"
     local url="https://github.com/${REPO}/releases/download/${version}/${name}_${version#v}_${platform}.tar.gz"
+    local tmp_extract_dir
+    tmp_extract_dir=$(mktemp -d)
 
     echo "  Downloading ${name} ${version} (${platform})..."
     if ! curl -sSL --fail -o "/tmp/${name}.tar.gz" "$url" 2>/dev/null; then
         echo "  Warning: Failed to download ${name} from ${url}"
+        rm -rf "$tmp_extract_dir"
         return 1
     fi
 
-    tar xzf "/tmp/${name}.tar.gz" -C "$INSTALL_DIR"
+    # Extract to a temporary directory first
+    tar xzf "/tmp/${name}.tar.gz" -C "$tmp_extract_dir"
     rm -f "/tmp/${name}.tar.gz"
+
+    # Atomically move the binary into the install directory
+    chmod +x "$tmp_extract_dir/${name}" 2>/dev/null || true
+    mv -f "$tmp_extract_dir/${name}" "$INSTALL_DIR/${name}"
+    rm -rf "$tmp_extract_dir"
     return 0
 }
 
@@ -181,10 +192,6 @@ download_binary "console" "$VERSION" "$PLATFORM"
 if ! download_binary "kc-agent" "$VERSION" "$PLATFORM"; then
     echo "  (kc-agent is optional — local cluster features will be limited)"
 fi
-
-# Make binaries executable
-chmod +x "$INSTALL_DIR/console" 2>/dev/null || true
-chmod +x "$INSTALL_DIR/kc-agent" 2>/dev/null || true
 
 # Kill any existing console instance on the console port
 EXISTING_PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
@@ -251,11 +258,16 @@ if [ -x "$INSTALL_DIR/kc-agent" ]; then
     AGENT_PID_FILE="$INSTALL_DIR/kc-agent.pid"
     AGENT_LOG_FILE="$INSTALL_DIR/kc-agent.log"
 
-    # Check if kc-agent is already running
+    # Check if kc-agent is already running — restart it with the new binary
     if [ -f "$AGENT_PID_FILE" ]; then
         EXISTING_AGENT_PID=$(cat "$AGENT_PID_FILE")
         if kill -0 "$EXISTING_AGENT_PID" 2>/dev/null; then
-            echo "kc-agent is already running (PID: $EXISTING_AGENT_PID)"
+            echo "Restarting kc-agent (PID: $EXISTING_AGENT_PID) with updated binary..."
+            kill -TERM "$EXISTING_AGENT_PID" 2>/dev/null || true
+            sleep 2
+            # Fall back to SIGKILL if process did not exit gracefully
+            kill -9 "$EXISTING_AGENT_PID" 2>/dev/null || true
+            rm -f "$AGENT_PID_FILE"
         else
             echo "Stale PID file found, removing..."
             rm -f "$AGENT_PID_FILE"
