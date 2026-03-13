@@ -1,14 +1,15 @@
 /**
  * Pod Exec Terminal Session Hook
  *
- * Manages a WebSocket connection to the backend /api/exec endpoint
+ * Manages a WebSocket connection to the backend /ws/exec endpoint
  * for interactive terminal sessions inside pods.
  *
  * Protocol:
- * 1. Client opens WebSocket to /api/exec
- * 2. Client sends exec_init message with cluster, namespace, pod, container, command
- * 3. Server replies with exec_started
- * 4. Client sends stdin/resize messages, server sends stdout/stderr/exit messages
+ * 1. Client opens WebSocket to /ws/exec
+ * 2. Client sends auth message with JWT token (first message)
+ * 3. Client sends exec_init message with cluster, namespace, pod, container, command
+ * 4. Server replies with exec_started
+ * 5. Client sends stdin/resize messages, server sends stdout/stderr/exit messages
  */
 
 import { useRef, useCallback, useEffect, useState } from 'react'
@@ -86,16 +87,26 @@ export function useExecSession(): UseExecSessionResult {
     setError(null)
     reconnectAttemptsRef.current = 0
 
-    // Build WebSocket URL
+    // Build WebSocket URL — token is sent as first message, NOT in the URL
+    // (keeps JWT out of server logs, browser history, and proxy logs)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-    const wsUrl = `${protocol}//${window.location.host}/ws/exec${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    const wsUrl = `${protocol}//${window.location.host}/ws/exec`
 
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
-      // Send the init message
+      // Step 1: Send auth message with JWT token
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      if (!token) {
+        setError('Not authenticated')
+        setStatus('error')
+        ws.close()
+        return
+      }
+      ws.send(JSON.stringify({ type: 'auth', token }))
+
+      // Step 2: Send the exec_init message
       const initMsg: ExecMessage & { cluster: string; namespace: string; pod: string; container: string; command: string[]; tty: boolean } = {
         type: 'exec_init',
         cluster: config.cluster,

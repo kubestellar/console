@@ -7,23 +7,32 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/gofiber/contrib/websocket"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
+// execAuthDeadline is how long the client has to send an auth message after connecting.
+const execAuthDeadline = 5 * time.Second
+
 // ExecHandlers handles pod exec API endpoints
 type ExecHandlers struct {
 	k8sClient *k8s.MultiClusterClient
+	jwtSecret string
+	devMode   bool
 }
 
 // NewExecHandlers creates a new exec handlers instance
-func NewExecHandlers(k8sClient *k8s.MultiClusterClient) *ExecHandlers {
+func NewExecHandlers(k8sClient *k8s.MultiClusterClient, jwtSecret string, devMode bool) *ExecHandlers {
 	return &ExecHandlers{
 		k8sClient: k8sClient,
+		jwtSecret: jwtSecret,
+		devMode:   devMode,
 	}
 }
 
@@ -111,9 +120,57 @@ func (q *terminalSizeQueue) Next() *remotecommand.TerminalSize {
 	return &size
 }
 
+// execAuthMessage is the first message the client must send to authenticate
+type execAuthMessage struct {
+	Type  string `json:"type"`
+	Token string `json:"token"`
+}
+
 // HandleExec handles a WebSocket connection for pod exec
 func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	defer c.Close()
+
+	// SECURITY: Require JWT authentication before allowing exec.
+	// The client must send an {"type":"auth","token":"<jwt>"} message first.
+	c.SetReadDeadline(time.Now().Add(execAuthDeadline))
+
+	var authMsg execAuthMessage
+	if err := c.ReadJSON(&authMsg); err != nil {
+		log.Printf("SECURITY: exec: failed to read auth message: %v", err)
+		writeError(c, "authentication required")
+		return
+	}
+
+	if authMsg.Type != "auth" || authMsg.Token == "" {
+		log.Printf("SECURITY: exec: invalid or missing auth message")
+		writeError(c, "authentication required")
+		return
+	}
+
+	// Validate JWT token
+	if authMsg.Token == "demo-token" {
+		log.Printf("SECURITY: exec: rejected demo-token (exec requires real authentication)")
+		writeError(c, "exec requires real authentication, demo-token not allowed")
+		return
+	}
+
+	if h.jwtSecret == "" {
+		log.Printf("SECURITY: exec: rejected connection (JWT secret not configured)")
+		writeError(c, "server misconfiguration: authentication unavailable")
+		return
+	}
+
+	claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
+	if err != nil {
+		log.Printf("SECURITY: exec: rejected invalid token: %v", err)
+		writeError(c, "invalid token")
+		return
+	}
+
+	log.Printf("exec: authenticated user %s for pod exec", claims.GitHubLogin)
+
+	// Clear read deadline after successful auth
+	c.SetReadDeadline(time.Time{})
 
 	if h.k8sClient == nil {
 		writeError(c, "No Kubernetes client available")

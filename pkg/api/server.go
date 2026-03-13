@@ -773,9 +773,8 @@ func (s *Server) setupRoutes() {
 		s.hub.HandleConnection(c)
 	}))
 
-	// WebSocket for pod exec terminal
-	// Registered at /ws/exec (not /api/exec) to avoid the /api group's JWTAuth middleware
-	execHandlers := handlers.NewExecHandlers(s.k8sClient)
+	// WebSocket for pod exec terminal — uses first-message JWT auth (same pattern as /ws hub)
+	execHandlers := handlers.NewExecHandlers(s.k8sClient, s.config.JWTSecret, s.config.DevMode)
 	s.app.Use("/ws/exec", middleware.WebSocketUpgrade())
 	s.app.Get("/ws/exec", websocket.New(func(c *websocket.Conn) {
 		execHandlers.HandleExec(c)
