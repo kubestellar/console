@@ -7,10 +7,16 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
-import { getDefaultCards } from '../../config/dashboards'
+import { getDefaultCards, deploymentsDashboardConfig } from '../../config/dashboards'
+import { migrateStorageKey } from '../../lib/dashboards/migrateStorageKey'
 import { useTranslation } from 'react-i18next'
 
-const DEPLOYMENTS_CARDS_KEY = 'kubestellar-deployments-cards'
+/** Storage key sourced from central dashboard config to prevent mismatches */
+const DEPLOYMENTS_CARDS_KEY = deploymentsDashboardConfig.storageKey ?? 'deployments-dashboard-cards'
+
+/** Old key used before the config was centralized — migrate saved layouts */
+const LEGACY_DEPLOYMENTS_CARDS_KEY = 'kubestellar-deployments-cards'
+migrateStorageKey(LEGACY_DEPLOYMENTS_CARDS_KEY, DEPLOYMENTS_CARDS_KEY)
 
 // Default cards for the deployments dashboard
 const DEFAULT_DEPLOYMENTS_CARDS = getDefaultCards('deployments')
