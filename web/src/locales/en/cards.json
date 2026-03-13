@@ -277,7 +277,8 @@
     "crio_status": "CRI-O",
     "coredns_status": "CoreDNS",
     "fluentd_status": "Fluentd",
-    "lima_status": "Lima"
+    "lima_status": "Lima",
+    "kubevela_status": "KubeVela"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -447,7 +448,8 @@
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
     "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
     "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health.",
-    "lima_status": "Lima virtual machine instances and resource usage."
+    "lima_status": "Lima virtual machine instances and resource usage.",
+    "kubevela_status": "KubeVela controller health and installation status across clusters."
   },
   "categories": {
     "core": "Core",

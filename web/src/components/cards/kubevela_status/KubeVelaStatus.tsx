@@ -67,7 +67,7 @@ function WorkflowProgress({ completed, total }: { completed: number; total: numb
 export function KubeVelaStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState } = useKubeVelaStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useKubeVelaStatus()
 
   if (showSkeleton) {
     return (
@@ -128,7 +128,7 @@ export function KubeVelaStatus() {
           {healthLabel}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="w-3 h-3" />
+          {isRefreshing && <RefreshCw className="w-3 h-3 animate-spin" />}
           <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>

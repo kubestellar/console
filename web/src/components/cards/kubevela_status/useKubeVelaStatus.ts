@@ -108,7 +108,7 @@ export function useKubeVelaStatus(): UseKubeVelaStatusResult {
       fetcher: fetchKubeVelaStatus,
     })
 
-  const effectiveIsDemoData = isDemoFallback
+  const effectiveIsDemoData = isDemoFallback && !isLoading
 
   const hasAnyData = data.pods.total > 0 || data.apps.total > 0
 
