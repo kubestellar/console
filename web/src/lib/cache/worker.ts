@@ -274,8 +274,14 @@ function respondError(id: number, message: string): void {
   self.postMessage(msg)
 }
 
-self.onmessage = (event: MessageEvent<WorkerRequest>) => {
-  const msg = event.data
+// Queue of messages received before the database is ready.
+// Bounded to prevent unbounded memory growth if init stalls.
+/** Maximum number of messages to queue while waiting for database init. */
+const MAX_PENDING_MESSAGES = 1000
+const pendingMessages: WorkerRequest[] = []
+let initComplete = false
+
+function processMessage(msg: WorkerRequest): void {
 
   try {
     switch (msg.type) {
@@ -332,18 +338,50 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
   }
 }
 
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  if (!initComplete) {
+    if (pendingMessages.length >= MAX_PENDING_MESSAGES) {
+      console.warn(
+        `[CacheWorker] Pending message queue full (${MAX_PENDING_MESSAGES}), dropping message:`,
+        event.data.type,
+      )
+      respondError(event.data.id, 'Worker initializing and message queue is full')
+      return
+    }
+    // Queue messages until database initialization completes
+    pendingMessages.push(event.data)
+    return
+  }
+  processMessage(event.data)
+}
+
 // ---------------------------------------------------------------------------
 // Initialize SQLite and signal readiness
 // ---------------------------------------------------------------------------
 
 initDatabase()
   .then(() => {
+    initComplete = true
+    // Drain any messages that arrived during initialization
+    for (const queued of pendingMessages) {
+      processMessage(queued)
+    }
+    pendingMessages.length = 0
     const msg: WorkerResponse = { id: -1, type: 'ready' }
     self.postMessage(msg)
   })
   .catch((e) => {
+    const reason = e instanceof Error ? e.message : String(e)
     console.error('[CacheWorker] Init failed:', e)
-    // Signal ready anyway — the main thread will fall back to IndexedDB
-    const msg: WorkerResponse = { id: -1, type: 'ready' }
+    // Reject all queued messages so callers aren't left waiting
+    for (const queued of pendingMessages) {
+      respondError(queued.id, `Worker init failed: ${reason}`)
+    }
+    pendingMessages.length = 0
+    // Mark init complete so future messages are processed (handlers
+    // gracefully return null/empty when db is null)
+    initComplete = true
+    // Signal failure — the main thread will fall back to IndexedDB
+    const msg: WorkerResponse = { id: -1, type: 'init-error', message: reason }
     self.postMessage(msg)
   })
