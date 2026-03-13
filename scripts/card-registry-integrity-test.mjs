@@ -67,6 +67,36 @@ function getStringLiteral(node) {
     return null
 }
 
+/**
+ * Unwrap chained .catch()/.then()/.finally() calls to find the underlying
+ * dynamic import() call expression.  For example:
+ *   import('./path').catch((err) => { throw err })
+ * The outer node is a .catch() CallExpression; this function walks inward
+ * through PropertyAccessExpression chains until it finds the import() call.
+ *
+ * @param {ts.CallExpression} node
+ * @returns {ts.CallExpression | null} The import() call, or null if not found.
+ */
+function unwrapToImportCall(node) {
+    // Direct import() call
+    if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        return node
+    }
+
+    // Chained: import('./path').catch(...) / .then(...) / .finally(...)
+    if (ts.isPropertyAccessExpression(node.expression)) {
+        const methodName = node.expression.name.text
+        if (methodName === 'catch' || methodName === 'then' || methodName === 'finally') {
+            const inner = node.expression.expression
+            if (ts.isCallExpression(inner)) {
+                return unwrapToImportCall(inner)
+            }
+        }
+    }
+
+    return null
+}
+
 // ---------------------------------------------------------------------------
 // Phase 1: Extract declarations from cardRegistry.ts
 // ---------------------------------------------------------------------------
@@ -106,14 +136,17 @@ function extractDeclarations(sourceFile) {
                 const varName = decl.name.text
 
                 // --- Bundle variable: const _foo = import('./path') ---
-                if (varName.startsWith('_') && ts.isCallExpression(decl.initializer) &&
-                    decl.initializer.expression.kind === ts.SyntaxKind.ImportKeyword) {
-                    const arg = decl.initializer.arguments?.[0]
-                    if (arg) {
-                        const path = getStringLiteral(arg)
-                        if (path) bundleMap.set(varName, path)
+                // Also handles chained patterns like import('./path').catch(...)
+                if (varName.startsWith('_') && ts.isCallExpression(decl.initializer)) {
+                    const importCall = unwrapToImportCall(decl.initializer)
+                    if (importCall) {
+                        const arg = importCall.arguments?.[0]
+                        if (arg) {
+                            const path = getStringLiteral(arg)
+                            if (path) bundleMap.set(varName, path)
+                        }
+                        return
                     }
-                    return
                 }
 
                 // --- Lazy declaration: const Foo = lazy(() => ...) ---
