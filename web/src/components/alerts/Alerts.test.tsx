@@ -1,4 +1,4 @@
-/// <reference types="@testing-library/jest-dom/vitest" />
+/// <reference types='@testing-library/jest-dom/vitest' />
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -7,7 +7,7 @@ import '../../test/utils/setupMocks'
 
 vi.mock('../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) => (
-    <div data-testid="dashboard-page" data-title={title} data-subtitle={subtitle}>
+    <div data-testid='dashboard-page' data-title={title} data-subtitle={subtitle}>
       <h1>{title}</h1>
       {subtitle && <p>{subtitle}</p>}
       {children}

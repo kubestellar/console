@@ -9,103 +9,87 @@ import { emitLogin } from '../../lib/analytics'
 import { LogoWithStar } from '../ui/LogoWithStar'
 
 // Lazy load the heavy Three.js globe animation
-const GlobeAnimation = lazy(() =>
-  import("../animations/globe").then((m) => ({ default: m.GlobeAnimation })),
-);
+const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
 
 // Map backend error codes to user-friendly messages with troubleshooting steps
-const OAUTH_ERROR_INFO: Record<
-  string,
-  { title: string; message: string; steps: string[] }
-> = {
+const OAUTH_ERROR_INFO: Record<string, { title: string; message: string; steps: string[] }> = {
   exchange_failed: {
-    title: "GitHub OAuth Token Exchange Failed",
-    message:
-      "The console was unable to complete the login with GitHub. This usually means your OAuth app is misconfigured.",
+    title: 'GitHub OAuth Token Exchange Failed',
+    message: 'The console was unable to complete the login with GitHub. This usually means your OAuth app is misconfigured.',
     steps: [
-      "Check that GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are set in your .env file",
-      "Verify the Client Secret in your GitHub OAuth app matches what's in .env (regenerate if unsure)",
+      'Check that GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are set in your .env file',
+      'Verify the Client Secret in your GitHub OAuth app matches what\'s in .env (regenerate if unsure)',
       'Confirm the "Authorization callback URL" in your GitHub OAuth app is set to: http://localhost:8080/auth/github/callback',
-      "Restart the console after updating .env",
+      'Restart the console after updating .env',
     ],
   },
   csrf_validation_failed: {
-    title: "Login Session Expired",
-    message:
-      "The login session timed out or was interrupted. This can happen with Safari or slow networks.",
+    title: 'Login Session Expired',
+    message: 'The login session timed out or was interrupted. This can happen with Safari or slow networks.',
     steps: [
       'Try logging in again — click "Continue with GitHub" below',
-      "If using Safari, try Chrome or Firefox instead",
-      "Clear your browser cookies for localhost and try again",
+      'If using Safari, try Chrome or Firefox instead',
+      'Clear your browser cookies for localhost and try again',
     ],
   },
   missing_code: {
-    title: "GitHub Login Incomplete",
-    message:
-      "GitHub did not return an authorization code. The OAuth flow may have been interrupted.",
+    title: 'GitHub Login Incomplete',
+    message: 'GitHub did not return an authorization code. The OAuth flow may have been interrupted.',
     steps: [
       'Try logging in again — click "Continue with GitHub" below',
-      "Check that your GitHub OAuth app is not suspended or deleted",
+      'Check that your GitHub OAuth app is not suspended or deleted',
       'Verify the "Homepage URL" in your GitHub OAuth app settings',
     ],
   },
   user_fetch_failed: {
-    title: "Could Not Retrieve GitHub Profile",
-    message:
-      "Login succeeded but the console was unable to fetch your GitHub profile.",
+    title: 'Could Not Retrieve GitHub Profile',
+    message: 'Login succeeded but the console was unable to fetch your GitHub profile.',
     steps: [
-      "Try logging in again — this may be a temporary GitHub API issue",
+      'Try logging in again — this may be a temporary GitHub API issue',
       'Check that your GitHub OAuth app has the "read:user" scope',
-      "Verify your internet connection to api.github.com",
+      'Verify your internet connection to api.github.com',
     ],
   },
   db_error: {
-    title: "Database Error",
-    message:
-      "The console backend encountered a database error while processing your login.",
+    title: 'Database Error',
+    message: 'The console backend encountered a database error while processing your login.',
     steps: [
-      "Restart the console and try again",
-      "Check the backend logs for more details",
+      'Restart the console and try again',
+      'Check the backend logs for more details',
     ],
   },
-};
+}
 
 export function Login() {
-  const { t } = useTranslation("common");
-  const { login, isAuthenticated, isLoading } = useAuth();
-  const [searchParams] = useSearchParams();
-  const sessionExpired = useMemo(
-    () => searchParams.get("reason") === "session_expired",
-    [searchParams],
-  );
-  const oauthError = useMemo(() => searchParams.get("error"), [searchParams]);
-  const errorInfo = oauthError ? OAUTH_ERROR_INFO[oauthError] : null;
+  const { t } = useTranslation('common')
+  const { login, isAuthenticated, isLoading } = useAuth()
+  const [searchParams] = useSearchParams()
+  const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
+  const oauthError = useMemo(() => searchParams.get('error'), [searchParams])
+  const errorInfo = oauthError ? OAUTH_ERROR_INFO[oauthError] : null
 
   // Auto-login for Netlify deploy previews or when backend has no OAuth configured
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info
   useEffect(() => {
-    if (isLoading || isAuthenticated || oauthError) return;
+    if (isLoading || isAuthenticated || oauthError) return
 
-    const isNetlifyPreview =
-      window.location.hostname.includes("deploy-preview-") ||
-      window.location.hostname.includes("netlify.app");
-    const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
+    const isNetlifyPreview = window.location.hostname.includes('deploy-preview-') ||
+      window.location.hostname.includes('netlify.app')
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
     if (isNetlifyPreview || isDemoMode) {
-      emitLogin("auto-netlify");
-      login();
-      return;
+      emitLogin('auto-netlify'); login()
+      return
     }
 
     // Binary quickstart without OAuth: auto-login to skip the login page
     // (the backend will create a dev-user JWT automatically)
     checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
       if (backendUp && !oauthConfigured) {
-        emitLogin("auto-quickstart");
-        login();
+        emitLogin('auto-quickstart'); login()
       }
-    });
-  }, [isLoading, isAuthenticated, login, oauthError]);
+    })
+  }, [isLoading, isAuthenticated, login, oauthError])
 
   // Show loading while checking auth status
   if (isLoading) {
@@ -113,12 +97,12 @@ export function Login() {
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
       </div>
-    );
+    )
   }
 
   // Redirect to dashboard if already authenticated
   if (isAuthenticated) {
-    return <Navigate to={ROUTES.HOME} replace />;
+    return <Navigate to={ROUTES.HOME} replace />
   }
 
   return (
@@ -132,11 +116,11 @@ export function Login() {
               key={i}
               className="star"
               style={{
-                width: Math.random() * 3 + 1 + "px",
-                height: Math.random() * 3 + 1 + "px",
-                left: Math.random() * 100 + "%",
-                top: Math.random() * 100 + "%",
-                animationDelay: Math.random() * 3 + "s",
+                width: Math.random() * 3 + 1 + 'px',
+                height: Math.random() * 3 + 1 + 'px',
+                left: Math.random() * 100 + '%',
+                top: Math.random() * 100 + '%',
+                animationDelay: Math.random() * 3 + 's',
               }}
             />
           ))}
@@ -153,12 +137,8 @@ export function Login() {
             <div className="flex items-center gap-3">
               <LogoWithStar className="w-14 h-14" alt="KubeStellar logo" />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  KubeStellar
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  KubeStellar Console
-                </p>
+                <h1 className="text-2xl font-bold text-foreground">KubeStellar</h1>
+                <p className="text-sm text-muted-foreground">KubeStellar Console</p>
               </div>
             </div>
           </div>
@@ -168,10 +148,8 @@ export function Login() {
             <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 text-yellow-300 text-sm">
               <AlertTriangle className="w-5 h-5 shrink-0 text-yellow-400" />
               <div>
-                <div className="font-medium">{t("login.sessionExpired")}</div>
-                <div className="text-xs text-yellow-400/80 mt-0.5">
-                  {t("login.sessionTimedOut")}
-                </div>
+                <div className="font-medium">{t('login.sessionExpired')}</div>
+                <div className="text-xs text-yellow-400/80 mt-0.5">{t('login.sessionTimedOut')}</div>
               </div>
             </div>
           )}
@@ -182,18 +160,12 @@ export function Login() {
               <div className="flex items-center gap-3 px-4 py-3 text-red-300 text-sm">
                 <AlertTriangle className="w-5 h-5 shrink-0 text-red-400" />
                 <div>
-                  <div className="font-medium text-red-300">
-                    {errorInfo.title}
-                  </div>
-                  <div className="text-xs text-red-400/80 mt-0.5">
-                    {errorInfo.message}
-                  </div>
+                  <div className="font-medium text-red-300">{errorInfo.title}</div>
+                  <div className="text-xs text-red-400/80 mt-0.5">{errorInfo.message}</div>
                 </div>
               </div>
               <div className="px-4 pb-3">
-                <div className="text-xs font-medium text-red-300/80 mb-1.5">
-                  Troubleshooting:
-                </div>
+                <div className="text-xs font-medium text-red-300/80 mb-1.5">Troubleshooting:</div>
                 <ol className="text-xs text-red-400/70 space-y-1 list-decimal list-inside">
                   {errorInfo.steps.map((step, i) => (
                     <li key={i}>{step}</li>
@@ -225,39 +197,27 @@ export function Login() {
 
           {/* Welcome text */}
           <div className="text-center mb-8">
-            <h2
-              data-testid="login-welcome-heading"
-              className="text-xl font-semibold text-foreground mb-2"
-            >
-              {oauthError
-                ? "Login Failed"
-                : sessionExpired
-                  ? t("login.sessionExpired")
-                  : t("login.welcomeBack")}
+            <h2 data-testid="login-welcome-heading" className="text-xl font-semibold text-foreground mb-2">
+              {oauthError ? 'Login Failed' : sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
             </h2>
             <p className="text-muted-foreground">
-              {oauthError
-                ? "Fix the issue above and try again"
-                : t("login.signInDescription")}
+              {oauthError ? 'Fix the issue above and try again' : t('login.signInDescription')}
             </p>
           </div>
 
           {/* GitHub login button */}
           <button
             data-testid="github-login-button"
-            onClick={() => {
-              emitLogin("github");
-              login();
-            }}
+            onClick={() => { emitLogin('github'); login() }}
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 transition-all duration-200 hover:shadow-lg"
           >
             <Github className="w-5 h-5" />
-            {t("login.continueWithGitHub")}
+            {t('login.continueWithGitHub')}
           </button>
 
           {/* Footer */}
           <div className="text-center text-sm text-muted-foreground mt-8">
-            {t("login.termsOfService")}
+            {t('login.termsOfService')}
           </div>
         </div>
       </div>
@@ -295,5 +255,5 @@ export function Login() {
         </span>
       </div>
     </div>
-  );
+  )
 }

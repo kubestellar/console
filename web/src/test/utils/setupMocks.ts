@@ -1,6 +1,6 @@
-import { vi } from "vitest";
+import { vi } from 'vitest';
 
-vi.mock("../../lib/demoMode", () => ({
+vi.mock('../../lib/demoMode', () => ({
   isDemoMode: () => true,
   getDemoMode: () => true,
   isNetlifyDeployment: false,
@@ -15,14 +15,14 @@ vi.mock("../../lib/demoMode", () => ({
   useDemoMode: () => true,
 }));
 
-vi.mock("../../hooks/useDemoMode", () => ({
+vi.mock('../../hooks/useDemoMode', () => ({
   getDemoMode: () => true,
   default: () => true,
   useDemoMode: () => true,
   isDemoModeForced: false,
 }));
 
-vi.mock("../../lib/analytics", () => ({
+vi.mock('../../lib/analytics', () => ({
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("../../lib/analytics", () => ({
   trackEvent: vi.fn(),
 }));
 
-vi.mock("../../hooks/useTokenUsage", () => ({
+vi.mock('../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({
     usage: {
       used: 0,
@@ -41,7 +41,7 @@ vi.mock("../../hooks/useTokenUsage", () => ({
       resetDate: new Date().toISOString(),
       byCategory: {},
     },
-    alertLevel: "normal",
+    alertLevel: 'normal',
     percentage: 0,
     remaining: 1000,
     addTokens: () => {},
