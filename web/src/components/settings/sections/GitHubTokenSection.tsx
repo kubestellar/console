@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
+import { STORAGE_KEY_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
-import type { AllSettings } from '../../../lib/settingsTypes'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
 }
 
 // Helper functions for base64 encoding (obfuscation, not encryption)
+// Used only for the feedback token which remains in localStorage
 const encodeToken = (token: string) => btoa(token)
 const decodeToken = (encoded: string) => {
   try {
@@ -24,8 +24,14 @@ const decodeToken = (encoded: string) => {
 const TOKEN_SOURCE_SETTINGS = 'settings'
 const TOKEN_SOURCE_ENV = 'env'
 
-/** Timeout for fetching settings from the local kc-agent */
+/** Timeout for fetching settings from the backend */
 const AGENT_FETCH_TIMEOUT_MS = 5000
+
+/** Build JWT auth headers for backend proxy requests */
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {
   const { t } = useTranslation()
@@ -45,75 +51,46 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const [feedbackGithubRateLimit, setFeedbackGithubRateLimit] = useState<{ limit: number; remaining: number; reset: Date } | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
 
-  // Load GitHub token status on mount — check localStorage first, then backend
+  // Load GitHub token status on mount — check backend proxy for main token, localStorage for feedback token
   useEffect(() => {
     const loadToken = async () => {
-      const encodedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
-      const storedSource = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
+      // Load feedback token from localStorage
       const encodedFeedbackToken = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
       const storedFeedbackSource = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
-
-      if (encodedToken) {
-        setHasGithubToken(true)
-        setTokenSource(storedSource)
-        const token = decodeToken(encodedToken)
-        await testGithubToken(token)
-      }
       const feedbackDismissed = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED) === 'true'
+
       if (encodedFeedbackToken && !feedbackDismissed) {
         setHasFeedbackGithubToken(true)
         setFeedbackTokenSource(storedFeedbackSource)
         const token = decodeToken(encodedFeedbackToken)
         await testFeedbackGithubToken(token)
       }
-      // If both tokens exist locally, no need to check backend
-      const mainDismissed = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED) === 'true'
-      if (encodedToken && (encodedFeedbackToken || feedbackDismissed)) {
+
+      // Check backend proxy for main token status
+      // Skip if user explicitly dismissed the env token
+      if (localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED) === 'true') {
         setIsInitializing(false)
         return
       }
 
-      // Check backend for any tokens not already in localStorage
-      // Skip entirely if both tokens are dismissed or already present
-      if (mainDismissed && (encodedFeedbackToken || feedbackDismissed)) {
-        setIsInitializing(false)
-        return
-      }
       try {
-        const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings`, {
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch('/api/github/token/status', {
+          headers: authHeaders(),
           signal: AbortSignal.timeout(AGENT_FETCH_TIMEOUT_MS),
         })
         if (response.ok) {
-          const data: AllSettings = await response.json()
-          // Only restore main token if not dismissed (or if it's settings-sourced, not env)
-          if (!encodedToken && data?.githubToken) {
-            const source = data.githubTokenSource || TOKEN_SOURCE_SETTINGS
-            const isEnvSourced = source === TOKEN_SOURCE_ENV
-            if (!mainDismissed || !isEnvSourced) {
-              localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(data.githubToken))
-              localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, source)
-              setHasGithubToken(true)
-              setTokenSource(source)
-              await testGithubToken(data.githubToken)
-            }
+          const data = await response.json() as { hasToken: boolean; source: string }
+          if (data.hasToken) {
+            const source = data.source || TOKEN_SOURCE_SETTINGS
+            localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, source)
+            window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
+            setHasGithubToken(true)
+            setTokenSource(source)
+            await validateViaProxy()
           }
-          // Only restore feedback token if not dismissed (or if it's settings-sourced, not env)
-          if (!encodedFeedbackToken && data?.feedbackGithubToken) {
-            const source = data.feedbackGithubTokenSource || TOKEN_SOURCE_SETTINGS
-            const isEnvSourced = source === TOKEN_SOURCE_ENV
-            if (!feedbackDismissed || !isEnvSourced) {
-              localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(data.feedbackGithubToken))
-              localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, source)
-              setHasFeedbackGithubToken(true)
-              setFeedbackTokenSource(source)
-              await testFeedbackGithubToken(data.feedbackGithubToken)
-            }
-          }
-          window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
         }
       } catch {
-        // Agent unavailable — no token available
+        // Backend unavailable — no token available
       }
 
       setIsInitializing(false)
@@ -164,6 +141,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     }
   }, [isInitializing])
 
+  /** Validate a token directly against GitHub API (used for feedback token only) */
   const validateToken = async (token: string) => {
     const response = await fetch('https://api.github.com/rate_limit', {
       headers: {
@@ -188,12 +166,32 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     }
   }
 
-  const testGithubToken = async (token: string) => {
+  /** Validate the main token already stored on the backend via the proxy */
+  const validateViaProxy = async () => {
     setGithubTokenTesting(true)
     setGithubTokenError(null)
     try {
-      const rate = await validateToken(token)
-      setGithubRateLimit(rate)
+      const response = await fetch('/api/github/rate_limit', {
+        headers: {
+          ...authHeaders(),
+          'Accept': 'application/vnd.github.v3+json',
+        },
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Invalid token - authentication failed')
+        }
+        throw new Error(`GitHub API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setGithubRateLimit({
+        limit: data.rate.limit,
+        remaining: data.rate.remaining,
+        reset: new Date(data.rate.reset * 1000),
+      })
       return true
     } catch (err) {
       setGithubTokenError(err instanceof Error ? err.message : 'Failed to validate token')
@@ -224,33 +222,64 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     if (!githubToken.trim()) return
 
     setGithubTokenTesting(true)
-    const isValid = await testGithubToken(githubToken.trim())
+    setGithubTokenError(null)
 
-    if (isValid) {
-      // Store base64 encoded (obfuscation)
-      localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(githubToken.trim()))
-      // User-entered tokens always have "settings" source
-      localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
-      // Clear any previous env-token dismissal
-      localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED)
-      window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
-      setHasGithubToken(true)
-      setTokenSource(TOKEN_SOURCE_SETTINGS)
-      setGithubToken('')
-      setGithubTokenSaved(true)
-      setTimeout(() => setGithubTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+    try {
+      // Save token to backend (encrypted storage)
+      const saveResponse = await fetch('/api/github/token', {
+        method: 'POST',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: githubToken.trim() }),
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
 
-      emitGitHubTokenConfigured()
-      emitConversionStep(6, 'github_token')
+      if (!saveResponse.ok) {
+        throw new Error(`Failed to save token: ${saveResponse.status}`)
+      }
 
-      // Trigger system updates check with the new token
-      forceVersionCheck()
+      // Validate via proxy (backend injects the saved token)
+      const isValid = await validateViaProxy()
+
+      if (isValid) {
+        // Store flags only (NOT the token itself)
+        localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
+        // Clear any previous env-token dismissal
+        localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED)
+        window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
+        setHasGithubToken(true)
+        setTokenSource(TOKEN_SOURCE_SETTINGS)
+        setGithubToken('') // Clear from input field
+        setGithubTokenSaved(true)
+        setTimeout(() => setGithubTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+
+        emitGitHubTokenConfigured()
+        emitConversionStep(6, 'github_token')
+
+        // Trigger system updates check with the new token
+        forceVersionCheck()
+      }
+    } catch (err) {
+      setGithubTokenError(err instanceof Error ? err.message : 'Failed to save token')
+    } finally {
+      setGithubTokenTesting(false)
     }
-    setGithubTokenTesting(false)
   }
 
-  const handleClearGithubToken = () => {
-    localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN)
+  const handleClearGithubToken = async () => {
+    try {
+      // Remove token from backend
+      await fetch('/api/github/token', {
+        method: 'DELETE',
+        headers: authHeaders(),
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
+    } catch {
+      // Best-effort — clear local state regardless
+    }
+
     localStorage.removeItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
     if (isEnvToken) {
       localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED, 'true')

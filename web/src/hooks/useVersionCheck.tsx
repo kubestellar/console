@@ -10,7 +10,6 @@ import type {
   UpdateProgress,
 } from '../types/updates'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
-import { STORAGE_KEY_GITHUB_TOKEN } from '../lib/constants'
 import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import { useLocalAgent } from './useLocalAgent'
 
@@ -18,9 +17,9 @@ declare const __APP_VERSION__: string
 declare const __COMMIT_HASH__: string
 
 const GITHUB_API_URL =
-  'https://api.github.com/repos/kubestellar/console/releases'
+  '/api/github/repos/kubestellar/console/releases'
 const GITHUB_MAIN_SHA_URL =
-  'https://api.github.com/repos/kubestellar/console/git/ref/heads/main'
+  '/api/github/repos/kubestellar/console/git/ref/heads/main'
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes cache
 const MIN_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes minimum between checks
 const AUTO_UPDATE_POLL_MS = 60 * 1000 // Poll kc-agent for update status every 60s
@@ -367,14 +366,6 @@ function useVersionCheckCore() {
       const headers: HeadersInit = {
         Accept: 'application/vnd.github.v3+json',
       }
-      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
-      if (storedToken) {
-        try {
-          headers['Authorization'] = `Bearer ${atob(storedToken)}`
-        } catch {
-          headers['Authorization'] = `Bearer ${storedToken}`
-        }
-      }
       console.debug('[version-check] Fetching latest main SHA from GitHub...')
       const resp = await fetch(GITHUB_MAIN_SHA_URL, {
         headers,
@@ -435,14 +426,9 @@ function useVersionCheckCore() {
     }
     try {
       const headers: HeadersInit = { Accept: 'application/vnd.github.v3+json' }
-      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
-      if (storedToken) {
-        try { headers['Authorization'] = `Bearer ${atob(storedToken)}` }
-        catch { headers['Authorization'] = `Bearer ${storedToken}` }
-      }
       console.debug('[version-check] Fetching commits:', currentSHA.slice(0, 7), '→', latestSHA.slice(0, 7))
       const resp = await fetch(
-        `https://api.github.com/repos/kubestellar/console/compare/${currentSHA}...${latestSHA}`,
+        `/api/github/repos/kubestellar/console/compare/${currentSHA}...${latestSHA}`,
         { headers, signal: AbortSignal.timeout(10000) }
       )
       if (resp.ok) {
@@ -558,18 +544,6 @@ function useVersionCheckCore() {
       }
       if (cache?.etag) {
         headers['If-None-Match'] = cache.etag
-      }
-
-      // Use GitHub token if available (base64 encoded in localStorage)
-      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
-      if (storedToken) {
-        try {
-          const token = atob(storedToken)
-          headers['Authorization'] = `Bearer ${token}`
-        } catch {
-          // Token not base64 encoded (old format), use as-is
-          headers['Authorization'] = `Bearer ${storedToken}`
-        }
       }
 
       const response = await fetch(GITHUB_API_URL, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })

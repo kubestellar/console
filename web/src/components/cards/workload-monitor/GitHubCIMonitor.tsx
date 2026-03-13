@@ -1,9 +1,9 @@
-import { useState, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
+import { useState, useMemo, useCallback, useImperativeHandle, forwardRef } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
   Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
 } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { Button } from '../../ui/Button'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
@@ -26,18 +26,8 @@ export interface GitHubCIMonitorRef {
   refresh: () => void
 }
 
-// Decode base64 encoded token from localStorage
-const decodeToken = (encoded: string): string => {
-  try {
-    return atob(encoded)
-  } catch {
-    return encoded // Return as-is if not encoded (backwards compatibility)
-  }
-}
-
 interface GitHubCIConfig {
   repos?: string[]
-  token?: string
 }
 
 interface WorkflowRun {
@@ -152,21 +142,15 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
     demoData: { workflows: DEMO_WORKFLOWS, isDemo: true },
     persist: true,
     fetcher: async () => {
-      const storedToken = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN)
-      const token = ghConfig?.token || (storedToken ? decodeToken(storedToken) : null)
-      if (!token) {
-        return { workflows: DEMO_WORKFLOWS, isDemo: true }
-      }
-
       const allRuns: WorkflowRun[] = []
       for (const repo of repos) {
         try {
-          const response = await fetch(`https://api.github.com/repos/${repo}/actions/runs?per_page=10`, {
-            headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+          const response = await fetch(`/api/github/repos/${repo}/actions/runs?per_page=10`, {
+            headers: { Accept: 'application/vnd.github.v3+json' },
             signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
           })
           if (response.status === 401 || response.status === 403) {
-            // Token lacks actions scope or is invalid — fall back to demo data
+            // Token invalid or missing — fall back to demo data
             return { workflows: DEMO_WORKFLOWS, isDemo: true }
           }
           if (!response.ok) continue // Skip this repo on other errors
@@ -232,17 +216,6 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
     setRepos(updatedRepos)
     saveRepos(updatedRepos)
   }, [repos])
-
-  // Listen for token changes in localStorage (e.g., when user adds token in Settings)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'github_token') {
-        refetch()
-      }
-    }
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [refetch])
 
   // Stats
   const stats = useMemo(() => {

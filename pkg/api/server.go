@@ -497,6 +497,13 @@ func (s *Server) setupRoutes() {
 	api.Get("/me", user.GetCurrentUser)
 	api.Put("/me", user.UpdateCurrentUser)
 
+	// GitHub API proxy — keeps PAT server-side, frontend calls /api/github/*
+	githubProxy := handlers.NewGitHubProxyHandler(s.config.GitHubToken)
+	api.Get("/github/token/status", githubProxy.HasToken)
+	api.Post("/github/token", githubProxy.SaveToken)
+	api.Delete("/github/token", githubProxy.DeleteToken)
+	api.Get("/github/*", githubProxy.Proxy)
+
 	// Persistent settings routes
 	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager())
 	api.Get("/settings", settingsHandler.GetSettings)
