@@ -11,6 +11,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
 import { emitMissionSuggestionsShown, emitMissionSuggestionActioned } from '../../lib/analytics'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 /** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
 const STORAGE_KEY_MISSIONS_COLLAPSED = 'kc-missions-collapsed'
@@ -45,7 +46,7 @@ export function MissionSuggestions() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [minimized, setMinimized] = useState(() =>
-    localStorage.getItem(STORAGE_KEY_MISSIONS_COLLAPSED) === 'true'
+    safeGetItem(STORAGE_KEY_MISSIONS_COLLAPSED) === 'true'
   )
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -71,7 +72,7 @@ export function MissionSuggestions() {
           countdownRef.current = null
           setMinimized(true)
           // Persist collapse so the expanded panel never comes back
-          localStorage.setItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true')
+          safeSetItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true')
           return AUTO_COLLAPSE_SECONDS
         }
         return prev - 1
@@ -299,7 +300,7 @@ export function MissionSuggestions() {
             {countdown}s
           </span>
           <button
-            onClick={() => { setMinimized(true); localStorage.setItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true') }}
+            onClick={() => { setMinimized(true); safeSetItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true') }}
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Minimize"
           >

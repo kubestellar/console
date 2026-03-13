@@ -6,6 +6,7 @@ import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardR
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
 import { AI_THINKING_DELAY_MS } from '../../lib/constants/network'
 import { emitCardRecommendationsShown, emitCardRecommendationActioned } from '../../lib/analytics'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 /** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
 const STORAGE_KEY_RECS_COLLAPSED = 'kc-recommendations-collapsed'
@@ -33,7 +34,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   const [expandedRec, setExpandedRec] = useState<string | null>(null)
   const [addingCard, setAddingCard] = useState<string | null>(null)
   const [minimized, setMinimized] = useState(() =>
-    localStorage.getItem(STORAGE_KEY_RECS_COLLAPSED) === 'true'
+    safeGetItem(STORAGE_KEY_RECS_COLLAPSED) === 'true'
   )
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -53,7 +54,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
           countdownRef.current = null
           setMinimized(true)
           // Persist collapse so the expanded panel never comes back
-          localStorage.setItem(STORAGE_KEY_RECS_COLLAPSED, 'true')
+          safeSetItem(STORAGE_KEY_RECS_COLLAPSED, 'true')
           return AUTO_COLLAPSE_SECONDS
         }
         return prev - 1
@@ -225,7 +226,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             {countdown}s
           </span>
           <button
-            onClick={() => { setMinimized(true); localStorage.setItem(STORAGE_KEY_RECS_COLLAPSED, 'true') }}
+            onClick={() => { setMinimized(true); safeSetItem(STORAGE_KEY_RECS_COLLAPSED, 'true') }}
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Minimize"
           >
