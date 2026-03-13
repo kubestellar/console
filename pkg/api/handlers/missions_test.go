@@ -18,7 +18,7 @@ func setupMissionsTest() (*fiber.App, *MissionsHandler) {
 	app := fiber.New()
 	handler := NewMissionsHandler()
 	handler.RegisterRoutes(app.Group("/api/missions"))
-	handler.RegisterPublicRoutes(app.Group("/api/missions/kb"))
+	handler.RegisterPublicRoutes(app.Group("/api/missions"))
 	return app, handler
 }
 
@@ -37,7 +37,7 @@ func TestMissions_BrowseConsoleKB_Success(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubAPIURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/kb/browse?path=missions", nil)
+	req, err := http.NewRequest("GET", "/api/missions/browse?path=missions", nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestMissions_BrowseConsoleKB_NoPath(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubAPIURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/kb/browse", nil)
+	req, err := http.NewRequest("GET", "/api/missions/browse", nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -291,7 +291,7 @@ func TestMissions_GetMissionFile_Success(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubRawURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/kb/file?path=missions/example.yaml", nil)
+	req, err := http.NewRequest("GET", "/api/missions/file?path=missions/example.yaml", nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -312,7 +312,7 @@ func TestMissions_GetMissionFile_NotFound(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubRawURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/kb/file?path=missions/nonexistent.yaml", nil)
+	req, err := http.NewRequest("GET", "/api/missions/file?path=missions/nonexistent.yaml", nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
