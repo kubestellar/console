@@ -164,33 +164,40 @@ function loadMissions(): Mission[] {
   return []
 }
 
-// Maximum number of missions to keep in localStorage to avoid QuotaExceededError
-const MAX_STORED_MISSIONS = 50
+// Maximum number of completed/failed missions to retain when pruning for quota.
+// Active (pending/running/waiting_input) and saved (library) missions are always kept.
+const MAX_COMPLETED_MISSIONS = 50
 
-// Save missions to localStorage, pruning old completed missions if quota is exceeded
+// Save missions to localStorage, pruning old completed/failed missions if quota is exceeded
 function saveMissions(missions: Mission[]) {
   try {
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
   } catch (e) {
     // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
     // browsers that use numeric code 22 instead of the named exception.
-    const isQuotaError = (e instanceof DOMException && e.name === 'QuotaExceededError')
-      || (e instanceof DOMException && (e as DOMException & { code?: number }).code === 22)
+    // Pattern matches useMetricsHistory for consistency across the codebase.
+    const isQuotaError = e instanceof DOMException
+      && (e.name === 'QuotaExceededError' || e.code === 22)
     if (isQuotaError) {
       console.warn('[Missions] localStorage quota exceeded, pruning old missions')
-      // Keep active missions and most recent completed/saved ones
-      const active = missions.filter(m => m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input')
-      const completed = missions
-        .filter(m => m.status === 'completed' || m.status === 'failed' || m.status === 'saved')
+      // Keep active missions (pending/running/waiting_input) unconditionally
+      const active = missions.filter(m =>
+        m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input'
+      )
+      // Keep saved/library missions unconditionally — they are small (no chat history)
+      const saved = missions.filter(m => m.status === 'saved')
+      // Only prune completed/failed missions by age
+      const completedOrFailed = missions
+        .filter(m => m.status === 'completed' || m.status === 'failed')
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        .slice(0, MAX_STORED_MISSIONS)
-      const pruned = [...active, ...completed]
+        .slice(0, MAX_COMPLETED_MISSIONS)
+      const pruned = [...active, ...saved, ...completedOrFailed]
       try {
         localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(pruned))
         return
-      } catch {
+      } catch (retryError) {
         // Still too large — clear missions storage as last resort
-        console.error('[Missions] localStorage still full after pruning, clearing missions')
+        console.error('[Missions] localStorage still full after pruning, clearing missions', retryError)
         localStorage.removeItem(MISSIONS_STORAGE_KEY)
       }
     } else {

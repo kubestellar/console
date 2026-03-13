@@ -840,6 +840,138 @@ describe('persistence', () => {
   })
 })
 
+// ── Quota / pruning ─────────────────────────────────────────────────────────
+
+describe('localStorage quota handling', () => {
+  /**
+   * Helper: build a minimal serialised mission object.
+   */
+  function makeMission(overrides: Partial<{
+    id: string; status: string; updatedAt: string
+  }> = {}) {
+    return {
+      id: overrides.id ?? `m-${Math.random()}`,
+      title: 'M',
+      description: 'D',
+      type: 'troubleshoot',
+      status: overrides.status ?? 'completed',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: overrides.updatedAt ?? new Date().toISOString(),
+    }
+  }
+
+  it('prunes completed/failed missions but preserves saved (library) missions on QuotaExceededError', () => {
+    // Seed a mix of saved (library), completed, and active missions
+    const saved1 = makeMission({ id: 'saved-1', status: 'saved' })
+    const saved2 = makeMission({ id: 'saved-2', status: 'saved' })
+    const completed1 = makeMission({ id: 'completed-1', status: 'completed', updatedAt: '2020-01-01T00:00:00Z' })
+    const completed2 = makeMission({ id: 'completed-2', status: 'completed', updatedAt: '2025-01-01T00:00:00Z' })
+    const failed1 = makeMission({ id: 'failed-1', status: 'failed', updatedAt: '2019-01-01T00:00:00Z' })
+    const pending1 = makeMission({ id: 'pending-1', status: 'pending' })
+
+    localStorage.setItem('kc_missions', JSON.stringify([
+      saved1, saved2, completed1, completed2, failed1, pending1,
+    ]))
+
+    // Intercept setItem: throw QuotaExceededError on the FIRST kc_missions
+    // write (the save triggered by useEffect), then allow the retry.
+    let missionWriteCount = 0
+    const realSetItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'kc_missions') {
+        missionWriteCount++
+        if (missionWriteCount === 1) {
+          throw new DOMException('quota exceeded', 'QuotaExceededError')
+        }
+      }
+      return realSetItem.call(this, key, value)
+    }
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    // Mount — loadMissions() then saveMissions() via useEffect
+    const { result } = renderHook(() => useMissions(), { wrapper })
+
+    // The pruning path must have retried
+    expect(missionWriteCount).toBeGreaterThanOrEqual(2)
+    expect(warnSpy).toHaveBeenCalledWith('[Missions] localStorage quota exceeded, pruning old missions')
+
+    // All saved (library) missions must still be present
+    expect(result.current.missions.some(m => m.id === 'saved-1')).toBe(true)
+    expect(result.current.missions.some(m => m.id === 'saved-2')).toBe(true)
+
+    // Active missions must still be present
+    expect(result.current.missions.some(m => m.id === 'pending-1')).toBe(true)
+
+    Storage.prototype.setItem = realSetItem
+    warnSpy.mockRestore()
+  })
+
+  it('detects QuotaExceededError via legacy numeric code 22', () => {
+    const completed1 = makeMission({ id: 'c1', status: 'completed' })
+    localStorage.setItem('kc_missions', JSON.stringify([completed1]))
+
+    let missionWriteCount = 0
+    const realSetItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'kc_missions') {
+        missionWriteCount++
+        if (missionWriteCount === 1) {
+          // Simulate legacy code-22 DOMException (no named exception)
+          const err = new DOMException('quota exceeded')
+          Object.defineProperty(err, 'code', { value: 22 })
+          Object.defineProperty(err, 'name', { value: '' })
+          throw err
+        }
+      }
+      return realSetItem.call(this, key, value)
+    }
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    renderHook(() => useMissions(), { wrapper })
+
+    // The pruning branch should have fired (retry = missionWriteCount >= 2)
+    expect(missionWriteCount).toBeGreaterThanOrEqual(2)
+    expect(warnSpy).toHaveBeenCalledWith('[Missions] localStorage quota exceeded, pruning old missions')
+
+    Storage.prototype.setItem = realSetItem
+    warnSpy.mockRestore()
+  })
+
+  it('logs the error and clears storage when pruning still exceeds quota', () => {
+    const completed1 = makeMission({ id: 'c1', status: 'completed' })
+    localStorage.setItem('kc_missions', JSON.stringify([completed1]))
+
+    const realSetItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === 'kc_missions') {
+        throw new DOMException('quota exceeded', 'QuotaExceededError')
+      }
+      return realSetItem.call(this, key, value)
+    }
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    renderHook(() => useMissions(), { wrapper })
+
+    // Should log the inner retry error (not silently swallow it)
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[Missions] localStorage still full after pruning, clearing missions',
+      expect.any(DOMException),
+    )
+
+    // Storage should have been cleared as a last resort
+    expect(localStorage.getItem('kc_missions')).toBeNull()
+
+    Storage.prototype.setItem = realSetItem
+    errorSpy.mockRestore()
+    warnSpy.mockRestore()
+  })
+})
+
 // ── saveMission ───────────────────────────────────────────────────────────────
 
 describe('saveMission', () => {
