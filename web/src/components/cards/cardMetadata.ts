@@ -209,6 +209,9 @@ export const CARD_TITLES: Record<string, string> = {
   // Strimzi Kafka operator
   strimzi_status: 'Strimzi',
 
+  // KubeVela application delivery
+  kubevela_status: 'KubeVela',
+
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Cross-Cluster Event Correlation',
   cluster_delta_detector: 'Cluster Delta Detector',
@@ -376,6 +379,9 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_chess: 'Chess game with Kubernetes-themed pieces.',
   // CoreDNS
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
+
+  // KubeVela application delivery
+  kubevela_status: 'KubeVela application delivery, component status, and workflow progress.',
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Unified timeline showing correlated warning events across multiple clusters.',

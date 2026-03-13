@@ -279,7 +279,8 @@
     "fluentd_status": "Fluentd",
     "lima_status": "Lima",
     "keda_status": "KEDA",
-    "strimzi_status": "Strimzi"
+    "strimzi_status": "Strimzi",
+    "kubevela_status": "KubeVela"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -451,7 +452,8 @@
     "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health.",
     "lima_status": "Lima virtual machine instances and resource usage.",
     "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths.",
-    "strimzi_status": "Strimzi Kafka cluster health, topic status, and consumer group lag."
+    "strimzi_status": "Strimzi Kafka cluster health, topic status, and consumer group lag.",
+    "kubevela_status": "KubeVela application delivery, component status, and workflow progress."
   },
   "categories": {
     "core": "Core",
@@ -2793,5 +2795,24 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "kubeVela": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "KubeVela not detected",
+    "notInstalledHint": "No KubeVela controller pods found. Deploy KubeVela to manage application delivery.",
+    "fetchError": "Failed to fetch KubeVela status",
+    "applications": "Applications",
+    "running": "Running",
+    "failed": "Failed",
+    "components": "Components",
+    "traits": "Traits",
+    "pods": "Pods",
+    "workflowSteps": "Workflow Steps",
+    "completed": "Completed",
+    "searchPlaceholder": "Search applications\u2026",
+    "noApplications": "Controller running",
+    "noApplicationsHint": "Application data requires the OAM Application CRD.",
+    "noSearchResults": "No applications match your search."
   }
 }

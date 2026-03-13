@@ -191,6 +191,8 @@ const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default
 const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
 // Strimzi Kafka operator card
 const StrimziStatus = lazy(() => import('./strimzi_status').then(m => ({ default: m.StrimziStatus })))
+// KubeVela application delivery card
+const KubeVelaStatus = lazy(() => import('./kubevela_status').then(m => ({ default: m.KubeVelaStatus })))
 
 // Multi-cluster insights cards — share one chunk via barrel import
 const _insightsBundle = import('./insights').catch((err) => { throw err })
@@ -457,6 +459,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   lima_status: LimaStatus,
   // Strimzi Kafka operator
   strimzi_status: StrimziStatus,
+  // KubeVela application delivery
+  kubevela_status: KubeVelaStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -616,6 +620,8 @@ export const DEMO_DATA_CARDS = new Set([
   'kagenti_security_posture',
   // Crossplane cards - demo until Crossplane is installed
   'crossplane_managed_resources',
+  // KubeVela - demo until KubeVela is installed
+  'kubevela_status',
 ])
 
 /**
@@ -787,6 +793,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   keda_status: () => import('./keda_status'),
   // Strimzi
   strimzi_status: () => import('./strimzi_status'),
+  // KubeVela application delivery
+  kubevela_status: () => import('./kubevela_status'),
 }
 
 /**
@@ -893,6 +901,7 @@ export const LIVE_DATA_CARDS = new Set([
   'coredns_status',
   'keda_status',
   'strimzi_status',
+  'kubevela_status',
   'network_policies',
   'cluster_changelog',
   'predictive_health',
@@ -998,6 +1007,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   maintenance_windows: 6,
   cluster_changelog: 6,
   quota_heatmap: 8,
+  // KubeVela application delivery
+  kubevela_status: 6,
 
   // Event dashboard cards
   event_summary: 6,
