@@ -159,11 +159,11 @@ jobs:
         if: steps.pr_info.outputs.is_copilot == 'true' && steps.check_comment.outputs.should_comment == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECK_NAME: ${{ github.event.check_run.name }}
+          CHECK_URL: ${{ github.event.check_run.html_url }}
         run: |
           PR_NUM="${{ steps.pr_info.outputs.pr_number }}"
           HEAD_SHA="${{ steps.pr_info.outputs.head_sha }}"
-          CHECK_NAME="${{ github.event.check_run.name }}"
-          CHECK_URL="${{ github.event.check_run.html_url }}"
 
           # Get the failure details
           DETAILS=$(gh api repos/${{ github.repository }}/check-runs/${{ github.event.check_run.id }} --jq '.output.summary // .output.text // "No details available"' | head -500)
@@ -462,16 +462,20 @@ jobs:
         if: steps.check_copilot.outputs.is_copilot == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          REVIEW_BODY: ${{ github.event.review.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          REVIEW_USER: ${{ github.event.review.user.login }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
         run: |
           PR_NUM="${{ steps.check_copilot.outputs.pr_number }}"
-          REVIEWER="${{ github.event.review.user.login || github.event.comment.user.login }}"
 
-          # Get the review/comment body
-          if [ "${{ github.event_name }}" == "pull_request_review" ]; then
-            FEEDBACK="${{ github.event.review.body }}"
+          # Use env vars (not inline expressions) to prevent script injection
+          if [ "$EVENT_NAME" == "pull_request_review" ]; then
+            REVIEWER="$REVIEW_USER"
             FEEDBACK_TYPE="review"
           else
-            FEEDBACK="${{ github.event.comment.body }}"
+            REVIEWER="$COMMENT_USER"
             FEEDBACK_TYPE="comment"
           fi
 
