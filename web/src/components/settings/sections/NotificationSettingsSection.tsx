@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, Globe, Mail, Slack, Check, X } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { useNotificationAPI } from '../../../hooks/useNotificationAPI'
 import { NotificationConfig } from '../../../types/alerts'
-import { isBrowserNotifVerified, setBrowserNotifVerified } from '../../../lib/notificationStatus'
+import { BrowserNotificationSettings } from './BrowserNotificationSettings'
+import { SlackNotificationSettings } from './SlackNotificationSettings'
+import { EmailNotificationSettings } from './EmailNotificationSettings'
 
 const STORAGE_KEY = 'kc_notification_config'
 
@@ -30,110 +32,23 @@ function saveConfig(config: NotificationConfig): void {
   }
 }
 
-/** Browser notification verification flow state */
-type BrowserNotifState = 'idle' | 'asked' | 'verified' | 'failed'
+/** Result of a test notification attempt */
+export interface TestResultState {
+  type: string
+  success: boolean
+  message: string
+}
 
 export function NotificationSettingsSection() {
   const { t } = useTranslation()
   const [config, setConfig] = useState<NotificationConfig>(loadConfig())
-  const [testResult, setTestResult] = useState<{ type: string; success: boolean; message: string } | null>(null)
+  const [testResult, setTestResult] = useState<TestResultState | null>(null)
   const { testNotification, isLoading } = useNotificationAPI()
-
-  // Browser notification verification state
-  const [browserNotifState, setBrowserNotifState] = useState<BrowserNotifState>(
-    () => (isBrowserNotifVerified() ? 'verified' : 'idle'),
-  )
-
-  const browserPermission =
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
-
-  const handleRequestPermission = async () => {
-    if (typeof Notification === 'undefined') return
-    try {
-      const result = await Notification.requestPermission()
-      if (result === 'granted') {
-        setBrowserNotifState('idle')
-      }
-    } catch {
-      // Permission request may fail in some environments
-    }
-  }
-
-  const handleSendBrowserTest = () => {
-    try {
-      new Notification('KubeStellar Console Test', {
-        body: t('settings.notifications.browser.testBody'),
-        requireInteraction: true,
-        icon: '/favicon.ico',
-      })
-    } catch {
-      // Notification constructor may throw in some environments
-    }
-    setBrowserNotifState('asked')
-  }
-
-  const handleBrowserNotifYes = () => {
-    setBrowserNotifVerified(true)
-    setBrowserNotifState('verified')
-  }
-
-  const handleBrowserNotifNo = () => {
-    setBrowserNotifVerified(false)
-    setBrowserNotifState('failed')
-  }
 
   const updateConfig = (updates: Partial<NotificationConfig>) => {
     const newConfig = { ...config, ...updates }
     setConfig(newConfig)
     saveConfig(newConfig)
-  }
-
-  const handleTestSlack = async () => {
-    if (!config.slackWebhookUrl) {
-      setTestResult({ type: 'slack', success: false, message: t('settings.notifications.slack.configureFirst') })
-      return
-    }
-
-    setTestResult(null)
-    try {
-      await testNotification('slack', {
-        slackWebhookUrl: config.slackWebhookUrl,
-        slackChannel: config.slackChannel,
-      })
-      setTestResult({ type: 'slack', success: true, message: t('settings.notifications.slack.testSuccess') })
-    } catch (error) {
-      setTestResult({
-        type: 'slack',
-        success: false,
-        message: error instanceof Error ? error.message : t('settings.notifications.slack.testFailed'),
-      })
-    }
-  }
-
-  const handleTestEmail = async () => {
-    if (!config.emailSMTPHost || !config.emailFrom || !config.emailTo) {
-      setTestResult({ type: 'email', success: false, message: t('settings.notifications.email.configureFirst') })
-      return
-    }
-
-    setTestResult(null)
-    try {
-      await testNotification('email', {
-        emailSMTPHost: config.emailSMTPHost,
-        emailSMTPPort: config.emailSMTPPort || 587,
-        emailFrom: config.emailFrom,
-        emailTo: config.emailTo,
-        emailUsername: config.emailUsername,
-        emailPassword: config.emailPassword,
-      })
-      setTestResult({ type: 'email', success: true, message: t('settings.notifications.email.testSuccess') })
-    } catch (error) {
-      setTestResult({
-        type: 'email',
-        success: false,
-        message: error instanceof Error ? error.message : t('settings.notifications.email.testFailed'),
-      })
-    }
   }
 
   return (
@@ -153,288 +68,27 @@ export function NotificationSettingsSection() {
       </p>
 
       {/* Browser Notifications */}
-      <div className="space-y-4 mb-6">
-        <div className="flex items-center gap-2 pb-2 border-b border-border">
-          <Globe className="w-4 h-4 text-foreground" />
-          <h3 className="text-sm font-medium text-foreground">{t('settings.notifications.browser.title')}</h3>
-        </div>
-
-        {/* Permission status */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{t('settings.notifications.browser.permissionStatus')}</span>
-          <span
-            className={`px-2 py-0.5 text-xs rounded-full border ${
-              browserPermission === 'granted'
-                ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                : browserPermission === 'denied'
-                  ? 'bg-red-500/10 border-red-500/20 text-red-400'
-                  : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
-            }`}
-          >
-            {browserPermission}
-          </span>
-        </div>
-
-        {browserPermission === 'granted' ? (
-          <>
-            {browserNotifState === 'idle' && (
-              <button
-                onClick={handleSendBrowserTest}
-                className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
-              >
-                {t('settings.notifications.browser.sendTest')}
-              </button>
-            )}
-
-            {browserNotifState === 'asked' && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">{t('settings.notifications.browser.didYouSeeIt')}</p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleBrowserNotifYes}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors"
-                  >
-                    {t('settings.notifications.browser.yes')}
-                  </button>
-                  <button
-                    onClick={handleBrowserNotifNo}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
-                  >
-                    {t('settings.notifications.browser.no')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {browserNotifState === 'verified' && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-green-400">
-                  {t('settings.notifications.browser.verified')}
-                </p>
-              </div>
-            )}
-
-            {browserNotifState === 'failed' && (
-              <div className="space-y-2">
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <X className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-400">
-                    {t('settings.notifications.browser.enableInstructions')}
-                  </p>
-                </div>
-                <button
-                  onClick={handleSendBrowserTest}
-                  className="px-4 py-2 text-sm rounded-lg bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
-                >
-                  {t('settings.notifications.browser.tryAgain')}
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="space-y-2">
-            {browserPermission === 'denied' ? (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-400">
-                  {t('settings.notifications.browser.blocked')}
-                </p>
-              </div>
-            ) : (
-              <button
-                onClick={handleRequestPermission}
-                className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
-              >
-                {t('settings.notifications.browser.requestPermission')}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <BrowserNotificationSettings />
 
       {/* Slack Configuration */}
-      <div className="space-y-4 mb-6">
-        <div className="flex items-center gap-2 pb-2 border-b border-border">
-          <Slack className="w-4 h-4 text-foreground" />
-          <h3 className="text-sm font-medium text-foreground">{t('settings.notifications.slack.title')}</h3>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            {t('settings.notifications.slack.webhookUrl')}
-          </label>
-          <input
-            type="text"
-            value={config.slackWebhookUrl || ''}
-            onChange={e => updateConfig({ slackWebhookUrl: e.target.value })}
-            placeholder="https://hooks.slack.com/services/..."
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('settings.notifications.slack.webhookHint')}
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            {t('settings.notifications.slack.channel')}
-          </label>
-          <input
-            type="text"
-            value={config.slackChannel || ''}
-            onChange={e => updateConfig({ slackChannel: e.target.value })}
-            placeholder="#alerts"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('settings.notifications.slack.channelHint')}
-          </p>
-        </div>
-
-        <button
-          onClick={handleTestSlack}
-          disabled={isLoading}
-          className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
-        >
-          {isLoading ? t('settings.notifications.slack.testing') : t('settings.notifications.slack.testNotification')}
-        </button>
-
-        {testResult && testResult.type === 'slack' && (
-          <div
-            className={`flex items-start gap-2 p-3 rounded-lg ${
-              testResult.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'
-            }`}
-          >
-            {testResult.success ? (
-              <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-            ) : (
-              <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-            )}
-            <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
-              {testResult.message}
-            </p>
-          </div>
-        )}
-      </div>
+      <SlackNotificationSettings
+        config={config}
+        updateConfig={updateConfig}
+        testResult={testResult}
+        setTestResult={setTestResult}
+        testNotification={testNotification}
+        isLoading={isLoading}
+      />
 
       {/* Email Configuration */}
-      <div className="space-y-4 mb-6">
-        <div className="flex items-center gap-2 pb-2 border-b border-border">
-          <Mail className="w-4 h-4 text-foreground" />
-          <h3 className="text-sm font-medium text-foreground">{t('settings.notifications.email.title')}</h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              {t('settings.notifications.email.smtpHost')}
-            </label>
-            <input
-              type="text"
-              value={config.emailSMTPHost || ''}
-              onChange={e => updateConfig({ emailSMTPHost: e.target.value })}
-              placeholder="smtp.gmail.com"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              {t('settings.notifications.email.smtpPort')}
-            </label>
-            <input
-              type="number"
-              value={config.emailSMTPPort || 587}
-              onChange={e => updateConfig({ emailSMTPPort: parseInt(e.target.value) })}
-              placeholder="587"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            {t('settings.notifications.email.fromAddress')}
-          </label>
-          <input
-            type="email"
-            value={config.emailFrom || ''}
-            onChange={e => updateConfig({ emailFrom: e.target.value })}
-            placeholder="alerts@example.com"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            {t('settings.notifications.email.toAddresses')}
-          </label>
-          <input
-            type="text"
-            value={config.emailTo || ''}
-            onChange={e => updateConfig({ emailTo: e.target.value })}
-            placeholder="team@example.com, oncall@example.com"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('settings.notifications.email.toHint')}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              {t('settings.notifications.email.username')}
-            </label>
-            <input
-              type="text"
-              value={config.emailUsername || ''}
-              onChange={e => updateConfig({ emailUsername: e.target.value })}
-              placeholder="username"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              {t('settings.notifications.email.password')}
-            </label>
-            <input
-              type="password"
-              value={config.emailPassword || ''}
-              onChange={e => updateConfig({ emailPassword: e.target.value })}
-              placeholder="password"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-        </div>
-
-        <button
-          onClick={handleTestEmail}
-          disabled={isLoading}
-          className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
-        >
-          {isLoading ? t('settings.notifications.email.testing') : t('settings.notifications.email.testNotification')}
-        </button>
-
-        {testResult && testResult.type === 'email' && (
-          <div
-            className={`flex items-start gap-2 p-3 rounded-lg ${
-              testResult.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'
-            }`}
-          >
-            {testResult.success ? (
-              <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-            ) : (
-              <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-            )}
-            <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
-              {testResult.message}
-            </p>
-          </div>
-        )}
-      </div>
+      <EmailNotificationSettings
+        config={config}
+        updateConfig={updateConfig}
+        testResult={testResult}
+        setTestResult={setTestResult}
+        testNotification={testNotification}
+        isLoading={isLoading}
+      />
 
       {/* Info Box */}
       <div className="mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
