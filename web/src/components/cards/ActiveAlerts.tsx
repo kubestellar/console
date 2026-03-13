@@ -126,7 +126,7 @@ export function ActiveAlerts() {
   const handleSendTestNotif = () => {
     try {
       new Notification('KubeStellar Console', {
-        body: 'Test notification — can you see this?', // TODO: i18n
+        body: t('activeAlerts.testNotificationBody'),
         icon: '/favicon.ico',
       })
     } catch {
@@ -296,7 +296,7 @@ export function ActiveAlerts() {
           {showNotifIndicator && notifVerifyState === 'idle' && (
             <button
               onClick={handleSendTestNotif}
-              title="Browser notifications not verified — click to test" // TODO: i18n
+              title={t('activeAlerts.notifNotVerified')}
               className="relative flex items-center p-1 rounded hover:bg-secondary/60 transition-colors"
             >
               <Bell className="w-3.5 h-3.5 text-muted-foreground" />
@@ -305,27 +305,25 @@ export function ActiveAlerts() {
           )}
           {notifVerifyState === 'asked' && (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {/* TODO: i18n */}
-              <span>Did you see it?</span>
+              <span>{t('activeAlerts.didYouSeeIt')}</span>
               <button
                 onClick={handleNotifYes}
                 className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors text-xs"
               >
-                Yes
+                {t('activeAlerts.yes')}
               </button>
               <button
                 onClick={handleNotifNo}
                 className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors text-xs"
               >
-                No
+                {t('activeAlerts.no')}
               </button>
             </span>
           )}
           {notifVerifyState === 'failed' && (
             <span className="flex items-center gap-1 text-xs text-amber-400">
               <Bell className="w-3 h-3" />
-              {/* TODO: i18n */}
-              <span>Check System Settings &rarr; Notifications &rarr; Chrome</span>
+              <span>{t('activeAlerts.checkSystemSettings')}</span>
             </span>
           )}
         </div>

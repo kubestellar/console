@@ -92,7 +92,7 @@ export function parseTimestamp(ts?: string): number {
 
 /** @internal Exported for testing */
 export function pct(value: number | undefined, total: number | undefined): number {
-  if (!value || !total || total === 0) return 0
+  if (value == null || total == null || total === 0) return 0
   return Math.round((value / total) * 100)
 }
 

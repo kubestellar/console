@@ -100,8 +100,7 @@ describe('pct', () => {
     expect(pct(1, 3)).toBe(33)
   })
 
-  it('returns 0 when value is 0 (known falsy behavior)', () => {
-    // TODO: pct(0, total) returns 0 due to falsy !value check — fix the guard to use value == null
+  it('returns 0 when value is 0', () => {
     expect(pct(0, 100)).toBe(0)
   })
 })

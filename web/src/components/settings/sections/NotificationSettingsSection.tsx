@@ -62,7 +62,7 @@ export function NotificationSettingsSection() {
   const handleSendBrowserTest = () => {
     try {
       new Notification('KubeStellar Console Test', {
-        body: 'If you see this, browser notifications are working!', // TODO: i18n
+        body: t('settings.notifications.browser.testBody'),
         requireInteraction: true,
         icon: '/favicon.ico',
       })
@@ -156,14 +156,12 @@ export function NotificationSettingsSection() {
       <div className="space-y-4 mb-6">
         <div className="flex items-center gap-2 pb-2 border-b border-border">
           <Globe className="w-4 h-4 text-foreground" />
-          {/* TODO: i18n */}
-          <h3 className="text-sm font-medium text-foreground">Browser Notifications</h3>
+          <h3 className="text-sm font-medium text-foreground">{t('settings.notifications.browser.title')}</h3>
         </div>
 
         {/* Permission status */}
         <div className="flex items-center gap-2">
-          {/* TODO: i18n */}
-          <span className="text-sm text-muted-foreground">Permission status:</span>
+          <span className="text-sm text-muted-foreground">{t('settings.notifications.browser.permissionStatus')}</span>
           <span
             className={`px-2 py-0.5 text-xs rounded-full border ${
               browserPermission === 'granted'
@@ -184,27 +182,25 @@ export function NotificationSettingsSection() {
                 onClick={handleSendBrowserTest}
                 className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
               >
-                {/* TODO: i18n */}
-                Send Test Notification
+                {t('settings.notifications.browser.sendTest')}
               </button>
             )}
 
             {browserNotifState === 'asked' && (
               <div className="space-y-2">
-                {/* TODO: i18n */}
-                <p className="text-sm text-muted-foreground">Did you see the notification?</p>
+                <p className="text-sm text-muted-foreground">{t('settings.notifications.browser.didYouSeeIt')}</p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleBrowserNotifYes}
                     className="px-3 py-1.5 text-sm rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors"
                   >
-                    Yes
+                    {t('settings.notifications.browser.yes')}
                   </button>
                   <button
                     onClick={handleBrowserNotifNo}
                     className="px-3 py-1.5 text-sm rounded-lg bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
                   >
-                    No
+                    {t('settings.notifications.browser.no')}
                   </button>
                 </div>
               </div>
@@ -213,9 +209,8 @@ export function NotificationSettingsSection() {
             {browserNotifState === 'verified' && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
                 <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                {/* TODO: i18n */}
                 <p className="text-sm text-green-400">
-                  Browser notifications verified and working.
+                  {t('settings.notifications.browser.verified')}
                 </p>
               </div>
             )}
@@ -224,17 +219,15 @@ export function NotificationSettingsSection() {
               <div className="space-y-2">
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <X className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                  {/* TODO: i18n */}
                   <p className="text-sm text-amber-400">
-                    Make sure notifications are enabled: System Settings &rarr; Notifications &rarr; Google Chrome &rarr; Allow Notifications
+                    {t('settings.notifications.browser.enableInstructions')}
                   </p>
                 </div>
                 <button
                   onClick={handleSendBrowserTest}
                   className="px-4 py-2 text-sm rounded-lg bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
                 >
-                  {/* TODO: i18n */}
-                  Try Again
+                  {t('settings.notifications.browser.tryAgain')}
                 </button>
               </div>
             )}
@@ -244,9 +237,8 @@ export function NotificationSettingsSection() {
             {browserPermission === 'denied' ? (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                 <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                {/* TODO: i18n */}
                 <p className="text-sm text-red-400">
-                  Browser notifications are blocked. Enable them in your browser&apos;s site settings for this page, then reload.
+                  {t('settings.notifications.browser.blocked')}
                 </p>
               </div>
             ) : (
@@ -254,8 +246,7 @@ export function NotificationSettingsSection() {
                 onClick={handleRequestPermission}
                 className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
               >
-                {/* TODO: i18n */}
-                Request Permission
+                {t('settings.notifications.browser.requestPermission')}
               </button>
             )}
           </div>

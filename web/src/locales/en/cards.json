@@ -2063,7 +2063,13 @@
     "allSystemsOperational": "All systems operational",
     "acknowledged": "Acknowledged",
     "acknowledge": "Acknowledge",
-    "viewDiagnosis": "View Diagnosis"
+    "viewDiagnosis": "View Diagnosis",
+    "testNotificationBody": "Test notification — can you see this?",
+    "notifNotVerified": "Browser notifications not verified — click to test",
+    "didYouSeeIt": "Did you see it?",
+    "yes": "Yes",
+    "no": "No",
+    "checkSystemSettings": "Check System Settings → Notifications → Chrome"
   },
   "alertRules": {
     "sortName": "Name",
@@ -2786,7 +2792,7 @@
     "topicStatus_active": "Active",
     "topicStatus_inactive": "Inactive",
     "topicStatus_error": "Error",
-    "topicPartitionsRf": "{{count}} partitions \u00b7 RF {{rf}}",
+    "topicPartitionsRf": "{{count}} partitions · RF {{rf}}",
     "groupStatus_ok": "OK",
     "groupStatus_warning": "Warning",
     "groupStatus_error": "Error",
@@ -2810,7 +2816,7 @@
     "pods": "Pods",
     "workflowSteps": "Workflow Steps",
     "completed": "Completed",
-    "searchPlaceholder": "Search applications\u2026",
+    "searchPlaceholder": "Search applications…",
     "noApplications": "Controller running",
     "noApplicationsHint": "Application data requires the OAM Application CRD.",
     "noSearchResults": "No applications match your search."

@@ -2048,7 +2048,13 @@
     "allSystemsOperational": "All systems operational",
     "acknowledged": "Acknowledged",
     "acknowledge": "Acknowledge",
-    "viewDiagnosis": "View Diagnosis"
+    "viewDiagnosis": "View Diagnosis",
+    "testNotificationBody": "Test notification — can you see this?",
+    "notifNotVerified": "Browser notifications not verified — click to test",
+    "didYouSeeIt": "Did you see it?",
+    "yes": "Yes",
+    "no": "No",
+    "checkSystemSettings": "Check System Settings → Notifications → Chrome"
   },
   "alertRules": {
     "sortName": "Name",

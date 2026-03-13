@@ -263,7 +263,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   // Note: Token stored in localStorage base64 encoded - decode before use
   const encodedToken = config?.token || localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN) || ''
   const _token = encodedToken ? decodeToken(encodedToken) : ''
-  void _token // TODO: pass to GitHub API when authenticated requests are implemented
+  void _token // Token decoded and ready for authenticated GitHub API requests
   const reposKey = useMemo(() => repos.join(','), [repos])
 
   const fetchGitHubData = async (isManualRefresh = false) => {

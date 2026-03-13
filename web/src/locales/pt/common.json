@@ -357,7 +357,21 @@
         "testSuccess": "Test email sent successfully!",
         "testFailed": "Failed to send test email"
       },
-      "tip": "Configure notification channels here, then add them to specific alert rules in the Alert Rules editor. Each rule can have multiple notification channels with different configurations."
+      "tip": "Configure notification channels here, then add them to specific alert rules in the Alert Rules editor. Each rule can have multiple notification channels with different configurations.",
+      "browser": {
+        "title": "Browser Notifications",
+        "permissionStatus": "Permission status:",
+        "testBody": "If you see this, browser notifications are working!",
+        "sendTest": "Send Test Notification",
+        "didYouSeeIt": "Did you see the notification?",
+        "yes": "Yes",
+        "no": "No",
+        "verified": "Browser notifications verified and working.",
+        "enableInstructions": "Make sure notifications are enabled: System Settings → Notifications → Google Chrome → Allow Notifications",
+        "tryAgain": "Try Again",
+        "blocked": "Browser notifications are blocked. Enable them in your browser's site settings for this page, then reload.",
+        "requestPermission": "Request Permission"
+      }
     },
     "persistence": {
       "title": "Deploy Persistence",
