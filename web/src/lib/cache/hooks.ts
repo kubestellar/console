@@ -403,9 +403,10 @@ export function useTrendHistory<T extends TrendPoint>({
     maxAge,
   })
 
-  // Keep a ref to the latest history to avoid stale closures in addPoint.
-  // Without this, rapid calls to addPoint capture the same stale `history`
-  // array, causing earlier points to be overwritten.
+  // historyRef is the source of truth for rapid addPoint calls.
+  // We update it immediately inside addPoint so that successive calls
+  // (before React re-renders) each see the previous call's result.
+  // The render-time sync below picks up external changes (e.g. initial load).
   const historyRef = useRef(history)
   historyRef.current = history
 
@@ -424,6 +425,11 @@ export function useTrendHistory<T extends TrendPoint>({
 
     // Add new point and trim to maxPoints
     const newHistory = [...currentHistory, point].slice(-maxPoints)
+
+    // Update ref immediately so the next addPoint call (even before
+    // React re-renders) sees this result instead of the stale array.
+    historyRef.current = newHistory
+
     await save(newHistory)
   }, [maxPoints, save])
 
