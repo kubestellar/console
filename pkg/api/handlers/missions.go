@@ -18,6 +18,16 @@ const (
 	missionsAPITimeout   = 30 * time.Second
 	missionsMaxBodyBytes = 10 * 1024 * 1024 // 10MB
 	missionsMaxPathLen   = 512              // max length for path/ref parameters
+
+	// forkHeadSHAMaxRetries is the number of attempts to resolve the fork's HEAD SHA
+	// after fork creation, since GitHub may not have the ref ready immediately.
+	forkHeadSHAMaxRetries = 5
+	// forkHeadSHAInitialBackoff is the initial delay before the first retry when
+	// polling for the fork's HEAD SHA.
+	forkHeadSHAInitialBackoff = 1 * time.Second
+	// forkHeadSHABackoffMultiplier is the factor by which the backoff delay increases
+	// on each retry attempt.
+	forkHeadSHABackoffMultiplier = 2
 )
 
 // sanitizePath validates and sanitizes a file path parameter.
@@ -394,28 +404,50 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		return c.Status(502).JSON(fiber.Map{"error": "fork response missing full_name"})
 	}
 
-	// Step 2: Get HEAD SHA from fork's main branch, then create new branch ref
+	// Step 2: Get HEAD SHA from fork's main branch, then create new branch ref.
+	// After fork creation, GitHub may not have the ref ready immediately (#2382).
+	// Retry with exponential backoff to handle this race condition.
 	mainRefURL := fmt.Sprintf("%s/repos/%s/git/ref/heads/main", h.githubAPIURL, forkFullName)
-	mainRefReq, err := http.NewRequest("GET", mainRefURL, nil)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to build ref request"})
-	}
-	mainRefReq.Header.Set("Authorization", "Bearer "+token)
-	mainRefReq.Header.Set("Accept", "application/vnd.github.v3+json")
-	mainRefResp, err := h.httpClient.Do(mainRefReq)
-	if err != nil {
-		return c.Status(502).JSON(fiber.Map{"error": "failed to get main branch ref"})
-	}
-	defer mainRefResp.Body.Close()
+	var headSHA string
+	backoff := forkHeadSHAInitialBackoff
+	for attempt := 0; attempt < forkHeadSHAMaxRetries; attempt++ {
+		mainRefReq, err := http.NewRequest("GET", mainRefURL, nil)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "failed to build ref request"})
+		}
+		mainRefReq.Header.Set("Authorization", "Bearer "+token)
+		mainRefReq.Header.Set("Accept", "application/vnd.github.v3+json")
+		mainRefResp, err := h.httpClient.Do(mainRefReq)
+		if err != nil {
+			return c.Status(502).JSON(fiber.Map{"error": "failed to get main branch ref"})
+		}
 
-	var refData map[string]interface{}
-	if err := json.NewDecoder(mainRefResp.Body).Decode(&refData); err != nil {
-		return c.Status(502).JSON(fiber.Map{"error": "failed to decode ref response"})
+		var refData map[string]interface{}
+		decodeErr := json.NewDecoder(mainRefResp.Body).Decode(&refData)
+		mainRefResp.Body.Close()
+		if decodeErr != nil {
+			return c.Status(502).JSON(fiber.Map{"error": "failed to decode ref response"})
+		}
+
+		if mainRefResp.StatusCode == http.StatusOK {
+			obj, _ := refData["object"].(map[string]interface{})
+			sha, _ := obj["sha"].(string)
+			if sha != "" {
+				headSHA = sha
+				break
+			}
+		}
+
+		// If this is not the last attempt, wait before retrying
+		if attempt < forkHeadSHAMaxRetries-1 {
+			log.Printf("[missions] Fork HEAD SHA not yet available (attempt %d/%d, status %d) — retrying in %v",
+				attempt+1, forkHeadSHAMaxRetries, mainRefResp.StatusCode, backoff)
+			time.Sleep(backoff)
+			backoff *= forkHeadSHABackoffMultiplier
+		}
 	}
-	obj, _ := refData["object"].(map[string]interface{})
-	headSHA, _ := obj["sha"].(string)
 	if headSHA == "" {
-		return c.Status(502).JSON(fiber.Map{"error": "could not resolve HEAD SHA for main branch"})
+		return c.Status(502).JSON(fiber.Map{"error": "could not resolve HEAD SHA for fork's main branch after retries"})
 	}
 
 	refURL := fmt.Sprintf("%s/repos/%s/git/refs", h.githubAPIURL, forkFullName)
@@ -432,7 +464,17 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	refReq.Header.Set("Authorization", "Bearer "+token)
 	refReq.Header.Set("Accept", "application/vnd.github.v3+json")
-	h.httpClient.Do(refReq) //nolint:errcheck // best-effort
+	branchResp, err := h.httpClient.Do(refReq)
+	if err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": "failed to create branch ref"})
+	}
+	defer branchResp.Body.Close()
+	if branchResp.StatusCode < 200 || branchResp.StatusCode >= 300 {
+		// 422 (Unprocessable Entity) means the branch already exists, which is acceptable
+		if branchResp.StatusCode != http.StatusUnprocessableEntity {
+			return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub branch creation failed with status %d", branchResp.StatusCode)})
+		}
+	}
 
 	// Step 3: Create/update file (commit)
 	fileURL := fmt.Sprintf("%s/repos/%s/contents/%s", h.githubAPIURL, forkFullName, req.FilePath)
@@ -455,6 +497,21 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		return c.Status(502).JSON(fiber.Map{"error": "failed to commit file"})
 	}
 	defer fileResp.Body.Close()
+
+	// Validate commit response status (#2384) and content (#2381)
+	if fileResp.StatusCode < 200 || fileResp.StatusCode >= 300 {
+		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub commit failed with status %d", fileResp.StatusCode)})
+	}
+	var commitData map[string]interface{}
+	if err := json.NewDecoder(fileResp.Body).Decode(&commitData); err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": "failed to decode commit response"})
+	}
+	// The GitHub Contents API returns a "content" object with "sha" on success
+	commitContent, _ := commitData["content"].(map[string]interface{})
+	commitSHA, _ := commitContent["sha"].(string)
+	if commitSHA == "" {
+		return c.Status(502).JSON(fiber.Map{"error": "GitHub commit response missing expected content SHA"})
+	}
 
 	// Step 4: Create PR
 	prURL := fmt.Sprintf("%s/repos/%s/pulls", h.githubAPIURL, req.Repo)
@@ -479,9 +536,18 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	defer prResp.Body.Close()
 
+	// Validate PR creation response (#2384)
+	if prResp.StatusCode < 200 || prResp.StatusCode >= 300 {
+		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub PR creation failed with status %d", prResp.StatusCode)})
+	}
 	var prData map[string]interface{}
-	json.NewDecoder(prResp.Body).Decode(&prData)
+	if err := json.NewDecoder(prResp.Body).Decode(&prData); err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": "failed to decode PR response"})
+	}
 	prHTMLURL, _ := prData["html_url"].(string)
+	if prHTMLURL == "" {
+		return c.Status(502).JSON(fiber.Map{"error": "GitHub PR response missing html_url"})
+	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
