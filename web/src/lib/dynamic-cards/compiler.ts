@@ -4,6 +4,20 @@ import type { CardComponentProps } from '../../components/cards/cardRegistry'
 import { getDynamicScope } from './scope'
 
 /**
+ * Browser globals that must be shadowed inside the dynamic card sandbox.
+ * Each is bound to `undefined` so card code cannot reach the real objects.
+ */
+const BLOCKED_GLOBALS = [
+  'window', 'document', 'globalThis', 'self', 'top', 'parent', 'frames',
+  'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource',
+  'eval', 'Function', 'importScripts',
+  'localStorage', 'sessionStorage', 'indexedDB', 'caches',
+  'navigator', 'location', 'history',
+  'setTimeout', 'setInterval', 'requestAnimationFrame',
+  'postMessage', 'crypto',
+] as const
+
+/**
  * Compile TSX source code to JavaScript using Sucrase.
  * Sucrase is loaded dynamically to avoid bloating the main bundle.
  */
@@ -27,11 +41,18 @@ export async function compileCardCode(tsx: string): Promise<CompileResult> {
 
 /**
  * Create a React component from compiled JavaScript code.
- * The code runs in a sandboxed scope with whitelisted libraries.
+ * The code runs in a hardened sandbox:
+ * 1. Whitelisted scope — only approved libraries are injected
+ * 2. Dangerous globals (window, document, fetch, etc.) are shadowed with undefined
+ * 3. The scope object is frozen to prevent prototype pollution
  */
 export function createCardComponent(compiledCode: string): DynamicComponentResult {
   try {
     const scope = getDynamicScope()
+
+    // Freeze each scope value that is an object to prevent prototype pollution
+    // (shallow freeze — we freeze the scope map itself, not deep internals of React)
+    Object.freeze(scope)
 
     // Build the module wrapper
     // The compiled code should export a default component function
@@ -43,11 +64,19 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
       return module.exports.default || module.exports;
     `
 
-    // Create function with scope variables
-    const scopeKeys = Object.keys(scope)
-    const scopeValues = scopeKeys.map(k => scope[k])
+    // Merge whitelisted scope with blocked globals (blocked = undefined)
+    const blockedEntries: Record<string, undefined> = {}
+    for (const name of BLOCKED_GLOBALS) {
+      // Only block if not already in the whitelist (e.g. if we ever expose a safe subset)
+      if (!(name in scope)) {
+        blockedEntries[name] = undefined
+      }
+    }
 
-     
+    const fullScope = { ...blockedEntries, ...scope }
+    const scopeKeys = Object.keys(fullScope)
+    const scopeValues = scopeKeys.map(k => fullScope[k])
+
     const factory = new Function(...scopeKeys, moduleCode)
     const component = factory(...scopeValues) as ComponentType<CardComponentProps>
 
