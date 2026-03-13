@@ -49,51 +49,8 @@ done
 # ============================================================================
 
 if ! command -v rg &> /dev/null; then
-  echo "WARNING: ripgrep (rg) not found — falling back to grep -rn"
-  # shellcheck disable=SC2317
-  rg() {
-    local args=()
-    local pattern=""
-    local paths=()
-    local line_numbers=""
-    local files_only=""
-    local quiet=""
-    local skip_next=""
-
-    for arg in "$@"; do
-      if [ -n "$skip_next" ]; then
-        skip_next=""
-        continue
-      fi
-      case "$arg" in
-        -n) line_numbers="-n" ;;
-        -l) files_only="1" ;;
-        -q) quiet="1" ;;
-        --glob) skip_next="1" ;;
-        --glob=*) ;; # skip glob flags (grep doesn't support them the same way)
-        -*) ;; # skip other rg-specific flags
-        *)
-          if [ -z "$pattern" ]; then
-            pattern="$arg"
-          else
-            paths+=("$arg")
-          fi
-          ;;
-      esac
-    done
-
-    if [ ${#paths[@]} -eq 0 ]; then
-      paths=(".")
-    fi
-
-    if [ -n "$quiet" ]; then
-      grep -rqE "$pattern" "${paths[@]}" 2>/dev/null
-    elif [ -n "$files_only" ]; then
-      grep -rlE "$pattern" "${paths[@]}" 2>/dev/null
-    else
-      grep -rnE ${line_numbers:+} "$pattern" "${paths[@]}" 2>/dev/null
-    fi
-  }
+  echo "ERROR: ripgrep (rg) is required but not found. Install with: brew install ripgrep"
+  exit 1
 fi
 
 # ============================================================================

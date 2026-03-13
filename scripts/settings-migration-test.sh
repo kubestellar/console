@@ -61,12 +61,8 @@ CRYPTO_OUTPUT="$TMPDIR_SM/crypto-tests.txt"
 CRYPTO_EXIT=0
 go test ./pkg/settings/... -run "TestEncryptDecrypt|TestDecrypt|TestEnsureKeyFile|TestKeyFingerprint" -v -timeout 30s > "$CRYPTO_OUTPUT" 2>&1 || CRYPTO_EXIT=$?
 
-CRYPTO_PASSED=$(grep -c "^--- PASS:" "$CRYPTO_OUTPUT" 2>/dev/null || true)
-CRYPTO_PASSED="${CRYPTO_PASSED:-0}"
-CRYPTO_PASSED=$(echo "$CRYPTO_PASSED" | tr -d '[:space:]')
-CRYPTO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$CRYPTO_OUTPUT" 2>/dev/null || true)
-CRYPTO_FAILED_COUNT="${CRYPTO_FAILED_COUNT:-0}"
-CRYPTO_FAILED_COUNT=$(echo "$CRYPTO_FAILED_COUNT" | tr -d '[:space:]')
+CRYPTO_PASSED=$(grep -c "^--- PASS:" "$CRYPTO_OUTPUT" 2>/dev/null || echo "0")
+CRYPTO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$CRYPTO_OUTPUT" 2>/dev/null || echo "0")
 
 TOTAL=$((TOTAL + 1))
 if [ "$CRYPTO_EXIT" -eq 0 ]; then
@@ -92,12 +88,8 @@ HANDLER_OUTPUT="$TMPDIR_SM/handler-tests.txt"
 HANDLER_EXIT=0
 go test ./pkg/api/handlers/... -run "TestGetSettings|TestSaveSettings|TestExportImport|TestSettingsFileError" -v -timeout 30s > "$HANDLER_OUTPUT" 2>&1 || HANDLER_EXIT=$?
 
-HANDLER_PASSED=$(grep -c "^--- PASS:" "$HANDLER_OUTPUT" 2>/dev/null || true)
-HANDLER_PASSED="${HANDLER_PASSED:-0}"
-HANDLER_PASSED=$(echo "$HANDLER_PASSED" | tr -d '[:space:]')
-HANDLER_FAILED_COUNT=$(grep -c "^--- FAIL:" "$HANDLER_OUTPUT" 2>/dev/null || true)
-HANDLER_FAILED_COUNT="${HANDLER_FAILED_COUNT:-0}"
-HANDLER_FAILED_COUNT=$(echo "$HANDLER_FAILED_COUNT" | tr -d '[:space:]')
+HANDLER_PASSED=$(grep -c "^--- PASS:" "$HANDLER_OUTPUT" 2>/dev/null || echo "0")
+HANDLER_FAILED_COUNT=$(grep -c "^--- FAIL:" "$HANDLER_OUTPUT" 2>/dev/null || echo "0")
 
 TOTAL=$((TOTAL + 1))
 if [ "$HANDLER_EXIT" -eq 0 ]; then

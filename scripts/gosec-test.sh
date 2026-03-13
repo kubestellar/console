@@ -68,7 +68,8 @@ echo ""
 # Taint-analysis rules (G702-G704) produce false positives in admin CLI tools
 # that intentionally operate on user-specified paths/URLs/commands.
 # G101 flags k8s type constants like "kubernetes.io/service-account-token" as hardcoded creds.
-GOSEC_EXCLUDE="G101,G702,G703,G704"
+# G407 flags AES-GCM nonce generation — our nonce IS random (crypto/rand.Read), not hardcoded.
+GOSEC_EXCLUDE="G101,G407,G702,G703,G704"
 
 # Run gosec with JSON output; gosec exits non-zero on findings, so we capture the exit code
 GOSEC_EXIT=0
