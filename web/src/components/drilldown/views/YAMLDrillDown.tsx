@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Copy, Check, Download, RefreshCw } from 'lucide-react'
+import { Copy, Check, Download, RefreshCw, Server, Layers } from 'lucide-react'
 import { api } from '../../../lib/api'
 import { useToast } from '../../ui/Toast'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { emitDataExported } from '../../../lib/analytics'
@@ -17,6 +19,8 @@ export function YAMLDrillDown({ data }: Props) {
   const namespace = data.namespace as string
   const resourceType = data.resourceType as string
   const resourceName = data.resourceName as string
+  const { drillToCluster, drillToNamespace } = useDrillDownActions()
+  const clusterShort = cluster.split('/').pop() || cluster
 
   const [yaml, setYAML] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
@@ -89,6 +93,28 @@ export function YAMLDrillDown({ data }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Contextual Navigation */}
+      <div className="flex items-center gap-6 text-sm">
+        {namespace && (
+          <button
+            onClick={() => drillToNamespace(cluster, namespace)}
+            className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+          >
+            <Layers className="w-4 h-4 text-purple-400" />
+            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
+            <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
+          </button>
+        )}
+        <button
+          onClick={() => drillToCluster(cluster)}
+          className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+        >
+          <Server className="w-4 h-4 text-blue-400" />
+          <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+          <ClusterBadge cluster={clusterShort} size="sm" />
+        </button>
+      </div>
+
       {/* Resource Info */}
       <div className="flex items-center justify-between">
         <div>
@@ -96,7 +122,7 @@ export function YAMLDrillDown({ data }: Props) {
             {resourceType}/{resourceName}
           </h3>
           <p className="text-sm text-muted-foreground">
-            {namespace} - {cluster.split('/').pop()}
+            {namespace} - {clusterShort}
           </p>
         </div>
         <div className="flex items-center gap-2">

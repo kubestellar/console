@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Server, Layers, Box } from 'lucide-react'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -7,9 +9,13 @@ interface Props {
 }
 
 export function LogsDrillDown({ data }: Props) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
+  const cluster = data.cluster as string
+  const namespace = data.namespace as string
   const pod = data.pod as string
   const container = data.container as string | undefined
+  const { drillToCluster, drillToNamespace, drillToPod } = useDrillDownActions()
+  const clusterShort = cluster?.split('/').pop() || cluster
   const [tailLines, setTailLines] = useState(100)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +62,40 @@ Connect to kubestellar-ops MCP server to fetch real logs.`
 
   return (
     <div className="space-y-4">
+      {/* Contextual Navigation */}
+      {cluster && (
+        <div className="flex items-center gap-6 text-sm">
+          {pod && (
+            <button
+              onClick={() => drillToPod(cluster, namespace, pod)}
+              className="flex items-center gap-2 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+            >
+              <Box className="w-4 h-4 text-cyan-400" />
+              <span className="text-muted-foreground">{t('drilldown.fields.pod')}</span>
+              <span className="font-mono text-cyan-400 group-hover:text-cyan-300 transition-colors">{pod}</span>
+            </button>
+          )}
+          {namespace && (
+            <button
+              onClick={() => drillToNamespace(cluster, namespace)}
+              className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+            >
+              <Layers className="w-4 h-4 text-purple-400" />
+              <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
+              <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
+            </button>
+          )}
+          <button
+            onClick={() => drillToCluster(cluster)}
+            className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+          >
+            <Server className="w-4 h-4 text-blue-400" />
+            <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+            <ClusterBadge cluster={clusterShort} size="sm" />
+          </button>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

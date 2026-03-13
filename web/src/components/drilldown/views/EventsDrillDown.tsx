@@ -1,7 +1,9 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
-import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle } from 'lucide-react'
+import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle, Server, Layers } from 'lucide-react'
 import { StatusIndicator } from '../../charts/StatusIndicator'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { getDemoMode } from '../../../hooks/useDemoMode'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POLL_INTERVAL_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -54,6 +56,7 @@ export function EventsDrillDown({ data }: Props) {
   const namespace = data.namespace as string | undefined
   const objectName = data.objectName as string | undefined
   const clusterShort = cluster.split('/').pop() || cluster
+  const { drillToCluster, drillToNamespace } = useDrillDownActions()
 
   const [events, setEvents] = useState<ClusterEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -196,6 +199,28 @@ export function EventsDrillDown({ data }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Contextual Navigation */}
+      <div className="flex items-center gap-6 text-sm">
+        {namespace && (
+          <button
+            onClick={() => drillToNamespace(cluster, namespace)}
+            className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+          >
+            <Layers className="w-4 h-4 text-purple-400" />
+            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
+            <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
+          </button>
+        )}
+        <button
+          onClick={() => drillToCluster(cluster)}
+          className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+        >
+          <Server className="w-4 h-4 text-blue-400" />
+          <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+          <ClusterBadge cluster={clusterShort} size="sm" />
+        </button>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="p-4 rounded-lg bg-card/50 border border-border">

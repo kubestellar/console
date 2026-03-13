@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { Box, ChevronRight } from 'lucide-react'
+import { Box, ChevronRight, Server } from 'lucide-react'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useAllPods } from '../../../hooks/useMCP'
 import { Gauge } from '../../charts/Gauge'
 import { StatusIndicator, type Status } from '../../charts/StatusIndicator'
@@ -37,7 +38,8 @@ export function GPUNodeDrillDown({ data }: Props) {
   const gpuType = data.gpuType as string
   const gpuCount = (data.gpuCount as number) || 0
   const gpuAllocated = (data.gpuAllocated as number) || 0
-  const { drillToEvents, drillToPod } = useDrillDownActions()
+  const { drillToEvents, drillToPod, drillToCluster } = useDrillDownActions()
+  const clusterShort = cluster.split('/').pop() || cluster
 
   const utilizationPercent = gpuCount > 0 ? Math.round((gpuAllocated / gpuCount) * 100) : 0
 
@@ -55,6 +57,18 @@ export function GPUNodeDrillDown({ data }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Contextual Navigation */}
+      <div className="flex items-center gap-6 text-sm">
+        <button
+          onClick={() => drillToCluster(cluster)}
+          className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+        >
+          <Server className="w-4 h-4 text-blue-400" />
+          <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+          <ClusterBadge cluster={clusterShort} size="sm" />
+        </button>
+      </div>
+
       {/* GPU Status */}
       <div className="p-6 rounded-lg bg-card/50 border border-border">
         <div className="flex items-center justify-between">

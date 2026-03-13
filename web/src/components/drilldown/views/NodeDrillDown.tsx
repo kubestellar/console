@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink } from 'lucide-react'
+import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink, Server } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useMissions } from '../../../hooks/useMissions'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -18,7 +19,7 @@ export function NodeDrillDown({ data }: Props) {
   const issue = data.issue as string | undefined
   const roles = data.roles as string[] | undefined
 
-  const { drillToEvents } = useDrillDownActions()
+  const { drillToEvents, drillToCluster } = useDrillDownActions()
   const { close: closeDialog } = useDrillDown()
   const { startMission } = useMissions()
   const [copied, setCopied] = useState<string | null>(null)
@@ -67,6 +68,18 @@ Start by checking node events and conditions.`,
 
   return (
     <div className="space-y-6">
+      {/* Contextual Navigation */}
+      <div className="flex items-center gap-6 text-sm">
+        <button
+          onClick={() => drillToCluster(cluster)}
+          className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+        >
+          <Server className="w-4 h-4 text-blue-400" />
+          <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+          <ClusterBadge cluster={clusterShort} size="sm" />
+        </button>
+      </div>
+
       {/* Status Banner for Offline Nodes */}
       {isOffline && (
         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">

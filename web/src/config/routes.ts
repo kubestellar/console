@@ -55,8 +55,11 @@ export const ROUTES = {
   ARCADE: '/arcade',
   DEPLOY: '/deploy',
   AI_ML: '/ai-ml',
+  AI_AGENTS: '/ai-agents',
   CI_CD: '/ci-cd',
-  
+  LLM_D_BENCHMARKS: '/llm-d-benchmarks',
+  INSIGHTS: '/insights',
+
   // Persona dashboards
   CLUSTER_ADMIN: '/cluster-admin',
 
@@ -70,9 +73,23 @@ export const ROUTES = {
   // Widget
   WIDGET: '/widget',
 
+  // Feedback / issue shortcuts
+  ISSUE: '/issue',
+  ISSUES: '/issues',
+  FEEDBACK: '/feedback',
+  FEATURE: '/feature',
+  FEATURES: '/features',
+
   // Marketing / competitive landing pages
   FROM_LENS: '/from-lens',
   FROM_HEADLAMP: '/from-headlamp',
+
+  // Dev / test routes
+  TEST_UNIFIED_CARD: '/test/unified-card',
+  TEST_UNIFIED_STATS: '/test/unified-stats',
+  TEST_UNIFIED_DASHBOARD: '/test/unified-dashboard',
+  PERF_ALL_CARDS: '/__perf/all-cards',
+  PERF_COMPLIANCE: '/__compliance/all-cards',
 } as const
 
 /**

@@ -1795,7 +1795,8 @@
       "suspend": "Suspend:",
       "revisionHistory": "Revision History Limit:",
       "minReadySeconds": "Min Ready Seconds:",
-      "progressDeadline": "Progress Deadline:"
+      "progressDeadline": "Progress Deadline:",
+      "pod": "Pod:"
     },
     "status": {
       "fetchingEvents": "Fetching events...",
