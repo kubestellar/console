@@ -216,8 +216,8 @@ describe('getLatestForChannel', () => {
 // Cache behaviour
 // ---------------------------------------------------------------------------
 
-/** Subset of the GitHub API URL used to identify calls to the releases endpoint */
-const RELEASES_API_PATH = 'api.github.com/repos/kubestellar/console/releases'
+/** Subset of the proxy URL used to identify calls to the releases endpoint */
+const RELEASES_API_PATH = '/api/github/repos/kubestellar/console/releases'
 
 /** Returns true when a fetch mock call is targeting the GitHub releases endpoint */
 function isReleasesApiCall(call: unknown[]): boolean {
