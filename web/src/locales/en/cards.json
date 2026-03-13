@@ -2814,5 +2814,25 @@
     "noApplications": "Controller running",
     "noApplicationsHint": "Application data requires the OAM Application CRD.",
     "noSearchResults": "No applications match your search."
+  },
+  "openFeature": {
+    "syncedJustNow": "Synced just now",
+    "syncedMinutesAgo": "Synced {{count}} min ago",
+    "syncedHoursAgo": "Synced {{count}}h ago",
+    "syncedDaysAgo": "Synced {{count}}d ago",
+    "fetchError": "Failed to fetch OpenFeature status",
+    "notInstalled": "Not installed",
+    "notInstalledHint": "OpenFeature operator not detected in any cluster.",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "unhealthy": "Unhealthy",
+    "providers": "Providers",
+    "flags": "Flags",
+    "evaluations": "Evaluations",
+    "providerStatus": "Provider Status",
+    "evals": "evals",
+    "cache": "cache",
+    "highErrorRate": "High error rate: {{rate}}%",
+    "learnMore": "Learn more about OpenFeature"
   }
 }

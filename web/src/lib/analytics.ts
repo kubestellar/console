@@ -1689,3 +1689,27 @@ export function emitFromLensTabSwitch(tab: string) {
 export function emitFromLensCommandCopy(tab: string, step: number, command: string) {
   send('ksc_from_lens_command_copy', { tab, step, command })
 }
+
+/* ------------------------------------------------------------------ */
+/*  /from-headlamp competitive landing page                           */
+/* ------------------------------------------------------------------ */
+
+/** Fired once when /from-headlamp is rendered */
+export function emitFromHeadlampViewed() {
+  send('ksc_from_headlamp_viewed')
+}
+
+/** Fired on CTA button clicks (hero_try_demo, hero_view_github, footer_try_demo, footer_view_github) */
+export function emitFromHeadlampActioned(action: string) {
+  send('ksc_from_headlamp_actioned', { action })
+}
+
+/** Fired when switching deployment tabs (localhost, cluster-portforward, cluster-ingress) */
+export function emitFromHeadlampTabSwitch(tab: string) {
+  send('ksc_from_headlamp_tab_switch', { tab })
+}
+
+/** Fired when a user copies an install command from the /from-headlamp page */
+export function emitFromHeadlampCommandCopy(tab: string, step: number, command: string) {
+  send('ksc_from_headlamp_command_copy', { tab, step, command })
+}

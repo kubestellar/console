@@ -72,6 +72,7 @@ export const ROUTES = {
 
   // Marketing / competitive landing pages
   FROM_LENS: '/from-lens',
+  FROM_HEADLAMP: '/from-headlamp',
 } as const
 
 /**
