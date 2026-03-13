@@ -60,14 +60,13 @@ jobs:
           SEMGREP_VERSION: '1.102.0'
           GOSEC_VERSION: 'v2.21.4'
           GOVULNCHECK_VERSION: 'v1.1.4'
-          GO_LICENSES_VERSION: 'v1.6.0'
         run: |
           # Go security tools (pinned to avoid breakage from upstream changes)
           go install "github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}"
           go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
-          # go-licenses install is best-effort — the license-compliance-test script
-          # has a fallback path using 'go list -m -json' when the binary is absent.
-          go install "github.com/google/go-licenses@${GO_LICENSES_VERSION}" || echo "Warning: go-licenses install failed — license test will use fallback"
+          # NOTE: go-licenses is intentionally omitted — its gopkg.in/src-d/go-git.v4
+          # dependency tree fails to compile (exit code 8) and kills the entire step.
+          # The license-compliance-test script has a fallback using 'go list -m -json'.
 
           # Secret scanning (pinned version)
           wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
