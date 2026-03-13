@@ -1,3 +1,5 @@
+> **Adding or modifying a card/dashboard?** Read the [Card Development Guide](.github/CARD_DEVELOPMENT_GUIDE.md) first — it covers required patterns, common pitfalls, and the full file checklist.
+
 ### 📌 Fixes
 
 Fixes #<issue-number> (Use "Fixes", "Closes", or "Resolves" for automatic closing)
