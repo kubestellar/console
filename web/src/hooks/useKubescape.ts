@@ -228,7 +228,7 @@ export function useKubescape() {
           const data = JSON.parse(scanResult.output)
           const items = (data.items || []) as ConfigScanSummaryResource[]
 
-          for (const item of items) {
+          for (const item of (items || [])) {
             const sevs = item.spec?.severities || {}
             const itemFails = (sevs.critical || 0) + (sevs.high || 0) + (sevs.medium || 0) + (sevs.low || 0)
             failedControls += itemFails
@@ -251,7 +251,7 @@ export function useKubescape() {
           const items = (data.items || []) as WorkloadConfigScanResource[]
 
           // Aggregate control results with names
-          for (const item of items) {
+          for (const item of (items || [])) {
             for (const [controlId, control] of Object.entries(item.spec?.controls || {})) {
               if (!controlResults.has(controlId)) {
                 controlResults.set(controlId, { name: control.name || controlId, passed: 0, failed: 0 })
@@ -360,7 +360,7 @@ export function useKubescape() {
         ? clusters
         : ['us-east-1', 'eu-central-1', 'us-west-2']
       const demoStatuses: Record<string, KubescapeClusterStatus> = {}
-      for (const name of demoNames) {
+      for (const name of (demoNames || [])) {
         demoStatuses[name] = getDemoStatus(name)
       }
       setStatuses(demoStatuses)

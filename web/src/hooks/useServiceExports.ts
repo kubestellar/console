@@ -115,7 +115,7 @@ function getDemoServiceExports(clusterNames: string[]): ServiceExport[] {
     { name: 'legacy-backend', namespace: 'legacy', status: 'Failed' as const, message: 'Service not found in cluster' },
   ]
 
-  for (const cluster of names) {
+  for (const cluster of (names || [])) {
     const hash = cluster.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
     const count = 2 + (hash % 4) // 2-5 exports per cluster
     const others = names.filter(n => n !== cluster)

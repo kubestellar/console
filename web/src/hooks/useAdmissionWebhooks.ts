@@ -112,7 +112,7 @@ function getDemoWebhooks(clusterNames: string[]): WebhookData[] {
     { name: 'vault-agent-injector', type: 'mutating', failurePolicy: 'Ignore', matchPolicy: 'Exact', rules: 1 },
   ]
 
-  for (const cluster of names) {
+  for (const cluster of (names || [])) {
     const hash = cluster.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
     const count = 2 + (hash % 4) // 2-5 webhooks per cluster
     for (let i = 0; i < count && i < templates.length; i++) {

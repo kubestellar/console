@@ -381,7 +381,7 @@ export function useKyverno() {
         ? clusters
         : ['us-east-1', 'eu-central-1', 'us-west-2']
       const demoStatuses: Record<string, KyvernoClusterStatus> = {}
-      for (const name of demoNames) {
+      for (const name of (demoNames || [])) {
         demoStatuses[name] = getDemoStatus(name)
       }
       setStatuses(demoStatuses)

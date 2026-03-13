@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // ============================================================================
 // Types
@@ -72,6 +73,7 @@ export function useHelmActions(): UseHelmActionsResult {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       const data = await response.json()

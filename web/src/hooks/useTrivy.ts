@@ -213,7 +213,7 @@ export function useTrivy() {
           const items = (data.items || []) as VulnerabilityReportResource[]
           totalReports = items.length
 
-          for (const item of items) {
+          for (const item of (items || [])) {
             const repo = item.report?.artifact?.repository || ''
             const tag = item.report?.artifact?.tag || 'latest'
             const ns = item.metadata?.namespace || 'default'
@@ -293,7 +293,7 @@ export function useTrivy() {
         ? clusters
         : ['us-east-1', 'eu-central-1', 'us-west-2']
       const demoStatuses: Record<string, TrivyClusterStatus> = {}
-      for (const name of demoNames) {
+      for (const name of (demoNames || [])) {
         demoStatuses[name] = getDemoStatus(name)
       }
       setStatuses(demoStatuses)

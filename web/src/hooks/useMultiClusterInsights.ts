@@ -93,7 +93,7 @@ function detectEventCorrelations(events: ClusterEvent[]): MultiClusterInsight[] 
   // Group events into time windows
   const windows = new Map<number, Map<string, ClusterEvent[]>>()
 
-  for (const event of warnings) {
+  for (const event of (warnings || [])) {
     const ts = parseTimestamp(event.lastSeen)
     if (ts === 0) continue
     const bucket = Math.floor(ts / EVENT_CORRELATION_WINDOW_MS) * EVENT_CORRELATION_WINDOW_MS
@@ -344,7 +344,7 @@ function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterInsight[]
 
   if (overloaded.length > 0 || underloaded.length > 0) {
     const metrics: Record<string, number> = {}
-    for (const c of cpuPcts) metrics[c.name] = c.pct
+    for (const c of (cpuPcts || [])) metrics[c.name] = c.pct
 
     const parts: string[] = []
     if (overloaded.length > 0) {
@@ -382,7 +382,7 @@ function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterInsight[]
 
     if (memOverloaded.length > 0 || memUnderloaded.length > 0) {
       const metrics: Record<string, number> = {}
-      for (const c of memPcts) metrics[c.name] = c.pct
+      for (const c of (memPcts || [])) metrics[c.name] = c.pct
 
       insights.push({
         id: generateId('resource-imbalance', 'memory'),
@@ -411,7 +411,7 @@ function detectRestartCorrelation(podIssues: PodIssue[]): MultiClusterInsight[] 
 
   // Group by workload name (strip pod hash suffix) across clusters
   const workloadRestarts = new Map<string, Map<string, number>>()
-  for (const issue of issues) {
+  for (const issue of (issues || [])) {
     // Strip pod hash: "api-server-abc123-xyz" → "api-server"
     const parts = issue.name.split('-')
     const workload = parts.length > 2 ? parts.slice(0, -2).join('-') : issue.name
@@ -495,7 +495,7 @@ function trackRolloutProgress(deployments: Deployment[]): MultiClusterInsight[] 
 
     // Find the newest image (highest version or most common)
     const imageCounts = new Map<string, number>()
-    for (const dep of deps) {
+    for (const dep of (deps || [])) {
       if (dep.image) imageCounts.set(dep.image, (imageCounts.get(dep.image) || 0) + 1)
     }
     const [newestImage] = Array.from(imageCounts.entries()).sort((a, b) => b[1] - a[1])[0]
@@ -513,7 +513,7 @@ function trackRolloutProgress(deployments: Deployment[]): MultiClusterInsight[] 
       failed: failed.length,
       total: deps.length,
     }
-    for (const dep of deps) {
+    for (const dep of (deps || [])) {
       if (!dep.cluster) continue
       if (dep.status === 'failed') {
         metrics[`${dep.cluster}_progress`] = 0
