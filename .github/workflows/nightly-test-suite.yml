@@ -52,43 +52,40 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4.2.0
 
-      - name: Install Go security tools
-        # Go tool compilation can fail with exit code 8 (OOM/signal during build).
-        # Individual test scripts handle missing binaries gracefully, so install
-        # failures should not block the remaining 32 test suites.
-        continue-on-error: true
-        env:
-          GOSEC_VERSION: 'v2.21.4'
-          GOVULNCHECK_VERSION: 'v1.1.4'
-          GO_LICENSES_VERSION: 'v1.6.0'
-        run: |
-          go install "github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}"
-          go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
-          go install "github.com/google/go-licenses@${GO_LICENSES_VERSION}"
-
       - name: Install test tools
-        continue-on-error: true
         env:
+          # All tools use pre-built binaries — no 'go install' compilation.
+          # go install was causing exit code 8 (signal kill during compilation)
+          # that poisoned subsequent steps on the CI runner.
+          GOSEC_VERSION: '2.21.4'
+          GOVULNCHECK_VERSION: '1.1.4'
           GITLEAKS_VERSION: '8.21.2'
           TRIVY_VERSION: '0.58.1'
           SEMGREP_VERSION: '1.102.0'
         run: |
-          # Wait for any lingering Go compilation processes to finish
-          sleep 2
+          # gosec (pre-built binary)
+          wget -q "https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/gosec_${GOSEC_VERSION}_linux_amd64.tar.gz" -O /tmp/gosec.tar.gz
+          tar -xzf /tmp/gosec.tar.gz -C /usr/local/bin gosec
 
-          # Secret scanning (pinned version)
+          # govulncheck (go install is safe for this small tool)
+          go install "golang.org/x/vuln/cmd/govulncheck@v${GOVULNCHECK_VERSION}"
+
+          # Secret scanning
           wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
           tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
 
-          # Container scanning (pinned version)
+          # Container scanning
           wget -q "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -O /tmp/trivy.tar.gz
           tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
 
-          # SAST (pinned version)
+          # SAST
           pip3 install --break-system-packages "semgrep==${SEMGREP_VERSION}"
 
           # ripgrep (some scripts use rg)
           sudo apt-get install -y ripgrep
+
+          # go-licenses: intentionally omitted (broken deps).
+          # license-compliance-test falls back to 'go list -m -json'.
 
       - name: Run full test suite
         id: tests
