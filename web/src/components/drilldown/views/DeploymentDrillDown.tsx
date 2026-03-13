@@ -17,6 +17,61 @@ interface Props {
 
 type TabType = 'overview' | 'pods' | 'events' | 'describe' | 'yaml'
 
+/** Kubernetes set-based label selector expression */
+interface LabelSelectorRequirement {
+  key: string
+  operator: 'In' | 'NotIn' | 'Exists' | 'DoesNotExist'
+  values?: string[]
+}
+
+/**
+ * Build a kubectl-compatible label selector string from matchLabels and matchExpressions.
+ * Supports both equality-based (matchLabels) and set-based (matchExpressions) selectors.
+ *
+ * kubectl -l format:
+ *   matchLabels:      "key=value"
+ *   In:               "key in (val1,val2)"
+ *   NotIn:            "key notin (val1,val2)"
+ *   Exists:           "key"
+ *   DoesNotExist:     "!key"
+ */
+function buildLabelSelector(
+  matchLabels?: Record<string, unknown>,
+  matchExpressions?: LabelSelectorRequirement[],
+): string {
+  const parts: string[] = []
+
+  // Equality-based selectors from matchLabels
+  if (matchLabels) {
+    for (const [k, v] of Object.entries(matchLabels)) {
+      parts.push(`${k}=${v}`)
+    }
+  }
+
+  // Set-based selectors from matchExpressions
+  if (matchExpressions) {
+    for (const expr of matchExpressions) {
+      const values = (expr.values || []).join(',')
+      switch (expr.operator) {
+        case 'In':
+          parts.push(`${expr.key} in (${values})`)
+          break
+        case 'NotIn':
+          parts.push(`${expr.key} notin (${values})`)
+          break
+        case 'Exists':
+          parts.push(expr.key)
+          break
+        case 'DoesNotExist':
+          parts.push(`!${expr.key}`)
+          break
+      }
+    }
+  }
+
+  return parts.join(',')
+}
+
 export function DeploymentDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
@@ -94,8 +149,14 @@ export function DeploymentDrillDown({ data }: Props) {
         setReadyReplicas(deploy.status?.readyReplicas || 0)
         setLabels(deploy.metadata?.labels || {})
 
-        // Get ReplicaSets owned by this Deployment
-        const rsOutput = await runKubectl(['get', 'replicasets', '-n', namespace, '-l', `app=${deploymentName}`, '-o', 'json'])
+        // Get ReplicaSets using the deployment's actual selector (matchLabels + matchExpressions)
+        const rsSelector = buildLabelSelector(
+          deploy.spec?.selector?.matchLabels,
+          deploy.spec?.selector?.matchExpressions,
+        )
+        const rsOutput = rsSelector
+          ? await runKubectl(['get', 'replicasets', '-n', namespace, '-l', rsSelector, '-o', 'json'])
+          : null
         if (rsOutput) {
           const rsList = JSON.parse(rsOutput)
           const rsInfo = rsList.items?.map((rs: { metadata: { name: string }; spec: { replicas: number }; status: { readyReplicas?: number } }) => ({
@@ -106,10 +167,11 @@ export function DeploymentDrillDown({ data }: Props) {
           setReplicaSets(rsInfo)
         }
 
-        // Get Pods with this deployment's label
-        const selector = Object.entries(deploy.spec?.selector?.matchLabels || {})
-          .map(([k, v]) => `${k}=${v}`)
-          .join(',')
+        // Get Pods with this deployment's selector (matchLabels + matchExpressions)
+        const selector = buildLabelSelector(
+          deploy.spec?.selector?.matchLabels,
+          deploy.spec?.selector?.matchExpressions,
+        )
         if (selector) {
           const podsOutput = await runKubectl(['get', 'pods', '-n', namespace, '-l', selector, '-o', 'json'])
           if (podsOutput) {
