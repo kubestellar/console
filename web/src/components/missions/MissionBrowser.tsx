@@ -42,6 +42,7 @@ import {
   getMissionSlug, getMissionShareUrl, updateNodeInTree,
   missionCache, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, BROWSER_TABS,
+  VirtualizedMissionGrid,
 } from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
 
@@ -1565,30 +1566,38 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     </div>
                     {/* Show cards progressively as they arrive */}
                     {filteredRecommendations.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {filteredRecommendations.map((match, i) => (
+                      <VirtualizedMissionGrid
+                        items={filteredRecommendations}
+                        viewMode="grid"
+                        maxColumns={3}
+                        className="flex-1"
+                        style={{ height: 'calc(90vh - 360px)' }}
+                        renderItem={(match) => (
                           <RecommendationCard
-                            key={i}
                             match={match}
                             onSelect={() => selectCardMission(match.mission)}
                             onImport={() => handleImport(match.mission)}
                             onCopyLink={(e) => handleCopyLink(match.mission, e)}
                           />
-                        ))}
-                      </div>
+                        )}
+                      />
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {filteredRecommendations.map((match, i) => (
+                  <VirtualizedMissionGrid
+                    items={filteredRecommendations}
+                    viewMode="grid"
+                    maxColumns={3}
+                    className="flex-1"
+                    style={{ height: 'calc(90vh - 360px)' }}
+                    renderItem={(match) => (
                       <RecommendationCard
-                        key={i}
                         match={match}
                         onSelect={() => selectCardMission(match.mission)}
                         onImport={() => handleImport(match.mission)}
                       />
-                    ))}
-                  </div>
+                    )}
+                  />
                 )}
               </CollapsibleSection>
             )}
@@ -1715,21 +1724,22 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         Loading… {installerMissions.length} found so far
                       </div>
                     )}
-                    <div className={viewMode === 'grid'
-                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
-                      : "flex flex-col gap-2"
-                    }>
-                      {filteredInstallers.map((mission, i) => (
+                    <VirtualizedMissionGrid
+                      items={filteredInstallers}
+                      viewMode={viewMode}
+                      maxColumns={4}
+                      className="flex-1"
+                      style={{ height: 'calc(90vh - 280px)' }}
+                      renderItem={(mission) => (
                         <InstallerCard
-                          key={i}
                           mission={mission}
                           compact={viewMode === 'list'}
                           onSelect={() => selectCardMission(mission)}
                           onImport={() => handleImport(mission)}
                           onCopyLink={(e) => handleCopyLink(mission, e)}
                         />
-                      ))}
-                    </div>
+                      )}
+                    />
                   </>
                 )}
 
@@ -1791,21 +1801,22 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         Loading… {solutionMissions.length} found so far
                       </div>
                     )}
-                    <div className={viewMode === 'grid'
-                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
-                      : "flex flex-col gap-2"
-                    }>
-                      {filteredSolutions.map((mission, i) => (
+                    <VirtualizedMissionGrid
+                      items={filteredSolutions}
+                      viewMode={viewMode}
+                      maxColumns={3}
+                      className="flex-1"
+                      style={{ height: 'calc(90vh - 280px)' }}
+                      renderItem={(mission) => (
                         <SolutionCard
-                          key={i}
                           mission={mission}
                           compact={viewMode === 'list'}
                           onSelect={() => selectCardMission(mission)}
                           onImport={() => handleImport(mission)}
                           onCopyLink={(e) => handleCopyLink(mission, e)}
                         />
-                      ))}
-                    </div>
+                      )}
+                    />
                   </>
                 )}
 

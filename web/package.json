@@ -50,6 +50,7 @@
     "@react-three/drei": "^9.120.4",
     "@react-three/fiber": "^8.17.10",
     "@sqlite.org/sqlite-wasm": "^3.51.2-build6",
+    "@tanstack/react-virtual": "^3.13.22",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "clsx": "^2.1.1",

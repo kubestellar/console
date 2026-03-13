@@ -10,3 +10,4 @@ export {
   fetchMissionContent, MISSION_FILE_FETCH_TIMEOUT_MS,
 } from './missionCache'
 export type { MissionCache } from './missionCache'
+export { VirtualizedMissionGrid } from './VirtualizedMissionGrid'
