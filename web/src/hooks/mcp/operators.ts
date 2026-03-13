@@ -75,17 +75,28 @@ export function useOperators(cluster?: string) {
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
   const [fetchVersion, setFetchVersion] = useState(0)
+  const clusterCountRef = useRef(clusterCacheRef.clusters.length)
 
+  // When clusters change, bump fetchVersion to re-trigger the fetch effect
+  // instead of putting clusterCount directly in the dependency array.
   useEffect(() => {
     return subscribeClusterCache((cache) => {
-      setClusterCount(cache.clusters.length)
+      const newCount = cache.clusters.length
+      if (newCount !== clusterCountRef.current) {
+        clusterCountRef.current = newCount
+        fetchInProgressRef.current = false
+        setFetchVersion(v => v + 1)
+      }
     })
   }, [])
 
   useEffect(() => {
     if (fetchInProgressRef.current) return
+
+    // Set guard immediately — including demo mode — to prevent re-entrant
+    // state-update cascades (React error #185: max update depth exceeded).
+    fetchInProgressRef.current = true
 
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -100,10 +111,10 @@ export function useOperators(cluster?: string) {
         setConsecutiveFailures(0)
         setIsLoading(false)
         setIsRefreshing(false)
+        fetchInProgressRef.current = false
         return
       }
 
-      fetchInProgressRef.current = true
       setIsRefreshing(true)
 
       // Try SSE streaming first for progressive rendering
@@ -202,7 +213,7 @@ export function useOperators(cluster?: string) {
       fetchInProgressRef.current = false
       unregisterRefetch()
     }
-  }, [cluster, clusterCount, fetchVersion, cacheKey])
+  }, [cluster, fetchVersion, cacheKey])
 
   const refetch = useCallback(() => {
     abortRef.current?.abort()
@@ -237,17 +248,28 @@ export function useOperatorSubscriptions(cluster?: string) {
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
   const [fetchVersion, setFetchVersion] = useState(0)
+  const clusterCountRef = useRef(clusterCacheRef.clusters.length)
 
+  // When clusters change, bump fetchVersion to re-trigger the fetch effect
+  // instead of putting clusterCount directly in the dependency array.
   useEffect(() => {
     return subscribeClusterCache((cache) => {
-      setClusterCount(cache.clusters.length)
+      const newCount = cache.clusters.length
+      if (newCount !== clusterCountRef.current) {
+        clusterCountRef.current = newCount
+        fetchInProgressRef.current = false
+        setFetchVersion(v => v + 1)
+      }
     })
   }, [])
 
   useEffect(() => {
     if (fetchInProgressRef.current) return
+
+    // Set guard immediately — including demo mode — to prevent re-entrant
+    // state-update cascades (React error #185: max update depth exceeded).
+    fetchInProgressRef.current = true
 
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -262,10 +284,10 @@ export function useOperatorSubscriptions(cluster?: string) {
         setConsecutiveFailures(0)
         setIsLoading(false)
         setIsRefreshing(false)
+        fetchInProgressRef.current = false
         return
       }
 
-      fetchInProgressRef.current = true
       setIsRefreshing(true)
 
       // Try SSE streaming first — backend handles multi-cluster parallelism
@@ -350,7 +372,7 @@ export function useOperatorSubscriptions(cluster?: string) {
       fetchInProgressRef.current = false
       unregisterRefetch()
     }
-  }, [cluster, clusterCount, fetchVersion, cacheKey])
+  }, [cluster, fetchVersion, cacheKey])
 
   const refetch = useCallback(() => {
     abortRef.current?.abort()

@@ -648,6 +648,20 @@ export function initAnalytics() {
 
 async function hashUserId(uid: string): Promise<string> {
   const data = new TextEncoder().encode(`ksc-analytics:${uid}`)
+
+  // crypto.subtle is only available in secure contexts (HTTPS / localhost).
+  // Fall back to a simple FNV-1a-style hash so analytics still works over HTTP.
+  if (!crypto.subtle) {
+    const FNV_OFFSET_BASIS = 0x811c9dc5
+    const FNV_PRIME = 0x01000193
+    let h = FNV_OFFSET_BASIS
+    for (const byte of data) {
+      h ^= byte
+      h = Math.imul(h, FNV_PRIME)
+    }
+    return (h >>> 0).toString(16).padStart(8, '0')
+  }
+
   const hash = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(hash))
     .map(b => b.toString(16).padStart(2, '0'))

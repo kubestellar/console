@@ -208,7 +208,7 @@ export function PodIssues() {
                       </span>
                     )}
                   </div>
-                  {issue.issues.length > 0 && (
+                  {(issue.issues || []).length > 0 && (
                     <p className="text-xs text-muted-foreground mt-1 truncate" title={(issue.issues || []).join(', ')}>
                       {(issue.issues || []).join(', ')}
                     </p>
@@ -223,7 +223,7 @@ export function PodIssues() {
                     cluster: issue.cluster || 'default',
                     status: issue.status,
                   }}
-                  issues={issue.issues.map(msg => ({ name: issue.status, message: msg }))}
+                  issues={(issue.issues || []).map(msg => ({ name: issue.status, message: msg }))}
                   additionalContext={{ restarts: issue.restarts }}
                 />
               </div>

@@ -98,7 +98,8 @@ const SEVERITY_KEYWORDS: Array<[string[], StatusSeverity]> = [
  * getStatusSeverity('Pending')          // => 'warning'
  * getStatusSeverity('custom-thing')     // => 'neutral'
  */
-export function getStatusSeverity(status: string): StatusSeverity {
+export function getStatusSeverity(status: string | undefined | null): StatusSeverity {
+  if (!status) return 'neutral'
   const lower = status.toLowerCase()
   for (const [keywords, severity] of SEVERITY_KEYWORDS) {
     if (keywords.some((kw) => lower.includes(kw))) {
@@ -117,7 +118,7 @@ export function getStatusSeverity(status: string): StatusSeverity {
  * // colors.text => 'text-red-400'
  * // colors.bg   => 'bg-red-500/20'
  */
-export function getStatusColors(status: string): StatusColorSet {
+export function getStatusColors(status: string | undefined | null): StatusColorSet {
   return STATUS_COLORS[getStatusSeverity(status)]
 }
 

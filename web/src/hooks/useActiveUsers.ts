@@ -42,7 +42,11 @@ const SMOOTHING_WINDOW = 5 // Keep last 5 counts
 function getSessionId(): string {
   let id = sessionStorage.getItem('kc-session-id')
   if (!id) {
-    id = crypto.randomUUID()
+    // crypto.randomUUID() requires a secure context (HTTPS / localhost).
+    // Fall back to Math.random-based ID for HTTP contexts.
+    id = typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
     sessionStorage.setItem('kc-session-id', id)
   }
   return id
