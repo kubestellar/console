@@ -35,6 +35,13 @@ const (
 	defaultHealthCheckURL = "http://127.0.0.1:8080/health"
 	maxQueryLimit         = 1000     // Upper bound for client-supplied limit query parameter
 	maxRequestBodyBytes   = 1 << 20 // 1MB upper bound for request body reads
+
+	// missionExecutionTimeout is the maximum wall-clock time a single mission
+	// chat execution (AI provider call) is allowed to run before the context
+	// is cancelled and the frontend receives a timeout error.  This prevents
+	// missions from staying in "Running/Processing" state indefinitely when the
+	// AI provider hangs or never responds (#2375).
+	missionExecutionTimeout = 5 * time.Minute
 )
 
 // Version is set by ldflags during build
@@ -2036,8 +2043,11 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		return
 	}
 
-	// Create cancellable context — cancel_chat messages will call the cancel function
-	ctx, cancel := context.WithCancel(context.Background())
+	// Create a context with both cancel and timeout so that:
+	//   1. cancel_chat messages can stop this session immediately, and
+	//   2. a hard deadline prevents missions from running forever when the
+	//      AI provider hangs or never responds (#2375).
+	ctx, cancel := context.WithTimeout(context.Background(), missionExecutionTimeout)
 	defer cancel()
 
 	// Register cancel function so handleCancelChat can stop this session
@@ -2182,8 +2192,14 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 
 		resp, err = streamingProvider.StreamChatWithProgress(ctx, chatReq, onChunk, onProgress)
 		if err != nil {
-			// Don't send error if we were cancelled — the frontend already knows
 			if ctx.Err() != nil {
+				// Distinguish timeout from user-initiated cancel (#2375)
+				if ctx.Err() == context.DeadlineExceeded {
+					log.Printf("[Chat] Session %s timed out after %v", req.SessionID, missionExecutionTimeout)
+					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
+						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+					return
+				}
 				log.Printf("[Chat] Session %s cancelled", req.SessionID)
 				return
 			}
@@ -2201,6 +2217,13 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		resp, err = provider.Chat(ctx, chatReq)
 		if err != nil {
 			if ctx.Err() != nil {
+				// Distinguish timeout from user-initiated cancel (#2375)
+				if ctx.Err() == context.DeadlineExceeded {
+					log.Printf("[Chat] Session %s timed out after %v", req.SessionID, missionExecutionTimeout)
+					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
+						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+					return
+				}
 				log.Printf("[Chat] Session %s cancelled", req.SessionID)
 				return
 			}
@@ -2212,6 +2235,12 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 
 	// Don't send result if cancelled
 	if ctx.Err() != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			log.Printf("[Chat] Session %s timed out after completion", req.SessionID)
+			safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
+				fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+			return
+		}
 		log.Printf("[Chat] Session %s cancelled after completion", req.SessionID)
 		return
 	}

@@ -138,6 +138,18 @@ const STATUS_WAITING_DELAY_MS = 500
 /** Delay before showing "Processing with AI..." status */
 const STATUS_PROCESSING_DELAY_MS = 3_000
 
+/**
+ * Maximum time (ms) a mission is allowed to stay in "running" state before the
+ * frontend considers it timed out and transitions it to "failed".  This acts as
+ * a client-side safety net in case the backend timeout fires but the error
+ * message is lost (e.g., WebSocket reconnect race), or the backend itself is
+ * unreachable.  Matches the backend missionExecutionTimeout (5 min) plus a
+ * small grace period for network latency.
+ */
+const MISSION_TIMEOUT_MS = 300_000 // 5 minutes
+/** How often (ms) the frontend checks for timed-out missions */
+const MISSION_TIMEOUT_CHECK_INTERVAL_MS = 15_000 // 15 seconds
+
 // Load missions from localStorage
 function loadMissions(): Mission[] {
   try {
@@ -295,6 +307,54 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveUnreadMissionIds(unreadMissionIds)
   }, [unreadMissionIds])
+
+  // Periodically check for missions stuck in "running" state beyond the timeout.
+  // This is a client-side safety net: the backend also has a context timeout, but
+  // if the WebSocket drops before the backend error arrives, the mission would
+  // stay in "running" forever without this check (#2375).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMissions(prev => {
+        const now = Date.now()
+        const hasTimedOut = prev.some(
+          m => m.status === 'running' && (now - new Date(m.updatedAt).getTime()) > MISSION_TIMEOUT_MS
+        )
+        if (!hasTimedOut) return prev
+
+        return prev.map(m => {
+          if (m.status !== 'running') return m
+          const elapsed = now - new Date(m.updatedAt).getTime()
+          if (elapsed <= MISSION_TIMEOUT_MS) return m
+
+          const timeoutMinutes = Math.round(MISSION_TIMEOUT_MS / 60_000)
+          // Clean up the pending request for this mission
+          for (const [reqId, mId] of pendingRequests.current.entries()) {
+            if (mId === m.id) {
+              pendingRequests.current.delete(reqId)
+            }
+          }
+          emitMissionError(m.type, 'mission_timeout')
+          return {
+            ...m,
+            status: 'failed' as MissionStatus,
+            currentStep: undefined,
+            updatedAt: new Date(),
+            messages: [
+              ...m.messages,
+              {
+                id: `msg-timeout-${Date.now()}-${m.id}`,
+                role: 'system' as const,
+                content: `**Mission Timed Out**\n\nThis mission has been running for over ${timeoutMinutes} minutes without a response from the AI provider. It has been automatically stopped.\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`,
+                timestamp: new Date(),
+              }
+            ]
+          }
+        })
+      })
+    }, MISSION_TIMEOUT_CHECK_INTERVAL_MS)
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Fetch available agents
   const fetchAgents = useCallback(() => {
@@ -685,6 +745,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         let errorContent = payload.message || 'Unknown error'
         if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
           errorContent = `${payload.message}\n\n[Configure API Keys →](/settings)\n\nAdd your API key for Claude, OpenAI, or Gemini to use AI missions.`
+        } else if (payload.code === 'mission_timeout') {
+          errorContent = `**Mission Timed Out**\n\n${payload.message}\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
         }
 
         return {
