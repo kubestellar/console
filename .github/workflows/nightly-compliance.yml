@@ -63,6 +63,7 @@ jobs:
   # ── Compliance Suites ────────────────────────────────────────────────
 
   compliance:
+    if: github.repository == 'kubestellar/console'
     name: Compliance (${{ matrix.suite }})
     needs: build
     runs-on: ubuntu-latest
@@ -191,6 +192,7 @@ jobs:
   # ── Performance Suites ───────────────────────────────────────────────
 
   perf:
+    if: github.repository == 'kubestellar/console'
     name: Perf (${{ matrix.suite }})
     needs: build
     runs-on: ubuntu-latest
