@@ -4,7 +4,7 @@ import { CodeBlock } from './CodeBlock'
 
 describe('CodeBlock Component', () => {
   it('renders code block with content', () => {
-    const { container } = render(<CodeBlock>console.log('hello')</CodeBlock>)
+    const { container } = render(<CodeBlock>const greeting = 'hello'</CodeBlock>)
     expect(container.querySelector('pre')).toBeTruthy()
   })
 

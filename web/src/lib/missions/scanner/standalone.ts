@@ -7,7 +7,7 @@
  * Usage:
  *   import { scanMissionFile, formatScanResultAsMarkdown } from './standalone'
  *   const result = scanMissionFile(fs.readFileSync('mission.json', 'utf-8'))
- *   console.log(formatScanResultAsMarkdown('mission.json', result))
+ *   const report = formatScanResultAsMarkdown('mission.json', result)
  */
 
 import { fullScan } from './index'
