@@ -60,6 +60,7 @@ type FeatureRequest struct {
 	Title             string        `json:"title"`
 	Description       string        `json:"description"`
 	RequestType       RequestType   `json:"request_type"`
+	TargetRepo        TargetRepo    `json:"target_repo,omitempty"`
 	GitHubIssueNumber *int          `json:"github_issue_number,omitempty"`
 	Status            RequestStatus `json:"status"`
 	PRNumber          *int          `json:"pr_number,omitempty"`
@@ -95,11 +96,22 @@ type Notification struct {
 	CreatedAt        time.Time        `json:"created_at"`
 }
 
+// TargetRepo identifies which GitHub repository an issue should be created in
+type TargetRepo string
+
+const (
+	// TargetRepoConsole routes issues to kubestellar/console (default)
+	TargetRepoConsole TargetRepo = "console"
+	// TargetRepoDocs routes issues to kubestellar/docs (for documentation issues)
+	TargetRepoDocs TargetRepo = "docs"
+)
+
 // CreateFeatureRequestInput is the input for creating a feature request
 type CreateFeatureRequestInput struct {
 	Title       string      `json:"title" validate:"required,min=10,max=200"`
 	Description string      `json:"description" validate:"required,min=20,max=5000"`
 	RequestType RequestType `json:"request_type" validate:"required,oneof=bug feature"`
+	TargetRepo  TargetRepo  `json:"target_repo,omitempty"`
 }
 
 // SubmitFeedbackInput is the input for submitting PR feedback

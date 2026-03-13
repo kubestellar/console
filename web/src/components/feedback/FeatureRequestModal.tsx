@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
@@ -11,6 +11,7 @@ import {
   isTriaged,
   type RequestType,
   type RequestStatus,
+  type TargetRepo,
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
@@ -100,6 +101,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
   const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'submit')
   const [requestType, setRequestType] = useState<RequestType>(initialRequestType || 'bug')
+  const [targetRepo, setTargetRepo] = useState<TargetRepo>('console')
   // Sync requestType when modal opens with a new initialRequestType (e.g. from /feature route)
   useEffect(() => {
     if (isOpen && initialRequestType) {
@@ -252,12 +254,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         title: extractedTitle,
         description: extractedDesc,
         request_type: requestType,
+        target_repo: targetRepo,
       })
       setSuccess({ issueUrl: result.github_issue_url })
       // Show thank-you briefly, then switch to Updates tab
       setTimeout(() => {
         setDescription('')
         setRequestType('bug')
+        setTargetRepo('console')
         setSuccess(null)
         setActiveTab('updates')
         refreshRequests()
@@ -283,6 +287,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       }
       setDescription('')
       setRequestType(initialRequestType || 'bug')
+      setTargetRepo('console')
       setError(null)
       setSuccess(null)
       setActiveTab(initialTab || 'submit')
@@ -1182,6 +1187,44 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                       +{REWARD_ACTIONS.feature_suggestion.coins}
                     </span>
                   </button>
+                </div>
+
+                {/* Repository selector — where should this issue be filed? */}
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Where does this issue belong?
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTargetRepo('console')}
+                      className={`flex-1 p-2.5 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                        targetRepo === 'console'
+                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                          : 'border-border text-muted-foreground hover:border-muted-foreground'
+                      }`}
+                    >
+                      <Monitor className="w-4 h-4" />
+                      <span className="text-sm">Console App</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTargetRepo('docs')}
+                      className={`flex-1 p-2.5 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                        targetRepo === 'docs'
+                          ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                          : 'border-border text-muted-foreground hover:border-muted-foreground'
+                      }`}
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      <span className="text-sm">Console Docs</span>
+                    </button>
+                  </div>
+                  {targetRepo === 'docs' && (
+                    <p className="text-2xs text-amber-400/80 mt-1">
+                      This issue will be filed on <span className="font-mono">kubestellar/docs</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* Description — first line becomes title */}

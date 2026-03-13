@@ -26,6 +26,8 @@ export interface FeatureRequest {
   title: string
   description: string
   request_type: RequestType
+  /** Which repo this issue was filed against (console or docs) */
+  target_repo?: TargetRepo
   github_issue_number?: number
   github_issue_url?: string
   status: RequestStatus
@@ -67,10 +69,14 @@ export interface Notification {
   action_url?: string // URL to GitHub issue, PR, or preview
 }
 
+/** Target repository for issue creation */
+export type TargetRepo = 'console' | 'docs'
+
 export interface CreateFeatureRequestInput {
   title: string
   description: string
   request_type: RequestType
+  target_repo?: TargetRepo
 }
 
 export interface SubmitFeedbackInput {
