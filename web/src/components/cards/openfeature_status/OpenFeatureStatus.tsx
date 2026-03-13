@@ -24,7 +24,7 @@ function useFormatRelativeTime() {
 export function OpenFeatureStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState } = useOpenFeatureStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useOpenFeatureStatus()
 
   if (showSkeleton) {
     return (
@@ -90,7 +90,7 @@ export function OpenFeatureStatus() {
           {healthLabel}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="w-3 h-3" />
+          {isRefreshing && <RefreshCw className="w-3 h-3 animate-spin" />}
           <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>

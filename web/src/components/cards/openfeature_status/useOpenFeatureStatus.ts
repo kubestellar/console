@@ -176,7 +176,7 @@ export interface UseOpenFeatureStatusResult {
 }
 
 export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
-  const cacheResult = useCache<OpenFeatureStatus>({
+  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } = useCache<OpenFeatureStatus>({
     key: CACHE_KEY,
     fetcher: fetchOpenFeatureStatus,
     demoData: OPENFEATURE_DEMO_DATA,
@@ -185,21 +185,23 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
     persist: true,
   })
 
-  const hasAnyData = cacheResult.data.providers.length > 0 || cacheResult.data.health !== 'not-installed'
+  const effectiveIsDemoData = isDemoFallback && !isLoading
+
+  const hasAnyData = data.providers.length > 0 || data.health !== 'not-installed'
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: cacheResult.isLoading,
-    isRefreshing: cacheResult.isRefreshing,
-    isDemoData: cacheResult.isDemoFallback && !cacheResult.isLoading,
+    isLoading,
+    isRefreshing,
+    isDemoData: effectiveIsDemoData,
     hasAnyData,
-    isFailed: cacheResult.isFailed,
-    consecutiveFailures: cacheResult.consecutiveFailures,
+    isFailed,
+    consecutiveFailures,
   })
 
   return {
-    data: cacheResult.data,
-    error: cacheResult.isFailed && !hasAnyData,
-    isRefreshing: cacheResult.isRefreshing,
+    data,
+    error: isFailed && !hasAnyData,
+    isRefreshing,
     showSkeleton,
     showEmptyState,
   }
