@@ -613,6 +613,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
 	api.Get("/mcp/wasmcloud/hosts", mcpHandlers.GetWasmCloudHosts)
 	api.Get("/mcp/wasmcloud/actors", mcpHandlers.GetWasmCloudActors)
+	api.Get("/mcp/custom-resources", mcpHandlers.GetCustomResources)
 
 	// SSE streaming variants — stream per-cluster results as they arrive
 	api.Get("/mcp/pods/stream", mcpHandlers.GetPodsStream)
