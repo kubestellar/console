@@ -209,6 +209,9 @@ Please proceed with applying this policy.`,
     setFlow('yaml')
   }
 
+  // Whether any cluster status is still loading (initial check in progress)
+  const isClustersLoading = Object.values(statuses).some(s => s.loading)
+
   // No installed clusters — empty state
   const noGatekeeper = installedClusters.length === 0
 
@@ -224,7 +227,13 @@ Please proceed with applying this policy.`,
       />
 
       <BaseModal.Content className="max-h-[60vh]">
-        {noGatekeeper ? (
+        {isClustersLoading && installedClusters.length === 0 ? (
+          /* Still checking clusters for Gatekeeper */
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
+            <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+            <p className="text-sm">Checking clusters for OPA Gatekeeper...</p>
+          </div>
+        ) : noGatekeeper ? (
           /* No clusters with Gatekeeper */
           <div className="text-center py-8 text-muted-foreground">
             <Shield className="w-10 h-10 mx-auto mb-3 opacity-40" />

@@ -8,7 +8,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { CheckCircle2, TrendingDown, TrendingUp, ChevronRight, Info } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, ChevronRight, Info, Loader2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
@@ -57,6 +57,15 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
   const isLoading = kyvernoLoading || trivyLoading || kubescapeLoading
   const isRefreshing = kyvernoRefreshing || trivyRefreshing || kubescapeRefreshing
   const isDemoData = kyvernoDemoData || trivyDemoData || kubescapeDemoData
+
+  /** Whether all clusters encountered errors (none succeeded) */
+  const hasError = !isLoading && !isRefreshing &&
+    Object.values(kyvernoStatuses || {}).every(s => !!s.error) &&
+    Object.values(trivyStatuses || {}).every(s => !!s.error) &&
+    Object.values(kubescapeStatuses || {}).every(s => !!s.error) &&
+    (Object.keys(kyvernoStatuses || {}).length > 0 ||
+     Object.keys(trivyStatuses || {}).length > 0 ||
+     Object.keys(kubescapeStatuses || {}).length > 0)
 
   const handleDriftClick = (d: DriftEntry) => {
     const toolKey = d.tool.toLowerCase()
@@ -149,6 +158,32 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     result.sort((a, b) => b.magnitude - a.magnitude)
     return result
   }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, selectedClusters, isAllClustersSelected])
+
+  // Loading state: show spinner while initial data loads
+  if (isLoading && drifts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2 p-4">
+        <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+        <p>Scanning clusters for compliance drift...</p>
+      </div>
+    )
+  }
+
+  // Error state: all clusters failed to load
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2 p-4">
+        <AlertTriangle className="w-6 h-6 text-destructive opacity-70" />
+        <p className="text-destructive">Failed to load compliance data</p>
+        <button
+          onClick={() => { kyvernoRefetch(); trivyRefetch(); kubescapeRefetch() }}
+          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   // Empty state: all clusters within baseline (only show after all hooks finish)
   if (!isLoading && !isRefreshing && drifts.length === 0) {

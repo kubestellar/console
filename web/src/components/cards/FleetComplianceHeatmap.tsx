@@ -8,7 +8,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { Info, Loader2 } from 'lucide-react'
+import { AlertTriangle, Info, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
@@ -149,6 +149,15 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   const isRefreshing = kyvernoRefreshing || trivyRefreshing || kubescapeRefreshing
   const isDemoData = isDemoMode || kyvernoDemoData || trivyDemoData || kubescapeDemoData
 
+  /** Whether all clusters encountered errors (none succeeded) */
+  const hasError = !isLoading && !isRefreshing &&
+    Object.values(kyvernoStatuses || {}).every(s => !!s.error) &&
+    Object.values(trivyStatuses || {}).every(s => !!s.error) &&
+    Object.values(kubescapeStatuses || {}).every(s => !!s.error) &&
+    (Object.keys(kyvernoStatuses || {}).length > 0 ||
+     Object.keys(trivyStatuses || {}).length > 0 ||
+     Object.keys(kubescapeStatuses || {}).length > 0)
+
   /** Whether each tool is installed on at least one cluster */
   const toolInstalled: Record<string, boolean> = {
     kyverno: kyvernoInstalled,
@@ -257,6 +266,21 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       return { cluster, kyverno: kyvernoCell, kubescape: kubescapeCell, trivy: trivyCell }
     })
   }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, deduplicatedClusters, selectedClusters, isAllClustersSelected])
+
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2 p-4">
+        <AlertTriangle className="w-6 h-6 text-destructive opacity-70" />
+        <p className="text-destructive">Failed to load compliance data</p>
+        <button
+          onClick={() => { kyvernoRefetch(); trivyRefetch(); kubescapeRefetch() }}
+          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (rows.length === 0) {
     // Still scanning — show loading state instead of definitive empty state
