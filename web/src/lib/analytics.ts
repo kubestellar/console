@@ -30,8 +30,8 @@ const GTAG_SCRIPT_PATH = '/api/gtag'
 
 /** First-party proxy path for the Umami tracking script — bypasses ad blockers */
 const UMAMI_SCRIPT_PATH = '/api/ksc'
-/** Single Umami website ID — all environments report here, filterable by hostname */
-const UMAMI_WEBSITE_ID = '07111027-162f-4e37-a0bb-067b9d08b88a'
+/** Umami website ID — configurable via branding; defaults to KubeStellar's ID */
+let umamiWebsiteId = '07111027-162f-4e37-a0bb-067b9d08b88a'
 
 /** Load Umami tracking script via first-party proxy (async, non-blocking).
  *  data-host-url tells Umami to POST events to our own origin (which proxies
@@ -40,7 +40,7 @@ function loadUmamiScript() {
   const script = document.createElement('script')
   script.src = UMAMI_SCRIPT_PATH
   script.defer = true
-  script.dataset.websiteId = UMAMI_WEBSITE_ID
+  script.dataset.websiteId = umamiWebsiteId
   // Umami appends /api/send internally — set host to our origin so events
   // go through the first-party proxy at /api/send → analytics.kubestellar.io
   script.dataset.hostUrl = window.location.origin
@@ -142,8 +142,8 @@ function onFirstInteraction() {
   if (!analyticsScriptsLoaded) {
     analyticsScriptsLoaded = true
     // NOW load gtag.js and Umami — only after a real human interacted
-    loadGtagScript()
-    loadUmamiScript()
+    if (gtagMeasurementId) loadGtagScript()
+    if (umamiWebsiteId) loadUmamiScript()
     startEngagementTracking()
 
     // Fire the events that would have fired at page load
@@ -516,9 +516,9 @@ function send(
 
 // ── Initialization ─────────────────────────────────────────────────
 
-// Public GA4 measurement ID — same as any website's GA tag in page source.
-// Overridable via GA4_REAL_MEASUREMENT_ID env var on the backend.
-const GTAG_MEASUREMENT_ID = 'G-PXWNVQ8D1T'
+// Public GA4 measurement ID — configurable via branding config.
+// Defaults to KubeStellar's ID; overridden by initAnalytics().
+let gtagMeasurementId = 'G-PXWNVQ8D1T'
 
 // Google Tag Manager CDN — used when first-party proxy is unavailable (Netlify)
 const GTAG_CDN_URL = 'https://www.googletagmanager.com/gtag/js'
@@ -535,7 +535,7 @@ const GTAG_CDN_URL = 'https://www.googletagmanager.com/gtag/js'
  *   3. If both fail (aggressive ad blocker) — custom proxy handles events.
  */
 function loadGtagScript() {
-  const mid = GTAG_MEASUREMENT_ID
+  const mid = gtagMeasurementId
   realMeasurementId = mid
 
   // Initialize dataLayer and gtag function before script loads
@@ -606,7 +606,23 @@ function loadGtagScript() {
   document.head.appendChild(script)
 }
 
-export function initAnalytics() {
+/** Optional analytics IDs from branding config (white-label support) */
+interface AnalyticsOptions {
+  /** GA4 measurement ID — empty string disables GA4 */
+  ga4MeasurementId?: string
+  /** Umami website ID — empty string disables Umami */
+  umamiWebsiteId?: string
+}
+
+export function initAnalytics(options?: AnalyticsOptions) {
+  // Apply branding overrides — empty string disables the respective platform
+  if (options?.ga4MeasurementId !== undefined) {
+    gtagMeasurementId = options.ga4MeasurementId
+  }
+  if (options?.umamiWebsiteId !== undefined) {
+    umamiWebsiteId = options.umamiWebsiteId
+  }
+
   measurementId = (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID
   if (!measurementId || initialized) return
 

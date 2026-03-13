@@ -21,7 +21,9 @@ import {
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
-import { initAnalytics } from './lib/analytics'
+// Analytics initialization moved to BrandingProvider — loaded after
+// branding config arrives from /health so white-label deployments can
+// provide their own GA4/Umami IDs (or disable analytics entirely).
 
 // ── Chunk load error recovery ─────────────────────────────────────────────
 // When a new build is deployed, chunk filenames change (content hashes).
@@ -135,13 +137,6 @@ enableMocking()
     // MCP hooks (~300 KB) end up in a separate chunk that the browser downloads
     // in parallel with the main bundle, reducing time-to-first-paint.
     await import('./lib/unified/registerHooks')
-
-    // Initialize GA4 analytics BEFORE first render so engagement tracking
-    // starts before PageViewTracker fires. The old setTimeout(() => ..., 0)
-    // deferred init to the next tick, causing engagementStartMs to be 0 when
-    // the first page_view flushed engagement — dropping all engagement time
-    // and crashing engaged sessions from 82% to 1.6%.
-    initAnalytics()
 
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>
