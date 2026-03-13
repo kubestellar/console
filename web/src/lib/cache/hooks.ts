@@ -7,7 +7,7 @@
  * - localStorage: Small preferences (filters, sort, collapsed state)
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 // ============================================================================
 // localStorage Hook for Preferences
@@ -403,9 +403,17 @@ export function useTrendHistory<T extends TrendPoint>({
     maxAge,
   })
 
+  // historyRef is the source of truth for rapid addPoint calls.
+  // We update it immediately inside addPoint so that successive calls
+  // (before React re-renders) each see the previous call's result.
+  // The render-time sync below picks up external changes (e.g. initial load).
+  const historyRef = useRef(history)
+  historyRef.current = history
+
   const addPoint = useCallback(async (point: T) => {
+    const currentHistory = historyRef.current
     // Check if this point is different from the last one (avoid duplicates)
-    const lastPoint = history[history.length - 1]
+    const lastPoint = currentHistory[currentHistory.length - 1]
     if (lastPoint) {
       // Compare all numeric values
       const isDifferent = Object.keys(point).some(k => {
@@ -416,9 +424,14 @@ export function useTrendHistory<T extends TrendPoint>({
     }
 
     // Add new point and trim to maxPoints
-    const newHistory = [...history, point].slice(-maxPoints)
+    const newHistory = [...currentHistory, point].slice(-maxPoints)
+
+    // Update ref immediately so the next addPoint call (even before
+    // React re-renders) sees this result instead of the stale array.
+    historyRef.current = newHistory
+
     await save(newHistory)
-  }, [history, maxPoints, save])
+  }, [maxPoints, save])
 
   return {
     history,
