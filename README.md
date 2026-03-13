@@ -52,20 +52,9 @@ The token needs a classic `repo` scope **or** a fine-grained token with **Issues
 
 ## Architecture
 
-```mermaid
-graph LR
-    A["KubeStellar Console"] --> B["30+ Dashboards<br/>150+ Monitoring Cards"]
-    A --> M["Marketplace<br/>(console-marketplace)"]
-    A --> D["AI Mission Explorer"]
-    D --> E["console-kb"]
-    E --> F["186 Install Missions<br/>67 Solution Missions"]
-    A --> C["AI Recommendations"]
-    A --> H["kc-agent → Codex, Copilot,<br/>Claude CLI, Kube API, MCP"]
-    click A href "https://console.kubestellar.io" _blank
-    click M href "https://github.com/kubestellar/console-marketplace" _blank
-    click E href "https://github.com/kubestellar/console-kb" _blank
-    click H href "https://github.com/kubestellar/console/tree/main/cmd/kc-agent" _blank
-```
+See the full [Architecture documentation](https://kubestellar.io/docs/console/overview/architecture) on the KubeStellar website.
+
+### Related Repositories
 
 - **[console-kb](https://github.com/kubestellar/console-kb)** — Knowledge base of guided installers for 250+ CNCF projects and solutions to common Kubernetes problems
 - **[console-marketplace](https://github.com/kubestellar/console-marketplace)** — Community-contributed monitoring cards per CNCF project
