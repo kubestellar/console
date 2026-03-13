@@ -281,6 +281,7 @@ const CARD_CATALOG = {
   ],
   'Orchestration': [
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
+    { type: 'openfeature_status', title: 'OpenFeature', description: 'OpenFeature provider health, flag evaluations, and cache performance', visualization: 'status' },
   ],
 } as const
 

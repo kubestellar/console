@@ -185,6 +185,8 @@ const FlatcarStatus = lazy(() => import('./flatcar_status').then(m => ({ default
 const CoreDNSStatus = lazy(() => import('./coredns_status').then(m => ({ default: m.CoreDNSStatus })))
 // KEDA card
 const KedaStatus = lazy(() => import('./keda_status').then(m => ({ default: m.KedaStatus })))
+// OpenFeature flag management card
+const OpenFeatureStatus = lazy(() => import('./openfeature_status').then(m => ({ default: m.OpenFeatureStatus })))
 
 // Multi-cluster insights cards — share one chunk via barrel import
 const _insightsBundle = import('./insights').catch((err) => { throw err })
@@ -445,6 +447,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   coredns_status: CoreDNSStatus,
   // KEDA
   keda_status: KedaStatus,
+  // OpenFeature flag management
+  openfeature_status: OpenFeatureStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -773,6 +777,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   buildpacks_status: () => import('./buildpacks-status'),
   // KEDA
   keda_status: () => import('./keda_status'),
+  // OpenFeature
+  openfeature_status: () => import('./openfeature_status'),
 }
 
 /**
@@ -878,6 +884,7 @@ export const LIVE_DATA_CARDS = new Set([
   'dns_health',
   'coredns_status',
   'keda_status',
+  'openfeature_status',
   'network_policies',
   'cluster_changelog',
   'predictive_health',
@@ -976,6 +983,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   dns_health: 4,
   coredns_status: 6,
   keda_status: 6,
+  openfeature_status: 6,
   etcd_status: 4,
   network_policies: 6,
   rbac_explorer: 6,

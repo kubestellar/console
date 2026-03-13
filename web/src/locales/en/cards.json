@@ -278,7 +278,8 @@
     "coredns_status": "CoreDNS",
     "fluentd_status": "Fluentd",
     "lima_status": "Lima",
-    "keda_status": "KEDA"
+    "keda_status": "KEDA",
+    "openfeature_status": "OpenFeature"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -449,7 +450,8 @@
     "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
     "fluentd_status": "Log pipeline status, buffer utilization, and output plugin health.",
     "lima_status": "Lima virtual machine instances and resource usage.",
-    "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths."
+    "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths.",
+    "openfeature_status": "OpenFeature provider health, flag evaluations, and cache performance."
   },
   "categories": {
     "core": "Core",
@@ -2766,5 +2768,31 @@
     "syncedDaysAgo": "{{count}}d ago",
     "queue": "queue",
     "target": "target"
+  },
+  "openFeature": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "unhealthy": "Unhealthy",
+    "notInstalled": "OpenFeature not detected",
+    "notInstalledHint": "No OpenFeature operator or flagd pods found. Deploy OpenFeature to manage feature flags.",
+    "fetchError": "Failed to fetch OpenFeature status",
+    "providers": "Providers",
+    "featureFlags": "Feature Flags",
+    "flags": "Flags",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "evaluations": "Evaluations",
+    "evals": "evals",
+    "cache": "cache",
+    "cacheHitRate": "Cache Hit Rate",
+    "errorRate": "Error Rate",
+    "totalEvaluations": "Total Evaluations",
+    "providerStatus": "Provider Status",
+    "highErrorRate": "High error rate: {{rate}}%",
+    "learnMore": "Learn more at openfeature.dev",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }

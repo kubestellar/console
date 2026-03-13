@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "openfeature_status",
+  "title": "OpenFeature",
+  "description": "OpenFeature flag evaluation status and provider health.",
+  "category": "App Definition",
+  "project": "openfeature",
+  "cncf_status": "incubating",
+  "config": {}
+}
