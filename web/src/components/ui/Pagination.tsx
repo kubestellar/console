@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from './Button'
 
 // Hook for managing pagination state
 export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOnFilterChange: boolean = true) {
@@ -137,47 +138,51 @@ export function Pagination({
 
         {/* Page navigation */}
         <div className="flex items-center gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onPageChange(1)}
             disabled={!canGoPrevious}
-            className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5"
             title={t('pagination.firstPage')}
             aria-label={t('pagination.firstPage')}
-          >
-            <ChevronsLeft className="w-4 h-4" />
-          </button>
-          <button
+            icon={<ChevronsLeft className="w-4 h-4" />}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={!canGoPrevious}
-            className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5"
             title={t('pagination.previousPage')}
             aria-label={t('pagination.previousPage')}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+            icon={<ChevronLeft className="w-4 h-4" />}
+          />
 
           <span className="px-3 py-1 text-foreground">
             {currentPage} / {totalPages || 1}
           </span>
 
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={!canGoNext}
-            className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5"
             title={t('pagination.nextPage')}
             aria-label={t('pagination.nextPage')}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          <button
+            icon={<ChevronRight className="w-4 h-4" />}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onPageChange(totalPages)}
             disabled={!canGoNext}
-            className="p-1.5 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5"
             title={t('pagination.lastPage')}
             aria-label={t('pagination.lastPage')}
-          >
-            <ChevronsRight className="w-4 h-4" />
-          </button>
+            icon={<ChevronsRight className="w-4 h-4" />}
+          />
         </div>
       </div>
     </div>

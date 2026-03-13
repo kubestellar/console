@@ -8,6 +8,7 @@ import {
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
   List, DollarSign, ChevronDown, ChevronRight, FlaskConical,
 } from 'lucide-react'
+import { Button } from './Button'
 import { StatusBadge } from './StatusBadge'
 import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
@@ -206,14 +207,16 @@ export function StatsOverview({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           {collapsible ? (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={toggleExpanded}
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="font-medium"
+              icon={<Activity className="w-4 h-4" />}
+              iconRight={isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             >
-              <Activity className="w-4 h-4" />
-              <span>{resolvedTitle}</span>
-              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </button>
+              {resolvedTitle}
+            </Button>
           ) : (
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Activity className="w-4 h-4" />
@@ -232,13 +235,14 @@ export function StatsOverview({
           )}
         </div>
         {showConfigButton && isExpanded && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={openConfig}
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
+            className="p-1"
             title={t('statsOverview.configureStats')}
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+            icon={<Settings className="w-4 h-4" />}
+          />
         )}
       </div>
 

@@ -6,6 +6,7 @@
  */
 
 import { X } from 'lucide-react'
+import { Button } from './Button'
 
 type Placement = 'top' | 'bottom' | 'bottom-right' | 'left' | 'right'
 
@@ -35,13 +36,14 @@ export function FeatureHintTooltip({
     >
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg glass border border-purple-500/30 bg-purple-500/10 shadow-lg w-72">
         <span className="text-xs text-purple-300 leading-tight">{message}</span>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onDismiss}
-          className="flex-shrink-0 p-0.5 rounded hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors"
+          className="flex-shrink-0 p-0.5 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300"
           aria-label="Dismiss hint"
-        >
-          <X className="w-3 h-3" />
-        </button>
+          icon={<X className="w-3 h-3" />}
+        />
       </div>
     </div>
   )

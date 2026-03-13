@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { cn } from '../../lib/cn'
 import { emitCardSortChanged, emitCardSortDirectionChanged, emitCardLimitChanged } from '../../lib/analytics'
 import { useCardType } from '../cards/CardWrapper'
+import { Button } from './Button'
 
 interface LimitOption {
   value: number | 'unlimited'
@@ -86,13 +87,15 @@ export function CardControls<T extends string = string>({
       {/* Limit Dropdown */}
       {showLimit && onLimitChange && (
         <div ref={limitRef} className="relative">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => { setLimitOpen(!limitOpen); setSortOpen(false) }}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            className="bg-secondary/50 hover:bg-secondary"
+            iconRight={<ChevronDown className={cn('w-3 h-3 transition-transform', limitOpen && 'rotate-180')} />}
           >
-            <span>Show: {currentLimitLabel}</span>
-            <ChevronDown className={cn('w-3 h-3 transition-transform', limitOpen && 'rotate-180')} />
-          </button>
+            Show: {currentLimitLabel}
+          </Button>
           {limitOpen && (
             <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1">
               {LIMIT_OPTIONS.map(option => (
@@ -116,13 +119,15 @@ export function CardControls<T extends string = string>({
       {showSort && sortOptions && sortOptions.length > 0 && onSortChange && (
         <div className="flex items-center gap-1">
           <div ref={sortRef} className="relative">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => { setSortOpen(!sortOpen); setLimitOpen(false) }}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              className="bg-secondary/50 hover:bg-secondary"
+              iconRight={<ChevronDown className={cn('w-3 h-3 transition-transform', sortOpen && 'rotate-180')} />}
             >
-              <span>Sort: {currentSortLabel}</span>
-              <ChevronDown className={cn('w-3 h-3 transition-transform', sortOpen && 'rotate-180')} />
-            </button>
+              Sort: {currentSortLabel}
+            </Button>
             {sortOpen && (
               <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[100px] py-1">
                 {sortOptions.map(option => (
@@ -141,18 +146,19 @@ export function CardControls<T extends string = string>({
             )}
           </div>
           {onSortDirectionChange && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={toggleDirection}
-              className="p-1 text-xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 bg-secondary/50 hover:bg-secondary"
               title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
               aria-label={sortDirection === 'asc' ? 'Sort ascending, click to sort descending' : 'Sort descending, click to sort ascending'}
-            >
-              {sortDirection === 'asc' ? (
+              icon={sortDirection === 'asc' ? (
                 <ArrowUp className="w-3 h-3" />
               ) : (
                 <ArrowDown className="w-3 h-3" />
               )}
-            </button>
+            />
           )}
         </div>
       )}

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
 import { X, Check, AlertTriangle, Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { Button } from './Button'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -128,13 +129,14 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
     >
       <span className={iconColors[toast.type]}>{icons[toast.type]}</span>
       <span className="flex-1 text-sm">{toast.message}</span>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onRemove}
-        className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground"
+        className="p-1 hover:bg-white/10"
         aria-label="Dismiss notification"
-      >
-        <X className="w-3 h-3" aria-hidden="true" />
-      </button>
+        icon={<X className="w-3 h-3" aria-hidden="true" />}
+      />
     </div>
   )
 }

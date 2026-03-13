@@ -121,13 +121,14 @@ export function CardSearch({
         )}
       />
       {localValue && (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleClear}
-          className="absolute right-2 p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
+          className="absolute right-2 p-0.5"
           title={t('common.clearSearch')}
-        >
-          <X className={cn(iconSize, 'w-3 h-3')} />
-        </button>
+          icon={<X className={cn(iconSize, 'w-3 h-3')} />}
+        />
       )}
     </div>
   )

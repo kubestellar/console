@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings, Check, GripVertical, Eye, EyeOff, Plus, Trash2, Search, ChevronRight, ChevronDown } from 'lucide-react'
+import { Button } from './Button'
 import { BaseModal } from '../../lib/modals'
 import {
   DndContext,
@@ -148,25 +149,27 @@ function SortableItem({ block, onToggleVisibility, onRemove, isCustom }: Sortabl
         <span className="text-sm">{iconEmojis[block.icon] || '📊'}</span>
       </div>
       <span className="flex-1 text-sm text-foreground">{block.name}</span>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => onToggleVisibility(block.id)}
-        className={`p-1 rounded transition-colors ${
+        className={`p-1 ${
           block.visible
-            ? 'hover:bg-secondary text-green-400'
-            : 'hover:bg-secondary text-muted-foreground'
+            ? 'text-green-400'
+            : 'text-muted-foreground'
         }`}
         title={block.visible ? 'Hide' : 'Show'}
-      >
-        {block.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-      </button>
+        icon={block.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+      />
       {isCustom && onRemove && (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => onRemove(block.id)}
-          className="p-1 rounded transition-colors hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
+          className="p-1 hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
           title={t('common.remove')}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          icon={<Trash2 className="w-4 h-4" />}
+        />
       )}
     </div>
   )
@@ -224,16 +227,19 @@ interface AvailableStatItemProps {
 
 function AvailableStatItem({ block, onAdd }: AvailableStatItemProps) {
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="md"
       onClick={() => onAdd(block)}
-      className="flex items-center gap-3 p-2 pl-8 rounded-lg hover:bg-secondary/40 transition-colors w-full text-left"
+      className="w-full justify-start pl-8 rounded-lg"
+      fullWidth
+      iconRight={<Plus className="w-4 h-4 text-muted-foreground" />}
     >
       <div className={`w-5 h-5 ${colorClasses[block.color] || 'text-foreground'}`}>
         <span className="text-sm">{iconEmojis[block.icon] || '📊'}</span>
       </div>
-      <span className="flex-1 text-sm text-foreground">{block.name}</span>
-      <Plus className="w-4 h-4 text-muted-foreground" />
-    </button>
+      <span className="flex-1 text-sm text-foreground text-left">{block.name}</span>
+    </Button>
   )
 }
 
@@ -250,19 +256,22 @@ function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onTog
 
   return (
     <div className="border-b border-border/50 last:border-b-0">
-      <button
+      <Button
+        variant="ghost"
+        size="md"
         onClick={onToggle}
-        className="flex items-center gap-2 w-full p-2 hover:bg-secondary/30 rounded-lg transition-colors"
-      >
-        {isExpanded ? (
+        className="w-full justify-start"
+        fullWidth
+        icon={isExpanded ? (
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         ) : (
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         )}
+        iconRight={<span className="text-xs text-muted-foreground">{availableBlocks.length}</span>}
+      >
         <span className="text-base">{category.icon}</span>
         <span className="flex-1 text-sm font-medium text-foreground text-left">{category.name}</span>
-        <span className="text-xs text-muted-foreground">{availableBlocks.length}</span>
-      </button>
+      </Button>
       {isExpanded && (
         <div className="border-l-2 border-purple-500/30 ml-2">
           {availableBlocks.map(block => (
@@ -442,12 +451,13 @@ export function StatsConfigModal({
                   autoFocus
                 />
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowAddPanel(false)}
-                className="text-sm text-muted-foreground hover:text-foreground"
               >
                 Done
-              </button>
+              </Button>
             </div>
             <div className="space-y-0 min-h-48 max-h-80 overflow-y-auto border border-border/50 rounded-lg">
               {hasAvailableStats ? (
@@ -473,38 +483,44 @@ export function StatsConfigModal({
             </div>
           </div>
         ) : (
-          <button
+          <Button
+            variant="ghost"
+            size="md"
             onClick={() => setShowAddPanel(true)}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:border-purple-500/50 transition-colors"
+            className="mt-4 w-full border border-dashed border-border hover:border-purple-500/50"
+            icon={<Plus className="w-4 h-4" />}
+            fullWidth
           >
-            <Plus className="w-4 h-4" />
             Add stat from other dashboards
-          </button>
+          </Button>
         )}
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleReset}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           Reset to Default
-        </button>
+        </Button>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="md"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="accent"
+            size="md"
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+            icon={<Check className="w-4 h-4" />}
           >
-            <Check className="w-4 h-4" />
             Save
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

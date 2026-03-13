@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Copy, Check, AlertCircle } from 'lucide-react'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { Button } from './Button'
 
 interface CodeBlockProps {
   children: string
@@ -47,19 +48,20 @@ export function CodeBlock({ children, language = 'text', fontSize = 'sm' }: Code
   return (
     <div className="relative group">
       <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleCopy}
-          className="p-1.5 rounded bg-secondary/80 hover:bg-secondary/60 text-secondary-foreground transition-colors"
+          className="p-1.5"
           title={copied ? 'Copied!' : copyFailed ? 'Copy failed' : 'Copy code'}
-        >
-          {copied ? (
+          icon={copied ? (
             <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
           ) : copyFailed ? (
             <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
           ) : (
             <Copy className="w-4 h-4 text-muted-foreground" />
           )}
-        </button>
+        />
       </div>
       <pre
         className={`bg-secondary border border-border rounded-md p-4 overflow-x-auto ${

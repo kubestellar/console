@@ -1,5 +1,6 @@
 import { useState, ReactNode } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { Button } from './Button'
 
 interface CollapsibleSectionProps {
   title: string
@@ -20,18 +21,21 @@ export function CollapsibleSection({
 
   return (
     <div className={className}>
-      <button
+      <Button
+        variant="ghost"
+        size="md"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-2 px-2 py-2 text-sm font-medium text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-      >
-        {isOpen ? (
+        className="w-full justify-start px-2 py-2 font-medium text-foreground"
+        fullWidth
+        icon={isOpen ? (
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         ) : (
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         )}
-        <span>{title}</span>
-        {badge && <span className="ml-auto">{badge}</span>}
-      </button>
+        iconRight={badge ? <span className="ml-auto">{badge}</span> : undefined}
+      >
+        {title}
+      </Button>
       {isOpen && (
         <div className="mt-2 animate-fade-in">
           {children}

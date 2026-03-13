@@ -3,6 +3,7 @@ import { RefreshCw, Clock, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { formatLastSeen } from '../../lib/errorClassifier'
+import { Button } from './Button'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 // Must match animation duration (1s) defined in index.css for animate-spin-min
@@ -207,23 +208,26 @@ export function RefreshButton({
           <span>{t('refresh.failed')}</span>
         </div>
       )}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onRefresh}
         disabled={disabled || isRefreshing || isVisuallySpinning}
-        className={`${buttonPadding} hover:bg-secondary rounded transition-colors disabled:opacity-50`}
+        className={buttonPadding}
         title={tooltipText}
         aria-label={tooltipText}
-      >
-        <RefreshCw
-          className={`${sizeClasses} ${
-            isVisuallySpinning
-              ? 'text-blue-400 animate-spin-min'
-              : isFailed
-              ? 'text-red-400'
-              : 'text-muted-foreground'
-          }`}
-        />
-      </button>
+        icon={
+          <RefreshCw
+            className={`${sizeClasses} ${
+              isVisuallySpinning
+                ? 'text-blue-400 animate-spin-min'
+                : isFailed
+                ? 'text-red-400'
+                : 'text-muted-foreground'
+            }`}
+          />
+        }
+      />
     </div>
   )
 }
