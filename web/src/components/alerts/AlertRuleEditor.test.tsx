@@ -1,61 +1,65 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
 
-import '../../test/utils/setupMocks'
+import "../../test/utils/setupMocks";
 
-vi.mock('../../hooks/useMCP', () => ({
+vi.mock("../../hooks/useMCP", () => ({
   useClusters: () => ({
-    clusters: [{ name: 'test-cluster', context: 'test-ctx' }],
+    clusters: [{ name: "test-cluster", context: "test-ctx" }],
   }),
-}))
+}));
 
-vi.mock('../../hooks/useAlerts', () => ({
+vi.mock("../../hooks/useAlerts", () => ({
   useAlertRules: () => ({ rules: [] }),
-}))
+}));
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
-}))
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
+}));
 
-import { AlertRuleEditor } from './AlertRuleEditor'
+import { AlertRuleEditor } from "./AlertRuleEditor";
 
-describe('AlertRuleEditor Component', () => {
-  const mockOnSave = vi.fn()
-  const mockOnCancel = vi.fn()
+describe("AlertRuleEditor Component", () => {
+  const mockOnSave = vi.fn();
+  const mockOnCancel = vi.fn();
 
-  it('renders without crashing when open', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders without crashing when open", () => {
     expect(() =>
       render(
         <AlertRuleEditor
           isOpen={true}
           onSave={mockOnSave}
           onCancel={mockOnCancel}
-        />
-      )
-    ).not.toThrow()
-  })
+        />,
+      ),
+    ).not.toThrow();
+  });
 
-  it('renders the modal title', () => {
+  it("renders the modal title", () => {
     render(
       <AlertRuleEditor
         isOpen={true}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
-      />
-    )
-    expect(screen.getAllByText('alerts.createRule')[0]).toBeInTheDocument()
-  })
+      />,
+    );
+    expect(screen.getAllByText("alerts.createRule")[0]).toBeInTheDocument();
+  });
 
-  it('renders the rule name input', () => {
+  it("renders the rule name input", () => {
     render(
       <AlertRuleEditor
         isOpen={true}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
-      />
-    )
+      />,
+    );
     // Use regex to ignore the trailing " *" or just check if it finds elements matching the pattern
-    expect(screen.getAllByText(/alerts\.ruleName/i)[0]).toBeInTheDocument()
-  })
-})
+    expect(screen.getAllByText(/alerts\.ruleName/i)[0]).toBeInTheDocument();
+  });
+});

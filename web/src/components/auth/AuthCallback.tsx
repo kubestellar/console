@@ -8,30 +8,30 @@ import { useToast } from '../ui/Toast'
 import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
 
 export function AuthCallback() {
-  const { t } = useTranslation('common')
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const { setToken, refreshUser } = useAuth()
-  const { showToast } = useToast()
-  const [status, setStatus] = useState(t('authCallback.signingIn'))
-  const hasProcessed = useRef(false)
+  const { t } = useTranslation("common");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { setToken, refreshUser } = useAuth();
+  const { showToast } = useToast();
+  const [status, setStatus] = useState(t("authCallback.signingIn"));
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
     // Prevent running multiple times
-    if (hasProcessed.current) return
-    hasProcessed.current = true
+    if (hasProcessed.current) return;
+    hasProcessed.current = true;
 
-    const token = searchParams.get('token')
-    const error = searchParams.get('error')
+    const token = searchParams.get("token");
+    const error = searchParams.get("error");
 
     if (error) {
-      navigate(getLoginWithError(error))
-      return
+      navigate(getLoginWithError(error));
+      return;
     }
 
     if (token) {
-      setToken(token, true)
-      setStatus(t('authCallback.fetchingUserInfo'))
+      setToken(token, true);
+      setStatus(t("authCallback.fetchingUserInfo"));
 
       // Check for a return-to URL saved by ProtectedRoute (deep-link through OAuth),
       // then fall back to the last visited dashboard route, then '/'.
@@ -42,32 +42,34 @@ export function AuthCallback() {
 
       // Add timeout to prevent hanging forever
       const timeoutId = setTimeout(() => {
-        navigate(destination)
-      }, 5000)
+        navigate(destination);
+      }, 5000);
 
-      refreshUser(token).then(() => {
-        clearTimeout(timeoutId)
-        navigate(destination)
-      }).catch((_err) => {
-        clearTimeout(timeoutId)
-        showToast(t('authCallback.failedToFetchUser'), 'warning')
-        // Still try to proceed if we have a token
-        setStatus(t('authCallback.completingSignIn'))
-        setTimeout(() => {
-          navigate(destination)
-        }, 500)
-      })
+      refreshUser(token)
+        .then(() => {
+          clearTimeout(timeoutId);
+          navigate(destination);
+        })
+        .catch((_err) => {
+          clearTimeout(timeoutId);
+          showToast(t("authCallback.failedToFetchUser"), "warning");
+          // Still try to proceed if we have a token
+          setStatus(t("authCallback.completingSignIn"));
+          setTimeout(() => {
+            navigate(destination);
+          }, 500);
+        });
     } else {
-      navigate(ROUTES.LOGIN)
+      navigate(ROUTES.LOGIN);
     }
-  }, [searchParams, setToken, refreshUser, navigate, showToast])
+  }, [searchParams, setToken, refreshUser, navigate, showToast]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
       <div className="text-center">
-        <div className="spinner w-12 h-12 mx-auto mb-4" />
+        <div className="spinner w-12 h-12 mx-auto mb-4" role="status" />
         <p className="text-muted-foreground">{status}</p>
       </div>
     </div>
-  )
+  );
 }
