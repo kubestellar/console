@@ -1,12 +1,18 @@
 package handlers
 
 import (
+	"context"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// webhookListTimeout is the timeout for listing webhooks across all clusters.
+const webhookListTimeout = 30 * time.Second
 
 // GVRs for webhook configurations
 var (
@@ -63,9 +69,12 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 		})
 	}
 
-	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+	ctx, cancel := context.WithTimeout(c.Context(), webhookListTimeout)
+	defer cancel()
+
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 	if err != nil {
-		clusters, _ = h.k8sClient.ListClusters(c.Context())
+		clusters, _ = h.k8sClient.ListClusters(ctx)
 	}
 
 	var allWebhooks []WebhookSummary
@@ -77,7 +86,7 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 		}
 
 		// Fetch validating webhooks
-		valList, err := client.Resource(validatingWebhookGVR).List(c.Context(), metav1.ListOptions{})
+		valList, err := client.Resource(validatingWebhookGVR).List(ctx, metav1.ListOptions{})
 		if err == nil {
 			for _, item := range valList.Items {
 				wh := parseWebhookFromUnstructured(&item, cluster.Name, "validating")
@@ -88,7 +97,7 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 		}
 
 		// Fetch mutating webhooks
-		mutList, err := client.Resource(mutatingWebhookGVR).List(c.Context(), metav1.ListOptions{})
+		mutList, err := client.Resource(mutatingWebhookGVR).List(ctx, metav1.ListOptions{})
 		if err == nil {
 			for _, item := range mutList.Items {
 				wh := parseWebhookFromUnstructured(&item, cluster.Name, "mutating")

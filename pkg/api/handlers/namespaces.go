@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"log"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -9,6 +12,12 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
+
+// nsDefaultTimeout is the per-cluster timeout for namespace queries.
+const nsDefaultTimeout = 15 * time.Second
+
+// nsWriteTimeout is the timeout for namespace write operations.
+const nsWriteTimeout = 15 * time.Second
 
 // NamespaceHandler handles namespace management operations
 type NamespaceHandler struct {
@@ -32,7 +41,9 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
 
-	ctx := c.Context()
+	ctx, cancel := context.WithTimeout(c.Context(), nsDefaultTimeout)
+	defer cancel()
+
 	namespaces, err := h.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
 		log.Printf("failed to list namespaces: %v", err)
@@ -64,7 +75,8 @@ func (h *NamespaceHandler) CreateNamespace(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster and name are required")
 	}
 
-	ctx := c.Context()
+	ctx, cancel := context.WithTimeout(c.Context(), nsWriteTimeout)
+	defer cancel()
 
 	// Check if user has cluster-admin access on the target cluster
 	isAdmin, err := h.k8sClient.CheckClusterAdminAccess(ctx, req.Cluster)
@@ -103,7 +115,8 @@ func (h *NamespaceHandler) DeleteNamespace(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster and namespace name are required")
 	}
 
-	ctx := c.Context()
+	ctx, cancel := context.WithTimeout(c.Context(), nsWriteTimeout)
+	defer cancel()
 
 	// Check if user has cluster-admin access on the target cluster
 	isAdmin, err := h.k8sClient.CheckClusterAdminAccess(ctx, cluster)
@@ -131,7 +144,9 @@ func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster and namespace name are required")
 	}
 
-	ctx := c.Context()
+	ctx, cancel := context.WithTimeout(c.Context(), nsDefaultTimeout)
+	defer cancel()
+
 	bindings, err := h.k8sClient.ListRoleBindings(ctx, cluster, name)
 	if err != nil {
 		log.Printf("failed to list role bindings: %v", err)
@@ -192,7 +207,8 @@ func (h *NamespaceHandler) GrantNamespaceAccess(c *fiber.Ctx) error {
 		req.Role = "admin"
 	}
 
-	ctx := c.Context()
+	ctx, cancel := context.WithTimeout(c.Context(), nsWriteTimeout)
+	defer cancel()
 
 	// Check if user has cluster-admin access on the target cluster
 	isAdmin, err := h.k8sClient.CheckClusterAdminAccess(ctx, req.Cluster)
@@ -233,7 +249,8 @@ func (h *NamespaceHandler) RevokeNamespaceAccess(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster, namespace, and binding name are required")
 	}
 
-	ctx := c.Context()
+	ctx, cancel := context.WithTimeout(c.Context(), nsWriteTimeout)
+	defer cancel()
 
 	// Check if user has cluster-admin access on the target cluster
 	isAdmin, err := h.k8sClient.CheckClusterAdminAccess(ctx, cluster)

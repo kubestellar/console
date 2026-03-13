@@ -805,7 +805,13 @@ func (h *ConsolePersistenceHandlers) TestConnection(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	health := h.checkClusterHealth(c.Context(), req.Cluster)
+	// persistenceProbeTimeout is the timeout for a single-cluster health probe.
+	const persistenceProbeTimeout = 15 * time.Second
+
+	ctx, cancel := context.WithTimeout(c.Context(), persistenceProbeTimeout)
+	defer cancel()
+
+	health := h.checkClusterHealth(ctx, req.Cluster)
 
 	return c.JSON(fiber.Map{
 		"cluster": req.Cluster,

@@ -167,7 +167,10 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+		hcCtx, hcCancel := context.WithTimeout(c.Context(), gitopsLookupTimeout)
+		defer hcCancel()
+
+		clusters, _, err := h.k8sClient.HealthyClusters(hcCtx)
 		if err != nil {
 			log.Printf("error listing healthy clusters for releases: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "releases": []HelmRelease{}})
@@ -203,7 +206,10 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 // listHelmReleasesForCluster lists helm releases for a specific cluster
 func (h *GitOpsHandlers) listHelmReleasesForCluster(c *fiber.Ctx, cluster string) error {
-	releases := h.getHelmReleasesForCluster(c.Context(), cluster)
+	ctx, cancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
+	defer cancel()
+
+	releases := h.getHelmReleasesForCluster(ctx, cluster)
 	return c.JSON(fiber.Map{"releases": releases})
 }
 
@@ -244,7 +250,10 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 
 	// If specific cluster requested, query only that cluster
 	if cluster != "" {
-		kustomizations := h.getKustomizationsForCluster(c.Context(), cluster)
+		ctx, cancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
+		defer cancel()
+
+		kustomizations := h.getKustomizationsForCluster(ctx, cluster)
 		return c.JSON(fiber.Map{"kustomizations": kustomizations})
 	}
 
@@ -282,7 +291,10 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 	}
 
 	// Fallback to default context
-	kustomizations := h.getKustomizationsForCluster(c.Context(), "")
+	fallbackCtx, fallbackCancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
+	defer fallbackCancel()
+
+	kustomizations := h.getKustomizationsForCluster(fallbackCtx, "")
 	return c.JSON(fiber.Map{"kustomizations": kustomizations})
 }
 
@@ -956,9 +968,12 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "repoUrl is required"})
 	}
 
+	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
+	defer cancel()
+
 	// Try MCP bridge first (detect_drift tool from kubestellar-ops)
 	if h.bridge != nil {
-		result, err := h.detectDriftViaMCP(c.Context(), req)
+		result, err := h.detectDriftViaMCP(ctx, req)
 		if err == nil {
 			return c.JSON(result)
 		}
@@ -966,7 +981,7 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 	}
 
 	// Fall back to kubectl diff
-	result, err := h.detectDriftViaKubectl(c.Context(), req)
+	result, err := h.detectDriftViaKubectl(ctx, req)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1118,9 +1133,12 @@ func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "repoUrl is required"})
 	}
 
+	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
+	defer cancel()
+
 	// Try MCP bridge first
 	if h.bridge != nil {
-		result, err := h.syncViaMCP(c.Context(), req)
+		result, err := h.syncViaMCP(ctx, req)
 		if err == nil {
 			return c.JSON(result)
 		}
@@ -1128,7 +1146,7 @@ func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
 	}
 
 	// Fall back to kubectl apply
-	result, err := h.syncViaKubectl(c.Context(), req)
+	result, err := h.syncViaKubectl(ctx, req)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
