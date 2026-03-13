@@ -59,6 +59,20 @@ func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
 	}
 }
 
+// getEffectiveToken returns the current feedback GitHub token, preferring
+// a user-configured token from the settings manager (set via UI at runtime)
+// and falling back to the startup value (from environment variable).
+func (h *FeedbackHandler) getEffectiveToken() string {
+	// Check settings manager first (user-configured via UI)
+	if sm := settings.GetSettingsManager(); sm != nil {
+		if all, err := sm.GetAll(); err == nil && all.FeedbackGitHubToken != "" {
+			return all.FeedbackGitHubToken
+		}
+	}
+	// Fallback to startup value (from env var)
+	return h.githubToken
+}
+
 // CreateFeatureRequest creates a new feature request and GitHub issue
 func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
@@ -83,7 +97,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	// Reject early if GitHub issue creation is not configured
-	if h.githubToken == "" || h.repoOwner == "" || h.repoName == "" {
+	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Issue submission is not available: FEEDBACK_GITHUB_TOKEN is not configured. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file (requires a GitHub personal access token with repo scope).")
 	}
 
@@ -326,7 +340,7 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid PR number")
 	}
 
-	if h.githubToken == "" {
+	if h.getEffectiveToken() == "" {
 		return c.JSON(fiber.Map{"status": "unavailable", "message": "GitHub not configured"})
 	}
 
@@ -341,7 +355,7 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
-	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := client.Do(req)
@@ -373,7 +387,7 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create status request")
 	}
-	req2.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req2.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req2.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp2, err := client.Do(req2)
@@ -429,7 +443,7 @@ type GitHubPR struct {
 // fetchLinkedPRs fetches PRs that are linked to the given issues
 func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR {
 	result := make(map[int]GitHubPR)
-	if h.githubToken == "" || h.repoOwner == "" || h.repoName == "" {
+	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
 		return result
 	}
 
@@ -452,7 +466,7 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 			continue
 		}
 
-		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+		req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 		client := &http.Client{Timeout: githubAPITimeout}
@@ -497,7 +511,7 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 
 // fetchGitHubIssues fetches issues created by the given user from the configured GitHub repo
 func (h *FeedbackHandler) fetchGitHubIssues(githubLogin string) ([]GitHubIssue, error) {
-	if h.githubToken == "" || h.repoOwner == "" || h.repoName == "" {
+	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
 		return nil, fmt.Errorf("GitHub not configured")
 	}
 	if githubLogin == "" {
@@ -513,7 +527,7 @@ func (h *FeedbackHandler) fetchGitHubIssues(githubLogin string) ([]GitHubIssue, 
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	client := &http.Client{Timeout: githubAPITimeout}
@@ -612,7 +626,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 		}
 
 		// Close the GitHub issue
-		if h.githubToken != "" {
+		if h.getEffectiveToken() != "" {
 			go h.closeGitHubIssue(issueNum)
 		}
 
@@ -649,7 +663,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 	}
 
 	// Close the GitHub issue if we have one
-	if h.githubToken != "" && request.GitHubIssueNumber != nil {
+	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
 		go h.closeGitHubIssue(*request.GitHubIssueNumber)
 	}
 
@@ -671,7 +685,7 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 		}
 
 		// Add a comment to the GitHub issue requesting an update
-		if h.githubToken != "" {
+		if h.getEffectiveToken() != "" {
 			go h.addIssueComment(issueNum, "The user has requested an update on this issue.")
 		}
 
@@ -702,7 +716,7 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 	}
 
 	// Add a comment to the GitHub issue requesting an update
-	if h.githubToken != "" && request.GitHubIssueNumber != nil {
+	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
 		go h.addIssueComment(*request.GitHubIssueNumber, "The user has requested an update on this issue.")
 	}
 
@@ -727,7 +741,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
 		return
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
@@ -766,7 +780,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string) {
 		return
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
@@ -834,7 +848,7 @@ func (h *FeedbackHandler) SubmitFeedback(c *fiber.Ctx) error {
 	}
 
 	// Add comment to GitHub PR if configured
-	if h.githubToken != "" && request.PRNumber != nil {
+	if h.getEffectiveToken() != "" && request.PRNumber != nil {
 		go h.addPRComment(request, feedback)
 	}
 
@@ -1118,7 +1132,7 @@ func (h *FeedbackHandler) handleIssueClosed(issueNumber int, issueURL string, is
 
 // getLatestBotComment fetches the most recent bot comment from the issue
 func (h *FeedbackHandler) getLatestBotComment(issueNumber int) string {
-	if h.githubToken == "" {
+	if h.getEffectiveToken() == "" {
 		return ""
 	}
 
@@ -1130,7 +1144,7 @@ func (h *FeedbackHandler) getLatestBotComment(issueNumber int) string {
 		return ""
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	client := &http.Client{Timeout: githubAPITimeout}
@@ -1360,7 +1374,7 @@ func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user
 		return 0, "", err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
@@ -1424,7 +1438,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 		return
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
@@ -1533,8 +1547,10 @@ func extractLinkedIssueNumbers(body string) []int {
 	return issueNumbers
 }
 
-// LoadFeedbackConfigFromEnv loads feedback configuration from environment
-func LoadFeedbackConfigFromEnv() FeedbackConfig {
+// LoadFeedbackConfig loads feedback configuration, preferring persisted settings
+// from the settings manager (user-configured via UI) and falling back to
+// environment variables (FEEDBACK_GITHUB_TOKEN, GITHUB_WEBHOOK_SECRET, etc.).
+func LoadFeedbackConfig() FeedbackConfig {
 	githubToken := os.Getenv("FEEDBACK_GITHUB_TOKEN")
 	if sm := settings.GetSettingsManager(); sm != nil {
 		if all, err := sm.GetAll(); err == nil && all.FeedbackGitHubToken != "" {

@@ -165,9 +165,14 @@ export function restoreToLocalStorage(settings: AllSettings): void {
 
   if (settings.feedbackGithubToken) {
     localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, btoa(settings.feedbackGithubToken))
+  } else {
+    // Remove stale entries when the token is cleared/absent from backend settings
+    localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
   }
   if (settings.feedbackGithubTokenSource) {
     localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, settings.feedbackGithubTokenSource)
+  } else {
+    localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
   }
 
   if (settings.notifications) {

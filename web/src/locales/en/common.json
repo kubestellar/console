@@ -285,7 +285,7 @@
       "envBadge": "from .env",
       "feedbackToken": "Feedback GitHub Token (FEEDBACK_GITHUB_TOKEN)",
       "feedbackTokenDescription": "Used by the feedback / bug submission integration. This should stay separate from the main GitHub Activity token.",
-      "feedbackTokenEnvSource": " Currently sourced from .env.",
+      "feedbackTokenEnvSource": "Currently sourced from .env.",
       "feedbackRateLimit": "{{remaining}}/{{limit}} requests remaining · resets at {{time}}"
     },
     "predictions": {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from 'lucide-react'
-import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
+import { STORAGE_KEY_GITHUB_TOKEN, STORAGE_KEY_GITHUB_TOKEN_SOURCE, STORAGE_KEY_GITHUB_TOKEN_DISMISSED, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
 import type { AllSettings } from '../../../lib/settingsTypes'
@@ -59,21 +59,23 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         const token = decodeToken(encodedToken)
         await testGithubToken(token)
       }
-      if (encodedFeedbackToken) {
+      const feedbackDismissed = localStorage.getItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED) === 'true'
+      if (encodedFeedbackToken && !feedbackDismissed) {
         setHasFeedbackGithubToken(true)
         setFeedbackTokenSource(storedFeedbackSource)
         const token = decodeToken(encodedFeedbackToken)
         await testFeedbackGithubToken(token)
       }
       // If both tokens exist locally, no need to check backend
-      if (encodedToken && encodedFeedbackToken) {
+      const mainDismissed = localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED) === 'true'
+      if (encodedToken && (encodedFeedbackToken || feedbackDismissed)) {
         setIsInitializing(false)
         return
       }
 
       // Check backend for any tokens not already in localStorage
-      // Skip if user explicitly dismissed the env token
-      if (localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED) === 'true' && encodedFeedbackToken) {
+      // Skip entirely if both tokens are dismissed or already present
+      if (mainDismissed && (encodedFeedbackToken || feedbackDismissed)) {
         setIsInitializing(false)
         return
       }
@@ -84,21 +86,29 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         })
         if (response.ok) {
           const data: AllSettings = await response.json()
+          // Only restore main token if not dismissed (or if it's settings-sourced, not env)
           if (!encodedToken && data?.githubToken) {
-            localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(data.githubToken))
             const source = data.githubTokenSource || TOKEN_SOURCE_SETTINGS
-            localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, source)
-            setHasGithubToken(true)
-            setTokenSource(source)
-            await testGithubToken(data.githubToken)
+            const isEnvSourced = source === TOKEN_SOURCE_ENV
+            if (!mainDismissed || !isEnvSourced) {
+              localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(data.githubToken))
+              localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, source)
+              setHasGithubToken(true)
+              setTokenSource(source)
+              await testGithubToken(data.githubToken)
+            }
           }
+          // Only restore feedback token if not dismissed (or if it's settings-sourced, not env)
           if (!encodedFeedbackToken && data?.feedbackGithubToken) {
-            localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(data.feedbackGithubToken))
             const source = data.feedbackGithubTokenSource || TOKEN_SOURCE_SETTINGS
-            localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, source)
-            setHasFeedbackGithubToken(true)
-            setFeedbackTokenSource(source)
-            await testFeedbackGithubToken(data.feedbackGithubToken)
+            const isEnvSourced = source === TOKEN_SOURCE_ENV
+            if (!feedbackDismissed || !isEnvSourced) {
+              localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(data.feedbackGithubToken))
+              localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, source)
+              setHasFeedbackGithubToken(true)
+              setFeedbackTokenSource(source)
+              await testFeedbackGithubToken(data.feedbackGithubToken)
+            }
           }
           window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
         }
@@ -261,6 +271,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     if (isValid) {
       localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(feedbackGithubToken.trim()))
       localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, TOKEN_SOURCE_SETTINGS)
+      // Clear any previous env-token dismissal
+      localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED)
       window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
       setHasFeedbackGithubToken(true)
       setFeedbackTokenSource(TOKEN_SOURCE_SETTINGS)
@@ -274,6 +286,9 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const handleClearFeedbackGithubToken = () => {
     localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
     localStorage.removeItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
+    if (isFeedbackEnvToken) {
+      localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, 'true')
+    }
     setHasFeedbackGithubToken(false)
     setFeedbackTokenSource(null)
     setFeedbackGithubRateLimit(null)
@@ -426,7 +441,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {t('settings.github.feedbackTokenDescription')}
-                {isFeedbackEnvToken ? t('settings.github.feedbackTokenEnvSource') : ''}
+                {isFeedbackEnvToken ? ` ${t('settings.github.feedbackTokenEnvSource')}` : ''}
               </p>
               {feedbackGithubTokenError && (
                 <p className="text-xs text-red-400 mt-2">{feedbackGithubTokenError}</p>

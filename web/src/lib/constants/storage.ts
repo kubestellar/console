@@ -13,6 +13,7 @@ export const STORAGE_KEY_GITHUB_TOKEN_SOURCE = 'github_token_source'
 export const STORAGE_KEY_GITHUB_TOKEN_DISMISSED = 'github_token_dismissed'
 export const STORAGE_KEY_FEEDBACK_GITHUB_TOKEN = 'feedback_github_token'
 export const STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE = 'feedback_github_token_source'
+export const STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED = 'ksc-feedback-github-token-dismissed'
 export const DEMO_TOKEN_VALUE = 'demo-token'
 
 // ── Demo / Onboarding ──────────────────────────────────────────────────

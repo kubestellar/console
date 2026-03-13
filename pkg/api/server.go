@@ -721,7 +721,7 @@ func (s *Server) setupRoutes() {
 	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
 
 	// Feature requests and feedback routes
-	feedbackCfg := handlers.LoadFeedbackConfigFromEnv()
+	feedbackCfg := handlers.LoadFeedbackConfig()
 	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
 	api.Post("/feedback/requests", feedback.CreateFeatureRequest)
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
