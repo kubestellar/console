@@ -3226,8 +3226,14 @@ func (m *MultiClusterClient) FindDeploymentIssues(ctx context.Context, contextNa
 		// Check for issues
 		var reason, message string
 
+		// Kubernetes defaults Replicas to 1 when unset
+		desiredReplicas := int32(1)
+		if deploy.Spec.Replicas != nil {
+			desiredReplicas = *deploy.Spec.Replicas
+		}
+
 		// Check if not all replicas are ready
-		if deploy.Status.ReadyReplicas < *deploy.Spec.Replicas {
+		if deploy.Status.ReadyReplicas < desiredReplicas {
 			// Check conditions for more details
 			for _, condition := range deploy.Status.Conditions {
 				if condition.Type == "Available" && condition.Status == "False" {
@@ -3245,14 +3251,14 @@ func (m *MultiClusterClient) FindDeploymentIssues(ctx context.Context, contextNa
 			// If we found no condition, use generic
 			if reason == "" {
 				reason = "Unavailable"
-				message = fmt.Sprintf("%d/%d replicas ready", deploy.Status.ReadyReplicas, *deploy.Spec.Replicas)
+				message = fmt.Sprintf("%d/%d replicas ready", deploy.Status.ReadyReplicas, desiredReplicas)
 			}
 
 			issues = append(issues, DeploymentIssue{
 				Name:          deploy.Name,
 				Namespace:     deploy.Namespace,
 				Cluster:       contextName,
-				Replicas:      *deploy.Spec.Replicas,
+				Replicas:      desiredReplicas,
 				ReadyReplicas: deploy.Status.ReadyReplicas,
 				Reason:        reason,
 				Message:       message,
@@ -3277,9 +3283,15 @@ func (m *MultiClusterClient) GetDeployments(ctx context.Context, contextName, na
 
 	var result []Deployment
 	for _, deploy := range deployments.Items {
+		// Kubernetes defaults Replicas to 1 when unset
+		desired := int32(1)
+		if deploy.Spec.Replicas != nil {
+			desired = *deploy.Spec.Replicas
+		}
+
 		// Determine status
 		status := "running"
-		if deploy.Status.ReadyReplicas < *deploy.Spec.Replicas {
+		if deploy.Status.ReadyReplicas < desired {
 			status = "deploying"
 			// Check if stuck/failed
 			for _, condition := range deploy.Status.Conditions {
@@ -3295,8 +3307,7 @@ func (m *MultiClusterClient) GetDeployments(ctx context.Context, contextName, na
 			}
 		}
 
-		// Calculate progress
-		desired := *deploy.Spec.Replicas
+		// Calculate progress — desired already set above
 		progress := 100
 		if desired > 0 {
 			progress = int((float64(deploy.Status.ReadyReplicas) / float64(desired)) * 100)
@@ -3326,7 +3337,7 @@ func (m *MultiClusterClient) GetDeployments(ctx context.Context, contextName, na
 			Namespace:         deploy.Namespace,
 			Cluster:           contextName,
 			Status:            status,
-			Replicas:          *deploy.Spec.Replicas,
+			Replicas:          desired,
 			ReadyReplicas:     deploy.Status.ReadyReplicas,
 			UpdatedReplicas:   deploy.Status.UpdatedReplicas,
 			AvailableReplicas: deploy.Status.AvailableReplicas,

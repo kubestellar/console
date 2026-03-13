@@ -406,6 +406,53 @@ func TestGetDeployments(t *testing.T) {
 	}
 }
 
+// TestGetDeploymentsNilReplicas verifies that GetDeployments handles
+// Spec.Replicas == nil (the Kubernetes default of 1 replica).
+func TestGetDeploymentsNilReplicas(t *testing.T) {
+	m, _ := NewMultiClusterClient("")
+
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "nil-replicas-dep",
+			Namespace:         "default",
+			CreationTimestamp: metav1.Time{Time: time.Now().Add(-10 * time.Minute)},
+		},
+		Spec: appsv1.DeploymentSpec{
+			// Replicas intentionally nil — Kubernetes defaults to 1
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Image: "nginx"}},
+				},
+			},
+		},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas: 1,
+		},
+	}
+
+	fakeCS := k8sfake.NewSimpleClientset(dep)
+	m.clients["c1"] = fakeCS
+
+	deps, err := m.GetDeployments(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("GetDeployments failed: %v", err)
+	}
+
+	if len(deps) != 1 {
+		t.Fatalf("Expected 1 deployment, got %d", len(deps))
+	}
+	if deps[0].Replicas != 1 {
+		t.Errorf("Expected 1 replica (default), got %d", deps[0].Replicas)
+	}
+	if deps[0].Status != "running" {
+		t.Errorf("Expected running status with nil replicas, got %s", deps[0].Status)
+	}
+	expectedProgress := 100 // 1 ready / 1 desired = 100%
+	if deps[0].Progress != expectedProgress {
+		t.Errorf("Expected progress %d%%, got %d%%", expectedProgress, deps[0].Progress)
+	}
+}
+
 func TestGetServices(t *testing.T) {
 	m, _ := NewMultiClusterClient("")
 
