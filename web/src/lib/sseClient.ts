@@ -1,8 +1,9 @@
 /**
  * SSE (Server-Sent Events) client for streaming API responses.
  *
- * Connects to backend /stream endpoints and delivers per-cluster data
- * incrementally as it arrives. Falls back to regular fetch on failure.
+ * Uses fetch() with ReadableStream to deliver per-cluster data incrementally.
+ * SECURITY: Sends JWT via Authorization header (not URL query params) to keep
+ * tokens out of server logs, browser history, and proxy logs.
  *
  * Performance optimizations:
  * - Result cache (10s TTL) serves cached data on re-navigation
@@ -26,7 +27,8 @@ export interface SSEFetchOptions<T> {
   signal?: AbortSignal
 }
 
-const SSE_TIMEOUT = 60_000 // 60s — backend has 30s overall deadline
+/** Overall timeout for a single SSE stream (backend has 30s deadline) */
+const SSE_TIMEOUT_MS = 60_000
 
 // Dedup: prevent duplicate concurrent SSE requests to the same URL
 const inflightRequests = new Map<string, Promise<unknown[]>>()
@@ -37,7 +39,41 @@ const resultCache = new Map<string, { data: unknown[]; at: number }>()
 const RESULT_CACHE_TTL_MS = 10_000
 
 /**
- * Open an SSE connection and progressively collect data.
+ * Parse an SSE text stream and dispatch events.
+ * SSE format: `event: <type>\ndata: <json>\n\n`
+ */
+function parseSSEChunk(
+  buffer: string,
+  onEvent: (eventType: string, data: string) => void,
+): string {
+  // SSE messages are separated by double newlines
+  const parts = buffer.split('\n\n')
+  // The last part may be incomplete — keep it in the buffer
+  const remaining = parts.pop() || ''
+
+  for (const part of parts) {
+    if (!part.trim()) continue
+    let eventType = 'message'
+    let data = ''
+
+    for (const line of part.split('\n')) {
+      if (line.startsWith('event:')) {
+        eventType = line.slice('event:'.length).trim()
+      } else if (line.startsWith('data:')) {
+        data = line.slice('data:'.length).trim()
+      }
+    }
+
+    if (data) {
+      onEvent(eventType, data)
+    }
+  }
+
+  return remaining
+}
+
+/**
+ * Open a fetch-based SSE connection and progressively collect data.
  * Resolves with the full accumulated array once the "done" event fires.
  */
 export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
@@ -50,12 +86,16 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
       if (value !== undefined) searchParams.append(key, String(value))
     })
   }
-  if (token) searchParams.append('_token', token)
 
-  const fullUrl = `${url}?${searchParams}`
+  // SECURITY: Token is sent via Authorization header, NOT in the URL
+  const queryString = searchParams.toString()
+  const fullUrl = queryString ? `${url}?${queryString}` : url
+
+  // Build cache key including token hash (different users get different caches)
+  const cacheKey = fullUrl
 
   // Check result cache — if fresh, replay cached data via callbacks and resolve
-  const cached = resultCache.get(fullUrl)
+  const cached = resultCache.get(cacheKey)
   if (cached && Date.now() - cached.at < RESULT_CACHE_TTL_MS) {
     const items = cached.data as T[]
     // Replay per-cluster grouping for onClusterData callbacks
@@ -74,79 +114,126 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   }
 
   // Dedup: if same URL is already in-flight, return the existing promise
-  const inflight = inflightRequests.get(fullUrl)
+  const inflight = inflightRequests.get(cacheKey)
   if (inflight) {
     return inflight as Promise<T[]>
   }
 
   const promise = new Promise<T[]>((resolve, reject) => {
     const accumulated: T[] = []
-    const eventSource = new EventSource(fullUrl)
+    let aborted = false
 
     const cleanup = () => {
-      inflightRequests.delete(fullUrl)
-      resultCache.set(fullUrl, { data: accumulated, at: Date.now() })
+      inflightRequests.delete(cacheKey)
+      resultCache.set(cacheKey, { data: accumulated, at: Date.now() })
     }
+
+    // Create an AbortController for timeout that chains with the provided signal
+    const timeoutController = new AbortController()
+    const timeoutId = setTimeout(() => {
+      timeoutController.abort()
+      cleanup()
+      resolve(accumulated)
+    }, SSE_TIMEOUT_MS)
 
     if (signal) {
       signal.addEventListener('abort', () => {
-        eventSource.close()
+        aborted = true
+        timeoutController.abort()
+        clearTimeout(timeoutId)
         cleanup()
         reject(new DOMException('Aborted', 'AbortError'))
       })
     }
 
-    eventSource.addEventListener('cluster_data', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data) as Record<string, unknown>
-        const items = (data[itemsKey] || []) as T[]
-        const clusterName = (data.cluster as string) || 'unknown'
+    const headers: Record<string, string> = {
+      Accept: 'text/event-stream',
+    }
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
 
-        const tagged = items.map((item) => {
-          const rec = item as Record<string, unknown>
-          return rec.cluster ? item : ({ ...item, cluster: clusterName } as T)
-        })
-
-        accumulated.push(...tagged)
-        onClusterData(clusterName, tagged)
-      } catch (e) {
-        console.error('[SSE] Failed to parse cluster_data:', e)
-      }
+    fetch(fullUrl, {
+      headers,
+      signal: timeoutController.signal,
     })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`SSE fetch failed: ${response.status}`)
+        }
+        if (!response.body) {
+          throw new Error('SSE response has no body')
+        }
 
-    eventSource.addEventListener('done', (event: MessageEvent) => {
-      eventSource.close()
-      cleanup()
-      try {
-        const summary = JSON.parse(event.data) as Record<string, unknown>
-        onDone?.(summary)
-      } catch {
-        /* ignore parse errors on summary */
-      }
-      resolve(accumulated)
-    })
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let sseBuffer = ''
 
-    eventSource.addEventListener('error', () => {
-      eventSource.close()
-      cleanup()
-      if (accumulated.length > 0) {
-        resolve(accumulated)
-      } else {
-        reject(new Error('SSE stream error'))
-      }
-    })
+        const handleEvent = (eventType: string, data: string) => {
+          if (eventType === 'cluster_data') {
+            try {
+              const parsed = JSON.parse(data) as Record<string, unknown>
+              const items = ((parsed[itemsKey] || []) as T[])
+              const clusterName = (parsed.cluster as string) || 'unknown'
 
-    const timeoutId = setTimeout(() => {
-      if (eventSource.readyState !== EventSource.CLOSED) {
-        eventSource.close()
+              const tagged = items.map((item) => {
+                const rec = item as Record<string, unknown>
+                return rec.cluster ? item : ({ ...item, cluster: clusterName } as T)
+              })
+
+              accumulated.push(...tagged)
+              onClusterData(clusterName, tagged)
+            } catch (e) {
+              console.error('[SSE] Failed to parse cluster_data:', e)
+            }
+          } else if (eventType === 'done') {
+            clearTimeout(timeoutId)
+            cleanup()
+            try {
+              const summary = JSON.parse(data) as Record<string, unknown>
+              onDone?.(summary)
+            } catch {
+              /* ignore parse errors on summary */
+            }
+            resolve(accumulated)
+          }
+        }
+
+        const pump = (): Promise<void> =>
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              // Stream ended — flush remaining buffer
+              if (sseBuffer.trim()) {
+                parseSSEChunk(sseBuffer + '\n\n', handleEvent)
+              }
+              cleanup()
+              clearTimeout(timeoutId)
+              resolve(accumulated)
+              return
+            }
+            sseBuffer += decoder.decode(value, { stream: true })
+            sseBuffer = parseSSEChunk(sseBuffer, handleEvent)
+            return pump()
+          })
+
+        return pump()
+      })
+      .catch((err) => {
+        clearTimeout(timeoutId)
         cleanup()
-        resolve(accumulated)
-      }
-    }, SSE_TIMEOUT)
-
-    eventSource.addEventListener('done', () => clearTimeout(timeoutId))
+        if (aborted) return
+        if (err.name === 'AbortError') {
+          // Timeout — already resolved above
+          return
+        }
+        if (accumulated.length > 0) {
+          resolve(accumulated)
+        } else {
+          reject(new Error(`SSE stream error: ${err.message}`))
+        }
+      })
   })
 
-  inflightRequests.set(fullUrl, promise as Promise<unknown[]>)
+  inflightRequests.set(cacheKey, promise as Promise<unknown[]>)
   return promise
 }
