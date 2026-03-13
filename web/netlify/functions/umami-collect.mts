@@ -81,8 +81,8 @@ export default async (req: Request) => {
       },
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return new Response(JSON.stringify({ error: "proxy_error", message }), {
+    console.error("[umami-collect] Proxy error:", err instanceof Error ? err.message : err)
+    return new Response(JSON.stringify({ error: "proxy_error" }), {
       status: 502,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })

@@ -20,6 +20,16 @@ import {
 } from './pod-drilldown'
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 
+/** Keys that must never be used as object property names (prototype pollution prevention). */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** Safely assign a key-value pair to a plain object, rejecting prototype-polluting keys. */
+function safeSet<T>(obj: Record<string, T>, key: string, value: T): void {
+  if (!UNSAFE_KEYS.has(key)) {
+    obj[key] = value
+  }
+}
+
 export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
@@ -191,22 +201,22 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
               const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
 
               if (labelsMatch && !labels) {
-                const parsed: Record<string, string> = {}
+                const parsed: Record<string, string> = Object.create(null) as Record<string, string>
                 labelsMatch[1].trim().split('\n').forEach(line => {
                   const [key, ...valueParts] = line.trim().split('=')
-                  if (key && key !== '<none>') parsed[key] = valueParts.join('=')
+                  if (key && key !== '<none>') safeSet(parsed, key, valueParts.join('='))
                 })
                 if (Object.keys(parsed).length > 0) setLabels(parsed)
               }
 
               if (annotationsMatch && !annotations) {
-                const parsed: Record<string, string> = {}
+                const parsed: Record<string, string> = Object.create(null) as Record<string, string>
                 annotationsMatch[1].trim().split('\n').forEach(line => {
                   const colonIdx = line.indexOf(':')
                   if (colonIdx > 0) {
                     const key = line.substring(0, colonIdx).trim()
                     const value = line.substring(colonIdx + 1).trim()
-                    if (key && key !== '<none>') parsed[key] = value
+                    if (key && key !== '<none>') safeSet(parsed, key, value)
                   }
                 })
                 if (Object.keys(parsed).length > 0) setAnnotations(parsed)
@@ -835,6 +845,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
         const updated = { ...prev }
         // Apply pending changes
         for (const [key, value] of Object.entries(pendingLabelChanges)) {
+          if (UNSAFE_KEYS.has(key)) continue
           if (value === null) {
             delete updated[key]
           } else {
@@ -842,7 +853,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           }
         }
         // Add new label
-        if (newLabelKey.trim() && newLabelValue.trim()) {
+        if (newLabelKey.trim() && newLabelValue.trim() && !UNSAFE_KEYS.has(newLabelKey.trim())) {
           updated[newLabelKey.trim()] = newLabelValue.trim()
         }
         return updated
@@ -869,14 +880,17 @@ Please proceed step by step and ask for confirmation before making any changes.`
   }
 
   const handleLabelChange = (key: string, value: string) => {
+    if (UNSAFE_KEYS.has(key)) return
     setPendingLabelChanges(prev => ({ ...prev, [key]: value }))
   }
 
   const handleLabelRemove = (key: string) => {
+    if (UNSAFE_KEYS.has(key)) return
     setPendingLabelChanges(prev => ({ ...prev, [key]: null }))
   }
 
   const undoLabelChange = (key: string) => {
+    if (UNSAFE_KEYS.has(key)) return
     setPendingLabelChanges(prev => {
       const updated = { ...prev }
       delete updated[key]
@@ -969,6 +983,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
         const updated = { ...prev }
         // Apply pending changes
         for (const [key, value] of Object.entries(pendingAnnotationChanges)) {
+          if (UNSAFE_KEYS.has(key)) continue
           if (value === null) {
             delete updated[key]
           } else {
@@ -976,7 +991,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
           }
         }
         // Add new annotation
-        if (newAnnotationKey.trim() && newAnnotationValue.trim()) {
+        if (newAnnotationKey.trim() && newAnnotationValue.trim() && !UNSAFE_KEYS.has(newAnnotationKey.trim())) {
           updated[newAnnotationKey.trim()] = newAnnotationValue.trim()
         }
         return updated
@@ -1003,14 +1018,17 @@ Please proceed step by step and ask for confirmation before making any changes.`
   }
 
   const handleAnnotationChange = (key: string, value: string) => {
+    if (UNSAFE_KEYS.has(key)) return
     setPendingAnnotationChanges(prev => ({ ...prev, [key]: value }))
   }
 
   const handleAnnotationRemove = (key: string) => {
+    if (UNSAFE_KEYS.has(key)) return
     setPendingAnnotationChanges(prev => ({ ...prev, [key]: null }))
   }
 
   const undoAnnotationChange = (key: string) => {
+    if (UNSAFE_KEYS.has(key)) return
     setPendingAnnotationChanges(prev => {
       const updated = { ...prev }
       delete updated[key]

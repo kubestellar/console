@@ -78,10 +78,12 @@ export function SecretDrillDown({ data }: Props) {
       const output = await runKubectl(['get', 'secret', secretName, '-n', namespace, '-o', 'json'])
       if (output) {
         const secret = JSON.parse(output)
-        // Decode base64 data
-        const decodedData: Record<string, string> = {}
+        // Decode base64 data (use null-prototype object to prevent prototype pollution)
+        const decodedData: Record<string, string> = Object.create(null) as Record<string, string>
+        const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype'])
         if (secret.data) {
           for (const [key, value] of Object.entries(secret.data)) {
+            if (unsafeKeys.has(key)) continue
             try {
               decodedData[key] = atob(value as string)
             } catch {

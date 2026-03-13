@@ -912,9 +912,9 @@ export default async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    console.error("[analytics-dashboard] Fetch error:", err instanceof Error ? err.message : err);
     return new Response(
-      JSON.stringify({ error: "Failed to fetch analytics data", message }),
+      JSON.stringify({ error: "Failed to fetch analytics data" }),
       {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
