@@ -21,7 +21,6 @@ env:
 
 jobs:
   test:
-    if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:

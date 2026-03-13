@@ -17,12 +17,6 @@ import (
 // rbacAnalysisTimeout is the timeout for RBAC analysis queries on large clusters.
 const rbacAnalysisTimeout = 60 * time.Second
 
-// rbacDefaultTimeout is the per-cluster timeout for standard RBAC queries.
-const rbacDefaultTimeout = 15 * time.Second
-
-// rbacWriteTimeout is the timeout for RBAC write operations.
-const rbacWriteTimeout = 15 * time.Second
-
 // parseUUID parses a UUID string
 func parseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
@@ -143,9 +137,7 @@ func (h *RBACHandler) GetUserManagementSummary(c *fiber.Ctx) error {
 
 	// Count K8s service accounts (if k8s client is available)
 	if h.k8sClient != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-		defer cancel()
-
+		ctx := c.Context()
 		total, clusters, err := h.k8sClient.CountServiceAccountsAllClusters(ctx)
 		if err == nil {
 			summary.K8sServiceAccounts.Total = total
@@ -171,8 +163,7 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
+	ctx := c.Context()
 
 	if cluster != "" {
 		// Get SAs from specific cluster
@@ -190,7 +181,7 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list clusters")
 	}
 
-	allSAs := make([]models.K8sServiceAccount, 0)
+	var allSAs []models.K8sServiceAccount
 	for _, cl := range clusters {
 		sas, err := h.k8sClient.ListServiceAccounts(ctx, cl.Name, namespace)
 		if err != nil {
@@ -212,12 +203,11 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	includeSystem := c.Query("includeSystem") == "true"
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
+	ctx := c.Context()
 
 	if cluster != "" {
 		// Get roles from specific cluster
-		roles := make([]models.K8sRole, 0)
+		var roles []models.K8sRole
 		if namespace != "" {
 			nsRoles, err := h.k8sClient.ListRoles(ctx, cluster, namespace)
 			if err != nil {
@@ -247,14 +237,13 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	includeSystem := c.Query("includeSystem") == "true"
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
+	ctx := c.Context()
 
 	if cluster == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
 
-	bindings := make([]models.K8sRoleBinding, 0)
+	var bindings []models.K8sRoleBinding
 
 	if namespace != "" {
 		nsBindings, err := h.k8sClient.ListRoleBindings(ctx, cluster, namespace)
@@ -279,9 +268,7 @@ func (h *RBACHandler) GetClusterPermissions(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
-
+	ctx := c.Context()
 	cluster := c.Query("cluster")
 
 	if cluster != "" {
@@ -315,8 +302,7 @@ func (h *RBACHandler) CreateServiceAccount(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Name, namespace, and cluster are required")
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacWriteTimeout)
-	defer cancel()
+	ctx := c.Context()
 
 	// Check if user has cluster-admin access
 	isAdmin, err := h.k8sClient.CheckClusterAdminAccess(ctx, req.Cluster)
@@ -348,8 +334,7 @@ func (h *RBACHandler) CreateRoleBinding(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Missing required fields")
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacWriteTimeout)
-	defer cancel()
+	ctx := c.Context()
 
 	// Check if user has cluster-admin access
 	isAdmin, err := h.k8sClient.CheckClusterAdminAccess(ctx, req.Cluster)
@@ -376,9 +361,7 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
-
+	ctx := c.Context()
 	users, err := h.k8sClient.GetAllK8sUsers(ctx, cluster)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list K8s users")
@@ -417,9 +400,7 @@ func (h *RBACHandler) GetPermissionsSummary(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacAnalysisTimeout)
-	defer cancel()
-
+	ctx := c.Context()
 	summaries, err := h.k8sClient.GetAllPermissionsSummaries(ctx)
 	if err != nil {
 		log.Printf("failed to get permissions summary: %v", err)
@@ -461,9 +442,7 @@ func (h *RBACHandler) CheckCanI(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster, verb, and resource are required")
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), rbacDefaultTimeout)
-	defer cancel()
-
+	ctx := c.Context()
 	result, err := h.k8sClient.CheckCanI(ctx, req.Cluster, req)
 	if err != nil {
 		log.Printf("failed to check permission: %v", err)

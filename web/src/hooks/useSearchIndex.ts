@@ -8,7 +8,6 @@ import { useNodes } from './mcp/compute'
 import { useHelmReleases } from './mcp/helm'
 import { useMissions } from './useMissions'
 import { useDashboards } from './useDashboards'
-import { DASHBOARD_CONFIGS } from '../config/dashboards'
 
 export type SearchCategory =
   | 'page'
@@ -110,68 +109,34 @@ const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
 ]
 
 // --- Dashboard storage keys → routes (for scanning placed cards) ---
-//
-// Built from the central dashboard config registry so keys stay in sync
-// automatically when a dashboard's storageKey is changed. We also include
-// legacy component-level keys so the search index finds layouts saved before
-// the key was centralised.
 
-/** Generate DASHBOARD_STORAGE from the central DASHBOARD_CONFIGS registry */
-function buildDashboardStorage(): { key: string; route: string; name: string }[] {
-  const entries: { key: string; route: string; name: string }[] = []
-  const seenKeys = new Set<string>()
-
-  // Primary: keys from central config (single source of truth)
-  for (const config of Object.values(DASHBOARD_CONFIGS)) {
-    if (config.storageKey && config.route) {
-      seenKeys.add(config.storageKey)
-      entries.push({ key: config.storageKey, route: config.route, name: config.name })
-    }
-  }
-
-  // Legacy: component-level keys that may still be in localStorage.
-  // These are the old keys some dashboard components hardcode directly.
-  // As dashboards are migrated to source from central config, these can be removed.
-  const LEGACY_COMPONENT_KEYS: { key: string; route: string; name: string }[] = [
-    { key: 'kubestellar-main-dashboard-cards', route: '/', name: 'Main' },
-    { key: 'kubestellar-clusters-cards', route: '/clusters', name: 'My Clusters' },
-    { key: 'kubestellar-workloads-cards', route: '/workloads', name: 'Workloads' },
-    { key: 'kubestellar-deployments-cards', route: '/deployments', name: 'Deployments' },
-    { key: 'kubestellar-pods-cards', route: '/pods', name: 'Pods' },
-    { key: 'kubestellar-services-cards', route: '/services', name: 'Services' },
-    { key: 'kubestellar-compute-cards', route: '/compute', name: 'Compute' },
-    { key: 'kubestellar-nodes-cards', route: '/nodes', name: 'Nodes' },
-    { key: 'kubestellar-storage-cards', route: '/storage', name: 'Storage' },
-    { key: 'kubestellar-network-cards', route: '/network', name: 'Network' },
-    { key: 'kubestellar-events-cards', route: '/events', name: 'Events' },
-    { key: 'kubestellar-security-cards', route: '/security', name: 'Security' },
-    { key: 'kubestellar-gitops-dashboard-cards', route: '/gitops', name: 'GitOps' },
-    { key: 'kubestellar-alerts-dashboard-cards', route: '/alerts', name: 'Alerts' },
-    { key: 'kubestellar-cost-cards', route: '/cost', name: 'Cost' },
-    { key: 'kubestellar-operators-cards', route: '/operators', name: 'Operators' },
-    { key: 'kubestellar-helm-cards', route: '/helm', name: 'Helm' },
-    { key: 'kubestellar-logs-cards', route: '/logs', name: 'Logs' },
-    { key: 'kubestellar-arcade-cards', route: '/arcade', name: 'Arcade' },
-    { key: 'kubestellar-kagenti-cards', route: '/ai-agents', name: 'AI Agents' },
-    { key: 'kubestellar-aiagents-cards', route: '/ai-agents', name: 'AI Agents' },
-    { key: 'kubestellar-cluster-admin-cards', route: '/cluster-admin', name: 'Cluster Admin' },
-    { key: 'kubestellar-insights-cards', route: '/insights', name: 'Insights' },
-    { key: 'kubestellar-llmd-benchmarks-cards', route: '/llm-d-benchmarks', name: 'Benchmarks' },
-    { key: 'kubestellar-cicd-cards', route: '/ci-cd', name: 'CI/CD' },
-    { key: 'kubestellar-aiml-cards', route: '/ai-ml', name: 'AI/ML' },
-  ]
-
-  for (const legacy of LEGACY_COMPONENT_KEYS) {
-    if (!seenKeys.has(legacy.key)) {
-      seenKeys.add(legacy.key)
-      entries.push(legacy)
-    }
-  }
-
-  return entries
-}
-
-const DASHBOARD_STORAGE = buildDashboardStorage()
+const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
+  { key: 'kubestellar-main-dashboard-cards', route: '/', name: 'Main' },
+  { key: 'kubestellar-clusters-cards', route: '/clusters', name: 'My Clusters' },
+  { key: 'kubestellar-workloads-cards', route: '/workloads', name: 'Workloads' },
+  { key: 'kubestellar-deployments-cards', route: '/deployments', name: 'Deployments' },
+  { key: 'kubestellar-pods-cards', route: '/pods', name: 'Pods' },
+  { key: 'kubestellar-services-cards', route: '/services', name: 'Services' },
+  { key: 'kubestellar-compute-cards', route: '/compute', name: 'Compute' },
+  { key: 'kubestellar-nodes-cards', route: '/nodes', name: 'Nodes' },
+  { key: 'kubestellar-storage-cards', route: '/storage', name: 'Storage' },
+  { key: 'kubestellar-network-cards', route: '/network', name: 'Network' },
+  { key: 'kubestellar-events-cards', route: '/events', name: 'Events' },
+  { key: 'kubestellar-security-cards', route: '/security', name: 'Security' },
+  { key: 'compliance-dashboard-cards', route: '/security-posture', name: 'Compliance' },
+  { key: 'data-compliance-dashboard-cards', route: '/data-compliance', name: 'Data Compliance' },
+  { key: 'kubestellar-gitops-dashboard-cards', route: '/gitops', name: 'GitOps' },
+  { key: 'kubestellar-alerts-dashboard-cards', route: '/alerts', name: 'Alerts' },
+  { key: 'kubestellar-deploy-cards', route: '/deploy', name: 'Deploy' },
+  { key: 'kubestellar-cost-cards', route: '/cost', name: 'Cost' },
+  { key: 'kubestellar-operators-cards', route: '/operators', name: 'Operators' },
+  { key: 'kubestellar-helm-cards', route: '/helm', name: 'Helm' },
+  { key: 'kubestellar-logs-cards', route: '/logs', name: 'Logs' },
+  { key: 'kubestellar-arcade-cards', route: '/arcade', name: 'Arcade' },
+  { key: 'kubestellar-kagenti-cards', route: '/ai-agents', name: 'AI Agents' },
+  { key: 'kubestellar-cluster-admin-cards', route: '/cluster-admin', name: 'Cluster Admin' },
+  { key: 'kubestellar-insights-cards', route: '/insights', name: 'Insights' },
+]
 
 interface StoredCard {
   card_type: string

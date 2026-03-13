@@ -520,7 +520,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 	c.Set("Connection", "keep-alive")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		allReports := make([]BenchmarkReport, 0)
+		var allReports []BenchmarkReport
 		totalSent := 0
 		skippedFolders := 0
 
@@ -711,7 +711,7 @@ func (h *BenchmarkHandlers) fetchAllReports(cutoff time.Time) ([]BenchmarkReport
 		return nil, fmt.Errorf("listing top-level folder: %w", err)
 	}
 
-	allReports := make([]BenchmarkReport, 0)
+	var allReports []BenchmarkReport
 	for _, item := range topLevel {
 		if item.MimeType != driveFolderMIME {
 			continue

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,9 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
-
-// svcExportListTimeout is the timeout for listing ServiceExports across all clusters.
-const svcExportListTimeout = 30 * time.Second
 
 // serviceExportGVR is the GroupVersionResource for MCS ServiceExports
 var serviceExportGVR = schema.GroupVersionResource{
@@ -63,15 +59,12 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), svcExportListTimeout)
-	defer cancel()
-
-	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
+	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 	if err != nil {
-		clusters, _ = h.k8sClient.ListClusters(ctx)
+		clusters, _ = h.k8sClient.ListClusters(c.Context())
 	}
 
-	allExports := make([]ServiceExportSummary, 0)
+	var allExports []ServiceExportSummary
 
 	for _, cluster := range clusters {
 		client, err := h.k8sClient.GetDynamicClient(cluster.Name)
@@ -79,7 +72,7 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 			continue
 		}
 
-		exportList, err := client.Resource(serviceExportGVR).Namespace("").List(ctx, metav1.ListOptions{})
+		exportList, err := client.Resource(serviceExportGVR).Namespace("").List(c.Context(), metav1.ListOptions{})
 		if err != nil {
 			// MCS API may not be installed on this cluster — skip silently
 			continue

@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"context"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -11,9 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
-
-// crdListTimeout is the timeout for listing CRDs across all clusters.
-const crdListTimeout = 30 * time.Second
 
 // crdGVR is the GroupVersionResource for CustomResourceDefinitions
 var crdGVR = schema.GroupVersionResource{
@@ -72,14 +67,11 @@ func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), crdListTimeout)
-	defer cancel()
-
-	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
+	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 	if err != nil {
-		clusters, _ = h.k8sClient.ListClusters(ctx)
+		clusters, _ = h.k8sClient.ListClusters(c.Context())
 	}
-	allCRDs := make([]CRDSummary, 0)
+	var allCRDs []CRDSummary
 
 	for _, cluster := range clusters {
 		client, err := h.k8sClient.GetDynamicClient(cluster.Name)
@@ -87,7 +79,7 @@ func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 			continue
 		}
 
-		crdList, err := client.Resource(crdGVR).List(ctx, metav1.ListOptions{})
+		crdList, err := client.Resource(crdGVR).List(c.Context(), metav1.ListOptions{})
 		if err != nil {
 			continue
 		}
@@ -122,7 +114,7 @@ func parseCRDFromUnstructured(item *unstructured.Unstructured, cluster string) *
 	scope, _ := spec["scope"].(string)
 
 	// Extract versions
-	versions := make([]CRDVersion, 0)
+	var versions []CRDVersion
 	var primaryVersion string
 	if versionsRaw, ok := spec["versions"].([]interface{}); ok {
 		for _, v := range versionsRaw {

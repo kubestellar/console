@@ -47,7 +47,6 @@ export type WorkerResponse =
   | { id: number; type: 'result'; value: unknown }
   | { id: number; type: 'error'; message: string }
   | { id: -1; type: 'ready' }
-  | { id: -1; type: 'init-error'; message: string }
 
 // ---------------------------------------------------------------------------
 // Preload result (returned by 'preloadAll')

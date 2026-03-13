@@ -104,12 +104,9 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		return demoResponse(c, "clusters", getDemoClusters())
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
 	// Try MCP bridge first if available
 	if h.bridge != nil {
-		clusters, err := h.bridge.ListClusters(ctx)
+		clusters, err := h.bridge.ListClusters(c.Context())
 		if err == nil && len(clusters) > 0 {
 			return c.JSON(fiber.Map{"clusters": clusters, "source": "mcp"})
 		}
@@ -118,7 +115,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 
 	// Fall back to direct k8s client
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.ListClusters(ctx)
+		clusters, err := h.k8sClient.ListClusters(c.Context())
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -143,9 +140,6 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 			h.k8sClient.GetAllClusterHealth(ctx)
 		}()
 
-		if clusters == nil {
-			clusters = make([]k8s.ClusterInfo, 0)
-		}
 		return c.JSON(fiber.Map{"clusters": clusters, "source": "k8s"})
 	}
 
@@ -161,12 +155,9 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 		return c.JSON(getDemoClusterHealth(cluster))
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
 	// Try MCP bridge first if available
 	if h.bridge != nil {
-		health, err := h.bridge.GetClusterHealth(ctx, cluster)
+		health, err := h.bridge.GetClusterHealth(c.Context(), cluster)
 		if err == nil {
 			return c.JSON(health)
 		}
@@ -175,7 +166,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 
 	// Fall back to direct k8s client
 	if h.k8sClient != nil {
-		health, err := h.k8sClient.GetClusterHealth(ctx, cluster)
+		health, err := h.k8sClient.GetClusterHealth(c.Context(), cluster)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -195,10 +186,7 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 
 	// Use direct k8s client for this as it's more efficient
 	if h.k8sClient != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpHealthTimeout)
-		defer cancel()
-
-		health, err := h.k8sClient.GetAllClusterHealth(ctx)
+		health, err := h.k8sClient.GetAllClusterHealth(c.Context())
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -222,10 +210,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 
 	// Try MCP bridge first for its richer functionality
 	if h.bridge != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		pods, err := h.bridge.GetPods(ctx, cluster, namespace, labelSelector)
+		pods, err := h.bridge.GetPods(c.Context(), cluster, namespace, labelSelector)
 		if err == nil {
 			return c.JSON(fiber.Map{"pods": pods, "source": "mcp"})
 		}
@@ -244,7 +229,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allPods := make([]k8s.PodInfo, 0)
+			var allPods []k8s.PodInfo
 			clusterTimeout := mcpExtendedTimeout
 
 			for _, cl := range clusters {
@@ -267,16 +252,10 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"pods": allPods, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		pods, err := h.k8sClient.GetPods(ctx, cluster, namespace)
+		pods, err := h.k8sClient.GetPods(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if pods == nil {
-			pods = make([]k8s.PodInfo, 0)
 		}
 		return c.JSON(fiber.Map{"pods": pods, "source": "k8s"})
 	}
@@ -296,10 +275,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 	// Try MCP bridge first
 	if h.bridge != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		issues, err := h.bridge.FindPodIssues(ctx, cluster, namespace)
+		issues, err := h.bridge.FindPodIssues(c.Context(), cluster, namespace)
 		if err == nil {
 			return c.JSON(fiber.Map{"issues": issues, "source": "mcp"})
 		}
@@ -318,7 +294,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allIssues := make([]k8s.PodIssue, 0)
+			var allIssues []k8s.PodIssue
 			clusterTimeout := mcpExtendedTimeout
 
 			for _, cl := range clusters {
@@ -341,16 +317,10 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		issues, err := h.k8sClient.FindPodIssues(ctx, cluster, namespace)
+		issues, err := h.k8sClient.FindPodIssues(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if issues == nil {
-			issues = make([]k8s.PodIssue, 0)
 		}
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
@@ -378,7 +348,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allNodes := make([]k8s.GPUNode, 0)
+			var allNodes []k8s.GPUNode
 			clusterTimeout := mcpExtendedTimeout // Increased for large GPU clusters
 
 			for _, cl := range clusters {
@@ -401,16 +371,10 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpExtendedTimeout)
-		defer cancel()
-
-		nodes, err := h.k8sClient.GetGPUNodes(ctx, cluster)
+		nodes, err := h.k8sClient.GetGPUNodes(c.Context(), cluster)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if nodes == nil {
-			nodes = make([]k8s.GPUNode, 0)
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -436,7 +400,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allNodes := make([]k8s.GPUNodeHealthStatus, 0)
+			var allNodes []k8s.GPUNodeHealthStatus
 			clusterTimeout := mcpExtendedTimeout
 
 			for _, cl := range clusters {
@@ -459,16 +423,10 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpExtendedTimeout)
-		defer cancel()
-
-		nodes, err := h.k8sClient.GetGPUNodeHealth(ctx, cluster)
+		nodes, err := h.k8sClient.GetGPUNodeHealth(c.Context(), cluster)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if nodes == nil {
-			nodes = make([]k8s.GPUNodeHealthStatus, 0)
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -491,10 +449,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
-	status, err := h.k8sClient.GetGPUHealthCronJobStatus(ctx, cluster)
+	status, err := h.k8sClient.GetGPUHealthCronJobStatus(c.Context(), cluster)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -525,10 +480,7 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpExtendedTimeout)
-	defer cancel()
-
-	if err := h.k8sClient.InstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
+	if err := h.k8sClient.InstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
@@ -557,10 +509,7 @@ func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
-	if err := h.k8sClient.UninstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace); err != nil {
+	if err := h.k8sClient.UninstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace); err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
@@ -584,10 +533,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
-	status, err := h.k8sClient.GetGPUHealthCronJobStatus(ctx, cluster)
+	status, err := h.k8sClient.GetGPUHealthCronJobStatus(c.Context(), cluster)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -615,7 +561,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allStatus := make([]*k8s.NVIDIAOperatorStatus, 0)
+			var allStatus []*k8s.NVIDIAOperatorStatus
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -638,10 +584,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"operators": allStatus, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, cluster)
+		status, err := h.k8sClient.GetNVIDIAOperatorStatus(c.Context(), cluster)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -672,7 +615,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allNodes := make([]k8s.NodeInfo, 0)
+			var allNodes []k8s.NodeInfo
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -695,16 +638,10 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		nodes, err := h.k8sClient.GetNodes(ctx, cluster)
+		nodes, err := h.k8sClient.GetNodes(c.Context(), cluster)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if nodes == nil {
-			nodes = make([]k8s.NodeInfo, 0)
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -734,7 +671,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allIssues := make([]k8s.DeploymentIssue, 0)
+			var allIssues []k8s.DeploymentIssue
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -757,15 +694,10 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-		issues, err := h.k8sClient.FindDeploymentIssues(ctx, cluster, namespace)
+		issues, err := h.k8sClient.FindDeploymentIssues(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if issues == nil {
-			issues = make([]k8s.DeploymentIssue, 0)
 		}
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
@@ -794,7 +726,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allDeployments := make([]k8s.Deployment, 0)
+			var allDeployments []k8s.Deployment
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -817,15 +749,10 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"deployments": allDeployments, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-		deployments, err := h.k8sClient.GetDeployments(ctx, cluster, namespace)
+		deployments, err := h.k8sClient.GetDeployments(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if deployments == nil {
-			deployments = make([]k8s.Deployment, 0)
 		}
 		return c.JSON(fiber.Map{"deployments": deployments, "source": "k8s"})
 	}
@@ -853,7 +780,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allServices := make([]k8s.Service, 0)
+			var allServices []k8s.Service
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -876,16 +803,10 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"services": allServices, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		services, err := h.k8sClient.GetServices(ctx, cluster, namespace)
+		services, err := h.k8sClient.GetServices(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if services == nil {
-			services = make([]k8s.Service, 0)
 		}
 		return c.JSON(fiber.Map{"services": services, "source": "k8s"})
 	}
@@ -913,7 +834,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allJobs := make([]k8s.Job, 0)
+			var allJobs []k8s.Job
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -936,16 +857,10 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"jobs": allJobs, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		jobs, err := h.k8sClient.GetJobs(ctx, cluster, namespace)
+		jobs, err := h.k8sClient.GetJobs(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if jobs == nil {
-			jobs = make([]k8s.Job, 0)
 		}
 		return c.JSON(fiber.Map{"jobs": jobs, "source": "k8s"})
 	}
@@ -973,7 +888,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allHPAs := make([]k8s.HPA, 0)
+			var allHPAs []k8s.HPA
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -996,16 +911,10 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"hpas": allHPAs, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		hpas, err := h.k8sClient.GetHPAs(ctx, cluster, namespace)
+		hpas, err := h.k8sClient.GetHPAs(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if hpas == nil {
-			hpas = make([]k8s.HPA, 0)
 		}
 		return c.JSON(fiber.Map{"hpas": hpas, "source": "k8s"})
 	}
@@ -1033,7 +942,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allConfigMaps := make([]k8s.ConfigMap, 0)
+			var allConfigMaps []k8s.ConfigMap
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1056,16 +965,10 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"configmaps": allConfigMaps, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		configmaps, err := h.k8sClient.GetConfigMaps(ctx, cluster, namespace)
+		configmaps, err := h.k8sClient.GetConfigMaps(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if configmaps == nil {
-			configmaps = make([]k8s.ConfigMap, 0)
 		}
 		return c.JSON(fiber.Map{"configmaps": configmaps, "source": "k8s"})
 	}
@@ -1093,7 +996,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allSecrets := make([]k8s.Secret, 0)
+			var allSecrets []k8s.Secret
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1116,16 +1019,10 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"secrets": allSecrets, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		secrets, err := h.k8sClient.GetSecrets(ctx, cluster, namespace)
+		secrets, err := h.k8sClient.GetSecrets(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if secrets == nil {
-			secrets = make([]k8s.Secret, 0)
 		}
 		return c.JSON(fiber.Map{"secrets": secrets, "source": "k8s"})
 	}
@@ -1153,7 +1050,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allServiceAccounts := make([]k8s.ServiceAccount, 0)
+			var allServiceAccounts []k8s.ServiceAccount
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1176,16 +1073,10 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"serviceAccounts": allServiceAccounts, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		serviceAccounts, err := h.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
+		serviceAccounts, err := h.k8sClient.GetServiceAccounts(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if serviceAccounts == nil {
-			serviceAccounts = make([]k8s.ServiceAccount, 0)
 		}
 		return c.JSON(fiber.Map{"serviceAccounts": serviceAccounts, "source": "k8s"})
 	}
@@ -1213,7 +1104,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allPVCs := make([]k8s.PVC, 0)
+			var allPVCs []k8s.PVC
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1236,16 +1127,10 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"pvcs": allPVCs, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		pvcs, err := h.k8sClient.GetPVCs(ctx, cluster, namespace)
+		pvcs, err := h.k8sClient.GetPVCs(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if pvcs == nil {
-			pvcs = make([]k8s.PVC, 0)
 		}
 		return c.JSON(fiber.Map{"pvcs": pvcs, "source": "k8s"})
 	}
@@ -1272,7 +1157,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allPVs := make([]k8s.PV, 0)
+			var allPVs []k8s.PV
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1295,16 +1180,10 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"pvs": allPVs, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		pvs, err := h.k8sClient.GetPVs(ctx, cluster)
+		pvs, err := h.k8sClient.GetPVs(c.Context(), cluster)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if pvs == nil {
-			pvs = make([]k8s.PV, 0)
 		}
 		return c.JSON(fiber.Map{"pvs": pvs, "source": "k8s"})
 	}
@@ -1332,7 +1211,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allQuotas := make([]k8s.ResourceQuota, 0)
+			var allQuotas []k8s.ResourceQuota
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1355,16 +1234,10 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"resourceQuotas": allQuotas, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		quotas, err := h.k8sClient.GetResourceQuotas(ctx, cluster, namespace)
+		quotas, err := h.k8sClient.GetResourceQuotas(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if quotas == nil {
-			quotas = make([]k8s.ResourceQuota, 0)
 		}
 		return c.JSON(fiber.Map{"resourceQuotas": quotas, "source": "k8s"})
 	}
@@ -1392,7 +1265,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allRanges := make([]k8s.LimitRange, 0)
+			var allRanges []k8s.LimitRange
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1415,16 +1288,10 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"limitRanges": allRanges, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		ranges, err := h.k8sClient.GetLimitRanges(ctx, cluster, namespace)
+		ranges, err := h.k8sClient.GetLimitRanges(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if ranges == nil {
-			ranges = make([]k8s.LimitRange, 0)
 		}
 		return c.JSON(fiber.Map{"limitRanges": ranges, "source": "k8s"})
 	}
@@ -1457,12 +1324,9 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
 		// Auto-create namespace if requested (used by GPU reservation flow)
 		if req.EnsureNamespace {
-			if err := h.k8sClient.EnsureNamespaceExists(ctx, req.Cluster, req.Namespace); err != nil {
+			if err := h.k8sClient.EnsureNamespaceExists(c.Context(), req.Cluster, req.Namespace); err != nil {
 				log.Printf("failed to create namespace: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
@@ -1476,7 +1340,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 			Annotations: req.Annotations,
 		}
 
-		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(ctx, req.Cluster, spec)
+		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(c.Context(), req.Cluster, spec)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1499,10 +1363,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		err := h.k8sClient.DeleteResourceQuota(ctx, cluster, namespace, name)
+		err := h.k8sClient.DeleteResourceQuota(c.Context(), cluster, namespace, name)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1532,10 +1393,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		logs, err := h.k8sClient.GetPodLogs(ctx, cluster, namespace, pod, container, int64(tailLines))
+		logs, err := h.k8sClient.GetPodLogs(c.Context(), cluster, namespace, pod, container, int64(tailLines))
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1559,10 +1417,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 
 	// Try MCP bridge first
 	if h.bridge != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		events, err := h.bridge.GetEvents(ctx, cluster, namespace, limit)
+		events, err := h.bridge.GetEvents(c.Context(), cluster, namespace, limit)
 		if err == nil {
 			return c.JSON(fiber.Map{"events": events, "source": "mcp"})
 		}
@@ -1589,7 +1444,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			// Query clusters in parallel with 5 second timeout per cluster
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allEvents := make([]k8s.Event, 0)
+			var allEvents []k8s.Event
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1617,16 +1472,10 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"events": allEvents, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		events, err := h.k8sClient.GetEvents(ctx, cluster, namespace, limit)
+		events, err := h.k8sClient.GetEvents(c.Context(), cluster, namespace, limit)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if events == nil {
-			events = make([]k8s.Event, 0)
 		}
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
@@ -1647,10 +1496,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 	// Try MCP bridge first
 	if h.bridge != nil {
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		events, err := h.bridge.GetWarningEvents(ctx, cluster, namespace, limit)
+		events, err := h.bridge.GetWarningEvents(c.Context(), cluster, namespace, limit)
 		if err == nil {
 			return c.JSON(fiber.Map{"events": events, "source": "mcp"})
 		}
@@ -1674,7 +1520,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allEvents := make([]k8s.Event, 0)
+			var allEvents []k8s.Event
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1702,16 +1548,10 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"events": allEvents, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		events, err := h.k8sClient.GetWarningEvents(ctx, cluster, namespace, limit)
+		events, err := h.k8sClient.GetWarningEvents(c.Context(), cluster, namespace, limit)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if events == nil {
-			events = make([]k8s.Event, 0)
 		}
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
@@ -1741,7 +1581,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 
 			var wg sync.WaitGroup
 			var mu sync.Mutex
-			allIssues := make([]k8s.SecurityIssue, 0)
+			var allIssues []k8s.SecurityIssue
 			clusterTimeout := mcpDefaultTimeout
 
 			for _, cl := range clusters {
@@ -1764,16 +1604,10 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
-		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-		defer cancel()
-
-		issues, err := h.k8sClient.CheckSecurityIssues(ctx, cluster, namespace)
+		issues, err := h.k8sClient.CheckSecurityIssues(c.Context(), cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-		}
-		if issues == nil {
-			issues = make([]k8s.SecurityIssue, 0)
 		}
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
@@ -1912,10 +1746,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
-	result, err := h.bridge.CallOpsTool(ctx, req.Name, req.Arguments)
+	result, err := h.bridge.CallOpsTool(c.Context(), req.Name, req.Arguments)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1940,10 +1771,7 @@ func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
-	defer cancel()
-
-	result, err := h.bridge.CallDeployTool(ctx, req.Name, req.Arguments)
+	result, err := h.bridge.CallDeployTool(c.Context(), req.Name, req.Arguments)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})

@@ -27,13 +27,11 @@ export class CacheWorkerRpc {
   private pending = new Map<number, PendingCall>()
   private readyPromise: Promise<void>
   private resolveReady!: () => void
-  private rejectReady!: (error: Error) => void
 
   constructor(worker: Worker) {
     this.worker = worker
-    this.readyPromise = new Promise<void>((resolve, reject) => {
+    this.readyPromise = new Promise<void>((resolve) => {
       this.resolveReady = resolve
-      this.rejectReady = reject
     })
 
     this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
@@ -42,12 +40,6 @@ export class CacheWorkerRpc {
       // Handle the initial 'ready' signal
       if (msg.id === -1 && msg.type === 'ready') {
         this.resolveReady()
-        return
-      }
-
-      // Handle init failure — reject the ready promise so callers know init failed
-      if (msg.id === -1 && msg.type === 'init-error') {
-        this.rejectReady(new Error(msg.message))
         return
       }
 

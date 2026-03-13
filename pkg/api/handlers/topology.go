@@ -1,17 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 )
-
-// topologyTimeout is the timeout for aggregating topology data across clusters.
-const topologyTimeout = 30 * time.Second
 
 // TopologyHandlers handles service topology API endpoints
 type TopologyHandlers struct {
@@ -76,8 +71,7 @@ func (h *TopologyHandlers) GetTopology(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), topologyTimeout)
-	defer cancel()
+	ctx := c.Context()
 
 	// Collect data from all sources
 	exports, _ := h.k8sClient.ListServiceExports(ctx)

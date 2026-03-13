@@ -164,45 +164,12 @@ function loadMissions(): Mission[] {
   return []
 }
 
-// Maximum number of completed/failed missions to retain when pruning for quota.
-// Active (pending/running/waiting_input) and saved (library) missions are always kept.
-const MAX_COMPLETED_MISSIONS = 50
-
-// Save missions to localStorage, pruning old completed/failed missions if quota is exceeded
+// Save missions to localStorage
 function saveMissions(missions: Mission[]) {
   try {
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
   } catch (e) {
-    // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
-    // browsers that use numeric code 22 instead of the named exception.
-    // Pattern matches useMetricsHistory for consistency across the codebase.
-    const isQuotaError = e instanceof DOMException
-      && (e.name === 'QuotaExceededError' || e.code === 22)
-    if (isQuotaError) {
-      console.warn('[Missions] localStorage quota exceeded, pruning old missions')
-      // Keep active missions (pending/running/waiting_input) unconditionally
-      const active = missions.filter(m =>
-        m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input'
-      )
-      // Keep saved/library missions unconditionally — they are small (no chat history)
-      const saved = missions.filter(m => m.status === 'saved')
-      // Only prune completed/failed missions by age
-      const completedOrFailed = missions
-        .filter(m => m.status === 'completed' || m.status === 'failed')
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        .slice(0, MAX_COMPLETED_MISSIONS)
-      const pruned = [...active, ...saved, ...completedOrFailed]
-      try {
-        localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(pruned))
-        return
-      } catch (retryError) {
-        // Still too large — clear missions storage as last resort
-        console.error('[Missions] localStorage still full after pruning, clearing missions', retryError)
-        localStorage.removeItem(MISSIONS_STORAGE_KEY)
-      }
-    } else {
-      console.error('Failed to save missions to localStorage:', e)
-    }
+    console.error('Failed to save missions to localStorage:', e)
   }
 }
 
@@ -247,35 +214,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // Track last stream timestamp per mission to detect tool-use gaps (for creating new chat bubbles)
   const lastStreamTimestamp = useRef<Map<string, number>>(new Map()) // missionId -> timestamp
   const STREAM_GAP_THRESHOLD_MS = 2000 // If >2s gap, create new message bubble
-
-  // Maximum number of WebSocket send retries before giving up
-  const WS_SEND_MAX_RETRIES = 3
-  // Delay between WebSocket send retries in milliseconds
-  const WS_SEND_RETRY_DELAY_MS = 1000
-
-  /**
-   * Send a message over the WebSocket with retry logic.
-   * Makes one immediate attempt, then retries up to WS_SEND_MAX_RETRIES
-   * additional times with WS_SEND_RETRY_DELAY_MS between attempts.
-   * Calls onFailure (if provided) when all retries are exhausted.
-   */
-  const wsSend = useCallback((data: string, onFailure?: () => void): void => {
-    let retries = 0
-    const trySend = () => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(data)
-        return
-      }
-      if (retries < WS_SEND_MAX_RETRIES) {
-        retries++
-        setTimeout(trySend, WS_SEND_RETRY_DELAY_MS)
-      } else {
-        console.error('[Missions] WebSocket send failed after retries — socket not open')
-        onFailure?.()
-      }
-    }
-    trySend()
-  }, [])
 
   // Save missions whenever they change
   useEffect(() => {
@@ -360,21 +298,16 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                         content: msg.content,
                       }))
 
-                    const mId = mission.id
-                    wsSend(JSON.stringify({
+                    wsRef.current?.send(JSON.stringify({
                       id: requestId,
                       type: 'chat',
                       payload: {
                         prompt: lastUserMessage.content,
-                        sessionId: mId,
+                        sessionId: mission.id,
                         agent: agentToUse,
                         history: history,
                       }
-                    }), () => {
-                      setMissions(prev => prev.map(m =>
-                        m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
-                      ))
-                    })
+                    }))
                   }
                 })
               }, 500)
@@ -783,7 +716,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       // Track token usage for this mission
       setActiveTokenCategory('missions')
 
-      wsSend(JSON.stringify({
+      wsRef.current?.send(JSON.stringify({
         id: requestId,
         type: 'chat',
         payload: {
@@ -793,11 +726,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           // Include mission context for the agent to use
           context: params.context,
         }
-      }), () => {
-        setMissions(prev => prev.map(m =>
-          m.id === missionId ? { ...m, status: 'failed', currentStep: 'WebSocket connection lost' } : m
-        ))
-      })
+      }))
 
       // Update status after message is sent
       setTimeout(() => {
@@ -911,7 +840,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
       setActiveTokenCategory('missions')
 
-      wsSend(JSON.stringify({
+      wsRef.current?.send(JSON.stringify({
         id: requestId,
         type: 'chat',
         payload: {
@@ -919,11 +848,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           sessionId: missionId,
           agent: selectedAgent || undefined,
         }
-      }), () => {
-        setMissions(prev => prev.map(m =>
-          m.id === missionId ? { ...m, status: 'failed', currentStep: 'WebSocket connection lost' } : m
-        ))
-      })
+      }))
     }).catch(() => {
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
@@ -1027,7 +952,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           content: msg.content,
         })) || []
 
-      wsSend(JSON.stringify({
+      wsRef.current?.send(JSON.stringify({
         id: requestId,
         type: 'chat',
         payload: {
@@ -1036,11 +961,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           agent: selectedAgent || undefined,
           history: history, // Include conversation history for context
         }
-      }), () => {
-        setMissions(prev => prev.map(m =>
-          m.id === missionId ? { ...m, status: 'failed', currentStep: 'WebSocket connection lost' } : m
-        ))
-      })
+      }))
     }).catch(() => {
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
@@ -1120,13 +1041,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // Skip WebSocket message for 'none' — no backend agent to select
     if (agentName === NONE_AGENT) return
     ensureConnection().then(() => {
-      wsSend(JSON.stringify({
+      wsRef.current?.send(JSON.stringify({
         id: `select-agent-${Date.now()}`,
         type: 'select_agent',
         payload: { agent: agentName }
-      }), () => {
-        console.error('[Missions] Failed to send agent selection after retries')
-      })
+      }))
     }).catch(err => {
       console.error('[Missions] Failed to select agent:', err)
     })

@@ -167,10 +167,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		hcCtx, hcCancel := context.WithTimeout(c.Context(), gitopsLookupTimeout)
-		defer hcCancel()
-
-		clusters, _, err := h.k8sClient.HealthyClusters(hcCtx)
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 		if err != nil {
 			log.Printf("error listing healthy clusters for releases: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "releases": []HelmRelease{}})
@@ -206,10 +203,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 // listHelmReleasesForCluster lists helm releases for a specific cluster
 func (h *GitOpsHandlers) listHelmReleasesForCluster(c *fiber.Ctx, cluster string) error {
-	ctx, cancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
-	defer cancel()
-
-	releases := h.getHelmReleasesForCluster(ctx, cluster)
+	releases := h.getHelmReleasesForCluster(c.Context(), cluster)
 	return c.JSON(fiber.Map{"releases": releases})
 }
 
@@ -230,7 +224,7 @@ func (h *GitOpsHandlers) getHelmReleasesForCluster(ctx context.Context, cluster 
 		return []HelmRelease{}
 	}
 
-	releases := make([]HelmRelease, 0)
+	var releases []HelmRelease
 	if err := json.Unmarshal(stdout.Bytes(), &releases); err != nil {
 		log.Printf("failed to parse helm ls output for cluster %s: %v", cluster, err)
 		return []HelmRelease{}
@@ -250,10 +244,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 
 	// If specific cluster requested, query only that cluster
 	if cluster != "" {
-		ctx, cancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
-		defer cancel()
-
-		kustomizations := h.getKustomizationsForCluster(ctx, cluster)
+		kustomizations := h.getKustomizationsForCluster(c.Context(), cluster)
 		return c.JSON(fiber.Map{"kustomizations": kustomizations})
 	}
 
@@ -267,7 +258,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		allKustomizations := make([]Kustomization, 0)
+		var allKustomizations []Kustomization
 		clusterTimeout := gitopsClusterTimeout
 
 		for _, cl := range clusters {
@@ -291,10 +282,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 	}
 
 	// Fallback to default context
-	fallbackCtx, fallbackCancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
-	defer fallbackCancel()
-
-	kustomizations := h.getKustomizationsForCluster(fallbackCtx, "")
+	kustomizations := h.getKustomizationsForCluster(c.Context(), "")
 	return c.JSON(fiber.Map{"kustomizations": kustomizations})
 }
 
@@ -968,12 +956,9 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "repoUrl is required"})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
-	defer cancel()
-
 	// Try MCP bridge first (detect_drift tool from kubestellar-ops)
 	if h.bridge != nil {
-		result, err := h.detectDriftViaMCP(ctx, req)
+		result, err := h.detectDriftViaMCP(c.Context(), req)
 		if err == nil {
 			return c.JSON(result)
 		}
@@ -981,7 +966,7 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 	}
 
 	// Fall back to kubectl diff
-	result, err := h.detectDriftViaKubectl(ctx, req)
+	result, err := h.detectDriftViaKubectl(c.Context(), req)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1133,12 +1118,9 @@ func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "repoUrl is required"})
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), gitopsDefaultTimeout)
-	defer cancel()
-
 	// Try MCP bridge first
 	if h.bridge != nil {
-		result, err := h.syncViaMCP(ctx, req)
+		result, err := h.syncViaMCP(c.Context(), req)
 		if err == nil {
 			return c.JSON(result)
 		}
@@ -1146,7 +1128,7 @@ func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
 	}
 
 	// Fall back to kubectl apply
-	result, err := h.syncViaKubectl(ctx, req)
+	result, err := h.syncViaKubectl(c.Context(), req)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1401,7 +1383,7 @@ func cleanupTempDir(dir string) {
 }
 
 func parseDiffOutput(output, namespace string) []DriftedResource {
-	resources := make([]DriftedResource, 0)
+	var resources []DriftedResource
 	resourceMap := make(map[string]*DriftedResource) // key: kind/name
 
 	lines := strings.Split(output, "\n")
@@ -1486,7 +1468,7 @@ func truncateValue(s string) string {
 }
 
 func parseApplyOutput(output string) []string {
-	applied := make([]string, 0)
+	var applied []string
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -1559,7 +1541,7 @@ func getDemoDrifts(cluster, namespace string) []GitOpsDrift {
 		return allDrifts
 	}
 
-	filtered := make([]GitOpsDrift, 0)
+	var filtered []GitOpsDrift
 	for _, d := range allDrifts {
 		if (cluster == "" || d.Cluster == cluster) && (namespace == "" || d.Namespace == namespace) {
 			filtered = append(filtered, d)
@@ -1602,7 +1584,7 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": stderr.String()})
 	}
 
-	history := make([]HelmHistoryEntry, 0)
+	var history []HelmHistoryEntry
 	if err := json.Unmarshal(stdout.Bytes(), &history); err != nil {
 		log.Printf("failed to parse helm history output for release %s: %v", release, err)
 		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": "failed to parse history"})
