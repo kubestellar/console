@@ -419,7 +419,7 @@ func (b *Bridge) parseClustersResult(result *CallToolResult) ([]ClusterInfo, err
 	}
 
 	// Parse the text content as JSON
-	var clusters []ClusterInfo
+	clusters := make([]ClusterInfo, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &clusters); err != nil {
@@ -460,7 +460,7 @@ func (b *Bridge) parsePodsResult(result *CallToolResult) ([]PodInfo, error) {
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
-	var pods []PodInfo
+	pods := make([]PodInfo, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &pods); err != nil {
@@ -476,7 +476,7 @@ func (b *Bridge) parsePodIssuesResult(result *CallToolResult) ([]PodIssue, error
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
-	var issues []PodIssue
+	issues := make([]PodIssue, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &issues); err != nil {
@@ -492,7 +492,7 @@ func (b *Bridge) parseEventsResult(result *CallToolResult) ([]Event, error) {
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
-	var events []Event
+	events := make([]Event, 0)
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &events); err != nil {

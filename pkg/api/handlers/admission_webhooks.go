@@ -68,7 +68,7 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 		clusters, _ = h.k8sClient.ListClusters(c.Context())
 	}
 
-	var allWebhooks []WebhookSummary
+	allWebhooks := make([]WebhookSummary, 0)
 
 	for _, cluster := range clusters {
 		client, err := h.k8sClient.GetDynamicClient(cluster.Name)

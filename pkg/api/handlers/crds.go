@@ -71,7 +71,7 @@ func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 	if err != nil {
 		clusters, _ = h.k8sClient.ListClusters(c.Context())
 	}
-	var allCRDs []CRDSummary
+	allCRDs := make([]CRDSummary, 0)
 
 	for _, cluster := range clusters {
 		client, err := h.k8sClient.GetDynamicClient(cluster.Name)
@@ -114,7 +114,7 @@ func parseCRDFromUnstructured(item *unstructured.Unstructured, cluster string) *
 	scope, _ := spec["scope"].(string)
 
 	// Extract versions
-	var versions []CRDVersion
+	versions := make([]CRDVersion, 0)
 	var primaryVersion string
 	if versionsRaw, ok := spec["versions"].([]interface{}); ok {
 		for _, v := range versionsRaw {
