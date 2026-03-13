@@ -58,11 +58,14 @@ jobs:
           GITLEAKS_VERSION: '8.21.2'
           TRIVY_VERSION: '0.58.1'
           SEMGREP_VERSION: '1.102.0'
+          GOSEC_VERSION: 'v2.21.4'
+          GOVULNCHECK_VERSION: 'v1.1.4'
+          GO_LICENSES_VERSION: 'v1.6.0'
         run: |
-          # Go security tools
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          go install github.com/google/go-licenses@latest
+          # Go security tools (pinned to avoid breakage from upstream changes)
+          go install "github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}"
+          go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+          go install "github.com/google/go-licenses@${GO_LICENSES_VERSION}"
 
           # Secret scanning (pinned version)
           wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
