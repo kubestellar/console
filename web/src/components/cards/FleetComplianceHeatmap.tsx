@@ -10,6 +10,7 @@
 import { useState, useMemo } from 'react'
 import { AlertTriangle, Info, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '../ui/Button'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useTrivy } from '../../hooks/useTrivy'
@@ -272,12 +273,14 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2 p-4">
         <AlertTriangle className="w-6 h-6 text-destructive opacity-70" />
         <p className="text-destructive">Failed to load compliance data</p>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => { kyvernoRefetch(); trivyRefetch(); kubescapeRefetch() }}
-          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          className="text-xs text-blue-400 hover:text-blue-300"
         >
           Retry
-        </button>
+        </Button>
       </div>
     )
   }
