@@ -7,7 +7,7 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -143,7 +143,7 @@ export function ClusterDeltaDetector() {
                   <XAxis dataKey="dimension" tick={{ fontSize: 9, fill: CHART_TICK_COLOR }} />
                   <YAxis tick={{ fontSize: 9, fill: CHART_TICK_COLOR }} />
                   <Tooltip
-                    contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, fontSize: 11 }}
+                    contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, fontSize: CHART_TOOLTIP_FONT_SIZE_COMPACT }}
                   />
                   <Bar dataKey={clusterPair[0]} fill={CLUSTER_A_COLOR} radius={[4, 4, 0, 0]} />
                   <Bar dataKey={clusterPair[1]} fill={CLUSTER_B_COLOR} radius={[4, 4, 0, 0]} />

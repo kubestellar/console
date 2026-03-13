@@ -24,7 +24,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { CardContentChart, CardChartSeries, CardAxisConfig } from '../../types'
-import { CHART_TOOLTIP_CONTENT_STYLE } from '../../../constants'
+import { CHART_TOOLTIP_CONTENT_STYLE_GRAY } from '../../../constants'
 
 export interface ChartVisualizationProps {
   /** Content configuration */
@@ -202,7 +202,7 @@ function LineChartRenderer({
             }
           />
           <Tooltip
-            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE_GRAY}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />
@@ -268,7 +268,7 @@ function AreaChartRenderer({
             }
           />
           <Tooltip
-            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE_GRAY}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />
@@ -336,7 +336,7 @@ function BarChartRenderer({
             }
           />
           <Tooltip
-            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE_GRAY}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />
@@ -408,7 +408,7 @@ function DonutChartRenderer({
             ))}
           </Pie>
           <Tooltip
-            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE_GRAY}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />

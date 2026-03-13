@@ -18,12 +18,23 @@ export const CHART_TOOLTIP_BORDER = '#333'
 export const CHART_TOOLTIP_BORDER_RADIUS = '8px'
 /** Standard font size for chart tooltip text */
 export const CHART_TOOLTIP_FONT_SIZE = '12px'
+/** Compact font size for insight-card tooltips */
+export const CHART_TOOLTIP_FONT_SIZE_COMPACT = '11px'
 /** Shared Recharts Tooltip contentStyle — eliminates repeated inline objects */
 export const CHART_TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
   backgroundColor: CHART_TOOLTIP_BG,
   border: `1px solid ${CHART_TOOLTIP_BORDER}`,
   borderRadius: CHART_TOOLTIP_BORDER_RADIUS,
   fontSize: CHART_TOOLTIP_FONT_SIZE,
+}
+/** Tailwind-gray tooltip style for unified card system charts */
+const UNIFIED_CHART_TOOLTIP_BG = '#1f2937'
+const UNIFIED_CHART_TOOLTIP_BORDER = '#374151'
+const UNIFIED_CHART_TOOLTIP_RADIUS = '0.375rem'
+export const CHART_TOOLTIP_CONTENT_STYLE_GRAY: React.CSSProperties = {
+  backgroundColor: UNIFIED_CHART_TOOLTIP_BG,
+  border: `1px solid ${UNIFIED_CHART_TOOLTIP_BORDER}`,
+  borderRadius: UNIFIED_CHART_TOOLTIP_RADIUS,
 }
 export const CHART_GRID_STROKE = '#333'
 export const CHART_AXIS_STROKE = '#333'
