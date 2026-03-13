@@ -7,6 +7,7 @@ import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { emitLogin } from '../../lib/analytics'
 import { LogoWithStar } from '../ui/LogoWithStar'
+import { useBranding } from '../../hooks/useBranding'
 
 // Lazy load the heavy Three.js globe animation
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
@@ -158,6 +159,7 @@ export function Login() {
     // Fallback for unrecognized error codes so the user always sees actionable UI
     return { ...UNKNOWN_ERROR_FALLBACK, message: `An unexpected error occurred during login (code: ${oauthError}).` }
   }, [oauthError])
+  const branding = useBranding()
 
   // Auto-login for Netlify deploy previews or when backend has no OAuth configured
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info
@@ -226,10 +228,10 @@ export function Login() {
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="flex items-center gap-3">
-              <LogoWithStar className="w-14 h-14" alt="KubeStellar logo" />
+              <LogoWithStar className="w-14 h-14" />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">KubeStellar</h1>
-                <p className="text-sm text-muted-foreground">KubeStellar Console</p>
+                <h1 className="text-2xl font-bold text-foreground">{branding.appShortName}</h1>
+                <p className="text-sm text-muted-foreground">{branding.appName}</p>
               </div>
             </div>
           </div>
@@ -281,7 +283,7 @@ export function Login() {
                     GitHub OAuth Settings
                   </a>
                   <a
-                    href="https://github.com/kubestellar/console#quick-start"
+                    href={`${branding.repoUrl}#quick-start`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-2.5 py-1.5 text-xs rounded border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"

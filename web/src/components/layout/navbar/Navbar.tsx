@@ -6,6 +6,7 @@ import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
 import { useMobile } from '../../../hooks/useMobile'
+import { useBranding } from '../../../hooks/useBranding'
 import { TourTrigger } from '../../onboarding/Tour'
 import { LogoWithStar } from '../../ui/LogoWithStar'
 import { UserProfileDropdown } from '../UserProfileDropdown'
@@ -37,6 +38,7 @@ export function Navbar() {
   const { config, toggleMobileSidebar } = useSidebarConfig()
   const { isMobile } = useMobile()
   const { t } = useTranslation()
+  const branding = useBranding()
 
   // Close mobile more menu on route change
   useEffect(() => {
@@ -70,13 +72,13 @@ export function Navbar() {
           <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" />
         </button>
         <a
-          href="https://kubestellar.io/docs/console/readme"
+          href={branding.docsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="hidden lg:flex flex-col leading-tight hover:opacity-80 transition-opacity"
         >
-          <span className="text-base md:text-lg font-semibold text-foreground">KubeStellar Console</span>
-          <span className="text-[10px] text-muted-foreground tracking-wide">multi-cluster first, saving time and tokens</span>
+          <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
+          <span className="text-[10px] text-muted-foreground tracking-wide">{branding.tagline}</span>
         </a>
       </div>
 

@@ -4,6 +4,7 @@ import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
 import { AuthProvider, useAuth } from './lib/auth'
 import { ThemeProvider } from './hooks/useTheme'
+import { BrandingProvider, useBranding } from './hooks/useBranding'
 import { DrillDownProvider } from './hooks/useDrillDown'
 import { DashboardProvider, useDashboardContext } from './hooks/useDashboardContext'
 import { GlobalFiltersProvider } from './hooks/useGlobalFilters'
@@ -338,8 +339,6 @@ const ROUTE_TITLES: Record<string, string> = {
   '/from-headlamp': 'Coming from Headlamp',
 }
 
-const APP_NAME = 'KubeStellar Console'
-
 /** Map route paths to dashboard IDs for duration analytics */
 function pathToDashboardId(path: string): string | null {
   if (path === '/') return 'main'
@@ -351,6 +350,7 @@ function pathToDashboardId(path: string): string | null {
 // Track page views in Google Analytics on route change and set document title
 function PageViewTracker() {
   const location = useLocation()
+  const { appName } = useBranding()
   const pageEnteredRef = useRef<{ path: string; timestamp: number } | null>(null)
 
   // Flush duration for current page (used on route change and tab close)
@@ -381,7 +381,7 @@ function PageViewTracker() {
     pageEnteredRef.current = { path: location.pathname, timestamp: Date.now() }
 
     const section = ROUTE_TITLES[location.pathname]
-    const title = section ? `${section} - ${APP_NAME}` : APP_NAME
+    const title = section ? `${section} - ${appName}` : appName
     document.title = title
     emitPageView(location.pathname)
   }, [location.pathname])
@@ -425,6 +425,7 @@ function DataPrefetchInit() {
 
 function App() {
   return (
+    <BrandingProvider>
     <ThemeProvider>
     <AuthProvider>
     <SettingsSyncInit />
@@ -530,6 +531,7 @@ function App() {
     </UnifiedDemoProvider>
     </AuthProvider>
     </ThemeProvider>
+    </BrandingProvider>
   )
 }
 

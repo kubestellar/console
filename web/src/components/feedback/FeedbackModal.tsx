@@ -10,6 +10,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
 import { emitFeedbackSubmitted, emitLinkedInShare } from '../../lib/analytics'
+import { useBranding } from '../../hooks/useBranding'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -19,11 +20,10 @@ interface FeedbackModalProps {
   initialType?: FeedbackType
 }
 
-const GITHUB_ISSUES_URL = 'https://github.com/kubestellar/kubestellar/issues/new'
-
 export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: FeedbackModalProps) {
   const { showToast } = useToast()
   const { t } = useTranslation(['common'])
+  const branding = useBranding()
   const [type, setType] = useState<FeedbackType>(initialType)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -40,9 +40,9 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     try {
       // Build GitHub issue URL with pre-filled content
       const issueType = type === 'bug' ? 'Bug Report' : 'Feature Request'
-      const body = `## ${issueType}\n\n${description}\n\n---\n*Submitted via KubeStellar Console*`
+      const body = `## ${issueType}\n\n${description}\n\n---\n*Submitted via ${branding.appName}*`
 
-      const githubUrl = `${GITHUB_ISSUES_URL}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${type === 'bug' ? 'bug' : 'enhancement'}`
+      const githubUrl = `${branding.issuesUrl}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${type === 'bug' ? 'bug' : 'enhancement'}`
 
       // Open GitHub in new tab
       window.open(githubUrl, '_blank', 'noopener,noreferrer')
@@ -156,7 +156,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
               {/* LinkedIn share suggestion */}
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Love KubeStellar? Share it with your network!
+                  Love {branding.appShortName}? Share it with your network!
                 </p>
                 <LinkedInShareButton onShare={() => awardCoins('linkedin_share')} />
               </div>
@@ -274,8 +274,9 @@ export function FeedbackButton({ onClick }: { onClick: () => void }) {
 // LinkedIn share button with coin reward
 export function LinkedInShareButton({ onShare, compact = false }: { onShare?: () => void; compact?: boolean }) {
   const { t } = useTranslation()
+  const { websiteUrl } = useBranding()
   const handleShare = () => {
-    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(websiteUrl)}`
     window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
     emitLinkedInShare('feedback_modal')
     onShare?.()
