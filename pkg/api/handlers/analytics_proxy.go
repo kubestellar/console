@@ -215,9 +215,10 @@ func isAllowedOrigin(c *fiber.Ctx) bool {
 		}
 	}
 
-	// Browsers always send Origin or Referer for XHR/fetch requests.
-	// Allow requests with neither header (e.g., server-to-server, curl).
-	return origin == "" && referer == ""
+	// Reject requests with neither Origin nor Referer — browsers always send
+	// at least one for XHR/fetch. Requests without either are likely from
+	// non-browser clients bypassing origin checks.
+	return false
 }
 
 // stripPort removes the port from a hostname (e.g., "localhost:5174" → "localhost").
