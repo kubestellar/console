@@ -1,6 +1,8 @@
 import { lazy, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { getCardConfig } from '../../config/cards'
+import { registerAllDescriptorCards } from './cardDescriptors.registry'
+import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -68,7 +70,7 @@ const ConsoleHealthCheckCard = lazy(() => import('./console-missions/ConsoleHeal
 const ConsoleOfflineDetectionCard = lazy(() => import('./console-missions/ConsoleOfflineDetectionCard').then(m => ({ default: m.ConsoleOfflineDetectionCard })))
 const HardwareHealthCard = lazy(() => import('./HardwareHealthCard').then(m => ({ default: m.HardwareHealthCard })))
 const ProactiveGPUNodeHealthMonitor = lazy(() => import('./ProactiveGPUNodeHealthMonitor').then(m => ({ default: m.ProactiveGPUNodeHealthMonitor })))
-const ActiveAlerts = lazy(() => import('./ActiveAlerts').then(m => ({ default: m.ActiveAlerts })))
+// ActiveAlerts — migrated to cardDescriptors.registry.ts (unified descriptor system)
 const AlertRulesCard = lazy(() => import('./AlertRules').then(m => ({ default: m.AlertRulesCard })))
 const OpenCostOverview = lazy(() => import('./OpenCostOverview').then(m => ({ default: m.OpenCostOverview })))
 const KubecostOverview = lazy(() => import('./KubecostOverview').then(m => ({ default: m.KubecostOverview })))
@@ -94,7 +96,7 @@ const LLMInference = lazy(() => _workloadDetectionBundle.then(m => ({ default: m
 const LLMModels = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.LLMModels })))
 const MLJobs = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.MLJobs })))
 const MLNotebooks = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.MLNotebooks })))
-const Weather = lazy(() => import('./weather/Weather').then(m => ({ default: m.Weather })))
+// Weather — migrated to cardDescriptors.registry.ts (unified descriptor system)
 const GitHubActivity = lazy(() => import('./GitHubActivity').then(m => ({ default: m.GitHubActivity })))
 const RSSFeed = lazy(() => import('./rss').then(m => ({ default: m.RSSFeed })))
 const Kubectl = lazy(() => import('./Kubectl').then(m => ({ default: m.Kubectl })))
@@ -103,7 +105,7 @@ const MatchGame = lazy(() => import('./MatchGame').then(m => ({ default: m.Match
 const Solitaire = lazy(() => import('./Solitaire').then(m => ({ default: m.Solitaire })))
 const Checkers = lazy(() => import('./Checkers').then(m => ({ default: m.Checkers })))
 const Game2048 = lazy(() => import('./Game2048').then(m => ({ default: m.Game2048 })))
-const StockMarketTicker = lazy(() => import('./StockMarketTicker').then(m => ({ default: m.StockMarketTicker })))
+// StockMarketTicker — migrated to cardDescriptors.registry.ts (unified descriptor system)
 const Kubedle = lazy(() => import('./Kubedle').then(m => ({ default: m.Kubedle })))
 const PodSweeper = lazy(() => import('./PodSweeper').then(m => ({ default: m.PodSweeper })))
 const ContainerTetris = lazy(() => import('./ContainerTetris').then(m => ({ default: m.ContainerTetris })))
@@ -308,8 +310,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   console_ai_offline_detection: ConsoleOfflineDetectionCard,
   hardware_health: HardwareHealthCard,
   gpu_node_health: ProactiveGPUNodeHealthMonitor,
-  // Alerting cards
-  active_alerts: ActiveAlerts,
+  // Alerting cards — active_alerts registered via unified descriptor system
   alert_rules: AlertRulesCard,
   // Cost management integrations
   opencost_overview: OpenCostOverview,
@@ -340,8 +341,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   llm_models: LLMModels,
   ml_jobs: MLJobs,
   ml_notebooks: MLNotebooks,
-  // Weather card
-  weather: Weather,
+  // Weather card — registered via unified descriptor system
   // GitHub Activity Monitoring card
   github_activity: GitHubActivity,
   // RSS Feed card
@@ -358,8 +358,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   checkers: Checkers,
   // Kube 2048 card
   game_2048: Game2048,
-  // Stock Market Ticker card
-  stock_market_ticker: StockMarketTicker,
+  // Stock Market Ticker card — registered via unified descriptor system
   // Kubedle card
   kubedle: Kubedle,
   // Pod Sweeper card
@@ -628,8 +627,10 @@ export const DEMO_DATA_CARDS = new Set([
  * Cards that should never show demo indicators (badge/yellow border).
  * Arcade/game cards don't have "demo data" — they're always just games.
  */
-// Re-export from cardMetadata for backward compatibility
-export { DEMO_EXEMPT_CARDS } from './cardMetadata'
+// Re-export the imported DEMO_EXEMPT_CARDS for backward compatibility.
+// (Imported at the top of this file from cardMetadata.ts so the descriptor
+// registration can mutate the same Set instance.)
+export { DEMO_EXEMPT_CARDS }
 
 /**
  * Map of card type → chunk preload function.
@@ -696,7 +697,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   argocd_applications: () => import('./deploy-bundle'),
   argocd_sync_status: () => import('./deploy-bundle'),
   argocd_health: () => import('./deploy-bundle'),
-  active_alerts: () => import('./ActiveAlerts'),
+  // active_alerts — preloader registered via unified descriptor system
   alert_rules: () => import('./AlertRules'),
   opencost_overview: () => import('./OpenCostOverview'),
   kubecost_overview: () => import('./KubecostOverview'),
@@ -929,7 +930,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   storage_overview: 4,
   network_overview: 4,
   gpu_overview: 4,
-  active_alerts: 4,
+  // active_alerts — width registered via unified descriptor system
   security_issues: 4,
   upgrade_status: 4,
   crossplane_managed_resources: 4,
@@ -1073,8 +1074,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   gpu_node_health: 6,
   node_status: 6,
   user_management: 6,
-  // Weather card
-  weather: 6,
+  // weather — width registered via unified descriptor system
   // GitHub Activity Monitoring card
   github_activity: 8,
   // RSS Feed card
@@ -1085,8 +1085,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   sudoku_game: 6,
   // Kube Match card
   match_game: 6,
-  // Stock Market Ticker
-  stock_market_ticker: 6,
+  // stock_market_ticker — width registered via unified descriptor system
   // Kubedle
   kubedle: 6,
   // Pod Sweeper
@@ -1140,6 +1139,24 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   cluster_comparison: 12,
   cluster_resource_tree: 12,
 }
+
+// ---------------------------------------------------------------------------
+// Unified Card Descriptor Registration
+// ---------------------------------------------------------------------------
+// Cards migrated to the descriptor system are registered here.
+// This populates RAW_CARD_COMPONENTS, CARD_CHUNK_PRELOADERS,
+// CARD_DEFAULT_WIDTHS, CARD_TITLES, CARD_DESCRIPTIONS, and
+// DEMO_DATA_CARDS / LIVE_DATA_CARDS / DEMO_EXEMPT_CARDS in one call.
+registerAllDescriptorCards({
+  components: RAW_CARD_COMPONENTS,
+  preloaders: CARD_CHUNK_PRELOADERS,
+  defaultWidths: CARD_DEFAULT_WIDTHS,
+  titles: CARD_TITLES,
+  descriptions: CARD_DESCRIPTIONS,
+  demoDataCards: DEMO_DATA_CARDS,
+  liveDataCards: LIVE_DATA_CARDS,
+  demoExemptCards: DEMO_EXEMPT_CARDS,
+})
 
 // Default width for cards not in the map
 const DEFAULT_CARD_WIDTH = 4

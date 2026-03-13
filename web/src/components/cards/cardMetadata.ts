@@ -117,8 +117,7 @@ export const CARD_TITLES: Record<string, string> = {
   external_secrets: 'External Secrets',
   cert_manager: 'Cert Manager',
 
-  // Alerting cards
-  active_alerts: 'Active Alerts',
+  // Alerting cards — active_alerts registered via unified descriptor system
   alert_rules: 'Alert Rules',
 
   // Cost management
@@ -136,7 +135,7 @@ export const CARD_TITLES: Record<string, string> = {
   user_management: 'User Management',
   github_activity: 'GitHub Activity',
   kubectl: 'Kubectl Terminal',
-  weather: 'Weather',
+  // weather — registered via unified descriptor system
   rss_feed: 'RSS Feed',
   iframe_embed: 'Iframe Embed',
   network_utils: 'Network Utils',
@@ -148,8 +147,7 @@ export const CARD_TITLES: Record<string, string> = {
   console_ai_health_check: 'AI Health Check',
   console_ai_offline_detection: 'Predictive Health Monitor',
 
-  // Stock Market Ticker
-  stock_market_ticker: 'Stock Market Ticker',
+  // stock_market_ticker — registered via unified descriptor system
 
   // PROW CI/CD cards
   prow_jobs: 'PROW Jobs',
@@ -316,7 +314,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   vault_secrets: 'HashiCorp Vault secrets management status.',
   external_secrets: 'External Secrets Operator sync status.',
   cert_manager: 'TLS certificate status and renewal from cert-manager.',
-  active_alerts: 'Currently firing alerts from Prometheus or other sources.',
+  // active_alerts — registered via unified descriptor system
   alert_rules: 'Configured alert rules and their evaluation status.',
   opencost_overview: 'Cost allocation data from OpenCost.',
   kubecost_overview: 'Cost breakdown and optimization from Kubecost.',
@@ -328,7 +326,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   user_management: 'Manage console users and their roles.',
   github_activity: 'Recent GitHub activity: commits, PRs, and issues.',
   kubectl: 'Interactive kubectl terminal for running commands.',
-  weather: 'Current weather conditions for cluster locations.',
+  // weather — registered via unified descriptor system
   rss_feed: 'RSS feed reader for Kubernetes news and blogs.',
   iframe_embed: 'Embed an external web page inside a card.',
   network_utils: 'Network diagnostic utilities: ping, DNS, traceroute.',
@@ -337,7 +335,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   console_ai_kubeconfig_audit: 'AI audit of kubeconfig files for security and cleanup.',
   console_ai_health_check: 'AI-powered cluster health analysis.',
   console_ai_offline_detection: 'Monitors cluster health and predicts failures before they happen. Detects offline nodes, GPU exhaustion, resource pressure, and groups issues by root cause for efficient remediation.',
-  stock_market_ticker: 'Live stock market ticker with tech company prices.',
+  // stock_market_ticker — registered via unified descriptor system
   prow_jobs: 'PROW CI/CD job status and results.',
   prow_status: 'Overall PROW system health and queue depth.',
   prow_history: 'Historical PROW job runs and success rates.',

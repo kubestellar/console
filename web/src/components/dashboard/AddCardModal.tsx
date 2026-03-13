@@ -11,6 +11,7 @@ import { useToast } from '../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../lib/constants/network'
 import { emitAddCardModalOpened, emitAddCardModalAbandoned, emitCardCategoryBrowsed, emitRecommendedCardShown } from '../../lib/analytics'
 import { isCardVisibleForProject } from '../../config/cards'
+import { getDescriptorsByCategory } from '../cards/cardDescriptor'
 
 // Helper function to wrap technical abbreviations in text with tooltips
 function wrapAbbreviations(text: string): ReactNode {
@@ -201,7 +202,7 @@ const CARD_CATALOG = {
     { type: 'hardware_health', title: 'Hardware Health', description: 'Track GPU, NIC, NVMe, InfiniBand disappearances on SuperMicro/HGX nodes', visualization: 'status' },
   ],
   'Alerting': [
-    { type: 'active_alerts', title: 'Active Alerts', description: 'Firing alerts with severity and quick actions', visualization: 'status' },
+    // active_alerts — registered via unified descriptor system (auto-merged below)
     { type: 'alert_rules', title: 'Alert Rules', description: 'Manage alert rules and notification channels', visualization: 'table' },
   ],
   'Cost Management': [
@@ -276,10 +277,10 @@ const CARD_CATALOG = {
   'Misc': [
     { type: 'buildpacks_status', title: 'Buildpacks Status', description: 'Cloud Native Buildpacks detection, builders, and image build status', visualization: 'status' },
     { type: 'flatcar_status', title: 'Flatcar Container Linux', description: 'Flatcar node OS versions, update status, and version distribution', visualization: 'status' },
-    { type: 'weather', title: 'Weather', description: 'Weather conditions with multi-day forecasts and animated backgrounds', visualization: 'status' },
+    // weather — registered via unified descriptor system (auto-merged below)
     { type: 'github_activity', title: 'GitHub Activity', description: 'Monitor GitHub repository activity - PRs, issues, releases, and contributors', visualization: 'table' },
     { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
-    { type: 'stock_market_ticker', title: 'Stock Market Ticker', description: 'Track multiple stocks with real-time sparkline charts and iPhone-style design', visualization: 'timeseries' },
+    // stock_market_ticker — registered via unified descriptor system (auto-merged below)
   ],
   'Orchestration': [
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
@@ -1000,7 +1001,15 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   // Compute recommended cards — popular cards not already on the dashboard
   const recommendedCards = useMemo(() => {
     const existing = new Set(existingCardTypes || [])
-    const allCards = Object.values(CARD_CATALOG).flat()
+    // Include both static catalog cards and descriptor-registered cards
+    const catalogCards = Object.values(CARD_CATALOG).flat() as Array<{ type: string; title: string; description: string; visualization: string }>
+    const descriptorCards = Array.from(getDescriptorsByCategory().values()).flat().map(d => ({
+      type: d.id,
+      title: d.title,
+      description: d.description,
+      visualization: d.visualization,
+    }))
+    const allCards = [...catalogCards, ...descriptorCards]
     return (RECOMMENDED_CARD_TYPES as readonly string[])
       .filter(type => !existing.has(type))
       .map(type => allCards.find(c => c.type === type))
@@ -1109,6 +1118,27 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       .filter(([, v]) => (v as unknown[]).length > 0),
   ) as Record<string, Array<{ type: string; title: string; description: string; visualization: string }>>
 
+  // Merge cards registered via the unified descriptor system into the catalog.
+  // Descriptors are grouped by their category and appended to the matching
+  // static catalog category (or create a new category if none exists).
+  const descriptorsByCategory = getDescriptorsByCategory()
+  for (const [category, descriptors] of descriptorsByCategory) {
+    const existing = staticCatalog[category] || []
+    const existingTypes = new Set(existing.map(c => c.type))
+    for (const d of descriptors) {
+      // Skip if already present in the static catalog (avoid duplicates during migration)
+      if (!existingTypes.has(d.id)) {
+        existing.push({
+          type: d.id,
+          title: d.title,
+          description: d.description,
+          visualization: d.visualization,
+        })
+      }
+    }
+    staticCatalog[category] = existing
+  }
+
   const mergedCatalog: Record<string, Array<{ type: string; title: string; description: string; visualization: string }>> = {
     ...(dynamicCatalogEntries.length > 0 ? { 'Custom Cards': dynamicCatalogEntries } : {}),
     ...staticCatalog,
@@ -1172,6 +1202,22 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
             title: card.title,
             description: card.description,
             visualization: card.visualization as CardSuggestion['visualization'],
+            config: {},
+          })
+        }
+      }
+    }
+
+    // Handle cards registered via the unified descriptor system
+    for (const descriptors of descriptorsByCategory.values()) {
+      for (const d of descriptors) {
+        if (selectedBrowseCards.has(d.id) && !addedTypes.has(d.id)) {
+          addedTypes.add(d.id)
+          cardsToAdd.push({
+            type: d.id,
+            title: d.title,
+            description: d.description,
+            visualization: d.visualization as CardSuggestion['visualization'],
             config: {},
           })
         }
