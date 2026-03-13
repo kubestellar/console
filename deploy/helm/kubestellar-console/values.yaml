@@ -138,7 +138,7 @@ persistence:
 
 # Database backup configuration
 backup:
-  enabled: false
+  enabled: true
   # Cron schedule (default: every 6 hours)
   schedule: "0 */6 * * *"
   # Backup storage
