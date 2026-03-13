@@ -32,6 +32,54 @@ spec:
       serviceAccountName: {{ include "kubestellar-console.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.backup.enabled .Values.backup.autoRestore }}
+      initContainers:
+        - name: db-restore
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              DB_PATH="{{ .Values.database.sqlitePath }}"
+              BACKUP_DIR="{{ .Values.backup.directory }}"
+              # Schema-only DBs are <=200KB; anything larger has real data
+              MIN_DATA_SIZE=200000
+
+              if [ -f "$DB_PATH" ]; then
+                DB_SIZE=$(stat -c%s "$DB_PATH" 2>/dev/null || stat -f%z "$DB_PATH" 2>/dev/null || echo "0")
+                if [ "$DB_SIZE" -gt "$MIN_DATA_SIZE" ]; then
+                  echo "Database exists with data (${DB_SIZE} bytes), skipping restore"
+                  exit 0
+                fi
+                echo "Database exists but appears empty (${DB_SIZE} bytes)"
+              else
+                echo "No database file found at $DB_PATH"
+              fi
+
+              # Find the latest backup
+              LATEST=$(ls -1t "$BACKUP_DIR"/console-*.db 2>/dev/null | head -1)
+              if [ -z "$LATEST" ]; then
+                echo "No backups found in $BACKUP_DIR, starting fresh"
+                exit 0
+              fi
+
+              BACKUP_SIZE=$(stat -c%s "$LATEST" 2>/dev/null || stat -f%z "$LATEST" 2>/dev/null || echo "0")
+              if [ "$BACKUP_SIZE" -le "$MIN_DATA_SIZE" ]; then
+                echo "Latest backup $LATEST is also empty (${BACKUP_SIZE} bytes), skipping"
+                exit 0
+              fi
+
+              echo "Restoring from backup: $LATEST (${BACKUP_SIZE} bytes)"
+              mkdir -p "$(dirname "$DB_PATH")"
+              cp "$LATEST" "$DB_PATH"
+              echo "Restore complete"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: backups
+              mountPath: {{ .Values.backup.directory }}
+              readOnly: true
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -233,6 +281,11 @@ spec:
         - name: custom-logos
           configMap:
             name: {{ .Values.branding.logoConfigMap }}
+        {{- end }}
+        {{- if and .Values.backup.enabled .Values.backup.autoRestore }}
+        - name: backups
+          persistentVolumeClaim:
+            claimName: {{ include "kubestellar-console.fullname" . }}-backups
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

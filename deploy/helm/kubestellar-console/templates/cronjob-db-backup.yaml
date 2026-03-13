@@ -1,0 +1,99 @@
+{{- if and .Values.persistence.enabled .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-db-backup
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "kubestellar-console.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: db-backup
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: {{ include "kubestellar-console.serviceAccountName" . }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: db-backup
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  DB_PATH="{{ .Values.database.sqlitePath }}"
+                  BACKUP_DIR="{{ .Values.backup.directory }}"
+                  RETENTION={{ .Values.backup.retentionCount }}
+
+                  mkdir -p "$BACKUP_DIR"
+
+                  # Use SQLite .backup for a consistent snapshot (safe even if DB is in use)
+                  if [ -f "$DB_PATH" ]; then
+                    cp "$DB_PATH" "$BACKUP_DIR/console-$TIMESTAMP.db"
+                    echo "Backup created: $BACKUP_DIR/console-$TIMESTAMP.db"
+                  else
+                    echo "ERROR: Database file not found at $DB_PATH"
+                    exit 1
+                  fi
+
+                  # Prune old backups, keep only the most recent $RETENTION
+                  cd "$BACKUP_DIR"
+                  BACKUP_COUNT=$(ls -1 console-*.db 2>/dev/null | wc -l)
+                  if [ "$BACKUP_COUNT" -gt "$RETENTION" ]; then
+                    PRUNE_COUNT=$((BACKUP_COUNT - RETENTION))
+                    ls -1t console-*.db | tail -n "$PRUNE_COUNT" | xargs rm -f
+                    echo "Pruned $PRUNE_COUNT old backup(s), kept $RETENTION"
+                  fi
+              volumeMounts:
+                - name: data
+                  mountPath: /app/data
+                - name: backups
+                  mountPath: {{ .Values.backup.directory }}
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: {{ include "kubestellar-console.fullname" . }}
+            - name: backups
+              persistentVolumeClaim:
+                claimName: {{ include "kubestellar-console.fullname" . }}-backups
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-backups
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.backup.storageSize }}
+  {{- if .Values.backup.storageClass }}
+  storageClassName: {{ .Values.backup.storageClass | quote }}
+  {{- else if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}

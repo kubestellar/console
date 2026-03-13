@@ -136,6 +136,23 @@ persistence:
   accessModes:
     - ReadWriteOnce
 
+# Database backup configuration
+backup:
+  enabled: false
+  # Cron schedule (default: every 6 hours)
+  schedule: "0 */6 * * *"
+  # Backup storage
+  directory: /backups
+  storageSize: 1Gi
+  storageClass: ""
+  # Number of backups to retain
+  retentionCount: 20
+  # Job history
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  # Auto-restore: if the main DB is empty or missing, restore from latest backup
+  autoRestore: true
+
 # kubestellar binaries configuration
 kubestellar:
   opsPath: /usr/local/bin/kubestellar-ops

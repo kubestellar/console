@@ -5,6 +5,8 @@ metadata:
   name: {{ include "kubestellar-console.fullname" . }}
   labels:
     {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
 spec:
   accessModes:
     {{- toYaml .Values.persistence.accessModes | nindent 4 }}
