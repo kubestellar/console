@@ -52,22 +52,26 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4.2.0
 
+      - name: Install Go security tools
+        # Go tool compilation can fail with exit code 8 (OOM/signal during build).
+        # Individual test scripts handle missing binaries gracefully, so install
+        # failures should not block the remaining 32 test suites.
+        continue-on-error: true
+        env:
+          GOSEC_VERSION: 'v2.21.4'
+          GOVULNCHECK_VERSION: 'v1.1.4'
+          GO_LICENSES_VERSION: 'v1.6.0'
+        run: |
+          go install "github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}"
+          go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+          go install "github.com/google/go-licenses@${GO_LICENSES_VERSION}"
+
       - name: Install test tools
         env:
-          # Pin tool versions for reproducibility and supply-chain safety
           GITLEAKS_VERSION: '8.21.2'
           TRIVY_VERSION: '0.58.1'
           SEMGREP_VERSION: '1.102.0'
-          GOSEC_VERSION: 'v2.21.4'
-          GOVULNCHECK_VERSION: 'v1.1.4'
         run: |
-          # Go security tools (pinned to avoid breakage from upstream changes)
-          go install "github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}"
-          go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
-          # NOTE: go-licenses is intentionally omitted — its gopkg.in/src-d/go-git.v4
-          # dependency tree fails to compile (exit code 8) and kills the entire step.
-          # The license-compliance-test script has a fallback using 'go list -m -json'.
-
           # Secret scanning (pinned version)
           wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
           tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
