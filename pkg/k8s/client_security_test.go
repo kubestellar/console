@@ -330,15 +330,27 @@ func TestFindDeploymentIssuesNilReplicas(t *testing.T) {
 		t.Fatalf("FindDeploymentIssues failed: %v", err)
 	}
 
-	issueMap := make(map[string]bool)
+	issueMap := make(map[string]DeploymentIssue)
 	for _, i := range issues {
-		issueMap[i.Name] = true
+		issueMap[i.Name] = i
 	}
 
-	if issueMap["nil-healthy"] {
+	if _, found := issueMap["nil-healthy"]; found {
 		t.Error("nil-healthy (ready=1, nil replicas) should not be flagged as an issue")
 	}
-	if !issueMap["nil-degraded"] {
-		t.Error("nil-degraded (ready=0, nil replicas) should be flagged as an issue")
+
+	degraded, found := issueMap["nil-degraded"]
+	if !found {
+		t.Fatal("nil-degraded (ready=0, nil replicas) should be flagged as an issue")
+	}
+	if degraded.Replicas != 1 {
+		t.Errorf("Expected Replicas=1 (Kubernetes default), got %d", degraded.Replicas)
+	}
+	if degraded.ReadyReplicas != 0 {
+		t.Errorf("Expected ReadyReplicas=0, got %d", degraded.ReadyReplicas)
+	}
+	expectedMsg := "0/1 replicas ready"
+	if degraded.Message != expectedMsg {
+		t.Errorf("Expected message %q, got %q", expectedMsg, degraded.Message)
 	}
 }

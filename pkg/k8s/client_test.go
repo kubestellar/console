@@ -447,6 +447,10 @@ func TestGetDeploymentsNilReplicas(t *testing.T) {
 	if deps[0].Status != "running" {
 		t.Errorf("Expected running status with nil replicas, got %s", deps[0].Status)
 	}
+	expectedProgress := 100 // 1 ready / 1 desired = 100%
+	if deps[0].Progress != expectedProgress {
+		t.Errorf("Expected progress %d%%, got %d%%", expectedProgress, deps[0].Progress)
+	}
 }
 
 func TestGetServices(t *testing.T) {
