@@ -9,7 +9,6 @@ import {
   Terminal,
   GitBranch,
   DollarSign,
-  Quote,
   ExternalLink,
   Sparkles,
   Monitor,
@@ -25,9 +24,6 @@ import { emitFromLensViewed, emitFromLensActioned, emitFromLensTabSwitch, emitFr
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
 /* ------------------------------------------------------------------ */
-
-/** Number of testimonial placeholder cards to render */
-const TESTIMONIAL_COUNT = 4
 
 /** Deployment option tab identifiers */
 type DeployTab = 'localhost' | 'cluster-portforward' | 'cluster-ingress'
@@ -62,39 +58,6 @@ const COMPARISON_DATA: ComparisonRow[] = [
   { feature: 'Security Posture', lens: false, console: true, consoleNote: 'Built-in' },
   { feature: 'Cost Analytics', lens: false, console: true, consoleNote: 'Built-in (OpenCost)' },
   { feature: 'GitOps Status', lens: false, console: true, consoleNote: 'Built-in (ArgoCD/Flux)' },
-]
-
-/* ------------------------------------------------------------------ */
-/*  Testimonial placeholder data                                      */
-/* ------------------------------------------------------------------ */
-
-interface Testimonial {
-  quote: string
-  author: string
-  role: string
-}
-
-const TESTIMONIALS: Testimonial[] = [
-  {
-    quote: 'After Lens went closed-source, KubeStellar Console was exactly what we needed. The multi-cluster view is leagues ahead.',
-    author: 'Marcus C.',
-    role: 'Platform Engineer',
-  },
-  {
-    quote: 'AI Missions changed how our team troubleshoots. It is like having a senior SRE on call 24/7.',
-    author: 'Priya R.',
-    role: 'SRE Lead',
-  },
-  {
-    quote: 'GPU visibility and cost analytics out of the box? We dropped three separate tools for one Console.',
-    author: 'James O.',
-    role: 'ML Infrastructure Engineer',
-  },
-  {
-    quote: 'Demo mode let me evaluate Console without touching production. I was sold in five minutes.',
-    author: 'Elena V.',
-    role: 'DevOps Manager',
-  },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -564,32 +527,6 @@ export function FromLens() {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
-
-      {/* ---- Testimonials ---- */}
-      <section className="max-w-5xl mx-auto px-6 py-16">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          What Lens users love about Console
-        </h2>
-        <p className="text-slate-400 text-center mb-12">
-          Engineers who made the switch aren't looking back.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {TESTIMONIALS.slice(0, TESTIMONIAL_COUNT).map((t, idx) => (
-            <div
-              key={idx}
-              className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 relative"
-            >
-              <Quote className="w-8 h-8 text-purple-500/20 absolute top-4 right-4" />
-              <p className="text-slate-300 leading-relaxed mb-4 italic">"{t.quote}"</p>
-              <div className="text-sm">
-                <span className="font-medium text-white">{t.author}</span>
-                <span className="text-slate-500 ml-2">{t.role}</span>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

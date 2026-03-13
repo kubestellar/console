@@ -7,7 +7,6 @@ import {
   Terminal,
   GitBranch,
   DollarSign,
-  Quote,
   ExternalLink,
   Sparkles,
   Monitor,
@@ -26,9 +25,6 @@ import { emitFromHeadlampViewed, emitFromHeadlampActioned, emitFromHeadlampTabSw
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
 /* ------------------------------------------------------------------ */
-
-/** Number of testimonial placeholder cards to render */
-const TESTIMONIAL_COUNT = 4
 
 /** Deployment option tab identifiers */
 type DeployTab = 'localhost' | 'cluster-portforward' | 'cluster-ingress'
@@ -65,39 +61,6 @@ const COMPARISON_DATA: ComparisonRow[] = [
   { feature: 'Helm Management', headlamp: 'Yes', console: 'Yes' },
   { feature: 'Desktop App', headlamp: 'Yes', console: 'Web-based', headlampNote: 'Electron + web', consoleNote: 'Accessible from any browser' },
   { feature: 'CNCF Tool Cards', headlamp: 'Via plugins', console: 'Built-in', consoleNote: 'KEDA, Strimzi, OpenFeature, KubeVela, etc.' },
-]
-
-/* ------------------------------------------------------------------ */
-/*  Testimonial data                                                  */
-/* ------------------------------------------------------------------ */
-
-interface Testimonial {
-  quote: string
-  author: string
-  role: string
-}
-
-const TESTIMONIALS: Testimonial[] = [
-  {
-    quote: 'We used Headlamp for single-cluster work and loved it. When we went multi-cluster with KubeStellar, Console gave us one pane of glass across everything.',
-    author: 'Sofia K.',
-    role: 'Platform Engineer',
-  },
-  {
-    quote: 'AI Missions is a game-changer for our junior SREs. They can troubleshoot issues in natural language instead of memorizing kubectl flags.',
-    author: 'Daniel M.',
-    role: 'SRE Lead',
-  },
-  {
-    quote: 'The built-in GPU visibility and cost analytics let us retire two separate monitoring tools. Less context-switching, more shipping.',
-    author: 'Aisha T.',
-    role: 'ML Platform Engineer',
-  },
-  {
-    quote: 'Demo mode let me show the whole team what multi-cluster management looks like before we committed to anything. No cluster access needed.',
-    author: 'Ryan P.',
-    role: 'DevOps Manager',
-  },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -584,32 +547,6 @@ export function FromHeadlamp() {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
-
-      {/* ---- Testimonials ---- */}
-      <section className="max-w-5xl mx-auto px-6 py-16">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          What teams say about Console
-        </h2>
-        <p className="text-slate-400 text-center mb-12">
-          Engineers who added Console to their Kubernetes workflow.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {TESTIMONIALS.slice(0, TESTIMONIAL_COUNT).map((t, idx) => (
-            <div
-              key={idx}
-              className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 relative"
-            >
-              <Quote className="w-8 h-8 text-teal-500/20 absolute top-4 right-4" />
-              <p className="text-slate-300 leading-relaxed mb-4 italic">"{t.quote}"</p>
-              <div className="text-sm">
-                <span className="font-medium text-white">{t.author}</span>
-                <span className="text-slate-500 ml-2">{t.role}</span>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
