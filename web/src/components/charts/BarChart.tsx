@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
+import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
 
 interface DataItem {
   name: string
@@ -82,13 +83,7 @@ export function BarChart({
             )}
             <Tooltip
               cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              contentStyle={{
-                backgroundColor: '#1e1e2e',
-                border: '1px solid #444',
-                borderRadius: '8px',
-                fontSize: '12px',
-                color: '#e0e0e0',
-              }}
+              contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: '#e0e0e0' }}
               labelStyle={{ color: '#ccc', fontWeight: 500 }}
               itemStyle={{ color: '#e0e0e0' }}
               formatter={(value) => [`${value}${unit}`, 'Value']}
@@ -148,12 +143,7 @@ export function StackedBarChart({
             />
             <Tooltip
               cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              contentStyle={{
-                backgroundColor: '#1e1e2e',
-                border: '1px solid #444',
-                borderRadius: '8px',
-                color: '#e0e0e0',
-              }}
+              contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: '#e0e0e0' }}
               labelStyle={{ color: '#ccc', fontWeight: 500 }}
               itemStyle={{ color: '#e0e0e0' }}
             />

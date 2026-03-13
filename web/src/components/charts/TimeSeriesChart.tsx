@@ -9,7 +9,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts'
-import { CHART_TOOLTIP_BG, CHART_TICK_COLOR } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR } from '../../lib/constants'
 
 interface DataPoint {
   time: string
@@ -77,12 +77,7 @@ export function TimeSeriesChart({
               </>
             )}
             <Tooltip
-              contentStyle={{
-                backgroundColor: CHART_TOOLTIP_BG,
-                border: '1px solid #333',
-                borderRadius: '8px',
-                fontSize: '12px',
-              }}
+              contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
               labelStyle={{ color: CHART_TICK_COLOR }}
               itemStyle={{ color: '#fff' }}
               formatter={(value) => [`${value}${unit}`, dataKey]}
@@ -128,11 +123,7 @@ export function TimeSeriesChart({
             </>
           )}
           <Tooltip
-            contentStyle={{
-              backgroundColor: CHART_TOOLTIP_BG,
-              border: '1px solid #333',
-              borderRadius: '8px',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
           />
           <Line
             type="monotone"
@@ -192,11 +183,7 @@ export function MultiSeriesChart({
             tickLine={false}
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: CHART_TOOLTIP_BG,
-              border: '1px solid #333',
-              borderRadius: '8px',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
           />
           {series.map((s) => (
             <Line

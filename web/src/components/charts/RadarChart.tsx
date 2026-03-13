@@ -8,7 +8,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts'
-import { CHART_TOOLTIP_BG } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
 
 interface DataPoint {
   name: string
@@ -59,12 +59,7 @@ export function RadarChart({
             tickCount={4}
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: CHART_TOOLTIP_BG,
-              border: '1px solid #333',
-              borderRadius: '8px',
-              fontSize: '12px',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
           />
           <Radar
             dataKey={dataKey}
@@ -120,11 +115,7 @@ export function MultiRadarChart({
             axisLine={false}
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: CHART_TOOLTIP_BG,
-              border: '1px solid #333',
-              borderRadius: '8px',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
           />
           {showLegend && (
             <Legend

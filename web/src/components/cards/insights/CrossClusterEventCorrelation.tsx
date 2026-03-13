@@ -9,7 +9,7 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -108,12 +108,7 @@ export function CrossClusterEventCorrelation() {
               <XAxis dataKey="time" tick={{ fontSize: 9, fill: CHART_TICK_COLOR }} />
               <YAxis tick={{ fontSize: 9, fill: CHART_TICK_COLOR }} allowDecimals={false} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: CHART_TOOLTIP_BG,
-                  border: `1px solid ${CHART_TOOLTIP_BORDER}`,
-                  borderRadius: 6,
-                  fontSize: 11,
-                }}
+                contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, fontSize: 11 }}
               />
               {(clusterNames || []).map((cluster, i) => (
                 <Area

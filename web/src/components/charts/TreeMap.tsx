@@ -1,5 +1,5 @@
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
-import { CHART_TOOLTIP_BG } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
 
 interface TreeMapItem {
   name: string
@@ -130,12 +130,7 @@ export function TreeMap({
           content={<CustomContent showLabels={showLabels} formatValue={formatValue} />}
         >
           <Tooltip
-            contentStyle={{
-              backgroundColor: CHART_TOOLTIP_BG,
-              border: '1px solid #333',
-              borderRadius: '8px',
-              fontSize: '12px',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
             formatter={(value) => [formatValue(value as number), 'Value']}
           />
         </Treemap>
@@ -190,12 +185,7 @@ export function NestedTreeMap({
           content={<CustomContent showLabels={true} formatValue={formatValue} />}
         >
           <Tooltip
-            contentStyle={{
-              backgroundColor: CHART_TOOLTIP_BG,
-              border: '1px solid #333',
-              borderRadius: '8px',
-              fontSize: '12px',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
             formatter={(value) => [formatValue(value as number), 'Value']}
           />
         </Treemap>

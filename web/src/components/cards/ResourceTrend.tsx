@@ -19,8 +19,7 @@ import {
   CHART_HEIGHT_STANDARD,
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
-  CHART_TOOLTIP_BG,
-  CHART_TOOLTIP_BORDER,
+  CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR,
 } from '../../lib/constants'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -350,12 +349,7 @@ export function ResourceTrend() {
                 allowDecimals={false}
               />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: CHART_TOOLTIP_BG,
-                  border: `1px solid ${CHART_TOOLTIP_BORDER}`,
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
+                contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
                 labelStyle={{ color: CHART_TICK_COLOR }}
               />
               <Legend

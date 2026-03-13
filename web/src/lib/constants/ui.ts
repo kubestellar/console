@@ -5,6 +5,8 @@
  * components so they can be tuned from a single location.
  */
 
+import type React from 'react'
+
 // ── Chart dimensions ────────────────────────────────────────────────────
 export const CHART_HEIGHT_STANDARD = 160
 export const CHART_HEIGHT_COMPACT = 100
@@ -12,6 +14,17 @@ export const CHART_HEIGHT_COMPACT = 100
 // ── Recharts shared styles ──────────────────────────────────────────────
 export const CHART_TOOLTIP_BG = '#1a1a2e'
 export const CHART_TOOLTIP_BORDER = '#333'
+/** Standard border-radius for chart tooltip containers (Tailwind rounded-lg equivalent) */
+export const CHART_TOOLTIP_BORDER_RADIUS = '8px'
+/** Standard font size for chart tooltip text */
+export const CHART_TOOLTIP_FONT_SIZE = '12px'
+/** Shared Recharts Tooltip contentStyle — eliminates repeated inline objects */
+export const CHART_TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
+  backgroundColor: CHART_TOOLTIP_BG,
+  border: `1px solid ${CHART_TOOLTIP_BORDER}`,
+  borderRadius: CHART_TOOLTIP_BORDER_RADIUS,
+  fontSize: CHART_TOOLTIP_FONT_SIZE,
+}
 export const CHART_GRID_STROKE = '#333'
 export const CHART_AXIS_STROKE = '#333'
 export const CHART_TICK_COLOR = '#888'

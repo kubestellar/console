@@ -24,6 +24,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { CardContentChart, CardChartSeries, CardAxisConfig } from '../../types'
+import { CHART_TOOLTIP_CONTENT_STYLE } from '../../../constants'
 
 export interface ChartVisualizationProps {
   /** Content configuration */
@@ -201,11 +202,7 @@ function LineChartRenderer({
             }
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: '#1f2937',
-              border: '1px solid #374151',
-              borderRadius: '0.375rem',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />
@@ -271,11 +268,7 @@ function AreaChartRenderer({
             }
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: '#1f2937',
-              border: '1px solid #374151',
-              borderRadius: '0.375rem',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />
@@ -343,11 +336,7 @@ function BarChartRenderer({
             }
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: '#1f2937',
-              border: '1px solid #374151',
-              borderRadius: '0.375rem',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />
@@ -419,11 +408,7 @@ function DonutChartRenderer({
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{
-              backgroundColor: '#1f2937',
-              border: '1px solid #374151',
-              borderRadius: '0.375rem',
-            }}
+            contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
             labelStyle={{ color: '#e5e7eb' }}
             itemStyle={{ color: '#e5e7eb' }}
           />

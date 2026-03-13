@@ -8,7 +8,7 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -113,7 +113,7 @@ export function ResourceImbalanceDetector() {
               <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: CHART_TICK_COLOR }} tickFormatter={v => `${v}%`} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: CHART_TICK_COLOR }} width={100} />
               <Tooltip
-                contentStyle={{ backgroundColor: CHART_TOOLTIP_BG, border: `1px solid ${CHART_TOOLTIP_BORDER}`, borderRadius: 6, fontSize: 11 }}
+                contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, fontSize: 11 }}
                 formatter={((value: number) => [`${value}%`, 'Usage']) as never}
               />
               <ReferenceLine x={avgValue} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: `Avg ${avgValue}%`, position: 'top', fontSize: 10, fill: '#f59e0b' }} />

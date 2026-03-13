@@ -1,4 +1,5 @@
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
 
 interface DataItem {
   name: string
@@ -51,13 +52,7 @@ export function PieChart({
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1e1e2e',
-                  border: '1px solid #444',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  color: '#e0e0e0',
-                }}
+                contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: '#e0e0e0' }}
                 labelStyle={{ color: '#ccc', fontWeight: 500 }}
                 itemStyle={{ color: '#e0e0e0' }}
               />
