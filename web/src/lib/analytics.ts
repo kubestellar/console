@@ -1732,3 +1732,27 @@ export function emitFromHeadlampTabSwitch(tab: string) {
 export function emitFromHeadlampCommandCopy(tab: string, step: number, command: string) {
   send('ksc_from_headlamp_command_copy', { tab, step, command })
 }
+
+/* ------------------------------------------------------------------ */
+/*  /white-label landing page                                          */
+/* ------------------------------------------------------------------ */
+
+/** Fired once when /white-label is rendered */
+export function emitWhiteLabelViewed() {
+  send('ksc_white_label_viewed')
+}
+
+/** Fired on CTA button clicks (hero_try_demo, hero_view_github, footer_try_demo, footer_view_github) */
+export function emitWhiteLabelActioned(action: string) {
+  send('ksc_white_label_actioned', { action })
+}
+
+/** Fired when switching deployment tabs (binary, helm, docker) */
+export function emitWhiteLabelTabSwitch(tab: string) {
+  send('ksc_white_label_tab_switch', { tab })
+}
+
+/** Fired when a user copies a command from the /white-label page */
+export function emitWhiteLabelCommandCopy(tab: string, step: number, command: string) {
+  send('ksc_white_label_command_copy', { tab, step, command })
+}

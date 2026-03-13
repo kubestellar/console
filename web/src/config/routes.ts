@@ -83,6 +83,7 @@ export const ROUTES = {
   // Marketing / competitive landing pages
   FROM_LENS: '/from-lens',
   FROM_HEADLAMP: '/from-headlamp',
+  WHITE_LABEL: '/white-label',
 
   // Dev / test routes
   TEST_UNIFIED_CARD: '/test/unified-card',
