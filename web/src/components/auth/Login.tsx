@@ -11,8 +11,15 @@ import { LogoWithStar } from '../ui/LogoWithStar'
 // Lazy load the heavy Three.js globe animation
 const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
 
+/** Structured info displayed for each OAuth error code returned by the backend. */
+interface OAuthErrorEntry {
+  title: string
+  message: string
+  steps: string[]
+}
+
 // Map backend error codes to user-friendly messages with troubleshooting steps
-const OAUTH_ERROR_INFO: Record<string, { title: string; message: string; steps: string[] }> = {
+const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
   exchange_failed: {
     title: 'GitHub OAuth Token Exchange Failed',
     message: 'The console was unable to complete the login with GitHub. This usually means your OAuth app is misconfigured.',
@@ -21,6 +28,36 @@ const OAUTH_ERROR_INFO: Record<string, { title: string; message: string; steps: 
       'Verify the Client Secret in your GitHub OAuth app matches what\'s in .env (regenerate if unsure)',
       'Confirm the "Authorization callback URL" in your GitHub OAuth app is set to: http://localhost:8080/auth/github/callback',
       'Restart the console after updating .env',
+    ],
+  },
+  invalid_client: {
+    title: 'Invalid OAuth Client Credentials',
+    message: 'GitHub rejected the client ID or client secret. Your OAuth app may be misconfigured or the credentials may have been rotated.',
+    steps: [
+      'Open your GitHub OAuth app settings and copy a fresh Client ID and Client Secret',
+      'Update GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in your .env file',
+      'If using GitHub Enterprise, verify GITHUB_URL points to the correct instance',
+      'Restart the console after updating .env',
+    ],
+  },
+  redirect_mismatch: {
+    title: 'OAuth Callback URL Mismatch',
+    message: 'The callback URL configured in the console does not match the one registered in your GitHub OAuth app.',
+    steps: [
+      'Open your GitHub OAuth app settings',
+      'Set "Authorization callback URL" to: http://localhost:8080/auth/github/callback',
+      'If using a custom BACKEND_URL, make sure the callback URL matches: <BACKEND_URL>/auth/github/callback',
+      'Restart the console after updating the GitHub OAuth app',
+    ],
+  },
+  network_error: {
+    title: 'Network Error',
+    message: 'The console backend could not reach GitHub to complete authentication. This is usually a connectivity issue.',
+    steps: [
+      'Check your internet connection',
+      'If behind a corporate proxy or firewall, ensure github.com and api.github.com are reachable',
+      'Try again in a few moments — GitHub may be experiencing an outage',
+      'Check https://www.githubstatus.com for service status',
     ],
   },
   csrf_validation_failed: {
@@ -41,6 +78,24 @@ const OAUTH_ERROR_INFO: Record<string, { title: string; message: string; steps: 
       'Verify the "Homepage URL" in your GitHub OAuth app settings',
     ],
   },
+  access_denied: {
+    title: 'Access Denied',
+    message: 'You denied the GitHub authorization request, or the OAuth app does not have permission to access your account.',
+    steps: [
+      'Click "Continue with GitHub" below and approve the authorization prompt',
+      'If you did not deny access, check that the GitHub OAuth app is not restricted by your organization\'s policies',
+      'Contact your GitHub organization admin if SSO enforcement is blocking access',
+    ],
+  },
+  github_error: {
+    title: 'GitHub Authorization Error',
+    message: 'GitHub returned an error during the authorization process.',
+    steps: [
+      'Try logging in again — this may be a temporary issue',
+      'Verify your GitHub OAuth app is not suspended or deleted',
+      'Check https://www.githubstatus.com for service status',
+    ],
+  },
   user_fetch_failed: {
     title: 'Could Not Retrieve GitHub Profile',
     message: 'Login succeeded but the console was unable to fetch your GitHub profile.',
@@ -58,6 +113,35 @@ const OAUTH_ERROR_INFO: Record<string, { title: string; message: string; steps: 
       'Check the backend logs for more details',
     ],
   },
+  create_user_failed: {
+    title: 'Account Creation Failed',
+    message: 'The console was unable to create your user account in its local database.',
+    steps: [
+      'Restart the console and try again',
+      'Check the backend logs for database errors',
+      'If the problem persists, try deleting the local database file and restarting',
+    ],
+  },
+  jwt_failed: {
+    title: 'Session Token Generation Failed',
+    message: 'The console backend was unable to generate a session token after successful GitHub login.',
+    steps: [
+      'Restart the console and try again',
+      'Ensure JWT_SECRET is set in your .env file (any random string)',
+      'Check the backend logs for more details',
+    ],
+  },
+}
+
+/** Fallback error info for unrecognized error codes. */
+const UNKNOWN_ERROR_FALLBACK: OAuthErrorEntry = {
+  title: 'Authentication Error',
+  message: 'An unexpected error occurred during login.',
+  steps: [
+    'Try logging in again — click "Continue with GitHub" below',
+    'Restart the console and try again',
+    'Check the backend logs for more details',
+  ],
 }
 
 export function Login() {
@@ -66,7 +150,14 @@ export function Login() {
   const [searchParams] = useSearchParams()
   const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
   const oauthError = useMemo(() => searchParams.get('error'), [searchParams])
-  const errorInfo = oauthError ? OAUTH_ERROR_INFO[oauthError] : null
+  const errorDetail = useMemo(() => searchParams.get('error_detail'), [searchParams])
+  const errorInfo = useMemo(() => {
+    if (!oauthError) return null
+    const known = OAUTH_ERROR_INFO[oauthError]
+    if (known) return known
+    // Fallback for unrecognized error codes so the user always sees actionable UI
+    return { ...UNKNOWN_ERROR_FALLBACK, message: `An unexpected error occurred during login (code: ${oauthError}).` }
+  }, [oauthError])
 
   // Auto-login for Netlify deploy previews or when backend has no OAuth configured
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info
@@ -156,7 +247,7 @@ export function Login() {
 
           {/* OAuth error banner */}
           {errorInfo && (
-            <div className="mb-6 rounded-lg border border-red-500/50 bg-red-500/10 overflow-hidden">
+            <div data-testid="oauth-error-banner" className="mb-6 rounded-lg border border-red-500/50 bg-red-500/10 overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-3 text-red-300 text-sm">
                 <AlertTriangle className="w-5 h-5 shrink-0 text-red-400" />
                 <div>
@@ -164,6 +255,14 @@ export function Login() {
                   <div className="text-xs text-red-400/80 mt-0.5">{errorInfo.message}</div>
                 </div>
               </div>
+              {/* Server-provided detail (e.g., specific GitHub error description) */}
+              {errorDetail && (
+                <div className="px-4 pb-2">
+                  <div className="text-xs text-red-400/60 bg-red-500/5 rounded px-3 py-2 font-mono break-words">
+                    {errorDetail}
+                  </div>
+                </div>
+              )}
               <div className="px-4 pb-3">
                 <div className="text-xs font-medium text-red-300/80 mb-1.5">Troubleshooting:</div>
                 <ol className="text-xs text-red-400/70 space-y-1 list-decimal list-inside">

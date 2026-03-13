@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -222,5 +223,62 @@ func TestGitHubCallback_InvalidState(t *testing.T) {
 	assert.Contains(t, loc.String(), "error=csrf_validation_failed")
 }
 
+func TestGitHubCallback_GitHubError(t *testing.T) {
+	app, _, handler := setupAuthTest()
+	app.Get("/auth/callback", handler.GitHubCallback)
+
+	t.Run("Access denied by user", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/auth/callback?error=access_denied&error_description=The+user+denied+access", nil)
+		resp, err := app.Test(req, 5000)
+		if err != nil || resp == nil {
+			t.Fatalf("app.Test failed: %v", err)
+		}
+
+		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+		loc, _ := resp.Location()
+		assert.Contains(t, loc.String(), "error=access_denied")
+		assert.Contains(t, loc.String(), "error_detail=")
+	})
+
+	t.Run("Generic GitHub error", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/auth/callback?error=application_suspended&error_description=App+is+suspended", nil)
+		resp, err := app.Test(req, 5000)
+		if err != nil || resp == nil {
+			t.Fatalf("app.Test failed: %v", err)
+		}
+
+		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+		loc, _ := resp.Location()
+		assert.Contains(t, loc.String(), "error=github_error")
+		assert.Contains(t, loc.String(), "error_detail=")
+	})
+}
+
+func TestClassifyExchangeError(t *testing.T) {
+	t.Run("Incorrect client credentials", func(t *testing.T) {
+		err := fmt.Errorf("oauth2: cannot fetch token: 401 Unauthorized\nResponse: incorrect_client_credentials")
+		code, _ := classifyExchangeError(err)
+		assert.Equal(t, "invalid_client", code)
+	})
+
+	t.Run("Redirect URI mismatch", func(t *testing.T) {
+		err := fmt.Errorf("oauth2: cannot fetch token: 400 Bad Request\nResponse: redirect_uri_mismatch")
+		code, _ := classifyExchangeError(err)
+		assert.Equal(t, "redirect_mismatch", code)
+	})
+
+	t.Run("Bad verification code", func(t *testing.T) {
+		err := fmt.Errorf("oauth2: cannot fetch token: 400 Bad Request\nResponse: bad_verification_code")
+		code, _ := classifyExchangeError(err)
+		assert.Equal(t, "exchange_failed", code)
+	})
+
+	t.Run("Generic exchange error", func(t *testing.T) {
+		err := fmt.Errorf("some unknown error from oauth2 library")
+		code, _ := classifyExchangeError(err)
+		assert.Equal(t, "exchange_failed", code)
+	})
+}
+
 // We cannot easily test successful GitHubCallback flow without mocking oauth lib
-// or doing extensive interface extraction, but we covered the error headers above.
+// or doing extensive interface extraction, but we covered the error paths above.

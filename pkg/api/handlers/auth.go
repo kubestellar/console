@@ -3,16 +3,19 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"strings"
 
 	"golang.org/x/oauth2"
 
@@ -265,11 +268,62 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
 
+// oauthErrorRedirect builds a redirect URL to the login page with a structured error.
+// The error code is always present; detail is optional human-readable context.
+func (h *AuthHandler) oauthErrorRedirect(c *fiber.Ctx, errorCode, detail string) error {
+	q := url.Values{"error": {errorCode}}
+	if detail != "" {
+		q.Set("error_detail", detail)
+	}
+	return c.Redirect(h.frontendURL+"/login?"+q.Encode(), fiber.StatusTemporaryRedirect)
+}
+
+// classifyExchangeError inspects a token-exchange error and returns a specific
+// error code plus a short description suitable for logging and the frontend.
+func classifyExchangeError(err error) (code, detail string) {
+	msg := err.Error()
+
+	// Network-level failures (DNS, TCP, TLS)
+	var netErr net.Error
+	if ok := errors.As(err, &netErr); ok {
+		if netErr.Timeout() {
+			return "network_error", "Request to GitHub timed out — check your internet connection"
+		}
+		return "network_error", "Could not reach GitHub — check your internet connection or firewall"
+	}
+
+	// oauth2 wraps the HTTP response body when GitHub returns a non-200.
+	// Common patterns from GitHub's OAuth error responses:
+	lower := strings.ToLower(msg)
+	switch {
+	case strings.Contains(lower, "incorrect_client_credentials") ||
+		strings.Contains(lower, "client_id"):
+		return "invalid_client", "GitHub rejected the client credentials — verify GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET"
+	case strings.Contains(lower, "redirect_uri_mismatch"):
+		return "redirect_mismatch", "The callback URL does not match the one registered in GitHub OAuth app settings"
+	case strings.Contains(lower, "bad_verification_code"):
+		return "exchange_failed", "Authorization code expired or was already used — please try logging in again"
+	default:
+		return "exchange_failed", msg
+	}
+}
+
 // GitHubCallback handles the OAuth callback
 func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
+	// GitHub may redirect with an error parameter when the user denies access
+	// or the OAuth app is misconfigured (e.g., suspended, wrong callback URL).
+	if ghError := c.Query("error"); ghError != "" {
+		ghDescription := c.Query("error_description", ghError)
+		log.Printf("[Auth] GitHub returned error: %s — %s", ghError, ghDescription)
+		if ghError == "access_denied" {
+			return h.oauthErrorRedirect(c, "access_denied", ghDescription)
+		}
+		return h.oauthErrorRedirect(c, "github_error", ghDescription)
+	}
+
 	code := c.Query("code")
 	if code == "" {
-		return c.Redirect(h.frontendURL+"/login?error=missing_code", fiber.StatusTemporaryRedirect)
+		return h.oauthErrorRedirect(c, "missing_code", "")
 	}
 
 	// CSRF validation: verify state parameter matches server-side store
@@ -277,28 +331,32 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	state := c.Query("state")
 	if state == "" || !validateAndConsumeOAuthState(state) {
 		log.Printf("[Auth] CSRF validation failed: invalid or expired state token")
-		return c.Redirect(h.frontendURL+"/login?error=csrf_validation_failed", fiber.StatusTemporaryRedirect)
+		return h.oauthErrorRedirect(c, "csrf_validation_failed", "")
 	}
 
-	// Exchange code for token
-	token, err := h.oauthConfig.Exchange(context.Background(), code)
+	// Exchange code for token — use a context with timeout for resilience
+	ctx, cancel := context.WithTimeout(context.Background(), githubHTTPTimeout)
+	defer cancel()
+	token, err := h.oauthConfig.Exchange(ctx, code)
 	if err != nil {
-		log.Printf("[Auth] Token exchange failed: %v", err)
-		return c.Redirect(h.frontendURL+"/login?error=exchange_failed", fiber.StatusTemporaryRedirect)
+		errCode, detail := classifyExchangeError(err)
+		log.Printf("[Auth] Token exchange failed (%s): %v", errCode, err)
+		return h.oauthErrorRedirect(c, errCode, detail)
 	}
 
 	// Get user info from GitHub
 	ghUser, err := h.getGitHubUser(token.AccessToken)
 	if err != nil {
 		log.Printf("[Auth] Failed to get GitHub user: %v", err)
-		return c.Redirect(h.frontendURL+"/login?error=user_fetch_failed", fiber.StatusTemporaryRedirect)
+		detail := err.Error()
+		return h.oauthErrorRedirect(c, "user_fetch_failed", detail)
 	}
 
 	// Find or create user
 	user, err := h.store.GetUserByGitHubID(fmt.Sprintf("%d", ghUser.ID))
 	if err != nil {
 		log.Printf("[Auth] Database error getting user: %v", err)
-		return c.Redirect(h.frontendURL+"/login?error=db_error", fiber.StatusTemporaryRedirect)
+		return h.oauthErrorRedirect(c, "db_error", "")
 	}
 
 	if user == nil {
@@ -311,7 +369,8 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 			Onboarded:   h.skipOnboarding, // Skip questionnaire if SKIP_ONBOARDING=true
 		}
 		if err := h.store.CreateUser(user); err != nil {
-			return c.Redirect(h.frontendURL+"/login?error=create_user_failed", fiber.StatusTemporaryRedirect)
+			log.Printf("[Auth] Failed to create user: %v", err)
+			return h.oauthErrorRedirect(c, "create_user_failed", "")
 		}
 	} else {
 		// Update user info
@@ -327,7 +386,8 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// Generate JWT
 	jwtToken, err := h.generateJWT(user)
 	if err != nil {
-		return c.Redirect(h.frontendURL+"/login?error=jwt_failed", fiber.StatusTemporaryRedirect)
+		log.Printf("[Auth] JWT generation failed: %v", err)
+		return h.oauthErrorRedirect(c, "jwt_failed", "")
 	}
 
 	// Set HttpOnly cookie (primary auth) and pass token in URL (migration fallback)
