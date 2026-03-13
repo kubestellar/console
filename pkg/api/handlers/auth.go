@@ -330,6 +330,39 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
 
+// Logout revokes the current JWT so it can no longer be used.
+// The token's jti is added to an in-memory revocation list that is
+// checked by the JWTAuth middleware on every request.
+func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
+	}
+
+	tokenString := authHeader[len("Bearer "):]
+	token, err := jwt.ParseWithClaims(tokenString, &middleware.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(h.jwtSecret), nil
+	})
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	}
+
+	claims, ok := token.Claims.(*middleware.UserClaims)
+	if !ok || claims.ID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Token has no revocable identifier")
+	}
+
+	// Add to revocation list — expires when the JWT itself would expire
+	expiresAt := time.Now().Add(jwtExpiration) // fallback
+	if claims.ExpiresAt != nil {
+		expiresAt = claims.ExpiresAt.Time
+	}
+	middleware.RevokeToken(claims.ID, expiresAt)
+
+	log.Printf("[Auth] Token revoked for user %s (jti: %s)", claims.GitHubLogin, claims.ID)
+	return c.JSON(fiber.Map{"success": true, "message": "Token revoked"})
+}
+
 // RefreshToken refreshes the JWT token
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	// Get current user from context
@@ -354,6 +387,15 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	claims, ok := token.Claims.(*middleware.UserClaims)
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid claims")
+	}
+
+	// Revoke the old token to prevent reuse
+	if claims.ID != "" {
+		expiresAt := time.Now().Add(jwtExpiration)
+		if claims.ExpiresAt != nil {
+			expiresAt = claims.ExpiresAt.Time
+		}
+		middleware.RevokeToken(claims.ID, expiresAt)
 	}
 
 	// Get fresh user data
@@ -415,6 +457,7 @@ func (h *AuthHandler) generateJWT(user *models.User) (string, error) {
 		UserID:      user.ID,
 		GitHubLogin: user.GitHubLogin,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.New().String(), // jti — unique token identifier for revocation
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(jwtExpiration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Subject:   user.ID.String(),

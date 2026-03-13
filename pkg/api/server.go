@@ -414,6 +414,7 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/auth/github", authLimiter, auth.GitHubLogin)
 	s.app.Get("/auth/github/callback", authLimiter, auth.GitHubCallback)
 	s.app.Post("/auth/refresh", authLimiter, auth.RefreshToken)
+	s.app.Post("/auth/logout", authLimiter, auth.Logout)
 
 	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
 	s.app.Get("/api/active-users", func(c *fiber.Ctx) error {

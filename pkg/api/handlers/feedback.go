@@ -918,12 +918,15 @@ func (h *FeedbackHandler) MarkAllNotificationsRead(c *fiber.Ctx) error {
 
 // HandleGitHubWebhook handles incoming GitHub webhook events
 func (h *FeedbackHandler) HandleGitHubWebhook(c *fiber.Ctx) error {
-	// Verify webhook signature if secret is configured
-	if h.webhookSecret != "" {
-		signature := c.Get("X-Hub-Signature-256")
-		if !h.verifyWebhookSignature(c.Body(), signature) {
-			return fiber.NewError(fiber.StatusUnauthorized, "Invalid webhook signature")
-		}
+	// Reject webhooks if no secret is configured — signature verification is mandatory
+	if h.webhookSecret == "" {
+		log.Printf("[Webhook] Rejected: GITHUB_WEBHOOK_SECRET not configured")
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Webhook signature verification not configured")
+	}
+
+	signature := c.Get("X-Hub-Signature-256")
+	if !h.verifyWebhookSignature(c.Body(), signature) {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid webhook signature")
 	}
 
 	eventType := c.Get("X-GitHub-Event")

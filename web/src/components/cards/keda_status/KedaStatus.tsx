@@ -136,17 +136,18 @@ function ReplicaBar({
 function ScaledObjectRow({ obj }: { obj: KedaScaledObject }) {
   const { t } = useTranslation('cards')
   const cfg = STATUS_CONFIG[obj.status]
+  const triggers = obj.triggers || []
   const triggerLabel =
-    obj.triggers.length > 0
-      ? TRIGGER_LABELS[obj.triggers[0].type] ?? obj.triggers[0].type
+    triggers.length > 0
+      ? TRIGGER_LABELS[triggers[0].type] ?? triggers[0].type
       : '—'
-  const extraTriggers = obj.triggers.length > 1 ? obj.triggers.length - 1 : 0
+  const extraTriggers = triggers.length > 1 ? triggers.length - 1 : 0
   const triggerSource =
-    obj.triggers.length > 0 ? obj.triggers[0].source : ''
+    triggers.length > 0 ? triggers[0].source : ''
   const currentVal =
-    obj.triggers.length > 0 ? obj.triggers[0].currentValue : null
+    triggers.length > 0 ? triggers[0].currentValue : null
   const targetVal =
-    obj.triggers.length > 0 ? obj.triggers[0].targetValue : null
+    triggers.length > 0 ? triggers[0].targetValue : null
 
   return (
     <div className="rounded-md bg-muted/30 px-3 py-2 space-y-1.5">
@@ -206,7 +207,7 @@ export function KedaStatus() {
 
   // Derived stats
   const stats = useMemo(() => {
-    const objs = data.scaledObjects
+    const objs = data.scaledObjects || []
     return {
       total: objs.length,
       ready: objs.filter(o => o.status === 'ready').length,
@@ -215,18 +216,22 @@ export function KedaStatus() {
     }
   }, [data.scaledObjects])
 
+  // Guard against undefined nested data from API/cache
+  const scaledObjects = useMemo(() => data.scaledObjects || [], [data.scaledObjects])
+  const operatorPods = data.operatorPods || { ready: 0, total: 0 }
+
   // Filtered list (local search)
   const filteredObjects = useMemo(() => {
-    if (!search.trim()) return data.scaledObjects
+    if (!search.trim()) return scaledObjects
     const q = search.toLowerCase()
-    return data.scaledObjects.filter(
+    return scaledObjects.filter(
       o =>
         o.name.toLowerCase().includes(q) ||
         o.namespace.toLowerCase().includes(q) ||
         o.target.toLowerCase().includes(q) ||
-        o.triggers.some(tr => tr.type.includes(q) || tr.source.toLowerCase().includes(q)),
+        (o.triggers || []).some(tr => tr.type.includes(q) || tr.source.toLowerCase().includes(q)),
     )
-  }, [data.scaledObjects, search])
+  }, [scaledObjects, search])
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (showSkeleton) {
@@ -297,7 +302,7 @@ export function KedaStatus() {
           </div>
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Server className="w-3 h-3" />
-            {data.operatorPods.ready}/{data.operatorPods.total}{' '}
+            {operatorPods.ready}/{operatorPods.total}{' '}
             {t('keda.operatorPods', 'pods')}
           </span>
         </div>
@@ -308,7 +313,7 @@ export function KedaStatus() {
       </div>
 
       {/* ── Stats grid ── */}
-      {data.scaledObjects.length > 0 && (
+      {scaledObjects.length > 0 && (
         <div className="grid grid-cols-4 gap-2">
           <StatTile
             icon={<TrendingUp className="w-4 h-4 text-blue-400" />}
@@ -342,7 +347,7 @@ export function KedaStatus() {
       )}
 
       {/* ── Search ── */}
-      {data.scaledObjects.length > 0 && (
+      {scaledObjects.length > 0 && (
         <CardSearchInput
           value={search}
           onChange={setSearch}
@@ -356,7 +361,7 @@ export function KedaStatus() {
           filteredObjects.map(obj => (
             <ScaledObjectRow key={`${obj.namespace}/${obj.name}`} obj={obj} />
           ))
-        ) : data.scaledObjects.length === 0 ? (
+        ) : scaledObjects.length === 0 ? (
           // Live mode: operator running but no ScaledObjects available via API
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1 py-6">
             <TrendingUp className="w-6 h-6 opacity-40" />
