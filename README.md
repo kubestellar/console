@@ -23,14 +23,28 @@ go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
 
 ## GitHub OAuth
 
-Create a [GitHub OAuth App](https://github.com/settings/developers) with callback URL `http://localhost:8080/auth/github/callback`, then add credentials to `.env`:
+1. **Create a [GitHub OAuth App](https://github.com/settings/developers)**
+   - Homepage URL: `http://localhost:8080`
+   - Callback URL: `http://localhost:8080/auth/github/callback`
 
-```
-GITHUB_CLIENT_ID=your-client-id
-GITHUB_CLIENT_SECRET=your-client-secret
-```
+2. **Clone the repo** (if you haven't already):
+   ```bash
+   git clone https://github.com/kubestellar/console.git
+   cd console
+   ```
 
-Restart with `./startup-oauth.sh` (local dev) or pass `--github-oauth` to `deploy.sh`.
+3. **Create a `.env` file in the repo root** (`console/.env`):
+   ```
+   GITHUB_CLIENT_ID=your-client-id
+   GITHUB_CLIENT_SECRET=your-client-secret
+   ```
+
+4. **Start the console**:
+   ```bash
+   ./startup-oauth.sh
+   ```
+
+Open http://localhost:8080 and sign in with GitHub. For Kubernetes deployments, pass `--github-oauth` to `deploy.sh` instead.
 
 To enable feedback and GitHub-powered features (nightly E2E status, community activity), go to **Settings** in the console sidebar and add a GitHub personal access token under **GitHub Token**.
 

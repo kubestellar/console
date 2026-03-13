@@ -182,8 +182,8 @@ if [ -z "$GITHUB_CLIENT_ID" ]; then
     echo ""
     echo "Or create a GitHub OAuth App at:"
     echo "  https://github.com/settings/developers"
-    echo "  Homepage URL: http://localhost:5174"
-    echo "  Callback URL: http://localhost:5174/auth/github/callback"
+    echo "  Homepage URL: http://localhost:8080"
+    echo "  Callback URL: http://localhost:8080/auth/github/callback"
     exit 1
 fi
 
