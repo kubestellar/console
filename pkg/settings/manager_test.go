@@ -253,6 +253,11 @@ func TestManager_ExportImport(t *testing.T) {
 }
 
 func TestManager_ImportDifferentKey(t *testing.T) {
+	// Isolate from env vars so GetAll fallbacks don't leak into assertions.
+	// t.Setenv restores the original value (or unsets) after the test.
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("FEEDBACK_GITHUB_TOKEN", "")
+
 	sm := newTestManager(t)
 
 	all := DefaultAllSettings()
