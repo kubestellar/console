@@ -115,8 +115,12 @@ WS_TEST_EXIT=0
 go test ./pkg/api/handlers/... -run "TestWebSocket\|TestHub\|TestHandle" -v -timeout 30s > "$WS_TEST_OUTPUT" 2>&1 || WS_TEST_EXIT=$?
 
 # Count pass/fail from Go test output
-GO_PASSED=$(grep -c "^--- PASS:" "$WS_TEST_OUTPUT" 2>/dev/null || echo "0")
-GO_FAILED=$(grep -c "^--- FAIL:" "$WS_TEST_OUTPUT" 2>/dev/null || echo "0")
+GO_PASSED=$(grep -c "^--- PASS:" "$WS_TEST_OUTPUT" 2>/dev/null || true)
+GO_PASSED="${GO_PASSED:-0}"
+GO_PASSED=$(echo "$GO_PASSED" | tr -d '[:space:]')
+GO_FAILED=$(grep -c "^--- FAIL:" "$WS_TEST_OUTPUT" 2>/dev/null || true)
+GO_FAILED="${GO_FAILED:-0}"
+GO_FAILED=$(echo "$GO_FAILED" | tr -d '[:space:]')
 
 if [ "$WS_TEST_EXIT" -eq 0 ]; then
   run_test "Go WebSocket handler tests (${GO_PASSED} tests)" "pass" ""

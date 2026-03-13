@@ -61,8 +61,12 @@ JWT_OUTPUT="$TMPDIR_AUTH/jwt-tests.txt"
 JWT_EXIT=0
 go test ./pkg/api/middleware/... -run "TestJWTAuth|TestValidateJWT|TestGetContext" -v -timeout 30s > "$JWT_OUTPUT" 2>&1 || JWT_EXIT=$?
 
-JWT_PASSED=$(grep -c "^--- PASS:" "$JWT_OUTPUT" 2>/dev/null || echo "0")
-JWT_FAILED_COUNT=$(grep -c "^--- FAIL:" "$JWT_OUTPUT" 2>/dev/null || echo "0")
+JWT_PASSED=$(grep -c "^--- PASS:" "$JWT_OUTPUT" 2>/dev/null || true)
+JWT_PASSED="${JWT_PASSED:-0}"
+JWT_PASSED=$(echo "$JWT_PASSED" | tr -d '[:space:]')
+JWT_FAILED_COUNT=$(grep -c "^--- FAIL:" "$JWT_OUTPUT" 2>/dev/null || true)
+JWT_FAILED_COUNT="${JWT_FAILED_COUNT:-0}"
+JWT_FAILED_COUNT=$(echo "$JWT_FAILED_COUNT" | tr -d '[:space:]')
 
 TOTAL=$((TOTAL + 1))
 if [ "$JWT_EXIT" -eq 0 ]; then
@@ -88,7 +92,9 @@ AUTH_OUTPUT="$TMPDIR_AUTH/auth-handler-tests.txt"
 AUTH_EXIT=0
 go test ./pkg/api/handlers/... -run "TestAuth|TestOAuth|TestLogin|TestCallback" -v -timeout 30s > "$AUTH_OUTPUT" 2>&1 || AUTH_EXIT=$?
 
-AUTH_PASSED=$(grep -c "^--- PASS:" "$AUTH_OUTPUT" 2>/dev/null || echo "0")
+AUTH_PASSED=$(grep -c "^--- PASS:" "$AUTH_OUTPUT" 2>/dev/null || true)
+AUTH_PASSED="${AUTH_PASSED:-0}"
+AUTH_PASSED=$(echo "$AUTH_PASSED" | tr -d '[:space:]')
 
 TOTAL=$((TOTAL + 1))
 if [ "$AUTH_EXIT" -eq 0 ]; then
@@ -117,7 +123,9 @@ WS_OUTPUT="$TMPDIR_AUTH/ws-auth-tests.txt"
 WS_EXIT=0
 go test ./pkg/api/handlers/... -run "TestWebSocket|TestHub" -v -timeout 30s > "$WS_OUTPUT" 2>&1 || WS_EXIT=$?
 
-WS_PASSED=$(grep -c "^--- PASS:" "$WS_OUTPUT" 2>/dev/null || echo "0")
+WS_PASSED=$(grep -c "^--- PASS:" "$WS_OUTPUT" 2>/dev/null || true)
+WS_PASSED="${WS_PASSED:-0}"
+WS_PASSED=$(echo "$WS_PASSED" | tr -d '[:space:]')
 
 TOTAL=$((TOTAL + 1))
 if [ "$WS_EXIT" -eq 0 ]; then
