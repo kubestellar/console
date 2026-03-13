@@ -14,11 +14,15 @@
 | Missing `isDemoData` wiring | Demo badge never appears, users think data is real | Destructure `isDemoFallback` from `useCache`, pass to `useCardLoadingState` |
 | Magic numbers | `setTimeout(fn, 5000)` with no explanation | Use named constants: `const WS_RECONNECT_MS = 5000` |
 | Hardcoded English strings | `"No data available"` in JSX | Use `t('cardName.noData')` with locale keys |
-| Scope creep in registry | PR registers 5 unrelated cards in `cardRegistry.ts` | Only register YOUR card — one card per PR |
+| Scope creep beyond card files | PR modifies Go backend, netlify functions, workflows | Only touch YOUR card's files — see [Scope Rules](#scope-rules-no-scope-creep) |
 | `useFormatRelativeTime` copy-paste | Same helper duplicated in every card | Import from shared utilities |
 | Nil slices in Go handlers | API returns `{"nodes": null}` instead of `[]` | Use `make([]T, 0)` not `var x []T` |
 | Raw error messages in API | `err.Error()` leaks cluster names to browser | `log.Printf(...)` + return generic `"internal server error"` |
-| Array operations on undefined | `.join()` or `for...of` on undefined crashes | Always guard: `(arr \|\| []).join(', ')` |
+| Array operations on undefined | `.map()`, `.join()`, `.reduce()` on undefined crashes | Guard ALL array ops: `(arr \|\| []).join(', ')` |
+| No tests | Card ships with zero test coverage | Must include render test + pure function tests |
+| Broad pod detection | `name.includes('kafka')` matches unrelated pods | Use label selectors or CRD queries, not substring matching |
+| Hardcoded status labels | Status display functions use English strings | Status labels from K8s are passthrough; custom UI labels use `t()` |
+| Wrong `hasAnyData` | Card flickers empty when tool not installed | `hasAnyData: !data.detected` prevents empty state for not-installed tools |
 | PR title missing emoji | `Add new card` | Must be `✨ Add Foo monitoring card` |
 
 ---
@@ -67,15 +71,33 @@ Every card needs ALL of these. Missing any one will cause issues.
 - [ ] **Card metadata**: Add title + description in `cardMetadata.ts`
 - [ ] **Add Card Modal**: Add catalog entry in `AddCardModal.tsx`
 - [ ] **Locale strings**: Add keys in `web/src/locales/en/cards.json`
+- [ ] **Tests**: `web/src/components/cards/your_card/__tests__/YourCard.test.tsx`
 - [ ] **Preset JSON** (optional): `presets/your-card.json`
 
-### Do NOT touch these files for other cards
+### Scope Rules (No Scope Creep)
 
-Your PR should only modify `cardRegistry.ts` to add YOUR card. Do not:
-- Register other people's cards
-- Add unrelated cards to `DEMO_DATA_CARDS`
-- Add unrelated cards to `CARD_CHUNK_PRELOADERS`
-- Modify `CardDataContext.tsx` (if you think you need to, ask first)
+Your PR should ONLY contain files for YOUR card. This is the #1 reason PRs get sent back.
+
+**Files you MAY modify:**
+- `web/src/components/cards/your_card/*` (your card directory)
+- `web/src/components/cards/cardRegistry.ts` (add YOUR card only)
+- `web/src/components/cards/cardMetadata.ts` (add YOUR card only)
+- `web/src/components/cards/AddCardModal.tsx` (add YOUR catalog entry only)
+- `web/src/locales/en/cards.json` (add YOUR keys only)
+- `presets/your-card.json` (your preset only)
+
+**Files you MUST NOT modify:**
+- `go.mod`, `go.sum` (Go dependencies)
+- `pkg/api/handlers/*` (Go backend handlers)
+- `web/netlify/functions/*` (Netlify serverless functions)
+- `.github/workflows/*` (CI/CD workflows)
+- `web/src/components/cards/CardDataContext.tsx`
+- `web/src/lib/cache.ts`
+- Other cards' directories
+- `cardRegistry.ts` entries for other people's cards
+- `DEMO_DATA_CARDS` or `CARD_CHUNK_PRELOADERS` entries for other cards
+
+If your card needs a new backend endpoint, submit it as a **separate PR** or coordinate with a maintainer.
 
 ---
 
@@ -175,6 +197,63 @@ export function useYourCardStatus() {
 4. CardWrapper thinks data is real — no demo badge, no yellow border
 5. User makes decisions based on fake data thinking it's real
 6. **This is a regression we actively reject PRs for.**
+
+### Getting `hasAnyData` Right (Not-Installed vs Empty)
+
+The `hasAnyData` parameter controls whether the card shows an empty state. Getting it wrong causes flicker or misleading UI.
+
+```typescript
+// BAD — flickers empty when tool is simply not installed
+const { showSkeleton, showEmptyState } = useCardLoadingState({
+  // ...
+  hasAnyData: data.items.length > 0,  // false when tool not installed!
+})
+
+// GOOD — treat "not detected" as valid data (show the "not installed" message)
+const { showSkeleton, showEmptyState } = useCardLoadingState({
+  // ...
+  hasAnyData: !data.detected ? true : data.items.length > 0,
+})
+```
+
+**Rule:** If your data type has a `detected` field, set `hasAnyData: true` when `detected === false`. This prevents the empty state from showing — instead, your card renders its own "not detected / not installed" message.
+
+---
+
+## Pod Detection: Be Specific
+
+Pod name substring matching is unreliable. Broad patterns match unrelated workloads.
+
+### Bad (too broad — will be rejected)
+
+```typescript
+// "kafka" matches kafka-ui, kafka-exporter, my-kafka-consumer, etc.
+const kafkaPods = pods.filter(p => p.name.includes('kafka'))
+
+// "feature" could match anything
+const ofPods = pods.filter(p => p.name.includes('feature'))
+```
+
+### Good (use labels or CRD queries)
+
+```typescript
+// Prefer label selectors in the backend query
+const kafkaPods = pods.filter(p =>
+  p.labels?.['strimzi.io/kind'] === 'Kafka' ||
+  p.labels?.['app.kubernetes.io/managed-by'] === 'strimzi-cluster-operator'
+)
+
+// Or query CRDs directly (best approach for tools with custom resources)
+const resp = await fetch('/api/mcp/strimzi/status')  // Backend queries CRDs
+```
+
+**Best practice:** If your tool installs CRDs (most CNCF tools do), query those CRDs in the backend rather than guessing from pod names. See the [Go Backend Endpoint Pattern](#go-backend-endpoint-pattern) section.
+
+Recent examples of cards with proper CRD-based detection:
+- **KEDA**: queries `keda.sh/v1alpha1` ScaledObjects and ScaledJobs
+- **Strimzi**: queries `kafka.strimzi.io/v1beta2` Kafkas and KafkaTopics
+- **OpenFeature**: queries `core.openfeature.dev/v1beta1` FeatureFlagConfigurations
+- **KubeVela**: queries `core.oam.dev/v1beta1` Applications
 
 ---
 
@@ -284,7 +363,30 @@ if (retries > MAX_FETCH_RETRIES) return
 const items = data.slice(0, DEFAULT_VISIBLE_ITEMS)
 ```
 
-This applies to demo data too — `30 * 1000` in a `lastSeen` field needs a constant.
+This applies to demo data too:
+
+```typescript
+// Bad — what do these numbers mean?
+const DEMO_DATA = {
+  lastSeen: Date.now() - 30000,
+  uptime: 86400000,
+  items: Array.from({ length: 5 }, ...),
+}
+
+// Good
+/** Demo: last seen 30 seconds ago */
+const DEMO_LAST_SEEN_AGO_MS = 30_000
+/** Demo: 24 hours uptime */
+const DEMO_UPTIME_MS = 24 * 60 * 60 * 1000
+/** Demo: number of sample items to generate */
+const DEMO_ITEM_COUNT = 5
+
+const DEMO_DATA = {
+  lastSeen: Date.now() - DEMO_LAST_SEEN_AGO_MS,
+  uptime: DEMO_UPTIME_MS,
+  items: Array.from({ length: DEMO_ITEM_COUNT }, ...),
+}
+```
 
 ---
 
@@ -325,11 +427,30 @@ Add keys to `web/src/locales/en/cards.json`:
 
 **Note:** We currently only have English translations. You only need to add keys to `en/cards.json`. Do NOT add keys to other language files unless you have verified translations.
 
+### What about Kubernetes status strings?
+
+Status strings from Kubernetes (e.g., `Running`, `CrashLoopBackOff`, `Pending`) are **passthrough** — display them as-is. Do NOT translate these.
+
+But **custom UI labels** you create (column headers, tooltips, descriptions) MUST use `t()`:
+
+```tsx
+// OK — Kubernetes status is passthrough
+<span>{issue.status}</span>
+
+// BAD — custom label is hardcoded English
+<span>Unhealthy</span>
+<MetricTile label="Active Replicas" ... />
+
+// GOOD — custom labels use t()
+<span>{t('yourCard.unhealthy')}</span>
+<MetricTile label={t('yourCard.activeReplicas')} ... />
+```
+
 ---
 
 ## Array Safety
 
-Hook data and API responses can be `undefined`. Always guard.
+Hook data and API responses can be `undefined`. Always guard **every** array operation.
 
 ### Bad (will crash)
 
@@ -337,6 +458,9 @@ Hook data and API responses can be `undefined`. Always guard.
 const labels = data.items.join(', ')
 for (const item of data.results) { ... }
 data.clusters.map(c => c.name)
+const total = data.metrics.reduce((sum, m) => sum + m.value, 0)
+const healthy = data.pods.filter(p => p.status === 'Running')
+if (data.issues.length > 0) { ... }
 ```
 
 ### Good
@@ -345,7 +469,12 @@ data.clusters.map(c => c.name)
 const labels = (data.items || []).join(', ')
 for (const item of (data.results || [])) { ... }
 (data.clusters || []).map(c => c.name)
+const total = (data.metrics || []).reduce((sum, m) => sum + m.value, 0)
+const healthy = (data.pods || []).filter(p => p.status === 'Running')
+if ((data.issues || []).length > 0) { ... }
 ```
+
+**This applies to ALL array methods**: `.map()`, `.filter()`, `.reduce()`, `.join()`, `.some()`, `.every()`, `.find()`, `.forEach()`, `.length`, and `for...of` loops. A production crash was caused by an unguarded `.join()` — this is not theoretical.
 
 ---
 
@@ -428,6 +557,100 @@ export function YourCard() {
 
 ---
 
+## Test Requirements
+
+Every card PR must include tests. Cards without tests will be rejected.
+
+### Required Tests
+
+Create `web/src/components/cards/your_card/__tests__/YourCard.test.tsx`:
+
+```typescript
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { YourCard } from '../YourCard'
+
+// Mock the data hook
+vi.mock('../useYourCardStatus', () => ({
+  useYourCardStatus: vi.fn(),
+}))
+
+// Mock i18n
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
+import { useYourCardStatus } from '../useYourCardStatus'
+
+describe('YourCard', () => {
+  it('renders skeleton when loading', () => {
+    vi.mocked(useYourCardStatus).mockReturnValue({
+      data: INITIAL_DATA,
+      showSkeleton: true,
+      showEmptyState: false,
+      isDemoFallback: false,
+    })
+    render(<YourCard />)
+    // Skeleton should be visible
+    expect(document.querySelector('.animate-pulse')).toBeTruthy()
+  })
+
+  it('renders empty state when not detected', () => {
+    vi.mocked(useYourCardStatus).mockReturnValue({
+      data: { ...INITIAL_DATA, detected: false },
+      showSkeleton: false,
+      showEmptyState: true,
+      isDemoFallback: false,
+    })
+    render(<YourCard />)
+    expect(screen.getByText('yourCard.notDetected')).toBeTruthy()
+  })
+
+  it('renders data when loaded', () => {
+    vi.mocked(useYourCardStatus).mockReturnValue({
+      data: YOUR_DEMO_DATA,  // Reuse your demo data
+      showSkeleton: false,
+      showEmptyState: false,
+      isDemoFallback: false,
+    })
+    render(<YourCard />)
+    // Verify key data elements render
+    expect(screen.getByText('yourCard.total')).toBeTruthy()
+  })
+})
+```
+
+### Test Pure Functions Separately
+
+If your card has helper functions (status mappers, formatters, etc.), test them in isolation:
+
+```typescript
+// __tests__/helpers.test.ts
+import { getYourToolSeverity } from '../helpers'
+
+describe('getYourToolSeverity', () => {
+  it('maps Running to success', () => {
+    expect(getYourToolSeverity('Running')).toBe('success')
+  })
+  it('maps unknown status to neutral', () => {
+    expect(getYourToolSeverity('SomeUnknownThing')).toBe('neutral')
+  })
+  it('handles undefined', () => {
+    expect(getYourToolSeverity(undefined)).toBe('neutral')
+  })
+})
+```
+
+### Running Tests
+
+```bash
+cd web && npx vitest run --reporter=verbose src/components/cards/your_card
+```
+
+---
+
 ## PR Requirements
 
 ### Title Format
@@ -450,13 +673,16 @@ git commit -s -m "✨ Add FooBar monitoring card"
 
 - [ ] `cd web && npm run build` passes
 - [ ] `cd web && npm run lint` passes
+- [ ] `cd web && npx vitest run src/components/cards/your_card` passes
 - [ ] Rebase onto latest `main`
-- [ ] Only YOUR card's files are changed (no scope creep)
+- [ ] Only YOUR card's files are changed (see [Scope Rules](#scope-rules-no-scope-creep))
 - [ ] Live data works (not just demo data)
 - [ ] `isDemoFallback` → `isDemoData` wiring is present
-- [ ] All strings use `t()` i18n calls
-- [ ] No magic numbers — all constants are named
-- [ ] Array operations guard against `undefined`
+- [ ] `hasAnyData` handles both "not installed" and "installed but empty"
+- [ ] All custom UI strings use `t()` i18n calls
+- [ ] No magic numbers — all constants are named (including demo data)
+- [ ] All array operations guard against `undefined` (`.map`, `.filter`, `.reduce`, `.join`, `.length`)
+- [ ] Pod detection uses labels or CRDs, not broad name substrings
 - [ ] Go API uses `make([]T, 0)`, `log.Printf`, `context.WithTimeout`
 
 ### One Card Per PR
@@ -493,12 +719,16 @@ If you're using an AI coding assistant (GitHub Copilot, ChatGPT, Claude, etc.) t
 
 1. **Always implement both live data fetching AND demo data fallback**
 2. **Always wire `isDemoFallback` through to `useCardLoadingState`**
-3. **Never use hardcoded strings in JSX — use `t()` calls**
-4. **Never use magic numbers — define named constants**
-5. **Guard all array operations against undefined**
-6. **Follow the exact file structure listed in the checklist above**
-7. **Run `npm run build && npm run lint` before committing**
-8. **Sign commits with `-s` for DCO**
+3. **Set `hasAnyData` correctly** — `true` when tool is not installed (show "not detected" message, not empty state)
+4. **Never use hardcoded strings in JSX — use `t()` calls** (except K8s status strings which are passthrough)
+5. **Never use magic numbers — define named constants** (including demo data time offsets)
+6. **Guard ALL array operations against undefined** — `.map()`, `.filter()`, `.reduce()`, `.join()`, `.length`, `for...of`
+7. **Use label selectors or CRD queries for pod detection** — never broad `name.includes()` matching
+8. **Include tests** — render tests for skeleton/empty/data states, plus pure function unit tests
+9. **Follow the exact file structure listed in the checklist above**
+10. **Do NOT modify files outside your card directory** — see [Scope Rules](#scope-rules-no-scope-creep)
+11. **Run `npm run build && npm run lint && npx vitest run` before committing**
+12. **Sign commits with `-s` for DCO**
 
 ---
 
