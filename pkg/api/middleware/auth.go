@@ -86,7 +86,12 @@ func IsTokenRevoked(jti string) bool {
 	return revokedTokens.IsRevoked(jti)
 }
 
-// JWTAuth creates JWT authentication middleware
+// jwtCookieName is the HttpOnly cookie that carries the JWT.
+// Must match the name used in handlers/auth.go.
+const jwtCookieName = "kc_auth"
+
+// JWTAuth creates JWT authentication middleware.
+// Token resolution order: Authorization header → HttpOnly cookie → _token query param (SSE only).
 func JWTAuth(secret string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -100,7 +105,12 @@ func JWTAuth(secret string) fiber.Handler {
 			}
 		}
 
-		// Fallback: accept _token query param for SSE /stream endpoints
+		// Fallback 1: read from HttpOnly cookie (set during login/refresh)
+		if tokenString == "" {
+			tokenString = c.Cookies(jwtCookieName)
+		}
+
+		// Fallback 2: accept _token query param for SSE /stream endpoints
 		// (EventSource API does not support custom headers)
 		if tokenString == "" && c.Query("_token") != "" && strings.HasSuffix(c.Path(), "/stream") {
 			tokenString = c.Query("_token")

@@ -15,8 +15,8 @@ import (
 const (
 	// githubProxyTimeout is the timeout for proxied GitHub API requests.
 	githubProxyTimeout = 15 * time.Second
-	// githubAPIBase is the base URL for the GitHub API.
-	githubAPIBase = "https://api.github.com"
+	// githubProxyAPIBase is the base URL for proxied GitHub API requests.
+	githubProxyAPIBase = "https://api.github.com"
 	// maxGitHubProxyPathLen is the maximum allowed path length to prevent abuse.
 	maxGitHubProxyPathLen = 512
 )
@@ -107,7 +107,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	}
 
 	// Build target URL with query params
-	targetURL := githubAPIBase + apiPath
+	targetURL := githubProxyAPIBase + apiPath
 	if qs := c.Context().QueryArgs().QueryString(); len(qs) > 0 {
 		targetURL += "?" + string(qs)
 	}

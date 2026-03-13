@@ -157,6 +157,8 @@ const (
 	oauthStateCookieName = "oauth_state"
 	// OAuth state cookie max age (10 minutes)
 	oauthStateCookieMaxAge = 600
+	// jwtCookieName is the HttpOnly cookie that carries the JWT.
+	jwtCookieName = "kc_auth"
 )
 
 // GitHubLogin initiates GitHub OAuth flow
@@ -255,6 +257,9 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL+"/login?error=jwt_failed", fiber.StatusTemporaryRedirect)
 	}
 
+	// Set HttpOnly cookie (primary auth) and pass token in URL (migration fallback)
+	h.setJWTCookie(c, jwtToken)
+
 	// Redirect to frontend with token
 	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&onboarded=%t", h.frontendURL, jwtToken, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
@@ -325,6 +330,9 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL+"/login?error=jwt_failed", fiber.StatusTemporaryRedirect)
 	}
 
+	// Set HttpOnly cookie (primary auth) and pass token in URL (migration fallback)
+	h.setJWTCookie(c, jwtToken)
+
 	// Redirect to frontend with token
 	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&onboarded=%t", h.frontendURL, jwtToken, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
@@ -334,12 +342,18 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 // The token's jti is added to an in-memory revocation list that is
 // checked by the JWTAuth middleware on every request.
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	// Accept token from Authorization header or HttpOnly cookie
+	var tokenString string
 	authHeader := c.Get("Authorization")
-	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+	if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+		tokenString = authHeader[len("Bearer "):]
+	}
+	if tokenString == "" {
+		tokenString = c.Cookies(jwtCookieName)
+	}
+	if tokenString == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
-
-	tokenString := authHeader[len("Bearer "):]
 	token, err := jwt.ParseWithClaims(tokenString, &middleware.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(h.jwtSecret), nil
 	})
@@ -358,6 +372,9 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		expiresAt = claims.ExpiresAt.Time
 	}
 	middleware.RevokeToken(claims.ID, expiresAt)
+
+	// Clear the HttpOnly cookie so the browser stops sending it
+	h.clearJWTCookie(c)
 
 	log.Printf("[Auth] Token revoked for user %s (jti: %s)", claims.GitHubLogin, claims.ID)
 	return c.JSON(fiber.Map{"success": true, "message": "Token revoked"})
@@ -410,6 +427,9 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to generate token")
 	}
 
+	// Update HttpOnly cookie with the fresh token
+	h.setJWTCookie(c, newToken)
+
 	return c.JSON(fiber.Map{
 		"token":     newToken,
 		"onboarded": user.Onboarded,
@@ -450,6 +470,37 @@ func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
 	}
 
 	return &user, nil
+}
+
+// setJWTCookie sets an HttpOnly cookie carrying the JWT token.
+// The cookie is Secure when the frontend URL uses HTTPS, SameSite=Lax
+// to allow top-level navigations (OAuth redirects) while blocking
+// cross-site POST requests.
+func (h *AuthHandler) setJWTCookie(c *fiber.Ctx, token string) {
+	secure := strings.HasPrefix(h.frontendURL, "https://")
+	c.Cookie(&fiber.Cookie{
+		Name:     jwtCookieName,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   int(jwtExpiration.Seconds()),
+		HTTPOnly: true,
+		Secure:   secure,
+		SameSite: "Lax",
+	})
+}
+
+// clearJWTCookie removes the JWT HttpOnly cookie.
+func (h *AuthHandler) clearJWTCookie(c *fiber.Ctx) {
+	secure := strings.HasPrefix(h.frontendURL, "https://")
+	c.Cookie(&fiber.Cookie{
+		Name:     jwtCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HTTPOnly: true,
+		Secure:   secure,
+		SameSite: "Lax",
+	})
 }
 
 func (h *AuthHandler) generateJWT(user *models.User) (string, error) {
