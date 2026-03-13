@@ -903,9 +903,9 @@ export function EPPRouting() {
           {/* Stack info */}
           {selectedStack && (
             <div className="flex items-center gap-1 text-xs">
-              <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[80px] ${
+              <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[180px] ${
                 isDemoMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
-              }`}>
+              }`} title={selectedStack.name}>
                 {selectedStack.name}
               </span>
               {isDemoMode && (
@@ -957,7 +957,7 @@ export function EPPRouting() {
       {/* Main visualization area */}
       <div className={`flex-1 relative ${isExpanded ? 'min-h-0' : 'min-h-[200px]'}`}>
         <svg
-          viewBox="-5 -5 120 120"
+          viewBox="-5 -10 120 130"
           className="w-full h-full overflow-visible"
           preserveAspectRatio="xMidYMid meet"
           style={{ overflow: 'visible' }}

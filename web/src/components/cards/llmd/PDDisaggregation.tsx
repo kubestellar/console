@@ -345,9 +345,9 @@ export function PDDisaggregation() {
         </div>
         <div className="flex items-center gap-2">
           {selectedStack && (
-            <span className={`px-1.5 py-0.5 rounded text-xs font-medium truncate max-w-[80px] ${
+            <span className={`px-1.5 py-0.5 rounded text-xs font-medium truncate max-w-[180px] ${
               isDemoMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
-            }`}>
+            }`} title={selectedStack.name}>
               {selectedStack.name}
             </span>
           )}

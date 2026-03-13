@@ -962,7 +962,7 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-background/50 to-secondary/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
+    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-background/50 to-secondary/30 rounded-lg ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-sm">
@@ -977,9 +977,9 @@ export function LLMdFlow() {
           {/* Stack info */}
           {selectedStack && (
             <div className="flex items-center gap-1.5 text-xs">
-              <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[100px] ${
+              <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[180px] ${
                 isDemoMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
-              }`}>
+              }`} title={selectedStack.name}>
                 {selectedStack.name}
               </span>
               <span className="text-muted-foreground">{selectedStack.cluster}</span>
@@ -1059,7 +1059,7 @@ export function LLMdFlow() {
 
       {/* SVG Flow Diagram - overflow visible allows labels to extend beyond viewBox */}
       <svg
-        viewBox="-5 -5 120 130"
+        viewBox="-5 -10 120 140"
         className="w-full h-[calc(100%-2rem)] mt-8 overflow-visible"
         preserveAspectRatio="xMidYMid meet"
         style={{ overflow: 'visible' }}
