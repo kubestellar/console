@@ -65,14 +65,15 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         const token = decodeToken(encodedFeedbackToken)
         await testFeedbackGithubToken(token)
       }
-      if (encodedToken || encodedFeedbackToken) {
+      // If both tokens exist locally, no need to check backend
+      if (encodedToken && encodedFeedbackToken) {
         setIsInitializing(false)
         return
       }
 
-      // No localStorage token — check if backend has one (e.g. from FEEDBACK_GITHUB_TOKEN)
+      // Check backend for any tokens not already in localStorage
       // Skip if user explicitly dismissed the env token
-      if (localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED) === 'true') {
+      if (localStorage.getItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED) === 'true' && encodedFeedbackToken) {
         setIsInitializing(false)
         return
       }
@@ -83,7 +84,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         })
         if (response.ok) {
           const data: AllSettings = await response.json()
-          if (data?.githubToken) {
+          if (!encodedToken && data?.githubToken) {
             localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN, encodeToken(data.githubToken))
             const source = data.githubTokenSource || TOKEN_SOURCE_SETTINGS
             localStorage.setItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE, source)
@@ -91,7 +92,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
             setTokenSource(source)
             await testGithubToken(data.githubToken)
           }
-          if (data?.feedbackGithubToken) {
+          if (!encodedFeedbackToken && data?.feedbackGithubToken) {
             localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, encodeToken(data.feedbackGithubToken))
             const source = data.feedbackGithubTokenSource || TOKEN_SOURCE_SETTINGS
             localStorage.setItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, source)
@@ -391,7 +392,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 
             <div>
               <label htmlFor="feedback-github-token" className="block text-sm text-muted-foreground mb-2">
-                Feedback GitHub Token (FEEDBACK_GITHUB_TOKEN)
+                {t('settings.github.feedbackToken')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -412,27 +413,31 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  {feedbackGithubTokenTesting ? 'Testing...' : feedbackGithubTokenSaved ? 'Saved!' : 'Save & Test'}
+                  {feedbackGithubTokenTesting ? t('settings.github.testing') : feedbackGithubTokenSaved ? t('settings.github.saved') : t('settings.github.saveAndTest')}
                 </button>
                 {hasFeedbackGithubToken && (
                   <button
                     onClick={handleClearFeedbackGithubToken}
                     className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10"
                   >
-                    Clear
+                    {t('settings.github.clear')}
                   </button>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Used by the feedback / bug submission integration. This should stay separate from the main GitHub Activity token.
-                {isFeedbackEnvToken ? ' Currently sourced from .env.' : ''}
+                {t('settings.github.feedbackTokenDescription')}
+                {isFeedbackEnvToken ? t('settings.github.feedbackTokenEnvSource') : ''}
               </p>
               {feedbackGithubTokenError && (
                 <p className="text-xs text-red-400 mt-2">{feedbackGithubTokenError}</p>
               )}
               {hasFeedbackGithubToken && feedbackGithubRateLimit && !feedbackGithubTokenError && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  {feedbackGithubRateLimit.remaining.toLocaleString()}/{feedbackGithubRateLimit.limit.toLocaleString()} requests remaining · resets at {feedbackGithubRateLimit.reset.toLocaleTimeString()}
+                  {t('settings.github.feedbackRateLimit', {
+                    remaining: feedbackGithubRateLimit.remaining.toLocaleString(),
+                    limit: feedbackGithubRateLimit.limit.toLocaleString(),
+                    time: feedbackGithubRateLimit.reset.toLocaleTimeString(),
+                  })}
                 </p>
               )}
             </div>

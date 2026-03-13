@@ -282,7 +282,11 @@
       "fineGrainedInstructions": "Set expiration, select 'Public repositories (read-only)'. No additional permissions needed for public repos.",
       "classicInstructions": "No scopes needed for public repos. For private repos, check the 'repo' scope.",
       "securityWarning": "Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date.",
-      "envBadge": "from .env"
+      "envBadge": "from .env",
+      "feedbackToken": "Feedback GitHub Token (FEEDBACK_GITHUB_TOKEN)",
+      "feedbackTokenDescription": "Used by the feedback / bug submission integration. This should stay separate from the main GitHub Activity token.",
+      "feedbackTokenEnvSource": " Currently sourced from .env.",
+      "feedbackRateLimit": "{{remaining}}/{{limit}} requests remaining · resets at {{time}}"
     },
     "predictions": {
       "title": "Predictive Failure Detection",

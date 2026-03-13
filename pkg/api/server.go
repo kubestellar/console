@@ -721,12 +721,8 @@ func (s *Server) setupRoutes() {
 	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
 
 	// Feature requests and feedback routes
-	feedback := handlers.NewFeedbackHandler(s.store, handlers.FeedbackConfig{
-		GitHubToken:   s.config.FeedbackGitHubToken,
-		WebhookSecret: s.config.GitHubWebhookSecret,
-		RepoOwner:     s.config.FeedbackRepoOwner,
-		RepoName:      s.config.FeedbackRepoName,
-	})
+	feedbackCfg := handlers.LoadFeedbackConfigFromEnv()
+	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
 	api.Post("/feedback/requests", feedback.CreateFeatureRequest)
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
 	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)
