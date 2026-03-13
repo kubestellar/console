@@ -8,6 +8,7 @@ export const workloadDeploymentConfig: UnifiedCardConfig = {
   title: 'Workload Deployment',
   category: 'workloads',
   description: 'Deploy workloads to clusters',
+  projects: ['kubestellar'],
   icon: 'Upload',
   iconColor: 'text-blue-400',
   defaultWidth: 6,

@@ -8,6 +8,7 @@ export const deployDashboardConfig: UnifiedDashboardConfig = {
   name: 'Deploy',
   subtitle: 'Workload deployment and management',
   route: '/deploy',
+  projects: ['kubestellar'],
   statsType: 'deploy',
   cards: [
     // Top row: Workloads, Cluster Groups, Missions (1/3 each)

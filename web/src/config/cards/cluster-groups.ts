@@ -8,6 +8,7 @@ export const clusterGroupsConfig: UnifiedCardConfig = {
   title: 'Cluster Groups',
   category: 'cluster-health',
   description: 'Manage cluster groupings',
+  projects: ['kubestellar'],
   icon: 'Layers',
   iconColor: 'text-blue-400',
   defaultWidth: 4,

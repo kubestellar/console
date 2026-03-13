@@ -329,6 +329,47 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   recommended_policies: recommendedPoliciesConfig,
 }
 
+/**
+ * Project tags for cards that only exist in the component registry (no config file).
+ * Cards with config files use the `projects` field on their UnifiedCardConfig instead.
+ * Cards not listed here and without a config `projects` field are universal.
+ */
+export const CARD_PROJECT_TAGS: Record<string, string[]> = {
+  // LLM-d benchmark cards (component-only, no config files)
+  benchmark_hero: ['kubestellar'],
+  pareto_frontier: ['kubestellar'],
+  hardware_leaderboard: ['kubestellar'],
+  latency_breakdown: ['kubestellar'],
+  throughput_comparison: ['kubestellar'],
+  performance_timeline: ['kubestellar'],
+  resource_utilization: ['kubestellar'],
+  // LLM-d architecture cards (component-only)
+  llmd_flow: ['kubestellar'],
+  kvcache_monitor: ['kubestellar'],
+  epp_routing: ['kubestellar'],
+  pd_disaggregation: ['kubestellar'],
+  llmd_ai_insights: ['kubestellar'],
+  llmd_configurator: ['kubestellar'],
+  // Kagenti cards (component-only, shared with kagenti project)
+  kagenti_status: ['kubestellar', 'kagenti'],
+  kagenti_agent_fleet: ['kubestellar', 'kagenti'],
+  kagenti_build_pipeline: ['kubestellar', 'kagenti'],
+  kagenti_tool_registry: ['kubestellar', 'kagenti'],
+  kagenti_agent_discovery: ['kubestellar', 'kagenti'],
+  kagenti_security: ['kubestellar', 'kagenti'],
+  kagenti_security_posture: ['kubestellar', 'kagenti'],
+  kagenti_topology: ['kubestellar', 'kagenti'],
+}
+
+/**
+ * Get the project tags for a card, checking both config file and fallback map.
+ */
+export function getCardProjectTags(cardType: string): string[] | undefined {
+  const config = CARD_CONFIGS[cardType]
+  if (config?.projects) return config.projects
+  return CARD_PROJECT_TAGS[cardType]
+}
+
 export function getCardConfig(cardType: string): UnifiedCardConfig | undefined {
   return CARD_CONFIGS[cardType]
 }
@@ -343,16 +384,26 @@ export function getUnifiedCardTypes(): string[] {
 
 /**
  * Get all card configs visible for the active project.
- * Cards without a `projects` field are always included.
+ * Checks both the config `projects` field and the CARD_PROJECT_TAGS fallback.
  */
 export function getVisibleCardConfigs(): CardConfigRegistry {
   const result: CardConfigRegistry = {}
   for (const [key, config] of Object.entries(CARD_CONFIGS)) {
-    if (isVisibleForProject(config.projects)) {
+    const projects = config.projects || CARD_PROJECT_TAGS[key]
+    if (isVisibleForProject(projects)) {
       result[key] = config
     }
   }
   return result
+}
+
+/**
+ * Check if a card type (by ID) is visible for the active project.
+ * Works for both config-based and component-only cards.
+ */
+export function isCardVisibleForProject(cardType: string): boolean {
+  const projects = getCardProjectTags(cardType)
+  return isVisibleForProject(projects)
 }
 
 // Re-export configs

@@ -8,6 +8,7 @@ export const llmdStackMonitorConfig: UnifiedCardConfig = {
   title: 'llm-d Stack',
   category: 'ai-ml',
   description: 'LLM-d stack health monitoring',
+  projects: ['kubestellar'],
   icon: 'Layers',
   iconColor: 'text-purple-400',
   defaultWidth: 6,

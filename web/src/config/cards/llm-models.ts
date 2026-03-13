@@ -8,6 +8,7 @@ export const llmModelsConfig: UnifiedCardConfig = {
   title: 'llm-d Models',
   category: 'ai-ml',
   description: 'Deployed LLM models',
+  projects: ['kubestellar'],
   icon: 'Brain',
   iconColor: 'text-purple-400',
   defaultWidth: 6,

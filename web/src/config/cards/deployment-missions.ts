@@ -8,6 +8,7 @@ export const deploymentMissionsConfig: UnifiedCardConfig = {
   title: 'Deployment Missions',
   category: 'workloads',
   description: 'Track deployment progress',
+  projects: ['kubestellar'],
   icon: 'Target',
   iconColor: 'text-purple-400',
   defaultWidth: 5,

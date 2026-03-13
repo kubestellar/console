@@ -10,6 +10,7 @@ import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { useToast } from '../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../lib/constants/network'
 import { emitAddCardModalOpened, emitAddCardModalAbandoned, emitCardCategoryBrowsed, emitRecommendedCardShown } from '../../lib/analytics'
+import { isCardVisibleForProject } from '../../config/cards'
 
 // Helper function to wrap technical abbreviations in text with tooltips
 function wrapAbbreviations(text: string): ReactNode {
@@ -1101,8 +1102,11 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
     visualization: dc.tier === 'tier1' ? 'table' : 'status',
   }))
 
+  // Filter catalog entries by active project context (white-label support)
   const staticCatalog = Object.fromEntries(
-    Object.entries(CARD_CATALOG).map(([k, v]) => [k, [...v]]),
+    Object.entries(CARD_CATALOG)
+      .map(([k, v]) => [k, v.filter(card => isCardVisibleForProject(card.type))])
+      .filter(([, v]) => (v as unknown[]).length > 0),
   ) as Record<string, Array<{ type: string; title: string; description: string; visualization: string }>>
 
   const mergedCatalog: Record<string, Array<{ type: string; title: string; description: string; visualization: string }>> = {

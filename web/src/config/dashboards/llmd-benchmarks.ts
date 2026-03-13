@@ -11,6 +11,7 @@ export const llmdBenchmarksDashboardConfig: UnifiedDashboardConfig = {
   name: 'llm-d Benchmarks',
   subtitle: 'Performance tracking across clouds and accelerators',
   route: '/llm-d-benchmarks',
+  projects: ['kubestellar'],
   statsType: 'ai-ml',
   cards: [
     { id: 'bench-nightly-1', cardType: 'nightly_e2e_status', title: 'Nightly E2E Status', position: { w: 12, h: 5 } },

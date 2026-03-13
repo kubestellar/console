@@ -8,6 +8,7 @@ export const aiAgentsDashboardConfig: UnifiedDashboardConfig = {
   name: 'AI Agents',
   subtitle: 'Kagenti agent platform — deploy, secure, and manage AI agents',
   route: '/ai-agents',
+  projects: ['kubestellar', 'kagenti'],
   statsType: 'ai-agents',
   cards: [
     // Hero overview card

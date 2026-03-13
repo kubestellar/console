@@ -8,6 +8,7 @@ export const llmInferenceConfig: UnifiedCardConfig = {
   title: 'llm-d Inference',
   category: 'ai-ml',
   description: 'LLM inference endpoint status',
+  projects: ['kubestellar'],
   icon: 'Bot',
   iconColor: 'text-purple-400',
   defaultWidth: 6,
