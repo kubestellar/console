@@ -302,6 +302,16 @@ func (s *Server) setupMiddleware() {
 		ExposeHeaders:    "X-Token-Refresh",
 		AllowCredentials: true,
 	}))
+
+	// Security headers
+	s.app.Use(func(c *fiber.Ctx) error {
+		c.Set("X-Content-Type-Options", "nosniff")
+		c.Set("X-Frame-Options", "DENY")
+		c.Set("X-XSS-Protection", "0") // Disabled per OWASP — modern browsers don't need it and it can introduce vulnerabilities
+		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		return c.Next()
+	})
 }
 
 // startupLoadingHTML is a self-contained loading page served while the server initializes.
