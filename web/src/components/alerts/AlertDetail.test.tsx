@@ -8,6 +8,7 @@ vi.mock('../../hooks/useAlerts', () => ({
   useAlerts: () => ({
     acknowledgeAlert: vi.fn(),
     resolveAlert: vi.fn(),
+    runAIDiagnosis: vi.fn(),
   }),
   useSlackWebhooks: () => ({ webhooks: [] }),
   useSlackNotification: () => ({ sendNotification: vi.fn() }),
