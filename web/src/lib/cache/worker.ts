@@ -274,7 +274,10 @@ function respondError(id: number, message: string): void {
   self.postMessage(msg)
 }
 
-// Queue of messages received before the database is ready
+// Queue of messages received before the database is ready.
+// Bounded to prevent unbounded memory growth if init stalls.
+/** Maximum number of messages to queue while waiting for database init. */
+const MAX_PENDING_MESSAGES = 1000
 const pendingMessages: WorkerRequest[] = []
 let initComplete = false
 
@@ -337,6 +340,14 @@ function processMessage(msg: WorkerRequest): void {
 
 self.onmessage = (event: MessageEvent<WorkerRequest>) => {
   if (!initComplete) {
+    if (pendingMessages.length >= MAX_PENDING_MESSAGES) {
+      console.warn(
+        `[CacheWorker] Pending message queue full (${MAX_PENDING_MESSAGES}), dropping message:`,
+        event.data.type,
+      )
+      respondError(event.data.id, 'Worker initializing and message queue is full')
+      return
+    }
     // Queue messages until database initialization completes
     pendingMessages.push(event.data)
     return
@@ -360,14 +371,17 @@ initDatabase()
     self.postMessage(msg)
   })
   .catch((e) => {
+    const reason = e instanceof Error ? e.message : String(e)
     console.error('[CacheWorker] Init failed:', e)
-    initComplete = true
-    // Drain queued messages — handlers return null/empty when db is null
+    // Reject all queued messages so callers aren't left waiting
     for (const queued of pendingMessages) {
-      processMessage(queued)
+      respondError(queued.id, `Worker init failed: ${reason}`)
     }
     pendingMessages.length = 0
-    // Signal ready anyway — the main thread will fall back to IndexedDB
-    const msg: WorkerResponse = { id: -1, type: 'ready' }
+    // Mark init complete so future messages are processed (handlers
+    // gracefully return null/empty when db is null)
+    initComplete = true
+    // Signal failure — the main thread will fall back to IndexedDB
+    const msg: WorkerResponse = { id: -1, type: 'init-error', message: reason }
     self.postMessage(msg)
   })
