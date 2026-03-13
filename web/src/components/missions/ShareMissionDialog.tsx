@@ -16,6 +16,7 @@ import {
   Shield,
   Loader2,
 } from 'lucide-react'
+import yaml from 'js-yaml'
 import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
@@ -59,55 +60,16 @@ function resolutionToMissionExport(resolution: Resolution): MissionExport {
   }
 }
 
+/** YAML indent width used by js-yaml dump */
+const YAML_INDENT = 2
+
 function missionToYaml(mission: MissionExport): string {
-  const lines: string[] = []
-  const indent = (depth: number) => '  '.repeat(depth)
-
-  function serialize(value: unknown, depth: number): void {
-    if (value === null || value === undefined) return
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-      // Multi-line strings use block scalar
-      const str = String(value)
-      if (str.includes('\n')) {
-        lines[lines.length - 1] += ' |'
-        str.split('\n').forEach(line => lines.push(`${indent(depth)}${line}`))
-      } else if (/[:#{}[\],&*?|>!'"%@`]/.test(str) || str === '') {
-        lines[lines.length - 1] += ` "${str.replace(/"/g, '\\"')}"`
-      } else {
-        lines[lines.length - 1] += ` ${str}`
-      }
-    } else if (Array.isArray(value)) {
-      if (value.length === 0) {
-        lines[lines.length - 1] += ' []'
-        return
-      }
-      value.forEach(item => {
-        if (typeof item === 'object' && item !== null) {
-          lines.push(`${indent(depth)}-`)
-          const entries = Object.entries(item)
-          entries.forEach(([k, v], i) => {
-            if (i === 0) {
-              lines[lines.length - 1] += ` ${k}:`
-            } else {
-              lines.push(`${indent(depth + 1)}${k}:`)
-            }
-            serialize(v, depth + 2)
-          })
-        } else {
-          lines.push(`${indent(depth)}-`)
-          serialize(item, depth + 1)
-        }
-      })
-    } else if (typeof value === 'object') {
-      Object.entries(value).forEach(([k, v]) => {
-        lines.push(`${indent(depth)}${k}:`)
-        serialize(v, depth + 1)
-      })
-    }
-  }
-
-  serialize(mission, 0)
-  return lines.join('\n')
+  return yaml.dump(mission, {
+    indent: YAML_INDENT,
+    lineWidth: -1,
+    noRefs: true,
+    sortKeys: false,
+  })
 }
 
 function missionToMarkdown(mission: MissionExport): string {
