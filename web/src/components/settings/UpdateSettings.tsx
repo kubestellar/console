@@ -98,7 +98,16 @@ export function UpdateSettings() {
   const oauthConfigured = isAuthenticated
 
   // Helm self-upgrade via Deployment image patch
-  const { isAvailable: selfUpgradeAvailable, triggerUpgrade: triggerSelfUpgrade, isTriggering: isSelfUpgrading, triggerError: selfUpgradeError } = useSelfUpgrade()
+  const {
+    isAvailable: selfUpgradeAvailable,
+    triggerUpgrade: triggerSelfUpgrade,
+    isTriggering: isSelfUpgrading,
+    triggerError: selfUpgradeError,
+    isRestarting: isSelfUpgradeRestarting,
+    restartComplete: selfUpgradeRestartComplete,
+    restartError: selfUpgradeRestartError,
+    restartElapsed: selfUpgradeRestartElapsed,
+  } = useSelfUpgrade()
 
   const CHANNEL_OPTIONS: { value: UpdateChannel; label: string; description: string; devOnly?: boolean }[] = [
     {
@@ -708,8 +717,42 @@ export function UpdateSettings() {
         </div>
       )}
 
+      {/* Helm Self-Upgrade: Restarting overlay */}
+      {(isSelfUpgradeRestarting || selfUpgradeRestartComplete || selfUpgradeRestartError) && (
+        <div className="mb-4 p-4 rounded-lg border border-border bg-secondary/30">
+          {isSelfUpgradeRestarting && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Loader2 className="w-8 h-8 animate-spin text-green-400" />
+              <p className="text-sm font-medium">{t('settings.updates.helmRestarting')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.updates.helmRestartingDesc', { seconds: selfUpgradeRestartElapsed })}
+              </p>
+            </div>
+          )}
+          {selfUpgradeRestartComplete && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Check className="w-8 h-8 text-green-400" />
+              <p className="text-sm font-medium">{t('settings.updates.helmRestartComplete')}</p>
+              <p className="text-xs text-muted-foreground">{t('settings.updates.helmRestartReloading')}</p>
+            </div>
+          )}
+          {selfUpgradeRestartError && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <AlertTriangle className="w-8 h-8 text-red-400" />
+              <p className="text-sm font-medium text-red-400">{selfUpgradeRestartError}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-2 rounded-lg bg-secondary text-sm hover:bg-secondary/80 transition-colors"
+              >
+                {t('settings.updates.helmRestartRefresh')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Helm Self-Upgrade Button (when self-upgrade available and update detected) */}
-      {hasUpdate && isHelmInstall && selfUpgradeAvailable && !isUpdating && latestRelease && (
+      {hasUpdate && isHelmInstall && selfUpgradeAvailable && !isUpdating && !isSelfUpgradeRestarting && !selfUpgradeRestartComplete && latestRelease && (
         <div className="mb-4">
           <button
             onClick={async () => {
