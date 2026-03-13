@@ -185,8 +185,8 @@ function ScaledObjectRow({ obj }: { obj: KedaScaledObject }) {
         />
         {currentVal !== null && targetVal !== null && (
           <div className="flex justify-between mt-0.5 text-xs text-muted-foreground tabular-nums">
-            <span>queue: {currentVal.toLocaleString()}</span>
-            <span>target: {targetVal.toLocaleString()}</span>
+            <span>{t('keda.queue', 'queue')}: {currentVal.toLocaleString()}</span>
+            <span>{t('keda.target', 'target')}: {targetVal.toLocaleString()}</span>
           </div>
         )}
       </div>

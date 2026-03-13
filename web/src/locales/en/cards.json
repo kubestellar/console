@@ -2763,6 +2763,8 @@
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
-    "syncedDaysAgo": "{{count}}d ago"
+    "syncedDaysAgo": "{{count}}d ago",
+    "queue": "queue",
+    "target": "target"
   }
 }

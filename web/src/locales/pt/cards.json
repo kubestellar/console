@@ -275,8 +275,7 @@
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
     "crio_status": "CRI-O",
-    "coredns_status": "CoreDNS",
-    "keda_status": "KEDA"
+    "coredns_status": "CoreDNS"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -441,8 +440,7 @@
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
-    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
-    "keda_status": "Status do autoscaler KEDA, métricas de objetos dimensionados e profundidade da fila de gatilhos."
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
   },
   "categories": {
     "core": "Core",
@@ -480,8 +478,7 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime",
-    "orchestration": "Orquestração"
+    "runtime": "Runtime"
   },
   "addCard": {
     "title": "Add Card",
@@ -2669,28 +2666,5 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
-  },
-  "keda": {
-    "healthy": "Saudável",
-    "degraded": "Degradado",
-    "notInstalled": "KEDA não detectado",
-    "notInstalledHint": "Nenhum Pod do operador KEDA encontrado. Implante o KEDA para habilitar o escalonamento automático baseado em eventos.",
-    "fetchError": "Falha ao buscar status do KEDA",
-    "operatorPods": "Pods",
-    "total": "Total",
-    "ready": "Pronto",
-    "issues": "Problemas",
-    "paused": "Em pausa",
-    "searchPlaceholder": "Pesquisar objetos dimensionados…",
-    "noScaledObjects": "Operador em execução",
-    "noScaledObjectsHint": "Os dados de objetos dimensionados requerem a API CRD do KEDA.",
-    "noSearchResults": "Nenhum objeto dimensionado corresponde à sua pesquisa.",
-    "scaledJob": "ScaledJob",
-    "scaledJobs": "ScaledJobs",
-    "moreTriggersLabel": "mais",
-    "syncedJustNow": "agora mesmo",
-    "syncedMinutesAgo": "há {{count}} min",
-    "syncedHoursAgo": "há {{count}} h",
-    "syncedDaysAgo": "há {{count}} dias"
   }
 }
