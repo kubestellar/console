@@ -9,7 +9,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { DEFAULT_BRANDING, mergeBranding, type BrandingConfig } from '../lib/branding'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { initAnalytics } from '../lib/analytics'
+import { updateAnalyticsIds } from '../lib/analytics'
 
 const BrandingContext = createContext<BrandingConfig>(DEFAULT_BRANDING)
 
@@ -42,18 +42,14 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
         if (!cancelled && data.branding && typeof data.branding === 'object') {
           const merged = mergeBranding(data.branding)
           setBranding(merged)
-          // Initialize analytics with branding-provided IDs
-          initAnalytics({
+          // Override analytics IDs if branding provides them
+          updateAnalyticsIds({
             ga4MeasurementId: merged.ga4MeasurementId,
             umamiWebsiteId: merged.umamiWebsiteId,
           })
-        } else {
-          // No branding from backend — use defaults (KubeStellar analytics)
-          initAnalytics()
         }
       } catch {
         // Use defaults — branding is non-critical
-        initAnalytics()
       }
     }
 

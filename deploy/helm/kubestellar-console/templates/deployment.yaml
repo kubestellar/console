@@ -216,7 +216,7 @@ spec:
             - name: data
               mountPath: /app/data
             {{- end }}
-            {{- if .Values.branding.logoConfigMap }}
+            {{- if and .Values.branding .Values.branding.logoConfigMap }}
             - name: custom-logos
               mountPath: /app/web/dist/custom-logos
               readOnly: true
@@ -229,7 +229,7 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "kubestellar-console.fullname" . }}
         {{- end }}
-        {{- if .Values.branding.logoConfigMap }}
+        {{- if and .Values.branding .Values.branding.logoConfigMap }}
         - name: custom-logos
           configMap:
             name: {{ .Values.branding.logoConfigMap }}

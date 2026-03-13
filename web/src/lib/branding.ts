@@ -91,7 +91,11 @@ export function mergeBranding(partial: Partial<Record<string, unknown>>): Brandi
   const result = { ...DEFAULT_BRANDING }
   for (const [key, value] of Object.entries(partial)) {
     if (key in result && value !== undefined && value !== null && value !== '') {
-      (result as Record<string, unknown>)[key] = value
+      // Only accept values matching the expected type of the default
+      const expectedType = typeof result[key as keyof BrandingConfig]
+      if (typeof value === expectedType) {
+        (result as Record<string, unknown>)[key] = value
+      }
     }
   }
   return result

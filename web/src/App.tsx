@@ -384,7 +384,7 @@ function PageViewTracker() {
     const title = section ? `${section} - ${appName}` : appName
     document.title = title
     emitPageView(location.pathname)
-  }, [location.pathname])
+  }, [location.pathname, appName])
 
   return null
 }

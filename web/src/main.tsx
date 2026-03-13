@@ -21,9 +21,7 @@ import {
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
-// Analytics initialization moved to BrandingProvider — loaded after
-// branding config arrives from /health so white-label deployments can
-// provide their own GA4/Umami IDs (or disable analytics entirely).
+import { initAnalytics } from './lib/analytics'
 
 // ── Chunk load error recovery ─────────────────────────────────────────────
 // When a new build is deployed, chunk filenames change (content hashes).
@@ -137,6 +135,11 @@ enableMocking()
     // MCP hooks (~300 KB) end up in a separate chunk that the browser downloads
     // in parallel with the main bundle, reducing time-to-first-paint.
     await import('./lib/unified/registerHooks')
+
+    // Initialize analytics BEFORE first render so interaction-gate listeners
+    // register before the user clicks/scrolls. BrandingProvider will later
+    // call updateAnalyticsIds() to override measurement IDs for white-label.
+    initAnalytics()
 
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>

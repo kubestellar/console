@@ -606,23 +606,26 @@ function loadGtagScript() {
   document.head.appendChild(script)
 }
 
-/** Optional analytics IDs from branding config (white-label support) */
-interface AnalyticsOptions {
-  /** GA4 measurement ID — empty string disables GA4 */
+/**
+ * Update analytics measurement IDs from branding config (white-label support).
+ * Called by BrandingProvider after /health response arrives. Only non-empty
+ * values override the hardcoded defaults — empty string means "use default",
+ * not "disable". To disable analytics entirely, the interaction gate and
+ * automated-environment checks handle that.
+ */
+export function updateAnalyticsIds(ids: {
   ga4MeasurementId?: string
-  /** Umami website ID — empty string disables Umami */
   umamiWebsiteId?: string
+}) {
+  if (ids.ga4MeasurementId) {
+    gtagMeasurementId = ids.ga4MeasurementId
+  }
+  if (ids.umamiWebsiteId) {
+    umamiWebsiteId = ids.umamiWebsiteId
+  }
 }
 
-export function initAnalytics(options?: AnalyticsOptions) {
-  // Apply branding overrides — empty string disables the respective platform
-  if (options?.ga4MeasurementId !== undefined) {
-    gtagMeasurementId = options.ga4MeasurementId
-  }
-  if (options?.umamiWebsiteId !== undefined) {
-    umamiWebsiteId = options.umamiWebsiteId
-  }
-
+export function initAnalytics() {
   measurementId = (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID
   if (!measurementId || initialized) return
 
