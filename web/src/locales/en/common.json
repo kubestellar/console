@@ -700,22 +700,13 @@
       "redo": "Redo"
     },
     "welcome": {
-      "gettingStarted": "Welcome to KubeStellar Console!",
-      "subtitle": "You're up and running — let's get your first cluster connected",
-      "noClustersHero": "No active clusters detected yet",
-      "noClustersHint": "Create a new test cluster or connect an existing one to start managing your multi-cluster workloads.",
-      "createCluster": "Create a Test Cluster",
-      "createClusterDesc": "Spin up a local kind/k3d cluster for testing",
-      "connectCluster": "Connect Existing Cluster",
-      "connectClusterDesc": "Configure kubeconfig path in Settings",
+      "gettingStarted": "Getting Started",
+      "subtitle": "Up and running in two steps",
       "dismiss": "Dismiss",
-      "step1Title": "Console is running",
-      "step1Desc": "Your KubeStellar Console is up and ready.",
-      "step2Title": "Connect a cluster",
-      "step2Desc": "Clusters are auto-detected from your kubeconfig. Place a kubeconfig at ~/.kube/config or configure via Settings.",
-      "openSettings": "Open Settings",
-      "step3Title": "Optional: Enable AI features",
-      "step3Desc": "Add API keys for Anthropic, OpenAI, or Google to enable AI-powered predictions and card suggestions.",
+      "step1Title": "Download and run the install script",
+      "step1Desc": "One command — downloads binaries, starts the console and kc-agent, and opens your browser. No Go, Node.js, or build tools required.",
+      "step2Title": "Open the console",
+      "step2Desc": "Once the script finishes, open http://localhost:8080 in your browser. Your clusters are auto-detected from ~/.kube/config.",
       "documentation": "Documentation"
     },
     "missions": {
