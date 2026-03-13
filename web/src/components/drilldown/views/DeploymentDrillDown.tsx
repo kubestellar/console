@@ -15,9 +15,6 @@ import { useTranslation } from 'react-i18next'
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
 const MAX_SCALE_REPLICAS = 100
 
-/** Guard for scaling down when current replicas already exceed the UI limit. */
-const MIN_SCALE_REPLICAS = 0
-
 interface Props {
   data: Record<string, unknown>
 }
@@ -194,7 +191,7 @@ export function DeploymentDrillDown({ data }: Props) {
   // Handle scale deployment - directly scales to the specified count
   const handleScaleTo = async (targetReplicas: number) => {
     if (!agentConnected || !canScale || targetReplicas === replicas) return
-    if (targetReplicas < MIN_SCALE_REPLICAS) return
+    if (targetReplicas < 0) return
     // Allow scaling down even when current replicas exceed the UI limit
     if (targetReplicas > MAX_SCALE_REPLICAS && targetReplicas > replicas) return
 
