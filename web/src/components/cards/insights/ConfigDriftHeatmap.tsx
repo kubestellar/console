@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Diff, ChevronRight } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
@@ -26,6 +27,7 @@ const HIGH_DRIFT_THRESHOLD = 0.7
 const MEDIUM_DRIFT_THRESHOLD = 0.3
 
 export function ConfigDriftHeatmap() {
+  const { t } = useTranslation('cards')
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
   const [selectedInsight, setSelectedInsight] = useState<MultiClusterInsight | null>(null)
@@ -87,8 +89,8 @@ export function ConfigDriftHeatmap() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
         <Diff className="w-8 h-8 mb-2 opacity-50" />
-        <p className="text-sm">No config drift detected</p>
-        <p className="text-xs mt-1">Shared workloads have consistent configuration</p>
+        <p className="text-sm">{t('configDrift.noDriftDetected')}</p>
+        <p className="text-xs mt-1">{t('configDrift.consistentConfig')}</p>
       </div>
     )
   }
@@ -154,11 +156,11 @@ export function ConfigDriftHeatmap() {
       <div className="flex items-center gap-3 text-2xs text-muted-foreground">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-green-500/20" />
-          <span>In sync</span>
+          <span>{t('configDrift.inSync')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-orange-500/15" />
-          <span>Low drift</span>
+          <span>{t('configDrift.lowDrift')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-yellow-500/25" />

@@ -28,7 +28,7 @@ interface TopoEdge {
 }
 
 export function KagentiTopology({ config }: { config?: Record<string, unknown> }) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('cards')
   const { isDemoMode } = useDemoMode()
   const cluster = config?.cluster as string | undefined
   const { data: agents, isLoading: agentsLoading } = useKagentiAgents({ cluster })
@@ -105,7 +105,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
   if (nodes.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card items-center justify-center text-muted-foreground text-xs">
-        No agents or tools to visualize
+        {t('kagentiTopology.noAgentsOrTools')}
       </div>
     )
   }
@@ -122,7 +122,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded bg-muted-foreground/50" />
-          <span>MCP Tool</span>
+          <span>{t('kagentiTopology.mcpTool')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-6 h-0 border-t border-dashed border-muted-foreground/50" />

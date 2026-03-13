@@ -9,6 +9,7 @@
 
 import { useState, useMemo } from 'react'
 import { CheckCircle2, XCircle, Minus, Info, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
@@ -36,6 +37,7 @@ interface PolicyRow {
 }
 
 export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
+  const { t } = useTranslation('cards')
   const { statuses: kyvernoStatuses, isLoading, isRefreshing, lastRefresh, isDemoData, refetch } = useKyverno()
   const { deduplicatedClusters: rawClusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
@@ -143,13 +145,13 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4 gap-2">
           <Loader2 className="w-6 h-6 animate-spin opacity-50" />
-          <p>Scanning clusters for Kyverno...</p>
+          <p>{t('crossClusterPolicy.scanningKyverno')}</p>
         </div>
       )
     }
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm p-4">
-        No clusters with Kyverno detected
+        {t('crossClusterPolicy.noKyvernoClusters')}
       </div>
     )
   }

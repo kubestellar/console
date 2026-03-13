@@ -721,7 +721,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                     className="mt-3 flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
                   >
                     <Plus className="w-4 h-4" />
-                    Create GPU Quota
+                    {t('namespaceQuotas.createGpuQuota')}
                   </button>
                 )}
               </div>

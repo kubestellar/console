@@ -21,7 +21,7 @@ interface MLNotebooksProps {
 }
 
 export function MLNotebooks({ config: _config }: MLNotebooksProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { data: notebooks, isLoading } = useDemoData(DEMO_NOTEBOOKS)
 
   useCardLoadingState({
@@ -55,7 +55,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return <StatusBadge color="green">{t('common.active')}</StatusBadge>
+        return <StatusBadge color="green">{t('common:common.active')}</StatusBadge>
       case 'idle':
         return <StatusBadge color="yellow">Idle</StatusBadge>
       case 'stopped':
@@ -108,9 +108,9 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
       <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs mb-4">
         <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-blue-400 font-medium">Notebook Detection</p>
+          <p className="text-blue-400 font-medium">{t('cards:mlNotebooks.notebookDetection')}</p>
           <p className="text-muted-foreground">
-            Scans for JupyterHub and standalone notebook servers.{' '}
+            {t('cards:mlNotebooks.notebookDetectionDescription')}{' '}
             <a href="https://jupyterhub.readthedocs.io/en/stable/getting-started/index.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-block py-2">
               JupyterHub docs <ExternalLink className="w-3 h-3 inline" />
             </a>
@@ -125,8 +125,8 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
             <tr className="text-xs text-muted-foreground border-b border-border/50">
               <th className="text-left py-2">Notebook</th>
               <th className="text-left py-2">User</th>
-              <th className="text-right py-2">{t('common.resources')}</th>
-              <th className="text-right py-2">{t('common.status')}</th>
+              <th className="text-right py-2">{t('common:common.resources')}</th>
+              <th className="text-right py-2">{t('common:common.status')}</th>
             </tr>
           </thead>
           <tbody>

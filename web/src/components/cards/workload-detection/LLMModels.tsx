@@ -26,7 +26,7 @@ interface LLMModelsProps {
 }
 
 export function LLMModels({ config: _config }: LLMModelsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   // Dynamically discover LLM-d clusters instead of using static list
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useCachedGPUNodes()
@@ -83,7 +83,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
       case 'stopped':
         return <StatusBadge color="gray">Stopped</StatusBadge>
       case 'error':
-        return <StatusBadge color="red">{t('common.error')}</StatusBadge>
+        return <StatusBadge color="red">{t('common:common.error')}</StatusBadge>
       default:
         return <StatusBadge color="gray">{status}</StatusBadge>
     }
@@ -160,7 +160,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
       <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs mb-4">
         <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-cyan-400 font-medium">InferencePool Detection</p>
+          <p className="text-cyan-400 font-medium">{t('cards:llmModels.inferencePoolDetection')}</p>
           <p className="text-muted-foreground">
             Scans for InferencePool resources on llm-d clusters.
           </p>
@@ -172,7 +172,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
         {paginatedItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <Layers className="w-8 h-8 mb-2 opacity-50" />
-            <p className="text-sm">No InferencePools found</p>
+            <p className="text-sm">{t('cards:llmModels.noInferencePools')}</p>
             <p className="text-xs">Scanning {llmdClusters.length} cluster{llmdClusters.length !== 1 ? 's' : ''}</p>
           </div>
         ) : (
@@ -180,9 +180,9 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
             <thead>
               <tr className="text-xs text-muted-foreground border-b border-border/50">
                 <th className="text-left py-2">Model</th>
-                <th className="text-left py-2">{t('common.namespace')}</th>
-                <th className="text-left py-2">{t('common.cluster')}</th>
-                <th className="text-right py-2">{t('common.status')}</th>
+                <th className="text-left py-2">{t('common:common.namespace')}</th>
+                <th className="text-left py-2">{t('common:common.cluster')}</th>
+                <th className="text-right py-2">{t('common:common.status')}</th>
               </tr>
             </thead>
             <tbody>

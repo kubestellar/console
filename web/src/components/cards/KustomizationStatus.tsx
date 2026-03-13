@@ -101,7 +101,7 @@ function formatTime(timestamp: string) {
 }
 
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -249,7 +249,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No Kustomizations</p>
+        <p className="text-sm">{t('cards:kustomizationStatus.noKustomizations')}</p>
         <p className="text-xs mt-1">Kustomizations will appear here</p>
       </div>
     )
@@ -344,15 +344,15 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-purple-500/10 text-center">
               <span className="text-lg font-bold text-purple-400">{totalItems}</span>
-              <p className="text-xs text-muted-foreground">{t('common.total')}</p>
+              <p className="text-xs text-muted-foreground">{t('common:common.total')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center">
               <span className="text-lg font-bold text-green-400">{readyCount}</span>
-              <p className="text-xs text-muted-foreground">{t('common.ready')}</p>
+              <p className="text-xs text-muted-foreground">{t('common:common.ready')}</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-red-500/10 text-center">
               <span className="text-lg font-bold text-red-400">{notReadyCount}</span>
-              <p className="text-xs text-muted-foreground">Failing</p>
+              <p className="text-xs text-muted-foreground">{t('cards:kustomizationStatus.failing')}</p>
             </div>
           </div>
 

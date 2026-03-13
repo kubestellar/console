@@ -2704,5 +2704,39 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "fleetCompliance": {
+    "scanningClusters": "Scanning clusters...",
+    "noClusters": "No clusters available"
+  },
+  "crossClusterPolicy": {
+    "scanningKyverno": "Scanning clusters for Kyverno...",
+    "noKyvernoClusters": "No clusters with Kyverno detected"
+  },
+  "llmModels": {
+    "inferencePoolDetection": "InferencePool Detection",
+    "noInferencePools": "No InferencePools found"
+  },
+  "mlNotebooks": {
+    "notebookDetection": "Notebook Detection",
+    "notebookDetectionDescription": "Scans for JupyterHub and standalone notebook servers."
+  },
+  "configDrift": {
+    "noDriftDetected": "No config drift detected",
+    "consistentConfig": "Shared workloads have consistent configuration",
+    "inSync": "In sync",
+    "lowDrift": "Low drift"
+  },
+  "kagentiTopology": {
+    "noAgentsOrTools": "No agents or tools to visualize",
+    "mcpTool": "MCP Tool"
+  },
+  "kustomizationStatus": {
+    "noKustomizations": "No Kustomizations",
+    "failing": "Failing"
+  },
+  "kubecostOverview": {
+    "monthlyCost": "Monthly Cost",
+    "savingsRecommendations": "Savings Recommendations"
   }
 }

@@ -9,6 +9,7 @@
 
 import { useState, useMemo } from 'react'
 import { Info, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useTrivy } from '../../hooks/useTrivy'
@@ -132,6 +133,7 @@ Please proceed step by step.`,
 }
 
 export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
+  const { t } = useTranslation('cards')
   const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, refetch: kyvernoRefetch } = useKyverno()
   const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, installed: trivyInstalled, refetch: trivyRefetch } = useTrivy()
   const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, installed: kubescapeInstalled, refetch: kubescapeRefetch } = useKubescape()
@@ -262,13 +264,13 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
           <Loader2 className="w-6 h-6 animate-spin opacity-50" />
-          <p>Scanning clusters...</p>
+          <p>{t('fleetCompliance.scanningClusters')}</p>
         </div>
       )
     }
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-        No clusters available
+        {t('fleetCompliance.noClusters')}
       </div>
     )
   }

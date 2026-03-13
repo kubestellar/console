@@ -36,7 +36,7 @@ const DEMO_RECOMMENDATIONS = [
 ]
 
 export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('cards')
   const { drillToCost } = useDrillDownActions()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
 
@@ -72,7 +72,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
       {/* Cost overview */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div className="p-3 rounded-lg bg-gradient-to-r from-green-500/20 to-green-500/20 border border-green-500/30">
-          <p className="text-xs text-green-400 mb-1">Monthly Cost</p>
+          <p className="text-xs text-green-400 mb-1">{t('kubecostOverview.monthlyCost')}</p>
           <p className="text-xl font-bold text-foreground">${DEMO_COST_SUMMARY.totalMonthly.toLocaleString()}</p>
         </div>
         <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-500/20 border border-purple-500/30">
@@ -110,7 +110,7 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
       {/* Savings recommendations */}
       <div className="flex-1 overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-muted-foreground font-medium">Savings Recommendations</p>
+          <p className="text-xs text-muted-foreground font-medium">{t('kubecostOverview.savingsRecommendations')}</p>
           <span className="flex items-center gap-1 text-xs text-green-400">
             <TrendingDown className="w-3 h-3" aria-hidden="true" />
             ${DEMO_COST_SUMMARY.savings}/mo potential
