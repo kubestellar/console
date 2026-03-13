@@ -149,6 +149,31 @@ kubestellar:
 # Example: "gpu-reservations,llm-d-benchmarks"
 enabledDashboards: ""
 
+# White-label project context
+# Controls which project-specific cards, dashboards, and backend routes are active.
+# Set to "crossplane", "istio", etc. to show only that project's features + generic K8s.
+# Default: "kubestellar" (shows all KubeStellar-specific features)
+consoleProject: ""
+
+# White-label branding configuration
+# All values default to KubeStellar branding when empty.
+# Set these to customize the console identity for your project.
+branding:
+  appName: ""           # Display name (default: "KubeStellar Console")
+  appShortName: ""      # Compact name (default: "KubeStellar")
+  tagline: ""           # Shown in navbar (default: "multi-cluster first, saving time and tokens")
+  logoUrl: ""           # Path to logo image (default: "/kubestellar-logo.svg")
+  faviconUrl: ""        # Path to favicon (default: "/favicon.ico")
+  themeColor: ""        # PWA theme color (default: "#7c3aed")
+  docsUrl: ""           # Documentation URL
+  communityUrl: ""      # Community/support URL
+  websiteUrl: ""        # Project website URL
+  issuesUrl: ""         # Bug report URL
+  repoUrl: ""           # Source code repository URL
+  hostedDomain: ""      # Domain where demo mode is forced (default: "console.kubestellar.io")
+  # Mount custom logo files from a ConfigMap
+  logoConfigMap: ""     # Name of ConfigMap containing logo SVG/PNG files
+
 # Override the auto-detected in-cluster name (e.g. "vllm-d", "pok-prod")
 clusterName: ""
 

@@ -138,6 +138,60 @@ spec:
             - name: ENABLED_DASHBOARDS
               value: {{ .Values.enabledDashboards | quote }}
             {{- end }}
+            {{- if .Values.consoleProject }}
+            - name: CONSOLE_PROJECT
+              value: {{ .Values.consoleProject | quote }}
+            {{- end }}
+            {{- with .Values.branding }}
+            {{- if .appName }}
+            - name: APP_NAME
+              value: {{ .appName | quote }}
+            {{- end }}
+            {{- if .appShortName }}
+            - name: APP_SHORT_NAME
+              value: {{ .appShortName | quote }}
+            {{- end }}
+            {{- if .tagline }}
+            - name: APP_TAGLINE
+              value: {{ .tagline | quote }}
+            {{- end }}
+            {{- if .logoUrl }}
+            - name: LOGO_URL
+              value: {{ .logoUrl | quote }}
+            {{- end }}
+            {{- if .faviconUrl }}
+            - name: FAVICON_URL
+              value: {{ .faviconUrl | quote }}
+            {{- end }}
+            {{- if .themeColor }}
+            - name: THEME_COLOR
+              value: {{ .themeColor | quote }}
+            {{- end }}
+            {{- if .docsUrl }}
+            - name: DOCS_URL
+              value: {{ .docsUrl | quote }}
+            {{- end }}
+            {{- if .communityUrl }}
+            - name: COMMUNITY_URL
+              value: {{ .communityUrl | quote }}
+            {{- end }}
+            {{- if .websiteUrl }}
+            - name: WEBSITE_URL
+              value: {{ .websiteUrl | quote }}
+            {{- end }}
+            {{- if .issuesUrl }}
+            - name: ISSUES_URL
+              value: {{ .issuesUrl | quote }}
+            {{- end }}
+            {{- if .repoUrl }}
+            - name: REPO_URL
+              value: {{ .repoUrl | quote }}
+            {{- end }}
+            {{- if .hostedDomain }}
+            - name: HOSTED_DOMAIN
+              value: {{ .hostedDomain | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.clusterName }}
             - name: CLUSTER_NAME
               value: {{ .Values.clusterName | quote }}
@@ -162,6 +216,11 @@ spec:
             - name: data
               mountPath: /app/data
             {{- end }}
+            {{- if .Values.branding.logoConfigMap }}
+            - name: custom-logos
+              mountPath: /app/web/dist/custom-logos
+              readOnly: true
+            {{- end }}
       volumes:
         - name: kc-config
           emptyDir: {}
@@ -169,6 +228,11 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "kubestellar-console.fullname" . }}
+        {{- end }}
+        {{- if .Values.branding.logoConfigMap }}
+        - name: custom-logos
+          configMap:
+            name: {{ .Values.branding.logoConfigMap }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
