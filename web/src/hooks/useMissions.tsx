@@ -222,19 +222,19 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
   /**
    * Send a message over the WebSocket with retry logic.
-   * If the socket is not open, retries up to WS_SEND_MAX_RETRIES times
-   * with WS_SEND_RETRY_DELAY_MS between attempts. Calls onFailure (if
-   * provided) when all retries are exhausted.
+   * Makes one immediate attempt, then retries up to WS_SEND_MAX_RETRIES
+   * additional times with WS_SEND_RETRY_DELAY_MS between attempts.
+   * Calls onFailure (if provided) when all retries are exhausted.
    */
   const wsSend = useCallback((data: string, onFailure?: () => void): void => {
-    let attempts = 0
+    let retries = 0
     const trySend = () => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(data)
         return
       }
-      attempts++
-      if (attempts <= WS_SEND_MAX_RETRIES) {
+      if (retries < WS_SEND_MAX_RETRIES) {
+        retries++
         setTimeout(trySend, WS_SEND_RETRY_DELAY_MS)
       } else {
         console.error('[Missions] WebSocket send failed after retries — socket not open')
@@ -327,16 +327,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                         content: msg.content,
                       }))
 
+                    const mId = mission.id
                     wsSend(JSON.stringify({
                       id: requestId,
                       type: 'chat',
                       payload: {
                         prompt: lastUserMessage.content,
-                        sessionId: mission.id,
+                        sessionId: mId,
                         agent: agentToUse,
                         history: history,
                       }
-                    }))
+                    }), () => {
+                      setMissions(prev => prev.map(m =>
+                        m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
+                      ))
+                    })
                   }
                 })
               }, 500)
@@ -881,7 +886,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           sessionId: missionId,
           agent: selectedAgent || undefined,
         }
-      }))
+      }), () => {
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? { ...m, status: 'failed', currentStep: 'WebSocket connection lost' } : m
+        ))
+      })
     }).catch(() => {
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
@@ -994,7 +1003,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           agent: selectedAgent || undefined,
           history: history, // Include conversation history for context
         }
-      }))
+      }), () => {
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? { ...m, status: 'failed', currentStep: 'WebSocket connection lost' } : m
+        ))
+      })
     }).catch(() => {
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
@@ -1078,7 +1091,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         id: `select-agent-${Date.now()}`,
         type: 'select_agent',
         payload: { agent: agentName }
-      }))
+      }), () => {
+        console.error('[Missions] Failed to send agent selection after retries')
+      })
     }).catch(err => {
       console.error('[Missions] Failed to select agent:', err)
     })
