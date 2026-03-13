@@ -95,6 +95,66 @@ const SID_KEY = '_ksc_sid'
 const SC_KEY = '_ksc_sc'
 const LAST_KEY = '_ksc_last'
 
+// ── Bot / Headless Detection ────────────────────────────────────────
+// Automated installs (CI pipelines, cloud VMs running curl|bash) start
+// the console but never interact with it. Without filtering, these
+// generate tens of thousands of fake "users" from data center IPs.
+// We gate analytics on real user interaction to exclude them.
+
+/** Returns true if the environment looks automated/headless */
+function isAutomatedEnvironment(): boolean {
+  try {
+    // WebDriver flag — set by Puppeteer, Selenium, Playwright, headless Chrome
+    if (navigator.webdriver) return true
+    // Headless Chrome UA substring
+    if (/HeadlessChrome/i.test(navigator.userAgent)) return true
+    // PhantomJS
+    if (/PhantomJS/i.test(navigator.userAgent)) return true
+    // No browser plugins (headless browsers have none)
+    // navigator.plugins is a PluginArray — check length, not truthiness
+    if (navigator.plugins && navigator.plugins.length === 0 && !/Firefox/i.test(navigator.userAgent)) return true
+    // No language preferences (bots often skip this)
+    if (!navigator.languages || navigator.languages.length === 0) return true
+  } catch {
+    // If any check throws, assume real browser
+  }
+  return false
+}
+
+/** Whether a real user interaction has been detected */
+let userHasInteracted = false
+/** Whether analytics scripts have been loaded (only after interaction) */
+let analyticsScriptsLoaded = false
+
+/**
+ * Called on first user interaction (click, scroll, keypress, touch).
+ * Loads analytics scripts and flushes the initial page_view / conversion events.
+ */
+function onFirstInteraction() {
+  if (userHasInteracted) return
+  userHasInteracted = true
+
+  // Remove interaction listeners — they're no longer needed
+  for (const evt of INTERACTION_GATE_EVENTS) {
+    document.removeEventListener(evt, onFirstInteraction)
+  }
+
+  if (!analyticsScriptsLoaded) {
+    analyticsScriptsLoaded = true
+    // NOW load gtag.js and Umami — only after a real human interacted
+    loadGtagScript()
+    loadUmamiScript()
+    startEngagementTracking()
+
+    // Fire the events that would have fired at page load
+    const deploymentType = getDeploymentType()
+    emitConversionStep(1, 'discovery', { deployment_type: deploymentType })
+    emitPageView(window.location.pathname)
+  }
+}
+
+const INTERACTION_GATE_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'] as const
+
 // ── Engagement Time Tracking ──────────────────────────────────────
 // GA4 requires the `_et` parameter (engagement time in milliseconds)
 // to calculate Average Engagement Time. Without it, GA4 reports 0s.
@@ -428,6 +488,10 @@ function send(
 ) {
   if (!initialized || isOptedOut()) return
 
+  // Don't send any events until a real user has interacted.
+  // This prevents automated/headless page loads from generating traffic.
+  if (!userHasInteracted) return
+
   // Umami: send every event immediately (no queuing needed — Umami has its
   // own session management and doesn't conflict with GA4 client IDs)
   sendToUmami(eventName, params)
@@ -545,6 +609,11 @@ function loadGtagScript() {
 export function initAnalytics() {
   measurementId = (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) || GA_MEASUREMENT_ID
   if (!measurementId || initialized) return
+
+  // Skip analytics entirely in automated/headless environments.
+  // This filters CI pipelines, cloud VMs, Puppeteer, etc.
+  if (isAutomatedEnvironment()) return
+
   initialized = true
   pageId = rand()
 
@@ -558,15 +627,6 @@ export function initAnalytics() {
     ...(tz && { timezone: tz }),
   }
 
-  // Load gtag.js for GA4 Realtime support (async, non-blocking)
-  loadGtagScript()
-
-  // Load Umami tracking script (parallel analytics validation)
-  loadUmamiScript()
-
-  // Start tracking user engagement for GA4 engagement time metrics
-  startEngagementTracking()
-
   // Flush engagement on page close (Safari doesn't always fire visibilitychange)
   window.addEventListener('beforeunload', emitUserEngagement)
 
@@ -576,8 +636,12 @@ export function initAnalytics() {
   // Capture UTM parameters from landing URL
   captureUtmParams()
 
-  // Fire discovery conversion step
-  emitConversionStep(1, 'discovery', { deployment_type: deploymentType })
+  // Gate analytics script loading on real user interaction.
+  // Automated installs load the page but never click/scroll/type — this
+  // single check eliminates ~25,000 bot "users" per day from data centers.
+  for (const evt of INTERACTION_GATE_EVENTS) {
+    document.addEventListener(evt, onFirstInteraction, { once: true, passive: true })
+  }
 }
 
 // ── Anonymous User ID ──────────────────────────────────────────────
