@@ -73,6 +73,25 @@ func (h *FeedbackHandler) getEffectiveToken() string {
 	return h.githubToken
 }
 
+// HasToken handles GET /api/feedback/token/status — returns whether the
+// feedback GitHub token is configured (without exposing the token itself).
+func (h *FeedbackHandler) HasToken(c *fiber.Ctx) error {
+	token := h.getEffectiveToken()
+	source := "none"
+	if h.githubToken != "" {
+		source = "env"
+	}
+	if sm := settings.GetSettingsManager(); sm != nil {
+		if all, err := sm.GetAll(); err == nil && all.FeedbackGitHubToken != "" {
+			source = "settings"
+		}
+	}
+	return c.JSON(fiber.Map{
+		"hasToken": token != "",
+		"source":   source,
+	})
+}
+
 // CreateFeatureRequest creates a new feature request and GitHub issue
 func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)

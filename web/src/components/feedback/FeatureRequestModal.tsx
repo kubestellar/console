@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, Linkedin, Trophy } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
@@ -116,6 +116,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [previewChecking, setPreviewChecking] = useState<number | null>(null) // PR number being checked
   const [previewResults, setPreviewResults] = useState<Record<number, { status: string; preview_url?: string; ready_at?: string; message?: string }>>({})
+  const [feedbackTokenMissing, setFeedbackTokenMissing] = useState(false) // true when FEEDBACK_GITHUB_TOKEN is not configured
 
   // Pre-fill description when opened from a card's bug button (only once on open)
   const prevOpenRef = useRef(false)
@@ -127,6 +128,29 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     }
     prevOpenRef.current = isOpen
   }, [isOpen])
+
+  // Check whether FEEDBACK_GITHUB_TOKEN is configured on the backend.
+  // Runs once when the modal first opens so we can warn the user *before*
+  // they spend time filling out the form.
+  const tokenCheckedRef = useRef(false)
+  useEffect(() => {
+    if (!isOpen || tokenCheckedRef.current || isDemoModeForced) return
+    tokenCheckedRef.current = true
+
+    fetch(`${BACKEND_DEFAULT_URL}/api/feedback/token/status`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && !data.hasToken) {
+          setFeedbackTokenMissing(true)
+        }
+      })
+      .catch(() => {
+        // Silently ignore — backend may not be reachable (e.g. demo mode)
+      })
+  }, [isOpen, token])
 
   const handleCheckPreview = async (prNumber: number) => {
     setPreviewChecking(prNumber)
@@ -1101,6 +1125,31 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           ) : (
             <form id="feedback-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-4 space-y-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+                {/* Warning banner when FEEDBACK_GITHUB_TOKEN is not configured */}
+                {feedbackTokenMissing && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                    <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-yellow-400 mb-1">
+                        GitHub integration not configured
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        The <code className="px-1 py-0.5 rounded bg-secondary text-foreground text-2xs">FEEDBACK_GITHUB_TOKEN</code> is
+                        not set. Issue submission requires a GitHub personal access token with <em>repo</em> scope.
+                        Add it to your <code className="px-1 py-0.5 rounded bg-secondary text-foreground text-2xs">.env</code> file or
+                        configure it in{' '}
+                        <button
+                          type="button"
+                          onClick={() => { window.location.href = '/settings' }}
+                          className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
+                        >
+                          Settings
+                        </button>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Type Selection */}
                 <div className="flex gap-2">
                   <button
@@ -1217,7 +1266,8 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
               <button
                 type="submit"
                 form="feedback-form"
-                disabled={isSubmitting}
+                disabled={isSubmitting || feedbackTokenMissing}
+                title={feedbackTokenMissing ? 'FEEDBACK_GITHUB_TOKEN is not configured — set it in .env or Settings' : undefined}
                 className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {isSubmitting ? (
