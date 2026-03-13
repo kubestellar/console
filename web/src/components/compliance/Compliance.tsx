@@ -11,6 +11,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { emitComplianceDrillDown } from '../../lib/analytics'
 
 const COMPLIANCE_CARDS_KEY = 'compliance-dashboard-cards'
@@ -33,6 +34,9 @@ export function Compliance() {
   const { drillToAllSecurity } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Check if the user is explicitly in demo mode
+  const { isDemoMode: explicitDemoMode } = useDemoMode()
 
   // Real data from compliance tool hooks
   const kyverno = useKyverno()
@@ -126,12 +130,13 @@ export function Compliance() {
     }
   }, [kyverno.statuses, kubescape.installed, kubescape.aggregated, trivy.installed, trivy.aggregated, trivy.statuses])
 
-  // Whether ALL data shown is demo (no real tools installed)
-  const allDemo = !realData.hasAnyRealData
-  // Per-tool demo status
-  const kyvernoIsDemo = kyverno.isDemoData || !realData.kyvernoInstalled
-  const kubescapeIsDemo = kubescape.isDemoData || !realData.kubescapeInstalled
-  const trivyIsDemo = trivy.isDemoData || !realData.trivyInstalled
+  // Only show demo/mock data when the user is explicitly in demo mode.
+  // When connected to a live cluster without compliance tools, show zeros — not fake numbers.
+  const allDemo = explicitDemoMode && !realData.hasAnyRealData
+  // Per-tool demo status: only show mock data when explicitly in demo mode AND tool is absent
+  const kyvernoIsDemo = explicitDemoMode && (kyverno.isDemoData || !realData.kyvernoInstalled)
+  const kubescapeIsDemo = explicitDemoMode && (kubescape.isDemoData || !realData.kubescapeInstalled)
+  const trivyIsDemo = explicitDemoMode && (trivy.isDemoData || !realData.trivyInstalled)
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
@@ -139,35 +144,37 @@ export function Compliance() {
       // Overall compliance — real when any tool is installed, demo otherwise
       case 'score':
         return allDemo
-          ? { value: '78%', sublabel: 'compliance score', isDemo: true, onClick: () => { emitComplianceDrillDown('score'); drillToAllSecurity() }, isClickable: reachableClusters.length > 0 }
+          ? { value: '78%', sublabel: 'compliance score', isDemo: true, isClickable: false }
           : { value: `${realData.overallScore}%`, sublabel: 'compliance score', onClick: () => { emitComplianceDrillDown('score'); drillToAllSecurity() }, isClickable: reachableClusters.length > 0 }
       case 'total_checks':
         return allDemo
-          ? { value: (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER, sublabel: 'total checks', isDemo: true, onClick: () => { emitComplianceDrillDown('total_checks'); drillToAllSecurity() }, isClickable: true }
+          ? { value: (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER, sublabel: 'total checks', isDemo: true, isClickable: false }
           : { value: realData.totalChecks, sublabel: 'total checks', onClick: () => { emitComplianceDrillDown('total_checks'); drillToAllSecurity() }, isClickable: realData.totalChecks > 0 }
       case 'passing':
         return allDemo
-          ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_PASS_RATE), sublabel: 'passing', isDemo: true, onClick: () => { emitComplianceDrillDown('passing'); drillToAllSecurity('passing') }, isClickable: true }
+          ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_PASS_RATE), sublabel: 'passing', isDemo: true, isClickable: false }
           : { value: realData.passing, sublabel: 'passing', onClick: () => { emitComplianceDrillDown('passing'); drillToAllSecurity('passing') }, isClickable: realData.passing > 0 }
       case 'failing':
         return allDemo
-          ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_FAIL_RATE), sublabel: 'failing', isDemo: true, onClick: () => { emitComplianceDrillDown('failing'); drillToAllSecurity('failing') }, isClickable: true }
+          ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_FAIL_RATE), sublabel: 'failing', isDemo: true, isClickable: false }
           : { value: realData.failing, sublabel: 'failing', onClick: () => { emitComplianceDrillDown('failing'); drillToAllSecurity('failing') }, isClickable: realData.failing > 0 }
       case 'warning': {
         const mockTotal = (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER
         return allDemo
-          ? { value: mockTotal - Math.floor(mockTotal * MOCK_PASS_RATE) - Math.floor(mockTotal * MOCK_FAIL_RATE), sublabel: 'warnings', isDemo: true, onClick: () => { emitComplianceDrillDown('warning'); drillToAllSecurity('warning') }, isClickable: true }
+          ? { value: mockTotal - Math.floor(mockTotal * MOCK_PASS_RATE) - Math.floor(mockTotal * MOCK_FAIL_RATE), sublabel: 'warnings', isDemo: true, isClickable: false }
           : { value: realData.warning, sublabel: 'warnings', onClick: () => { emitComplianceDrillDown('warning'); drillToAllSecurity('warning') }, isClickable: realData.warning > 0 }
       }
       case 'critical_findings':
         return allDemo
-          ? { value: Math.floor((reachableClusters.length || 1) * 2.3), sublabel: 'critical findings', isDemo: true, onClick: () => { emitComplianceDrillDown('critical'); drillToAllSecurity('critical') }, isClickable: true }
+          ? { value: Math.floor((reachableClusters.length || 1) * 2.3), sublabel: 'critical findings', isDemo: true, isClickable: false }
           : { value: realData.trivyCritical + realData.kyvernoViolations, sublabel: 'critical findings', onClick: () => { emitComplianceDrillDown('critical'); drillToAllSecurity('critical') }, isClickable: true }
 
       // Policy enforcement tools — use real data when the tool is installed
       case 'gatekeeper_violations':
-        // Gatekeeper hook not yet implemented — always demo
-        return { value: Math.floor((reachableClusters.length || 1) * MOCK_GATEKEEPER_PER_CLUSTER), sublabel: 'Gatekeeper violations', isClickable: false, isDemo: true }
+        // Gatekeeper hook not yet implemented — show mock only in explicit demo mode
+        return explicitDemoMode
+          ? { value: Math.floor((reachableClusters.length || 1) * MOCK_GATEKEEPER_PER_CLUSTER), sublabel: 'Gatekeeper violations', isClickable: false, isDemo: true }
+          : { value: 0, sublabel: 'Gatekeeper violations', isClickable: false }
       case 'kyverno_violations':
         return kyvernoIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 2.8), sublabel: 'Kyverno violations', isClickable: false, isDemo: true }
@@ -179,8 +186,10 @@ export function Compliance() {
 
       // Security scanning
       case 'falco_alerts':
-        // Falco hook not yet implemented — always demo
-        return { value: Math.floor((reachableClusters.length || 1) * MOCK_FALCO_PER_CLUSTER), sublabel: 'Falco alerts', isClickable: false, isDemo: true }
+        // Falco hook not yet implemented — show mock only in explicit demo mode
+        return explicitDemoMode
+          ? { value: Math.floor((reachableClusters.length || 1) * MOCK_FALCO_PER_CLUSTER), sublabel: 'Falco alerts', isClickable: false, isDemo: true }
+          : { value: 0, sublabel: 'Falco alerts', isClickable: false }
       case 'trivy_vulns':
         return trivyIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 12), sublabel: 'Trivy vulnerabilities', isClickable: false, isDemo: true }
@@ -204,13 +213,15 @@ export function Compliance() {
           ? { value: '79%', sublabel: 'NSA hardening', isClickable: false, isDemo: true }
           : { value: `${realData.nsaScore || realData.kubescapeScore}%`, sublabel: 'NSA hardening', isClickable: false }
       case 'pci_score':
-        // PCI-DSS not directly tracked by any installed tool — always demo
-        return { value: '75%', sublabel: 'PCI-DSS', isClickable: false, isDemo: true }
+        // PCI-DSS not directly tracked by any installed tool — show mock only in explicit demo mode
+        return explicitDemoMode
+          ? { value: '75%', sublabel: 'PCI-DSS', isClickable: false, isDemo: true }
+          : { value: '0%', sublabel: 'PCI-DSS', isClickable: false }
 
       default:
         return { value: '-' }
     }
-  }, [allDemo, realData, kyvernoIsDemo, kubescapeIsDemo, trivyIsDemo, reachableClusters, drillToAllSecurity])
+  }, [allDemo, realData, kyvernoIsDemo, kubescapeIsDemo, trivyIsDemo, reachableClusters, drillToAllSecurity, explicitDemoMode])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
