@@ -622,6 +622,13 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/wasmcloud/hosts", mcpHandlers.GetWasmCloudHosts)
 	api.Get("/mcp/wasmcloud/actors", mcpHandlers.GetWasmCloudActors)
 	api.Get("/mcp/custom-resources", mcpHandlers.GetCustomResources)
+	api.Get("/mcp/replicasets", mcpHandlers.GetReplicaSets)
+	api.Get("/mcp/statefulsets", mcpHandlers.GetStatefulSets)
+	api.Get("/mcp/daemonsets", mcpHandlers.GetDaemonSets)
+	api.Get("/mcp/cronjobs", mcpHandlers.GetCronJobs)
+	api.Get("/mcp/ingresses", mcpHandlers.GetIngresses)
+	api.Get("/mcp/networkpolicies", mcpHandlers.GetNetworkPolicies)
+	api.Get("/mcp/resource-yaml", mcpHandlers.GetResourceYAML)
 
 	// SSE streaming variants — stream per-cluster results as they arrive
 	api.Get("/mcp/pods/stream", mcpHandlers.GetPodsStream)

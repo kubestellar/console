@@ -245,6 +245,60 @@ func getDemoLimitRanges() []k8s.LimitRange {
 	}
 }
 
+// Demo ReplicaSets
+func getDemoReplicaSets() []k8s.ReplicaSet {
+	return []k8s.ReplicaSet{
+		{Name: "frontend-7d8f9c6b5", Namespace: "production", Cluster: "eks-prod-us-east-1", Replicas: 3, ReadyReplicas: 3, OwnerName: "frontend", OwnerKind: "Deployment", Age: "2d"},
+		{Name: "api-server-5c4d8e7f2", Namespace: "production", Cluster: "eks-prod-us-east-1", Replicas: 5, ReadyReplicas: 5, OwnerName: "api-server", OwnerKind: "Deployment", Age: "1d"},
+		{Name: "worker-9a8b7c6d5", Namespace: "batch", Cluster: "gke-staging", Replicas: 2, ReadyReplicas: 2, OwnerName: "worker", OwnerKind: "Deployment", Age: "6h"},
+	}
+}
+
+// Demo StatefulSets
+func getDemoStatefulSets() []k8s.StatefulSet {
+	return []k8s.StatefulSet{
+		{Name: "postgres", Namespace: "database", Cluster: "aks-dev-westeu", Replicas: 3, ReadyReplicas: 3, Status: "Running", Image: "postgres:15", Age: "30d"},
+		{Name: "redis-cluster", Namespace: "cache", Cluster: "eks-prod-us-east-1", Replicas: 6, ReadyReplicas: 6, Status: "Running", Image: "redis:7", Age: "14d"},
+		{Name: "elasticsearch", Namespace: "logging", Cluster: "openshift-prod", Replicas: 3, ReadyReplicas: 2, Status: "Updating", Image: "elasticsearch:8.10", Age: "7d"},
+	}
+}
+
+// Demo DaemonSets
+func getDemoDaemonSets() []k8s.DaemonSet {
+	return []k8s.DaemonSet{
+		{Name: "fluentd", Namespace: "logging", Cluster: "eks-prod-us-east-1", DesiredScheduled: 5, CurrentScheduled: 5, Ready: 5, Status: "Running", Age: "60d"},
+		{Name: "node-exporter", Namespace: "monitoring", Cluster: "openshift-prod", DesiredScheduled: 3, CurrentScheduled: 3, Ready: 3, Status: "Running", Age: "45d"},
+		{Name: "calico-node", Namespace: "kube-system", Cluster: "gke-staging", DesiredScheduled: 4, CurrentScheduled: 4, Ready: 4, Status: "Running", Age: "90d"},
+	}
+}
+
+// Demo CronJobs
+func getDemoCronJobs() []k8s.CronJob {
+	return []k8s.CronJob{
+		{Name: "db-backup", Namespace: "database", Cluster: "aks-dev-westeu", Schedule: "0 2 * * *", Suspend: false, Active: 0, LastSchedule: "6h ago", Age: "30d"},
+		{Name: "log-cleanup", Namespace: "logging", Cluster: "eks-prod-us-east-1", Schedule: "0 0 * * 0", Suspend: false, Active: 0, LastSchedule: "2d ago", Age: "60d"},
+		{Name: "report-gen", Namespace: "analytics", Cluster: "gke-staging", Schedule: "30 8 * * 1-5", Suspend: false, Active: 1, LastSchedule: "4h ago", Age: "14d"},
+	}
+}
+
+// Demo Ingresses
+func getDemoIngresses() []k8s.Ingress {
+	return []k8s.Ingress{
+		{Name: "frontend-ingress", Namespace: "production", Cluster: "eks-prod-us-east-1", Class: "nginx", Hosts: []string{"app.example.com"}, Address: "10.0.1.100", Age: "30d"},
+		{Name: "api-ingress", Namespace: "production", Cluster: "eks-prod-us-east-1", Class: "nginx", Hosts: []string{"api.example.com"}, Address: "10.0.1.101", Age: "30d"},
+		{Name: "monitoring-ingress", Namespace: "monitoring", Cluster: "openshift-prod", Class: "haproxy", Hosts: []string{"grafana.internal.example.com"}, Address: "10.0.2.50", Age: "14d"},
+	}
+}
+
+// Demo NetworkPolicies
+func getDemoNetworkPolicies() []k8s.NetworkPolicy {
+	return []k8s.NetworkPolicy{
+		{Name: "deny-all", Namespace: "production", Cluster: "eks-prod-us-east-1", PolicyTypes: []string{"Ingress", "Egress"}, PodSelector: "", Age: "60d"},
+		{Name: "allow-frontend", Namespace: "production", Cluster: "eks-prod-us-east-1", PolicyTypes: []string{"Ingress"}, PodSelector: "app=frontend", Age: "60d"},
+		{Name: "allow-monitoring", Namespace: "monitoring", Cluster: "openshift-prod", PolicyTypes: []string{"Ingress"}, PodSelector: "app=prometheus", Age: "30d"},
+	}
+}
+
 // Demo GPU nodes
 func getDemoGPUNodeHealth() []k8s.GPUNodeHealthStatus {
 	return []k8s.GPUNodeHealthStatus{

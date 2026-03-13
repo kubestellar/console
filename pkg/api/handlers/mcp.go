@@ -2007,3 +2007,375 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 
 	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
 }
+
+// GetReplicaSets returns ReplicaSets from clusters
+func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "replicasets", getDemoReplicaSets())
+	}
+
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			if err != nil {
+				log.Printf("internal error: %v", err)
+				return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			allItems := make([]k8s.ReplicaSet, 0)
+			clusterTimeout := mcpDefaultTimeout
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					items, err := h.k8sClient.GetReplicaSets(ctx, clusterName, namespace)
+					if err == nil && len(items) > 0 {
+						mu.Lock()
+						allItems = append(allItems, items...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			waitWithDeadline(&wg, maxResponseDeadline)
+			return c.JSON(fiber.Map{"replicasets": allItems, "source": "k8s"})
+		}
+
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
+		items, err := h.k8sClient.GetReplicaSets(ctx, cluster, namespace)
+		if err != nil {
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		}
+		if items == nil {
+			items = make([]k8s.ReplicaSet, 0)
+		}
+		return c.JSON(fiber.Map{"replicasets": items, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetStatefulSets returns StatefulSets from clusters
+func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "statefulsets", getDemoStatefulSets())
+	}
+
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			if err != nil {
+				log.Printf("internal error: %v", err)
+				return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			allItems := make([]k8s.StatefulSet, 0)
+			clusterTimeout := mcpDefaultTimeout
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					items, err := h.k8sClient.GetStatefulSets(ctx, clusterName, namespace)
+					if err == nil && len(items) > 0 {
+						mu.Lock()
+						allItems = append(allItems, items...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			waitWithDeadline(&wg, maxResponseDeadline)
+			return c.JSON(fiber.Map{"statefulsets": allItems, "source": "k8s"})
+		}
+
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
+		items, err := h.k8sClient.GetStatefulSets(ctx, cluster, namespace)
+		if err != nil {
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		}
+		if items == nil {
+			items = make([]k8s.StatefulSet, 0)
+		}
+		return c.JSON(fiber.Map{"statefulsets": items, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetDaemonSets returns DaemonSets from clusters
+func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "daemonsets", getDemoDaemonSets())
+	}
+
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			if err != nil {
+				log.Printf("internal error: %v", err)
+				return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			allItems := make([]k8s.DaemonSet, 0)
+			clusterTimeout := mcpDefaultTimeout
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					items, err := h.k8sClient.GetDaemonSets(ctx, clusterName, namespace)
+					if err == nil && len(items) > 0 {
+						mu.Lock()
+						allItems = append(allItems, items...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			waitWithDeadline(&wg, maxResponseDeadline)
+			return c.JSON(fiber.Map{"daemonsets": allItems, "source": "k8s"})
+		}
+
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
+		items, err := h.k8sClient.GetDaemonSets(ctx, cluster, namespace)
+		if err != nil {
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		}
+		if items == nil {
+			items = make([]k8s.DaemonSet, 0)
+		}
+		return c.JSON(fiber.Map{"daemonsets": items, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetCronJobs returns CronJobs from clusters
+func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "cronjobs", getDemoCronJobs())
+	}
+
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			if err != nil {
+				log.Printf("internal error: %v", err)
+				return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			allItems := make([]k8s.CronJob, 0)
+			clusterTimeout := mcpDefaultTimeout
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					items, err := h.k8sClient.GetCronJobs(ctx, clusterName, namespace)
+					if err == nil && len(items) > 0 {
+						mu.Lock()
+						allItems = append(allItems, items...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			waitWithDeadline(&wg, maxResponseDeadline)
+			return c.JSON(fiber.Map{"cronjobs": allItems, "source": "k8s"})
+		}
+
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
+		items, err := h.k8sClient.GetCronJobs(ctx, cluster, namespace)
+		if err != nil {
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		}
+		if items == nil {
+			items = make([]k8s.CronJob, 0)
+		}
+		return c.JSON(fiber.Map{"cronjobs": items, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetIngresses returns Ingresses from clusters
+func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "ingresses", getDemoIngresses())
+	}
+
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			if err != nil {
+				log.Printf("internal error: %v", err)
+				return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			allItems := make([]k8s.Ingress, 0)
+			clusterTimeout := mcpDefaultTimeout
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					items, err := h.k8sClient.GetIngresses(ctx, clusterName, namespace)
+					if err == nil && len(items) > 0 {
+						mu.Lock()
+						allItems = append(allItems, items...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			waitWithDeadline(&wg, maxResponseDeadline)
+			return c.JSON(fiber.Map{"ingresses": allItems, "source": "k8s"})
+		}
+
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
+		items, err := h.k8sClient.GetIngresses(ctx, cluster, namespace)
+		if err != nil {
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		}
+		if items == nil {
+			items = make([]k8s.Ingress, 0)
+		}
+		return c.JSON(fiber.Map{"ingresses": items, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetNetworkPolicies returns NetworkPolicies from clusters
+func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "networkpolicies", getDemoNetworkPolicies())
+	}
+
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			if err != nil {
+				log.Printf("internal error: %v", err)
+				return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			allItems := make([]k8s.NetworkPolicy, 0)
+			clusterTimeout := mcpDefaultTimeout
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					items, err := h.k8sClient.GetNetworkPolicies(ctx, clusterName, namespace)
+					if err == nil && len(items) > 0 {
+						mu.Lock()
+						allItems = append(allItems, items...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			waitWithDeadline(&wg, maxResponseDeadline)
+			return c.JSON(fiber.Map{"networkpolicies": allItems, "source": "k8s"})
+		}
+
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
+		items, err := h.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
+		if err != nil {
+			log.Printf("internal error: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		}
+		if items == nil {
+			items = make([]k8s.NetworkPolicy, 0)
+		}
+		return c.JSON(fiber.Map{"networkpolicies": items, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetResourceYAML returns the YAML representation of a Kubernetes resource.
+// This is a stub handler — full resource YAML retrieval requires dynamic client
+// support which will be added in a future iteration. For now, it returns an
+// empty yaml field so the frontend can gracefully fall back to demo YAML.
+func (h *MCPHandlers) GetResourceYAML(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{"yaml": "", "source": "demo"})
+	}
+
+	return c.JSON(fiber.Map{"yaml": "", "source": "stub"})
+}
