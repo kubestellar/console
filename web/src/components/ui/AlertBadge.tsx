@@ -242,10 +242,12 @@ export function AlertBadge() {
   return (
     <div className="relative" data-tour="alerts">
       {/* Badge Button */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={toggle}
-        className={`relative p-2 rounded-lg hover:bg-secondary/50 transition-colors ${
-          stats.critical > 0 ? 'text-red-400' : stats.warning > 0 ? 'text-orange-400' : 'text-muted-foreground'
+        className={`relative p-2 ${
+          stats.critical > 0 ? 'text-red-400' : stats.warning > 0 ? 'text-orange-400' : ''
         }`}
         title={stats.firing > 0 ? `${stats.firing} active alerts` : 'No active alerts'}
       >
@@ -257,7 +259,7 @@ export function AlertBadge() {
             <AnimatedCounter value={stats.firing} />
           </span>
         )}
-      </button>
+      </Button>
 
       {/* Dropdown Panel - bottom sheet on mobile */}
       {isOpen && (
@@ -302,13 +304,14 @@ export function AlertBadge() {
                   </span>
                 )}
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={close}
-                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground"
+                className="p-1"
                 aria-label="Close alert panel"
-              >
-                <X className="w-4 h-4" />
-              </button>
+                icon={<X className="w-4 h-4" />}
+              />
             </div>
 
             {/* Search - only show when there are alerts */}
@@ -330,81 +333,81 @@ export function AlertBadge() {
             {/* Severity Filter - only show when there are alerts */}
             {stats.firing > 0 && (
               <div className="p-2 border-b border-border flex items-center gap-2">
-                <button
+                <Button
+                  variant={severityFilter === 'all' ? 'accent' : 'ghost'}
+                  size="sm"
                   onClick={() => setSeverityFilter('all')}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    severityFilter === 'all'
-                      ? 'bg-purple-500/20 text-purple-400'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
                 >
                   All ({stats.firing})
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSeverityFilter('critical')}
                   aria-label={`Filter by critical alerts (${stats.critical})`}
-                  className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
-                    severityFilter === 'critical'
-                      ? 'bg-red-500/20 text-red-400'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={severityFilter === 'critical'
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                    : ''}
+                  icon={<span className="w-2 h-2 rounded-full bg-red-500" />}
                 >
-                  <span className="w-2 h-2 rounded-full bg-red-500" />
                   {stats.critical}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSeverityFilter('warning')}
                   aria-label={`Filter by warning alerts (${stats.warning})`}
-                  className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
-                    severityFilter === 'warning'
-                      ? 'bg-orange-500/20 text-orange-400'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={severityFilter === 'warning'
+                    ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
+                    : ''}
+                  icon={<span className="w-2 h-2 rounded-full bg-orange-500" />}
                 >
-                  <span className="w-2 h-2 rounded-full bg-orange-500" />
                   {stats.warning}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSeverityFilter('info')}
                   aria-label={`Filter by info alerts (${stats.info})`}
-                  className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
-                    severityFilter === 'info'
-                      ? 'bg-blue-500/20 text-blue-400'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={severityFilter === 'info'
+                    ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                    : ''}
+                  icon={<span className="w-2 h-2 rounded-full bg-blue-500" />}
                 >
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
                   {stats.info}
-                </button>
+                </Button>
               </div>
             )}
 
             {/* Selection Controls - only show when there are unacknowledged alerts */}
             {unacknowledgedDisplayedIds.length > 0 && (
               <div className="p-2 border-b border-border flex items-center justify-between">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={allSelected ? handleDeselectAll : handleSelectAll}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   title={allSelected ? 'Deselect all' : 'Select all'}
-                >
-                  {allSelected ? (
+                  icon={allSelected ? (
                     <CheckSquare className="w-4 h-4 text-purple-400" />
                   ) : someSelected ? (
                     <MinusSquare className="w-4 h-4 text-purple-400" />
                   ) : (
                     <Square className="w-4 h-4" />
                   )}
-                  <span>{allSelected ? 'Deselect All' : 'Select All'}</span>
-                </button>
+                >
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </Button>
 
                 {selectedAlertIds.size > 0 && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleAcknowledgeSelected}
-                    className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors"
+                    className="bg-green-500/20 hover:bg-green-500/30 text-green-400"
+                    icon={<CheckCircle className="w-3 h-3" />}
                   >
-                    <CheckCircle className="w-3 h-3" />
                     Ack {selectedAlertIds.size}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -444,18 +447,19 @@ export function AlertBadge() {
                   <div className="flex items-start gap-2">
                     {/* Selection checkbox for unacknowledged alerts */}
                     {!alert.acknowledgedAt && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => toggleAlertSelection(e, alert.id)}
-                        className="mt-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                        className="mt-0.5 p-0"
                         title={selectedAlertIds.has(alert.id) ? 'Deselect' : 'Select'}
                         aria-label={selectedAlertIds.has(alert.id) ? `Deselect alert: ${alert.ruleName}` : `Select alert: ${alert.ruleName}`}
-                      >
-                        {selectedAlertIds.has(alert.id) ? (
+                        icon={selectedAlertIds.has(alert.id) ? (
                           <CheckSquare className="w-4 h-4 text-purple-400" />
                         ) : (
                           <Square className="w-4 h-4" />
                         )}
-                      </button>
+                      />
                     )}
                     <span className="text-lg">{getSeverityIcon(alert.severity)}</span>
                     <div className="flex-1 min-w-0">
@@ -535,15 +539,17 @@ export function AlertBadge() {
 
             {/* Footer */}
             <div className="p-2 border-t border-border text-center">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   close()
                   navigate(ROUTES.ALERTS)
                 }}
-                className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                className="text-purple-400 hover:text-purple-300"
               >
                 Open Alerts Dashboard
-              </button>
+              </Button>
             </div>
           </div>
         </>
