@@ -101,7 +101,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
     message: 'Login succeeded but the console was unable to fetch your GitHub profile.',
     steps: [
       'Try logging in again — this may be a temporary GitHub API issue',
-      'Check that your GitHub OAuth app has the "read:user" scope',
+      'Check that your GitHub OAuth app has the "user:email" scope',
       'Verify your internet connection to api.github.com',
     ],
   },

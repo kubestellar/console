@@ -140,7 +140,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 			ClientID:     cfg.GitHubClientID,
 			ClientSecret: cfg.GitHubSecret,
 			RedirectURL:  redirectURL,
-			Scopes:       []string{"user:email", "read:user"},
+			Scopes:       []string{"user:email"},
 			Endpoint:     oauthEndpoint,
 		},
 		githubAPIBase: apiBase,
@@ -529,7 +529,68 @@ func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
 		return nil, err
 	}
 
+	// GET /user only returns the user's public email (empty if not set).
+	// Fall back to GET /user/emails (requires user:email scope) to find
+	// the primary verified email address.
+	if user.Email == "" {
+		if email, err := h.getGitHubPrimaryEmail(accessToken); err == nil {
+			user.Email = email
+		}
+	}
+
 	return &user, nil
+}
+
+// gitHubEmail represents one entry from GitHub's GET /user/emails response.
+type gitHubEmail struct {
+	Email    string `json:"email"`
+	Primary  bool   `json:"primary"`
+	Verified bool   `json:"verified"`
+}
+
+// getGitHubPrimaryEmail fetches the user's primary verified email via
+// GET /user/emails (requires the user:email OAuth scope).
+func (h *AuthHandler) getGitHubPrimaryEmail(accessToken string) (string, error) {
+	req, err := http.NewRequest("GET", h.githubAPIBase+"/user/emails", nil)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	client := &http.Client{Timeout: githubHTTPTimeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GitHub emails API returned %d", resp.StatusCode)
+	}
+
+	var emails []gitHubEmail
+	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
+		return "", err
+	}
+
+	// Return the primary verified email; fall back to first verified email.
+	var firstVerified string
+	for _, e := range emails {
+		if e.Primary && e.Verified {
+			return e.Email, nil
+		}
+		if e.Verified && firstVerified == "" {
+			firstVerified = e.Email
+		}
+	}
+
+	if firstVerified != "" {
+		return firstVerified, nil
+	}
+
+	return "", fmt.Errorf("no verified email found")
 }
 
 // setJWTCookie sets an HttpOnly cookie carrying the JWT token.
