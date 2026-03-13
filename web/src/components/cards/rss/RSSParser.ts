@@ -15,18 +15,16 @@ export function isValidThumbnail(url: string): boolean {
   return !invalidPatterns.some(pattern => lowerUrl.includes(pattern))
 }
 
-// Strip HTML tags from description
+// Strip HTML tags from description using DOMParser (safe — no script execution)
 export function stripHTML(html: string): string {
-  const tmp = document.createElement('div')
-  tmp.innerHTML = html
-  return tmp.textContent || tmp.innerText || ''
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return doc.body.textContent || ''
 }
 
-// Decode HTML entities
+// Decode HTML entities using DOMParser (safe — no script execution)
 export function decodeHTMLEntities(text: string): string {
-  const tmp = document.createElement('textarea')
-  tmp.innerHTML = text
-  return tmp.value
+  const doc = new DOMParser().parseFromString(text, 'text/html')
+  return doc.body.textContent || ''
 }
 
 // Normalize Reddit URLs to use www.reddit.com instead of old.reddit.com
