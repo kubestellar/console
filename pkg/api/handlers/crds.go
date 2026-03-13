@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -9,6 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// crdListTimeout is the timeout for listing CRDs across all clusters.
+const crdListTimeout = 30 * time.Second
 
 // crdGVR is the GroupVersionResource for CustomResourceDefinitions
 var crdGVR = schema.GroupVersionResource{
@@ -67,9 +72,12 @@ func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 		})
 	}
 
-	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
+	ctx, cancel := context.WithTimeout(c.Context(), crdListTimeout)
+	defer cancel()
+
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 	if err != nil {
-		clusters, _ = h.k8sClient.ListClusters(c.Context())
+		clusters, _ = h.k8sClient.ListClusters(ctx)
 	}
 	var allCRDs []CRDSummary
 
@@ -79,7 +87,7 @@ func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 			continue
 		}
 
-		crdList, err := client.Resource(crdGVR).List(c.Context(), metav1.ListOptions{})
+		crdList, err := client.Resource(crdGVR).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			continue
 		}

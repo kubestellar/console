@@ -104,9 +104,12 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		return demoResponse(c, "clusters", getDemoClusters())
 	}
 
+	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+	defer cancel()
+
 	// Try MCP bridge first if available
 	if h.bridge != nil {
-		clusters, err := h.bridge.ListClusters(c.Context())
+		clusters, err := h.bridge.ListClusters(ctx)
 		if err == nil && len(clusters) > 0 {
 			return c.JSON(fiber.Map{"clusters": clusters, "source": "mcp"})
 		}
@@ -115,7 +118,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 
 	// Fall back to direct k8s client
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.ListClusters(c.Context())
+		clusters, err := h.k8sClient.ListClusters(ctx)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -507,7 +510,10 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
-	if err := h.k8sClient.InstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), mcpExtendedTimeout)
+	defer cancel()
+
+	if err := h.k8sClient.InstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
@@ -536,7 +542,10 @@ func (h *MCPHandlers) UninstallGPUHealthCronJob(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
-	if err := h.k8sClient.UninstallGPUHealthCronJob(c.Context(), body.Cluster, body.Namespace); err != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+	defer cancel()
+
+	if err := h.k8sClient.UninstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace); err != nil {
 		log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
@@ -1394,9 +1403,12 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient != nil {
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
 		// Auto-create namespace if requested (used by GPU reservation flow)
 		if req.EnsureNamespace {
-			if err := h.k8sClient.EnsureNamespaceExists(c.Context(), req.Cluster, req.Namespace); err != nil {
+			if err := h.k8sClient.EnsureNamespaceExists(ctx, req.Cluster, req.Namespace); err != nil {
 				log.Printf("failed to create namespace: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
@@ -1410,7 +1422,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 			Annotations: req.Annotations,
 		}
 
-		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(c.Context(), req.Cluster, spec)
+		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(ctx, req.Cluster, spec)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -1433,7 +1445,10 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient != nil {
-		err := h.k8sClient.DeleteResourceQuota(c.Context(), cluster, namespace, name)
+		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+		defer cancel()
+
+		err := h.k8sClient.DeleteResourceQuota(ctx, cluster, namespace, name)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})

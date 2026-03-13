@@ -25,6 +25,12 @@ const (
 	workloadListTimeout = 30 * time.Second
 	// workloadPodsTimeout is the timeout for fetching pod/health context for AI queries.
 	workloadPodsTimeout = 15 * time.Second
+	// workloadDefaultTimeout is the per-cluster timeout for single-cluster workload queries.
+	workloadDefaultTimeout = 15 * time.Second
+	// workloadWriteTimeout is the timeout for workload write operations (deploy, scale, delete).
+	workloadWriteTimeout = 30 * time.Second
+	// workloadDeployLogsTimeout is the timeout for fetching deploy logs (events + pod queries).
+	workloadDeployLogsTimeout = 15 * time.Second
 )
 
 // WorkloadHandlers handles workload API endpoints
@@ -53,7 +59,10 @@ func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	workloadType := c.Query("type")
 
-	workloads, err := h.k8sClient.ListWorkloads(c.Context(), cluster, namespace, workloadType)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
+	defer cancel()
+
+	workloads, err := h.k8sClient.ListWorkloads(ctx, cluster, namespace, workloadType)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -73,7 +82,10 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	workload, err := h.k8sClient.GetWorkload(c.Context(), cluster, namespace, name)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+	defer cancel()
+
+	workload, err := h.k8sClient.GetWorkload(ctx, cluster, namespace, name)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -130,7 +142,10 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 		GroupName:  req.GroupName,
 	}
 
-	result, err := h.k8sClient.DeployWorkload(c.Context(), req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
+	defer cancel()
+
+	result, err := h.k8sClient.DeployWorkload(ctx, req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -150,7 +165,10 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	workloadKind, bundle, err := h.k8sClient.ResolveWorkloadDependencies(c.Context(), cluster, namespace, name)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+	defer cancel()
+
+	workloadKind, bundle, err := h.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			log.Printf("not found: %v", err)
@@ -205,7 +223,10 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	result, err := h.k8sClient.MonitorWorkload(c.Context(), cluster, namespace, name)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+	defer cancel()
+
+	result, err := h.k8sClient.MonitorWorkload(ctx, cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			log.Printf("not found: %v", err)
@@ -229,7 +250,10 @@ func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	workload, err := h.k8sClient.GetWorkload(c.Context(), cluster, namespace, name)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+	defer cancel()
+
+	workload, err := h.k8sClient.GetWorkload(ctx, cluster, namespace, name)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -323,8 +347,11 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 
 	// Label cluster nodes with group membership
 	if h.k8sClient != nil {
+		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
+		defer cancel()
+
 		for _, cluster := range group.Clusters {
-			_ = h.k8sClient.LabelClusterNodes(c.Context(), cluster, map[string]string{
+			_ = h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 				"kubestellar.io/group": group.Name,
 			})
 		}
@@ -352,6 +379,9 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 
 	// Remove labels from clusters no longer in the group
 	if existed && h.k8sClient != nil {
+		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
+		defer cancel()
+
 		oldSet := make(map[string]bool)
 		for _, c := range oldGroup.Clusters {
 			oldSet[c] = true
@@ -362,12 +392,12 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 		}
 		for _, cluster := range oldGroup.Clusters {
 			if !newSet[cluster] {
-				_ = h.k8sClient.RemoveClusterNodeLabels(c.Context(), cluster, []string{"kubestellar.io/group"})
+				_ = h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"})
 			}
 		}
 		for _, cluster := range group.Clusters {
 			if !oldSet[cluster] {
-				_ = h.k8sClient.LabelClusterNodes(c.Context(), cluster, map[string]string{
+				_ = h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 					"kubestellar.io/group": group.Name,
 				})
 			}
@@ -389,8 +419,11 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 
 	// Remove labels from all clusters in the deleted group
 	if existed && h.k8sClient != nil {
+		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
+		defer cancel()
+
 		for _, cluster := range group.Clusters {
-			_ = h.k8sClient.RemoveClusterNodeLabels(c.Context(), cluster, []string{"kubestellar.io/group"})
+			_ = h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"})
 		}
 	}
 
@@ -726,7 +759,11 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 		SystemPrompt: systemPrompt,
 	}
 
-	resp, err := provider.Chat(c.Context(), chatReq)
+	// AI chat calls may take longer than standard k8s queries
+	aiCtx, aiCancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
+	defer aiCancel()
+
+	resp, err := provider.Chat(aiCtx, chatReq)
 	if err != nil {
 		log.Printf("ai query generation failed: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -799,7 +836,10 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "namespace is required"})
 	}
 
-	result, err := h.k8sClient.ScaleWorkload(c.Context(), req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas)
+	ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
+	defer cancel()
+
+	result, err := h.k8sClient.ScaleWorkload(ctx, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -819,7 +859,10 @@ func (h *WorkloadHandlers) DeleteWorkload(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	if err := h.k8sClient.DeleteWorkload(c.Context(), cluster, namespace, name); err != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
+	defer cancel()
+
+	if err := h.k8sClient.DeleteWorkload(ctx, cluster, namespace, name); err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
@@ -839,7 +882,10 @@ func (h *WorkloadHandlers) GetClusterCapabilities(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
 
-	capabilities, err := h.k8sClient.GetClusterCapabilities(c.Context())
+	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
+	defer cancel()
+
+	capabilities, err := h.k8sClient.GetClusterCapabilities(ctx)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -855,7 +901,10 @@ func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
 
-	policies, err := h.k8sClient.ListBindingPolicies(c.Context())
+	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+	defer cancel()
+
+	policies, err := h.k8sClient.ListBindingPolicies(ctx)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -882,7 +931,8 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": fmt.Sprintf("cluster %s: %v", cluster, err)})
 	}
 
-	ctx := c.Context()
+	ctx, cancel := context.WithTimeout(c.Context(), workloadDeployLogsTimeout)
+	defer cancel()
 
 	// Try label selector first: app=<name>
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{

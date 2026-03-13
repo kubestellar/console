@@ -1,10 +1,19 @@
 package handlers
 
 import (
+	"context"
 	"log"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
 )
+
+// mcsDefaultTimeout is the per-cluster timeout for MCS API queries.
+const mcsDefaultTimeout = 15 * time.Second
+
+// mcsWriteTimeout is the timeout for MCS write operations (create/delete).
+const mcsWriteTimeout = 15 * time.Second
 
 // MCSHandlers handles Multi-Cluster Service API endpoints
 type MCSHandlers struct {
@@ -31,9 +40,12 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
+	defer cancel()
+
 	if cluster != "" {
 		// Get exports for specific cluster
-		exports, err := h.k8sClient.ListServiceExportsForCluster(c.Context(), cluster, namespace)
+		exports, err := h.k8sClient.ListServiceExportsForCluster(ctx, cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -46,7 +58,7 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	}
 
 	// Get exports across all clusters
-	list, err := h.k8sClient.ListServiceExports(c.Context())
+	list, err := h.k8sClient.ListServiceExports(ctx)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -66,9 +78,12 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
+	defer cancel()
+
 	if cluster != "" {
 		// Get imports for specific cluster
-		imports, err := h.k8sClient.ListServiceImportsForCluster(c.Context(), cluster, namespace)
+		imports, err := h.k8sClient.ListServiceImportsForCluster(ctx, cluster, namespace)
 		if err != nil {
 			log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -81,7 +96,7 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	}
 
 	// Get imports across all clusters
-	list, err := h.k8sClient.ListServiceImports(c.Context())
+	list, err := h.k8sClient.ListServiceImports(ctx)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -97,7 +112,10 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
 
-	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
+	defer cancel()
+
+	clusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -110,7 +128,7 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 
 	status := make([]clusterMCSStatus, 0, len(clusters))
 	for _, cluster := range clusters {
-		available := h.k8sClient.IsMCSAvailable(c.Context(), cluster.Name)
+		available := h.k8sClient.IsMCSAvailable(ctx, cluster.Name)
 		status = append(status, clusterMCSStatus{
 			Cluster:      cluster.Name,
 			MCSAvailable: available,
@@ -133,7 +151,10 @@ func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	exports, err := h.k8sClient.ListServiceExportsForCluster(c.Context(), cluster, namespace)
+	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
+	defer cancel()
+
+	exports, err := h.k8sClient.ListServiceExportsForCluster(ctx, cluster, namespace)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -159,7 +180,10 @@ func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	imports, err := h.k8sClient.ListServiceImportsForCluster(c.Context(), cluster, namespace)
+	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
+	defer cancel()
+
+	imports, err := h.k8sClient.ListServiceImportsForCluster(ctx, cluster, namespace)
 	if err != nil {
 		log.Printf("internal error: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
@@ -205,8 +229,11 @@ func (h *MCSHandlers) CreateServiceExport(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "serviceName is required"})
 	}
 
+	ctx, cancel := context.WithTimeout(c.Context(), mcsWriteTimeout)
+	defer cancel()
+
 	// Create the ServiceExport
-	if err := h.k8sClient.CreateServiceExport(c.Context(), req.Cluster, req.Namespace, req.ServiceName); err != nil {
+	if err := h.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
 		log.Printf("failed to create serviceexport: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
@@ -230,7 +257,10 @@ func (h *MCSHandlers) DeleteServiceExport(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
-	if err := h.k8sClient.DeleteServiceExport(c.Context(), cluster, namespace, name); err != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), mcsWriteTimeout)
+	defer cancel()
+
+	if err := h.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
 		log.Printf("failed to delete serviceexport: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
