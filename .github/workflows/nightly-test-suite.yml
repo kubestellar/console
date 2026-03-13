@@ -54,38 +54,60 @@ jobs:
 
       - name: Install test tools
         env:
-          # All tools use pre-built binaries — no 'go install' compilation.
-          # go install was causing exit code 8 (signal kill during compilation)
-          # that poisoned subsequent steps on the CI runner.
           GOSEC_VERSION: '2.21.4'
           GITLEAKS_VERSION: '8.21.2'
           TRIVY_VERSION: '0.58.1'
           SEMGREP_VERSION: '1.102.0'
+        shell: bash {0}
         run: |
-          # gosec (pre-built binary)
-          wget -q "https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/gosec_${GOSEC_VERSION}_linux_amd64.tar.gz" -O /tmp/gosec.tar.gz
-          tar -xzf /tmp/gosec.tar.gz -C /usr/local/bin gosec
+          # Non-fatal installs: test scripts handle missing tools gracefully.
+          # Using 'bash {0}' (no -e) so one failure doesn't abort the rest.
 
-          # govulncheck: intentionally omitted from workflow install.
-          # go install causes exit code 8 (OOM/signal kill) on CI runners.
-          # dependency-audit-test.sh installs it on-demand with graceful fallback.
+          echo "::group::gosec (pre-built binary)"
+          wget "https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/gosec_${GOSEC_VERSION}_linux_amd64.tar.gz" -O /tmp/gosec.tar.gz \
+            && tar -xzf /tmp/gosec.tar.gz -C /usr/local/bin gosec \
+            && echo "✓ gosec installed" \
+            || echo "::warning::gosec install failed"
+          echo "::endgroup::"
 
-          # Secret scanning
-          wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz
-          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          echo "::group::gitleaks (pre-built binary)"
+          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz \
+            && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
+            && echo "✓ gitleaks installed" \
+            || echo "::warning::gitleaks install failed"
+          echo "::endgroup::"
 
-          # Container scanning
-          wget -q "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -O /tmp/trivy.tar.gz
-          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+          echo "::group::trivy (pre-built binary)"
+          wget "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -O /tmp/trivy.tar.gz \
+            && tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy \
+            && echo "✓ trivy installed" \
+            || echo "::warning::trivy install failed"
+          echo "::endgroup::"
 
-          # SAST
-          pip3 install --break-system-packages "semgrep==${SEMGREP_VERSION}"
+          echo "::group::semgrep (pip)"
+          pip3 install --break-system-packages "semgrep==${SEMGREP_VERSION}" \
+            && echo "✓ semgrep installed" \
+            || echo "::warning::semgrep install failed"
+          echo "::endgroup::"
 
-          # ripgrep (some scripts use rg)
-          sudo apt-get install -y ripgrep
+          echo "::group::ripgrep (apt)"
+          sudo apt-get install -y ripgrep \
+            && echo "✓ ripgrep installed" \
+            || echo "::warning::ripgrep install failed"
+          echo "::endgroup::"
 
-          # go-licenses: intentionally omitted (broken deps).
-          # license-compliance-test falls back to 'go list -m -json'.
+          # govulncheck & go-licenses: omitted (go install causes exit code 8).
+          # Test scripts install on-demand with graceful fallback.
+
+          echo ""
+          echo "=== Tool verification ==="
+          for tool in gosec gitleaks trivy semgrep rg; do
+            if command -v "$tool" &>/dev/null; then
+              echo "  ✓ $tool"
+            else
+              echo "  ✗ $tool (missing — tests will handle gracefully)"
+            fi
+          done
 
       - name: Run full test suite
         id: tests
