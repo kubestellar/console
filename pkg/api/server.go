@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
@@ -397,9 +398,22 @@ func (s *Server) setupRoutes() {
 		DevMode:          s.config.DevMode,
 		SkipOnboarding:   s.config.SkipOnboarding,
 	})
-	s.app.Get("/auth/github", auth.GitHubLogin)
-	s.app.Get("/auth/github/callback", auth.GitHubCallback)
-	s.app.Post("/auth/refresh", auth.RefreshToken)
+	// Rate limit auth endpoints — stricter to prevent brute-force
+	authLimiterMaxRequests := 10            // max requests per window
+	authLimiterWindow := 1 * time.Minute    // sliding window duration
+	authLimiter := limiter.New(limiter.Config{
+		Max:        authLimiterMaxRequests,
+		Expiration: authLimiterWindow,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
+		},
+	})
+	s.app.Get("/auth/github", authLimiter, auth.GitHubLogin)
+	s.app.Get("/auth/github/callback", authLimiter, auth.GitHubCallback)
+	s.app.Post("/auth/refresh", authLimiter, auth.RefreshToken)
 
 	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
 	s.app.Get("/api/active-users", func(c *fiber.Ctx) error {
@@ -462,8 +476,20 @@ func (s *Server) setupRoutes() {
 	missions := handlers.NewMissionsHandler()
 	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
 
-	// API routes (protected)
-	api := s.app.Group("/api", middleware.JWTAuth(s.config.JWTSecret))
+	// API routes (protected) — with rate limiting
+	apiLimiterMaxRequests := 200            // max requests per window per IP
+	apiLimiterWindow := 1 * time.Minute     // sliding window duration
+	apiLimiter := limiter.New(limiter.Config{
+		Max:        apiLimiterMaxRequests,
+		Expiration: apiLimiterWindow,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
+		},
+	})
+	api := s.app.Group("/api", apiLimiter, middleware.JWTAuth(s.config.JWTSecret))
 
 	// User routes
 	user := handlers.NewUserHandler(s.store)
