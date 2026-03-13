@@ -17,7 +17,54 @@ import (
 const (
 	missionsAPITimeout   = 30 * time.Second
 	missionsMaxBodyBytes = 10 * 1024 * 1024 // 10MB
+	missionsMaxPathLen   = 512              // max length for path/ref parameters
 )
+
+// sanitizePath validates and sanitizes a file path parameter.
+// SECURITY: Blocks path traversal (../) and dangerous characters.
+func sanitizePath(path string) (string, error) {
+	if len(path) > missionsMaxPathLen {
+		return "", fmt.Errorf("path exceeds maximum length of %d", missionsMaxPathLen)
+	}
+	// Block path traversal
+	if strings.Contains(path, "..") {
+		return "", fmt.Errorf("path traversal (..) is not allowed")
+	}
+	// Block null bytes
+	if strings.ContainsRune(path, 0) {
+		return "", fmt.Errorf("path contains null bytes")
+	}
+	// Block shell metacharacters and control characters
+	for _, ch := range path {
+		if ch < 0x20 || ch == '`' || ch == '$' || ch == '|' || ch == ';' || ch == '&' || ch == '\\' {
+			return "", fmt.Errorf("path contains invalid character")
+		}
+	}
+	// Normalize leading slash
+	return strings.TrimPrefix(path, "/"), nil
+}
+
+// sanitizeRef validates a git ref (branch/tag) parameter.
+// SECURITY: Blocks flag injection and dangerous patterns.
+func sanitizeRef(ref string) (string, error) {
+	if len(ref) > missionsMaxPathLen {
+		return "", fmt.Errorf("ref exceeds maximum length")
+	}
+	if strings.HasPrefix(ref, "-") {
+		return "", fmt.Errorf("ref must not start with '-'")
+	}
+	if strings.Contains(ref, "..") {
+		return "", fmt.Errorf("ref must not contain '..'")
+	}
+	// Only allow alphanumeric, -, _, ., /
+	for _, ch := range ref {
+		if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') || ch == '-' || ch == '_' || ch == '.' || ch == '/') {
+			return "", fmt.Errorf("ref contains invalid character: %c", ch)
+		}
+	}
+	return ref, nil
+}
 
 // MissionsHandler handles mission-related API endpoints (knowledge base browsing,
 // validation, sharing).
@@ -99,7 +146,10 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 // BrowseConsoleKB lists directory contents from the kubestellar/console-kb repo.
 // GET /api/missions/browse?path=solutions
 func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
-	path := c.Query("path", "")
+	path, err := sanitizePath(c.Query("path", ""))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
 	url := fmt.Sprintf("%s/repos/kubestellar/console-kb/contents/%s?ref=master", h.githubAPIURL, path)
 
 	resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
@@ -154,11 +204,19 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 // GetMissionFile fetches raw file content from the kubestellar/console-kb repo.
 // GET /api/missions/file?path=solutions/cncf-generated/kubernetes/kubernetes-42873.json
 func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
-	path := c.Query("path")
-	if path == "" {
+	rawPath := c.Query("path")
+	if rawPath == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "path query parameter is required"})
 	}
-	ref := c.Query("ref", "master")
+	path, err := sanitizePath(rawPath)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	rawRef := c.Query("ref", "master")
+	ref, err := sanitizeRef(rawRef)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
 
 	url := fmt.Sprintf("%s/kubestellar/console-kb/%s/%s", h.githubRawURL, ref, path)
 
@@ -300,6 +358,14 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	if req.Repo == "" || req.FilePath == "" || req.Content == "" || req.Branch == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "repo, filePath, content, and branch are required"})
+	}
+
+	// SECURITY: Validate path and branch to prevent traversal/injection
+	if _, err := sanitizePath(req.FilePath); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid filePath: %v", err)})
+	}
+	if _, err := sanitizeRef(req.Branch); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid branch: %v", err)})
 	}
 
 	// Step 1: Fork the repo
