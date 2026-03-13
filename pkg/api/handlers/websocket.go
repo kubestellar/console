@@ -129,14 +129,27 @@ func (h *Hub) Close() {
 	close(h.done)
 }
 
-// Broadcast sends a message to all clients of a user
+// Broadcast sends a message to all clients of a user.
+// Uses non-blocking send to prevent callers from blocking indefinitely
+// when the broadcast buffer is full or the hub has been shut down.
+// Messages that cannot be delivered are dropped rather than stalling the sender.
 func (h *Hub) Broadcast(userID uuid.UUID, msg Message) {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("Failed to marshal message: %v", err)
 		return
 	}
-	h.broadcast <- broadcastMessage{userID: userID, data: data}
+
+	select {
+	case h.broadcast <- broadcastMessage{userID: userID, data: data}:
+		// Message queued successfully
+	case <-h.done:
+		// Hub is shut down; discard the message
+		log.Printf("Hub closed, dropping broadcast for user %s", userID)
+	default:
+		// Broadcast buffer is full; drop the message to avoid blocking the sender
+		log.Printf("Broadcast buffer full, dropping message for user %s (type: %s)", userID, msg.Type)
+	}
 }
 
 // GetActiveUsersCount returns the number of unique users with active connections
@@ -177,8 +190,18 @@ func (h *Hub) GetDemoSessionCount() int {
 	return count
 }
 
-// BroadcastAll sends a message to all connected clients
+// BroadcastAll sends a message to all connected clients.
+// Checks if the hub is shut down before iterating clients, and uses
+// non-blocking sends to avoid stalling on any individual client.
 func (h *Hub) BroadcastAll(msg Message) {
+	// Check if the hub has been shut down before doing any work
+	select {
+	case <-h.done:
+		log.Printf("Hub closed, dropping broadcast-all (type: %s)", msg.Type)
+		return
+	default:
+	}
+
 	data, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("Failed to marshal message: %v", err)
