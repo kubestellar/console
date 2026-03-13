@@ -29,24 +29,15 @@ const GTAG_SCRIPT_PATH = '/api/gtag'
 // Umami auto-tracks pageviews; custom events use umami.track().
 
 const UMAMI_SCRIPT_URL = 'https://analytics.kubestellar.io/ksc'
-const UMAMI_WEBSITE_ID_PROD = '07111027-162f-4e37-a0bb-067b9d08b88a'
-const UMAMI_WEBSITE_ID_LOCAL = '1339e1d0-b491-4157-9942-037bc9dd4e80'
-
-// Window.umami type is merged with gtag globals below
-
-/** Get the correct Umami website ID based on deployment */
-function getUmamiWebsiteId(): string {
-  const h = window.location.hostname
-  if (h === 'localhost' || h === '127.0.0.1') return UMAMI_WEBSITE_ID_LOCAL
-  return UMAMI_WEBSITE_ID_PROD
-}
+/** Single Umami website ID — all environments report here, filterable by hostname */
+const UMAMI_WEBSITE_ID = '07111027-162f-4e37-a0bb-067b9d08b88a'
 
 /** Load Umami tracking script (async, non-blocking) */
 function loadUmamiScript() {
   const script = document.createElement('script')
   script.src = UMAMI_SCRIPT_URL
   script.defer = true
-  script.dataset.websiteId = getUmamiWebsiteId()
+  script.dataset.websiteId = UMAMI_WEBSITE_ID
   document.head.appendChild(script)
 }
 
