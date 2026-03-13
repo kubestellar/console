@@ -129,6 +129,15 @@ const MISSIONS_STORAGE_KEY = 'kc_missions'
 const UNREAD_MISSIONS_KEY = 'kc_unread_missions'
 const SELECTED_AGENT_KEY = 'kc_selected_agent'
 
+/** Delay before auto-reconnecting interrupted missions after WS opens */
+const MISSION_RECONNECT_DELAY_MS = 500
+/** Delay before auto-reconnecting WebSocket after close */
+const WS_AUTO_RECONNECT_DELAY_MS = 3_000
+/** Delay before showing "Waiting for response..." status */
+const STATUS_WAITING_DELAY_MS = 500
+/** Delay before showing "Processing with AI..." status */
+const STATUS_PROCESSING_DELAY_MS = 3_000
+
 // Load missions from localStorage
 function loadMissions(): Mission[] {
   try {
@@ -330,56 +339,23 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // Fetch available agents on connect
           fetchAgents()
 
-          // Auto-reconnect interrupted missions
+          // Auto-reconnect interrupted missions (#2379)
+          // Collect missions that need reconnection via a ref so the side
+          // effect (WebSocket sends) happens OUTSIDE the state updater.
+          // React StrictMode may invoke state updaters twice, which would
+          // cause duplicate reconnection requests if the send lived inside.
+          const missionsToReconnect: Mission[] = []
+
           setMissions(prev => {
-            const missionsToReconnect = prev.filter(m =>
+            const candidates = prev.filter(m =>
               m.status === 'running' && m.context?.needsReconnect
             )
 
-            if (missionsToReconnect.length > 0) {
+            if (candidates.length > 0) {
+              // Snapshot missions for the side effect scheduled below
+              missionsToReconnect.push(...candidates)
 
-              // Schedule reconnection after a short delay to let state settle
-              setTimeout(() => {
-                missionsToReconnect.forEach(mission => {
-                  // Find the last user message to re-send
-                  const userMessages = mission.messages.filter(msg => msg.role === 'user')
-                  const lastUserMessage = userMessages[userMessages.length - 1]
-
-                  if (lastUserMessage && wsRef.current?.readyState === WebSocket.OPEN) {
-                    // Determine which agent to use - prefer claude-code for tool execution
-                    const agentToUse = mission.agent || 'claude-code'
-
-                    const requestId = `claude-reconnect-${Date.now()}-${mission.id}`
-                    pendingRequests.current.set(requestId, mission.id)
-
-                    // Build history from all messages except system messages
-                    const history = mission.messages
-                      .filter(msg => msg.role === 'user' || msg.role === 'assistant')
-                      .map(msg => ({
-                        role: msg.role,
-                        content: msg.content,
-                      }))
-
-                    const mId = mission.id
-                    wsSend(JSON.stringify({
-                      id: requestId,
-                      type: 'chat',
-                      payload: {
-                        prompt: lastUserMessage.content,
-                        sessionId: mId,
-                        agent: agentToUse,
-                        history: history,
-                      }
-                    }), () => {
-                      setMissions(prev => prev.map(m =>
-                        m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
-                      ))
-                    })
-                  }
-                })
-              }, 500)
-
-              // Clear the needsReconnect flag and update step
+              // Clear the needsReconnect flag and update step (pure state update)
               return prev.map(m =>
                 m.context?.needsReconnect
                   ? {
@@ -392,6 +368,49 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             }
             return prev
           })
+
+          // Side effect: schedule reconnection OUTSIDE the state updater
+          if (missionsToReconnect.length > 0) {
+            setTimeout(() => {
+              missionsToReconnect.forEach(mission => {
+                // Find the last user message to re-send
+                const userMessages = mission.messages.filter(msg => msg.role === 'user')
+                const lastUserMessage = userMessages[userMessages.length - 1]
+
+                if (lastUserMessage && wsRef.current?.readyState === WebSocket.OPEN) {
+                  // Determine which agent to use - prefer claude-code for tool execution
+                  const agentToUse = mission.agent || 'claude-code'
+
+                  const requestId = `claude-reconnect-${Date.now()}-${mission.id}`
+                  pendingRequests.current.set(requestId, mission.id)
+
+                  // Build history from all messages except system messages
+                  const history = mission.messages
+                    .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+                    .map(msg => ({
+                      role: msg.role,
+                      content: msg.content,
+                    }))
+
+                  const mId = mission.id
+                  wsSend(JSON.stringify({
+                    id: requestId,
+                    type: 'chat',
+                    payload: {
+                      prompt: lastUserMessage.content,
+                      sessionId: mId,
+                      agent: agentToUse,
+                      history: history,
+                    }
+                  }), () => {
+                    setMissions(prev => prev.map(m =>
+                      m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
+                    ))
+                  })
+                }
+              })
+            }, MISSION_RECONNECT_DELAY_MS)
+          }
 
           resolve()
         }
@@ -418,7 +437,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               ensureConnection().catch(() => {
                 // Silent fail - will retry on next user interaction
               })
-            }, 3000)
+            }, WS_AUTO_RECONNECT_DELAY_MS)
           }
 
           // Fail any pending missions that were waiting for a response
@@ -806,7 +825,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ? { ...m, currentStep: 'Waiting for response...' }
             : m
         ))
-      }, 500)
+      }, STATUS_WAITING_DELAY_MS)
 
       // Update status while AI is processing
       setTimeout(() => {
@@ -815,7 +834,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ? { ...m, currentStep: `Processing with ${selectedAgent || 'AI'}...` }
             : m
         ))
-      }, 3000)
+      }, STATUS_PROCESSING_DELAY_MS)
     }).catch(() => {
       const errorContent = `**Local Agent Not Connected**
 

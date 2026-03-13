@@ -123,9 +123,12 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
     const accumulated: T[] = []
     let aborted = false
 
-    const cleanup = () => {
+    const cleanup = (wasAborted = false) => {
       inflightRequests.delete(cacheKey)
-      resultCache.set(cacheKey, { data: accumulated, at: Date.now() })
+      // Don't cache partial results from aborted streams (#2380)
+      if (!wasAborted) {
+        resultCache.set(cacheKey, { data: accumulated, at: Date.now() })
+      }
     }
 
     // Create an AbortController for timeout that chains with the provided signal
@@ -141,7 +144,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
         aborted = true
         timeoutController.abort()
         clearTimeout(timeoutId)
-        cleanup()
+        cleanup(/* wasAborted */ true)
         reject(new DOMException('Aborted', 'AbortError'))
       })
     }
