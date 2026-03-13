@@ -140,6 +140,9 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 			h.k8sClient.GetAllClusterHealth(ctx)
 		}()
 
+		if clusters == nil {
+			clusters = make([]k8s.ClusterInfo, 0)
+		}
 		return c.JSON(fiber.Map{"clusters": clusters, "source": "k8s"})
 	}
 
