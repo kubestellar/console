@@ -1061,6 +1061,13 @@ func (h *GitOpsHandlers) detectDriftViaMCP(ctx context.Context, req DetectDriftR
 
 // detectDriftViaKubectl uses kubectl diff to detect drift
 func (h *GitOpsHandlers) detectDriftViaKubectl(ctx context.Context, req DetectDriftRequest) (*DetectDriftResponse, error) {
+	// SECURITY: Validate K8s name params before passing to kubectl CLI
+	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
+		if err := validateK8sName(val, field); err != nil {
+			return nil, fmt.Errorf("invalid %s: %w", field, err)
+		}
+	}
+
 	// Clone the repo to a temp directory
 	tempDir, err := cloneRepo(ctx, req.RepoURL, req.Branch)
 	if err != nil {
@@ -1216,6 +1223,13 @@ func (h *GitOpsHandlers) syncViaMCP(ctx context.Context, req SyncRequest) (*Sync
 
 // syncViaKubectl uses kubectl apply
 func (h *GitOpsHandlers) syncViaKubectl(ctx context.Context, req SyncRequest) (*SyncResponse, error) {
+	// SECURITY: Validate K8s name params before passing to kubectl CLI
+	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
+		if err := validateK8sName(val, field); err != nil {
+			return nil, fmt.Errorf("invalid %s: %w", field, err)
+		}
+	}
+
 	// Clone the repo
 	tempDir, err := cloneRepo(ctx, req.RepoURL, req.Branch)
 	if err != nil {
@@ -1285,6 +1299,78 @@ func getString(m map[string]interface{}, key string) string {
 
 // gitOpsTempDirPrefix is the required prefix for all GitOps temp directories
 const gitOpsTempDirPrefix = "/tmp/gitops-"
+
+// maxK8sNameLen is the maximum allowed length for Kubernetes resource names (RFC 1123)
+const maxK8sNameLen = 253
+
+// maxHelmChartLen is the maximum allowed length for a Helm chart reference
+const maxHelmChartLen = 512
+
+// validateK8sName validates a Kubernetes-style name (cluster, namespace, release, pod).
+// SECURITY: Prevents flag injection and shell metacharacters in CLI args.
+func validateK8sName(name, field string) error {
+	if name == "" {
+		return nil // Empty is OK — callers handle required-field checks separately
+	}
+	if len(name) > maxK8sNameLen {
+		return fmt.Errorf("%s exceeds maximum length of %d", field, maxK8sNameLen)
+	}
+	if strings.HasPrefix(name, "-") {
+		return fmt.Errorf("%s must not start with '-'", field)
+	}
+	for _, ch := range name {
+		if !((ch >= 'a' && ch <= 'z') ||
+			(ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') ||
+			ch == '-' || ch == '_' || ch == '.') {
+			return fmt.Errorf("%s contains invalid character: %c", field, ch)
+		}
+	}
+	return nil
+}
+
+// validateHelmChart validates a Helm chart reference (e.g. "bitnami/nginx", "oci://...").
+// SECURITY: Prevents flag injection via chart parameter.
+func validateHelmChart(chart string) error {
+	if chart == "" {
+		return fmt.Errorf("chart is required")
+	}
+	if len(chart) > maxHelmChartLen {
+		return fmt.Errorf("chart reference exceeds maximum length of %d", maxHelmChartLen)
+	}
+	if strings.HasPrefix(chart, "-") {
+		return fmt.Errorf("chart must not start with '-'")
+	}
+	// Allow alphanumeric, -, _, ., /, : (for oci:// and repo/chart)
+	for _, ch := range chart {
+		if !((ch >= 'a' && ch <= 'z') ||
+			(ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') ||
+			ch == '-' || ch == '_' || ch == '.' || ch == '/' || ch == ':') {
+			return fmt.Errorf("chart contains invalid character: %c", ch)
+		}
+	}
+	return nil
+}
+
+// validateHelmVersion validates a Helm chart version string.
+func validateHelmVersion(version string) error {
+	if version == "" {
+		return nil
+	}
+	if strings.HasPrefix(version, "-") {
+		return fmt.Errorf("version must not start with '-'")
+	}
+	for _, ch := range version {
+		if !((ch >= 'a' && ch <= 'z') ||
+			(ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') ||
+			ch == '-' || ch == '_' || ch == '.' || ch == '+') {
+			return fmt.Errorf("version contains invalid character: %c", ch)
+		}
+	}
+	return nil
+}
 
 // validateRepoURL validates that a repository URL is safe to clone
 // SECURITY: Prevents command injection and malformed URLs
@@ -1578,6 +1664,13 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "release parameter is required"})
 	}
 
+	// SECURITY: Validate all user-supplied params before passing to helm CLI
+	for field, val := range map[string]string{"cluster": cluster, "release": release, "namespace": namespace} {
+		if err := validateK8sName(val, field); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
+
 	// Note: helm history doesn't support -A (all namespaces) flag
 	// If namespace not provided, helm will search in the default namespace
 	// The frontend should pass the namespace from the release data
@@ -1619,6 +1712,13 @@ func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
 
 	if release == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "release parameter is required"})
+	}
+
+	// SECURITY: Validate all user-supplied params before passing to helm CLI
+	for field, val := range map[string]string{"cluster": cluster, "release": release, "namespace": namespace} {
+		if err := validateK8sName(val, field); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 
 	// If namespace not provided, look it up from helm list (with timeout)
@@ -1721,6 +1821,13 @@ func (h *GitOpsHandlers) RollbackHelmRelease(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "revision must be a positive integer"})
 	}
 
+	// SECURITY: Validate all user-supplied params before passing to helm CLI
+	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
+		if err := validateK8sName(val, field); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
+
 	args := []string{"rollback", req.Release, fmt.Sprintf("%d", req.Revision), "-n", req.Namespace}
 	if req.Cluster != "" {
 		args = append(args, "--kube-context", req.Cluster)
@@ -1763,6 +1870,13 @@ func (h *GitOpsHandlers) UninstallHelmRelease(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "release and namespace are required"})
 	}
 
+	// SECURITY: Validate all user-supplied params before passing to helm CLI
+	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
+		if err := validateK8sName(val, field); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
+
 	args := []string{"uninstall", req.Release, "-n", req.Namespace}
 	if req.Cluster != "" {
 		args = append(args, "--kube-context", req.Cluster)
@@ -1803,6 +1917,19 @@ func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
 
 	if req.Release == "" || req.Namespace == "" || req.Chart == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "release, namespace, and chart are required"})
+	}
+
+	// SECURITY: Validate all user-supplied params before passing to helm CLI
+	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
+		if err := validateK8sName(val, field); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
+	if err := validateHelmChart(req.Chart); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	if err := validateHelmVersion(req.Version); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	args := []string{"upgrade", req.Release, req.Chart, "-n", req.Namespace}
