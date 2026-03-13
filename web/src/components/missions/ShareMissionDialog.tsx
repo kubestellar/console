@@ -16,6 +16,7 @@ import {
   Shield,
   Loader2,
 } from 'lucide-react'
+import yaml from 'js-yaml'
 import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
@@ -28,7 +29,7 @@ interface ShareMissionDialogProps {
   onClose: () => void
 }
 
-type ExportChannel = 'json' | 'clipboard' | 'markdown'
+type ExportChannel = 'json' | 'clipboard' | 'markdown' | 'yaml'
 
 function resolutionToMissionExport(resolution: Resolution): MissionExport {
   return {
@@ -57,6 +58,18 @@ function resolutionToMissionExport(resolution: Resolution): MissionExport {
       updatedAt: resolution.updatedAt,
     },
   }
+}
+
+/** YAML indent width used by js-yaml dump */
+const YAML_INDENT = 2
+
+function missionToYaml(mission: MissionExport): string {
+  return yaml.dump(mission, {
+    indent: YAML_INDENT,
+    lineWidth: -1,
+    noRefs: true,
+    sortKeys: false,
+  })
 }
 
 function missionToMarkdown(mission: MissionExport): string {
@@ -141,6 +154,17 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
       case 'markdown':
         await navigator.clipboard.writeText(missionToMarkdown(mission))
         break
+      case 'yaml': {
+        const yamlContent = missionToYaml(mission)
+        const yamlBlob = new Blob([yamlContent], { type: 'application/x-yaml' })
+        const yamlUrl = URL.createObjectURL(yamlBlob)
+        const yamlAnchor = document.createElement('a')
+        yamlAnchor.href = yamlUrl
+        yamlAnchor.download = `${mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)}.yaml`
+        yamlAnchor.click()
+        URL.revokeObjectURL(yamlUrl)
+        break
+      }
     }
 
     setExported(channel)
@@ -221,6 +245,13 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
             description="Human-readable format"
             active={exported === 'markdown'}
             onClick={() => handleExport('markdown')}
+          />
+          <ExportButton
+            icon={<Download className="w-4 h-4" />}
+            label="Download YAML"
+            description="Save as .yaml file"
+            active={exported === 'yaml'}
+            onClick={() => handleExport('yaml')}
           />
         </div>
       </div>
