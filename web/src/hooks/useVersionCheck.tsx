@@ -765,8 +765,12 @@ function useVersionCheckCore() {
   // Periodic poll: re-fetch auto-update status every 60s so the UI picks up
   // new commits detected by kc-agent without requiring manual "Check Now".
   // Includes autoUpdateEnabled so toggling the setting restarts polling.
+  // Fires an immediate fetch when toggled on so the user doesn't wait a full
+  // AUTO_UPDATE_POLL_MS cycle before seeing the current status.
   useEffect(() => {
     if (!agentConnected || !agentSupportsAutoUpdate || !autoUpdateEnabled) return
+    // Immediate fetch so the UI updates right away when auto-update is toggled on
+    fetchAutoUpdateStatus()
     const id = setInterval(() => {
       fetchAutoUpdateStatus()
     }, AUTO_UPDATE_POLL_MS)

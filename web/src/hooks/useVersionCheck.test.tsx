@@ -6,15 +6,20 @@ import type { GitHubRelease, ParsedRelease } from '../types/updates'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
 
 // ---------------------------------------------------------------------------
-// Mock external dependencies so the hook can mount without a live agent
+// Mock external dependencies so the hook can mount without a live agent.
+// Uses a hoisted ref so individual tests can override the return value.
 // ---------------------------------------------------------------------------
 
-vi.mock('./useLocalAgent', () => ({
-  useLocalAgent: () => ({
+const mockUseLocalAgent = vi.hoisted(() =>
+  vi.fn(() => ({
     isConnected: false,
-    health: null,
+    health: null as Record<string, unknown> | null,
     refresh: vi.fn(),
-  }),
+  }))
+)
+
+vi.mock('./useLocalAgent', () => ({
+  useLocalAgent: mockUseLocalAgent,
 }))
 
 // ---------------------------------------------------------------------------
@@ -470,5 +475,91 @@ describe('VersionCheckProvider', () => {
       const githubCalls = mockFetch.mock.calls.filter(isReleasesApiCall)
       expect(githubCalls.length).toBeGreaterThan(0)
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Toggle-sensitive polling (auto-update toggle restarts polling)
+// ---------------------------------------------------------------------------
+
+/** URL path used by the hook to fetch auto-update status from kc-agent */
+const AUTO_UPDATE_STATUS_PATH = '127.0.0.1:8585/auto-update/status'
+
+/** Returns true when a fetch mock call is targeting the kc-agent auto-update status endpoint */
+function isAutoUpdateStatusCall(call: unknown[]): boolean {
+  return typeof call[0] === 'string' && (call[0] as string).includes(AUTO_UPDATE_STATUS_PATH)
+}
+
+describe('toggle-sensitive polling', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+
+    // Simulate a connected agent that supports auto-update
+    mockUseLocalAgent.mockReturnValue({
+      isConnected: true,
+      health: { install_method: 'dev', hasClaude: false },
+      refresh: vi.fn(),
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+
+    // Reset the mock back to default (disconnected agent) so other test suites
+    // that rely on the default behaviour are not affected
+    mockUseLocalAgent.mockReturnValue({
+      isConnected: false,
+      health: null,
+      refresh: vi.fn(),
+    })
+  })
+
+  it('fires an immediate fetchAutoUpdateStatus when autoUpdateEnabled is toggled on', async () => {
+    // Start with auto-update disabled
+    localStorage.setItem(UPDATE_STORAGE_KEYS.AUTO_UPDATE_ENABLED, 'false')
+    localStorage.setItem(UPDATE_STORAGE_KEYS.CHANNEL, 'developer')
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: (_k: string) => null },
+      json: async () => ({
+        enabled: true,
+        channel: 'developer',
+        hasUpdate: false,
+        currentSHA: 'abc1234',
+        latestSHA: 'abc1234',
+      }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = renderHook(() => useVersionCheck(), { wrapper })
+
+    // Flush any mount-time effects and their micro-tasks
+    await act(async () => {
+      await vi.runAllTimersAsync()
+    })
+
+    // Record the number of auto-update status calls made during mount
+    const callsBeforeToggle = mockFetch.mock.calls.filter(isAutoUpdateStatusCall).length
+
+    // Toggle auto-update ON — this should fire an immediate fetch
+    await act(async () => {
+      await result.current.setAutoUpdateEnabled(true)
+    })
+
+    // Flush the effect triggered by the state change
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    const callsAfterToggle = mockFetch.mock.calls.filter(isAutoUpdateStatusCall).length
+
+    // At least one new call should have been made immediately (not after 60s)
+    expect(callsAfterToggle).toBeGreaterThan(callsBeforeToggle)
   })
 })
