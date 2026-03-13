@@ -236,7 +236,7 @@ export function AlertBadge() {
     if (stats.critical > 0) return 'bg-red-500'
     if (stats.warning > 0) return 'bg-orange-500'
     if (stats.info > 0) return 'bg-blue-500'
-    return 'bg-gray-500'
+    return 'bg-gray-500 dark:bg-gray-400'
   }
 
   return (

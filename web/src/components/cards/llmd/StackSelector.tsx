@@ -16,7 +16,7 @@ const STATUS_COLORS = {
   healthy: 'bg-green-500',
   degraded: 'bg-yellow-500',
   unhealthy: 'bg-red-500',
-  unknown: 'bg-gray-500',
+  unknown: 'bg-gray-500 dark:bg-gray-400',
 }
 
 type SortField = 'name' | 'accelerators' | 'status' | 'replicas'

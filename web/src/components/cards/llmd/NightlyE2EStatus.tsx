@@ -93,7 +93,7 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
         : isFailed
           ? 'bg-red-400'
           : run.conclusion === 'cancelled'
-            ? 'bg-gray-500'
+            ? 'bg-gray-500 dark:bg-gray-400'
             : 'bg-yellow-400'
 
   const reasonLabel = isGPUFailure ? 'GPU unavailable' : ''
@@ -1037,7 +1037,7 @@ export function NightlyE2EStatus() {
           <span>{t('common:common.running').toLowerCase()}</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-gray-500" />
+          <div className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400" />
           <span>{t('cards:llmd.cancelled')}</span>
         </div>
         <span className="text-muted-foreground">|</span>

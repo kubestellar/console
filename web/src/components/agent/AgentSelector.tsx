@@ -208,7 +208,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                 )}
               >
                 <span className={cn(
-                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  'inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-200 transition-transform',
                   !isNoneSelected ? 'translate-x-6' : 'translate-x-1'
                 )} />
               </button>

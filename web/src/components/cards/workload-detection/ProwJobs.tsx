@@ -110,7 +110,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       periodic: 'bg-purple-500/20 text-purple-400',
       batch: 'bg-cyan-500/20 text-cyan-400',
     }
-    return colors[type] || 'bg-gray-500/20 text-muted-foreground'
+    return colors[type] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground'
   }
 
   if (isLoading) {
