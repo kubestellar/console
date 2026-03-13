@@ -19,6 +19,19 @@ const ALLOWED_HOSTS = new Set([
   "127.0.0.1",
 ]);
 
+function getAllowedCorsOrigin(origin: string): string {
+  if (!origin) return "https://console.kubestellar.io";
+  try {
+    const hostname = new URL(origin).hostname;
+    if (ALLOWED_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
+      return origin;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "https://console.kubestellar.io";
+}
+
 function isAllowedOrigin(req: Request): boolean {
   const origin = req.headers.get("origin") || "";
   const referer = req.headers.get("referer") || "";
@@ -34,13 +47,15 @@ function isAllowedOrigin(req: Request): boolean {
       /* ignore parse errors */
     }
   }
-  // Allow if neither header present (browsers always send one for fetch)
-  return !origin && !referer;
+  // Reject if neither header present — non-browser clients (curl, scripts) omit both
+  return false;
 }
 
 export default async (req: Request) => {
+  const origin = req.headers.get("origin") || "";
+  const corsOrigin = getAllowedCorsOrigin(origin);
   const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": corsOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };

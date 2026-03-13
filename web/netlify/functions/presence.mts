@@ -1,15 +1,38 @@
 import { getStore } from "@netlify/blobs";
 
+const ALLOWED_HOSTS = new Set([
+  "console.kubestellar.io",
+  "localhost",
+  "127.0.0.1",
+]);
+
+function getAllowedCorsOrigin(origin: string): string {
+  if (!origin) return "https://console.kubestellar.io";
+  try {
+    const hostname = new URL(origin).hostname;
+    if (ALLOWED_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
+      return origin;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "https://console.kubestellar.io";
+}
+
 const STORE_NAME = "presence";
 const SESSION_PREFIX = "session-";
 const SESSION_TTL_MS = 90_000; // 90 seconds — sessions expire if no heartbeat
+const MAX_SESSION_ID_LEN = 64;
+const SESSION_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 export default async (req: Request) => {
   const store = getStore(STORE_NAME);
 
-  // CORS headers for cross-origin requests (preview deploys)
+  // CORS headers — restrict to allowed origins (production + preview deploys)
+  const origin = req.headers.get("origin") || "";
+  const corsOrigin = getAllowedCorsOrigin(origin);
   const headers = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": corsOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Cache-Control": "no-cache, no-store",
@@ -27,7 +50,12 @@ export default async (req: Request) => {
     try {
       const body = await req.json();
       const sessionId = body.sessionId;
-      if (typeof sessionId === "string" && sessionId.length > 0) {
+      if (
+        typeof sessionId === "string" &&
+        sessionId.length > 0 &&
+        sessionId.length <= MAX_SESSION_ID_LEN &&
+        SESSION_ID_PATTERN.test(sessionId)
+      ) {
         await store.set(`${SESSION_PREFIX}${sessionId}`, String(now));
       }
     } catch {
