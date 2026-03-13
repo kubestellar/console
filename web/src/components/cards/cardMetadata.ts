@@ -206,6 +206,8 @@ export const CARD_TITLES: Record<string, string> = {
   provider_health: 'Provider Health',
   // CoreDNS
   coredns_status: 'CoreDNS',
+  // Strimzi Kafka operator
+  strimzi_status: 'Strimzi',
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Cross-Cluster Event Correlation',
@@ -344,6 +346,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   ml_jobs: 'Machine learning training and batch job status.',
   ml_notebooks: 'Jupyter notebook server status and resource usage.',
   provider_health: 'Health and status of AI and cloud infrastructure providers.',
+  strimzi_status: 'Strimzi Kafka cluster health, topic status, and consumer group lag.',
 
   // Games
   sudoku_game: 'Classic Sudoku puzzle game with multiple difficulty levels.',
