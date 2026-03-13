@@ -156,6 +156,17 @@ var nightlyWorkflows = []NightlyWorkflow{
 	{Repo: "llm-d/llm-d-benchmark", WorkflowFile: "ci-nightly-benchmark-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS", Model: "opt-125m", GPUType: "H100", GPUCount: 1},
 }
 
+// isAllowedRepo checks if a repo is in the allowlist derived from nightlyWorkflows.
+// SECURITY: Prevents arbitrary GitHub API calls via user-controlled repo parameter.
+func isAllowedRepo(repo string) bool {
+	for _, w := range nightlyWorkflows {
+		if w.Repo == repo {
+			return true
+		}
+	}
+	return false
+}
+
 // NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
 // It pre-warms the cache in the background so the first request returns instantly.
 func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
@@ -692,6 +703,13 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 	if repo == "" || runID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "repo and runId query params are required",
+		})
+	}
+
+	// SECURITY: Validate repo against allowlist derived from nightlyWorkflows
+	if !isAllowedRepo(repo) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "repo is not in the allowed list of monitored repositories",
 		})
 	}
 
