@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Settings, Hash, TrendingUp, CircleDot, BarChart3 } from 'lucide-react'
+import { Settings, Hash, TrendingUp, CircleDot, BarChart3, ArrowUpDown, Layers } from 'lucide-react'
 import type { StatDisplayMode } from './StatsBlockDefinitions'
 
 /** Gap between trigger button and popover in pixels */
@@ -18,12 +18,38 @@ function GaugeIcon({ className }: { className?: string }) {
   )
 }
 
+/** Horseshoe icon — U-shaped arc */
+function HorseshoeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M5 8a7 7 0 0 1 14 0v5" />
+      <path d="M5 8v5" />
+    </svg>
+  )
+}
+
+/** Heatmap icon — grid of squares */
+function HeatmapIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <rect x="3" y="3" width="7" height="7" rx="1" opacity="0.3" />
+      <rect x="14" y="3" width="7" height="7" rx="1" opacity="0.6" />
+      <rect x="3" y="14" width="7" height="7" rx="1" opacity="0.8" />
+      <rect x="14" y="14" width="7" height="7" rx="1" opacity="1" />
+    </svg>
+  )
+}
+
 const MODE_OPTIONS: { mode: StatDisplayMode; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { mode: 'numeric', icon: Hash, label: 'Number' },
   { mode: 'sparkline', icon: TrendingUp, label: 'Sparkline' },
   { mode: 'gauge', icon: GaugeIcon, label: 'Gauge' },
+  { mode: 'horseshoe', icon: HorseshoeIcon, label: 'Horseshoe' },
   { mode: 'ring', icon: CircleDot, label: 'Ring' },
   { mode: 'mini-bar', icon: BarChart3, label: 'Bar' },
+  { mode: 'trend', icon: ArrowUpDown, label: 'Trend' },
+  { mode: 'stacked-bar', icon: Layers, label: 'Stacked' },
+  { mode: 'heatmap', icon: HeatmapIcon, label: 'Heatmap' },
 ]
 
 interface StatBlockModePickerProps {

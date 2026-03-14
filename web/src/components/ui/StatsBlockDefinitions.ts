@@ -6,7 +6,16 @@
 /**
  * Display mode for a stat block visualization
  */
-export type StatDisplayMode = 'numeric' | 'sparkline' | 'gauge' | 'ring' | 'mini-bar'
+export type StatDisplayMode =
+  | 'numeric'
+  | 'sparkline'
+  | 'gauge'
+  | 'ring'
+  | 'mini-bar'
+  | 'trend'
+  | 'stacked-bar'
+  | 'heatmap'
+  | 'horseshoe'
 
 /**
  * Configuration for a single stat block
@@ -432,12 +441,26 @@ export const STAT_DISPLAY_MODE_DEFAULTS: Record<string, StatDisplayMode> = {
   'compute:cpu_util': 'ring',
   'compute:memory_util': 'ring',
 
-  // Data compliance — encryption score
-  'data-compliance:encryption_score': 'ring',
+  // Data compliance — horseshoe for scores
+  'data-compliance:encryption_score': 'horseshoe',
+  'data-compliance:gdpr_score': 'horseshoe',
 
-  // Clusters — trend over time
+  // Clusters — trend and heatmap
   'clusters:healthy': 'sparkline',
   'clusters:pods': 'sparkline',
+  'clusters:unhealthy': 'heatmap',
+  'clusters:unreachable': 'heatmap',
+
+  // Workloads — trend delta for issues
+  'workloads:critical': 'trend',
+  'workloads:warning': 'trend',
+
+  // Security — heatmap for severity
+  'security:critical': 'heatmap',
+  'security:high': 'heatmap',
+
+  // Alerts — trend for firing
+  'alerts:firing': 'trend',
 
   // Pods — trend over time
   'pods:total_pods': 'sparkline',

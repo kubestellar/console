@@ -95,10 +95,14 @@ function getAvailableModes(blockId: string, data: StatBlockValue): StatDisplayMo
     : parseFloat(String(data.value))
 
   if (!isNaN(numericValue)) {
-    modes.push('sparkline', 'mini-bar')
+    modes.push('sparkline', 'mini-bar', 'trend', 'heatmap')
     if (data.max !== undefined || PERCENTAGE_STAT_IDS.has(blockId) || String(data.value).includes('%')) {
-      modes.push('gauge', 'ring')
+      modes.push('gauge', 'horseshoe', 'ring')
     }
+  }
+  // Stacked bar available for all numeric stats (renders as single segment if no breakdown)
+  if (!isNaN(numericValue)) {
+    modes.push('stacked-bar')
   }
   return modes
 }
@@ -111,6 +115,26 @@ const RING_SIZE_PX = 64
 
 /** Stroke width of the circular ring indicator in pixels */
 const RING_STROKE_PX = 6
+
+/** Size of the horseshoe gauge in pixels */
+const HORSESHOE_SIZE_PX = 64
+
+/** Stroke width of the horseshoe gauge */
+const HORSESHOE_STROKE_PX = 6
+
+/** Angle span of the horseshoe arc in degrees (270 = 3/4 circle) */
+const HORSESHOE_ARC_DEG = 270
+
+/** Heatmap intensity thresholds — maps value ranges to opacity */
+const HEATMAP_THRESHOLDS = [
+  { max: 0, opacity: 0 },
+  { max: 1, opacity: 0.15 },
+  { max: 5, opacity: 0.3 },
+  { max: 10, opacity: 0.5 },
+  { max: 25, opacity: 0.7 },
+  { max: 50, opacity: 0.85 },
+  { max: Infinity, opacity: 1.0 },
+]
 
 /**
  * Value and metadata for a single stat block
@@ -128,6 +152,53 @@ export interface StatBlockValue {
   thresholds?: { warning: number; critical: number }
   /** Hint to the display mode picker about what modes are appropriate */
   modeHints?: StatDisplayMode[]
+}
+
+/** Inline horseshoe gauge — a 270° arc with value text centered */
+function HorseshoeGauge({ value, max = 100, size, strokeWidth, color }: {
+  value: number; max?: number; size: number; strokeWidth: number; color: string
+}) {
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+  const arcFraction = HORSESHOE_ARC_DEG / 360
+  const arcLength = circumference * arcFraction
+  const offset = arcLength - (percentage / 100) * arcLength
+  /** Rotation to center the gap at the bottom: -(90 + half of gap angle) */
+  const gapDeg = 360 - HORSESHOE_ARC_DEG
+  const rotationDeg = 90 + gapDeg / 2
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: `rotate(${rotationDeg}deg)` }}>
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="currentColor" strokeWidth={strokeWidth}
+          strokeDasharray={`${arcLength} ${circumference}`}
+          className="text-secondary"
+        />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${arcLength} ${circumference}`}
+          strokeDashoffset={offset}
+          style={{ transition: 'stroke-dashoffset 0.5s ease', filter: `drop-shadow(0 0 6px ${color}40)` }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-sm font-bold text-foreground">{Math.round(percentage)}%</span>
+      </div>
+    </div>
+  )
+}
+
+/** Get heatmap opacity for a value */
+function getHeatmapOpacity(value: number): number {
+  for (const t of HEATMAP_THRESHOLDS) {
+    if (value <= t.max) return t.opacity
+  }
+  return 1.0
 }
 
 interface StatBlockProps {
@@ -238,6 +309,73 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
             />
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+        </>
+      ) : effectiveMode === 'horseshoe' && !isNaN(numericValue) ? (
+        <>
+          <div className="flex justify-center">
+            <HorseshoeGauge
+              value={numericValue}
+              max={maxValue}
+              size={HORSESHOE_SIZE_PX}
+              strokeWidth={HORSESHOE_STROKE_PX}
+              color={hexColor}
+            />
+          </div>
+          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{data.sublabel}</div>}
+        </>
+      ) : effectiveMode === 'trend' && !isNaN(numericValue) ? (
+        (() => {
+          const prevValue = history && history.length >= 2 ? history[history.length - 2] : undefined
+          const delta = prevValue !== undefined ? numericValue - prevValue : undefined
+          const deltaPercent = prevValue !== undefined && prevValue !== 0
+            ? Math.round(((numericValue - prevValue) / prevValue) * 100)
+            : undefined
+          return (
+            <>
+              <div className="flex items-baseline gap-2">
+                <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+                  {displayValue}
+                </div>
+                {delta !== undefined && (
+                  <span className={`text-sm font-medium ${delta > 0 ? 'text-red-400' : delta < 0 ? 'text-green-400' : 'text-muted-foreground'}`}>
+                    {delta > 0 ? '▲' : delta < 0 ? '▼' : '—'}
+                    {deltaPercent !== undefined && ` ${Math.abs(deltaPercent)}%`}
+                  </span>
+                )}
+              </div>
+              {delta === undefined && !isLoading && hasData && (
+                <div className="text-2xs text-muted-foreground/50 mt-0.5">Collecting…</div>
+              )}
+              {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+            </>
+          )
+        })()
+      ) : effectiveMode === 'stacked-bar' && !isNaN(numericValue) ? (
+        <>
+          <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+            {displayValue}
+          </div>
+          <div className="mt-1.5 w-full bg-secondary rounded-full overflow-hidden flex" style={{ height: MINI_BAR_HEIGHT_PX }}>
+            <div
+              className="h-full transition-all duration-500"
+              style={{
+                width: `${Math.min((numericValue / maxValue) * 100, 100)}%`,
+                backgroundColor: hexColor,
+              }}
+            />
+          </div>
+          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+        </>
+      ) : effectiveMode === 'heatmap' && !isNaN(numericValue) ? (
+        <>
+          <div
+            className="absolute inset-0 rounded-lg transition-colors duration-500"
+            style={{ backgroundColor: hexColor, opacity: getHeatmapOpacity(numericValue) }}
+          />
+          <div className="relative">
+            <div className={`text-3xl font-bold ${numericValue > 0 ? 'text-white drop-shadow-sm' : valueColor}`}>{displayValue}</div>
+            {data.sublabel && <div className={`text-xs ${numericValue > 0 ? 'text-white/70' : 'text-muted-foreground'}`}>{data.sublabel}</div>}
+          </div>
         </>
       ) : (
         /* Default numeric mode */
