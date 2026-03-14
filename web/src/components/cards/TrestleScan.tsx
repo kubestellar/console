@@ -26,6 +26,8 @@ interface CardConfig {
 const SCORE_GOOD_THRESHOLD = 80
 /** Score threshold for "warning" compliance posture */
 const SCORE_WARNING_THRESHOLD = 60
+/** Minimum content height to prevent layout shift during progressive loading (pixels) */
+const MIN_CONTENT_HEIGHT_PX = 240
 
 /** Troubleshoot mission for Trestle installed but no data */
 const TROUBLESHOOT_MISSION = {
@@ -143,7 +145,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
   // Only show full-screen spinner on very first load with zero data
   if (isLoading && Object.keys(statuses).length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-2">
+      <div className="flex flex-col items-center justify-center h-full gap-2" style={{ minHeight: MIN_CONTENT_HEIGHT_PX }}>
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         {totalClusters > 0 && (
           <span className="text-xs text-muted-foreground">
@@ -225,7 +227,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       : 'Critical'
 
   return (
-    <div className="space-y-3 h-full flex flex-col">
+    <div className="space-y-3 h-full flex flex-col" style={{ minHeight: MIN_CONTENT_HEIGHT_PX }}>
       {/* Refresh / streaming progress indicator */}
       {isRefreshing && lastRefresh && (
         <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} />

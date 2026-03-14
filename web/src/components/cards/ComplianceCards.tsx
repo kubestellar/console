@@ -140,10 +140,13 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
 export function TrivyScan({ config: _config }: CardConfig) {
   const { t } = useTranslation()
-  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, refetch } = useTrivy()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, clustersChecked, totalClusters, refetch } = useTrivy()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
+
+  /** Whether all clusters have been checked */
+  const allChecked = clustersChecked >= totalClusters && totalClusters > 0
 
   // Filter by selected clusters
   const filtered = useMemo(() => {
@@ -199,8 +202,30 @@ Please proceed step by step.`,
     })
   }
 
+  // Only show full-screen spinner on very first load with zero data
+  if (isLoading && Object.keys(statuses).length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        {totalClusters > 0 && (
+          <span className="text-xs text-muted-foreground">
+            Checking clusters... {clustersChecked}/{totalClusters}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
+      {/* Progressive streaming indicator */}
+      {!allChecked && totalClusters > 0 && !isRefreshing && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Checking clusters... {clustersChecked}/{totalClusters}</span>
+        </div>
+      )}
+
       {/* Install prompt when not detected (only after scanning completes) */}
       {!installed && !isLoading && !isRefreshing && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
@@ -315,10 +340,13 @@ Please proceed step by step.`,
 // ── Kubescape Security Posture ──────────────────────────────────────────
 
 export function KubescapeScan({ config: _config }: CardConfig) {
-  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, refetch } = useKubescape()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, clustersChecked, totalClusters, refetch } = useKubescape()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
+
+  /** Whether all clusters have been checked */
+  const allChecked = clustersChecked >= totalClusters && totalClusters > 0
 
   // Filter by selected clusters
   const filtered = useMemo(() => {
@@ -378,8 +406,30 @@ Please proceed step by step.`,
 
   const score = filtered.overallScore
 
+  // Only show full-screen spinner on very first load with zero data
+  if (isLoading && Object.keys(statuses).length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        {totalClusters > 0 && (
+          <span className="text-xs text-muted-foreground">
+            Checking clusters... {clustersChecked}/{totalClusters}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
+      {/* Progressive streaming indicator */}
+      {!allChecked && totalClusters > 0 && !isRefreshing && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Checking clusters... {clustersChecked}/{totalClusters}</span>
+        </div>
+      )}
+
       {/* Install prompt when not detected (only after scanning completes) */}
       {!installed && !isLoading && !isRefreshing && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
@@ -544,11 +594,14 @@ Please proceed step by step.`,
 // ── Policy Violations Aggregated ────────────────────────────────────────
 
 export function PolicyViolations({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, refetch: kyvernoRefetch } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal, refetch: kyvernoRefetch } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
   const [selectedViolation, setSelectedViolation] = useState<{ policy: string; count: number; tool: string; clusters: string[] } | null>(null)
+
+  /** Whether all clusters have been checked */
+  const kyvernoAllChecked = kyvernoChecked >= kyvernoTotal && kyvernoTotal > 0
 
   // Aggregate violations from Kyverno reports. Per-policy violation counts are
   // back-populated from PolicyReport results in the hook, but we also use
@@ -614,6 +667,12 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     })
   }
 
+  // Clusters contributing Kyverno data (must be before early returns to satisfy hooks rules)
+  const participatingClusters = useMemo(() =>
+    Object.values(kyvernoStatuses).filter(s => s.installed).map(s => s.cluster),
+    [kyvernoStatuses],
+  )
+
   const hasData = violations.length > 0 || kyvernoDemoData
   useCardLoadingState({ isLoading: kyvernoLoading, hasAnyData: hasData, isDemoData: kyvernoDemoData })
 
@@ -625,7 +684,11 @@ export function PolicyViolations({ config: _config }: CardConfig) {
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
             <Loader2 className="w-8 h-8 mb-2 opacity-50 animate-spin" />
             <p className="text-sm">Scanning for policy violations...</p>
-            <p className="text-xs mt-1">Checking Kyverno reports across clusters</p>
+            {kyvernoTotal > 0 ? (
+              <p className="text-xs mt-1">Checking clusters... {kyvernoChecked}/{kyvernoTotal}</p>
+            ) : (
+              <p className="text-xs mt-1">Checking Kyverno reports across clusters</p>
+            )}
           </div>
         </div>
       )
@@ -656,14 +719,16 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     )
   }
 
-  // Clusters contributing Kyverno data
-  const participatingClusters = useMemo(() =>
-    Object.values(kyvernoStatuses).filter(s => s.installed).map(s => s.cluster),
-    [kyvernoStatuses],
-  )
-
   return (
     <div className="space-y-3">
+      {/* Progressive streaming indicator */}
+      {!kyvernoAllChecked && kyvernoTotal > 0 && !kyvernoRefreshing && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Checking clusters... {kyvernoChecked}/{kyvernoTotal}</span>
+        </div>
+      )}
+
       {/* Participating clusters */}
       {participatingClusters.length > 0 && (
         <div className="flex flex-wrap gap-1">
@@ -738,12 +803,17 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 // ── Compliance Score Gauge ──────────────────────────────────────────────
 
 export function ComplianceScore({ config: _config }: CardConfig) {
-  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData } = useKubescape()
-  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData } = useKyverno()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
   const [showBreakdown, setShowBreakdown] = useState(false)
 
   const isLoading = ksLoading || kyLoading
+
+  /** Combined progress: use the slower of the two tools' cluster checks */
+  const totalChecking = Math.max(ksTotal, kyTotal)
+  const minChecked = Math.min(ksChecked, kyChecked)
+  const allChecked = minChecked >= totalChecking && totalChecking > 0
 
   // Compute composite score from available tools
   const { score, breakdown, usingFallback } = useMemo(() => {
@@ -834,6 +904,14 @@ export function ComplianceScore({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
+      {/* Progressive streaming indicator */}
+      {!allChecked && totalChecking > 0 && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Checking clusters... {minChecked}/{totalChecking}</span>
+        </div>
+      )}
+
       {/* Participating clusters */}
       {scoreClusters.length > 0 && !isDemoData && (
         <div className="flex flex-wrap gap-1">

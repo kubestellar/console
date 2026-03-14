@@ -1,9 +1,11 @@
 /**
  * Hook to fetch Trivy Operator vulnerability data from connected clusters.
  *
- * Follows the useCertManager.ts pattern:
- * - Phase 1: CRD existence check per cluster (5s timeout)
+ * Uses parallel cluster checks with progressive streaming:
+ * - Phase 1: CRD existence check per cluster (3s timeout)
  * - Phase 2: Fetch VulnerabilityReports from installed clusters (15s timeout)
+ * - All clusters checked in parallel via Promise.allSettled
+ * - Results stream to the card as each cluster completes
  * - localStorage cache with auto-refresh
  * - Demo fallback when no clusters are connected
  */
@@ -20,8 +22,8 @@ const REFRESH_INTERVAL_MS = 120_000
 /** Cache TTL: 2 minutes — matches refresh interval */
 const CACHE_TTL_MS = 120_000
 
-/** Timeout for CRD existence check */
-const CRD_CHECK_TIMEOUT_MS = 5_000
+/** Timeout for CRD existence check (fast — missing resources fail instantly) */
+const CRD_CHECK_TIMEOUT_MS = 3_000
 
 /** Timeout for data fetch */
 const DATA_FETCH_TIMEOUT_MS = 15_000
@@ -136,6 +138,93 @@ interface VulnerabilityReportResource {
   }
 }
 
+// ── Single-cluster fetch (used in parallel) ──────────────────────────────
+
+async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> {
+  try {
+    // Phase 1: CRD check
+    const crdCheck = await kubectlProxy.exec(
+      ['get', 'crd', 'vulnerabilityreports.aquasecurity.github.io', '-o', 'name'],
+      { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
+    )
+
+    if (crdCheck.exitCode !== 0) {
+      return {
+        cluster, installed: false, loading: false,
+        vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
+        totalReports: 0, scannedImages: 0, images: [],
+      }
+    }
+
+    // Phase 2: Fetch VulnerabilityReports
+    const result = await kubectlProxy.exec(
+      ['get', 'vulnerabilityreports', '-A', '-o', 'json'],
+      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+    )
+
+    const summary: TrivyVulnSummary = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
+    let totalReports = 0
+    const imageSet = new Set<string>()
+    const imageReports: TrivyImageReport[] = []
+
+    if (result.exitCode === 0 && result.output) {
+      const data = JSON.parse(result.output)
+      const items = (data.items || []) as VulnerabilityReportResource[]
+      totalReports = items.length
+
+      for (const item of (items || [])) {
+        const repo = item.report?.artifact?.repository || ''
+        const tag = item.report?.artifact?.tag || 'latest'
+        const ns = item.metadata?.namespace || 'default'
+        if (repo) imageSet.add(repo)
+
+        const crit = item.report?.summary?.criticalCount || 0
+        const high = item.report?.summary?.highCount || 0
+        const med = item.report?.summary?.mediumCount || 0
+        const low = item.report?.summary?.lowCount || 0
+
+        if (item.report?.summary) {
+          summary.critical += crit
+          summary.high += high
+          summary.medium += med
+          summary.low += low
+          summary.unknown += item.report.summary.unknownCount || 0
+        }
+
+        // Collect per-image data for drill-down
+        if (repo) {
+          imageReports.push({ image: repo, tag, namespace: ns, critical: crit, high, medium: med, low })
+        }
+      }
+    }
+
+    // Sort by severity (critical+high desc) and limit to top N
+    imageReports.sort((a, b) => (b.critical + b.high) - (a.critical + a.high))
+    const topImages = imageReports.slice(0, MAX_IMAGES_PER_CLUSTER)
+
+    return {
+      cluster,
+      installed: true,
+      loading: false,
+      vulnerabilities: summary,
+      totalReports,
+      scannedImages: imageSet.size,
+      images: topImages,
+    }
+  } catch (err) {
+    const isDemoError = err instanceof Error && err.message.includes('demo mode')
+    if (!isDemoError) {
+      console.error(`[useTrivy] Error fetching from ${cluster}:`, err)
+    }
+    return {
+      cluster, installed: false, loading: false,
+      error: err instanceof Error ? err.message : 'Connection failed',
+      vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
+      totalReports: 0, scannedImages: 0, images: [],
+    }
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────
 
 export function useTrivy() {
@@ -151,6 +240,8 @@ export function useTrivy() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(
     cachedData.current?.timestamp ? new Date(cachedData.current.timestamp) : null
   )
+  /** Number of clusters that have completed checking (for progressive UI) */
+  const [clustersChecked, setClustersChecked] = useState(0)
   const initialLoadDone = useRef(!!cachedData.current)
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
@@ -175,108 +266,29 @@ export function useTrivy() {
       setIsRefreshing(true)
       if (!initialLoadDone.current) setIsLoading(true)
     }
+    setClustersChecked(0)
 
-    const newStatuses: Record<string, TrivyClusterStatus> = {}
+    // Check all clusters in parallel, stream results progressively
+    const allStatuses: Record<string, TrivyClusterStatus> = {}
 
-    for (const cluster of (clusters || [])) {
-      try {
-        // Phase 1: CRD check
-        const crdCheck = await kubectlProxy.exec(
-          ['get', 'crd', 'vulnerabilityreports.aquasecurity.github.io', '-o', 'name'],
-          { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
-        )
-
-        if (crdCheck.exitCode !== 0) {
-          newStatuses[cluster] = {
-            cluster, installed: false, loading: false,
-            vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
-            totalReports: 0, scannedImages: 0, images: [],
-          }
-          // Progressive update — show not-installed immediately
-          setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
-          continue
+    const promises = (clusters || []).map(cluster =>
+      fetchSingleCluster(cluster).then(status => {
+        allStatuses[cluster] = status
+        // Stream each result immediately — card re-renders progressively
+        setStatuses(prev => ({ ...prev, [cluster]: status }))
+        setClustersChecked(prev => prev + 1)
+        // Clear loading state once first cluster with data arrives
+        if (!initialLoadDone.current && status.installed) {
+          initialLoadDone.current = true
+          setIsLoading(false)
         }
+      })
+    )
 
-        // Phase 2: Fetch VulnerabilityReports
-        const result = await kubectlProxy.exec(
-          ['get', 'vulnerabilityreports', '-A', '-o', 'json'],
-          { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
-        )
-
-        const summary: TrivyVulnSummary = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
-        let totalReports = 0
-        const imageSet = new Set<string>()
-        const imageReports: TrivyImageReport[] = []
-
-        if (result.exitCode === 0 && result.output) {
-          const data = JSON.parse(result.output)
-          const items = (data.items || []) as VulnerabilityReportResource[]
-          totalReports = items.length
-
-          for (const item of (items || [])) {
-            const repo = item.report?.artifact?.repository || ''
-            const tag = item.report?.artifact?.tag || 'latest'
-            const ns = item.metadata?.namespace || 'default'
-            if (repo) imageSet.add(repo)
-
-            const crit = item.report?.summary?.criticalCount || 0
-            const high = item.report?.summary?.highCount || 0
-            const med = item.report?.summary?.mediumCount || 0
-            const low = item.report?.summary?.lowCount || 0
-
-            if (item.report?.summary) {
-              summary.critical += crit
-              summary.high += high
-              summary.medium += med
-              summary.low += low
-              summary.unknown += item.report.summary.unknownCount || 0
-            }
-
-            // Collect per-image data for drill-down
-            if (repo) {
-              imageReports.push({ image: repo, tag, namespace: ns, critical: crit, high, medium: med, low })
-            }
-          }
-        }
-
-        // Sort by severity (critical+high desc) and limit to top N
-        imageReports.sort((a, b) => (b.critical + b.high) - (a.critical + a.high))
-        const topImages = imageReports.slice(0, MAX_IMAGES_PER_CLUSTER)
-
-        newStatuses[cluster] = {
-          cluster,
-          installed: true,
-          loading: false,
-          vulnerabilities: summary,
-          totalReports,
-          scannedImages: imageSet.size,
-          images: topImages,
-        }
-      } catch (err) {
-        const isDemoError = err instanceof Error && err.message.includes('demo mode')
-        if (!isDemoError) {
-          console.error(`[useTrivy] Error fetching from ${cluster}:`, err)
-        }
-        newStatuses[cluster] = {
-          cluster, installed: false, loading: false,
-          error: err instanceof Error ? err.message : 'Connection failed',
-          vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
-          totalReports: 0, scannedImages: 0, images: [],
-        }
-      }
-
-      // Progressive update: stream each cluster's data to the UI as it arrives
-      setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
-
-      // Clear loading state once first cluster with data arrives
-      if (!initialLoadDone.current && newStatuses[cluster].installed) {
-        initialLoadDone.current = true
-        setIsLoading(false)
-      }
-    }
+    await Promise.allSettled(promises)
 
     // Final: save complete cache and clear refresh state
-    saveToCache(newStatuses)
+    saveToCache(allStatuses)
     setLastRefresh(new Date())
     initialLoadDone.current = true
     setIsLoading(false)
@@ -297,6 +309,7 @@ export function useTrivy() {
         demoStatuses[name] = getDemoStatus(name)
       }
       setStatuses(demoStatuses)
+      setClustersChecked(demoNames.length)
       setIsLoading(false)
       setLastRefresh(new Date())
       initialLoadDone.current = true
@@ -346,6 +359,10 @@ export function useTrivy() {
     lastRefresh,
     installed,
     isDemoData,
+    /** Number of clusters checked so far (for progressive UI) */
+    clustersChecked,
+    /** Total number of clusters being checked */
+    totalClusters: clusters.length,
     refetch,
   }
 }

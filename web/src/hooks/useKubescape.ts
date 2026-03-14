@@ -1,9 +1,11 @@
 /**
  * Hook to fetch Kubescape security posture data from connected clusters.
  *
- * Follows the useCertManager.ts pattern:
- * - Phase 1: CRD existence check per cluster (5s timeout)
+ * Uses parallel cluster checks with progressive streaming:
+ * - Phase 1: CRD/API existence check per cluster (3s timeout)
  * - Phase 2: Fetch ConfigurationScanSummaries from installed clusters (15s timeout)
+ * - All clusters checked in parallel via Promise.allSettled
+ * - Results stream to the card as each cluster completes
  * - localStorage cache with auto-refresh
  * - Demo fallback when no clusters are connected
  */
@@ -20,8 +22,8 @@ const REFRESH_INTERVAL_MS = 120_000
 /** Cache TTL: 2 minutes — matches refresh interval */
 const CACHE_TTL_MS = 120_000
 
-/** Timeout for CRD existence check */
-const CRD_CHECK_TIMEOUT_MS = 5_000
+/** Timeout for CRD/API existence check (fast — missing resources fail instantly) */
+const CRD_CHECK_TIMEOUT_MS = 3_000
 
 /** Timeout for data fetch */
 const DATA_FETCH_TIMEOUT_MS = 15_000
@@ -140,6 +142,158 @@ interface WorkloadConfigScanResource {
   }
 }
 
+// ── Single-cluster fetch (used in parallel) ──────────────────────────────
+
+function emptyStatus(cluster: string, installed: boolean, error?: string): KubescapeClusterStatus {
+  return {
+    cluster, installed, loading: false, error,
+    overallScore: 0, frameworks: [], controls: [],
+    totalControls: 0, passedControls: 0, failedControls: 0,
+  }
+}
+
+async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStatus> {
+  try {
+    // Phase 1: API resource check — Kubescape uses workloadconfigurationscansummaries
+    // Note: Kubescape Operator serves these via API aggregation (storage pod),
+    // not as standard CRDs, so we check API availability instead of CRD existence.
+    const apiCheck = await kubectlProxy.exec(
+      ['api-resources', '--api-group=spdx.softwarecomposition.kubescape.io', '-o', 'name'],
+      { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
+    )
+
+    const hasKubescapeApi = apiCheck.exitCode === 0 &&
+      (apiCheck.output || '').includes('workloadconfigurationscansummaries')
+
+    if (!hasKubescapeApi) {
+      // Fallback: try traditional CRD check (some installations use standard CRDs)
+      const crdCheck = await kubectlProxy.exec(
+        ['get', 'crd', 'workloadconfigurationscansummaries.spdx.softwarecomposition.kubescape.io', '-o', 'name'],
+        { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
+      )
+
+      if (crdCheck.exitCode !== 0) {
+        return emptyStatus(cluster, false)
+      }
+    }
+
+    // Phase 2: Fetch workload configuration scan summaries
+    let totalControls = 0
+    let passedControls = 0
+    let failedControls = 0
+
+    const scanResult = await kubectlProxy.exec(
+      ['get', 'workloadconfigurationscansummaries', '-A', '-o', 'json'],
+      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+    )
+
+    if (scanResult.exitCode === 0 && scanResult.output) {
+      const data = JSON.parse(scanResult.output)
+      const items = (data.items || []) as ConfigScanSummaryResource[]
+
+      for (const item of (items || [])) {
+        const sevs = item.spec?.severities || {}
+        const itemFails = (sevs.critical || 0) + (sevs.high || 0) + (sevs.medium || 0) + (sevs.low || 0)
+        failedControls += itemFails
+        // Each workload summary represents scanned controls
+        totalControls += itemFails + 1 // at least 1 passed per workload
+        passedControls += 1
+      }
+    }
+
+    // Try to fetch detailed control scan data for framework breakdown
+    const frameworks: KubescapeFrameworkScore[] = []
+    const controlResults = new Map<string, { name: string; passed: number; failed: number }>()
+    const detailResult = await kubectlProxy.exec(
+      ['get', 'workloadconfigurationscans', '-A', '-o', 'json', '--limit=50'],
+      { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+    )
+
+    if (detailResult.exitCode === 0 && detailResult.output) {
+      const data = JSON.parse(detailResult.output)
+      const items = (data.items || []) as WorkloadConfigScanResource[]
+
+      // Aggregate control results with names
+      for (const item of (items || [])) {
+        for (const [controlId, control] of Object.entries(item.spec?.controls || {})) {
+          if (!controlResults.has(controlId)) {
+            controlResults.set(controlId, { name: control.name || controlId, passed: 0, failed: 0 })
+          }
+          const entry = controlResults.get(controlId)!
+          // Update name if we find a non-empty one
+          if (control.name && entry.name === controlId) {
+            entry.name = control.name
+          }
+          if (control.status?.status === 'passed') {
+            entry.passed++
+          } else {
+            entry.failed++
+          }
+        }
+      }
+
+      // Use total controls for overall score
+      if (controlResults.size > 0) {
+        totalControls = controlResults.size
+        passedControls = 0
+        failedControls = 0
+        for (const result of controlResults.values()) {
+          if (result.passed > result.failed) {
+            passedControls++
+          } else {
+            failedControls++
+          }
+        }
+      }
+    }
+
+    const overallScore = totalControls > 0
+      ? Math.round((passedControls / totalControls) * 100)
+      : 0
+
+    // Build framework scores if we don't have detailed data
+    if (frameworks.length === 0 && totalControls > 0) {
+      // Derive approximate framework scores from overall
+      frameworks.push(
+        { name: 'NSA-CISA', score: Math.min(100, overallScore + 4), passCount: passedControls, failCount: failedControls },
+        { name: 'MITRE ATT&CK', score: Math.max(0, overallScore - 3), passCount: passedControls, failCount: failedControls },
+        { name: 'CIS Benchmark', score: Math.min(100, overallScore + 1), passCount: passedControls, failCount: failedControls },
+      )
+    }
+
+    // Build per-control detail array from aggregated results
+    const controls: KubescapeControl[] = []
+    if (detailResult.exitCode === 0 && controlResults.size > 0) {
+      for (const [id, result] of controlResults.entries()) {
+        controls.push({ id, name: result.name, passed: result.passed, failed: result.failed })
+      }
+      // Sort failed-first for drill-down priority
+      controls.sort((a, b) => b.failed - a.failed)
+    }
+
+    return {
+      cluster,
+      installed: true,
+      loading: false,
+      overallScore,
+      frameworks,
+      totalControls,
+      passedControls,
+      failedControls,
+      controls,
+    }
+  } catch (err) {
+    const isDemoError = err instanceof Error && err.message.includes('demo mode')
+    if (!isDemoError) {
+      console.error(`[useKubescape] Error fetching from ${cluster}:`, err)
+    }
+    return emptyStatus(
+      cluster, false,
+      err instanceof Error ? err.message : 'Connection failed'
+    )
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────
 
 export function useKubescape() {
@@ -155,6 +309,8 @@ export function useKubescape() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(
     cachedData.current?.timestamp ? new Date(cachedData.current.timestamp) : null
   )
+  /** Number of clusters that have completed checking (for progressive UI) */
+  const [clustersChecked, setClustersChecked] = useState(0)
   const initialLoadDone = useRef(!!cachedData.current)
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
@@ -179,171 +335,29 @@ export function useKubescape() {
       setIsRefreshing(true)
       if (!initialLoadDone.current) setIsLoading(true)
     }
+    setClustersChecked(0)
 
-    const newStatuses: Record<string, KubescapeClusterStatus> = {}
+    // Check all clusters in parallel, stream results progressively
+    const allStatuses: Record<string, KubescapeClusterStatus> = {}
 
-    for (const cluster of (clusters || [])) {
-      try {
-        // Phase 1: API resource check — Kubescape uses workloadconfigurationscansummaries
-        // Note: Kubescape Operator serves these via API aggregation (storage pod),
-        // not as standard CRDs, so we check API availability instead of CRD existence.
-        const apiCheck = await kubectlProxy.exec(
-          ['api-resources', '--api-group=spdx.softwarecomposition.kubescape.io', '-o', 'name'],
-          { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
-        )
-
-        const hasKubescapeApi = apiCheck.exitCode === 0 &&
-          (apiCheck.output || '').includes('workloadconfigurationscansummaries')
-
-        if (!hasKubescapeApi) {
-          // Fallback: try traditional CRD check (some installations use standard CRDs)
-          const crdCheck = await kubectlProxy.exec(
-            ['get', 'crd', 'workloadconfigurationscansummaries.spdx.softwarecomposition.kubescape.io', '-o', 'name'],
-            { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
-          )
-
-          if (crdCheck.exitCode !== 0) {
-            newStatuses[cluster] = {
-              cluster, installed: false, loading: false,
-              overallScore: 0, frameworks: [], controls: [],
-              totalControls: 0, passedControls: 0, failedControls: 0,
-            }
-            // Progressive update — show not-installed immediately
-            setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
-            continue
-          }
+    const promises = (clusters || []).map(cluster =>
+      fetchSingleCluster(cluster).then(status => {
+        allStatuses[cluster] = status
+        // Stream each result immediately — card re-renders progressively
+        setStatuses(prev => ({ ...prev, [cluster]: status }))
+        setClustersChecked(prev => prev + 1)
+        // Clear loading state once first cluster with data arrives
+        if (!initialLoadDone.current && status.installed) {
+          initialLoadDone.current = true
+          setIsLoading(false)
         }
+      })
+    )
 
-        // Phase 2: Fetch workload configuration scan summaries
-        let totalControls = 0
-        let passedControls = 0
-        let failedControls = 0
-
-        const scanResult = await kubectlProxy.exec(
-          ['get', 'workloadconfigurationscansummaries', '-A', '-o', 'json'],
-          { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
-        )
-
-        if (scanResult.exitCode === 0 && scanResult.output) {
-          const data = JSON.parse(scanResult.output)
-          const items = (data.items || []) as ConfigScanSummaryResource[]
-
-          for (const item of (items || [])) {
-            const sevs = item.spec?.severities || {}
-            const itemFails = (sevs.critical || 0) + (sevs.high || 0) + (sevs.medium || 0) + (sevs.low || 0)
-            failedControls += itemFails
-            // Each workload summary represents scanned controls
-            totalControls += itemFails + 1 // at least 1 passed per workload
-            passedControls += 1
-          }
-        }
-
-        // Try to fetch detailed control scan data for framework breakdown
-        const frameworks: KubescapeFrameworkScore[] = []
-        const controlResults = new Map<string, { name: string; passed: number; failed: number }>()
-        const detailResult = await kubectlProxy.exec(
-          ['get', 'workloadconfigurationscans', '-A', '-o', 'json', '--limit=50'],
-          { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
-        )
-
-        if (detailResult.exitCode === 0 && detailResult.output) {
-          const data = JSON.parse(detailResult.output)
-          const items = (data.items || []) as WorkloadConfigScanResource[]
-
-          // Aggregate control results with names
-          for (const item of (items || [])) {
-            for (const [controlId, control] of Object.entries(item.spec?.controls || {})) {
-              if (!controlResults.has(controlId)) {
-                controlResults.set(controlId, { name: control.name || controlId, passed: 0, failed: 0 })
-              }
-              const entry = controlResults.get(controlId)!
-              // Update name if we find a non-empty one
-              if (control.name && entry.name === controlId) {
-                entry.name = control.name
-              }
-              if (control.status?.status === 'passed') {
-                entry.passed++
-              } else {
-                entry.failed++
-              }
-            }
-          }
-
-          // Use total controls for overall score
-          if (controlResults.size > 0) {
-            totalControls = controlResults.size
-            passedControls = 0
-            failedControls = 0
-            for (const result of controlResults.values()) {
-              if (result.passed > result.failed) {
-                passedControls++
-              } else {
-                failedControls++
-              }
-            }
-          }
-        }
-
-        const overallScore = totalControls > 0
-          ? Math.round((passedControls / totalControls) * 100)
-          : 0
-
-        // Build framework scores if we don't have detailed data
-        if (frameworks.length === 0 && totalControls > 0) {
-          // Derive approximate framework scores from overall
-          frameworks.push(
-            { name: 'NSA-CISA', score: Math.min(100, overallScore + 4), passCount: passedControls, failCount: failedControls },
-            { name: 'MITRE ATT&CK', score: Math.max(0, overallScore - 3), passCount: passedControls, failCount: failedControls },
-            { name: 'CIS Benchmark', score: Math.min(100, overallScore + 1), passCount: passedControls, failCount: failedControls },
-          )
-        }
-
-        // Build per-control detail array from aggregated results
-        const controls: KubescapeControl[] = []
-        if (detailResult.exitCode === 0 && controlResults.size > 0) {
-          for (const [id, result] of controlResults.entries()) {
-            controls.push({ id, name: result.name, passed: result.passed, failed: result.failed })
-          }
-          // Sort failed-first for drill-down priority
-          controls.sort((a, b) => b.failed - a.failed)
-        }
-
-        newStatuses[cluster] = {
-          cluster,
-          installed: true,
-          loading: false,
-          overallScore,
-          frameworks,
-          totalControls,
-          passedControls,
-          failedControls,
-          controls,
-        }
-      } catch (err) {
-        const isDemoError = err instanceof Error && err.message.includes('demo mode')
-        if (!isDemoError) {
-          console.error(`[useKubescape] Error fetching from ${cluster}:`, err)
-        }
-        newStatuses[cluster] = {
-          cluster, installed: false, loading: false,
-          error: err instanceof Error ? err.message : 'Connection failed',
-          overallScore: 0, frameworks: [], controls: [],
-          totalControls: 0, passedControls: 0, failedControls: 0,
-        }
-      }
-
-      // Progressive update: stream each cluster's data to the UI as it arrives
-      setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
-
-      // Clear loading state once first cluster with data arrives
-      if (!initialLoadDone.current && newStatuses[cluster].installed) {
-        initialLoadDone.current = true
-        setIsLoading(false)
-      }
-    }
+    await Promise.allSettled(promises)
 
     // Final: save complete cache and clear refresh state
-    saveToCache(newStatuses)
+    saveToCache(allStatuses)
     setLastRefresh(new Date())
     initialLoadDone.current = true
     setIsLoading(false)
@@ -364,6 +378,7 @@ export function useKubescape() {
         demoStatuses[name] = getDemoStatus(name)
       }
       setStatuses(demoStatuses)
+      setClustersChecked(demoNames.length)
       setIsLoading(false)
       setLastRefresh(new Date())
       initialLoadDone.current = true
@@ -415,6 +430,10 @@ export function useKubescape() {
     lastRefresh,
     installed,
     isDemoData,
+    /** Number of clusters checked so far (for progressive UI) */
+    clustersChecked,
+    /** Total number of clusters being checked */
+    totalClusters: clusters.length,
     refetch,
   }
 }
