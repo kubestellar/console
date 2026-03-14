@@ -4,7 +4,24 @@ import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useFluentdStatus } from './useFluentdStatus'
 import type { FluentdOutputPlugin } from './demoData'
-import { formatRelativeTime } from '../../../lib/formatters'
+
+function useFluentdRelativeTime() {
+  const { t } = useTranslation('cards')
+
+  return (isoString: string): string => {
+    const diff = Date.now() - new Date(isoString).getTime()
+    if (isNaN(diff) || diff < 0) return t('fluentd.syncedJustNow')
+
+    const minute = 60_000
+    const hour = 60 * minute
+    const day = 24 * hour
+
+    if (diff < minute) return t('fluentd.syncedJustNow')
+    if (diff < hour) return t('fluentd.syncedMinutesAgo', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('fluentd.syncedHoursAgo', { count: Math.floor(diff / hour) })
+    return t('fluentd.syncedDaysAgo', { count: Math.floor(diff / day) })
+  }
+}
 
 function pluginStatusColor(status: FluentdOutputPlugin['status']): string {
   if (status === 'healthy') return 'text-green-400'
@@ -43,6 +60,7 @@ function BufferBar({ utilization }: { utilization: number }) {
 
 export function FluentdStatus() {
   const { t } = useTranslation('cards')
+  const formatRelativeTime = useFluentdRelativeTime()
   const { data, error, showSkeleton, showEmptyState, isRefreshing } = useFluentdStatus()
 
   if (showSkeleton) {
@@ -106,7 +124,7 @@ export function FluentdStatus() {
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {isRefreshing && <RefreshCw className="w-3 h-3 animate-spin" />}
-          <span>{formatRelativeTime(data.lastCheckTime).toLowerCase()}</span>
+          <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>
 

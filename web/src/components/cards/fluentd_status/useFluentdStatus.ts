@@ -311,7 +311,7 @@ export function useFluentdStatus(): UseFluentdStatusResult {
     })
 
   const effectiveIsDemoData = isDemoFallback && !isLoading
-  const hasAnyData = data.health === 'not-installed' ? true : (data.pods?.total ?? 0) > 0
+  const hasAnyData = (data.pods?.total ?? 0) > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,

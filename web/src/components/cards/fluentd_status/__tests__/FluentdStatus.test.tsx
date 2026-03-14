@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { FluentdStatus } from '../FluentdStatus'
@@ -13,7 +14,12 @@ vi.mock('../useFluentdStatus', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
+    t: (key: string, secondArg?: unknown) => {
+      if (typeof secondArg === 'string') {
+        return secondArg
+      }
+      return key
+    },
   }),
 }))
 
@@ -53,7 +59,7 @@ describe('FluentdStatus', () => {
     })
 
     const { container } = render(<FluentdStatus />)
-    expect(container.querySelector('.animate-pulse')).toBeTruthy()
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument()
   })
 
   it('renders not-installed message when Fluentd is not detected', () => {
@@ -69,7 +75,7 @@ describe('FluentdStatus', () => {
     })
 
     render(<FluentdStatus />)
-    expect(screen.getByText('Fluentd not detected')).toBeTruthy()
+    expect(screen.getByText('Fluentd not detected')).toBeVisible()
   })
 
   it('renders loaded metric and plugin content', () => {
@@ -85,7 +91,7 @@ describe('FluentdStatus', () => {
     })
 
     render(<FluentdStatus />)
-    expect(screen.getByText('Pods')).toBeTruthy()
-    expect(screen.getByText('elasticsearch-output')).toBeTruthy()
+    expect(screen.getByText('Pods')).toBeVisible()
+    expect(screen.getByText('elasticsearch-output')).toBeVisible()
   })
 })
