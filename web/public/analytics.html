@@ -387,7 +387,7 @@
   <script>
     const API_URL = '/api/analytics-dashboard';
     const CHART_COLORS = ['#6366f1', '#06b6d4', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#eab308', '#3b82f6'];
-    const FUNNEL_COLORS = ['#6366f1', '#818cf8', '#3b82f6', '#06b6d4', '#22c55e'];
+    const FUNNEL_COLORS = ['#6366f1', '#818cf8', '#a855f7', '#3b82f6', '#06b6d4', '#22c55e'];
 
     if (typeof Chart === 'undefined') {
       document.getElementById('content').innerHTML = '<div class="error-box"><strong>Chart.js failed to load</strong><br>The charting library could not be loaded. This may be due to a Content Security Policy restriction or network issue. Try refreshing the page.</div>';
@@ -552,12 +552,9 @@
         { label: 'Sessions', value: fmt(ov.sessions), change: pctChange(ov.sessions, ovp.sessions) },
         { label: 'Page Views', value: fmt(ov.pageViews), change: pctChange(ov.pageViews, ovp.pageViews) },
         { label: 'Avg Engagement', value: fmtTime(ov.avgEngagementTime), change: pctChange(ov.avgEngagementTime, ovp.avgEngagementTime) },
-        { label: 'Bounce Rate', value: fmtPct(ov.bounceRate), change: pctChange(ov.bounceRate, ovp.bounceRate) },
+        { label: 'Install Conv. Rate', value: fmtPct(ov.activeUsers > 0 ? (data.funnel.agentConnected / ov.activeUsers) : 0), change: { dir: 'flat', value: '—' } },
         { label: 'Events / Session', value: ov.eventsPerSession.toFixed(1), change: pctChange(ov.eventsPerSession, ovp.eventsPerSession) },
       ];
-
-      // Invert bounce rate direction (lower is better)
-      kpis[4].change.dir = kpis[4].change.dir === 'up' ? 'down' : kpis[4].change.dir === 'down' ? 'up' : 'flat';
 
       html += '<div class="kpi-grid">';
       for (const kpi of kpis) {
@@ -591,9 +588,10 @@
       const funnelSteps = [
         { label: 'Page View', value: funnel.landing, color: FUNNEL_COLORS[0] },
         { label: 'Login', value: funnel.login, color: FUNNEL_COLORS[1] },
-        { label: 'Agent Connected', value: funnel.agentConnected, color: FUNNEL_COLORS[2] },
-        { label: 'Solution Viewed', value: funnel.solutionViewed, color: FUNNEL_COLORS[3] },
-        { label: 'Mission Started', value: funnel.missionStarted, color: FUNNEL_COLORS[4] },
+        { label: 'Command Copied', value: funnel.commandCopied || 0, color: FUNNEL_COLORS[2] },
+        { label: 'Agent Connected', value: funnel.agentConnected, color: FUNNEL_COLORS[3] },
+        { label: 'Solution Viewed', value: funnel.solutionViewed, color: FUNNEL_COLORS[4] },
+        { label: 'Mission Started', value: funnel.missionStarted, color: FUNNEL_COLORS[5] },
       ];
       const maxFunnel = Math.max(...funnelSteps.map(s => s.value), 1);
 

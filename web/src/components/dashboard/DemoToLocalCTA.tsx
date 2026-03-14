@@ -15,7 +15,7 @@ import {
   STORAGE_KEY_DEMO_CTA_DISMISSED,
   STORAGE_KEY_HINTS_SUPPRESSED,
 } from '../../lib/constants/storage'
-import { emitDemoToLocalShown, emitDemoToLocalActioned } from '../../lib/analytics'
+import { emitDemoToLocalShown, emitDemoToLocalActioned, emitInstallCommandCopied } from '../../lib/analytics'
 
 const NETLIFY_INSTALL_COMMAND = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 
@@ -61,6 +61,7 @@ export function DemoToLocalCTA() {
       await navigator.clipboard.writeText(NETLIFY_INSTALL_COMMAND)
       setCopied(true)
       emitDemoToLocalActioned('copy_command')
+      emitInstallCommandCopied('demo_to_local', NETLIFY_INSTALL_COMMAND)
       setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
     } catch {
       // Clipboard API not available — select the text instead

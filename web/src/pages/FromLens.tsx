@@ -19,7 +19,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react'
-import { emitFromLensViewed, emitFromLensActioned, emitFromLensTabSwitch, emitFromLensCommandCopy } from '../lib/analytics'
+import { emitFromLensViewed, emitFromLensActioned, emitFromLensTabSwitch, emitFromLensCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -250,6 +250,7 @@ function DeploymentSection() {
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
     emitFromLensCommandCopy(activeTab, step, commands[0])
+    emitInstallCommandCopied('from_lens', commands[0])
   }, [activeTab])
 
   const steps = activeTab === 'localhost'

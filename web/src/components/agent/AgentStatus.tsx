@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { useTranslation } from 'react-i18next'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
+import { emitInstallCommandCopied } from '@/lib/analytics'
 
 export function AgentStatus() {
   const { t } = useTranslation('common')
@@ -78,7 +79,7 @@ export function AgentInstallBanner() {
             {installCommand}
           </code>
           <button
-            onClick={() => copyToClipboard(installCommand)}
+            onClick={() => { copyToClipboard(installCommand); emitInstallCommandCopied('agent_install_banner', installCommand) }}
             className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             {t('agentSetup.copy')}

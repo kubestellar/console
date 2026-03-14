@@ -18,7 +18,7 @@ import {
   Package,
   Puzzle,
 } from 'lucide-react'
-import { emitWhiteLabelViewed, emitWhiteLabelActioned, emitWhiteLabelTabSwitch, emitWhiteLabelCommandCopy } from '../lib/analytics'
+import { emitWhiteLabelViewed, emitWhiteLabelActioned, emitWhiteLabelTabSwitch, emitWhiteLabelCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -257,6 +257,7 @@ function DeploymentSection() {
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
     emitWhiteLabelCommandCopy(activeTab, step, commands[0])
+    emitInstallCommandCopied('white_label', commands[0])
   }, [activeTab])
 
   const steps = activeTab === 'binary'

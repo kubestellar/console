@@ -70,6 +70,7 @@ interface DashboardData {
   funnel: {
     landing: number;
     login: number;
+    commandCopied: number;
     agentConnected: number;
     solutionViewed: number;
     missionStarted: number;
@@ -400,6 +401,7 @@ async function fetchDashboardData(
           expressions: [
             "ksc_utm_landing",
             "login",
+            "ksc_install_command_copied",
             "ksc_agent_connected",
             "ksc_solution_viewed",
             "ksc_mission_started",
@@ -781,6 +783,7 @@ async function fetchDashboardData(
     funnel: {
       landing: funnelMap["page_view"] || funnelMap["first_visit"] || 0,
       login: funnelMap["login"] || 0,
+      commandCopied: funnelMap["ksc_install_command_copied"] || 0,
       agentConnected: funnelMap["ksc_agent_connected"] || 0,
       solutionViewed: funnelMap["ksc_solution_viewed"] || 0,
       missionStarted: funnelMap["ksc_mission_started"] || 0,

@@ -1161,6 +1161,27 @@ export function emitApiKeyRemoved(provider: string) {
   send('ksc_api_key_removed', { provider })
 }
 
+// ── Install Command Copied ──────────────────────────────────────
+// Unified event for any "copy install command" action across the site.
+// Feeds into the adoption funnel: Page View → Login → Command Copied → Agent Connected → …
+
+/** Source labels for install command copy events */
+type InstallCopySource =
+  | 'setup_quickstart'
+  | 'setup_dev_mode'
+  | 'setup_k8s_deploy'
+  | 'setup_oauth_env'
+  | 'setup_oauth_restart'
+  | 'agent_install_banner'
+  | 'demo_to_local'
+  | 'from_lens'
+  | 'from_headlamp'
+  | 'white_label'
+
+export function emitInstallCommandCopied(source: InstallCopySource, command: string) {
+  send('ksc_install_command_copied', { source, command })
+}
+
 // ── Conversion Funnel ───────────────────────────────────────────
 // Unified step-based funnel event for user journey:
 //   1 = discovery     (visited site)

@@ -5,6 +5,7 @@ import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight,
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { emitInstallCommandCopied } from '../../lib/analytics'
 
 interface SetupInstructionsDialogProps {
   isOpen: boolean
@@ -18,6 +19,8 @@ const CURL_BASE = 'https://raw.githubusercontent.com/kubestellar/console/main'
 const QUICKSTART_CMD = `curl -sSL ${CURL_BASE}/start.sh | bash`
 const K8S_DEPLOY_CMD = `curl -sSL ${CURL_BASE}/deploy.sh | bash`
 
+/** Index of the "Restart the console" step — the last OAuth step */
+const OAUTH_RESTART_STEP_IDX = 7
 const OAUTH_STEPS = [
   { label: 'Go to', link: 'https://github.com/settings/developers', linkText: 'GitHub Developer Settings' },
   { label: 'Click "New OAuth App" and fill in:' },
@@ -107,7 +110,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                     {QUICKSTART_CMD}
                   </code>
                   <button
-                    onClick={() => copyToClipboard(QUICKSTART_CMD, 1)}
+                    onClick={() => { copyToClipboard(QUICKSTART_CMD, 1); emitInstallCommandCopied('setup_quickstart', QUICKSTART_CMD) }}
                     className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     title={t('drilldown.tooltips.copyCommand')}
                   >
@@ -140,7 +143,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                           git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh
                         </code>
                         <button
-                          onClick={() => copyToClipboard('git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh', 300)}
+                          onClick={() => { const cmd = 'git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh'; copyToClipboard(cmd, 300); emitInstallCommandCopied('setup_dev_mode', cmd) }}
                           className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                           title={t('drilldown.tooltips.copyCommand')}
                         >
@@ -182,7 +185,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                           {K8S_DEPLOY_CMD}
                         </code>
                         <button
-                          onClick={() => copyToClipboard(K8S_DEPLOY_CMD, 400)}
+                          onClick={() => { copyToClipboard(K8S_DEPLOY_CMD, 400); emitInstallCommandCopied('setup_k8s_deploy', K8S_DEPLOY_CMD) }}
                           className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                           title={t('drilldown.tooltips.copyCommand')}
                         >
@@ -245,7 +248,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                                   {oStep.command}
                                 </pre>
                                 <button
-                                  onClick={() => copyToClipboard(oStep.command, 200 + idx)}
+                                  onClick={() => { copyToClipboard(oStep.command, 200 + idx); emitInstallCommandCopied(idx === OAUTH_RESTART_STEP_IDX ? 'setup_oauth_restart' : 'setup_oauth_env', oStep.command) }}
                                   className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors self-start"
                                   title={t('common.copy')}
                                 >

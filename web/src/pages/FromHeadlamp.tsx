@@ -20,7 +20,7 @@ import {
   Puzzle,
   Heart,
 } from 'lucide-react'
-import { emitFromHeadlampViewed, emitFromHeadlampActioned, emitFromHeadlampTabSwitch, emitFromHeadlampCommandCopy } from '../lib/analytics'
+import { emitFromHeadlampViewed, emitFromHeadlampActioned, emitFromHeadlampTabSwitch, emitFromHeadlampCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -238,6 +238,7 @@ function DeploymentSection() {
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
     emitFromHeadlampCommandCopy(activeTab, step, commands[0])
+    emitInstallCommandCopied('from_headlamp', commands[0])
   }, [activeTab])
 
   const steps = activeTab === 'localhost'
