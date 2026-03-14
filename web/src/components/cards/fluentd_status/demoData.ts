@@ -27,6 +27,9 @@ export interface FluentdDemoData {
   lastCheckTime: string
 }
 
+/** Demo: last check timestamp offset (90 seconds ago) */
+const DEMO_LAST_CHECK_OFFSET_MS = 90 * 1000
+
 export const FLUENTD_DEMO_DATA: FluentdDemoData = {
   health: 'degraded',
   pods: { ready: 5, total: 6 },
@@ -56,5 +59,5 @@ export const FLUENTD_DEMO_DATA: FluentdDemoData = {
       errorCount: 1,
     },
   ],
-  lastCheckTime: new Date(Date.now() - 90 * 1000).toISOString(), // 90 sec ago
+  lastCheckTime: new Date(Date.now() - DEMO_LAST_CHECK_OFFSET_MS).toISOString(),
 }

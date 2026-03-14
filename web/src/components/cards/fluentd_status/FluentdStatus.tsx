@@ -4,20 +4,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useFluentdStatus } from './useFluentdStatus'
 import type { FluentdOutputPlugin } from './demoData'
-
-function useFormatRelativeTime() {
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return 'just now'
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return 'just now'
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`
-    return `${Math.floor(diff / day)}d ago`
-  }
-}
+import { formatRelativeTime } from '../../../lib/formatters'
 
 function pluginStatusColor(status: FluentdOutputPlugin['status']): string {
   if (status === 'healthy') return 'text-green-400'
@@ -56,8 +43,7 @@ function BufferBar({ utilization }: { utilization: number }) {
 
 export function FluentdStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState } = useFluentdStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useFluentdStatus()
 
   if (showSkeleton) {
     return (
@@ -96,6 +82,8 @@ export function FluentdStatus() {
     )
   }
 
+  const outputPlugins = data.outputPlugins || []
+
   const isHealthy = data.health === 'healthy'
   const healthColorClass = isHealthy
     ? 'bg-green-500/15 text-green-400'
@@ -117,8 +105,8 @@ export function FluentdStatus() {
           {healthLabel}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="w-3 h-3" />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
+          {isRefreshing && <RefreshCw className="w-3 h-3 animate-spin" />}
+          <span>{formatRelativeTime(data.lastCheckTime).toLowerCase()}</span>
         </div>
       </div>
 
@@ -161,13 +149,13 @@ export function FluentdStatus() {
       )}
 
       {/* Output plugins */}
-      {data.outputPlugins.length > 0 && (
+      {outputPlugins.length > 0 && (
         <div className="flex-1 overflow-y-auto">
           <p className="text-xs text-muted-foreground mb-2">
             {t('fluentd.outputPlugins', 'Output plugins')}
           </p>
           <div className="space-y-1.5">
-            {data.outputPlugins.map((plugin) => (
+            {outputPlugins.map((plugin) => (
               <div
                 key={plugin.name}
                 className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2"
@@ -181,11 +169,11 @@ export function FluentdStatus() {
                 </div>
                 <div className="text-right shrink-0 ml-2">
                   <p className={`text-xs font-medium tabular-nums ${pluginStatusColor(plugin.status)}`}>
-                    {plugin.emitCount.toLocaleString()} emitted
+                    {plugin.emitCount.toLocaleString()} {t('fluentd.emitted', 'emitted')}
                   </p>
                   {plugin.errorCount > 0 && (
                     <p className="text-xs text-red-400 tabular-nums">
-                      {plugin.errorCount} errors
+                      {plugin.errorCount} {t('fluentd.errors', 'errors')}
                     </p>
                   )}
                 </div>
