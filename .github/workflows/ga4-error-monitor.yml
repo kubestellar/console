@@ -1,0 +1,304 @@
+name: GA4 Error Monitor
+# Queries GA4 for recent ksc_error events and creates GitHub issues for
+# error spikes. Issues get triage/accepted + ai-fix-requested labels so
+# Copilot auto-picks them up and creates fix PRs.
+#
+# Secrets required:
+#   GA4_SERVICE_ACCOUNT_KEY  — Google service account JSON with GA4 Data API access
+#   GA4_PROPERTY_ID          — GA4 property ID (e.g. 525401563)
+#   CONSOLE_AUTO             — GitHub PAT with repo + issues + workflow scope
+
+on:
+  schedule:
+    - cron: '42 * * * *' # Every hour at :42
+  workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: 'Hours to look back for errors (default: 2)'
+        required: false
+        default: '2'
+        type: string
+      threshold:
+        description: 'Minimum error count to trigger an issue (default: 5)'
+        required: false
+        default: '5'
+        type: string
+
+env:
+  ISSUE_PREFIX: "[GA4-Error]"
+  # Minimum errors in the lookback window to create an issue
+  ERROR_THRESHOLD: 5
+  # Maximum issues created per run to avoid flooding
+  MAX_ISSUES_PER_RUN: 3
+  # Hours to look back for errors
+  LOOKBACK_HOURS: 2
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install googleapis
+        run: npm install googleapis@144
+
+      - name: Query GA4 and create issues
+        uses: actions/github-script@v7
+        env:
+          GA4_SERVICE_ACCOUNT_KEY: ${{ secrets.GA4_SERVICE_ACCOUNT_KEY }}
+          GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO }}
+          script: |
+            const { google } = require('googleapis');
+
+            // ── Config ──
+            const lookbackHours = parseInt('${{ inputs.lookback_hours }}' || process.env.LOOKBACK_HOURS);
+            const threshold = parseInt('${{ inputs.threshold }}' || process.env.ERROR_THRESHOLD);
+            const maxIssues = parseInt(process.env.MAX_ISSUES_PER_RUN);
+            const prefix = process.env.ISSUE_PREFIX;
+            const propertyId = process.env.GA4_PROPERTY_ID;
+
+            if (!process.env.GA4_SERVICE_ACCOUNT_KEY || !propertyId) {
+              core.warning('GA4_SERVICE_ACCOUNT_KEY or GA4_PROPERTY_ID not set — skipping');
+              return;
+            }
+
+            // ── Auth ──
+            const credentials = JSON.parse(process.env.GA4_SERVICE_ACCOUNT_KEY);
+            const auth = new google.auth.GoogleAuth({
+              credentials,
+              scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+            });
+            const analyticsData = google.analyticsdata({ version: 'v1beta', auth });
+
+            // ── Query GA4 for errors in the last N hours ──
+            // GA4 Data API doesn't support hourly granularity in dateRanges,
+            // so we query the last 2 days and filter by hour dimension.
+            const now = new Date();
+            const startDate = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const startHour = startDate.getUTCHours();
+
+            core.info(`Querying GA4 property ${propertyId} for ksc_error events (last ${lookbackHours}h, threshold: ${threshold})`);
+
+            const { data } = await analyticsData.properties.runReport({
+              property: `properties/${propertyId}`,
+              requestBody: {
+                dateRanges: [{ startDate: startDateStr, endDate: 'today' }],
+                dimensions: [
+                  { name: 'customEvent:error_category' },
+                  { name: 'customEvent:error_page' },
+                  { name: 'dateHour' },
+                ],
+                metrics: [{ name: 'eventCount' }],
+                dimensionFilter: {
+                  filter: {
+                    fieldName: 'eventName',
+                    stringFilter: { value: 'ksc_error' },
+                  },
+                },
+                orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+                limit: 100,
+              },
+            });
+
+            if (!data.rows || data.rows.length === 0) {
+              core.info('No ksc_error events found in the lookback window.');
+              return;
+            }
+
+            // ── Filter to lookback window and aggregate by category+page ──
+            const cutoffHour = `${startDateStr.replace(/-/g, '')}${String(startHour).padStart(2, '0')}`;
+            const aggregated = new Map();
+
+            for (const row of data.rows) {
+              const category = row.dimensionValues[0].value || 'uncategorized';
+              const page = row.dimensionValues[1].value || '/';
+              const dateHour = row.dimensionValues[2].value;
+              const count = parseInt(row.metricValues[0].value);
+
+              if (dateHour < cutoffHour) continue;
+
+              const key = `${category}::${page === '(not set)' ? '/' : page}`;
+              aggregated.set(key, (aggregated.get(key) || 0) + count);
+            }
+
+            // ── Filter by threshold and sort ──
+            const spikes = [...aggregated.entries()]
+              .filter(([, count]) => count >= threshold)
+              .sort((a, b) => b[1] - a[1]);
+
+            if (spikes.length === 0) {
+              core.info(`No error spikes above threshold (${threshold}) in the last ${lookbackHours}h.`);
+              return;
+            }
+
+            core.info(`Found ${spikes.length} error spike(s) above threshold:`);
+            for (const [key, count] of spikes) {
+              core.info(`  ${key}: ${count} errors`);
+            }
+
+            // ── Deduplicate against existing issues ──
+            const [{ data: openIssues }, { data: closedIssues }] = await Promise.all([
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'ga4-error',
+                state: 'open',
+                per_page: 50,
+              }),
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'ga4-error',
+                state: 'closed',
+                sort: 'updated',
+                direction: 'desc',
+                per_page: 20,
+              }),
+            ]);
+
+            const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+            const recentlyClosed = closedIssues.filter(i => new Date(i.closed_at) > threeDaysAgo);
+            const existingIssues = [...openIssues, ...recentlyClosed];
+
+            const normalizeTitle = (t) => t.replace(/\[GA4-Error\]\s*/, '').replace(/\d+/g, 'N').toLowerCase().trim();
+
+            // ── Create issues ──
+            let created = 0;
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const timestamp = now.toISOString().replace('T', ' ').split('.')[0] + ' UTC';
+
+            for (const [key, count] of spikes) {
+              if (created >= maxIssues) {
+                core.warning(`Rate limit: ${maxIssues} issues/run. ${spikes.length - created} spike(s) skipped.`);
+                break;
+              }
+
+              const [category, page] = key.split('::');
+              const title = `${prefix} ${count} ${category} errors on ${page} (last ${lookbackHours}h)`;
+
+              const dup = existingIssues.find(i => normalizeTitle(i.title) === normalizeTitle(title));
+              if (dup) {
+                core.info(`Skipping duplicate: "${title}" matches #${dup.number} (${dup.state})`);
+                continue;
+              }
+
+              const categoryGuide = {
+                card_render: [
+                  'Check the card component for undefined data access or dynamic Tailwind classes',
+                  'Look at the DynamicCardErrorBoundary error detail in browser console',
+                  'Run the card in isolation with demo data to reproduce',
+                ],
+                chunk_load: [
+                  'This is usually caused by stale cached chunks after a Netlify deploy',
+                  'Check if ChunkErrorBoundary auto-reload recovery is working (ksc_chunk_reload_recovery events)',
+                  'Consider adding cache-busting headers to netlify.toml for JS/CSS assets',
+                ],
+                uncaught_render: [
+                  'Check for undefined/null access in React components on the affected page',
+                  'Look for missing array guards (.filter(), .map() on potentially undefined data)',
+                  'Add error boundaries around the failing component if not already present',
+                ],
+                unhandled_rejection: [
+                  'Find async operations (fetch, API calls) on the affected page that lack .catch()',
+                  'Add try/catch around async hooks or Promise chains',
+                  'Check if the error comes from a third-party library or internal code',
+                ],
+                runtime: [
+                  'Check browser console for the exact error stack trace',
+                  'Common causes: accessing properties of undefined, type errors, DOM manipulation issues',
+                  'Review recent PRs that touched the affected page',
+                ],
+              };
+
+              const fixes = categoryGuide[category] || [
+                'Check the browser console for the error stack trace',
+                'Review recent PRs that touched code on the affected page',
+                'Add appropriate error handling or guards',
+              ];
+
+              const body = [
+                `## GA4 Error Spike: ${category}`,
+                '',
+                `**Detected:** ${timestamp} | **Count:** ${count} errors | **Threshold:** ${threshold} | **Window:** ${lookbackHours}h`,
+                `**Page:** \`${page}\` | **Category:** \`${category}\``,
+                '',
+                `**Run:** [View workflow run](${runUrl})`,
+                '',
+                '### Error Category Description',
+                category === 'card_render' ? 'A dashboard card component crashed during rendering. Caught by `DynamicCardErrorBoundary` — the card shows an error state but the page continues working.' :
+                category === 'chunk_load' ? 'Browser tried to load a JavaScript chunk that no longer exists (stale cache after deploy). `ChunkErrorBoundary` attempts auto-reload recovery.' :
+                category === 'uncaught_render' ? 'A React component crashed during render outside of card boundaries. Caught by `AppErrorBoundary` — shows "Something went wrong" fallback.' :
+                category === 'unhandled_rejection' ? 'A Promise rejection was not caught anywhere in the call chain. Logged by the global `unhandledrejection` handler.' :
+                category === 'runtime' ? 'A JavaScript runtime error occurred (window.onerror). Not a React render error — could be event handlers, timers, or third-party code.' :
+                `Error category: ${category}`,
+                '',
+                '### How to Fix',
+                ...fixes.map(f => `- ${f}`),
+                '',
+                '### Investigation Steps',
+                '1. Check the [GA4 Error Tracking dashboard](https://analytics.google.com/) for this category',
+                `2. Search codebase for error-prone patterns on \`${page}\`:`,
+                '   ```bash',
+                '   # Find components rendered on this page',
+                `   grep -r "${page.replace('/', '')}" web/src/config/routes.ts`,
+                '   # Find unguarded array operations',
+                '   grep -rn "\\.filter\\|.map\\|.join\\|.forEach" web/src/components/ | grep -v "|| \\[\\]"',
+                '   ```',
+                '3. Review recent PRs that touched the affected page or components',
+                '',
+                '---',
+                `*This issue was automatically created by the [GA4 Error Monitor workflow](${runUrl}).*`,
+                '*Labels `ai-fix-requested` and `triage/accepted` enable Copilot to fix this automatically.*',
+              ].join('\n');
+
+              const labels = ['bug', 'ai-fix-requested', 'help wanted', 'ga4-error', 'auto-qa', 'triage/accepted'];
+
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels,
+              });
+
+              core.info(`Created issue #${issue.number}: ${title}`);
+
+              // Auto-assign Copilot coding agent
+              try {
+                await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  assignees: ['copilot-swe-agent[bot]'],
+                  agent_assignment: {
+                    target_repo: `${context.repo.owner}/${context.repo.repo}`,
+                    base_branch: 'main',
+                  },
+                });
+                core.info(`Assigned Copilot to #${issue.number}`);
+              } catch (e) {
+                core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
+              }
+
+              created++;
+            }
+
+            core.info(`GA4 Error Monitor complete: ${created} issue(s) created from ${spikes.length} spike(s).`);
