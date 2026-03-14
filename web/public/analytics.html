@@ -757,7 +757,7 @@
       container.innerHTML = html;
 
       // Render charts
-      renderDailyChart(data.dailyUsers);
+      renderDailyChart(data.dailyUsers, data.dailyFunnel || []);
       renderEventsChart(data.topEvents.slice(0, 10));
       renderCountryChart(data.countries.slice(0, 8));
       renderSourceChart(data.trafficSources.slice(0, 6));
@@ -781,42 +781,97 @@
       }
     }
 
-    function renderDailyChart(dailyUsers) {
+    function renderDailyChart(dailyUsers, dailyFunnel) {
       const ctx = document.getElementById('dailyChart');
       if (!ctx) return;
+
+      // Build a lookup of daily agent_connected users by date
+      const funnelByDate = {};
+      for (const f of dailyFunnel) { funnelByDate[f.date] = f.agentConnected; }
+
+      // Compute daily install conversion rate: agentConnected / activeUsers * 100
+      const PERCENT = 100;
+      const convRateData = dailyUsers.map(d => {
+        const connected = funnelByDate[d.date] || 0;
+        return d.users > 0 ? (connected / d.users) * PERCENT : 0;
+      });
+
+      const hasConvData = convRateData.some(v => v > 0);
+
+      const datasets = [
+        {
+          label: 'Users',
+          data: dailyUsers.map(d => d.users),
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Sessions',
+          data: dailyUsers.map(d => d.sessions),
+          borderColor: '#06b6d4',
+          backgroundColor: 'rgba(6, 182, 212, 0.05)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          yAxisID: 'y',
+        },
+      ];
+
+      if (hasConvData) {
+        datasets.push({
+          label: 'Conv. Rate %',
+          data: convRateData,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34, 197, 94, 0.08)',
+          fill: false,
+          tension: 0.3,
+          pointRadius: 2,
+          borderWidth: 2,
+          borderDash: [4, 3],
+          yAxisID: 'yRate',
+        });
+      }
+
       const chart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: dailyUsers.map(d => formatDate(d.date)),
-          datasets: [
-            {
-              label: 'Users',
-              data: dailyUsers.map(d => d.users),
-              borderColor: '#6366f1',
-              backgroundColor: 'rgba(99, 102, 241, 0.1)',
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-            {
-              label: 'Sessions',
-              data: dailyUsers.map(d => d.sessions),
-              borderColor: '#06b6d4',
-              backgroundColor: 'rgba(6, 182, 212, 0.05)',
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-          ],
+          datasets,
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { intersect: false, mode: 'index' },
-          plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } } },
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  if (ctx.dataset.yAxisID === 'yRate') {
+                    return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%';
+                  }
+                  return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString();
+                },
+              },
+            },
+          },
           scales: {
             x: { grid: { display: false } },
-            y: { beginAtZero: true },
+            y: { beginAtZero: true, position: 'left' },
+            ...(hasConvData ? {
+              yRate: {
+                beginAtZero: true,
+                position: 'right',
+                max: PERCENT,
+                grid: { display: false },
+                ticks: { callback: v => v + '%' },
+                title: { display: true, text: 'Conv. Rate', color: '#22c55e', font: { size: 11 } },
+              },
+            } : {}),
           },
         },
       });

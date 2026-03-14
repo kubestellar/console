@@ -93,6 +93,7 @@ interface DashboardData {
   featureAdoption: { feature: string; count: number; users: number }[];
   weeklyRetention: { week: string; newUsers: number; returning: number }[];
   errors: { event: string; count: number; detail: string; daily: number[] }[];
+  dailyFunnel: { date: string; agentConnected: number }[];
   cachedAt: string;
   propertyId: string;
   dateRange: string;
@@ -306,6 +307,7 @@ async function fetchDashboardData(
     weeklyRetRows,
     errorRows,
     errorDailyRows,
+    dailyFunnelRows,
   ] = await Promise.all([
     // 1. Overview metrics (current period)
     runReport(propertyId, accessToken, withFilter({
@@ -615,6 +617,20 @@ async function fetchDashboardData(
       },
       orderBys: [{ dimension: { dimensionName: "date", orderType: "ALPHANUMERIC" } }],
     }, filterMode)),
+
+    // 20. Daily funnel events (agent_connected by date — for conv rate line chart)
+    runReport(propertyId, accessToken, withFilter({
+      dateRanges: [currentRange],
+      dimensions: [{ name: "date" }],
+      metrics: [{ name: "totalUsers" }],
+      dimensionFilter: {
+        filter: {
+          fieldName: "eventName",
+          stringFilter: { matchType: "EXACT" as const, value: "ksc_agent_connected" },
+        },
+      },
+      orderBys: [{ dimension: { dimensionName: "date", orderType: "ALPHANUMERIC" } }],
+    }, filterMode)),
   ]);
 
   // Parse overview
@@ -819,6 +835,10 @@ async function fetchDashboardData(
     featureAdoption,
     weeklyRetention,
     errors,
+    dailyFunnel: dailyFunnelRows.map((r) => ({
+      date: dimVal(r, 0),
+      agentConnected: metVal(r, 0),
+    })),
     cachedAt: new Date().toISOString(),
     propertyId,
     dateRange: "Last 28 days",
