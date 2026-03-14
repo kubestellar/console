@@ -9,6 +9,7 @@
 
 import { useState, useMemo } from 'react'
 import { AlertTriangle, Info, Loader2 } from 'lucide-react'
+import { ProgressRing } from '../ui/ProgressRing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/Button'
 import { useCardLoadingState } from './CardDataContext'
@@ -158,9 +159,9 @@ Please proceed step by step.`,
 
 export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   const { t } = useTranslation('cards')
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, refetch: kyvernoRefetch } = useKyverno()
-  const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, installed: trivyInstalled, refetch: trivyRefetch } = useTrivy()
-  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, installed: kubescapeInstalled, refetch: kubescapeRefetch } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, refetch: kyvernoRefetch, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
+  const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, installed: trivyInstalled, refetch: trivyRefetch, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
+  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, installed: kubescapeInstalled, refetch: kubescapeRefetch, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { deduplicatedClusters } = useClusters()
   const { isDemoMode } = useDemoMode()
@@ -172,6 +173,10 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   const isLoading = kyvernoLoading || trivyLoading || kubescapeLoading
   const isRefreshing = kyvernoRefreshing || trivyRefreshing || kubescapeRefreshing
   const isDemoData = isDemoMode || kyvernoDemoData || trivyDemoData || kubescapeDemoData
+
+  /** Combined progressive streaming progress across all three tools */
+  const totalChecking = Math.max(kyvernoTotal, kubescapeTotal, trivyTotal)
+  const minChecked = Math.min(kyvernoChecked, kubescapeChecked, trivyChecked)
 
   /** Whether all clusters encountered errors (none succeeded) */
   const hasError = !isLoading && !isRefreshing &&
@@ -312,8 +317,12 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
     // Still scanning — show loading state instead of definitive empty state
     if (isLoading || isRefreshing) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
-          <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-3">
+          {totalChecking > 0 ? (
+            <ProgressRing progress={minChecked / totalChecking} size={28} strokeWidth={2.5} />
+          ) : (
+            <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+          )}
           <p>{t('fleetCompliance.scanningClusters')}</p>
         </div>
       )
@@ -341,9 +350,17 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
         <span>Each cell shows tool health per cluster. Click any cell for details. Gray cells mean the tool is not installed.</span>
       </div>
 
-      {/* Refresh indicator */}
-      <div className="flex justify-end">
-        <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />
+      {/* Refresh indicator + inline progress */}
+      <div className="flex items-center justify-between">
+        {(isLoading || isRefreshing) && totalChecking > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ProgressRing progress={minChecked / totalChecking} size={14} strokeWidth={1.5} />
+            <span>Scanning...</span>
+          </div>
+        )}
+        <div className="ml-auto">
+          <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />
+        </div>
       </div>
 
       {/* Header row */}

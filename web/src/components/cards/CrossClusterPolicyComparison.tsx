@@ -9,6 +9,7 @@
 
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, XCircle, Minus, Info, Loader2 } from 'lucide-react'
+import { ProgressRing } from '../ui/ProgressRing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/Button'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
@@ -39,7 +40,7 @@ interface PolicyRow {
 
 export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
   const { t } = useTranslation('cards')
-  const { statuses: kyvernoStatuses, isLoading, isRefreshing, lastRefresh, isDemoData, refetch } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading, isRefreshing, lastRefresh, isDemoData, refetch, clustersChecked, totalClusters } = useKyverno()
   const { deduplicatedClusters: rawClusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const [localSelected, setLocalSelected] = useState<string[]>([])
@@ -166,8 +167,12 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
     // Still scanning — show loading state instead of definitive empty state
     if (isLoading || isRefreshing) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4 gap-2">
-          <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4 gap-3">
+          {totalClusters > 0 ? (
+            <ProgressRing progress={clustersChecked / totalClusters} size={28} strokeWidth={2.5} />
+          ) : (
+            <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+          )}
           <p>{t('crossClusterPolicy.scanningKyverno')}</p>
         </div>
       )
@@ -197,9 +202,17 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
         <span>Compares Kyverno policy deployment across clusters. Missing policies (gray) mean inconsistent enforcement.</span>
       </div>
 
-      {/* Refresh indicator */}
-      <div className="flex justify-end">
-        <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />
+      {/* Refresh indicator + inline progress */}
+      <div className="flex items-center justify-between">
+        {(isLoading || isRefreshing) && totalClusters > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ProgressRing progress={clustersChecked / totalClusters} size={14} strokeWidth={1.5} />
+            <span>Scanning...</span>
+          </div>
+        )}
+        <div className="ml-auto">
+          <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />
+        </div>
       </div>
 
       {/* Cluster selector */}

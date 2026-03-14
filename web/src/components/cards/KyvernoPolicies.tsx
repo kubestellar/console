@@ -7,7 +7,8 @@
  */
 
 import { useState, useMemo } from 'react'
-import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck, Sparkles } from 'lucide-react'
+import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck, Sparkles, Loader2 } from 'lucide-react'
+import { ProgressRing } from '../ui/ProgressRing'
 import { CardSearchInput } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -26,7 +27,7 @@ interface KyvernoPoliciesProps {
 
 function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   const { t } = useTranslation()
-  const { statuses, isLoading, isRefreshing, lastRefresh, installed, isDemoData, refetch } = useKyverno()
+  const { statuses, isLoading, isRefreshing, lastRefresh, installed, isDemoData, refetch, clustersChecked, totalClusters } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [localSearch, setLocalSearch] = useState('')
@@ -166,6 +167,18 @@ Please proceed step by step.`,
           <ExternalLink className="w-4 h-4" />
         </a>
       </div>
+
+      {/* Inline progress ring while scanning */}
+      {(isLoading || isRefreshing) && !installed && !isDemoData && (
+        <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+          {totalClusters > 0 ? (
+            <ProgressRing progress={clustersChecked / totalClusters} size={14} strokeWidth={1.5} />
+          ) : (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          )}
+          <span>Scanning clusters...</span>
+        </div>
+      )}
 
       {/* Install prompt when not detected (only after scanning completes) */}
       {!installed && !isLoading && !isRefreshing && (

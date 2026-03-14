@@ -9,6 +9,7 @@
 
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, ChevronRight, Info, Loader2 } from 'lucide-react'
+import { ProgressRing } from '../ui/ProgressRing'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
@@ -49,15 +50,19 @@ function stats(values: number[]): { mean: number; stdDev: number } {
 }
 
 export function ComplianceDrift({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, refetch: kyvernoRefetch } = useKyverno()
-  const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, refetch: trivyRefetch } = useTrivy()
-  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, refetch: kubescapeRefetch } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, refetch: kyvernoRefetch, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
+  const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, refetch: trivyRefetch, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
+  const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, refetch: kubescapeRefetch, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [modal, setModal] = useState<{ tool: string; cluster: string } | null>(null)
 
   const isLoading = kyvernoLoading || trivyLoading || kubescapeLoading
   const isRefreshing = kyvernoRefreshing || trivyRefreshing || kubescapeRefreshing
   const isDemoData = kyvernoDemoData || trivyDemoData || kubescapeDemoData
+
+  /** Combined progressive streaming progress across all three tools */
+  const totalChecking = Math.max(kyvernoTotal, kubescapeTotal, trivyTotal)
+  const minChecked = Math.min(kyvernoChecked, kubescapeChecked, trivyChecked)
 
   /** Whether all clusters encountered errors (none succeeded) */
   const hasError = !isLoading && !isRefreshing &&
@@ -163,8 +168,12 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
   // Loading state: show spinner while initial data loads
   if (isLoading && drifts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2 p-4">
-        <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-3 p-4">
+        {totalChecking > 0 ? (
+          <ProgressRing progress={minChecked / totalChecking} size={28} strokeWidth={2.5} />
+        ) : (
+          <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+        )}
         <p>Scanning clusters for compliance drift...</p>
       </div>
     )
@@ -209,9 +218,17 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
         <span>Flags clusters deviating from fleet average. Drift indicates inconsistent security posture that needs investigation.</span>
       </div>
 
-      {/* Refresh indicator */}
-      <div className="flex justify-end">
-        <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />
+      {/* Refresh indicator + inline progress */}
+      <div className="flex items-center justify-between">
+        {(isLoading || isRefreshing) && totalChecking > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ProgressRing progress={minChecked / totalChecking} size={14} strokeWidth={1.5} />
+            <span>Scanning...</span>
+          </div>
+        )}
+        <div className="ml-auto">
+          <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={kyvernoLastRefresh} size="xs" />
+        </div>
       </div>
 
       {drifts.map((d, i) => {

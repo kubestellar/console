@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Plus, WifiOff, Loader2 } from 'lucide-react'
+import { ProgressRing } from '../ui/ProgressRing'
 import { useTranslation } from 'react-i18next'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
@@ -232,6 +233,8 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<number | null>(null)
+  const [opaClustersChecked, setOpaClustersChecked] = useState(0)
+  const [opaTotalClusters, setOpaTotalClusters] = useState(0)
 
   // Persist statuses to localStorage when they change (only successful results, not loading/error)
   useEffect(() => {
@@ -348,6 +351,8 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     isCheckingRef.current = true
     globalCheckInProgress = true
     setIsRefreshing(true)
+    setOpaClustersChecked(0)
+    setOpaTotalClusters(clustersToCheck.length)
 
     // Mark clusters as being checked globally
     for (const cluster of clustersToCheck) {
@@ -403,6 +408,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
         })
       }
 
+      setOpaClustersChecked(prev => prev + 1)
       if (phase1Queue.length > 0) await processPhase1()
     }
 
@@ -617,9 +623,18 @@ Let's start by discussing what kind of policy I need.`,
     })
   }
 
-  // Show skeleton until OPA checks have populated (skip in demo mode — demo statuses are provided)
+  // Show progress ring until OPA checks have populated (skip in demo mode — demo statuses are provided)
   if (!shouldUseDemoData && ((isLoading && clusters.length === 0) || (isOPAChecking && !hasOPAData))) {
-    return <CardSkeleton rows={4} type="list" showHeader showSearch />
+    return (
+      <div className="h-full flex flex-col min-h-card items-center justify-center gap-3">
+        {opaTotalClusters > 0 ? (
+          <ProgressRing progress={opaClustersChecked / opaTotalClusters} size={28} strokeWidth={2.5} />
+        ) : (
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/50" />
+        )}
+        <p className="text-sm text-muted-foreground">Scanning clusters...</p>
+      </div>
+    )
   }
 
   return (

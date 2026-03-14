@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from 'react'
 import { Sparkles, Shield, ChevronRight, CheckCircle2, AlertTriangle, Zap, Loader2 } from 'lucide-react'
+import { ProgressRing } from '../ui/ProgressRing'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useKubescape } from '../../hooks/useKubescape'
@@ -254,9 +255,9 @@ Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
 // ─── Component ──────────────────────────────────────────────────────
 
 function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, installed: kyvernoInstalled, isDemoData: kyvernoDemoData } = useKyverno()
-  const { isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, installed: kubescapeInstalled, isDemoData: kubescapeDemoData } = useKubescape()
-  const { isLoading: trivyLoading, isRefreshing: trivyRefreshing, installed: trivyInstalled, isDemoData: trivyDemoData } = useTrivy()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, installed: kyvernoInstalled, isDemoData: kyvernoDemoData, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
+  const { isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, installed: kubescapeInstalled, isDemoData: kubescapeDemoData, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
+  const { isLoading: trivyLoading, isRefreshing: trivyRefreshing, installed: trivyInstalled, isDemoData: trivyDemoData, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
   const { deduplicatedClusters } = useClusters()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -266,6 +267,11 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   const isLoading = kyvernoLoading || kubescapeLoading || trivyLoading
   const isRefreshing = kyvernoRefreshing || kubescapeRefreshing || trivyRefreshing
   const isDemoData = isDemoMode || kyvernoDemoData || kubescapeDemoData || trivyDemoData
+
+  /** Combined progressive streaming progress across all three tools */
+  const totalChecking = Math.max(kyvernoTotal, kubescapeTotal, trivyTotal)
+  const minChecked = Math.min(kyvernoChecked, kubescapeChecked, trivyChecked)
+  const allChecked = minChecked >= totalChecking && totalChecking > 0
 
   // Build recommendations from real cluster data
   const { recommendations, fleetCoverage, totalGaps } = useMemo(() => {
@@ -393,10 +399,14 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
       return (
         <div className="space-y-3">
           <div className="flex flex-col items-center justify-center py-6 text-center">
-            <Loader2 className="w-8 h-8 text-muted-foreground/50 mb-3 animate-spin" />
+            {totalChecking > 0 ? (
+              <ProgressRing progress={minChecked / totalChecking} size={32} strokeWidth={2.5} className="mb-3" />
+            ) : (
+              <Loader2 className="w-8 h-8 text-muted-foreground/50 mb-3 animate-spin" />
+            )}
             <p className="text-sm font-medium text-foreground">Scanning clusters...</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-[250px]">
-              Checking for compliance tools across your fleet
+              Detecting compliance tools across your fleet
             </p>
           </div>
         </div>
@@ -452,6 +462,14 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
           </button>
         )}
       </div>
+
+      {/* Inline progress ring while still scanning */}
+      {!allChecked && (isLoading || isRefreshing) && totalChecking > 0 && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <ProgressRing progress={minChecked / totalChecking} size={14} strokeWidth={1.5} />
+          <span>Scanning clusters...</span>
+        </div>
+      )}
 
       {/* Category sections */}
       <div className="space-y-1.5">
