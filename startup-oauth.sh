@@ -298,7 +298,9 @@ else
         BREW_BIN="$(command -v kc-agent 2>/dev/null || true)"
         if [ -n "$BREW_BIN" ] && [ ! -s "$BREW_BIN" ]; then
             echo -e "${YELLOW}Detected broken kc-agent binary (0 bytes), relinking...${NC}"
-            brew link --overwrite kc-agent 2>/dev/null || true
+            rm -f "$BREW_BIN"
+            brew unlink kc-agent 2>/dev/null || true
+            brew link kc-agent 2>/dev/null || true
             BREW_BIN="$(command -v kc-agent 2>/dev/null || true)"
         fi
 
