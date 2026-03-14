@@ -383,7 +383,20 @@ export function useTrestle() {
     await Promise.allSettled(promises)
 
     if (mountedRef.current) {
-      saveToCache(allStatuses)
+      // If no cluster has Trestle installed, fall back to demo data so the
+      // card renders sample scores instead of showing 0% with empty profiles.
+      const anyInstalled = Object.values(allStatuses).some(s => s.installed)
+      if (!anyInstalled) {
+        const demoNames = clusterNames.length > 0 ? clusterNames : ['cluster-1', 'cluster-2', 'cluster-3']
+        const demoStatuses: Record<string, TrestleClusterStatus> = {}
+        for (const name of (demoNames || [])) {
+          demoStatuses[name] = getDemoStatus(name)
+        }
+        setStatuses(demoStatuses)
+        setClustersChecked(demoNames.length)
+      } else {
+        saveToCache(allStatuses)
+      }
       setIsLoading(false)
       setIsRefreshing(false)
       setLastRefresh(new Date())
