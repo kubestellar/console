@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,7 +29,90 @@ const (
 	// forkHeadSHABackoffMultiplier is the factor by which the backoff delay increases
 	// on each retry attempt.
 	forkHeadSHABackoffMultiplier = 2
+
+	// missionsCacheTTL is how long cached GitHub API responses are considered fresh.
+	// Directory listings and file contents change infrequently (console-kb is updated
+	// via PRs), so a 10-minute TTL provides a good balance between freshness and
+	// reducing GitHub API calls.
+	missionsCacheTTL = 10 * time.Minute
+
+	// missionsCacheStaleTTL is how long stale cache entries can be served when
+	// GitHub returns a rate-limit error (403/429). This prevents complete outages
+	// when the unauthenticated rate limit (60 req/hr) is exhausted.
+	missionsCacheStaleTTL = 1 * time.Hour
+
+	// missionsCacheMaxEntries is the maximum number of entries in the response cache.
+	// Each entry stores a directory listing or file body. This prevents unbounded
+	// memory growth from deep directory traversals.
+	missionsCacheMaxEntries = 256
 )
+
+// missionsCacheEntry holds a cached GitHub API response (directory listing or file content).
+type missionsCacheEntry struct {
+	body        []byte
+	contentType string
+	statusCode  int
+	fetchedAt   time.Time
+}
+
+// missionsResponseCache is a concurrency-safe in-memory cache for GitHub API responses.
+// The cache key is the full request URL. Entries are evicted when the cache exceeds
+// missionsCacheMaxEntries (oldest-first eviction).
+type missionsResponseCache struct {
+	mu      sync.RWMutex
+	entries map[string]*missionsCacheEntry
+}
+
+// get returns a cached entry if it exists and is within the given TTL.
+// Returns nil if no entry exists or the entry is expired.
+func (c *missionsResponseCache) get(key string, ttl time.Duration) *missionsCacheEntry {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	entry, ok := c.entries[key]
+	if !ok {
+		return nil
+	}
+	if time.Since(entry.fetchedAt) > ttl {
+		return nil
+	}
+	return entry
+}
+
+// getStale returns a cached entry even if expired, as long as it is within staleTTL.
+// Used to serve stale data when GitHub rate-limits us — better than an error.
+func (c *missionsResponseCache) getStale(key string, staleTTL time.Duration) *missionsCacheEntry {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	entry, ok := c.entries[key]
+	if !ok {
+		return nil
+	}
+	if time.Since(entry.fetchedAt) > staleTTL {
+		return nil
+	}
+	return entry
+}
+
+// set stores a response in the cache, evicting the oldest entry if the cache is full.
+func (c *missionsResponseCache) set(key string, entry *missionsCacheEntry) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	// Evict oldest entry if at capacity (simple strategy: find oldest and remove it)
+	if len(c.entries) >= missionsCacheMaxEntries {
+		var oldestKey string
+		var oldestTime time.Time
+		for k, v := range c.entries {
+			if oldestKey == "" || v.fetchedAt.Before(oldestTime) {
+				oldestKey = k
+				oldestTime = v.fetchedAt
+			}
+		}
+		if oldestKey != "" {
+			delete(c.entries, oldestKey)
+		}
+	}
+	c.entries[key] = entry
+}
 
 // sanitizePath validates and sanitizes a file path parameter.
 // SECURITY: Blocks path traversal (../) and dangerous characters.
@@ -82,6 +166,7 @@ type MissionsHandler struct {
 	httpClient    *http.Client
 	githubAPIURL  string // defaults to "https://api.github.com"
 	githubRawURL  string // defaults to "https://raw.githubusercontent.com"
+	cache         *missionsResponseCache
 }
 
 // NewMissionsHandler creates a new MissionsHandler with default settings.
@@ -90,6 +175,7 @@ func NewMissionsHandler() *MissionsHandler {
 		httpClient:   &http.Client{Timeout: missionsAPITimeout},
 		githubAPIURL: "https://api.github.com",
 		githubRawURL: "https://raw.githubusercontent.com",
+		cache:        &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)},
 	}
 }
 
@@ -155,15 +241,37 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 
 // BrowseConsoleKB lists directory contents from the kubestellar/console-kb repo.
 // GET /api/missions/browse?path=solutions
+//
+// Responses are cached server-side for missionsCacheTTL to eliminate redundant
+// GitHub API calls. On rate-limit errors (403/429), stale cache entries are
+// served for up to missionsCacheStaleTTL rather than returning an error.
 func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	path, err := sanitizePath(c.Query("path", ""))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	cacheKey := "browse:" + path
+
+	// Check fresh cache first
+	if cached := h.cache.get(cacheKey, missionsCacheTTL); cached != nil {
+		log.Printf("[missions] Cache HIT (browse) path=%q", path)
+		c.Set("Content-Type", cached.contentType)
+		c.Set("X-Cache", "HIT")
+		return c.Status(cached.statusCode).Send(cached.body)
+	}
+
 	url := fmt.Sprintf("%s/repos/kubestellar/console-kb/contents/%s?ref=master", h.githubAPIURL, path)
 
 	resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
 	if err != nil {
+		// Upstream failed — try stale cache
+		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
+			log.Printf("[missions] Upstream error, serving STALE cache (browse) path=%q err=%v", path, err)
+			c.Set("Content-Type", stale.contentType)
+			c.Set("X-Cache", "STALE")
+			return c.Status(stale.statusCode).Send(stale.body)
+		}
 		return c.Status(502).JSON(fiber.Map{"error": "upstream request failed"})
 	}
 	defer resp.Body.Close()
@@ -173,11 +281,25 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to read response body"})
 	}
+
+	// Rate-limited — serve stale cache if available
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
+			log.Printf("[missions] Rate-limited (%d), serving STALE cache (browse) path=%q", resp.StatusCode, path)
+			c.Set("Content-Type", stale.contentType)
+			c.Set("X-Cache", "STALE")
+			return c.Status(stale.statusCode).Send(stale.body)
+		}
+		return c.Status(resp.StatusCode).JSON(fiber.Map{
+			"error":  "GitHub API rate limit exceeded — no cached data available",
+			"status": resp.StatusCode,
+			"code":   "rate_limited",
+		})
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		code := "github_error"
-		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-			code = "rate_limited"
-		} else if resp.StatusCode == http.StatusUnauthorized {
+		if resp.StatusCode == http.StatusUnauthorized {
 			code = "token_invalid"
 		}
 		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "GitHub API error", "status": resp.StatusCode, "code": code})
@@ -206,6 +328,20 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 			"size": int(size),
 		})
 	}
+
+	// Cache the transformed response
+	transformedBody, err := json.Marshal(entries)
+	if err == nil {
+		h.cache.set(cacheKey, &missionsCacheEntry{
+			body:        transformedBody,
+			contentType: "application/json",
+			statusCode:  http.StatusOK,
+			fetchedAt:   time.Now(),
+		})
+		log.Printf("[missions] Cache MISS → stored (browse) path=%q", path)
+	}
+
+	c.Set("X-Cache", "MISS")
 	return c.JSON(entries)
 }
 
@@ -213,6 +349,11 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 
 // GetMissionFile fetches raw file content from the kubestellar/console-kb repo.
 // GET /api/missions/file?path=solutions/cncf-generated/kubernetes/kubernetes-42873.json
+//
+// Responses are cached server-side for missionsCacheTTL to avoid redundant
+// GitHub raw content fetches. The solutions/index.json file is the most critical
+// cache entry — it is fetched once and serves all mission browser listings,
+// eliminating the N+1 request pattern.
 func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	rawPath := c.Query("path")
 	if rawPath == "" {
@@ -228,10 +369,27 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	cacheKey := "file:" + ref + ":" + path
+
+	// Check fresh cache first
+	if cached := h.cache.get(cacheKey, missionsCacheTTL); cached != nil {
+		log.Printf("[missions] Cache HIT (file) ref=%q path=%q", ref, path)
+		c.Set("Content-Type", cached.contentType)
+		c.Set("X-Cache", "HIT")
+		return c.Status(cached.statusCode).Send(cached.body)
+	}
+
 	url := fmt.Sprintf("%s/kubestellar/console-kb/%s/%s", h.githubRawURL, ref, path)
 
 	resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
 	if err != nil {
+		// Upstream failed — try stale cache
+		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
+			log.Printf("[missions] Upstream error, serving STALE cache (file) ref=%q path=%q err=%v", ref, path, err)
+			c.Set("Content-Type", stale.contentType)
+			c.Set("X-Cache", "STALE")
+			return c.Status(stale.statusCode).Send(stale.body)
+		}
 		return c.Status(502).JSON(fiber.Map{"error": "upstream request failed"})
 	}
 	defer resp.Body.Close()
@@ -241,6 +399,22 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to read response body"})
 	}
+
+	// Rate-limited — serve stale cache if available
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
+			log.Printf("[missions] Rate-limited (%d), serving STALE cache (file) ref=%q path=%q", resp.StatusCode, ref, path)
+			c.Set("Content-Type", stale.contentType)
+			c.Set("X-Cache", "STALE")
+			return c.Status(stale.statusCode).Send(stale.body)
+		}
+		return c.Status(resp.StatusCode).JSON(fiber.Map{
+			"error":  "GitHub API rate limit exceeded — no cached data available",
+			"status": resp.StatusCode,
+			"code":   "rate_limited",
+		})
+	}
+
 	if resp.StatusCode == http.StatusNotFound {
 		return c.Status(404).JSON(fiber.Map{"error": "file not found"})
 	}
@@ -248,7 +422,17 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "GitHub raw content error"})
 	}
 
+	// Cache the successful response
+	h.cache.set(cacheKey, &missionsCacheEntry{
+		body:        body,
+		contentType: "text/plain",
+		statusCode:  http.StatusOK,
+		fetchedAt:   time.Now(),
+	})
+	log.Printf("[missions] Cache MISS → stored (file) ref=%q path=%q (%d bytes)", ref, path, len(body))
+
 	c.Set("Content-Type", "text/plain")
+	c.Set("X-Cache", "MISS")
 	return c.Send(body)
 }
 
