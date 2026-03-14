@@ -27,6 +27,9 @@ import (
 const (
 	// oauthStateExpiration is how long an OAuth state token remains valid.
 	oauthStateExpiration = 10 * time.Minute
+	// oauthStateCleanupInterval is how often the background goroutine sweeps
+	// for expired OAuth state entries.
+	oauthStateCleanupInterval = 5 * time.Minute
 	// jwtExpiration is the lifetime of issued JWT tokens.
 	// Set to 7 days — the auth middleware signals clients to silently refresh
 	// after 50% of the lifetime (3.5 days) via the X-Token-Refresh header,
@@ -44,10 +47,37 @@ var oauthStateStore = struct {
 	states map[string]time.Time
 }{states: make(map[string]time.Time)}
 
+// init starts a background goroutine that periodically purges expired
+// OAuth state entries.  This ensures the map stays bounded even when no
+// new OAuth flows are initiated (the inline cleanup in storeOAuthState
+// only runs when a new state is added).
+func init() {
+	go func() {
+		ticker := time.NewTicker(oauthStateCleanupInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			purgeExpiredOAuthStates()
+		}
+	}()
+}
+
+// purgeExpiredOAuthStates removes all state entries older than oauthStateExpiration.
+func purgeExpiredOAuthStates() {
+	oauthStateStore.Lock()
+	defer oauthStateStore.Unlock()
+	now := time.Now()
+	for s, t := range oauthStateStore.states {
+		if now.Sub(t) > oauthStateExpiration {
+			delete(oauthStateStore.states, s)
+		}
+	}
+}
+
 func storeOAuthState(state string) {
 	oauthStateStore.Lock()
 	defer oauthStateStore.Unlock()
-	// Clean up expired states (older than 10 minutes)
+	// Inline cleanup: remove expired states on every insert so the map
+	// stays bounded even between background sweeps.
 	now := time.Now()
 	for s, t := range oauthStateStore.states {
 		if now.Sub(t) > oauthStateExpiration {
@@ -62,7 +92,6 @@ func validateAndConsumeOAuthState(state string) bool {
 	defer oauthStateStore.Unlock()
 	if t, ok := oauthStateStore.states[state]; ok {
 		delete(oauthStateStore.states, state)
-		// Valid if less than 10 minutes old
 		return time.Since(t) < oauthStateExpiration
 	}
 	return false
@@ -158,7 +187,8 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 const (
 	// OAuth state cookie name
 	oauthStateCookieName = "oauth_state"
-	// OAuth state cookie max age (10 minutes)
+	// oauthStateCookieMaxAge is oauthStateExpiration expressed in seconds for the browser cookie.
+	// Must stay in sync with oauthStateExpiration above.
 	oauthStateCookieMaxAge = 600
 	// jwtCookieName is the HttpOnly cookie that carries the JWT.
 	jwtCookieName = "kc_auth"
