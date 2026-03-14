@@ -79,7 +79,8 @@ interface CardHistoryProps {
 
 export function CardHistory({ onRestoreCard }: CardHistoryProps) {
   const { t: _t } = useTranslation()
-  const { history, clearHistory, removeEntry } = useCardHistory()
+  const { history: rawHistory, clearHistory, removeEntry } = useCardHistory()
+  const history = rawHistory || []
   const [filter, setFilter] = useState<CardHistoryEntry['action'] | 'all'>('all')
 
   const filteredHistory = filter === 'all' ? history : history.filter((entry) => entry.action === filter)

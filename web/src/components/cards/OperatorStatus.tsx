@@ -133,6 +133,22 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
     }
   }
 
+  const STATUS_ICON_CLASS: Record<string, string> = {
+    green: 'text-green-400',
+    red: 'text-red-400',
+    blue: 'text-blue-400',
+    purple: 'text-purple-400',
+    orange: 'text-orange-400',
+  }
+
+  const STATUS_BADGE_CLASS: Record<string, string> = {
+    green: 'bg-green-500/20 text-green-400',
+    red: 'bg-red-500/20 text-red-400',
+    blue: 'bg-blue-500/20 text-blue-400',
+    purple: 'bg-purple-500/20 text-purple-400',
+    orange: 'bg-orange-500/20 text-orange-400',
+  }
+
   const getStatusColor = (status: Operator['status']) => {
     switch (status) {
       case 'Succeeded': return 'green'
@@ -272,7 +288,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <StatusIcon className={`w-4 h-4 text-${color}-400 ${op.status === 'Installing' ? 'animate-spin' : ''}`} />
+                      <StatusIcon className={`w-4 h-4 ${STATUS_ICON_CLASS[color]} ${op.status === 'Installing' ? 'animate-spin' : ''}`} />
                       {op.cluster && (
                         <ClusterBadge cluster={op.cluster} size="sm" />
                       )}
@@ -285,7 +301,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
                           issues={[{ name: `Operator ${op.status}`, message: `Operator is in ${op.status} state${op.upgradeAvailable ? `, upgrade available: ${op.upgradeAvailable}` : ''}` }]}
                         />
                       )}
-                      <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${STATUS_BADGE_CLASS[color]}`}>
                         {op.status}
                       </span>
                       <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
