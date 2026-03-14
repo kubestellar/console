@@ -715,6 +715,12 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusBadRequest, "Invalid GitHub issue number")
 		}
 
+		// Verify the requesting user owns this GitHub issue
+		currentLogin := middleware.GetGitHubLogin(c)
+		if ownerErr := h.verifyGitHubIssueOwnership(issueNum, currentLogin); ownerErr != nil {
+			return ownerErr
+		}
+
 		// Close the GitHub issue
 		if h.getEffectiveToken() != "" {
 			go h.closeGitHubIssue(issueNum, h.repoName)
@@ -774,6 +780,12 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusBadRequest, "Invalid GitHub issue number")
 		}
 
+		// Verify the requesting user owns this GitHub issue
+		currentLogin := middleware.GetGitHubLogin(c)
+		if ownerErr := h.verifyGitHubIssueOwnership(issueNum, currentLogin); ownerErr != nil {
+			return ownerErr
+		}
+
 		// Add a comment to the GitHub issue requesting an update
 		if h.getEffectiveToken() != "" {
 			go h.addIssueComment(issueNum, "The user has requested an update on this issue.", h.repoName)
@@ -822,6 +834,54 @@ func (h *FeedbackHandler) resolveRepoName(target models.TargetRepo) string {
 		return docsRepoName
 	}
 	return h.repoName
+}
+
+// verifyGitHubIssueOwnership fetches a GitHub issue and checks that the
+// requesting user (identified by their GitHub login) is the issue author.
+// Returns nil on success, or a fiber error (403/502/404) on failure.
+func (h *FeedbackHandler) verifyGitHubIssueOwnership(issueNumber int, currentLogin string) error {
+	if currentLogin == "" {
+		return fiber.NewError(fiber.StatusForbidden, "GitHub login not available — cannot verify ownership")
+	}
+
+	if h.getEffectiveToken() == "" {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "GitHub not configured")
+	}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d",
+		h.repoOwner, h.repoName, issueNumber)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create ownership check request")
+	}
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	client := &http.Client{Timeout: githubAPITimeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadGateway, "Failed to reach GitHub API for ownership check")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return fiber.NewError(fiber.StatusNotFound, "GitHub issue not found")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("GitHub API returned %d during ownership check", resp.StatusCode))
+	}
+
+	var issue GitHubIssue
+	if err := json.NewDecoder(resp.Body).Decode(&issue); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to parse GitHub issue for ownership check")
+	}
+
+	if !strings.EqualFold(issue.User.Login, currentLogin) {
+		return fiber.NewError(fiber.StatusForbidden, "Access denied: you can only modify your own feedback issues")
+	}
+
+	return nil
 }
 
 // closeGitHubIssue closes an issue on GitHub in the specified repo
