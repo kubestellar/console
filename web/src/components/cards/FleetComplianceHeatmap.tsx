@@ -131,6 +131,29 @@ Important: Start with audit mode — do NOT set enforcementAction to deny until 
 
 Please proceed step by step.`,
   },
+  trestle: {
+    title: 'Install Compliance Trestle',
+    description: 'Install OSCAL Compass / Compliance Trestle for compliance-as-code (CNCF Sandbox)',
+    prompt: `I want to install Compliance Trestle (OSCAL Compass) for compliance-as-code on my Kubernetes clusters.
+
+Compliance Trestle is a CNCF Sandbox project that uses NIST OSCAL to automate compliance assessment.
+
+Please help me:
+1. Install the c2p (Compliance-to-Policy) controller:
+   kubectl create namespace c2p-system
+   kubectl apply -f https://raw.githubusercontent.com/oscal-compass/compliance-to-policy/main/deploy/kubernetes/c2p-controller.yaml
+
+2. Set up an initial OSCAL profile (NIST 800-53 rev5):
+   pip install compliance-trestle
+   trestle init
+   trestle import -f https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json -o nist-800-53
+
+3. Configure the policy bridge to your existing engine (Kyverno, OPA, or Kubescape)
+
+4. Verify assessment results: kubectl get assessmentresults -A
+
+Please proceed step by step.`,
+  },
 }
 
 export function FleetComplianceHeatmap({ config: _config }: CardConfig) {

@@ -18,6 +18,7 @@ export const complianceDashboardConfig: UnifiedDashboardConfig = {
     { id: 'kyverno-policies-1', cardType: 'kyverno_policies', position: { w: 6, h: 3 } },
     { id: 'kubescape-scan-1', cardType: 'kubescape_scan', position: { w: 6, h: 3 } },
     { id: 'trivy-scan-1', cardType: 'trivy_scan', position: { w: 6, h: 3 } },
+    { id: 'trestle-scan-1', cardType: 'trestle_scan', position: { w: 6, h: 3 } },
     { id: 'compliance-drift-1', cardType: 'compliance_drift', position: { w: 6, h: 3 } },
     { id: 'cross-cluster-policy-comparison-1', cardType: 'cross_cluster_policy_comparison', position: { w: 6, h: 3 } },
   ],

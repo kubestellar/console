@@ -84,6 +84,7 @@ const KyvernoPolicies = lazy(() => import('./KyvernoPolicies').then(m => ({ defa
 // contain only hardcoded demo data, and lazy loading them causes blank cards
 // while heavier modules (OPA) saturate the dev server's transform pipeline.
 import { FalcoAlerts, TrivyScan, KubescapeScan, PolicyViolations, ComplianceScore } from './ComplianceCards'
+const TrestleScan = lazy(() => import('./TrestleScan').then(m => ({ default: m.TrestleScan })))
 const VaultSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.VaultSecrets })))
 const ExternalSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.ExternalSecrets })))
 const CertManager = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.CertManager })))
@@ -320,6 +321,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kyverno_policies: KyvernoPolicies,
   // Compliance tool cards
   falco_alerts: FalcoAlerts,
+  trestle_scan: TrestleScan,
   trivy_scan: TrivyScan,
   kubescape_scan: KubescapeScan,
   policy_violations: PolicyViolations,
@@ -705,6 +707,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   opa_policies: () => import('./OPAPolicies'),
   kyverno_policies: () => import('./KyvernoPolicies'),
   falco_alerts: () => import('./ComplianceCards'),
+  trestle_scan: () => import('./TrestleScan'),
   trivy_scan: () => import('./ComplianceCards'),
   kubescape_scan: () => import('./ComplianceCards'),
   policy_violations: () => import('./ComplianceCards'),
@@ -1046,6 +1049,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   opa_policies: 6,
   kyverno_policies: 6,
   falco_alerts: 4,
+  trestle_scan: 6,
   trivy_scan: 4,
   kubescape_scan: 4,
   policy_violations: 6,

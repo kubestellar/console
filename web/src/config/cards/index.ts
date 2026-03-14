@@ -145,6 +145,7 @@ import { stockMarketTickerConfig } from './stock-market-ticker'
 import { storageOverviewConfig } from './storage-overview'
 import { sudokuGameConfig } from './sudoku-game'
 import { topPodsConfig } from './top-pods'
+import { trestleScanConfig } from './trestle-scan'
 import { trivyScanConfig } from './trivy-scan'
 import { upgradeStatusConfig } from './upgrade-status'
 import { userManagementConfig } from './user-management'
@@ -306,6 +307,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   storage_overview: storageOverviewConfig,
   sudoku_game: sudokuGameConfig,
   top_pods: topPodsConfig,
+  trestle_scan: trestleScanConfig,
   trivy_scan: trivyScanConfig,
   upgrade_status: upgradeStatusConfig,
   user_management: userManagementConfig,
@@ -546,6 +548,7 @@ export {
   storageOverviewConfig,
   sudokuGameConfig,
   topPodsConfig,
+  trestleScanConfig,
   trivyScanConfig,
   upgradeStatusConfig,
   userManagementConfig,

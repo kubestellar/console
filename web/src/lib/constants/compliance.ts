@@ -177,6 +177,12 @@ export const TOOL_DESCRIPTIONS: Record<string, ToolDescription> = {
     measures: 'Resource compliance using Rego policies and constraint templates',
     whyItMatters: 'Provides fine-grained policy control with the flexibility of the Rego policy language',
   },
+  trestle: {
+    name: 'Compliance Trestle',
+    tagline: 'Compliance-as-code with NIST OSCAL (CNCF Sandbox)',
+    measures: 'OSCAL-based compliance assessment against NIST 800-53, FedRAMP, and custom profiles',
+    whyItMatters: 'Automates compliance documentation and continuous assessment using the NIST standard, bridging policy engines to regulatory frameworks',
+  },
 }
 
 // ── Card-Level Descriptions ───────────────────────────────────────────
@@ -202,5 +208,9 @@ export const CARD_DESCRIPTIONS: Record<string, { title: string; description: str
   policy_violations: {
     title: 'Policy Violations',
     description: 'Resources failing policy checks. Each violation is a misconfiguration that could be a security risk.',
+  },
+  trestle_scan: {
+    title: 'Compliance Trestle (OSCAL)',
+    description: 'NIST OSCAL compliance assessment. Shows control pass/fail status across profiles like NIST 800-53 and FedRAMP.',
   },
 }
