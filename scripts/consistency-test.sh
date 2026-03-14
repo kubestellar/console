@@ -453,6 +453,7 @@ phase6() {
     'src/components/cards/workload-monitor/GitHubCIMonitor.tsx'  # Date.now() for demo data, not cache TTL
     'src/components/cards/Missions.tsx'  # Date.now() for demo mission timestamps, not cache TTL
     'src/App.tsx'  # Date.now() for page view analytics duration, not cache TTL
+    'src/hooks/useSelfUpgrade.ts'  # Date.now() for restart polling elapsed, not cache TTL
   )
 
   # Find files that implement caching with TTL: have localStorage AND Date.now() - (subtraction

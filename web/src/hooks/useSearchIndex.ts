@@ -161,7 +161,7 @@ function buildDashboardStorage(): { key: string; route: string; name: string }[]
     { key: 'kubestellar-aiml-cards', route: '/ai-ml', name: 'AI/ML' },
   ]
 
-  for (const legacy of LEGACY_COMPONENT_KEYS) {
+  for (const legacy of (LEGACY_COMPONENT_KEYS || [])) {
     if (!seenKeys.has(legacy.key)) {
       seenKeys.add(legacy.key)
       entries.push(legacy)

@@ -14,6 +14,9 @@ const RESTART_POLL_MAX_MS = 120_000
 /** Short timeout for health probes during restart polling (ms) */
 const RESTART_HEALTH_TIMEOUT_MS = 3_000
 
+/** Delay before auto-reload so the user sees the success state (ms) */
+const RELOAD_DELAY_MS = 1_500
+
 /** Read the JWT token from localStorage for authenticated API calls */
 const getToken = () => localStorage.getItem(STORAGE_KEY_TOKEN)
 
@@ -105,7 +108,7 @@ export function useSelfUpgrade() {
           setIsRestarting(false)
           setRestartComplete(true)
           // Auto-reload after a brief pause so the user sees the success state
-          setTimeout(() => window.location.reload(), 1500)
+          setTimeout(() => window.location.reload(), RELOAD_DELAY_MS)
         }
       } catch {
         // Expected — pod is still restarting
