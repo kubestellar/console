@@ -279,6 +279,11 @@ export function Layout({ children }: LayoutProps) {
     <VersionCheckProvider>
     <TourProvider>
     <div className="h-screen bg-background overflow-hidden flex flex-col">
+      {/* Dev mode accent line — 2px green bar at top of viewport (like VS Code debug mode) */}
+      {__DEV_MODE__ && (
+        <div className="h-0.5 bg-green-500 flex-shrink-0 z-[60]" title="Development build" />
+      )}
+
       {/* Skip to content link for keyboard users and screen readers */}
       <a
         href="#main-content"
@@ -286,7 +291,7 @@ export function Layout({ children }: LayoutProps) {
       >
         {t('actions.skipToContent')}
       </a>
-      
+
       {/* Tour overlay and prompt */}
       <TourOverlay />
       <TourPrompt />

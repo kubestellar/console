@@ -7,11 +7,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Terminal, Copy, Check, X, Rocket, KeyRound, Code2 } from 'lucide-react'
+import { Terminal, Copy, Check, X, Rocket, KeyRound } from 'lucide-react'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
-import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
 import { isNetlifyDeployment, getDemoMode, hasRealToken } from '../../lib/demoMode'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import {
   STORAGE_KEY_DEMO_CTA_DISMISSED,
@@ -33,16 +31,14 @@ export function DemoToLocalCTA() {
   )
   const [copied, setCopied] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
-  const [showDevDialog, setShowDevDialog] = useState(false)
   const emittedRef = useRef(false)
-  const { isConnected } = useLocalAgent()
 
   // Localhost without OAuth = user ran start.sh but hasn't configured GitHub OAuth yet
   const isLocalNoOAuth = !isNetlifyDeployment && getDemoMode() && !hasRealToken()
-  // Localhost with OAuth + agent = fully set up, offer developer setup
-  const isLocalDeveloper = !isNetlifyDeployment && hasRealToken() && isConnected
+  // Fully set up local developers don't need onboarding CTAs — the same info
+  // is available in the profile dropdown's Developer panel.
   const shouldShow =
-    (isNetlifyDeployment || isLocalNoOAuth || isLocalDeveloper) &&
+    (isNetlifyDeployment || isLocalNoOAuth) &&
     !dismissed &&
     !hintsSuppressed
 
@@ -83,40 +79,7 @@ export function DemoToLocalCTA() {
     setShowSetupDialog(true)
   }
 
-  const handleDevSetup = () => {
-    emitDemoToLocalActioned('developer_setup')
-    setShowDevDialog(true)
-  }
-
-  // ── State 3: Localhost with OAuth + agent — small developer link ──
-  if (isLocalDeveloper) {
-    return (
-      <>
-        <div className="mb-4 flex items-center gap-2 text-xs animate-in fade-in duration-300">
-          <Code2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-          <button
-            onClick={handleDevSetup}
-            className="text-green-400 hover:text-green-300 transition-colors"
-          >
-            Developer setup &amp; advanced options
-          </button>
-          <button
-            onClick={handleDismiss}
-            className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 ml-auto"
-            aria-label="Dismiss"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-        <DeveloperSetupDialog
-          isOpen={showDevDialog}
-          onClose={() => setShowDevDialog(false)}
-        />
-      </>
-    )
-  }
-
-  // ── State 2: Localhost without OAuth — prompt to set up GitHub OAuth ──
+  // ── Localhost without OAuth — prompt to set up GitHub OAuth ──
   if (isLocalNoOAuth) {
     return (
       <div className="mb-4 rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
