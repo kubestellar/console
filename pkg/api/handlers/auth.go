@@ -24,6 +24,13 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+// bearerPrefix is the standard "Bearer " prefix in Authorization headers.
+const bearerPrefix = "Bearer "
+
+// bearerPrefixLen is the length of the "Bearer " prefix (7 bytes).
+// Used to safely slice Authorization headers after validating the prefix.
+const bearerPrefixLen = len(bearerPrefix)
+
 const (
 	// oauthStateExpiration is how long an OAuth state token remains valid.
 	oauthStateExpiration = 10 * time.Minute
@@ -405,8 +412,8 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// Accept token from Authorization header or HttpOnly cookie
 	var tokenString string
 	authHeader := c.Get("Authorization")
-	if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
-		tokenString = authHeader[len("Bearer "):]
+	if len(authHeader) >= bearerPrefixLen && strings.HasPrefix(authHeader, bearerPrefix) {
+		tokenString = authHeader[bearerPrefixLen:]
 	}
 	if tokenString == "" {
 		tokenString = c.Cookies(jwtCookieName)
@@ -448,11 +455,11 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
 
-	if !strings.HasPrefix(authHeader, "Bearer ") {
+	if len(authHeader) < bearerPrefixLen || !strings.HasPrefix(authHeader, bearerPrefix) {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
 	}
 
-	tokenString := authHeader[7:] // Remove "Bearer "
+	tokenString := authHeader[bearerPrefixLen:]
 	token, err := jwt.ParseWithClaims(tokenString, &middleware.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(h.jwtSecret), nil
 	})

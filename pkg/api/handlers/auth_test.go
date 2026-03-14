@@ -109,6 +109,20 @@ func TestRefreshToken(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
+	t.Run("Short Authorization Header (< Bearer prefix length)", func(t *testing.T) {
+		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
+		req.Header.Set("Authorization", "Bad")
+		resp, _ := app.Test(req, 5000)
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	t.Run("Authorization Header without Bearer prefix", func(t *testing.T) {
+		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
+		req.Header.Set("Authorization", "Basic dXNlcjpwYXNz")
+		resp, _ := app.Test(req, 5000)
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
 	t.Run("Invalid Token", func(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
 		req.Header.Set("Authorization", "Bearer invalid-token-string")
