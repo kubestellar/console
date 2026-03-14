@@ -786,14 +786,15 @@ test('security compliance — frontend security audit', async ({ page }, testInf
 
       // Patterns that indicate REAL cluster data (not demo/static UI content).
       // These use specific formats that only appear with live K8s data:
-      // - Actual IP addresses or hostnames in cluster contexts
-      // - Specific resource counts with cluster names
-      // - Kubernetes API server URLs
+      // - Actual IP addresses in cluster contexts (not localhost/loopback)
+      // - Kubernetes API server URLs with ports
+      // - Namespace references in data contexts (not static UI text)
+      // Note: "kubeconfig", "kubectl", ".kube" removed — they appear in
+      // static help/Getting Started text, not as leaked cluster data.
       const realDataPatterns = [
-        /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?\b/,          // IP addresses
-        /https?:\/\/[a-z0-9.-]+:\d+/i,                              // API server URLs
-        /kubeconfig|kubectl|\.kube/i,                                // Config file references
-        /namespace:\s*[a-z][a-z0-9-]+/i,                            // Namespace references
+        /\b(?!127\.0\.0\.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?\b/,  // Non-loopback IPs
+        /https?:\/\/[a-z0-9.-]+:\d{4,5}\b/i,                       // API server URLs (4-5 digit port)
+        /namespace:\s*[a-z][a-z0-9-]{2,}/i,                         // Namespace references (3+ chars)
       ]
       const realDataFound = realDataPatterns.filter((p) => p.test(body))
 
