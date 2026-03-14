@@ -82,4 +82,7 @@ export interface AllSettings {
   githubTokenSource?: 'settings' | 'env'
   /** Where the feedback GitHub token came from: "settings" (user UI), "env" (.env file), or undefined */
   feedbackGithubTokenSource?: 'settings' | 'env'
+
+  /** Per-dashboard stat block configurations (order, visibility, display mode) */
+  statBlockConfigs?: Record<string, unknown[]>
 }

@@ -4,6 +4,11 @@
  */
 
 /**
+ * Display mode for a stat block visualization
+ */
+export type StatDisplayMode = 'numeric' | 'sparkline' | 'gauge' | 'ring' | 'mini-bar'
+
+/**
  * Configuration for a single stat block
  */
 export interface StatBlockConfig {
@@ -12,6 +17,8 @@ export interface StatBlockConfig {
   icon: string
   visible: boolean
   color: string
+  /** Visualization mode — defaults to 'numeric' if absent (backward-compatible) */
+  displayMode?: StatDisplayMode
 }
 
 /**
@@ -409,4 +416,40 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
  */
 export function getStatsStorageKey(dashboardType: DashboardStatsType): string {
   return `${dashboardType}-stats-config`
+}
+
+/**
+ * Default display modes for specific stat blocks to showcase visualization options.
+ * Key format: "dashboardType:blockId"
+ */
+export const STAT_DISPLAY_MODE_DEFAULTS: Record<string, StatDisplayMode> = {
+  // Compliance — scores are percentages, perfect for gauges
+  'compliance:score': 'gauge',
+  'compliance:cis_score': 'gauge',
+  'compliance:nsa_score': 'gauge',
+
+  // Compute — utilization percentages fit rings
+  'compute:cpu_util': 'ring',
+  'compute:memory_util': 'ring',
+
+  // Data compliance — encryption score
+  'data-compliance:encryption_score': 'ring',
+
+  // Clusters — trend over time
+  'clusters:healthy': 'sparkline',
+  'clusters:pods': 'sparkline',
+
+  // Pods — trend over time
+  'pods:total_pods': 'sparkline',
+}
+
+/**
+ * Get the default display mode for a specific stat block on a specific dashboard.
+ * Returns undefined if no non-numeric default is defined (falls back to 'numeric').
+ */
+export function getDefaultDisplayMode(
+  dashboardType: DashboardStatsType,
+  blockId: string,
+): StatDisplayMode | undefined {
+  return STAT_DISPLAY_MODE_DEFAULTS[`${dashboardType}:${blockId}`]
 }

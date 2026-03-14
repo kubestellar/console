@@ -25,6 +25,7 @@ import {
   DashboardStatsType,
   ALL_STAT_BLOCKS,
   getDefaultStatBlocks,
+  getDefaultDisplayMode,
   getStatsStorageKey,
   CLUSTERS_STAT_BLOCKS,
   WORKLOADS_STAT_BLOCKS,
@@ -537,6 +538,14 @@ export function useStatsConfig(
   const defaultBlocks = getDefaultStatBlocks(dashboardType)
   const key = storageKey || getStatsStorageKey(dashboardType)
 
+  // Apply default display modes from STAT_DISPLAY_MODE_DEFAULTS to blocks
+  // that don't have an explicit displayMode set
+  const applyDefaultModes = (blockList: StatBlockConfig[]): StatBlockConfig[] =>
+    blockList.map(b => ({
+      ...b,
+      displayMode: b.displayMode ?? getDefaultDisplayMode(dashboardType, b.id),
+    }))
+
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
     const saved = safeGetJSON<StatBlockConfig[]>(key)
     if (saved) {
@@ -551,9 +560,9 @@ export function useStatsConfig(
           merged.push(defaultBlock)
         }
       })
-      return merged
+      return applyDefaultModes(merged)
     }
-    return defaultBlocks
+    return applyDefaultModes(defaultBlocks)
   })
 
   const saveBlocks = (newBlocks: StatBlockConfig[]) => {

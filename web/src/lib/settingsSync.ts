@@ -116,6 +116,21 @@ export function collectFromLocalStorage(): Partial<AllSettings> {
   const tourCompleted = localStorage.getItem(STORAGE_KEY_TOUR_COMPLETED)
   if (tourCompleted !== null) result.tourCompleted = tourCompleted === 'true'
 
+  // Stat block configs — collect all *-stats-config keys from localStorage
+  const statBlockConfigs: Record<string, unknown[]> = {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.endsWith('-stats-config')) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '')
+        if (Array.isArray(parsed)) statBlockConfigs[key] = parsed
+      } catch { /* skip corrupted */ }
+    }
+  }
+  if (Object.keys(statBlockConfigs).length > 0) {
+    result.statBlockConfigs = statBlockConfigs
+  }
+
   return result
 }
 
@@ -181,6 +196,15 @@ export function restoreToLocalStorage(settings: AllSettings): void {
 
   if (settings.tourCompleted !== undefined) {
     localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, String(settings.tourCompleted))
+  }
+
+  // Restore stat block configs
+  if (settings.statBlockConfigs) {
+    for (const [key, value] of Object.entries(settings.statBlockConfigs)) {
+      if (Array.isArray(value)) {
+        try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* skip */ }
+      }
+    }
   }
 
   // Notify hooks to re-read from localStorage

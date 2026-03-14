@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,12 +10,17 @@ import {
 } from 'lucide-react'
 import { Button } from './Button'
 import { StatusBadge } from './StatusBadge'
-import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
+import { StatBlockConfig, DashboardStatsType, StatDisplayMode } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
+import { StatBlockModePicker } from './StatBlockModePicker'
+import { Sparkline } from '../charts/Sparkline'
+import { Gauge } from '../charts/Gauge'
+import { CircularProgress } from '../charts/ProgressBar'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
+import { useStatHistory, MIN_SPARKLINE_POINTS } from '../../hooks/useStatHistory'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -61,6 +66,52 @@ const VALUE_COLORS: Record<string, string> = {
   root: 'text-orange-400',
 }
 
+/** Hex color values for chart components, keyed by stat block color name */
+const COLOR_HEX: Record<string, string> = {
+  purple: '#9333ea',
+  green: '#22c55e',
+  orange: '#f97316',
+  yellow: '#eab308',
+  cyan: '#06b6d4',
+  blue: '#3b82f6',
+  red: '#ef4444',
+  gray: '#6b7280',
+}
+
+/** Stat block IDs that represent percentage-type values (0-100) */
+const PERCENTAGE_STAT_IDS = new Set([
+  'score', 'cis_score', 'nsa_score', 'pci_score', 'kubescape_score',
+  'encryption_score', 'cpu_util', 'memory_util',
+  'gdpr_score', 'hipaa_score', 'soc2_score',
+])
+
+/** Determine which display modes are appropriate for a given stat block */
+function getAvailableModes(blockId: string, data: StatBlockValue): StatDisplayMode[] {
+  if (data.modeHints && data.modeHints.length > 0) return data.modeHints
+
+  const modes: StatDisplayMode[] = ['numeric']
+  const numericValue = typeof data.value === 'number'
+    ? data.value
+    : parseFloat(String(data.value))
+
+  if (!isNaN(numericValue)) {
+    modes.push('sparkline', 'mini-bar')
+    if (data.max !== undefined || PERCENTAGE_STAT_IDS.has(blockId) || String(data.value).includes('%')) {
+      modes.push('gauge', 'ring')
+    }
+  }
+  return modes
+}
+
+/** Height of the mini-bar progress bar in pixels */
+const MINI_BAR_HEIGHT_PX = 6
+
+/** Size of the circular ring indicator in pixels */
+const RING_SIZE_PX = 44
+
+/** Stroke width of the circular ring indicator in pixels */
+const RING_STROKE_PX = 5
+
 /**
  * Value and metadata for a single stat block
  */
@@ -71,6 +122,12 @@ export interface StatBlockValue {
   isClickable?: boolean
   /** Whether this stat uses demo/mock data (shows yellow border + badge) */
   isDemo?: boolean
+  /** For gauge/ring modes: the max value (default 100) */
+  max?: number
+  /** For gauge mode: threshold config */
+  thresholds?: { warning: number; critical: number }
+  /** Hint to the display mode picker about what modes are appropriate */
+  modeHints?: StatDisplayMode[]
 }
 
 interface StatBlockProps {
@@ -78,34 +135,124 @@ interface StatBlockProps {
   data: StatBlockValue
   hasData: boolean
   isLoading?: boolean
+  history?: number[]
+  onDisplayModeChange?: (mode: StatDisplayMode) => void
 }
 
-function StatBlock({ block, data, hasData, isLoading }: StatBlockProps) {
+function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChange }: StatBlockProps) {
   const IconComponent = ICONS[block.icon] || Server
   const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
   const valueColor = VALUE_COLORS[block.id] || 'text-foreground'
+  const hexColor = COLOR_HEX[block.color] || '#9333ea'
   const isClickable = !isLoading && data.isClickable !== false && !!data.onClick
   const isDemo = data.isDemo === true
+  const mode: StatDisplayMode = block.displayMode || 'numeric'
+  const availableModes = getAvailableModes(block.id, data)
 
   const displayValue = hasData ? data.value : '-'
+  const numericValue = typeof data.value === 'number'
+    ? data.value
+    : parseFloat(String(data.value))
+  const maxValue = data.max ?? 100
+
+  // Sparkline: fall back to numeric if not enough data yet
+  const hasEnoughHistory = (history?.length ?? 0) >= MIN_SPARKLINE_POINTS
+  const effectiveMode = mode === 'sparkline' && !hasEnoughHistory ? 'numeric' : mode
 
   return (
     <div
-      className={`relative glass p-4 rounded-lg ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
+      className={`group relative glass p-4 rounded-lg min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
     >
+      {/* Demo badge */}
       {isDemo && (
         <span className="absolute -top-1 -right-1" title="Demo data">
           <FlaskConical className="w-3.5 h-3.5 text-yellow-400/70" />
         </span>
       )}
+
+      {/* Mode picker gear — appears on hover */}
+      {!isLoading && onDisplayModeChange && (
+        <StatBlockModePicker
+          currentMode={mode}
+          availableModes={availableModes}
+          onModeChange={onDisplayModeChange}
+        />
+      )}
+
+      {/* Header: icon + name */}
       <div className="flex items-center gap-2 mb-2">
         <IconComponent className={`w-5 h-5 shrink-0 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
         <span className="text-sm text-muted-foreground truncate">{block.name}</span>
       </div>
-      <div className={`text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>{displayValue}</div>
-      {data.sublabel && (
-        <div className="text-xs text-muted-foreground">{data.sublabel}</div>
+
+      {/* Mode-specific content */}
+      {effectiveMode === 'sparkline' && hasEnoughHistory && !isNaN(numericValue) ? (
+        <>
+          <div className="flex items-end justify-between gap-2">
+            <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+              {displayValue}
+            </div>
+            <Sparkline data={history!} color={hexColor} height={28} width={64} fill />
+          </div>
+          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+        </>
+      ) : effectiveMode === 'gauge' && !isNaN(numericValue) ? (
+        <>
+          <div className="flex justify-center">
+            <Gauge
+              value={numericValue}
+              max={maxValue}
+              size="xs"
+              thresholds={data.thresholds}
+              invertColors={PERCENTAGE_STAT_IDS.has(block.id)}
+            />
+          </div>
+          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{data.sublabel}</div>}
+        </>
+      ) : effectiveMode === 'ring' && !isNaN(numericValue) ? (
+        <>
+          <div className="flex items-center gap-3">
+            <CircularProgress
+              value={numericValue}
+              max={maxValue}
+              size={RING_SIZE_PX}
+              strokeWidth={RING_STROKE_PX}
+              color={hexColor}
+            />
+            <div>
+              <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+                {displayValue}
+              </div>
+              {data.sublabel && <div className="text-xs text-muted-foreground">{data.sublabel}</div>}
+            </div>
+          </div>
+        </>
+      ) : effectiveMode === 'mini-bar' && !isNaN(numericValue) ? (
+        <>
+          <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+            {displayValue}
+          </div>
+          <div className="mt-1.5 w-full bg-secondary rounded-full overflow-hidden" style={{ height: MINI_BAR_HEIGHT_PX }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min((numericValue / maxValue) * 100, 100)}%`,
+                backgroundColor: hexColor,
+              }}
+            />
+          </div>
+          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+        </>
+      ) : (
+        /* Default numeric mode */
+        <>
+          <div className={`text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>{displayValue}</div>
+          {mode === 'sparkline' && !hasEnoughHistory && !isLoading && hasData && (
+            <div className="text-2xs text-muted-foreground/50 mt-0.5">Building trend…</div>
+          )}
+          {data.sublabel && <div className="text-xs text-muted-foreground">{data.sublabel}</div>}
+        </>
       )}
     </div>
   )
@@ -171,6 +318,21 @@ export function StatsOverview({
   const effectiveIsLoading = isLoading || forceLoadingForOffline || isModeSwitching
   const effectiveHasData = forceLoadingForOffline ? false : hasData
   const { isOpen, open: openConfig, close: closeConfig } = useModalState()
+
+  // Sparkline history buffer — accumulates values over the session
+  const { getHistory } = useStatHistory(
+    dashboardType,
+    getStatValue,
+    visibleBlocks.map(b => b.id),
+    effectiveIsLoading,
+  )
+
+  // Handle per-block display mode changes — persists to localStorage (synced to agent)
+  const handleDisplayModeChange = useCallback((blockId: string, mode: StatDisplayMode) => {
+    const updated = blocks.map(b => b.id === blockId ? { ...b, displayMode: mode } : b)
+    saveBlocks(updated)
+    window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
+  }, [blocks, saveBlocks])
 
   // Manage collapsed state with localStorage persistence
   const storageKey = collapsedStorageKey || `kubestellar-${dashboardType}-stats-collapsed`
@@ -260,6 +422,8 @@ export function StatsOverview({
                 data={data}
                 hasData={effectiveHasData && !effectiveIsLoading && data?.value !== undefined}
                 isLoading={effectiveIsLoading}
+                history={getHistory(block.id)}
+                onDisplayModeChange={(mode) => handleDisplayModeChange(block.id, mode)}
               />
             )
           })}
