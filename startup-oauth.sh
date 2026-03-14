@@ -287,13 +287,34 @@ else
     if command -v brew &>/dev/null; then
         if brew list kc-agent &>/dev/null; then
             echo -e "${GREEN}Upgrading kc-agent...${NC}"
-            brew update --quiet && brew upgrade kc-agent 2>/dev/null || true
+            brew update --quiet && brew upgrade kc-agent || true
         else
             echo -e "${GREEN}Installing kc-agent...${NC}"
             brew update --quiet && brew install kubestellar/tap/kc-agent
         fi
+
+        # Validate the brew-installed binary — brew upgrade can leave a broken
+        # symlink (0-byte regular file) if the link step fails silently.
+        BREW_BIN="$(command -v kc-agent 2>/dev/null || true)"
+        if [ -n "$BREW_BIN" ] && [ ! -s "$BREW_BIN" ]; then
+            echo -e "${YELLOW}Detected broken kc-agent binary (0 bytes), relinking...${NC}"
+            brew link --overwrite kc-agent 2>/dev/null || true
+            BREW_BIN="$(command -v kc-agent 2>/dev/null || true)"
+        fi
+
+        # Final fallback: if the symlink is still broken, find the binary
+        # directly in the Cellar and use it without the symlink.
+        if [ -n "$BREW_BIN" ] && [ ! -s "$BREW_BIN" ]; then
+            echo -e "${YELLOW}Brew symlink still broken, using Cellar binary directly...${NC}"
+            CELLAR_BIN="$(find "$(brew --cellar kc-agent 2>/dev/null)" -name kc-agent -type f -perm +111 2>/dev/null | head -1)"
+            if [ -n "$CELLAR_BIN" ] && [ -s "$CELLAR_BIN" ]; then
+                BREW_BIN="$CELLAR_BIN"
+            fi
+        fi
     fi
-    if command -v kc-agent &>/dev/null; then
+    if [ -n "$BREW_BIN" ] && [ -s "$BREW_BIN" ] && [ -x "$BREW_BIN" ]; then
+        KC_AGENT_BIN="$BREW_BIN"
+    elif command -v kc-agent &>/dev/null && [ -s "$(command -v kc-agent)" ]; then
         KC_AGENT_BIN="$(command -v kc-agent)"
     fi
 fi
