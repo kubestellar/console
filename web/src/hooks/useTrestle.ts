@@ -215,7 +215,7 @@ export function useTrestle() {
     if (isDemoMode) {
       const demoNames = clusterNames.length > 0 ? clusterNames : ['cluster-1', 'cluster-2', 'cluster-3']
       const demoStatuses: Record<string, TrestleClusterStatus> = {}
-      for (const name of demoNames) {
+      for (const name of (demoNames || [])) {
         demoStatuses[name] = getDemoStatus(name)
       }
       if (mountedRef.current) {
@@ -235,7 +235,7 @@ export function useTrestle() {
         // Phase 1: CRD detection — check for OSCAL CRDs
         let found = false
 
-        for (const crdName of TRESTLE_CRD_NAMES) {
+        for (const crdName of (TRESTLE_CRD_NAMES || [])) {
           const crdCheck = await kubectlProxy.exec(
             ['get', 'crd', crdName, '-o', 'name'],
             { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
@@ -248,7 +248,7 @@ export function useTrestle() {
 
         // Fallback: check for known deployments
         if (!found) {
-          for (const dep of TRESTLE_DEPLOYMENT_CHECKS) {
+          for (const dep of (TRESTLE_DEPLOYMENT_CHECKS || [])) {
             const depCheck = await kubectlProxy.exec(
               ['get', 'deployment', dep.name, '-n', dep.ns, '-o', 'name'],
               { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
@@ -275,7 +275,7 @@ export function useTrestle() {
         ]
 
         let fetchedData = false
-        for (const api of apiGroups) {
+        for (const api of (apiGroups || [])) {
           const result = await kubectlProxy.exec(
             ['get', `${api.resource}.${api.group}`, '-A', '-o', 'json'],
             { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
@@ -290,7 +290,7 @@ export function useTrestle() {
                 const profiles: OscalProfile[] = []
                 const controlResults: OscalControlResult[] = []
 
-                for (const item of items) {
+                for (const item of (items || [])) {
                   const spec = (item.spec || {}) as Record<string, unknown>
                   const status = (item.status || {}) as Record<string, unknown>
                   const meta = (item.metadata || {}) as Record<string, unknown>
@@ -422,7 +422,7 @@ export function useTrestle() {
     const agg = { totalControls: 0, passedControls: 0, failedControls: 0, otherControls: 0, overallScore: 0 }
     const installedStatuses = Object.values(statuses).filter(s => s.installed)
     if (installedStatuses.length === 0) return agg
-    for (const s of installedStatuses) {
+    for (const s of (installedStatuses || [])) {
       agg.totalControls += s.totalControls
       agg.passedControls += s.passedControls
       agg.failedControls += s.failedControls
