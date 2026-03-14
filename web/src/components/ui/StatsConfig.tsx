@@ -138,13 +138,14 @@ function SortableItem({ block, onToggleVisibility, onRemove, isCustom }: Sortabl
         block.visible ? '' : 'opacity-50'
       }`}
     >
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
+        className="cursor-grab active:cursor-grabbing p-1"
+        icon={<GripVertical className="w-4 h-4 text-muted-foreground" />}
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing p-1 hover:bg-secondary rounded"
-      >
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-      </button>
+      />
       <div className={`w-5 h-5 ${colorClasses[block.color] || 'text-foreground'}`}>
         <span className="text-sm">{iconEmojis[block.icon] || '📊'}</span>
       </div>

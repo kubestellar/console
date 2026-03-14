@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Filter, ChevronDown, Server } from 'lucide-react'
 import { ClusterStatusDot, getClusterState, type ClusterState } from './ClusterStatusBadge'
 import type { ClusterErrorType } from '../../lib/errorClassifier'
+import { Button } from './Button'
 
 interface ClusterFilterDropdownProps {
   localClusterFilter: string[]
@@ -86,21 +87,22 @@ export function ClusterFilterDropdown({
 
       {/* Cluster filter dropdown */}
       <div ref={clusterFilterRef} className="relative">
-        <button
+        <Button
           ref={buttonRef}
+          variant="ghost"
+          size="sm"
           onClick={() => setShowClusterFilter(!showClusterFilter)}
           aria-haspopup="listbox"
           aria-expanded={showClusterFilter}
-          className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+          className={`px-2 py-1 text-xs border ${
             localClusterFilter.length > 0
               ? 'bg-purple-900 border-purple-800 text-purple-400'
               : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
           }`}
           title={t('clusterFilter.filterByCluster')}
-        >
-          <Filter className="w-3 h-3" />
-          <ChevronDown className="w-3 h-3" />
-        </button>
+          icon={<Filter className="w-3 h-3" />}
+          iconRight={<ChevronDown className="w-3 h-3" />}
+        />
 
         {/* Portal dropdown to escape overflow-hidden containers */}
         {showClusterFilter && dropdownStyle && createPortal(
@@ -123,16 +125,19 @@ export function ClusterFilterDropdown({
             }}
           >
             <div className="p-1">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 role="option"
                 aria-selected={localClusterFilter.length === 0}
                 onClick={clearClusterFilter}
-                className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                  localClusterFilter.length === 0 ? 'bg-purple-900 text-purple-400' : 'hover:bg-secondary text-foreground'
+                className={`w-full justify-start px-2 py-1.5 text-xs ${
+                  localClusterFilter.length === 0 ? 'bg-purple-900 text-purple-400' : 'text-foreground'
                 }`}
+                fullWidth
               >
                 {t('clusterFilter.allClusters')}
-              </button>
+              </Button>
               {availableClusters.map(cluster => {
                 const clusterState: ClusterState = cluster.healthy !== undefined || cluster.reachable !== undefined
                   ? getClusterState(
@@ -152,27 +157,30 @@ export function ClusterFilterDropdown({
                   clusterState.startsWith('unreachable') ? t('clusterFilter.offline') : ''
 
                 return (
-                  <button
+                  <Button
                     key={cluster.name}
+                    variant="ghost"
+                    size="sm"
                     role="option"
                     aria-selected={localClusterFilter.includes(cluster.name)}
                     onClick={() => !isUnreachable && toggleClusterFilter(cluster.name)}
                     disabled={isUnreachable}
-                    className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
+                    className={`w-full justify-start px-2 py-1.5 text-xs ${
                       isUnreachable
                         ? 'opacity-40 cursor-not-allowed'
                         : localClusterFilter.includes(cluster.name)
                         ? 'bg-purple-900 text-purple-400'
-                          : 'hover:bg-secondary text-foreground'
+                          : 'text-foreground'
                     }`}
+                    fullWidth
                     title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
+                    icon={<ClusterStatusDot state={clusterState} size="sm" />}
                   >
-                    <ClusterStatusDot state={clusterState} size="sm" />
                     <span className="flex-1 truncate">{cluster.name}</span>
                     {stateLabel && (
                       <span className="text-2xs text-muted-foreground shrink-0">{stateLabel}</span>
                     )}
-                  </button>
+                  </Button>
                 )
               })}
             </div>

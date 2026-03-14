@@ -99,16 +99,19 @@ export function CardControls<T extends string = string>({
           {limitOpen && (
             <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1">
               {LIMIT_OPTIONS.map(option => (
-                <button
+                <Button
                   key={String(option.value)}
+                  variant="ghost"
+                  size="sm"
                   onClick={() => { onLimitChange(option.value); setLimitOpen(false); emitCardLimitChanged(String(option.value), cardType) }}
                   className={cn(
-                    'w-full px-3 py-1.5 text-left text-xs hover:bg-secondary/50 transition-colors',
+                    'w-full justify-start px-3 py-1.5 text-xs',
                     limit === option.value ? 'text-primary bg-primary/10' : 'text-foreground'
                   )}
+                  fullWidth
                 >
                   {option.label}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -131,16 +134,19 @@ export function CardControls<T extends string = string>({
             {sortOpen && (
               <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[100px] py-1">
                 {sortOptions.map(option => (
-                  <button
+                  <Button
                     key={option.value}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => { onSortChange(option.value); setSortOpen(false); emitCardSortChanged(option.value, cardType) }}
                     className={cn(
-                      'w-full px-3 py-1.5 text-left text-xs hover:bg-secondary/50 transition-colors',
+                      'w-full justify-start px-3 py-1.5 text-xs',
                       sortBy === option.value ? 'text-primary bg-primary/10' : 'text-foreground'
                     )}
+                    fullWidth
                   >
                     {option.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
