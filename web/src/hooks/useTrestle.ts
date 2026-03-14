@@ -26,8 +26,8 @@ const REFRESH_INTERVAL_MS = 120_000
 /** Cache TTL: 2 minutes — matches refresh interval */
 const CACHE_TTL_MS = 120_000
 
-/** Timeout for CRD existence check */
-const CRD_CHECK_TIMEOUT_MS = 5_000
+/** Timeout for CRD/deployment existence check (fast — missing resources fail instantly) */
+const CRD_CHECK_TIMEOUT_MS = 3_000
 
 /** Timeout for data fetch */
 const DATA_FETCH_TIMEOUT_MS = 15_000
@@ -190,33 +190,28 @@ function emptyStatus(cluster: string, installed: boolean, error?: string): Trest
 
 async function fetchSingleCluster(cluster: string): Promise<TrestleClusterStatus> {
   try {
-    // Phase 1: CRD detection — check for OSCAL CRDs
-    let found = false
-
-    for (const crdName of (TRESTLE_CRD_NAMES || [])) {
-      const crdCheck = await kubectlProxy.exec(
-        ['get', 'crd', crdName, '-o', 'name'],
-        { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
-      )
-      if (crdCheck.exitCode === 0) {
-        found = true
-        break
-      }
-    }
-
-    // Fallback: check for known deployments
-    if (!found) {
-      for (const dep of (TRESTLE_DEPLOYMENT_CHECKS || [])) {
-        const depCheck = await kubectlProxy.exec(
+    // Phase 1: Fast detection — race all CRD + deployment checks in parallel
+    // First success wins; if all fail, Trestle is not installed.
+    // Uses Promise.allSettled + find to emulate Promise.any (es2021 not available).
+    const allChecks = [
+      ...(TRESTLE_CRD_NAMES || []).map(crdName =>
+        kubectlProxy.exec(
+          ['get', 'crd', crdName, '-o', 'name'],
+          { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
+        )
+      ),
+      ...(TRESTLE_DEPLOYMENT_CHECKS || []).map(dep =>
+        kubectlProxy.exec(
           ['get', 'deployment', dep.name, '-n', dep.ns, '-o', 'name'],
           { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
         )
-        if (depCheck.exitCode === 0) {
-          found = true
-          break
-        }
-      }
-    }
+      ),
+    ]
+
+    const results = await Promise.allSettled(allChecks)
+    const found = results.some(
+      r => r.status === 'fulfilled' && r.value.exitCode === 0
+    )
 
     if (!found) {
       return emptyStatus(cluster, false)
