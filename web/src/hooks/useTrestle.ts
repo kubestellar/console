@@ -1,9 +1,11 @@
 /**
  * Hook to fetch Compliance Trestle / OSCAL assessment data from connected clusters.
  *
- * Follows the useKubescape.ts pattern:
+ * Uses parallel cluster checks with progressive streaming:
  * - Phase 1: CRD existence check per cluster (5s timeout)
  * - Phase 2: Fetch assessment data from installed clusters (15s timeout)
+ * - All clusters checked in parallel via Promise.allSettled
+ * - Results stream to the card as each cluster completes
  * - localStorage cache with auto-refresh
  * - Demo fallback when no clusters are connected
  *
@@ -184,6 +186,142 @@ function emptyStatus(cluster: string, installed: boolean, error?: string): Trest
   }
 }
 
+// ── Single-cluster fetch (used in parallel) ──────────────────────────────
+
+async function fetchSingleCluster(cluster: string): Promise<TrestleClusterStatus> {
+  try {
+    // Phase 1: CRD detection — check for OSCAL CRDs
+    let found = false
+
+    for (const crdName of (TRESTLE_CRD_NAMES || [])) {
+      const crdCheck = await kubectlProxy.exec(
+        ['get', 'crd', crdName, '-o', 'name'],
+        { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
+      )
+      if (crdCheck.exitCode === 0) {
+        found = true
+        break
+      }
+    }
+
+    // Fallback: check for known deployments
+    if (!found) {
+      for (const dep of (TRESTLE_DEPLOYMENT_CHECKS || [])) {
+        const depCheck = await kubectlProxy.exec(
+          ['get', 'deployment', dep.name, '-n', dep.ns, '-o', 'name'],
+          { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
+        )
+        if (depCheck.exitCode === 0) {
+          found = true
+          break
+        }
+      }
+    }
+
+    if (!found) {
+      return emptyStatus(cluster, false)
+    }
+
+    // Phase 2: Fetch assessment data
+    const apiGroups = [
+      { group: 'oscal.io', version: 'v1alpha1', resource: 'assessmentresults' },
+      { group: 'compliance.oscal.io', version: 'v1', resource: 'complianceassessments' },
+      { group: 'oscal.io', version: 'v1', resource: 'assessmentresults' },
+    ]
+
+    for (const api of (apiGroups || [])) {
+      const result = await kubectlProxy.exec(
+        ['get', `${api.resource}.${api.group}`, '-A', '-o', 'json'],
+        { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
+      )
+
+      if (result.exitCode === 0 && result.output) {
+        try {
+          const data = JSON.parse(result.output)
+          const items = (data.items || []) as Array<Record<string, unknown>>
+
+          if (items.length > 0) {
+            const profiles: OscalProfile[] = []
+            const controlResults: OscalControlResult[] = []
+
+            for (const item of (items || [])) {
+              const spec = (item.spec || {}) as Record<string, unknown>
+              const status = (item.status || {}) as Record<string, unknown>
+              const meta = (item.metadata || {}) as Record<string, unknown>
+              const profileName = String(spec.profile || spec.profileName || meta.name || 'Unknown Profile')
+
+              const results = (status.results || status.controlResults || []) as Array<Record<string, unknown>>
+              let passed = 0
+              let failed = 0
+              let other = 0
+
+              for (const r of (results || [])) {
+                const controlStatus = String(r.status || r.state || 'other').toLowerCase()
+                const controlId = String(r.controlId || r.control || r.id || '')
+                const title = String(r.title || r.description || controlId)
+
+                if (controlStatus === 'pass' || controlStatus === 'satisfied') {
+                  passed++
+                  controlResults.push({ controlId, title, status: 'pass' })
+                } else if (controlStatus === 'fail' || controlStatus === 'not-satisfied') {
+                  failed++
+                  controlResults.push({ controlId, title, status: 'fail' })
+                } else {
+                  other++
+                  controlResults.push({
+                    controlId, title,
+                    status: controlStatus === 'not-applicable' ? 'not-applicable' : 'other',
+                  })
+                }
+              }
+
+              profiles.push({
+                name: profileName,
+                totalControls: passed + failed + other,
+                controlsPassed: passed,
+                controlsFailed: failed,
+                controlsOther: other,
+              })
+            }
+
+            const totalControls = controlResults.length
+            const passedControls = controlResults.filter(c => c.status === 'pass').length
+            const failedControls = controlResults.filter(c => c.status === 'fail').length
+            const otherControls = totalControls - passedControls - failedControls
+            const overallScore = totalControls > 0
+              ? Math.round((passedControls / totalControls) * 100)
+              : 0
+
+            return {
+              cluster,
+              installed: true,
+              loading: false,
+              overallScore,
+              profiles,
+              totalControls,
+              passedControls,
+              failedControls,
+              otherControls,
+              controlResults,
+              lastAssessment: new Date().toISOString(),
+            }
+          }
+        } catch {
+          // JSON parse error, try next API group
+        }
+      }
+    }
+
+    // Installed but no assessment data yet
+    return emptyStatus(cluster, true)
+  } catch (err) {
+    return emptyStatus(
+      cluster, false,
+      err instanceof Error ? err.message : 'Unknown error'
+    )
+  }
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────
 
 export function useTrestle() {
@@ -193,6 +331,8 @@ export function useTrestle() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  /** Number of clusters that have completed checking (for progressive UI) */
+  const [clustersChecked, setClustersChecked] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
 
@@ -210,6 +350,7 @@ export function useTrestle() {
 
     if (isRefresh) setIsRefreshing(true)
     else setIsLoading(true)
+    setClustersChecked(0)
 
     // Demo mode
     if (isDemoMode) {
@@ -220,6 +361,7 @@ export function useTrestle() {
       }
       if (mountedRef.current) {
         setStatuses(demoStatuses)
+        setClustersChecked(demoNames.length)
         setIsLoading(false)
         setIsRefreshing(false)
         setLastRefresh(new Date())
@@ -227,160 +369,26 @@ export function useTrestle() {
       return
     }
 
-    // Real mode: check each cluster
-    const newStatuses: Record<string, TrestleClusterStatus> = {}
+    // Real mode: check all clusters in parallel, stream results progressively
+    const allStatuses: Record<string, TrestleClusterStatus> = {}
 
-    for (const cluster of (clusterNames || [])) {
-      try {
-        // Phase 1: CRD detection — check for OSCAL CRDs
-        let found = false
-
-        for (const crdName of (TRESTLE_CRD_NAMES || [])) {
-          const crdCheck = await kubectlProxy.exec(
-            ['get', 'crd', crdName, '-o', 'name'],
-            { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
-          )
-          if (crdCheck.exitCode === 0) {
-            found = true
-            break
-          }
-        }
-
-        // Fallback: check for known deployments
-        if (!found) {
-          for (const dep of (TRESTLE_DEPLOYMENT_CHECKS || [])) {
-            const depCheck = await kubectlProxy.exec(
-              ['get', 'deployment', dep.name, '-n', dep.ns, '-o', 'name'],
-              { context: cluster, timeout: CRD_CHECK_TIMEOUT_MS }
-            )
-            if (depCheck.exitCode === 0) {
-              found = true
-              break
-            }
-          }
-        }
-
-        if (!found) {
-          newStatuses[cluster] = emptyStatus(cluster, false)
-          setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
-          continue
-        }
-
-        // Phase 2: Fetch assessment data
-        // Try each known API group for OSCAL assessment results
-        const apiGroups = [
-          { group: 'oscal.io', version: 'v1alpha1', resource: 'assessmentresults' },
-          { group: 'compliance.oscal.io', version: 'v1', resource: 'complianceassessments' },
-          { group: 'oscal.io', version: 'v1', resource: 'assessmentresults' },
-        ]
-
-        let fetchedData = false
-        for (const api of (apiGroups || [])) {
-          const result = await kubectlProxy.exec(
-            ['get', `${api.resource}.${api.group}`, '-A', '-o', 'json'],
-            { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
-          )
-
-          if (result.exitCode === 0 && result.output) {
-            try {
-              const data = JSON.parse(result.output)
-              const items = (data.items || []) as Array<Record<string, unknown>>
-
-              if (items.length > 0) {
-                const profiles: OscalProfile[] = []
-                const controlResults: OscalControlResult[] = []
-
-                for (const item of (items || [])) {
-                  const spec = (item.spec || {}) as Record<string, unknown>
-                  const status = (item.status || {}) as Record<string, unknown>
-                  const meta = (item.metadata || {}) as Record<string, unknown>
-                  const profileName = String(spec.profile || spec.profileName || meta.name || 'Unknown Profile')
-
-                  const results = (status.results || status.controlResults || []) as Array<Record<string, unknown>>
-                  let passed = 0
-                  let failed = 0
-                  let other = 0
-
-                  for (const r of (results || [])) {
-                    const controlStatus = String(r.status || r.state || 'other').toLowerCase()
-                    const controlId = String(r.controlId || r.control || r.id || '')
-                    const title = String(r.title || r.description || controlId)
-
-                    if (controlStatus === 'pass' || controlStatus === 'satisfied') {
-                      passed++
-                      controlResults.push({ controlId, title, status: 'pass' })
-                    } else if (controlStatus === 'fail' || controlStatus === 'not-satisfied') {
-                      failed++
-                      controlResults.push({ controlId, title, status: 'fail' })
-                    } else {
-                      other++
-                      controlResults.push({
-                        controlId, title,
-                        status: controlStatus === 'not-applicable' ? 'not-applicable' : 'other',
-                      })
-                    }
-                  }
-
-                  profiles.push({
-                    name: profileName,
-                    totalControls: passed + failed + other,
-                    controlsPassed: passed,
-                    controlsFailed: failed,
-                    controlsOther: other,
-                  })
-                }
-
-                const totalControls = controlResults.length
-                const passedControls = controlResults.filter(c => c.status === 'pass').length
-                const failedControls = controlResults.filter(c => c.status === 'fail').length
-                const otherControls = totalControls - passedControls - failedControls
-                const overallScore = totalControls > 0
-                  ? Math.round((passedControls / totalControls) * 100)
-                  : 0
-
-                newStatuses[cluster] = {
-                  cluster,
-                  installed: true,
-                  loading: false,
-                  overallScore,
-                  profiles,
-                  totalControls,
-                  passedControls,
-                  failedControls,
-                  otherControls,
-                  controlResults,
-                  lastAssessment: new Date().toISOString(),
-                }
-                fetchedData = true
-                break
-              }
-            } catch {
-              // JSON parse error, try next API group
-            }
-          }
-        }
-
-        if (!fetchedData) {
-          // Installed but no assessment data yet
-          newStatuses[cluster] = emptyStatus(cluster, true)
-        }
-
+    const promises = (clusterNames || []).map(cluster =>
+      fetchSingleCluster(cluster).then(status => {
+        allStatuses[cluster] = status
         if (mountedRef.current) {
-          setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
+          // Stream each result immediately — card re-renders progressively
+          setStatuses(prev => ({ ...prev, [cluster]: status }))
+          setClustersChecked(prev => prev + 1)
+          // Clear initial loading after first result arrives
+          setIsLoading(false)
         }
-      } catch (err) {
-        newStatuses[cluster] = emptyStatus(
-          cluster, false,
-          err instanceof Error ? err.message : 'Unknown error'
-        )
-        if (mountedRef.current) {
-          setStatuses(prev => ({ ...prev, [cluster]: newStatuses[cluster] }))
-        }
-      }
-    }
+      })
+    )
+
+    await Promise.allSettled(promises)
 
     if (mountedRef.current) {
-      saveToCache(newStatuses)
+      saveToCache(allStatuses)
       setIsLoading(false)
       setIsRefreshing(false)
       setLastRefresh(new Date())
@@ -442,6 +450,10 @@ export function useTrestle() {
     lastRefresh,
     installed,
     isDemoData,
+    /** Number of clusters checked so far (for progressive UI) */
+    clustersChecked,
+    /** Total number of clusters being checked */
+    totalClusters: clusterNames.length,
     refetch: () => fetchData(true),
   }
 }

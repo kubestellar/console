@@ -4,6 +4,7 @@
  * Displays OSCAL compliance assessment status from Compliance Trestle / c2p.
  * When installed, shows per-profile pass/fail counts and an overall score.
  * When not installed, falls back to demo data and offers an AI mission install link.
+ * Uses progressive streaming — shows results as each cluster check completes.
  *
  * Compliance Trestle is a CNCF Sandbox project for compliance-as-code using NIST OSCAL.
  */
@@ -44,10 +45,13 @@ Please diagnose step by step and fix any issues found.`,
 }
 
 export function TrestleScan({ config: _config }: CardConfig) {
-  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, lastRefresh } = useTrestle()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, lastRefresh, clustersChecked, totalClusters } = useTrestle()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
+
+  /** Whether all clusters have been checked */
+  const allChecked = clustersChecked >= totalClusters && totalClusters > 0
 
   // Filter by selected clusters
   const filtered = useMemo(() => {
@@ -136,11 +140,16 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
     return Array.from(profileMap.values())
   }, [statuses, selectedClusters])
 
-  // Loading state
-  if (isLoading) {
+  // Only show full-screen spinner on very first load with zero data
+  if (isLoading && Object.keys(statuses).length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex flex-col items-center justify-center h-full gap-2">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        {totalClusters > 0 && (
+          <span className="text-xs text-muted-foreground">
+            Checking clusters... {clustersChecked}/{totalClusters}
+          </span>
+        )}
       </div>
     )
   }
@@ -217,9 +226,15 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
 
   return (
     <div className="space-y-3 h-full flex flex-col">
-      {/* Refresh indicator */}
+      {/* Refresh / streaming progress indicator */}
       {isRefreshing && lastRefresh && (
         <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} />
+      )}
+      {!allChecked && totalClusters > 0 && !isRefreshing && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Checking clusters... {clustersChecked}/{totalClusters}</span>
+        </div>
       )}
 
       {/* Overall Score */}
