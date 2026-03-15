@@ -251,7 +251,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					pods, err := h.k8sClient.GetPods(ctx, clusterName, namespace)
@@ -325,7 +325,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					issues, err := h.k8sClient.FindPodIssues(ctx, clusterName, namespace)
@@ -385,7 +385,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetGPUNodes(ctx, clusterName)
@@ -443,7 +443,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetGPUNodeHealth(ctx, clusterName)
@@ -622,7 +622,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, clusterName)
@@ -679,7 +679,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetNodes(ctx, clusterName)
@@ -741,7 +741,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					issues, err := h.k8sClient.FindDeploymentIssues(ctx, clusterName, namespace)
@@ -801,7 +801,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					deployments, err := h.k8sClient.GetDeployments(ctx, clusterName, namespace)
@@ -860,7 +860,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					services, err := h.k8sClient.GetServices(ctx, clusterName, namespace)
@@ -920,7 +920,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					jobs, err := h.k8sClient.GetJobs(ctx, clusterName, namespace)
@@ -980,7 +980,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					hpas, err := h.k8sClient.GetHPAs(ctx, clusterName, namespace)
@@ -1040,7 +1040,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					configmaps, err := h.k8sClient.GetConfigMaps(ctx, clusterName, namespace)
@@ -1100,7 +1100,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					secrets, err := h.k8sClient.GetSecrets(ctx, clusterName, namespace)
@@ -1160,7 +1160,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					serviceAccounts, err := h.k8sClient.GetServiceAccounts(ctx, clusterName, namespace)
@@ -1220,7 +1220,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					pvcs, err := h.k8sClient.GetPVCs(ctx, clusterName, namespace)
@@ -1279,7 +1279,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					pvs, err := h.k8sClient.GetPVs(ctx, clusterName)
@@ -1339,7 +1339,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					quotas, err := h.k8sClient.GetResourceQuotas(ctx, clusterName, namespace)
@@ -1399,7 +1399,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					ranges, err := h.k8sClient.GetLimitRanges(ctx, clusterName, namespace)
@@ -1596,7 +1596,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					events, err := h.k8sClient.GetEvents(ctx, clusterName, namespace, perClusterLimit)
@@ -1681,7 +1681,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					events, err := h.k8sClient.GetWarningEvents(ctx, clusterName, namespace, perClusterLimit)
@@ -1748,7 +1748,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					issues, err := h.k8sClient.CheckSecurityIssues(ctx, clusterName, namespace)
@@ -1980,7 +1980,7 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), mcpDefaultTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetFlatcarNodes(ctx, clusterName)
@@ -2035,7 +2035,7 @@ func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetReplicaSets(ctx, clusterName, namespace)
@@ -2095,7 +2095,7 @@ func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetStatefulSets(ctx, clusterName, namespace)
@@ -2155,7 +2155,7 @@ func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetDaemonSets(ctx, clusterName, namespace)
@@ -2215,7 +2215,7 @@ func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetCronJobs(ctx, clusterName, namespace)
@@ -2275,7 +2275,7 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetIngresses(ctx, clusterName, namespace)
@@ -2335,7 +2335,7 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetNetworkPolicies(ctx, clusterName, namespace)

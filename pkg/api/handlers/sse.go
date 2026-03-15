@@ -44,10 +44,15 @@ const sseSlowClusterTimeout = 3 * time.Second
 // sseCacheTTL is how long cached SSE responses are considered fresh.
 const sseCacheTTL = 15 * time.Second
 
+// sseCacheEvictInterval is how often the background goroutine sweeps the cache
+// to remove expired entries and prevent unbounded memory growth.
+const sseCacheEvictInterval = 30 * time.Second
+
 // SSE response cache — avoids re-fetching when the user navigates away and back.
 var (
-	sseCache   = map[string]*sseCacheEntry{}
-	sseCacheMu sync.RWMutex
+	sseCache       = map[string]*sseCacheEntry{}
+	sseCacheMu     sync.RWMutex
+	sseCacheOnce   sync.Once
 )
 
 type sseCacheEntry struct {
@@ -55,16 +60,46 @@ type sseCacheEntry struct {
 	fetchedAt time.Time
 }
 
+// startSSECacheEvictor launches a background goroutine (once) that periodically
+// deletes expired entries from sseCache so memory doesn't grow without bound.
+func startSSECacheEvictor() {
+	sseCacheOnce.Do(func() {
+		go func() {
+			ticker := time.NewTicker(sseCacheEvictInterval)
+			defer ticker.Stop()
+			for range ticker.C {
+				now := time.Now()
+				sseCacheMu.Lock()
+				for k, e := range sseCache {
+					if now.Sub(e.fetchedAt) >= sseCacheTTL {
+						delete(sseCache, k)
+					}
+				}
+				sseCacheMu.Unlock()
+			}
+		}()
+	})
+}
+
 func sseCacheGet(key string) interface{} {
-	sseCacheMu.RLock()
-	defer sseCacheMu.RUnlock()
-	if e, ok := sseCache[key]; ok && time.Since(e.fetchedAt) < sseCacheTTL {
-		return e.data
+	sseCacheMu.Lock()
+	defer sseCacheMu.Unlock()
+	e, ok := sseCache[key]
+	if !ok {
+		return nil
 	}
-	return nil
+	if time.Since(e.fetchedAt) >= sseCacheTTL {
+		// Delete expired entry on read to bound memory between eviction sweeps.
+		delete(sseCache, key)
+		return nil
+	}
+	return e.data
 }
 
 func sseCacheSet(key string, data interface{}) {
+	// Ensure the background evictor is running.
+	startSSECacheEvictor()
+
 	sseCacheMu.Lock()
 	sseCache[key] = &sseCacheEntry{data: data, fetchedAt: time.Now()}
 	sseCacheMu.Unlock()
