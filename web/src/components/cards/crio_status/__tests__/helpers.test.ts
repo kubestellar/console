@@ -48,7 +48,7 @@ describe('crio_status helpers', () => {
     expect(summary.runningContainers).toBe(1)
     expect(summary.pausedContainers).toBe(1)
     expect(summary.stoppedContainers).toBe(1)
-    expect(summary.imagePullTotal).toBe(3)
+    expect(summary.totalContainers).toBe(3)
     expect(summary.imagePullFailed).toBe(1)
     expect(summary.podSandboxesReady).toBe(1)
     expect(summary.podSandboxesTotal).toBe(3)

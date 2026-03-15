@@ -82,6 +82,7 @@ interface BackendPodContainer {
 }
 
 interface BackendPodInfo {
+  name?: string
   node?: string
   status?: string
   ready?: string
@@ -92,6 +93,10 @@ interface BackendEventInfo {
   reason?: string
   message?: string
   lastSeen?: string
+  involvedObject?: {
+    kind?: string
+    name?: string
+  }
 }
 
 /**
@@ -178,10 +183,29 @@ async function fetchCrioStatus(): Promise<CrioStatus> {
   const health: 'healthy' | 'degraded' = 
     hasMultipleVersions || hasUnhealthyNodes ? 'degraded' : 'healthy'
   const podSummary = summarizeCrioPods(crioPods)
-  const recentImagePulls = buildRecentImagePulls(allEvents)
+  const crioPodNames = new Set(
+    crioPods
+      .map((pod) => pod.name)
+      .filter((name): name is string => Boolean(name)),
+  )
+  const crioEvents = allEvents.filter((event) => {
+    if (event?.involvedObject?.kind === 'Pod' && event.involvedObject.name) {
+      return crioPodNames.has(event.involvedObject.name)
+    }
+
+    const eventMessage = String(event?.message ?? '')
+    for (const podName of crioPodNames) {
+      if (eventMessage.includes(podName)) {
+        return true
+      }
+    }
+
+    return false
+  })
+  const recentImagePulls = buildRecentImagePulls(crioEvents)
   const imagePullSuccessful = Math.max(
     0,
-    podSummary.imagePullTotal - podSummary.imagePullFailed,
+    podSummary.totalContainers - podSummary.imagePullFailed,
   )
   const podSandboxesNotReady = Math.max(
     0,
@@ -199,7 +223,7 @@ async function fetchCrioStatus(): Promise<CrioStatus> {
       stoppedContainers: podSummary.stoppedContainers,
     },
     imagePulls: {
-      total: podSummary.imagePullTotal,
+      total: podSummary.totalContainers,
       successful: imagePullSuccessful,
       failed: podSummary.imagePullFailed,
     },
@@ -249,7 +273,7 @@ export function useCrioStatus(): UseCrioStatusResult {
     })
 
   const effectiveIsDemoData = isDemoFallback && !isLoading
-  const hasAnyData = !data.detected ? true : data.totalNodes > 0
+  const hasAnyData = data.detected
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,

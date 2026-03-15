@@ -87,7 +87,7 @@ export function summarizeCrioPods(pods: CrioPodInfo[]): {
   runningContainers: number
   pausedContainers: number
   stoppedContainers: number
-  imagePullTotal: number
+  totalContainers: number
   imagePullFailed: number
   podSandboxesReady: number
   podSandboxesTotal: number
@@ -95,7 +95,7 @@ export function summarizeCrioPods(pods: CrioPodInfo[]): {
   let runningContainers = 0
   let pausedContainers = 0
   let stoppedContainers = 0
-  let imagePullTotal = 0
+  let totalContainers = 0
   let imagePullFailed = 0
   let podSandboxesReady = 0
 
@@ -111,7 +111,7 @@ export function summarizeCrioPods(pods: CrioPodInfo[]): {
     }
 
     for (const container of (pod.containers || [])) {
-      imagePullTotal += 1
+      totalContainers += 1
       const state = container.state ?? 'running'
       if (state === 'running') {
         runningContainers += 1
@@ -132,7 +132,7 @@ export function summarizeCrioPods(pods: CrioPodInfo[]): {
     runningContainers,
     pausedContainers,
     stoppedContainers,
-    imagePullTotal,
+    totalContainers,
     imagePullFailed,
     podSandboxesReady,
     podSandboxesTotal: (pods || []).length,
