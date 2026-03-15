@@ -13,6 +13,9 @@ import {
   Sparkles,
   ThumbsUp,
   ThumbsDown,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useResolutions, detectIssueSignature, type Resolution } from '../../../hooks/useResolutions'
@@ -30,7 +33,7 @@ import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
-  const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, selectedAgent } = useMissions()
+  const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, selectedAgent } = useMissions()
   const { findSimilarResolutions, recordUsage, allResolutions } = useResolutions()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -49,6 +52,11 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   // Message validation error (e.g. too long)
   const [inputError, setInputError] = useState<string | null>(null)
+
+  // Title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editTitleValue, setEditTitleValue] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   // Find related resolutions based on mission content
   const relatedResolutions = useMemo(() => {
@@ -206,6 +214,43 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     }
   }, [mission.messages, mission.status, mission.updatedAt])
 
+  /** Maximum allowed length for mission titles */
+  const MAX_TITLE_LENGTH = 80
+
+  /** Start inline title editing */
+  const startEditingTitle = useCallback(() => {
+    setEditTitleValue(mission.title)
+    setIsEditingTitle(true)
+    // Focus the input after React renders it
+    requestAnimationFrame(() => titleInputRef.current?.select())
+  }, [mission.title])
+
+  /** Save the edited title */
+  const saveTitle = useCallback(() => {
+    const trimmed = editTitleValue.trim()
+    if (trimmed.length > 0 && trimmed.length <= MAX_TITLE_LENGTH && trimmed !== mission.title) {
+      renameMission(mission.id, trimmed)
+    }
+    setIsEditingTitle(false)
+  }, [editTitleValue, mission.id, mission.title, renameMission])
+
+  /** Cancel title editing */
+  const cancelEditTitle = useCallback(() => {
+    setIsEditingTitle(false)
+    setEditTitleValue('')
+  }, [])
+
+  /** Handle keyboard events in the title input */
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      saveTitle()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelEditTitle()
+    }
+  }, [saveTitle, cancelEditTitle])
+
   const handleSend = () => {
     if (!input.trim()) return
     // Validate message size before sending
@@ -336,7 +381,49 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       <div className="p-4 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-2 mb-2">
           <TypeIcon className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold text-foreground flex-1 truncate">{mission.title}</h3>
+          {isEditingTitle ? (
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={editTitleValue}
+                onChange={(e) => setEditTitleValue(e.target.value.slice(0, MAX_TITLE_LENGTH))}
+                onKeyDown={handleTitleKeyDown}
+                onBlur={saveTitle}
+                maxLength={MAX_TITLE_LENGTH}
+                className="flex-1 min-w-0 px-2 py-0.5 text-sm font-semibold bg-secondary/50 border border-border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                data-testid="mission-title-input"
+              />
+              <button
+                onClick={saveTitle}
+                onMouseDown={(e) => e.preventDefault()}
+                className="p-0.5 hover:bg-green-500/20 rounded transition-colors"
+                title={t('common.save', { defaultValue: 'Save' })}
+              >
+                <Check className="w-3.5 h-3.5 text-green-400" />
+              </button>
+              <button
+                onClick={cancelEditTitle}
+                onMouseDown={(e) => e.preventDefault()}
+                className="p-0.5 hover:bg-red-500/20 rounded transition-colors"
+                title={t('common.cancel', { defaultValue: 'Cancel' })}
+              >
+                <X className="w-3.5 h-3.5 text-muted-foreground hover:text-red-400" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 flex-1 min-w-0 group">
+              <h3 className="font-semibold text-foreground flex-1 truncate">{mission.title}</h3>
+              <button
+                onClick={startEditingTitle}
+                className="p-0.5 rounded transition-colors opacity-0 group-hover:opacity-100 hover:bg-secondary"
+                title={t('missionChat.renameTitle', { defaultValue: 'Rename mission' })}
+                data-testid="mission-title-edit-btn"
+              >
+                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          )}
           <button
             onClick={saveTranscript}
             className="p-1 hover:bg-secondary rounded transition-colors"

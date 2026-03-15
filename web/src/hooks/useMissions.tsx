@@ -90,6 +90,7 @@ interface MissionContextValue {
   sendMessage: (missionId: string, content: string) => void
   cancelMission: (missionId: string) => void
   dismissMission: (missionId: string) => void
+  renameMission: (missionId: string, newTitle: string) => void
   rateMission: (missionId: string, feedback: MissionFeedback) => void
   setActiveMission: (missionId: string | null) => void
   markMissionAsRead: (missionId: string) => void
@@ -1166,6 +1167,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }
   }, [activeMissionId])
 
+  // Rename a mission's display title
+  const renameMission = useCallback((missionId: string, newTitle: string) => {
+    const trimmed = newTitle.trim()
+    if (!trimmed) return
+    setMissions(prev => prev.map(m => {
+      if (m.id === missionId) {
+        return { ...m, title: trimmed, updatedAt: new Date() }
+      }
+      return m
+    }))
+  }, [])
+
   // Rate a mission (thumbs up/down feedback)
   const rateMission = useCallback((missionId: string, feedback: MissionFeedback) => {
     setMissions(prev => prev.map(m => {
@@ -1284,6 +1297,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       sendMessage,
       cancelMission,
       dismissMission,
+      renameMission,
       rateMission,
       setActiveMission,
       markMissionAsRead,
