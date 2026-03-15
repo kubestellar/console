@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -577,7 +578,7 @@ func matchString(actual, operator, expected string) bool {
 	case "neq":
 		return actual != expected
 	case "contains":
-		return len(actual) > 0 && len(expected) > 0 && (actual == expected || len(actual) > len(expected))
+		return strings.Contains(actual, expected)
 	default:
 		return false
 	}
