@@ -50,9 +50,9 @@ const sseCacheEvictInterval = 30 * time.Second
 
 // SSE response cache — avoids re-fetching when the user navigates away and back.
 var (
-	sseCache       = map[string]*sseCacheEntry{}
-	sseCacheMu     sync.RWMutex
-	sseCacheOnce   sync.Once
+	sseCache     = map[string]*sseCacheEntry{}
+	sseCacheMu   sync.RWMutex
+	sseCacheOnce sync.Once
 )
 
 type sseCacheEntry struct {

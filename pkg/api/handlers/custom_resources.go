@@ -87,7 +87,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 		wg.Add(1)
 		go func(clusterName string) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), mcpDefaultTimeout)
 			defer cancel()
 
 			items, err := h.listCR(ctx, clusterName, namespace, gvr)
