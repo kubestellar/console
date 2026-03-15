@@ -192,6 +192,8 @@ const KedaStatus = lazy(() => import('./keda_status').then(m => ({ default: m.Ke
 const FluentdStatus = lazy(() => import('./fluentd_status').then(m => ({ default: m.FluentdStatus })))
 // Lima VM card
 const LimaStatus = lazy(() => import('./lima_status').then(m => ({ default: m.LimaStatus })))
+// CloudEvents monitoring card
+const CloudEventsStatus = lazy(() => import('./cloudevents_status').then(m => ({ default: m.CloudEventsStatus })))
 // Strimzi Kafka operator card
 const StrimziStatus = lazy(() => import('./strimzi_status').then(m => ({ default: m.StrimziStatus })))
 // KubeVela application delivery card
@@ -458,6 +460,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   fluentd_status: FluentdStatus,
   // Lima VM
   lima_status: LimaStatus,
+  // CloudEvents messaging
+  cloudevents_status: CloudEventsStatus,
   // Strimzi Kafka operator
   strimzi_status: StrimziStatus,
   // KubeVela application delivery
@@ -795,6 +799,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   buildpacks_status: () => import('./buildpacks-status'),
   // KEDA
   keda_status: () => import('./keda_status'),
+  // CloudEvents
+  cloudevents_status: () => import('./cloudevents_status'),
   // Strimzi
   strimzi_status: () => import('./strimzi_status'),
   // KubeVela application delivery

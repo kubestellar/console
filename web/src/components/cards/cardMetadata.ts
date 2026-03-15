@@ -210,6 +210,8 @@ export const CARD_TITLES: Record<string, string> = {
 
   // KubeVela application delivery
   kubevela_status: 'KubeVela',
+  // CloudEvents monitoring
+  cloudevents_status: 'CloudEvents',
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Cross-Cluster Event Correlation',
@@ -382,6 +384,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
 
   // KubeVela application delivery
   kubevela_status: 'KubeVela application delivery, component status, and workflow progress.',
+  // CloudEvents monitoring
+  cloudevents_status: 'CloudEvents message flow, event source tracking, and delivery status.',
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: 'Unified timeline showing correlated warning events across multiple clusters.',

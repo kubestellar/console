@@ -280,7 +280,8 @@
     "lima_status": "Lima",
     "keda_status": "KEDA",
     "strimzi_status": "Strimzi",
-    "kubevela_status": "KubeVela"
+    "kubevela_status": "KubeVela",
+    "cloudevents_status": "CloudEvents"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -453,7 +454,8 @@
     "lima_status": "Lima virtual machine instances and resource usage.",
     "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths.",
     "strimzi_status": "Strimzi Kafka cluster health, topic status, and consumer group lag.",
-    "kubevela_status": "KubeVela application delivery, component status, and workflow progress."
+    "kubevela_status": "KubeVela application delivery, component status, and workflow progress.",
+    "cloudevents_status": "CloudEvents message flow, event source tracking, and delivery status."
   },
   "categories": {
     "core": "Core",
@@ -493,7 +495,8 @@
     "securityEvents": "Security & Events",
     "runtime": "Runtime",
     "orchestration": "Orchestration",
-    "streamingMessaging": "Streaming & Messaging"
+    "streamingMessaging": "Streaming & Messaging",
+    "serverless": "Serverless"
   },
   "addCard": {
     "title": "Add Card",
@@ -2714,6 +2717,28 @@
     "status_broken": "Broken",
     "openDocs": "Lima Docs",
     "fetchError": "Failed to fetch Lima status",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
+  },
+  "cloudevents": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "CloudEvents not detected",
+    "notInstalledHint": "No Knative Eventing resources found. Deploy Knative Eventing to monitor CloudEvents brokers, triggers, and event sources.",
+    "fetchError": "Failed to fetch CloudEvents status",
+    "brokers": "Brokers",
+    "triggers": "Triggers",
+    "sources": "Sources",
+    "deliveryFailures": "Delivery Failures",
+    "searchPlaceholder": "Search resources…",
+    "resources": "Resources",
+    "noMatches": "No resources match your search.",
+    "status_ready": "Ready",
+    "status_degraded": "Degraded",
+    "status_error": "Error",
+    "sink": "Sink",
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",

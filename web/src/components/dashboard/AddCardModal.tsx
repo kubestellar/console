@@ -286,6 +286,9 @@ const CARD_CATALOG = {
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela application delivery, component status, and workflow progress', visualization: 'status' },
   ],
+  'Serverless': [
+    { type: 'cloudevents_status', title: 'CloudEvents', description: 'CloudEvents message flow, event source tracking, and delivery status', visualization: 'status' },
+  ],
   'Streaming & Messaging': [
     { type: 'strimzi_status', title: 'Strimzi', description: 'Strimzi Kafka cluster health, topic status, and consumer group lag', visualization: 'status' },
   ],
@@ -331,6 +334,7 @@ const CATEGORY_LOCALE_KEYS: Record<string, string> = {
   'Misc': 'misc',
   'Runtime': 'runtime',
   'Orchestration': 'orchestration',
+  'Serverless': 'serverless',
   'Streaming & Messaging': 'streamingMessaging',
 }
 
