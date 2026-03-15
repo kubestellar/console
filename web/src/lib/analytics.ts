@@ -947,8 +947,8 @@ const GLOBAL_RELOAD_THROTTLE_MS = 30_000 // 30 seconds
 
 /**
  * If the error message indicates a stale-chunk failure, auto-reload once
- * (same throttle logic as ChunkErrorBoundary). Returns true if a reload
- * was triggered so the caller can skip further processing.
+ * (same throttle logic as ChunkErrorBoundary). Returns true when the error
+ * IS a chunk error so the caller skips emitting a duplicate 'runtime' event.
  */
 function tryChunkReloadRecovery(msg: string): boolean {
   if (!isChunkLoadMessage(msg)) return false
@@ -965,9 +965,11 @@ function tryChunkReloadRecovery(msg: string): boolean {
     sessionStorage.removeItem(CHUNK_RELOAD_TS_KEY)
     emitChunkReloadRecoveryFailed(msg)
   } catch {
-    // sessionStorage unavailable — fall through to normal error reporting
+    // sessionStorage unavailable — chunk_load was already emitted above
   }
-  return false
+  // Always return true when the error IS a chunk error — prevents the caller
+  // from also emitting a 'runtime' error for the same event (double reporting).
+  return true
 }
 
 /** Track unhandled promise rejections and runtime errors globally */
