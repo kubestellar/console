@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"sync"
@@ -10,6 +11,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestWaitWithDeadline_CompletesBeforeDeadline(t *testing.T) {
@@ -104,7 +108,17 @@ func TestMCPGetPods_InternalErrorIsSanitized(t *testing.T) {
 	handler := NewMCPHandlers(nil, env.K8sClient)
 	env.App.Get("/api/mcp/pods", handler.GetPods)
 
-	req, err := http.NewRequest("GET", "/api/mcp/pods?cluster=missing-cluster", nil)
+	k8sClient, err := env.K8sClient.GetClient("test-cluster")
+	require.NoError(t, err)
+
+	fakeClient, ok := k8sClient.(*k8sfake.Clientset)
+	require.True(t, ok, "expected fake clientset for test-cluster")
+
+	fakeClient.PrependReactor("list", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("forced pods list error")
+	})
+
+	req, err := http.NewRequest("GET", "/api/mcp/pods?cluster=test-cluster", nil)
 	require.NoError(t, err)
 
 	resp, err := env.App.Test(req, 5000)
