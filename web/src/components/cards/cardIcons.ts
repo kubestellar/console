@@ -182,6 +182,8 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   provider_health: { icon: Activity, color: 'text-green-400' },
   // CoreDNS
   coredns_status: { icon: Network, color: 'text-cyan-400' },
+  // CRI-O
+  crio_status: { icon: Box, color: 'text-blue-400' },
 
   // Games
   sudoku_game: { icon: Puzzle, color: 'text-purple-400' },

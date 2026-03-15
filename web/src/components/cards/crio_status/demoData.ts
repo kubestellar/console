@@ -10,6 +10,7 @@
  */
 
 export interface CrioStatusDemoData {
+  detected: boolean
   totalNodes: number
   versions: Record<string, number>
   health: 'healthy' | 'degraded' | 'not-installed'
@@ -37,7 +38,22 @@ export interface CrioStatusDemoData {
   lastCheckTime: string
 }
 
+/** Demo: timestamp offset for latest refresh (2 minutes ago). */
+const DEMO_LAST_CHECK_AGO_MS = 2 * 60 * 1000
+
+/** Demo: image pull happened 2 minutes ago. */
+const DEMO_PULL_1_AGO_MS = 2 * 60 * 1000
+/** Demo: image pull happened 5 minutes ago. */
+const DEMO_PULL_2_AGO_MS = 5 * 60 * 1000
+/** Demo: image pull happened 8 minutes ago. */
+const DEMO_PULL_3_AGO_MS = 8 * 60 * 1000
+/** Demo: image pull happened 12 minutes ago. */
+const DEMO_PULL_4_AGO_MS = 12 * 60 * 1000
+/** Demo: image pull happened 18 minutes ago. */
+const DEMO_PULL_5_AGO_MS = 18 * 60 * 1000
+
 export const CRIO_DEMO_DATA: CrioStatusDemoData = {
+  detected: true,
   totalNodes: 12,
   versions: {
     '1.30.0': 8,
@@ -64,32 +80,32 @@ export const CRIO_DEMO_DATA: CrioStatusDemoData = {
     {
       image: 'ghcr.io/kubestellar/console:latest',
       status: 'success',
-      time: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+      time: new Date(Date.now() - DEMO_PULL_1_AGO_MS).toISOString(),
       size: '245 MB',
     },
     {
       image: 'registry.k8s.io/kube-proxy:v1.30.0',
       status: 'success',
-      time: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      time: new Date(Date.now() - DEMO_PULL_2_AGO_MS).toISOString(),
       size: '89 MB',
     },
     {
       image: 'docker.io/library/nginx:alpine',
       status: 'success',
-      time: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
+      time: new Date(Date.now() - DEMO_PULL_3_AGO_MS).toISOString(),
       size: '41 MB',
     },
     {
       image: 'quay.io/prometheus/node-exporter:latest',
       status: 'failed',
-      time: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+      time: new Date(Date.now() - DEMO_PULL_4_AGO_MS).toISOString(),
     },
     {
       image: 'gcr.io/cadvisor/cadvisor:v0.47.0',
       status: 'success',
-      time: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
+      time: new Date(Date.now() - DEMO_PULL_5_AGO_MS).toISOString(),
       size: '124 MB',
     },
   ],
-  lastCheckTime: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+  lastCheckTime: new Date(Date.now() - DEMO_LAST_CHECK_AGO_MS).toISOString(),
 }

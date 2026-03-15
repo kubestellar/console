@@ -22,7 +22,7 @@ function useFormatRelativeTime() {
 export function CrioStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState } = useCrioStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useCrioStatus()
 
   if (showSkeleton) {
     return (
@@ -52,7 +52,7 @@ export function CrioStatus() {
     )
   }
 
-  if (data.health === 'not-installed') {
+  if (!data.detected || data.health === 'not-installed') {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Box className="w-6 h-6 text-muted-foreground/50" />
@@ -101,7 +101,7 @@ export function CrioStatus() {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>
@@ -177,11 +177,11 @@ export function CrioStatus() {
       </div>
 
       {/* Recent image pulls (if available) */}
-      {data.recentImagePulls.length > 0 && (
+      {(data.recentImagePulls || []).length > 0 && (
         <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
           <p className="text-xs font-medium text-muted-foreground">{t('crio.recentImagePulls')}</p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
-            {data.recentImagePulls.slice(0, 5).map((pull, idx) => (
+            {(data.recentImagePulls || []).slice(0, 5).map((pull, idx) => (
               <div key={idx} className="flex items-center justify-between text-xs gap-2">
                 <span className="text-muted-foreground truncate flex-1" title={pull.image}>
                   {pull.image.split('/').pop()?.split(':')[0] || pull.image}

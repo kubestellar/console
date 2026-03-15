@@ -205,6 +205,8 @@ export const CARD_TITLES: Record<string, string> = {
   provider_health: 'Provider Health',
   // CoreDNS
   coredns_status: 'CoreDNS',
+  // CRI-O container runtime
+  crio_status: 'CRI-O',
   // Strimzi Kafka operator
   strimzi_status: 'Strimzi',
 
@@ -381,6 +383,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_chess: 'Chess game with Kubernetes-themed pieces.',
   // CoreDNS
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
+  // CRI-O container runtime
+  crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
 
   // KubeVela application delivery
   kubevela_status: 'KubeVela application delivery, component status, and workflow progress.',
