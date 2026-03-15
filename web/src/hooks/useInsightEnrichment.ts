@@ -215,6 +215,20 @@ export function mergeEnrichments(insights: MultiClusterInsight[]): MultiClusterI
 
 // ── React hook ───────────────────────────────────────────────────────────
 
+/** @internal Test only helper to reset singleton state between test runs */
+export function _resetStateForTest() {
+  enrichments.clear()
+  lastEnrichmentTime = 0
+  lastRequestHash = ''
+  if (wsConnection) {
+    wsConnection.close()
+    wsConnection = null
+  }
+  wsReconnectAttempts = 0
+  enrichmentEndpointAvailable = true
+  subscribers.clear()
+}
+
 /**
  * Hook to enrich heuristic insights with AI analysis.
  *
