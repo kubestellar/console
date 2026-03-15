@@ -5,8 +5,12 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/test"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
@@ -14,12 +18,17 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+// testAdminUserID is the fixed user ID injected by setupTestEnv for RBAC-protected
+// endpoints. The MockStore is configured to return an admin user for this ID.
+var testAdminUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
 type testEnv struct {
 	App       *fiber.App
 	TempDir   string
 	Settings  *settings.SettingsManager
 	K8sClient *k8s.MultiClusterClient
 	Hub       *Hub
+	Store     store.Store
 }
 
 // setupTestEnv creates a new test environment with a fresh Fiber app and an initialized
@@ -64,7 +73,22 @@ func setupTestEnv(t *testing.T) *testEnv {
 		hub.Close()
 	})
 
+	// Initialize a MockStore with a pre-configured admin user so RBAC-protected
+	// handler tests pass without extra setup.
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
+		ID:   testAdminUserID,
+		Role: "admin",
+	}, nil)
+
 	app := fiber.New()
+
+	// Inject the admin user ID into Fiber locals so middleware.GetUserID works
+	// in handler tests that exercise RBAC-protected endpoints.
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", testAdminUserID)
+		return c.Next()
+	})
 
 	// Return the environment
 	return &testEnv{
@@ -73,6 +97,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Settings:  manager,
 		K8sClient: k8sClient,
 		Hub:       hub,
+		Store:     mockStore,
 	}
 }
 

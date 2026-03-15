@@ -546,7 +546,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/github/*", githubProxy.Proxy)
 
 	// Persistent settings routes
-	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager())
+	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager(), s.store)
 	api.Get("/settings", settingsHandler.GetSettings)
 	api.Put("/settings", settingsHandler.SaveSettings)
 	api.Post("/settings/export", settingsHandler.ExportSettings)
@@ -755,7 +755,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/topology", topologyHandlers.GetTopology)
 
 	// Workload routes
-	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub)
+	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
 	api.Get("/workloads", workloadHandlers.ListWorkloads)
 	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
 	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)

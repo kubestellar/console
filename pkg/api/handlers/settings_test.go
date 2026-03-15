@@ -15,7 +15,7 @@ import (
 
 func TestGetSettings(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewSettingsHandler(env.Settings)
+	handler := NewSettingsHandler(env.Settings, env.Store)
 	env.App.Get("/api/settings", handler.GetSettings)
 
 	// Case 1: File missing (default settings)
@@ -53,7 +53,7 @@ func TestGetSettings(t *testing.T) {
 
 func TestSaveSettings(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewSettingsHandler(env.Settings)
+	handler := NewSettingsHandler(env.Settings, env.Store)
 	env.App.Put("/api/settings", handler.SaveSettings)
 
 	// Case 1: Valid save
@@ -89,7 +89,7 @@ func TestSaveSettings(t *testing.T) {
 
 func TestExportImportSettings(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewSettingsHandler(env.Settings)
+	handler := NewSettingsHandler(env.Settings, env.Store)
 	env.App.Post("/api/settings/export", handler.ExportSettings)
 	env.App.Post("/api/settings/import", handler.ImportSettings)
 
@@ -122,7 +122,7 @@ func TestExportImportSettings(t *testing.T) {
 	// env2 actually shares the same key as env1 (because we didn't restart the process).
 	// This is perfect for simulating a restore on the same machine/key setup.
 
-	handler2 := NewSettingsHandler(env2.Settings)
+	handler2 := NewSettingsHandler(env2.Settings, env2.Store)
 	env2.App.Post("/api/settings/import", handler2.ImportSettings)
 
 	reqImport := httptest.NewRequest("POST", "/api/settings/import", bytes.NewReader(exportedData))
@@ -158,7 +158,7 @@ func TestSettingsFileError(t *testing.T) {
 	}
 
 	env := setupTestEnv(t)
-	handler := NewSettingsHandler(env.Settings)
+	handler := NewSettingsHandler(env.Settings, env.Store)
 	env.App.Put("/api/settings", handler.SaveSettings)
 
 	// Make directory read-only to force save error

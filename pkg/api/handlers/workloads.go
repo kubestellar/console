@@ -15,6 +15,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/store"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -37,13 +38,15 @@ const (
 type WorkloadHandlers struct {
 	k8sClient *k8s.MultiClusterClient
 	hub       *Hub
+	store     store.Store
 }
 
 // NewWorkloadHandlers creates a new workload handlers instance
-func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *WorkloadHandlers {
+func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub, s store.Store) *WorkloadHandlers {
 	return &WorkloadHandlers{
 		k8sClient: k8sClient,
 		hub:       hub,
+		store:     s,
 	}
 }
 
@@ -433,6 +436,13 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 // SyncClusterGroups bulk-syncs cluster groups from frontend localStorage
 // POST /api/cluster-groups/sync
 func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
+	// Bulk sync overwrites all cluster groups — require console admin role
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	var groups []ClusterGroup
 	if err := json.Unmarshal(c.Body(), &groups); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})

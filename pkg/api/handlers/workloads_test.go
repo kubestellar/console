@@ -32,7 +32,7 @@ func newK8sScheme() *runtime.Scheme {
 
 func TestListWorkloads(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/workloads", handler.ListWorkloads)
 
 	scheme := newK8sScheme()
@@ -82,7 +82,7 @@ func TestListWorkloads(t *testing.T) {
 
 func TestGetWorkload(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/workloads/:cluster/:namespace/:name", handler.GetWorkload)
 
 	scheme := newK8sScheme()
@@ -131,7 +131,7 @@ func TestGetWorkload(t *testing.T) {
 
 func TestDeployWorkload(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/workloads/deploy", handler.DeployWorkload)
 
 	scheme := newK8sScheme()
@@ -197,7 +197,7 @@ func TestDeployWorkload(t *testing.T) {
 
 func TestGetDeployStatus(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/workloads/deploy-status/:cluster/:namespace/:name", handler.GetDeployStatus)
 
 	scheme := newK8sScheme()
@@ -227,7 +227,7 @@ func TestGetDeployStatus(t *testing.T) {
 
 func TestScaleWorkload(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/workloads/scale", handler.ScaleWorkload)
 
 	// Payload
@@ -256,7 +256,7 @@ func TestScaleWorkload(t *testing.T) {
 
 func TestDeleteWorkload(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Delete("/api/workloads/:cluster/:namespace/:name", handler.DeleteWorkload)
 
 	req, err := http.NewRequest("DELETE", "/api/workloads/c1/default/del-app", nil)
@@ -271,7 +271,7 @@ func TestDeleteWorkload(t *testing.T) {
 
 func TestClusterGroupsCRUD(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 
 	env.App.Get("/api/cluster-groups", handler.ListClusterGroups)
 	env.App.Post("/api/cluster-groups", handler.CreateClusterGroup)
@@ -348,7 +348,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 
 func TestEvaluateClusterQuery(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/evaluate", handler.EvaluateClusterQuery)
 
 	config := &api.Config{
@@ -437,7 +437,7 @@ func (m *MockAIProvider) StreamChat(ctx context.Context, req *agent.ChatRequest,
 
 func TestGenerateClusterQuery(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/generate", handler.GenerateClusterQuery)
 
 	// Register Mock AI
@@ -471,7 +471,7 @@ func TestGenerateClusterQuery(t *testing.T) {
 
 func TestResolveDependencies(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/workloads/resolve-deps/:cluster/:namespace/:name", handler.ResolveDependencies)
 
 	scheme := newK8sScheme()
@@ -525,7 +525,7 @@ func TestResolveDependencies(t *testing.T) {
 
 func TestMonitorWorkload(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/workloads/monitor/:cluster/:namespace/:name", handler.MonitorWorkload)
 
 	scheme := newK8sScheme()
@@ -563,7 +563,7 @@ func TestMonitorWorkload(t *testing.T) {
 
 func TestGetDeployLogs(t *testing.T) {
 	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(env.K8sClient, env.Hub)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/workloads/logs/:cluster/:namespace/:name", handler.GetDeployLogs)
 
 	scheme := newK8sScheme()
