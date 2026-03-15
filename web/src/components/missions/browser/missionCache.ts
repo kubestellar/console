@@ -4,6 +4,7 @@
  * Cache refreshes only when user clicks refresh or after CACHE_TTL_MS elapses.
  */
 import type { MissionExport, MissionMatch } from '../../../lib/missions/types'
+import type { ClusterContext } from '../../../hooks/useClusterContext'
 
 /** Cache time-to-live: 6 hours */
 const MISSION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
@@ -279,32 +280,56 @@ interface RecommendationCacheEntry {
   solutionCount: number
   /** Timestamp of last computation */
   computedAt: number
+  /** Fingerprint of the cluster context used to compute recommendations */
+  clusterFingerprint: string
+}
+
+/**
+ * Generate a stable fingerprint string from a ClusterContext.
+ * Used to invalidate the recommendation cache when the user switches clusters
+ * or when cluster state changes (new operators, different issues, etc.).
+ * Returns a fixed string for null context (no cluster connected).
+ */
+const NO_CLUSTER_FINGERPRINT = '__no_cluster__'
+
+export function computeClusterFingerprint(ctx: ClusterContext | null): string {
+  if (!ctx) return NO_CLUSTER_FINGERPRINT
+  // Sort arrays for stability — the order of resources/issues/labels
+  // can vary between renders without meaning the cluster actually changed.
+  const resources = [...ctx.resources].sort().join(',')
+  const issues = [...ctx.issues].sort().join(',')
+  const labelEntries = Object.entries(ctx.labels).sort(([a], [b]) => a.localeCompare(b))
+  const labels = labelEntries.map(([k, v]) => `${k}=${v}`).join(',')
+  return `${ctx.name}|${ctx.provider ?? ''}|${ctx.version ?? ''}|${resources}|${issues}|${labels}`
 }
 
 let recommendationCacheEntry: RecommendationCacheEntry | null = null
 
 /**
  * Get cached recommendations if the cache is still valid.
- * Returns null if the cache is stale, empty, or the solution count has changed
- * (indicating new data was fetched).
+ * Returns null if the cache is stale, empty, the solution count has changed
+ * (indicating new data was fetched), or the cluster context has changed.
  */
-export function getCachedRecommendations(): MissionMatch[] | null {
+export function getCachedRecommendations(clusterCtx: ClusterContext | null): MissionMatch[] | null {
   if (!recommendationCacheEntry) return null
   // Invalidate if solutions changed (new data arrived)
   if (recommendationCacheEntry.solutionCount !== missionCache.solutions.length) return null
   // Invalidate if TTL expired
   if (Date.now() - recommendationCacheEntry.computedAt > RECOMMENDATION_CACHE_TTL_MS) return null
+  // Invalidate if cluster context changed (different cluster, new operators, etc.)
+  if (recommendationCacheEntry.clusterFingerprint !== computeClusterFingerprint(clusterCtx)) return null
   return recommendationCacheEntry.recommendations
 }
 
 /**
  * Store computed recommendations in the module-level cache.
  */
-export function setCachedRecommendations(recommendations: MissionMatch[]) {
+export function setCachedRecommendations(recommendations: MissionMatch[], clusterCtx: ClusterContext | null) {
   recommendationCacheEntry = {
     recommendations,
     solutionCount: missionCache.solutions.length,
     computedAt: Date.now(),
+    clusterFingerprint: computeClusterFingerprint(clusterCtx),
   }
 }
 

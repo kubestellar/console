@@ -278,7 +278,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       }
 
       // Use cached recommendations if available and still valid
-      const cached = getCachedRecommendations()
+      const cached = getCachedRecommendations(clusterContextRef.current)
       if (cached) {
         setRecommendations(cached)
         setHasCluster(!!clusterContextRef.current)
@@ -297,7 +297,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       const cluster = clusterContextRef.current
       setHasCluster(!!cluster)
       const matched = matchMissionsToCluster(allMissions, cluster)
-      setCachedRecommendations(matched)
+      setCachedRecommendations(matched, cluster)
       setRecommendations(matched)
       setLoadingRecommendations(false)
       const done = missionCache.solutionsDone
