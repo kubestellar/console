@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
-// Lazy load large components (>350 lines) for better performance
+// Lazy load large components (>300 lines) for better performance
 const ClusterDrillDown = lazy(() => import('./views/ClusterDrillDown').then(m => ({ default: m.ClusterDrillDown })))
 const OperatorDrillDown = lazy(() => import('./views/OperatorDrillDown').then(m => ({ default: m.OperatorDrillDown })))
 const PolicyDrillDown = lazy(() => import('./views/PolicyDrillDown').then(m => ({ default: m.PolicyDrillDown })))
@@ -23,10 +23,11 @@ const HelmReleaseDrillDown = lazy(() => import('./views/HelmReleaseDrillDown').t
 const ConfigMapDrillDown = lazy(() => import('./views/ConfigMapDrillDown').then(m => ({ default: m.ConfigMapDrillDown })))
 const BuildpackDrillDown = lazy(() => import('./views/BuildpackDrillDown').then(m => ({ default: m.BuildpackDrillDown })))
 
+const EventsDrillDown = lazy(() => import('./views/EventsDrillDown').then(m => ({ default: m.EventsDrillDown })))
+
 // Keep smaller components as direct imports for immediate loading
 import { NamespaceDrillDown } from './views/NamespaceDrillDown'
 import { LogsDrillDown } from './views/LogsDrillDown'
-import { EventsDrillDown } from './views/EventsDrillDown'
 import { NodeDrillDown } from './views/NodeDrillDown'
 import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
 const GPUNamespaceDrillDown = lazy(() => import('./views/GPUNamespaceDrillDown').then(m => ({ default: m.GPUNamespaceDrillDown })))
