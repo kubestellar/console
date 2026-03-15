@@ -104,6 +104,13 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 // DeployWorkload deploys a workload to specified clusters
 // POST /api/workloads/deploy
 func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
+	// Require console admin role for workload mutations
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
@@ -331,6 +338,13 @@ func (h *WorkloadHandlers) ListClusterGroups(c *fiber.Ctx) error {
 // CreateClusterGroup creates a new cluster group and labels the member clusters
 // POST /api/cluster-groups
 func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
+	// Require console admin role for cluster group mutations
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
 		log.Printf("invalid request body: %v", err)
@@ -366,6 +380,13 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 // UpdateClusterGroup updates a cluster group
 // PUT /api/cluster-groups/:name
 func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
+	// Require console admin role for cluster group mutations
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	name := c.Params("name")
 
 	var group ClusterGroup
@@ -413,6 +434,13 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 // DeleteClusterGroup deletes a cluster group and removes labels
 // DELETE /api/cluster-groups/:name
 func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
+	// Require console admin role for cluster group mutations
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	name := c.Params("name")
 
 	clusterGroupsMu.Lock()
@@ -821,6 +849,13 @@ func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
 // ScaleWorkload scales a workload in specified clusters
 // POST /api/workloads/scale
 func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
+	// Require console admin role for workload mutations
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
@@ -861,6 +896,13 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 // DeleteWorkload deletes a workload from specified clusters
 // DELETE /api/workloads/:cluster/:namespace/:name
 func (h *WorkloadHandlers) DeleteWorkload(c *fiber.Ctx) error {
+	// Require console admin role for workload mutations
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
