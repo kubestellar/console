@@ -70,7 +70,8 @@ const FILTER_FIELDS = [
 ]
 
 const TEXT_OPERATORS = [
-  { value: 'eq', label: 'contains' },
+  { value: 'eq', label: 'equals' },
+  { value: 'contains', label: 'contains' },
   { value: 'neq', label: 'excludes' },
 ]
 
