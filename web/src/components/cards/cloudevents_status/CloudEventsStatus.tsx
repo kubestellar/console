@@ -172,7 +172,7 @@ export function CloudEventsStatus() {
                   </div>
                   <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
                     <span className="truncate">{resource.kind} · {resource.namespace} · {resource.cluster}</span>
-                    <span className="shrink-0">{t('cloudevents.sink')}: {resource.sink}</span>
+                    <span className="shrink-0">{t('cloudevents.sink')}: {resource.sink || t('security.notApplicable')}</span>
                   </div>
                 </div>
               )

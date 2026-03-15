@@ -91,7 +91,7 @@ function parseSink(item: CRItem): string {
   const sink = (item.spec?.sink ?? {}) as Record<string, unknown>
   const ref = (sink.ref ?? {}) as Record<string, unknown>
   const name = typeof ref.name === 'string' ? ref.name : ''
-  return name || 'n/a'
+  return name
 }
 
 function buildCounts(items: CRItem[]): ResourceCounts {
@@ -101,6 +101,15 @@ function buildCounts(items: CRItem[]): ResourceCounts {
     ready,
     notReady: items.length - ready,
   }
+}
+
+export const __testables = {
+  getConditionValue,
+  getConditionTimestamp,
+  getStateFromReadyCondition,
+  mapKindFromResource,
+  parseSink,
+  buildCounts,
 }
 
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {

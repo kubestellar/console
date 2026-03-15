@@ -275,7 +275,8 @@
     "flatcar_status": "Flatcar Container Linux",
     "contour_status": "Contour",
     "crio_status": "CRI-O",
-    "coredns_status": "CoreDNS"
+    "coredns_status": "CoreDNS",
+    "cloudevents_status": "CloudEvents"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -440,7 +441,8 @@
     "console_offline_detection": "Monitor offline nodes, GPU issues, and AI-predicted failures.",
     "flatcar_status": "Flatcar node OS versions, update status, and version distribution.",
     "contour_status": "Contour ingress proxy status, HTTPProxy resources.",
-    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status."
+    "crio_status": "CRI-O container runtime metrics, image pulls, and pod sandbox status.",
+    "cloudevents_status": "CloudEvents message flow, event source tracking, and delivery status."
   },
   "categories": {
     "core": "Core",
@@ -478,7 +480,8 @@
     "clusterHealth": "Cluster Health",
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
-    "runtime": "Runtime"
+    "runtime": "Runtime",
+    "serverless": "Serverless"
   },
   "addCard": {
     "title": "Add Card",
@@ -2668,6 +2671,28 @@
     "noCrioNodes": "No CRI-O nodes found",
     "noCrioNodesHint": "No nodes running CRI-O container runtime detected.",
     "fetchError": "Failed to fetch CRI-O status",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
+  },
+  "cloudevents": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "CloudEvents not detected",
+    "notInstalledHint": "No Knative Eventing resources found. Deploy Knative Eventing to monitor CloudEvents brokers, triggers, and event sources.",
+    "fetchError": "Failed to fetch CloudEvents status",
+    "brokers": "Brokers",
+    "triggers": "Triggers",
+    "sources": "Sources",
+    "deliveryFailures": "Delivery Failures",
+    "searchPlaceholder": "Search resources…",
+    "resources": "Resources",
+    "noMatches": "No resources match your search.",
+    "status_ready": "Ready",
+    "status_degraded": "Degraded",
+    "status_error": "Error",
+    "sink": "Sink",
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
