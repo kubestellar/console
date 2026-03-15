@@ -3,10 +3,12 @@
  * Also persisted to localStorage so data is instant on page reload.
  * Cache refreshes only when user clicks refresh or after CACHE_TTL_MS elapses.
  */
-import type { MissionExport } from '../../../lib/missions/types'
+import type { MissionExport, MissionMatch } from '../../../lib/missions/types'
 
 /** Cache time-to-live: 6 hours */
 const MISSION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+/** Recommendation cache TTL: 10 minutes (shorter since it depends on cluster context) */
+const RECOMMENDATION_CACHE_TTL_MS = 10 * 60 * 1000
 /** localStorage key for persisted mission cache */
 const MISSION_CACHE_STORAGE_KEY = 'kc-mission-cache'
 
@@ -259,7 +261,54 @@ export function resetMissionCache() {
   missionCache.solutionsFetching = false
   missionCache.fetchedAt = 0
   missionCache.fetchError = null
+  // Also invalidate recommendation cache when mission data is refreshed
+  resetRecommendationCache()
   try { localStorage.removeItem(MISSION_CACHE_STORAGE_KEY) } catch { /* ok */ }
   notifyCacheListeners()
   startMissionCacheFetch()
+}
+
+// ============================================================================
+// Recommendation cache — avoids re-running matchMissionsToCluster on every dialog open
+// ============================================================================
+
+interface RecommendationCacheEntry {
+  /** Cached recommendation results */
+  recommendations: MissionMatch[]
+  /** Number of solutions when recommendations were computed (invalidation key) */
+  solutionCount: number
+  /** Timestamp of last computation */
+  computedAt: number
+}
+
+let recommendationCacheEntry: RecommendationCacheEntry | null = null
+
+/**
+ * Get cached recommendations if the cache is still valid.
+ * Returns null if the cache is stale, empty, or the solution count has changed
+ * (indicating new data was fetched).
+ */
+export function getCachedRecommendations(): MissionMatch[] | null {
+  if (!recommendationCacheEntry) return null
+  // Invalidate if solutions changed (new data arrived)
+  if (recommendationCacheEntry.solutionCount !== missionCache.solutions.length) return null
+  // Invalidate if TTL expired
+  if (Date.now() - recommendationCacheEntry.computedAt > RECOMMENDATION_CACHE_TTL_MS) return null
+  return recommendationCacheEntry.recommendations
+}
+
+/**
+ * Store computed recommendations in the module-level cache.
+ */
+export function setCachedRecommendations(recommendations: MissionMatch[]) {
+  recommendationCacheEntry = {
+    recommendations,
+    solutionCount: missionCache.solutions.length,
+    computedAt: Date.now(),
+  }
+}
+
+/** Clear the recommendation cache (used on explicit refresh) */
+export function resetRecommendationCache() {
+  recommendationCacheEntry = null
 }

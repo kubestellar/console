@@ -43,6 +43,7 @@ import {
   missionCache, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, BROWSER_TABS,
   VirtualizedMissionGrid,
+  getCachedRecommendations, setCachedRecommendations,
 } from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
 
@@ -258,7 +259,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   }, [isOpen, isAuthenticated, user, watchedRepos, watchedPaths])
 
   // ============================================================================
-  // Fetch recommendations
+  // Fetch recommendations (with module-level caching to avoid recomputation)
   // ============================================================================
 
   useEffect(() => {
@@ -271,13 +272,32 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       if (allMissions.length === 0) {
         if (!missionCache.solutionsDone) {
           setLoadingRecommendations(true)
-          setSearchProgress({ step: 'Scanning', detail: 'Loading solutions…', found: 0, scanned: 0 })
+          setSearchProgress({ step: 'Scanning', detail: 'Loading solutions...', found: 0, scanned: 0 })
         }
         return
       }
+
+      // Use cached recommendations if available and still valid
+      const cached = getCachedRecommendations()
+      if (cached) {
+        setRecommendations(cached)
+        setHasCluster(!!clusterContextRef.current)
+        setLoadingRecommendations(false)
+        const done = missionCache.solutionsDone
+        setSearchProgress({
+          step: done ? 'Done' : 'Scanning',
+          detail: `${allMissions.length} solutions`,
+          found: allMissions.length,
+          scanned: allMissions.length,
+        })
+        return
+      }
+
+      // Cache miss — compute recommendations and store them
       const cluster = clusterContextRef.current
       setHasCluster(!!cluster)
       const matched = matchMissionsToCluster(allMissions, cluster)
+      setCachedRecommendations(matched)
       setRecommendations(matched)
       setLoadingRecommendations(false)
       const done = missionCache.solutionsDone
@@ -293,7 +313,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     updateRecommendations()
     missionCache.listeners.add(updateRecommendations)
     return () => { missionCache.listeners.delete(updateRecommendations) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   // ============================================================================

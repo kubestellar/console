@@ -8,6 +8,7 @@ export { getMissionSlug, getMissionShareUrl, updateNodeInTree, formatBytes, norm
 export {
   missionCache, notifyCacheListeners, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, MISSION_FILE_FETCH_TIMEOUT_MS,
+  getCachedRecommendations, setCachedRecommendations, resetRecommendationCache,
 } from './missionCache'
 export type { MissionCache } from './missionCache'
 export { VirtualizedMissionGrid } from './VirtualizedMissionGrid'
