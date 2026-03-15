@@ -15,4 +15,5 @@ permissions:
 
 jobs:
   analysis:
-    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@2cdb7c22649c4e5cd36edc2d2fc57de96949e7a9 # main
+    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@main
+    secrets: inherit

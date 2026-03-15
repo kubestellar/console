@@ -13,4 +13,5 @@ permissions:
 
 jobs:
   greet:
-    uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@2cdb7c22649c4e5cd36edc2d2fc57de96949e7a9 # main
+    uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@main
+    secrets: inherit
