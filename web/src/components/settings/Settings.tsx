@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
   Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container, HardDrive,
-  CheckCircle, Loader2, AlertCircle, WifiOff, BarChart3,
+  CheckCircle, Loader2, AlertCircle, WifiOff, BarChart3, X,
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
@@ -109,6 +109,16 @@ export function Settings() {
 
   const [activeSection, setActiveSection] = useState<string>('ai-mode-settings')
   const [showRestoredToast, setShowRestoredToast] = useState(false)
+
+  /** Close settings and return to previous page (or home as fallback) */
+  const handleClose = useCallback(() => {
+    // window.history.length > 1 covers both browser and react-router history
+    if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/')
+    }
+  }, [navigate])
 
   // Suppresses IntersectionObserver updates during programmatic scrolls
   // so the sidebar highlight stays on the clicked item instead of flickering
@@ -281,7 +291,17 @@ export function Settings() {
       <nav className="hidden lg:block w-56 shrink-0">
         <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto scroll-enhanced space-y-4">
           <div className="mb-4">
-            <h1 data-testid="settings-title" className="text-xl font-bold text-foreground">{t('settings.title')}</h1>
+            <div className="flex items-center justify-between">
+              <h1 data-testid="settings-title" className="text-xl font-bold text-foreground">{t('settings.title')}</h1>
+              <button
+                data-testid="settings-close-desktop"
+                onClick={handleClose}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                title={t('common.close', { defaultValue: 'Close' })}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground">{t('settings.subtitle')}</p>
             <div className={cn('flex items-center gap-1.5 mt-2 text-xs', sync.className)}>
               <SyncIcon className={cn('w-3.5 h-3.5', syncStatus === 'saving' && 'animate-spin')} />
@@ -324,7 +344,17 @@ export function Settings() {
       <div ref={contentRef} className="flex-1 min-w-0">
         {/* Mobile Header */}
         <div className="lg:hidden mb-6">
-          <h1 data-testid="settings-title-mobile" className="text-2xl font-bold text-foreground">{t('settings.title')}</h1>
+          <div className="flex items-center justify-between">
+            <h1 data-testid="settings-title-mobile" className="text-2xl font-bold text-foreground">{t('settings.title')}</h1>
+            <button
+              data-testid="settings-close-mobile"
+              onClick={handleClose}
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+              title={t('common.close', { defaultValue: 'Close' })}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           <p className="text-muted-foreground">{t('settings.subtitle')}</p>
           <div className={cn('flex items-center gap-1.5 mt-2 text-xs', sync.className)}>
             <SyncIcon className={cn('w-3.5 h-3.5', syncStatus === 'saving' && 'animate-spin')} />
