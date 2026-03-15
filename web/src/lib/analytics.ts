@@ -14,7 +14,7 @@
  */
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
-import { CHUNK_RELOAD_TS_KEY } from './chunkErrors'
+import { CHUNK_RELOAD_TS_KEY, isChunkLoadMessage } from './chunkErrors'
 import { isDemoMode } from './demoMode'
 
 // DECOY Measurement ID — the proxy rewrites this to the real ID server-side.
@@ -942,6 +942,34 @@ function checkChunkReloadRecovery() {
   }
 }
 
+// Reload throttle interval — must match ChunkErrorBoundary to prevent loops
+const GLOBAL_RELOAD_THROTTLE_MS = 30_000 // 30 seconds
+
+/**
+ * If the error message indicates a stale-chunk failure, auto-reload once
+ * (same throttle logic as ChunkErrorBoundary). Returns true if a reload
+ * was triggered so the caller can skip further processing.
+ */
+function tryChunkReloadRecovery(msg: string): boolean {
+  if (!isChunkLoadMessage(msg)) return false
+  emitError('chunk_load', msg)
+  try {
+    const lastReload = sessionStorage.getItem(CHUNK_RELOAD_TS_KEY)
+    const now = Date.now()
+    if (!lastReload || now - parseInt(lastReload) > GLOBAL_RELOAD_THROTTLE_MS) {
+      sessionStorage.setItem(CHUNK_RELOAD_TS_KEY, String(now))
+      window.location.reload()
+      return true
+    }
+    // Already reloaded recently — recovery failed
+    sessionStorage.removeItem(CHUNK_RELOAD_TS_KEY)
+    emitChunkReloadRecoveryFailed(msg)
+  } catch {
+    // sessionStorage unavailable — fall through to normal error reporting
+  }
+  return false
+}
+
 /** Track unhandled promise rejections and runtime errors globally */
 export function startGlobalErrorTracking() {
   // Check if we just recovered from a chunk-load auto-reload
@@ -956,6 +984,8 @@ export function startGlobalErrorTracking() {
     isEmitting = true
     try {
       const msg = event.reason?.message || String(event.reason || 'unknown')
+      // Stale chunks can surface as unhandled rejections from dynamic import()
+      if (tryChunkReloadRecovery(msg)) return
       emitError('unhandled_rejection', msg)
     } finally {
       isEmitting = false
@@ -968,6 +998,8 @@ export function startGlobalErrorTracking() {
     if (isEmitting) return
     isEmitting = true
     try {
+      // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
+      if (tryChunkReloadRecovery(event.message)) return
       emitError('runtime', event.message)
     } finally {
       isEmitting = false
