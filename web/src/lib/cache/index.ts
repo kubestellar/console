@@ -378,6 +378,32 @@ if (typeof window !== 'undefined') {
   registerCacheReset('unified-cache', clearAllInMemoryCaches)
 }
 
+/**
+ * Check if fetcher output is equivalent to the initial (empty) data.
+ * Used to detect "no data available" responses that shouldn't overwrite cache.
+ * Handles: empty arrays, objects with all-empty/zero fields, null.
+ */
+function isEquivalentToInitial<T>(newData: T, initialData: T): boolean {
+  // Null/undefined
+  if (newData == null && initialData == null) return true
+
+  // Arrays: both empty
+  if (Array.isArray(newData) && Array.isArray(initialData)) {
+    return (newData as unknown[]).length === 0 && (initialData as unknown[]).length === 0
+  }
+
+  // Objects: compare via JSON (catches {alerts:[], inventory:[], nodeCount:0} etc.)
+  if (typeof newData === 'object' && typeof initialData === 'object') {
+    try {
+      return JSON.stringify(newData) === JSON.stringify(initialData)
+    } catch {
+      return false
+    }
+  }
+
+  return false
+}
+
 // ============================================================================
 // Cache Store (Module-level singleton)
 // ============================================================================
@@ -568,14 +594,11 @@ class CacheStore<T> {
         return
       }
 
-      // Guard: if the fetcher returned empty data (same as initialData) but we
+      // Guard: if the fetcher returned data equivalent to initialData but we
       // already have cached data, keep the cache. This prevents refresh from
       // wiping card data when the agent/backend hasn't connected yet.
-      // Fetchers return [] when both agent and backend are unavailable, which
-      // would overwrite perfectly good cached data with nothing.
-      const isEmptyResult = Array.isArray(newData) && (newData as unknown[]).length === 0
-        && Array.isArray(this.initialData) && (this.initialData as unknown[]).length === 0
-      if (isEmptyResult && hasCachedData) {
+      // Fetchers return [] or empty objects when data sources are unavailable.
+      if (hasCachedData && isEquivalentToInitial(newData, this.initialData)) {
         // Don't overwrite cache — treat as "no data available yet"
         this.fetchingRef = false
         this.setState({
