@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +13,28 @@ import (
 
 	"github.com/kubestellar/console/pkg/models"
 )
+
+// SQLite connection pool defaults
+const (
+	// sqliteDefaultMaxOpenConns limits concurrent database connections
+	sqliteDefaultMaxOpenConns = 25
+	// sqliteDefaultMaxIdleConns controls idle connection pool size
+	sqliteDefaultMaxIdleConns = 5
+	// sqliteDefaultConnMaxLifetime recycles connections periodically
+	sqliteDefaultConnMaxLifetime = 5 * time.Minute
+	// sqliteDefaultConnMaxIdleTime closes long-idle connections
+	sqliteDefaultConnMaxIdleTime = 2 * time.Minute
+)
+
+// getEnvInt reads an integer from the environment, falling back to defaultVal.
+func getEnvInt(key string, defaultVal int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return defaultVal
+}
 
 // SQLiteStore implements Store using SQLite
 type SQLiteStore struct {
@@ -23,6 +47,12 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+
+	// Configure connection pool for resource management under high load
+	db.SetMaxOpenConns(getEnvInt("KC_SQLITE_MAX_OPEN_CONNS", sqliteDefaultMaxOpenConns))
+	db.SetMaxIdleConns(getEnvInt("KC_SQLITE_MAX_IDLE_CONNS", sqliteDefaultMaxIdleConns))
+	db.SetConnMaxLifetime(sqliteDefaultConnMaxLifetime)
+	db.SetConnMaxIdleTime(sqliteDefaultConnMaxIdleTime)
 
 	store := &SQLiteStore{db: db}
 	if err := store.migrate(); err != nil {
