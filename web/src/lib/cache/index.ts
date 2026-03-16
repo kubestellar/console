@@ -791,7 +791,7 @@ export function useCache<T>({
   persist = true,
   autoRefresh = true,
   enabled = true,
-  demoWhenEmpty = false,
+  demoWhenEmpty = demoData !== undefined,
   liveInDemoMode = false,
   merge,
   shared = true,
