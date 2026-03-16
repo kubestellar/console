@@ -7,6 +7,7 @@ import { BaseModal } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 const DISMISSED_KEY = 'kc-agent-setup-dismissed'
 const SNOOZED_KEY = 'kc-agent-setup-snoozed'
@@ -53,14 +54,14 @@ export function AgentSetupDialog() {
   const [showLinux, setShowLinux] = useState(false)
 
   const copyMacOS = async () => {
-    await navigator.clipboard.writeText(macOSInstallCommand)
+    await copyToClipboard(macOSInstallCommand)
     setCopiedMacOS(true)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedMacOS(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const copyLinux = async () => {
-    await navigator.clipboard.writeText(linuxBuildCommand)
+    await copyToClipboard(linuxBuildCommand)
     setCopiedLinux(true)
     clearTimeout(copiedLinuxTimerRef.current)
     copiedLinuxTimerRef.current = setTimeout(() => setCopiedLinux(false), UI_FEEDBACK_TIMEOUT_MS)

@@ -6,6 +6,7 @@ import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { emitInstallCommandCopied } from '../../lib/analytics'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface SetupInstructionsDialogProps {
   isOpen: boolean
@@ -44,8 +45,8 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
-  const copyToClipboard = async (text: string, stepKey: number) => {
-    await navigator.clipboard.writeText(text)
+  const handleCopy = async (text: string, stepKey: number) => {
+    await copyToClipboard(text)
     setCopiedStep(stepKey)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), UI_FEEDBACK_TIMEOUT_MS)
@@ -110,7 +111,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                     {QUICKSTART_CMD}
                   </code>
                   <button
-                    onClick={() => { copyToClipboard(QUICKSTART_CMD, 1); emitInstallCommandCopied('setup_quickstart', QUICKSTART_CMD) }}
+                    onClick={() => { handleCopy(QUICKSTART_CMD, 1); emitInstallCommandCopied('setup_quickstart', QUICKSTART_CMD) }}
                     className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     title={t('drilldown.tooltips.copyCommand')}
                   >
@@ -143,7 +144,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                           git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh
                         </code>
                         <button
-                          onClick={() => { const cmd = 'git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh'; copyToClipboard(cmd, 300); emitInstallCommandCopied('setup_dev_mode', cmd) }}
+                          onClick={() => { const cmd = 'git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh'; handleCopy(cmd, 300); emitInstallCommandCopied('setup_dev_mode', cmd) }}
                           className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                           title={t('drilldown.tooltips.copyCommand')}
                         >
@@ -185,7 +186,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                           {K8S_DEPLOY_CMD}
                         </code>
                         <button
-                          onClick={() => { copyToClipboard(K8S_DEPLOY_CMD, 400); emitInstallCommandCopied('setup_k8s_deploy', K8S_DEPLOY_CMD) }}
+                          onClick={() => { handleCopy(K8S_DEPLOY_CMD, 400); emitInstallCommandCopied('setup_k8s_deploy', K8S_DEPLOY_CMD) }}
                           className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                           title={t('drilldown.tooltips.copyCommand')}
                         >
@@ -248,7 +249,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                                   {oStep.command}
                                 </pre>
                                 <button
-                                  onClick={() => { copyToClipboard(oStep.command, 200 + idx); emitInstallCommandCopied(idx === OAUTH_RESTART_STEP_IDX ? 'setup_oauth_restart' : 'setup_oauth_env', oStep.command) }}
+                                  onClick={() => { handleCopy(oStep.command, 200 + idx); emitInstallCommandCopied(idx === OAUTH_RESTART_STEP_IDX ? 'setup_oauth_restart' : 'setup_oauth_env', oStep.command) }}
                                   className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors self-start"
                                   title={t('common.copy')}
                                 >

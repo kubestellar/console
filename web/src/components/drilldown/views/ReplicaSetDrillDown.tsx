@@ -10,6 +10,7 @@ import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface Props {
   data: Record<string, unknown>
@@ -166,7 +167,7 @@ export function ReplicaSetDrillDown({ data }: Props) {
   }, [agentConnected])
 
   const handleCopy = (field: string, value: string) => {
-    navigator.clipboard.writeText(value)
+    copyToClipboard(value)
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }

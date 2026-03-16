@@ -19,6 +19,7 @@ import {
   Puzzle,
 } from 'lucide-react'
 import { emitWhiteLabelViewed, emitWhiteLabelActioned, emitWhiteLabelTabSwitch, emitWhiteLabelCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
+import { copyToClipboard } from '../lib/clipboard'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -251,7 +252,7 @@ function DeploymentSection() {
 
   const copyCommands = useCallback(async (commands: string[], step: number) => {
     const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
-    await navigator.clipboard.writeText(text)
+    await copyToClipboard(text)
     const key = `${activeTab}-${step}`
     setCopiedStep(key)
     clearTimeout(copiedTimerRef.current)

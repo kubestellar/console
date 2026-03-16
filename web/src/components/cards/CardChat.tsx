@@ -5,6 +5,7 @@ import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 export interface ChatMessage {
   id: string
@@ -125,7 +126,7 @@ export function CardChat({
   }
 
   const handleCopy = (id: string, content: string) => {
-    navigator.clipboard.writeText(content)
+    copyToClipboard(content)
     setCopiedId(id)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedId(null), UI_FEEDBACK_TIMEOUT_MS)

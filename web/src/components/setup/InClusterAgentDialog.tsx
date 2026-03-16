@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Plug, Copy, Check, ChevronDown, ChevronRight, Terminal, Shield, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface InClusterAgentDialogProps {
   isOpen: boolean
@@ -35,8 +36,8 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
   const corsEnvCmd = `KC_ALLOWED_ORIGINS=${currentOrigin} kc-agent`
   const corsFlag = `kc-agent -allowed-origins ${currentOrigin}`
 
-  const copyToClipboard = async (text: string, stepKey: number) => {
-    await navigator.clipboard.writeText(text)
+  const handleCopy = async (text: string, stepKey: number) => {
+    await copyToClipboard(text)
     setCopiedStep(stepKey)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), UI_FEEDBACK_TIMEOUT_MS)
@@ -98,7 +99,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
                     {BREW_INSTALL_CMD}
                   </code>
                   <button
-                    onClick={() => copyToClipboard(BREW_INSTALL_CMD, COPY_KEY_BREW)}
+                    onClick={() => handleCopy(BREW_INSTALL_CMD, COPY_KEY_BREW)}
                     className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     title="Copy command"
                   >
@@ -130,7 +131,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
                           {BUILD_FROM_SOURCE_CMD}
                         </code>
                         <button
-                          onClick={() => copyToClipboard(BUILD_FROM_SOURCE_CMD, COPY_KEY_BUILD)}
+                          onClick={() => handleCopy(BUILD_FROM_SOURCE_CMD, COPY_KEY_BUILD)}
                           className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                           title="Copy command"
                         >
@@ -176,7 +177,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
                     {corsEnvCmd}
                   </code>
                   <button
-                    onClick={() => copyToClipboard(corsEnvCmd, COPY_KEY_CORS_ENV)}
+                    onClick={() => handleCopy(corsEnvCmd, COPY_KEY_CORS_ENV)}
                     className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     title="Copy command"
                   >
@@ -197,7 +198,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
                     {corsFlag}
                   </code>
                   <button
-                    onClick={() => copyToClipboard(corsFlag, COPY_KEY_CORS_FLAG)}
+                    onClick={() => handleCopy(corsFlag, COPY_KEY_CORS_FLAG)}
                     className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     title="Copy command"
                   >

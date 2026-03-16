@@ -16,6 +16,7 @@ import {
   STORAGE_KEY_HINTS_SUPPRESSED,
 } from '../../lib/constants/storage'
 import { emitDemoToLocalShown, emitDemoToLocalActioned, emitInstallCommandCopied } from '../../lib/analytics'
+import { copyToClipboard } from '../../lib/clipboard'
 
 const NETLIFY_INSTALL_COMMAND = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 
@@ -59,7 +60,7 @@ export function DemoToLocalCTA() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(NETLIFY_INSTALL_COMMAND)
+      await copyToClipboard(NETLIFY_INSTALL_COMMAND)
       setCopied(true)
       emitDemoToLocalActioned('copy_command')
       emitInstallCommandCopied('demo_to_local', NETLIFY_INSTALL_COMMAND)

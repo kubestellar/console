@@ -7,6 +7,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POLL_INTERVAL_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface ClusterEvent {
   type: string
@@ -142,7 +143,7 @@ export function EventsDrillDown({ data }: Props) {
     const cmd = objectName
       ? `kubectl --context ${clusterShort} get events --field-selector involvedObject.name=${objectName}${namespace ? ` -n ${namespace}` : ''}`
       : `kubectl --context ${clusterShort} get events${namespace ? ` -n ${namespace}` : ' -A'} --sort-by=.lastTimestamp`
-    navigator.clipboard.writeText(cmd)
+    copyToClipboard(cmd)
     setCopied(true)
     setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }

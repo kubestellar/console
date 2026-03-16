@@ -9,6 +9,7 @@ import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface CommandHistoryItem {
   id: string
@@ -416,7 +417,7 @@ data:
 
   // Copy output to clipboard
   const copyOutput = useCallback(() => {
-    navigator.clipboard.writeText(output.join('\n'))
+    copyToClipboard(output.join('\n'))
     setOutput(prev => [...prev, 'Copied to clipboard!', ''])
   }, [output])
 
@@ -588,7 +589,7 @@ data:
               </button>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(yamlContent)
+                  copyToClipboard(yamlContent)
                   setOutput(prev => [...prev, 'YAML copied to clipboard!', ''])
                 }}
                 disabled={!yamlContent.trim()}

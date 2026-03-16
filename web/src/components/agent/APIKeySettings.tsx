@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { emitApiKeyConfigured, emitApiKeyRemoved, emitConversionStep } from '../../lib/analytics'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 const INSTALL_COMMAND = KC_AGENT.installCommand
 
@@ -117,7 +118,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const timeoutRef = useRef<number>()
 
   const copyInstallCommand = async () => {
-    await navigator.clipboard.writeText(INSTALL_COMMAND)
+    await copyToClipboard(INSTALL_COMMAND)
     setCopied(true)
     timeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }

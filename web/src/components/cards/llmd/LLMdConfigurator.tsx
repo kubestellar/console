@@ -12,6 +12,7 @@ import { useReportCardDataState } from '../CardDataContext'
 import { Acronym } from './shared/PortalTooltip'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 const CATEGORY_ICONS = {
   scheduling: Zap,
@@ -196,7 +197,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
   }, [selectedPreset, currentParams])
 
   const copyConfig = () => {
-    navigator.clipboard.writeText(yamlConfig)
+    copyToClipboard(yamlConfig)
     setCopied(true)
     setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }

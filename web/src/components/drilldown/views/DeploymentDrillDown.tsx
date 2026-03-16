@@ -10,6 +10,7 @@ import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/n
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 /** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
@@ -326,7 +327,7 @@ export function DeploymentDrillDown({ data }: Props) {
   }, [agentConnected])
 
   const handleCopy = (field: string, value: string) => {
-    navigator.clipboard.writeText(value)
+    copyToClipboard(value)
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }

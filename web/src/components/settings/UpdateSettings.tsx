@@ -29,6 +29,7 @@ import { Button } from '../ui/Button'
 import { useAuth } from '../../lib/auth'
 import type { UpdateChannel } from '../../types/updates'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 import {
   emitUpdateChecked,
   emitUpdateTriggered,
@@ -215,7 +216,7 @@ export function UpdateSettings() {
   }, [])
 
   const copyCommand = async (command: string, id: string) => {
-    await navigator.clipboard.writeText(command)
+    await copyToClipboard(command)
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     setCopiedCommand(id)
     copyTimeoutRef.current = setTimeout(() => setCopiedCommand(null), UI_FEEDBACK_TIMEOUT_MS)

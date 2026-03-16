@@ -15,6 +15,7 @@ import {
   type ResourceContext,
 } from '../../modals'
 import { useToast } from '../../ui/Toast'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface Props {
   data: Record<string, unknown>
@@ -360,7 +361,7 @@ Check:
   }
 
   const handleCopy = (field: string, value: string) => {
-    navigator.clipboard.writeText(value)
+    copyToClipboard(value)
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }

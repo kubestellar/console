@@ -20,6 +20,7 @@ import {
   type ResourceContext,
 } from '../../modals'
 import { useTranslation } from 'react-i18next'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface Props {
   data: Record<string, unknown>
@@ -281,7 +282,7 @@ export function ArgoAppDrillDown({ data }: Props) {
   }, [activeTab])
 
   const handleCopy = (field: string, value: string) => {
-    navigator.clipboard.writeText(value)
+    copyToClipboard(value)
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }

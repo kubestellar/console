@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal, Globe, Rocket, X, ExternalLink, Copy, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { copyToClipboard } from '../../lib/clipboard'
 
 const DISMISSED_KEY = 'kc-welcome-dismissed'
 
@@ -36,7 +37,7 @@ export function WelcomeCard() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(INSTALL_COMMAND)
+      await copyToClipboard(INSTALL_COMMAND)
       setCopied(true)
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
       copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)

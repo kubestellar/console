@@ -19,6 +19,7 @@ import {
 import type { SimilarResolution, Resolution, ResolutionSteps } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface ResolutionKnowledgePanelProps {
   relatedResolutions: SimilarResolution[]
@@ -259,5 +260,5 @@ function copyResolutionToClipboard(resolution: ResolutionSteps) {
     ...(resolution.yaml ? ['\nYAML:', '```yaml', resolution.yaml, '```'] : []),
   ].join('\n')
 
-  navigator.clipboard.writeText(text)
+  copyToClipboard(text)
 }

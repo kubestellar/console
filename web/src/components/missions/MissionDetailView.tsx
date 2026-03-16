@@ -30,6 +30,7 @@ import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting'
 
@@ -105,7 +106,7 @@ function CopyButton({ text }: { text: string }) {
   }, [])
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text).then(() => {
+    copyToClipboard(text).then(() => {
       setCopied(true)
       if (copiedTimeoutRef.current !== null) clearTimeout(copiedTimeoutRef.current)
       copiedTimeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
@@ -289,7 +290,7 @@ export function MissionDetailView({
           {shareUrl && (
             <button
               onClick={() => {
-                navigator.clipboard.writeText(shareUrl)
+                copyToClipboard(shareUrl)
                 setLinkCopied(true)
                 if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
                 linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)

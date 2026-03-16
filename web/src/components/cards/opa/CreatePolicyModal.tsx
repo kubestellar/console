@@ -6,6 +6,7 @@ import { kubectlProxy } from '../../../lib/kubectlProxy'
 import { useToast } from '../../ui/Toast'
 import type { GatekeeperStatus, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 // Creation flow type for CreatePolicyModal
 type CreateFlow = 'choose' | 'describe' | 'template' | 'yaml'
@@ -425,7 +426,7 @@ Please proceed with applying this policy.`,
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(yamlContent)
+                      copyToClipboard(yamlContent)
                       showToast('Copied to clipboard', 'success')
                     }}
                     className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"

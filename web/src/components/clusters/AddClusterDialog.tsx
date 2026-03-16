@@ -6,6 +6,7 @@ import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { CloudProviderIcon } from '../ui/CloudProviderIcon'
 import { StatusBadge } from '../ui/StatusBadge'
 import { emitClusterCreated } from '../../lib/analytics'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface AddClusterDialogProps {
   open: boolean
@@ -89,7 +90,7 @@ function CopyButton({ text }: { text: string }) {
   }, [])
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text)
+    copyToClipboard(text)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)

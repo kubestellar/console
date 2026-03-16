@@ -22,6 +22,7 @@ import type { MissionExport, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
 import { cn } from '../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface ShareMissionDialogProps {
   resolution: Resolution
@@ -149,10 +150,10 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
         break
       }
       case 'clipboard':
-        await navigator.clipboard.writeText(json)
+        await copyToClipboard(json)
         break
       case 'markdown':
-        await navigator.clipboard.writeText(missionToMarkdown(mission))
+        await copyToClipboard(missionToMarkdown(mission))
         break
       case 'yaml': {
         const yamlContent = missionToYaml(mission)

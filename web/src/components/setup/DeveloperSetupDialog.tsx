@@ -5,6 +5,7 @@ import { Code2, Copy, Check, GitBranch, RefreshCw, ExternalLink, ChevronDown, Ch
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface DeveloperSetupDialogProps {
   isOpen: boolean
@@ -34,8 +35,8 @@ export function DeveloperSetupDialog({ isOpen, onClose }: DeveloperSetupDialogPr
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
-  const copyToClipboard = async (text: string, stepKey: number) => {
-    await navigator.clipboard.writeText(text)
+  const handleCopy = async (text: string, stepKey: number) => {
+    await copyToClipboard(text)
     setCopiedStep(stepKey)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), UI_FEEDBACK_TIMEOUT_MS)
@@ -86,7 +87,7 @@ export function DeveloperSetupDialog({ isOpen, onClose }: DeveloperSetupDialogPr
               <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
                 {DEV_CLONE_CMD}
               </code>
-              <CopyButton copied={copiedStep === COPY_KEY_CLONE} onClick={() => copyToClipboard(DEV_CLONE_CMD, COPY_KEY_CLONE)} />
+              <CopyButton copied={copiedStep === COPY_KEY_CLONE} onClick={() => handleCopy(DEV_CLONE_CMD, COPY_KEY_CLONE)} />
             </div>
           </div>
 
@@ -122,7 +123,7 @@ export function DeveloperSetupDialog({ isOpen, onClose }: DeveloperSetupDialogPr
                 <pre className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto whitespace-pre">
                   {ENV_TEMPLATE}
                 </pre>
-                <CopyButton copied={copiedStep === COPY_KEY_ENV} onClick={() => copyToClipboard(ENV_TEMPLATE, COPY_KEY_ENV)} />
+                <CopyButton copied={copiedStep === COPY_KEY_ENV} onClick={() => handleCopy(ENV_TEMPLATE, COPY_KEY_ENV)} />
               </div>
             </div>
           </div>
@@ -137,7 +138,7 @@ export function DeveloperSetupDialog({ isOpen, onClose }: DeveloperSetupDialogPr
               <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
                 {DEV_START_OAUTH_CMD}
               </code>
-              <CopyButton copied={copiedStep === COPY_KEY_START} onClick={() => copyToClipboard(DEV_START_OAUTH_CMD, COPY_KEY_START)} />
+              <CopyButton copied={copiedStep === COPY_KEY_START} onClick={() => handleCopy(DEV_START_OAUTH_CMD, COPY_KEY_START)} />
             </div>
             <p className="text-xs text-muted-foreground ml-7">
               {t('developerSetup.startDevDesc')}

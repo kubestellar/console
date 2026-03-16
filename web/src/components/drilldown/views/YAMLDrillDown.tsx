@@ -7,6 +7,7 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { emitDataExported } from '../../../lib/analytics'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface Props {
   data: Record<string, unknown>
@@ -57,9 +58,9 @@ export function YAMLDrillDown({ data }: Props) {
     }
   }
 
-  const copyToClipboard = async () => {
+  const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(yaml)
+      await copyToClipboard(yaml)
       setCopied(true)
       clearTimeout(copiedTimerRef.current)
       copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
@@ -134,7 +135,7 @@ export function YAMLDrillDown({ data }: Props) {
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
           <button
-            onClick={copyToClipboard}
+            onClick={handleCopy}
             className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors"
             title="Copy to clipboard"
           >

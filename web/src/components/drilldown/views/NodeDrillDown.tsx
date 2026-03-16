@@ -5,6 +5,7 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useMissions } from '../../../hooks/useMissions'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface Props {
   data: Record<string, unknown>
@@ -33,7 +34,7 @@ export function NodeDrillDown({ data }: Props) {
   const clusterShort = cluster.split('/').pop() || cluster
 
   const copyCommand = (cmd: string, label: string) => {
-    navigator.clipboard.writeText(cmd)
+    copyToClipboard(cmd)
     setCopied(label)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopied(null), UI_FEEDBACK_TIMEOUT_MS)

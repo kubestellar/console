@@ -20,6 +20,7 @@ import {
   type WidgetTemplateDefinition,
 } from '../../lib/widgets/widgetRegistry'
 import { generateWidget, getWidgetFilename, type WidgetConfig } from '../../lib/widgets/codeGenerator'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface WidgetExportModalProps {
   isOpen: boolean
@@ -120,7 +121,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   // Copy to clipboard
   const handleCopy = async () => {
     if (!widgetCode) return
-    await navigator.clipboard.writeText(widgetCode)
+    await copyToClipboard(widgetCode)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)

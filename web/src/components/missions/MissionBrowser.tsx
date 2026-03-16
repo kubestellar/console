@@ -46,6 +46,7 @@ import {
   getCachedRecommendations, setCachedRecommendations,
 } from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
+import { copyToClipboard } from '../../lib/clipboard'
 
 // ============================================================================
 // Types
@@ -374,7 +375,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const handleCopyLink = useCallback((mission: MissionExport, e: React.MouseEvent) => {
     e.stopPropagation()
     const url = getMissionShareUrl(mission)
-    navigator.clipboard.writeText(url)
+    copyToClipboard(url)
     emitSolutionLinkCopied(mission.title, mission.cncfProject)
   }, [])
 

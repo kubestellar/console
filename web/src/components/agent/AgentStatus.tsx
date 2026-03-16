@@ -5,6 +5,7 @@ import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { useTranslation } from 'react-i18next'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { emitInstallCommandCopied } from '@/lib/analytics'
+import { copyToClipboard } from '../../lib/clipboard'
 
 export function AgentStatus() {
   const { t } = useTranslation('common')
@@ -58,10 +59,6 @@ export function AgentInstallBanner() {
   const { isDemoMode } = useLocalAgent()
 
   if (!isDemoMode) return null
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-  }
 
   const installCommand = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 

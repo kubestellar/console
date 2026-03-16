@@ -7,6 +7,7 @@ import { kubectlProxy } from '../../../lib/kubectlProxy'
 import { useToast } from '../../ui/Toast'
 import type { Policy, Violation, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 // Tab type for ClusterOPAModal
 type OPAModalTab = 'policies' | 'violations'
@@ -503,7 +504,7 @@ Please proceed with applying this policy.`,
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">YAML will be applied to: <span className="text-foreground">{clusterName}</span></span>
               <button
-                onClick={() => navigator.clipboard.writeText(yamlContent)}
+                onClick={() => copyToClipboard(yamlContent)}
                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Copy className="w-3 h-3" />

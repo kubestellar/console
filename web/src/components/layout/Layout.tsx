@@ -29,6 +29,7 @@ import { KeepAliveOutlet } from './KeepAliveOutlet'
 import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
+import { copyToClipboard } from '../../lib/clipboard'
 
 // Lazy-load the AI mission sidebar so react-markdown and remark plugins are
 // not part of the initial bundle — they only load when the sidebar is first rendered.
@@ -107,7 +108,7 @@ export function Layout({ children }: LayoutProps) {
 
   const handleCopyFallback = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText('./startup-oauth.sh')
+      await copyToClipboard('./startup-oauth.sh')
       setRestartState('copied')
       setTimeout(() => setRestartState('idle'), UI_FEEDBACK_TIMEOUT_MS)
     } catch {

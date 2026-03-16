@@ -31,6 +31,7 @@ const FeatureRequestModal = lazy(() =>
 )
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { copyToClipboard } from '../../lib/clipboard'
 
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
@@ -891,7 +892,7 @@ export function CardWrapper({
                         onClick={() => {
                           setShowMenu(false)
                           const url = `${window.location.origin}${window.location.pathname}?card=${cardType}`
-                          navigator.clipboard.writeText(url)
+                          copyToClipboard(url)
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
                         role="menuitem"

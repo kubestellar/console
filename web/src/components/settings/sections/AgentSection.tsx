@@ -4,6 +4,7 @@ import { Plug, RefreshCw, Check, X, Copy, Cpu } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import type { AgentHealth } from '../../../hooks/useLocalAgent'
 import { UI_FEEDBACK_TIMEOUT_MS, RETRY_DELAY_MS } from '../../../lib/constants/network'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface AgentSectionProps {
   isConnected: boolean
@@ -21,7 +22,7 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
   const refreshTimerRef = useRef<number>()
 
   const copyInstallCommand = async () => {
-    await navigator.clipboard.writeText(INSTALL_COMMAND)
+    await copyToClipboard(INSTALL_COMMAND)
     setCopied(true)
     timeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }

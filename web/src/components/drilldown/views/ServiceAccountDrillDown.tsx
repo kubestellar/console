@@ -7,6 +7,7 @@ import { FileText, Code, Info, Tag, Loader2, Copy, Check, Layers, Server, Lock, 
 import { cn } from '../../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useTranslation } from 'react-i18next'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 interface Props {
   data: Record<string, unknown>
@@ -127,7 +128,7 @@ export function ServiceAccountDrillDown({ data }: Props) {
   }, [agentConnected])
 
   const handleCopy = (field: string, value: string) => {
-    navigator.clipboard.writeText(value)
+    copyToClipboard(value)
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }

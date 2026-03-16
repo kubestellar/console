@@ -21,6 +21,7 @@ import {
   Heart,
 } from 'lucide-react'
 import { emitFromHeadlampViewed, emitFromHeadlampActioned, emitFromHeadlampTabSwitch, emitFromHeadlampCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
+import { copyToClipboard } from '../lib/clipboard'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -232,7 +233,7 @@ function DeploymentSection() {
 
   const copyCommands = useCallback(async (commands: string[], step: number) => {
     const text = commands.join('\n')
-    await navigator.clipboard.writeText(text)
+    await copyToClipboard(text)
     const key = `${activeTab}-${step}`
     setCopiedStep(key)
     clearTimeout(copiedTimerRef.current)

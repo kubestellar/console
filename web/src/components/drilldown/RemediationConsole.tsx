@@ -6,6 +6,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { AI_THINKING_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
 import { authFetch } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
+import { copyToClipboard } from '../../lib/clipboard'
 
 interface LogEntry {
   id: string
@@ -369,7 +370,7 @@ Labels:       app=${resourceName.split('-')[0]}
     const text = logs.map(log =>
       `[${log.timestamp.toISOString()}] [${log.type.toUpperCase()}] ${log.message}${log.details ? `\n  ${log.details}` : ''}`
     ).join('\n')
-    navigator.clipboard.writeText(text)
+    copyToClipboard(text)
   }
 
   const downloadLogs = () => {

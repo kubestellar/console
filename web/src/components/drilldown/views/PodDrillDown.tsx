@@ -19,6 +19,7 @@ import {
   getPodCache, setPodCache, cleanupPodCache,
 } from './pod-drilldown'
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
+import { copyToClipboard } from '../../../lib/clipboard'
 
 /** Keys that must never be used as object property names (prototype pollution prevention). */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -755,7 +756,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
   }
 
   const handleCopy = (field: string, value: string) => {
-    navigator.clipboard.writeText(value)
+    copyToClipboard(value)
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
