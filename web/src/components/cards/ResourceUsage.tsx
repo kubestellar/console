@@ -52,8 +52,8 @@ export function ResourceUsage() {
     const xpuOnly = gpuNodes.filter(n => n.acceleratorType === 'XPU')
 
     const sumAccel = (nodes: typeof gpuNodes) => ({
-      total: nodes.reduce((s, n) => s + n.gpuCount, 0),
-      used: nodes.reduce((s, n) => s + n.gpuAllocated, 0),
+      total: nodes.reduce((s, n) => s + (n.gpuCount || 0), 0),
+      used: nodes.reduce((s, n) => s + (n.gpuAllocated || 0), 0),
     })
 
     return {
