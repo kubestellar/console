@@ -71,13 +71,14 @@ function getStatusColor(status: string) {
 
 function PVCStatusInternal() {
   const { t } = useTranslation()
-  const { pvcs, isLoading, error, consecutiveFailures, isFailed, isDemoFallback } = useCachedPVCs()
+  const { pvcs, isLoading, isRefreshing, error, consecutiveFailures, isFailed, isDemoFallback } = useCachedPVCs()
   const { drillToPVC } = useDrillDownActions()
   const { isDemoMode: demoMode } = useDemoMode()
 
   // Report card data state
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: pvcs.length > 0,
     isFailed,
     consecutiveFailures,

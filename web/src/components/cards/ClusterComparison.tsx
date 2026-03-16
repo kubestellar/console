@@ -18,13 +18,14 @@ interface ClusterComparisonProps {
 export function ClusterComparison({ config }: ClusterComparisonProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: rawClusters, isLoading: clustersLoading } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
+  const { nodes: gpuNodes, isDemoFallback, isRefreshing } = useCachedGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
   const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
+    isRefreshing,
     hasAnyData: rawClusters.length > 0,
     isDemoData: isDemoMode || isDemoFallback,
   })

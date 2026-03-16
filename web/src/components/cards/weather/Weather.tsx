@@ -119,7 +119,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   }, [units, forecastLength])
 
   const weatherCacheKey = `weather:${currentLocation.latitude}:${currentLocation.longitude}:${units}:${forecastLength}`
-  const { data: weatherData, isLoading, isFailed, refetch } = useCache<WeatherData>({
+  const { data: weatherData, isLoading, isRefreshing, isFailed, isDemoFallback, refetch } = useCache<WeatherData>({
     key: weatherCacheKey,
     category: 'default',
     initialData: INITIAL_WEATHER,
@@ -188,7 +188,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const currentWeather = weatherData.current
   const forecast = weatherData.forecast
   const hourlyForecast = weatherData.hourly
-  useCardLoadingState({ isLoading, hasAnyData: !!currentWeather, isDemoData: false })
+  useCardLoadingState({ isLoading, isRefreshing, hasAnyData: !!currentWeather, isDemoData: isDemoFallback })
 
   // Save locations to localStorage whenever they change
   useEffect(() => {

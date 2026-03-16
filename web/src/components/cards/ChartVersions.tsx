@@ -43,11 +43,13 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     isFailed,
     consecutiveFailures,
     isDemoFallback: isDemoData,
+    isRefreshing,
   } = useCachedHelmReleases()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading || releasesLoading,
+    isRefreshing,
     hasAnyData: allHelmReleases.length > 0,
     isFailed,
     consecutiveFailures,

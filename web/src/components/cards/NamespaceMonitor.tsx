@@ -132,7 +132,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   }, [clusters, selectedClusters, isAllClustersSelected, searchFilter])
 
   // Fetch data for selected cluster
-  const { namespaces, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+  const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
   const { deployments, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments(selectedCluster || undefined)
   const { services, isDemoFallback: servicesDemoFallback } = useCachedServices(selectedCluster || undefined)
   const { pvcs, isDemoFallback: pvcsDemoFallback } = useCachedPVCs(selectedCluster || undefined)
@@ -148,6 +148,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
+    isRefreshing: namespacesRefreshing,
     hasAnyData: clusters.length > 0,
     isDemoData,
   })

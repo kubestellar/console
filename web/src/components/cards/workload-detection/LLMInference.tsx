@@ -54,6 +54,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: servers.length > 0,
     isDemoData: isDemoFallback,
     isFailed,

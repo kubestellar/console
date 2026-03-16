@@ -38,6 +38,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: models.length > 0,
     isDemoData: isDemoFallback,
   })

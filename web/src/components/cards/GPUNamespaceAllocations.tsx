@@ -52,7 +52,7 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { nodes: gpuNodes, isLoading: gpuLoading, isDemoFallback: gpuNodesDemoFallback } = useCachedGPUNodes()
+  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback: gpuNodesDemoFallback } = useCachedGPUNodes()
   const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback } = useCachedAllPods()
   const { drillToGPUNamespace } = useDrillDownActions()
 
@@ -63,6 +63,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
 
   useCardLoadingState({
     isLoading: gpuLoading || podsLoading,
+    isRefreshing: gpuRefreshing,
     hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
     isDemoData,
   })
