@@ -84,6 +84,19 @@ Please diagnose step by step and fix any issues found.`,
   },
 }
 
+/** Install mission prompt for compliance tools (Kubescape + Kyverno) */
+const COMPLIANCE_INSTALL_PROMPT = `I want to set up compliance monitoring on my Kubernetes clusters.
+
+Please help me install one or both of these tools:
+
+1. **Kubescape** — security posture scoring (CIS, NSA, MITRE frameworks)
+   - Install via Helm: helm repo add kubescape https://kubescape.github.io/helm-charts && helm install kubescape kubescape/kubescape-operator -n kubescape --create-namespace
+
+2. **Kyverno** — policy enforcement with compliance reports
+   - Install via Helm: helm repo add kyverno https://kyverno.github.io/kyverno && helm install kyverno kyverno/kyverno -n kyverno --create-namespace
+
+Please install at least one tool and verify it is producing scan results.`
+
 // ── Falco (still static — no hook yet) ──────────────────────────────────
 
 export function FalcoAlerts({ config: _config }: CardConfig) {
@@ -854,9 +867,10 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 // ── Compliance Score Gauge ──────────────────────────────────────────────
 
 export function ComplianceScore({ config: _config }: CardConfig) {
-  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
-  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, installed: ksInstalled, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, installed: kyInstalled, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
+  const { startMission } = useMissions()
   const [showBreakdown, setShowBreakdown] = useState(false)
 
   const isLoading = ksLoading || kyLoading
@@ -934,10 +948,21 @@ export function ComplianceScore({ config: _config }: CardConfig) {
     return totalPolicies > 0 ? { totalPolicies, totalViolations, enforcingCount, auditCount } : undefined
   }, [kyvernoStatuses, selectedClusters])
 
-  // Mark as demo data when hooks report demo OR when using hardcoded fallback values
-  const isDemoData = ksDemoData || kyDemoData || usingFallback
+  // Mark as demo data only when hooks report demo mode (explicit demo or forced Netlify).
+  // When compliance tools are not installed, show an install prompt instead of a fake demo score.
+  const isDemoData = ksDemoData || kyDemoData
 
-  useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
+  const handleInstallCompliance = () => {
+    startMission({
+      title: 'Install Compliance Tools',
+      description: 'Install Kubescape and/or Kyverno for compliance score tracking',
+      type: 'deploy',
+      initialPrompt: COMPLIANCE_INSTALL_PROMPT,
+      context: {},
+    })
+  }
+
+  useCardLoadingState({ isLoading, hasAnyData: !usingFallback || isDemoData, isDemoData })
 
   const scoreCtx = getScoreContext(score)
 
@@ -952,6 +977,9 @@ export function ComplianceScore({ config: _config }: CardConfig) {
     }
     return Array.from(clusters)
   }, [kubescapeStatuses, kyvernoStatuses])
+
+  // Whether no compliance tools are installed (and we've finished loading)
+  const noToolsInstalled = !isLoading && !ksInstalled && !kyInstalled && !isDemoData
 
   return (
     <div className="space-y-3">
@@ -978,72 +1006,93 @@ export function ComplianceScore({ config: _config }: CardConfig) {
         <span>{CARD_DESCRIPTIONS.compliance_score.description}</span>
       </div>
 
-      <div
-        className="flex items-center justify-center py-4 cursor-pointer group"
-        onClick={() => setShowBreakdown(true)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setShowBreakdown(true)
-          }
-        }}
-        title="Click for detailed breakdown"
-      >
-        <div className="relative w-24 h-24 group-hover:scale-105 transition-transform">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-secondary" />
-            <circle
-              cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3"
-              strokeDasharray={`${score}, 100`}
-              className={score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-foreground">{score}%</span>
+      {/* No compliance tools installed — show install prompt instead of fake demo score */}
+      {noToolsInstalled && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-cyan-400 font-medium">No Compliance Tools Detected</p>
+            <p className="text-muted-foreground">
+              Install Kubescape or Kyverno to see live compliance scores.{' '}
+              <button onClick={handleInstallCompliance} className="text-cyan-400 hover:underline">
+                Install with an AI Mission →
+              </button>
+            </p>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Score context */}
-      <div className="text-center">
-        <span className={`text-xs font-semibold ${scoreCtx.color}`}>{scoreCtx.label}</span>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{scoreCtx.description}</p>
-      </div>
-
-      {/* Breakdown by tool */}
-      <div className="space-y-1.5">
-        {(breakdown || []).map((item, i) => (
-          <div key={i} className="flex items-center gap-2 px-1">
-            <span className="text-xs text-muted-foreground w-20 truncate">{item.name}</span>
-            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${item.value >= 80 ? 'bg-green-400/60' : item.value >= 60 ? 'bg-yellow-400/60' : 'bg-red-400/60'}`}
-                style={{ width: `${item.value}%` }}
-              />
+      {/* Score chart — only shown when real data exists or in demo mode */}
+      {!noToolsInstalled && (
+        <>
+          <div
+            className="flex items-center justify-center py-4 cursor-pointer group"
+            onClick={() => setShowBreakdown(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setShowBreakdown(true)
+              }
+            }}
+            title="Click for detailed breakdown"
+          >
+            <div className="relative w-24 h-24 group-hover:scale-105 transition-transform">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-secondary" />
+                <circle
+                  cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3"
+                  strokeDasharray={`${score}, 100`}
+                  className={score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold text-foreground">{score}%</span>
+              </div>
             </div>
-            <span className={`text-xs font-medium w-10 text-right ${item.value >= 80 ? 'text-green-400' : item.value >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-              {item.value}%
-            </span>
           </div>
-        ))}
-      </div>
 
-      {/* Breakdown Modal */}
-      <ComplianceScoreBreakdownModal
-        isOpen={showBreakdown}
-        onClose={() => setShowBreakdown(false)}
-        score={score}
-        breakdown={breakdown}
-        kubescapeData={kubescapeAgg.totalControls > 0 ? {
-          totalControls: kubescapeAgg.totalControls,
-          passedControls: kubescapeAgg.passedControls,
-          failedControls: kubescapeAgg.failedControls,
-          frameworks: kubescapeAgg.frameworks || [],
-        } : undefined}
-        kyvernoData={kyvernoBreakdownData}
-      />
+          {/* Score context */}
+          <div className="text-center">
+            <span className={`text-xs font-semibold ${scoreCtx.color}`}>{scoreCtx.label}</span>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{scoreCtx.description}</p>
+          </div>
+
+          {/* Breakdown by tool */}
+          <div className="space-y-1.5">
+            {(breakdown || []).map((item, i) => (
+              <div key={i} className="flex items-center gap-2 px-1">
+                <span className="text-xs text-muted-foreground w-20 truncate">{item.name}</span>
+                <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${item.value >= 80 ? 'bg-green-400/60' : item.value >= 60 ? 'bg-yellow-400/60' : 'bg-red-400/60'}`}
+                    style={{ width: `${item.value}%` }}
+                  />
+                </div>
+                <span className={`text-xs font-medium w-10 text-right ${item.value >= 80 ? 'text-green-400' : item.value >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                  {item.value}%
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Breakdown Modal */}
+          <ComplianceScoreBreakdownModal
+            isOpen={showBreakdown}
+            onClose={() => setShowBreakdown(false)}
+            score={score}
+            breakdown={breakdown}
+            kubescapeData={kubescapeAgg.totalControls > 0 ? {
+              totalControls: kubescapeAgg.totalControls,
+              passedControls: kubescapeAgg.passedControls,
+              failedControls: kubescapeAgg.failedControls,
+              frameworks: kubescapeAgg.frameworks || [],
+            } : undefined}
+            kyvernoData={kyvernoBreakdownData}
+          />
+        </>
+      )}
     </div>
   )
 }
