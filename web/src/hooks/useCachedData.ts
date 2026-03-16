@@ -2338,7 +2338,9 @@ export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> 
     initialData: HW_INITIAL_DATA,
     demoData: HW_DEMO_DATA,
     persist: true,
-    enabled: !isAgentUnavailable(),
+    // Don't gate on isAgentUnavailable() — the agent may connect after the hook
+    // mounts and `enabled` is only read once. The fetcher handles unavailability
+    // internally by throwing, which useCache tracks as consecutive failures.
     fetcher: fetchHardwareHealth,
   })
 
