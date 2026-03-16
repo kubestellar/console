@@ -15,6 +15,8 @@ const GRAVITY = 0.5
 const JUMP_FORCE = -12
 const MOVE_SPEED = 4
 const PLAYER_SIZE = 28
+/** Number of frames of invincibility after spawning (prevents instant death at start) */
+const INVINCIBILITY_FRAMES = 90
 
 // Tile types
 const EMPTY = 0
@@ -103,6 +105,8 @@ export function PodBrothers() {
   const keysRef = useRef<Set<string>>(new Set())
   const animationRef = useRef<number>(0)
   const levelRef = useRef<number[][]>([])
+  /** Frames remaining of spawn invincibility (prevents instant death on overlapping enemies) */
+  const invincibilityRef = useRef<number>(0)
 
   // Initialize level
   const initLevel = useCallback(() => {
@@ -141,6 +145,9 @@ export function PodBrothers() {
       onGround: false,
       facingRight: true,
     }
+
+    // Grant spawn invincibility to prevent instant death from overlapping enemies
+    invincibilityRef.current = INVINCIBILITY_FRAMES
   }, [])
 
   // Collision detection
@@ -161,6 +168,11 @@ export function PodBrothers() {
   const update = useCallback(() => {
     const player = playerRef.current
     const keys = keysRef.current
+
+    // Tick down spawn invincibility
+    if (invincibilityRef.current > 0) {
+      invincibilityRef.current--
+    }
 
     // Handle input
     if (keys.has('ArrowLeft') || keys.has('a') || keys.has('A')) {
@@ -274,12 +286,13 @@ export function PodBrothers() {
         player.y < ey + TILE_SIZE - 4 &&
         player.y + PLAYER_SIZE > ey + 4
       ) {
-        // Check if stomping
+        // Check if stomping (always allowed, even during invincibility)
         if (player.vy > 0 && player.y + PLAYER_SIZE < ey + TILE_SIZE / 2) {
           enemy.alive = false
           player.vy = JUMP_FORCE / 2
           setScore(s => s + 200)
-        } else {
+        } else if (invincibilityRef.current <= 0) {
+          // Only take damage when not invincible
           setLives(l => {
             if (l <= 1) {
               setGameState('lost')
@@ -421,19 +434,25 @@ export function PodBrothers() {
       ctx.fillRect(enemy.x + TILE_SIZE - 12, enemy.y + 12, 3, 3)
     })
 
-    // Draw player (Pod)
+    // Draw player (Pod) — blink every 4 frames during invincibility for visual feedback
     const player = playerRef.current
-    ctx.fillStyle = COLORS.player
-    ctx.fillRect(player.x, player.y, PLAYER_SIZE, PLAYER_SIZE)
-    // Pod logo (circle)
-    ctx.fillStyle = '#fff'
-    ctx.beginPath()
-    ctx.arc(player.x + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, 8, 0, Math.PI * 2)
-    ctx.fill()
-    // Eyes
-    const eyeOffset = player.facingRight ? 4 : -4
-    ctx.fillStyle = '#000'
-    ctx.fillRect(player.x + PLAYER_SIZE / 2 + eyeOffset - 2, player.y + 6, 4, 4)
+    const BLINK_INTERVAL = 4
+    const isInvincible = invincibilityRef.current > 0
+    const shouldDraw = !isInvincible || Math.floor(invincibilityRef.current / BLINK_INTERVAL) % 2 === 0
+
+    if (shouldDraw) {
+      ctx.fillStyle = COLORS.player
+      ctx.fillRect(player.x, player.y, PLAYER_SIZE, PLAYER_SIZE)
+      // Pod logo (circle)
+      ctx.fillStyle = '#fff'
+      ctx.beginPath()
+      ctx.arc(player.x + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, 8, 0, Math.PI * 2)
+      ctx.fill()
+      // Eyes
+      const eyeOffset = player.facingRight ? 4 : -4
+      ctx.fillStyle = '#000'
+      ctx.fillRect(player.x + PLAYER_SIZE / 2 + eyeOffset - 2, player.y + 6, 4, 4)
+    }
   }, [])
 
   // Game loop
