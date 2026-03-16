@@ -803,13 +803,10 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   buildpacks_status: () => import('./buildpacks-status'),
   // KEDA
   keda_status: () => import('./keda_status'),
-<<<<<<< HEAD
   // CloudEvents
   cloudevents_status: () => import('./cloudevents_status'),
-=======
   // CRI-O
   crio_status: () => import('./crio_status'),
->>>>>>> 51e5fc67 (Added live cluster data support for CRIO card)
   // Strimzi
   strimzi_status: () => import('./strimzi_status'),
   // KubeVela application delivery
