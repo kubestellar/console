@@ -19,13 +19,22 @@ jobs:
       pr_message: |
         👋 Welcome to the KubeStellar Console community! 💖
 
-        Thanks and congrats 🎉 for your first PR! Before merge, please ensure:
-        - ✅ **DCO Sign-off** — `git commit -s` ([DCO](https://developercertificate.org/))
-        - ✅ **PR Title** — Starts with emoji: ✨ feature | 🐛 bug fix | 📖 docs | 🌱 other
+        Thanks and congrats 🎉 for your first PR! We're excited to have you contributing.
+
+        **Before merge, please ensure:**
+        - ✅ **DCO Sign-off** — All commits signed with `git commit -s` ([DCO](https://developercertificate.org/))
+        - ✅ **PR Title** — Starts with emoji: ✨ feature | 🐛 bug fix | 📖 docs | 🌱 other | ⚠️ breaking
 
         📬 Using KubeStellar Console? Please [add yourself to our Adopters list](https://github.com/kubestellar/console/edit/main/ADOPTERS.md) — it really helps! 🙏
 
-        📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) | 🖥️ [Live Demo](https://console.kubestellar.io) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
+        **Resources:**
+        - 🖥️ [KubeStellar Console](https://console.kubestellar.io) — Try the live multi-cluster dashboard
+        - 📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) — Installation, features, and architecture
+        - 🧩 [Marketplace](https://kubestellar.io/docs/console/programs/marketplace) — Community extensions and cards
+        - 📚 [Knowledge Base](https://kubestellar.io/docs/console/programs/knowledge-base) — Troubleshooting and how-tos
+        - 📖 [Full Documentation](https://kubestellar.io/docs) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
+
+        A maintainer will review your PR soon. Hope you have a great time here!
 
         🌟 If you like KubeStellar Console, please ⭐ **star** our repo to support it! 🌟
       issue_message: |
@@ -33,10 +42,22 @@ jobs:
 
         Thanks and congrats 🎉 for opening your first issue! Every issue helps make the Console better.
 
-        **Want to work on this?** Comment `/assign` to claim it.
+        **To work on this issue**, comment `/assign` to claim it (use `/unassign` to remove).
+
+        **Find Issues to Work On:**
+        - [`good first issue`](https://github.com/kubestellar/console/labels/good%20first%20issue) | [`help wanted`](https://github.com/kubestellar/console/labels/help%20wanted) | [CLOTributor](https://clotributor.dev/search?project=kubestellar)
 
         📬 Using KubeStellar Console? Please [add yourself to our Adopters list](https://github.com/kubestellar/console/edit/main/ADOPTERS.md) — it really helps! 🙏
 
-        📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) | 🖥️ [Live Demo](https://console.kubestellar.io) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
+        **Resources:**
+        - 🖥️ [KubeStellar Console](https://console.kubestellar.io) — Try the live multi-cluster dashboard
+        - 📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) — Installation, features, and architecture
+        - 🧩 [Marketplace](https://kubestellar.io/docs/console/programs/marketplace) — Community extensions and cards
+        - 📚 [Knowledge Base](https://kubestellar.io/docs/console/programs/knowledge-base) — Troubleshooting and how-tos
+        - 📖 [Full Documentation](https://kubestellar.io/docs) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
+
+        Hope you have a great time here!
 
         🌟 If you like KubeStellar Console, please ⭐ **star** our repo to support it! 🌟
+
+        **For Maintainers:** `/good-first-issue` | `/help-wanted`
