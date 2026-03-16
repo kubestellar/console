@@ -489,7 +489,16 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll for pod updates
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`allPods:${cacheKey}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
@@ -661,7 +670,16 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for pod issue updates
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`podIssues:${cacheKey}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
@@ -799,7 +817,16 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for deployment issues
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`deploymentIssues:${cacheKey}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
