@@ -568,6 +568,23 @@ class CacheStore<T> {
         return
       }
 
+      // Guard: if the fetcher returned empty data (same as initialData) but we
+      // already have cached data, keep the cache. This prevents refresh from
+      // wiping card data when the agent/backend hasn't connected yet.
+      // Fetchers return [] when both agent and backend are unavailable, which
+      // would overwrite perfectly good cached data with nothing.
+      const isEmptyResult = Array.isArray(newData) && (newData as unknown[]).length === 0
+        && Array.isArray(this.initialData) && (this.initialData as unknown[]).length === 0
+      if (isEmptyResult && hasCachedData) {
+        // Don't overwrite cache — treat as "no data available yet"
+        this.fetchingRef = false
+        this.setState({
+          isLoading: false,
+          isRefreshing: false,
+        })
+        return
+      }
+
       const finalData = merge && hasCachedData ? merge(this.state.data, newData) : newData
 
       await this.saveToStorage(finalData)
