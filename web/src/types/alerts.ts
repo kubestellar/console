@@ -7,6 +7,9 @@ export type AlertConditionType =
   | 'memory_pressure'
   | 'cpu_pressure'
   | 'disk_pressure'
+  | 'dns_failure'
+  | 'certificate_error'
+  | 'cluster_unreachable'
   | 'weather_alerts'
   | 'nightly_e2e_failure'
   | 'custom'
@@ -225,6 +228,42 @@ export const PRESET_ALERT_RULES: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt
     channels: [{ type: 'browser', enabled: true, config: {} }],
     aiDiagnose: true,
   },
+  {
+    name: 'DNS Failure',
+    description: 'Alert when CoreDNS pods are crashing or not ready in any cluster',
+    enabled: true,
+    condition: {
+      type: 'dns_failure',
+      duration: 0,
+    },
+    severity: 'critical',
+    channels: [{ type: 'browser', enabled: true, config: {} }],
+    aiDiagnose: true,
+  },
+  {
+    name: 'Certificate Error',
+    description: 'Alert when a cluster connection fails due to certificate issues (expired, untrusted, or mismatched)',
+    enabled: true,
+    condition: {
+      type: 'certificate_error',
+      duration: 0,
+    },
+    severity: 'warning',
+    channels: [{ type: 'browser', enabled: true, config: {} }],
+    aiDiagnose: true,
+  },
+  {
+    name: 'Cluster Unreachable',
+    description: 'Alert when a cluster cannot be reached (network timeout, auth failure, or DNS resolution failure)',
+    enabled: true,
+    condition: {
+      type: 'cluster_unreachable',
+      duration: 0,
+    },
+    severity: 'critical',
+    channels: [{ type: 'browser', enabled: true, config: {} }],
+    aiDiagnose: true,
+  },
 ]
 
 // Helper to get severity color
@@ -272,6 +311,12 @@ export function formatCondition(condition: AlertCondition): string {
       return `CPU usage > ${condition.threshold}%`
     case 'disk_pressure':
       return `Disk usage > ${condition.threshold}%`
+    case 'dns_failure':
+      return 'CoreDNS pods not ready or crashing'
+    case 'certificate_error':
+      return 'Cluster connection certificate error'
+    case 'cluster_unreachable':
+      return 'Cluster unreachable (network/auth/DNS)'
     case 'weather_alerts':
       if (condition.weatherCondition === 'extreme_heat') {
         return `Temperature > ${condition.temperatureThreshold || 100}°F`

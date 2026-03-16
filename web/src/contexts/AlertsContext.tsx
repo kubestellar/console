@@ -988,6 +988,185 @@ Please provide:
     [createAlert]
   )
 
+  // Evaluate DNS failures — checks for CoreDNS pods crashing or not ready
+  const evaluateDNSFailure = useCallback(
+    (rule: AlertRule) => {
+      const currentPodIssues = podIssuesRef.current
+      const relevantClusters = rule.condition.clusters?.length
+        ? rule.condition.clusters
+        : undefined
+
+      // Find CoreDNS pods with issues (coredns, dns-default on OpenShift)
+      const dnsIssues = (currentPodIssues || []).filter(pod => {
+        const isDNSPod = pod.name.includes('coredns') || pod.name.includes('dns-default')
+        const matchesCluster = !relevantClusters || relevantClusters.includes(pod.cluster || '')
+        return isDNSPod && matchesCluster
+      })
+
+      // Group by cluster
+      const clusterDNSIssues = new Map<string, typeof dnsIssues>()
+      for (const pod of dnsIssues) {
+        const cluster = pod.cluster || 'unknown'
+        const existing = clusterDNSIssues.get(cluster) || []
+        existing.push(pod)
+        clusterDNSIssues.set(cluster, existing)
+      }
+
+      for (const [cluster, pods] of clusterDNSIssues) {
+        const podNames = pods.map(p => p.name).join(', ')
+        const issues = pods.flatMap(p => p.issues || []).join('; ')
+        createAlert(
+          rule,
+          `${cluster}: DNS failure — ${pods.length} CoreDNS pod(s) unhealthy`,
+          { clusterName: cluster, podNames, issues, podCount: pods.length },
+          cluster,
+          'kube-system',
+          podNames,
+          'Pod'
+        )
+
+        const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster)
+        if (
+          rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
+          !notifiedAlertKeysRef.current.has(notifKey)
+        ) {
+          notifiedAlertKeysRef.current.add(notifKey)
+          sendNotificationWithDeepLink(
+            `DNS Failure: ${cluster}`,
+            `${pods.length} CoreDNS pod(s) unhealthy — ${issues || 'check pod status'}`,
+            { drilldown: 'pod', cluster, namespace: pods[0].namespace, pod: pods[0].name }
+          )
+        }
+      }
+
+      // Auto-resolve clusters that no longer have DNS issues
+      const clustersWithIssues = new Set(clusterDNSIssues.keys())
+      setAlerts(prev => prev.map(a => {
+        if (a.ruleId === rule.id && a.status === 'firing' && a.cluster && !clustersWithIssues.has(a.cluster)) {
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, a.cluster)
+          notifiedAlertKeysRef.current.delete(notifKey)
+          return { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
+        }
+        return a
+      }))
+    },
+    [createAlert]
+  )
+
+  // Evaluate certificate errors — checks for clusters with certificate connection failures
+  const evaluateCertificateError = useCallback(
+    (rule: AlertRule) => {
+      const currentClusters = clustersRef.current
+      const relevantClusters = rule.condition.clusters?.length
+        ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
+        : currentClusters
+
+      for (const cluster of relevantClusters) {
+        if (cluster.errorType === 'certificate') {
+          createAlert(
+            rule,
+            `${cluster.name}: Certificate error — ${cluster.errorMessage || 'TLS handshake failed'}`,
+            {
+              clusterName: cluster.name,
+              errorType: cluster.errorType,
+              errorMessage: cluster.errorMessage,
+              server: cluster.server,
+            },
+            cluster.name,
+            undefined,
+            cluster.name,
+            'Cluster'
+          )
+
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          if (
+            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
+            !notifiedAlertKeysRef.current.has(notifKey)
+          ) {
+            notifiedAlertKeysRef.current.add(notifKey)
+            sendNotificationWithDeepLink(
+              `Certificate Error: ${cluster.name}`,
+              cluster.errorMessage || 'TLS certificate validation failed',
+              { drilldown: 'cluster', cluster: cluster.name, issue: 'certificate' }
+            )
+          }
+        } else {
+          // Auto-resolve if cert error clears
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          notifiedAlertKeysRef.current.delete(notifKey)
+          setAlerts(prev => {
+            const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
+            if (firingAlert) {
+              return prev.map(a => a.id === firingAlert.id ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() } : a)
+            }
+            return prev
+          })
+        }
+      }
+    },
+    [createAlert]
+  )
+
+  // Evaluate cluster unreachable — checks for clusters with network/auth/timeout failures
+  const evaluateClusterUnreachable = useCallback(
+    (rule: AlertRule) => {
+      const currentClusters = clustersRef.current
+      const relevantClusters = rule.condition.clusters?.length
+        ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
+        : currentClusters
+
+      for (const cluster of relevantClusters) {
+        if (cluster.reachable === false && cluster.errorType !== 'certificate') {
+          const errorLabel = cluster.errorType === 'timeout' ? 'connection timed out'
+            : cluster.errorType === 'auth' ? 'authentication failed'
+            : cluster.errorType === 'network' ? 'network unreachable'
+            : 'connection failed'
+
+          createAlert(
+            rule,
+            `${cluster.name}: Cluster unreachable — ${errorLabel}`,
+            {
+              clusterName: cluster.name,
+              errorType: cluster.errorType,
+              errorMessage: cluster.errorMessage,
+              server: cluster.server,
+              lastSeen: cluster.lastSeen,
+            },
+            cluster.name,
+            undefined,
+            cluster.name,
+            'Cluster'
+          )
+
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          if (
+            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
+            !notifiedAlertKeysRef.current.has(notifKey)
+          ) {
+            notifiedAlertKeysRef.current.add(notifKey)
+            sendNotificationWithDeepLink(
+              `Cluster Unreachable: ${cluster.name}`,
+              `${errorLabel}${cluster.lastSeen ? ` — last seen ${cluster.lastSeen}` : ''}`,
+              { drilldown: 'cluster', cluster: cluster.name, issue: 'unreachable' }
+            )
+          }
+        } else if (cluster.reachable !== false) {
+          // Auto-resolve when cluster becomes reachable again
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          notifiedAlertKeysRef.current.delete(notifKey)
+          setAlerts(prev => {
+            const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
+            if (firingAlert) {
+              return prev.map(a => a.id === firingAlert.id ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() } : a)
+            }
+            return prev
+          })
+        }
+      }
+    },
+    [createAlert]
+  )
+
   // Evaluate nightly E2E failures — reads cached run data from ref
   const evaluateNightlyE2EFailure = useCallback(
     (rule: AlertRule) => {
@@ -1098,6 +1277,15 @@ Please provide:
           case 'nightly_e2e_failure':
             evaluateNightlyE2EFailure(rule)
             break
+          case 'dns_failure':
+            evaluateDNSFailure(rule)
+            break
+          case 'certificate_error':
+            evaluateCertificateError(rule)
+            break
+          case 'cluster_unreachable':
+            evaluateClusterUnreachable(rule)
+            break
           default:
             break
         }
@@ -1106,7 +1294,7 @@ Please provide:
       isEvaluatingRef.current = false
       setIsEvaluating(false)
     }
-  }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateDiskPressure, evaluateMemoryPressure, evaluateWeatherAlerts, evaluateNightlyE2EFailure])
+  }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateDiskPressure, evaluateMemoryPressure, evaluateWeatherAlerts, evaluateNightlyE2EFailure, evaluateDNSFailure, evaluateCertificateError, evaluateClusterUnreachable])
 
   // Stable ref for evaluateConditions so the interval never resets
   const evaluateConditionsRef = useRef(evaluateConditions)
