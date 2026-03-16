@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, KeyboardEvent } from 'react'
 import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
-import { safeGetItem } from '../../lib/utils/localStorage'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { AI_THINKING_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
+import { authFetch } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
 
 interface LogEntry {
@@ -188,7 +188,52 @@ export function RemediationConsole({
     })
   }
 
-  // Shell command execution
+  /**
+   * Map a kubectl command to an MCP ops tool call.
+   * Returns { name, arguments } if mapped, or null if the command is not supported.
+   */
+  const mapCommandToMcpTool = (cmd: string): { name: string; arguments: Record<string, string> } | null => {
+    const trimmed = cmd.trim()
+
+    // kubectl get pods
+    if (/^kubectl\s+get\s+pods?\b/.test(trimmed)) {
+      return { name: 'get_pods', arguments: { cluster, namespace } }
+    }
+    // kubectl describe pod <name>
+    const describeMatch = trimmed.match(/^kubectl\s+describe\s+pod\s+(\S+)/)
+    if (describeMatch) {
+      return { name: 'describe_pod', arguments: { cluster, namespace, pod: describeMatch[1] } }
+    }
+    // kubectl describe deployment <name>
+    if (/^kubectl\s+describe\s+(deployment|deploy)\b/.test(trimmed)) {
+      return { name: 'find_deployment_issues', arguments: { cluster, namespace } }
+    }
+    // kubectl logs <pod>
+    const logsMatch = trimmed.match(/^kubectl\s+logs?\s+(\S+)/)
+    if (logsMatch) {
+      return { name: 'get_pod_logs', arguments: { cluster, namespace, pod: logsMatch[1] } }
+    }
+    // kubectl get events
+    if (/^kubectl\s+get\s+events?\b/.test(trimmed)) {
+      return { name: 'get_events', arguments: { cluster, namespace } }
+    }
+    // kubectl get deployments
+    if (/^kubectl\s+get\s+(deployments?|deploy)\b/.test(trimmed)) {
+      return { name: 'get_deployments', arguments: { cluster, namespace } }
+    }
+    // kubectl get services
+    if (/^kubectl\s+get\s+(services?|svc)\b/.test(trimmed)) {
+      return { name: 'get_services', arguments: { cluster, namespace } }
+    }
+    // kubectl get nodes
+    if (/^kubectl\s+get\s+nodes?\b/.test(trimmed)) {
+      return { name: 'get_nodes', arguments: { cluster } }
+    }
+
+    return null
+  }
+
+  // Shell command execution via MCP ops tools
   const executeCommand = async (cmd: string) => {
     if (!cmd.trim()) return
 
@@ -205,50 +250,53 @@ export function RemediationConsole({
     setIsExecuting(true)
     setShellError(null)
 
+    const toolCall = mapCommandToMcpTool(cmd)
+
+    if (!toolCall) {
+      // Command is not a supported kubectl operation
+      addLog({
+        type: 'output',
+        message: simulateCommandOutput(cmd),
+      })
+      setShellError('This command is not supported via the MCP bridge. Use the quick commands above for supported operations.')
+      setLastFailedCommand(cmd)
+      setIsExecuting(false)
+      setShellCommand('')
+      return
+    }
+
     try {
-      // Call backend API to execute the command
-      const response = await fetch('/api/shell/exec', {
+      const response = await authFetch('/api/mcp/tools/ops/call', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${safeGetItem('token') || ''}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          command: cmd,
-          cluster,
-          namespace,
+          name: toolCall.name,
+          arguments: toolCall.arguments,
         }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!response.ok) {
-        throw new Error(`Command failed: ${response.status}`)
+        throw new Error(`MCP tool call failed: ${response.status}`)
       }
 
       const result = await response.json()
 
-      if (result.stdout) {
-        addLog({
-          type: 'output',
-          message: result.stdout,
-        })
-      }
-      if (result.stderr) {
-        addLog({
-          type: 'error',
-          message: result.stderr,
-        })
-      }
-      if (result.error) {
-        addLog({
-          type: 'error',
-          message: result.error,
-        })
-      }
+      // MCP tools return content as an array of { type, text } or as a direct object
+      const output = Array.isArray(result?.content)
+        ? (result.content as Array<{ text?: string }>).map((c: { text?: string }) => c.text || '').join('\n')
+        : typeof result === 'string'
+          ? result
+          : JSON.stringify(result, null, 2)
+
+      addLog({
+        type: 'output',
+        message: output,
+      })
     } catch (error) {
-      // Simulate output for demo purposes when backend is not available
+      // Fall back to simulated output when backend is unavailable
       const message = error instanceof Error ? error.message : 'Connection failed'
-      setShellError(`Shell API unavailable: ${message}`)
+      setShellError(`MCP bridge unavailable: ${message}`)
       setLastFailedCommand(cmd)
       addLog({
         type: 'output',
