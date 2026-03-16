@@ -122,12 +122,7 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
     {
       id: 'default-8',
       cardType: 'compliance_score',
-      position: { w: 6, h: 3, x: 0, y: 13 },
-    },
-    {
-      id: 'default-9',
-      cardType: 'benchmark_hero',
-      position: { w: 6, h: 3, x: 6, y: 13 },
+      position: { w: 12, h: 3, x: 0, y: 13 },
     },
   ],
 
@@ -143,7 +138,6 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
     'cluster_metrics',
     'events_timeline',
     'compliance_score',
-    'benchmark_hero',
     'nightly_e2e_status',
   ],
 

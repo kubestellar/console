@@ -528,6 +528,37 @@ export function useCachedEvents(
     initialData: [] as ClusterEvent[],
     demoData: getDemoEvents(),
     fetcher: async () => {
+      // Try agent first (direct kubectl proxy — works before backend auth)
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
+        if (cluster) {
+          const ci = clusterCacheRef.clusters.find(c => c.name === cluster)
+          const ctx = ci?.context || cluster
+          const events = await kubectlProxy.getEvents(ctx, namespace, limit)
+          return events.map(e => ({ ...e, cluster }))
+        }
+        // Fetch from all clusters via agent
+        const clusters = getAgentClusters()
+        const allEvents: ClusterEvent[] = []
+        const results = await Promise.allSettled(
+          clusters.map(async (ci) => {
+            const ctx = ci.context || ci.name
+            const events = await kubectlProxy.getEvents(ctx, namespace, limit)
+            return events.map(e => ({ ...e, cluster: ci.name }))
+          })
+        )
+        for (const r of results) {
+          if (r.status === 'fulfilled') allEvents.push(...r.value)
+        }
+        return allEvents
+          .sort((a, b) => {
+            const timeA = a.lastSeen ? new Date(a.lastSeen).getTime() : 0
+            const timeB = b.lastSeen ? new Date(b.lastSeen).getTime() : 0
+            return timeB - timeA
+          })
+          .slice(0, limit)
+      }
+
+      // Fall back to REST API (requires backend auth)
       if (cluster) {
         const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { cluster, namespace, limit })
         return data.events || []
@@ -535,6 +566,28 @@ export function useCachedEvents(
       return await fetchFromAllClusters<ClusterEvent>('events', 'events', { namespace, limit })
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      // Try agent-based progressive fetch first
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
+        const clusters = getAgentClusters()
+        const accumulated: ClusterEvent[] = []
+        for (const ci of clusters) {
+          try {
+            const ctx = ci.context || ci.name
+            const events = await kubectlProxy.getEvents(ctx, namespace, limit)
+            accumulated.push(...events.map(e => ({ ...e, cluster: ci.name })))
+            accumulated.sort((a, b) => {
+              const timeA = a.lastSeen ? new Date(a.lastSeen).getTime() : 0
+              const timeB = b.lastSeen ? new Date(b.lastSeen).getTime() : 0
+              return timeB - timeA
+            })
+            onProgress([...accumulated].slice(0, limit))
+          } catch {
+            // Skip failed clusters, continue with others
+          }
+        }
+        return accumulated.slice(0, limit)
+      }
+      // Fall back to SSE via backend
       return await fetchViaSSE<ClusterEvent>('events', 'events', { namespace, limit }, onProgress)
     },
   })
