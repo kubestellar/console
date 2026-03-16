@@ -210,6 +210,7 @@ const K3sStatus = safeLazy(() => _multiTenancyBundle, 'K3sStatus')
 const KubevirtStatus = safeLazy(() => _multiTenancyBundle, 'KubevirtStatus')
 const MultiTenancyOverview = safeLazy(() => _multiTenancyBundle, 'MultiTenancyOverview')
 const TenantIsolationSetup = safeLazy(() => _multiTenancyBundle, 'TenantIsolationSetup')
+const TenantTopology = safeLazy(() => _multiTenancyBundle, 'TenantTopology')
 
 // Multi-cluster insights cards — share one chunk via barrel import
 const _insightsBundle = import('./insights').catch(() => undefined as never)
@@ -506,6 +507,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kubevirt_status: KubevirtStatus,
   multi_tenancy_overview: MultiTenancyOverview,
   tenant_isolation_setup: TenantIsolationSetup,
+  tenant_topology: TenantTopology,
 
   // Multi-cluster insights cards
   cross_cluster_event_correlation: CrossClusterEventCorrelation,
@@ -800,6 +802,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kubevirt_status: () => _multiTenancyBundle,
   multi_tenancy_overview: () => _multiTenancyBundle,
   tenant_isolation_setup: () => _multiTenancyBundle,
+  tenant_topology: () => _multiTenancyBundle,
   // Cluster admin — all share one chunk via barrel
   predictive_health: () => import('./cluster-admin-bundle'),
   node_debug: () => import('./cluster-admin-bundle'),
@@ -955,6 +958,7 @@ export const LIVE_DATA_CARDS = new Set([
   'kubevirt_status',
   'multi_tenancy_overview',
   'tenant_isolation_setup',
+  'tenant_topology',
   // Kagenti AI agent cards
   'kagenti_status',
   'kagenti_agent_fleet',
@@ -1067,6 +1071,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kubevirt_status: 6,
   multi_tenancy_overview: 6,
   tenant_isolation_setup: 12,
+  tenant_topology: 12,
 
   // Event dashboard cards
   event_summary: 6,

@@ -233,6 +233,7 @@ export const CARD_TITLES: Record<string, string> = {
   kubevirt_status: 'KubeVirt',
   multi_tenancy_overview: 'Multi-Tenancy Overview',
   tenant_isolation_setup: 'Tenant Isolation Setup',
+  tenant_topology: 'Tenant Architecture',
 }
 
 // Short descriptions shown via info icon tooltip in the card header
@@ -416,6 +417,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kubevirt_status: 'KubeVirt VM status, running/stopped/migrating VMs, and data-plane isolation.',
   multi_tenancy_overview: 'Aggregated view of tenant isolation across OVN, KubeFlex, K3s, and KubeVirt.',
   tenant_isolation_setup: 'AI-powered multi-tenancy setup wizard with component detection and one-click configuration.',
+  tenant_topology: 'Interactive SVG topology of the KubeCon multi-tenancy architecture: KubeVirt VMs, K3s control planes, Layer-2/3 UDN networks, and KubeFlex controller with live status indicators.',
 }
 
 /**

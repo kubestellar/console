@@ -76,15 +76,17 @@ export const multiTenancyDashboardConfig: UnifiedDashboardConfig = {
   },
 
   cards: [
-    { id: 'mt-1', cardType: 'tenant_isolation_setup', position: { w: 12, h: 3, x: 0, y: 0 } },
-    { id: 'mt-2', cardType: 'multi_tenancy_overview', position: { w: 6, h: 3, x: 0, y: 3 } },
-    { id: 'mt-3', cardType: 'ovn_status', position: { w: 6, h: 3, x: 6, y: 3 } },
-    { id: 'mt-4', cardType: 'kubeflex_status', position: { w: 6, h: 3, x: 0, y: 6 } },
-    { id: 'mt-5', cardType: 'k3s_status', position: { w: 6, h: 3, x: 6, y: 6 } },
-    { id: 'mt-6', cardType: 'kubevirt_status', position: { w: 6, h: 3, x: 0, y: 9 } },
+    { id: 'mt-0', cardType: 'tenant_topology', position: { w: 12, h: 4, x: 0, y: 0 } },
+    { id: 'mt-1', cardType: 'tenant_isolation_setup', position: { w: 12, h: 3, x: 0, y: 4 } },
+    { id: 'mt-2', cardType: 'multi_tenancy_overview', position: { w: 6, h: 3, x: 0, y: 7 } },
+    { id: 'mt-3', cardType: 'ovn_status', position: { w: 6, h: 3, x: 6, y: 7 } },
+    { id: 'mt-4', cardType: 'kubeflex_status', position: { w: 6, h: 3, x: 0, y: 10 } },
+    { id: 'mt-5', cardType: 'k3s_status', position: { w: 6, h: 3, x: 6, y: 10 } },
+    { id: 'mt-6', cardType: 'kubevirt_status', position: { w: 6, h: 3, x: 0, y: 13 } },
   ],
 
   availableCardTypes: [
+    'tenant_topology',
     'tenant_isolation_setup',
     'multi_tenancy_overview',
     'ovn_status',

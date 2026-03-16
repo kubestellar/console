@@ -284,6 +284,7 @@ const CARD_CATALOG = {
     // stock_market_ticker — registered via unified descriptor system (auto-merged below)
   ],
   'Multi-Tenancy': [
+    { type: 'tenant_topology', title: 'Tenant Architecture', description: 'Interactive SVG topology of the multi-tenancy architecture with live status', visualization: 'chart' },
     { type: 'tenant_isolation_setup', title: 'Tenant Isolation Setup', description: 'AI-powered multi-tenancy setup wizard', visualization: 'status' },
     { type: 'multi_tenancy_overview', title: 'Multi-Tenancy Overview', description: 'Aggregated tenant isolation status', visualization: 'status' },
     { type: 'ovn_status', title: 'OVN-Kubernetes', description: 'OVN network and UDN status', visualization: 'status' },
