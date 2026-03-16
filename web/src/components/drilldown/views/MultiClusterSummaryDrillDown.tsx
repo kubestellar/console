@@ -172,7 +172,9 @@ function getStatusBadge(status: string) {
 export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSummaryDrillDownProps) {
   const { t } = useTranslation()
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
-  const { nodes: cachedNodes } = useCachedNodes()
+  const { nodes: rawCachedNodes } = useCachedNodes()
+  // Guard against undefined to prevent crashes when APIs return 404/500/empty
+  const cachedNodes = rawCachedNodes || []
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [clusterFilter, setClusterFilter] = useState<string>('all')

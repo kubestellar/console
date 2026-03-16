@@ -10,11 +10,17 @@ const STORAGE_KEY = 'kubestellar-cluster-admin-cards'
 const DEFAULT_CARDS = getDefaultCards('cluster-admin')
 
 export function ClusterAdmin() {
-  const { clusters, isLoading, isRefreshing, lastUpdated, refetch, error } = useClusters()
-  const { issues: podIssues } = useCachedPodIssues()
-  const { events: warningEvents } = useCachedWarningEvents()
-  const { nodes } = useCachedNodes()
+  const { clusters: rawClusters, isLoading, isRefreshing, lastUpdated, refetch, error } = useClusters()
+  const { issues: rawPodIssues } = useCachedPodIssues()
+  const { events: rawWarningEvents } = useCachedWarningEvents()
+  const { nodes: rawNodes } = useCachedNodes()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
+
+  // Guard all arrays against undefined to prevent crashes when APIs return 404/500/empty
+  const clusters = rawClusters || []
+  const podIssues = rawPodIssues || []
+  const warningEvents = rawWarningEvents || []
+  const nodes = rawNodes || []
 
   const reachable = clusters.filter(c => c.reachable !== false)
   const healthy = reachable.filter(c => c.healthy === true)

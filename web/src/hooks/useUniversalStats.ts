@@ -45,7 +45,7 @@ export function useUniversalStats() {
     drillToAllSecurity, drillToAllGPU, drillToAllStorage,
   } = useDrillDownActions()
 
-  // Domain-specific data
+  // Domain-specific data — all guarded with || [] to prevent crashes on 404/500/empty
   const { issues: podIssues } = usePodIssues()
   const { deployments } = useDeployments()
   const { issues: deploymentIssues } = useDeploymentIssues()
@@ -62,18 +62,19 @@ export function useUniversalStats() {
   const { rules: alertRules } = useAlertRules()
 
   // ─── Cluster-derived values ───
-  const totalClusters = deduplicatedClusters.length
-  const healthyClusters = deduplicatedClusters.filter(c => c.healthy).length
-  const unhealthyClusters = deduplicatedClusters.filter(c => !c.healthy).length
-  const unreachableClusters = deduplicatedClusters.filter(c => c.reachable === false).length
-  const totalNodes = deduplicatedClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const totalPods = deduplicatedClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const totalCPUs = deduplicatedClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
-  const totalMemoryGB = deduplicatedClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
-  const totalStorageGB = deduplicatedClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
+  const safeClusters = deduplicatedClusters || []
+  const totalClusters = safeClusters.length
+  const healthyClusters = safeClusters.filter(c => c.healthy).length
+  const unhealthyClusters = safeClusters.filter(c => !c.healthy).length
+  const unreachableClusters = safeClusters.filter(c => c.reachable === false).length
+  const totalNodes = safeClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const totalPods = safeClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+  const totalCPUs = safeClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
+  const totalMemoryGB = safeClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
+  const totalStorageGB = safeClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
   const uniqueNamespaces = useMemo(
-    () => new Set(deduplicatedClusters.flatMap(c => c.namespaces || [])),
-    [deduplicatedClusters]
+    () => new Set(safeClusters.flatMap(c => c.namespaces || [])),
+    [safeClusters]
   )
 
   // ─── Pod-derived values ───
@@ -136,11 +137,11 @@ export function useUniversalStats() {
   // Only count GPUs from reachable clusters
   const unreachableClusterNames = useMemo(() => {
     return new Set(
-      deduplicatedClusters
+      safeClusters
         .filter(c => c.reachable === false)
         .map(c => c.name)
     )
-  }, [deduplicatedClusters])
+  }, [safeClusters])
 
   const realGPUCount = useMemo(() => {
     return (gpuNodes || [])
@@ -444,7 +445,7 @@ export function useUniversalStats() {
   return {
     getStatValue,
     isLoading,
-    clusters: deduplicatedClusters,
+    clusters: safeClusters,
   }
 }
 
