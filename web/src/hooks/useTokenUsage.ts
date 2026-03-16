@@ -70,6 +70,7 @@ let sharedUsage: TokenUsage = {
   byCategory: { ...DEFAULT_BY_CATEGORY },
 }
 let pollStarted = false
+let pollIntervalId: ReturnType<typeof setInterval> | null = null
 const subscribers = new Set<(usage: TokenUsage) => void>()
 
 // Track active AI operation for attributing token usage
@@ -229,8 +230,18 @@ function startPolling() {
   // Initial fetch
   fetchTokenUsage()
 
-  // Poll at interval
-  setInterval(fetchTokenUsage, POLL_INTERVAL)
+  // Poll at interval — store the ID so we can clean up when all subscribers leave
+  pollIntervalId = setInterval(fetchTokenUsage, POLL_INTERVAL)
+}
+
+// Stop singleton polling when no subscribers remain (prevents memory leaks)
+function stopPolling() {
+  if (!pollStarted) return
+  if (pollIntervalId !== null) {
+    clearInterval(pollIntervalId)
+    pollIntervalId = null
+  }
+  pollStarted = false
 }
 
 export function useTokenUsage() {
@@ -252,6 +263,10 @@ export function useTokenUsage() {
 
     return () => {
       subscribers.delete(handleUpdate)
+      // Stop polling when no components are subscribed (prevents memory leaks)
+      if (subscribers.size === 0) {
+        stopPolling()
+      }
     }
   }, [])
 
