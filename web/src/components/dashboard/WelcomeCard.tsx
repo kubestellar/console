@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal, Globe, Rocket, X, ExternalLink, Copy, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -21,6 +21,7 @@ export function WelcomeCard() {
     }
   })
   const [copied, setCopied] = useState(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   if (dismissed) return null
 
@@ -37,7 +38,8 @@ export function WelcomeCard() {
     try {
       await navigator.clipboard.writeText(INSTALL_COMMAND)
       setCopied(true)
-      setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
     } catch {
       // Clipboard API not available
     }

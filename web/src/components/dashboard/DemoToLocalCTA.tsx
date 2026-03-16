@@ -32,6 +32,7 @@ export function DemoToLocalCTA() {
   const [copied, setCopied] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const emittedRef = useRef(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Localhost without OAuth = user ran start.sh but hasn't configured GitHub OAuth yet
   const isLocalNoOAuth = !isNetlifyDeployment && getDemoMode() && !hasRealToken()
@@ -62,7 +63,8 @@ export function DemoToLocalCTA() {
       setCopied(true)
       emitDemoToLocalActioned('copy_command')
       emitInstallCommandCopied('demo_to_local', NETLIFY_INSTALL_COMMAND)
-      setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
     } catch {
       // Clipboard API not available — select the text instead
       const el = document.querySelector('[data-install-command]') as HTMLElement

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { CheckCircle, Check, Link } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -19,6 +19,7 @@ export function RecommendationCard({
   const { mission, score, matchPercent, matchReasons } = match
   const isClusterMatch = score > 1
   const [linkCopied, setLinkCopied] = useState(false)
+  const linkCopyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   return (
     <div
@@ -36,7 +37,8 @@ export function RecommendationCard({
                 e.stopPropagation()
                 onCopyLink(e)
                 setLinkCopied(true)
-                setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                if (linkCopyTimerRef.current) clearTimeout(linkCopyTimerRef.current)
+                linkCopyTimerRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
               title="Copy shareable link"
