@@ -169,6 +169,12 @@ export const SKELETON_DELAY_MS = 100
 /** Timeout for initial render measurement (150ms) */
 export const INITIAL_RENDER_TIMEOUT_MS = 150
 
+/** Maximum time a card can remain in loading state before forced fallback (30 seconds).
+ * If a card reports isLoading:true but never transitions out (e.g., interrupted render,
+ * hook cancellation, or error during data fetching), this timeout forces it to exit
+ * the loading state and show content or an error fallback. */
+export const CARD_LOADING_TIMEOUT_MS = 30_000
+
 /** Short retry/backoff delay (500ms) */
 export const SHORT_DELAY_MS = 500
 

@@ -29,7 +29,7 @@ const WidgetExportModal = lazy(() =>
 const FeatureRequestModal = lazy(() =>
   import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
 )
-import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS } from '../../lib/constants/network'
+import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 
@@ -392,6 +392,22 @@ export function CardWrapper({
     return () => clearTimeout(timer)
   }, []) // Empty deps - only run on mount
 
+  // Stuck loading guard: if a card reports isLoading:true but never updates,
+  // force it to exit loading state after CARD_LOADING_TIMEOUT_MS (30 seconds).
+  // This prevents cards from being permanently stuck in loading state due to
+  // interrupted renders, hook cancellation, or errors during data fetching.
+  const [cardLoadingTimedOut, setCardLoadingTimedOut] = useState(false)
+  useEffect(() => {
+    // Only start the timer when a card explicitly reports isLoading: true
+    if (childDataState?.isLoading) {
+      setCardLoadingTimedOut(false)
+      const timer = setTimeout(() => setCardLoadingTimedOut(true), CARD_LOADING_TIMEOUT_MS)
+      return () => clearTimeout(timer)
+    }
+    // Card is no longer loading — reset the flag
+    setCardLoadingTimedOut(false)
+  }, [childDataState?.isLoading])
+
   // Handle minimum spin duration for refresh button
   // Include both prop and context-reported refresh state
   const contextIsRefreshing = childDataState?.isRefreshing || false
@@ -484,25 +500,28 @@ export function CardWrapper({
   const reportCtx = useMemo(() => ({ report: reportCallback }), [reportCallback])
 
   // Merge child-reported state with props — child reports take priority when present
-  const effectiveIsFailed = isFailed || childDataState?.isFailed || false
+  const effectiveIsFailed = isFailed || childDataState?.isFailed || cardLoadingTimedOut
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
   // Show loading when:
-  // - Card explicitly reports isLoading: true, OR
+  // - Card explicitly reports isLoading: true (AND stuck-loading timeout hasn't fired), OR
   // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
   // Static/demo cards that never report will stop showing as loading after 150ms
   // NOTE: isRefreshing is NOT included — background refreshes should be invisible to avoid flicker
-  const effectiveIsLoading = childDataState?.isLoading || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
+  // cardLoadingTimedOut acts as a safety valve: if a card stays in isLoading:true for
+  // CARD_LOADING_TIMEOUT_MS (30s), force it out of loading state to prevent permanent spinner.
+  const effectiveIsLoading = (childDataState?.isLoading && !cardLoadingTimedOut) || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
   // hasData logic:
   // - If card explicitly reports hasData, use it
   // - If card hasn't reported AND quick timeout passed, assume has data (static/demo card)
   // - If card hasn't reported AND skeleton timed out, assume has data (show content)
   // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
+  // - If stuck loading timed out, force hasData to true so content area is shown
   // - Otherwise default to true (show content)
-  const effectiveHasData = childDataState?.hasData ?? (
+  const effectiveHasData = cardLoadingTimedOut ? true : (childDataState?.hasData ?? (
     childDataState === null
       ? (initialRenderTimedOut || skeletonTimedOut)  // After quick timeout, assume static card has content
       : (childDataState?.isLoading ? false : true)
-  )
+  ))
 
   // Merge isDemoData from child-reported state with prop.
   // When forceLive is true, ignore child-reported isDemoData — the child checks global
