@@ -7,6 +7,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'restarts' | 'name' | 'cpu' | 'memory' | 'gpu'
@@ -65,6 +66,7 @@ export function TopPods({ config }: TopPodsProps) {
   const { t } = useTranslation()
   const clusterConfig = config?.cluster
   const namespaceConfig = config?.namespace
+  const { isDemoMode } = useDemoMode()
   const { drillToPod } = useDrillDownActions()
 
   // Fetch more pods to allow client-side filtering and pagination (using unified cache)
@@ -82,7 +84,7 @@ export function TopPods({ config }: TopPodsProps) {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
-    isDemoData: isDemoFallback,
+    isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: rawPods.length > 0,
     isFailed,
     consecutiveFailures,

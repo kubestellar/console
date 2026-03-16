@@ -11,6 +11,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardComponentProps } from './cardRegistry'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 // Resource types to monitor
@@ -92,6 +93,7 @@ const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { t: _t } = useTranslation()
+  const { isDemoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
@@ -149,7 +151,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0,
-    isDemoData,
+    isDemoData: isDemoMode || isDemoData,
   })
 
   // Build snapshots and detect changes

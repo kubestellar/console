@@ -2,6 +2,7 @@ import { CheckCircle, AlertTriangle, RefreshCw, Flag, Server, Activity } from 'l
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { useOpenFeatureStatus } from './useOpenFeatureStatus'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 
 const ERROR_RATE_WARNING_PCT = 5 // Show warning when error rate exceeds this percentage
@@ -29,6 +30,10 @@ function useFormatRelativeTime() {
 
 export function OpenFeatureStatus() {
   const { t } = useTranslation('cards')
+  // useDemoMode provides explicit demo mode awareness; useOpenFeatureStatus also
+  // handles demo data internally via useCache, but we reference isDemoMode here
+  // to suppress the "not-installed" state when demo data is being shown.
+  const { isDemoMode } = useDemoMode()
   const formatRelativeTime = useFormatRelativeTime()
   const { data, error, showSkeleton, showEmptyState, isRefreshing } = useOpenFeatureStatus()
 
@@ -55,7 +60,7 @@ export function OpenFeatureStatus() {
     )
   }
 
-  if (data.health === 'not-installed') {
+  if (data.health === 'not-installed' && !isDemoMode) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Flag className="w-6 h-6 text-muted-foreground/50" />

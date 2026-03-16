@@ -12,6 +12,7 @@ import {
   CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'time' | 'count' | 'type'
@@ -24,6 +25,7 @@ const SORT_OPTIONS = [
 
 function EventStreamInternal() {
   const { t } = useTranslation()
+  const { isDemoMode } = useDemoMode()
   // Fetch more events from API to enable pagination (using cached data hook)
   const {
     events: rawEvents,
@@ -37,7 +39,7 @@ function EventStreamInternal() {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
-    isDemoData: isDemoFallback,
+    isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: rawEvents.length > 0,
     isFailed: !!error && rawEvents.length === 0,
     consecutiveFailures: error ? 1 : 0,

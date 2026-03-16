@@ -9,6 +9,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface GPUStatusProps {
   config?: Record<string, unknown>
@@ -32,6 +33,7 @@ interface ClusterGPUStats {
 
 export function GPUStatus({ config }: GPUStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { isDemoMode } = useDemoMode()
   const cluster = config?.cluster as string | undefined
   const {
     nodes: rawNodes,
@@ -44,7 +46,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: rawNodes.length > 0,
-    isDemoData: isDemoFallback,
+    isDemoData: isDemoMode || isDemoFallback,
   })
 
   // Card-specific GPU type filter (not handled by useCardData)
