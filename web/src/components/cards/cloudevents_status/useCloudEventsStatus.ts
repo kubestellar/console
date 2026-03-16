@@ -1,6 +1,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { authFetch } from '../../../lib/api'
 import { CLOUDEVENTS_DEMO_DATA, type CloudEventResource, type CloudEventsDemoData } from './demoData'
 
 export type CloudEventsStatus = CloudEventsDemoData
@@ -115,7 +116,7 @@ export const __testables = {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const response = await fetch(`/api/mcp/custom-resources?${params.toString()}`, {
+    const response = await authFetch(`/api/mcp/custom-resources?${params.toString()}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })

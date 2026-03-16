@@ -2,6 +2,7 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { KEDA_DEMO_DATA, type KedaDemoData, type KedaScaledObject, type KedaTriggerType } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { authFetch } from '../../../lib/api'
 
 export type KedaStatus = KedaDemoData
 
@@ -73,7 +74,7 @@ function isPodReady(pod: BackendPodInfo): boolean {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await fetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })

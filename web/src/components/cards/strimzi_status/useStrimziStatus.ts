@@ -2,6 +2,7 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { STRIMZI_DEMO_DATA, type StrimziDemoData, type StrimziTopic } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { authFetch } from '../../../lib/api'
 
 export type StrimziStatus = StrimziDemoData
 
@@ -80,7 +81,7 @@ function isBrokerPod(pod: BackendPodInfo): boolean {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await fetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -125,7 +126,7 @@ function parseTopic(item: CRItem): StrimziTopic {
 
 async function fetchStrimziStatus(): Promise<StrimziStatus> {
   // Step 1: Detect Strimzi pods
-  const resp = await fetch('/api/mcp/pods', {
+  const resp = await authFetch('/api/mcp/pods', {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

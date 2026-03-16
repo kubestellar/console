@@ -510,3 +510,21 @@ class ApiClient {
 }
 
 export const api = new ApiClient()
+
+/**
+ * Drop-in replacement for `fetch()` that auto-injects the JWT Authorization
+ * header from localStorage.  Use this for MCP endpoint calls that need auth
+ * but return a raw Response (unlike `api.get()` which returns `{data}`).
+ *
+ * Existing callers only need to change `fetch(url, init)` -> `authFetch(url, init)`.
+ */
+export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers = new Headers(init?.headers)
+
+  if (token && token !== DEMO_TOKEN_VALUE && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  return fetch(input, { ...init, headers })
+}

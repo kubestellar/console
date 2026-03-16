@@ -2,6 +2,7 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { CONTOUR_DEMO_DATA } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { authFetch } from '../../../lib/api'
 import type { ContourDemoData } from './demoData'
 
 export type ContourStatus = ContourDemoData
@@ -71,7 +72,7 @@ function isPodReady(pod: BackendPodInfo): boolean {
 }
 
 async function fetchContourStatus(): Promise<ContourStatus> {
-  const resp = await fetch('/api/mcp/pods', {
+  const resp = await authFetch('/api/mcp/pods', {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

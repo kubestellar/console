@@ -2,6 +2,7 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { OPENFEATURE_DEMO_DATA } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { authFetch } from '../../../lib/api'
 import type { OpenFeatureDemoData } from './demoData'
 
 export type OpenFeatureStatus = OpenFeatureDemoData
@@ -100,7 +101,7 @@ function extractProviderName(pod: BackendPodInfo): string {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await fetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -146,7 +147,7 @@ function countFlags(items: CRItem[]): { total: number; enabled: number; disabled
 
 async function fetchOpenFeatureStatus(): Promise<OpenFeatureStatus> {
   // Step 1: Detect OpenFeature pods
-  const resp = await fetch('/api/mcp/pods', {
+  const resp = await authFetch('/api/mcp/pods', {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

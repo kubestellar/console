@@ -2,6 +2,7 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { KUBEVELA_DEMO_DATA, type KubeVelaDemoData, type KubeVelaApplication } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { authFetch } from '../../../lib/api'
 
 export type KubeVelaStatus = KubeVelaDemoData
 
@@ -76,7 +77,7 @@ function isPodReady(pod: BackendPodInfo): boolean {
 async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
   try {
     const params = new URLSearchParams({ group, version, resource })
-    const resp = await fetch(`/api/mcp/custom-resources?${params}`, {
+    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -153,7 +154,7 @@ function parseApplication(item: CRItem): KubeVelaApplication {
 
 async function fetchKubeVelaStatus(): Promise<KubeVelaStatus> {
   // Step 1: Detect controller pods
-  const resp = await fetch('/api/mcp/pods', {
+  const resp = await authFetch('/api/mcp/pods', {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

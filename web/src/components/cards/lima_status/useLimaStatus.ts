@@ -2,6 +2,7 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { LIMA_DEMO_DATA, type LimaDemoData, type LimaInstance } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { authFetch } from '../../../lib/api'
 
 export interface LimaStatus {
   instances: LimaInstance[]
@@ -55,7 +56,7 @@ interface BackendNodeInfo {
  * clusters. The backend returns { nodes: NodeInfo[], source: string }.
  */
 async function fetchLimaStatus(): Promise<LimaStatus> {
-  const resp = await fetch('/api/mcp/nodes', {
+  const resp = await authFetch('/api/mcp/nodes', {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

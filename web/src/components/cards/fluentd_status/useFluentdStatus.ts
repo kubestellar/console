@@ -2,6 +2,7 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { FLUENTD_DEMO_DATA, type FluentdDemoData } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { authFetch } from '../../../lib/api'
 
 export type FluentdStatus = FluentdDemoData
 
@@ -158,7 +159,7 @@ export function estimateEventsPerSecond(events: BackendEventInfo[]): number {
 }
 
 async function fetchPods(url: string): Promise<BackendPodInfo[]> {
-  const resp = await fetch(url, {
+  const resp = await authFetch(url, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
@@ -173,7 +174,7 @@ async function fetchPods(url: string): Promise<BackendPodInfo[]> {
 
 async function fetchDaemonSets(namespace?: string): Promise<BackendDaemonSetInfo[]> {
   const query = namespace ? `?namespace=${encodeURIComponent(namespace)}` : ''
-  const resp = await fetch(`/api/mcp/daemonsets${query}`, {
+  const resp = await authFetch(`/api/mcp/daemonsets${query}`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
@@ -193,7 +194,7 @@ async function fetchEvents(namespace: string): Promise<BackendEventInfo[]> {
       limit: String(EVENT_SAMPLE_LIMIT),
     })
 
-    const resp = await fetch(`/api/mcp/events?${params}`, {
+    const resp = await authFetch(`/api/mcp/events?${params}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })

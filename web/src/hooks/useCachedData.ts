@@ -17,7 +17,7 @@
 
 import { useState, useCallback } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
-import { isBackendUnavailable } from '../lib/api'
+import { isBackendUnavailable, authFetch } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { fetchSSE } from '../lib/sseClient'
 import { clusterCacheRef } from './mcp/shared'
@@ -1681,7 +1681,7 @@ export function useCachedSecurityIssues(
           const params = new URLSearchParams()
           if (cluster) params.append('cluster', cluster)
           if (namespace) params.append('namespace', namespace)
-          const response = await fetch(`/api/mcp/security-issues?${params}`, {
+          const response = await authFetch(`/api/mcp/security-issues?${params}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -1906,7 +1906,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     try {
       const token = getToken()
       if (!token) throw new Error('No authentication token')
-      const response = await fetch('/api/mcp/gpu-nodes/health/cronjob', {
+      const response = await authFetch('/api/mcp/gpu-nodes/health/cronjob', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1939,7 +1939,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     try {
       const token = getToken()
       if (!token) throw new Error('No authentication token')
-      const response = await fetch('/api/mcp/gpu-nodes/health/cronjob', {
+      const response = await authFetch('/api/mcp/gpu-nodes/health/cronjob', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -2101,7 +2101,7 @@ export const coreFetchers = {
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
-      const response = await fetch('/api/mcp/security-issues', {
+      const response = await authFetch('/api/mcp/security-issues', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
