@@ -342,12 +342,11 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       setConsecutiveFailures(0)
       setLastRefresh(now)
     } catch (err) {
-      // Keep stale data on error - don't fall back to demo
+      // Keep stale data on error — only fall back to demo data when demo mode is active
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !podsCache) {
         setError('Failed to fetch pods')
-        setPods(getDemoPods())
       }
     } finally {
       setIsLoading(false)
@@ -472,9 +471,6 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
     } catch (err) {
       if (!silent && !podsCache) {
         setError('Failed to fetch pods')
-        setPods(getDemoAllPods().filter(p =>
-          (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
-        ))
       }
     } finally {
       if (!silent) {
@@ -800,7 +796,6 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       setLastRefresh(new Date())
       if (!silent && !deploymentIssuesCache) {
         setError('Failed to fetch deployment issues')
-        setIssues(getDemoDeploymentIssues())
       }
     } finally {
       setIsLoading(false)

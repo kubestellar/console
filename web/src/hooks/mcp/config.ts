@@ -89,9 +89,6 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
     } catch {
       // Don't show error - ConfigMaps are optional
       setError(null)
-      setConfigMaps(getDemoConfigMaps().filter(cm =>
-        (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
-      ))
     } finally {
       setIsLoading(false)
     }
@@ -196,9 +193,6 @@ export function useSecrets(cluster?: string, namespace?: string) {
     } catch {
       // Don't show error - Secrets are optional
       setError(null)
-      setSecrets(getDemoSecrets().filter(s =>
-        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
-      ))
     } finally {
       setIsLoading(false)
     }
@@ -277,9 +271,6 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
     } catch {
       // Don't show error - ServiceAccounts are optional
       setError(null)
-      setServiceAccounts(getDemoServiceAccounts().filter(sa =>
-        (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
-      ))
     } finally {
       setIsLoading(false)
     }

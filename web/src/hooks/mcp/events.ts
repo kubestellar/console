@@ -178,7 +178,6 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setLastRefresh(new Date())
       if (!silent && !eventsCache) {
         setError('Failed to fetch events')
-        setEvents(getDemoEvents())
       }
     } finally {
       if (!isMountedRef.current) return
@@ -335,7 +334,6 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     } catch {
       if (!silent && !warningEventsCache) {
         setError('Failed to fetch warning events')
-        setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
       }
     } finally {
       setIsLoading(false)

@@ -107,8 +107,6 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       setLastRefresh(new Date())
       if (!silent && hadNoData) {
         setError('Failed to fetch security issues')
-        setIssues(getDemoSecurityIssues())
-        setIsUsingDemoData(true)
       }
     } finally {
       setIsLoading(false)

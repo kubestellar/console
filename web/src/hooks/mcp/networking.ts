@@ -270,12 +270,6 @@ export function useServices(cluster?: string, namespace?: string) {
       if (!silent) {
         // Don't show error at dashboard level - services are optional
         setError(null)
-        // Fall back to demo data on error if no cached data
-        if (services.length === 0) {
-          setServices(getDemoServices().filter(s =>
-            (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
-          ))
-        }
       }
       // Don't clear services on error - keep stale data
     } finally {
