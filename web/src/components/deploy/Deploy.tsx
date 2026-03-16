@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
+import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, AlertTriangle } from 'lucide-react'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -110,9 +110,6 @@ const SortableDeployCard = memo(function SortableDeployCard({
   }
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
-  if (!CardComponent) {
-    return null
-  }
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -139,7 +136,15 @@ const SortableDeployCard = memo(function SortableDeployCard({
           </button>
         }
       >
-        <CardComponent config={card.config} />
+        {CardComponent ? (
+          <CardComponent config={card.config} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+            <AlertTriangle className="w-6 h-6 text-yellow-500" />
+            <p className="text-sm font-medium">Unknown card type: {card.card_type}</p>
+            <p className="text-xs">This card type is not registered. You can remove it.</p>
+          </div>
+        )}
       </CardWrapper>
     </div>
   )

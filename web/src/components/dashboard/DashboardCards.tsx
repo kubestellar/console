@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout } from 'lucide-react'
+import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout, AlertTriangle } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import { CardWrapper } from '../cards/CardWrapper'
@@ -164,9 +164,6 @@ export function DashboardCards({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {cards.map(card => {
                 const CardComponent = CARD_COMPONENTS[card.card_type]
-                if (!CardComponent) {
-                  return null
-                }
                 return (
                   <CardWrapper
                     key={card.id}
@@ -178,7 +175,15 @@ export function DashboardCards({
                     isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
                     isLive={LIVE_DATA_CARDS.has(card.card_type)}
                   >
-                    <CardComponent config={card.config} />
+                    {CardComponent ? (
+                      <CardComponent config={card.config} />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+                        <AlertTriangle className="w-6 h-6 text-yellow-500" />
+                        <p className="text-sm font-medium">Unknown card type: {card.card_type}</p>
+                        <p className="text-xs">This card type is not registered. You can remove it.</p>
+                      </div>
+                    )}
                   </CardWrapper>
                 )
               })}

@@ -146,7 +146,6 @@ const SortableGpuCard = memo(function SortableGpuCard({
   } = useSortable({ id })
 
   const Component = CARD_COMPONENTS[card.type]
-  if (!Component) return null
 
   const colSpan = Math.min(12, Math.max(3, card.width))
   const style = {
@@ -181,7 +180,15 @@ const SortableGpuCard = memo(function SortableGpuCard({
             </button>
           }
         >
-          <Component />
+          {Component ? (
+            <Component />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+              <AlertTriangle className="w-6 h-6 text-yellow-500" />
+              <p className="text-sm font-medium">Unknown card type: {card.type}</p>
+              <p className="text-xs">This card type is not registered. You can remove it.</p>
+            </div>
+          )}
         </CardWrapper>
       </Suspense>
     </div>

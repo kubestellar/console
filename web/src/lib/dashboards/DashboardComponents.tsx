@@ -1,7 +1,7 @@
 import { memo, ReactNode } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass } from 'lucide-react'
+import { GripVertical, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
 import { getIcon } from '../icons'
 import { DashboardCard } from './types'
 import { CardWrapper } from '../../components/cards/CardWrapper'
@@ -62,9 +62,6 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   }
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
-  if (!CardComponent) {
-    return null
-  }
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -91,7 +88,15 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
           </button>
         }
       >
-        <CardComponent config={card.config} />
+        {CardComponent ? (
+          <CardComponent config={card.config} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+            <AlertTriangle className="w-6 h-6 text-yellow-500" />
+            <p className="text-sm font-medium">Unknown card type: {card.card_type}</p>
+            <p className="text-xs">This card type is not registered. You can remove it.</p>
+          </div>
+        )}
       </CardWrapper>
     </div>
   )

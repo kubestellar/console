@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, AlertTriangle } from 'lucide-react'
 import { CardWrapper } from '../../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../../cards/cardRegistry'
 import { DashboardCard } from '../../../lib/dashboards'
@@ -50,9 +50,6 @@ export const SortableClusterCard = memo(function SortableClusterCard({
   }
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
-  if (!CardComponent) {
-    return null
-  }
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -79,7 +76,15 @@ export const SortableClusterCard = memo(function SortableClusterCard({
           </button>
         }
       >
-        <CardComponent config={card.config} />
+        {CardComponent ? (
+          <CardComponent config={card.config} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+            <AlertTriangle className="w-6 h-6 text-yellow-500" />
+            <p className="text-sm font-medium">Unknown card type: {card.card_type}</p>
+            <p className="text-xs">This card type is not registered. You can remove it.</p>
+          </div>
+        )}
       </CardWrapper>
     </div>
   )
