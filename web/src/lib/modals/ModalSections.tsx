@@ -27,6 +27,7 @@ import { Copy, Check, ChevronDown, ChevronRight, ExternalLink, AlertCircle } fro
 import { getStatusColors, NavigationTarget } from './types'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../constants/network'
 import { Button } from '../../components/ui/Button'
+import { copyToClipboard } from '../clipboard'
 
 // ============================================================================
 // Key-Value Section
@@ -92,7 +93,7 @@ function KeyValueItem({
       ? item.value
       : String(item.value)
 
-    await navigator.clipboard.writeText(textValue)
+    await copyToClipboard(textValue)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)

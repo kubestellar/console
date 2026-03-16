@@ -1023,6 +1023,8 @@ export function startGlobalErrorTracking() {
       const msg = event.reason?.message || String(event.reason || 'unknown')
       // Skip errors already reported by React error boundaries (prevents double-counting)
       if (wasAlreadyReported(msg)) return
+      // Skip clipboard API errors — expected on non-HTTPS and in restricted contexts
+      if (msg.includes('writeText') || msg.includes('clipboard') || msg.includes('copy')) return
       // Stale chunks can surface as unhandled rejections from dynamic import()
       if (tryChunkReloadRecovery(msg)) return
       emitError('unhandled_rejection', msg)

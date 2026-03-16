@@ -877,6 +877,10 @@ func (s *Server) setupRoutes() {
 		// Serve pre-compressed assets (.gz/.br) with Content-Length to avoid chunked encoding
 		s.app.Use(preCompressedStatic("./web/dist"))
 		s.app.Get("/*", func(c *fiber.Ctx) error {
+			// index.html must NOT be cached long-term — it contains chunk references
+			// that change on every deploy. Without this, browsers serve stale HTML
+			// for up to a year, causing chunk_load errors (+56% trend in GA4).
+			c.Set("Cache-Control", "public, max-age=0, must-revalidate")
 			return c.SendFile("./web/dist/index.html")
 		})
 	}
@@ -903,6 +907,10 @@ func preCompressedStatic(root string) fiber.Handler {
 		// Content type
 		ext := filepath.Ext(filePath)
 		contentType := ""
+		// HTML files must not be cached with immutable — they contain chunk
+		// references that change on every deploy. Only hashed assets (.js, .css)
+		// should use long-term immutable caching.
+		isHTML := false
 		switch ext {
 		case ".js":
 			contentType = "application/javascript"
@@ -910,6 +918,7 @@ func preCompressedStatic(root string) fiber.Handler {
 			contentType = "text/css"
 		case ".html":
 			contentType = "text/html"
+			isHTML = true
 		case ".json":
 			contentType = "application/json"
 		case ".svg":
@@ -928,6 +937,13 @@ func preCompressedStatic(root string) fiber.Handler {
 			contentType = "application/manifest+json"
 		}
 
+		// HTML must revalidate on every request so deploys take effect immediately.
+		// Hashed assets (.js, .css) are immutable — filenames change on rebuild.
+		cacheHeader := fmt.Sprintf("public, max-age=%d, immutable", oneYear)
+		if isHTML {
+			cacheHeader = "public, max-age=0, must-revalidate"
+		}
+
 		accept := c.Get("Accept-Encoding")
 
 		// Try brotli first, then gzip
@@ -936,7 +952,7 @@ func preCompressedStatic(root string) fiber.Handler {
 			if brInfo, err := os.Stat(brPath); err == nil {
 				c.Set("Content-Encoding", "br")
 				c.Set("Content-Type", contentType)
-				c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
+				c.Set("Cache-Control", cacheHeader)
 				c.Set("Content-Length", fmt.Sprintf("%d", brInfo.Size()))
 				c.Set("Vary", "Accept-Encoding")
 				return c.SendFile(brPath)
@@ -947,7 +963,7 @@ func preCompressedStatic(root string) fiber.Handler {
 			if gzInfo, err := os.Stat(gzPath); err == nil {
 				c.Set("Content-Encoding", "gzip")
 				c.Set("Content-Type", contentType)
-				c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
+				c.Set("Cache-Control", cacheHeader)
 				c.Set("Content-Length", fmt.Sprintf("%d", gzInfo.Size()))
 				c.Set("Vary", "Accept-Encoding")
 				return c.SendFile(gzPath)
@@ -958,7 +974,7 @@ func preCompressedStatic(root string) fiber.Handler {
 		if contentType != "" {
 			c.Set("Content-Type", contentType)
 		}
-		c.Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", oneYear))
+		c.Set("Cache-Control", cacheHeader)
 		return c.SendFile(filePath)
 	}
 }
