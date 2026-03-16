@@ -77,6 +77,10 @@ async function fetchOvnStatus(): Promise<OvnStatus> {
   })
 
   if (!podsResp.ok) {
+    // 401/403 = not authenticated — return empty so useCache falls back to demo data
+    if (podsResp.status === 401 || podsResp.status === 403) {
+      return { ...INITIAL_DATA, lastCheckTime: new Date().toISOString() }
+    }
     throw new Error(`HTTP ${podsResp.status}`)
   }
 

@@ -75,6 +75,9 @@ async function fetchKubevirtStatus(): Promise<KubevirtStatus> {
   })
 
   if (!podsResp.ok) {
+    if (podsResp.status === 401 || podsResp.status === 403) {
+      return { ...INITIAL_DATA, lastCheckTime: new Date().toISOString() }
+    }
     throw new Error(`HTTP ${podsResp.status}`)
   }
 
