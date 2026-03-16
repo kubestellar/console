@@ -165,6 +165,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const rulesRef = useRef(rules)
   rulesRef.current = rules
 
+  // Track which alert dedup keys have already triggered a browser notification.
+  // Prevents the same alert from sending repeated macOS notifications on every
+  // evaluation cycle. Keys are cleared when the alert resolves.
+  const notifiedAlertKeysRef = useRef<Set<string>>(new Set())
+
   // CronJob health results cache — fetched async, read synchronously by evaluator
   const cronJobResultsRef = useRef<Record<string, GPUHealthCheckResult[]>>({})
 
@@ -812,8 +817,13 @@ Please provide:
             'Node'
           )
 
-          // Send browser notification with deep link to GPU node
-          if (rule.channels?.some(ch => ch.type === 'browser' && ch.enabled)) {
+          // Send browser notification only once per alert (not on every evaluation cycle)
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          if (
+            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
+            !notifiedAlertKeysRef.current.has(notifKey)
+          ) {
+            notifiedAlertKeysRef.current.add(notifKey)
             const firstNode = failedNodes[0]
             sendNotificationWithDeepLink(
               `GPU Health Alert: ${cluster.name}`,
@@ -826,6 +836,9 @@ Please provide:
             )
           }
         } else {
+          // Auto-resolve — clear the notification dedup key
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          notifiedAlertKeysRef.current.delete(notifKey)
           // Auto-resolve if all nodes are healthy
           setAlerts(prev => {
             const firingAlert = prev.find(
@@ -863,6 +876,10 @@ Please provide:
         )
 
         if (diskPressureIssue) {
+          // Extract node name from issue string (format: "DiskPressure on node-name")
+          const nodeMatch = diskPressureIssue.match(/on\s+(\S+)/)
+          const affectedNode = nodeMatch?.[1]
+
           createAlert(
             rule,
             `${cluster.name}: ${diskPressureIssue}`,
@@ -870,6 +887,7 @@ Please provide:
               clusterName: cluster.name,
               issue: diskPressureIssue,
               nodeCount: cluster.nodeCount,
+              affectedNode,
             },
             cluster.name,
             undefined,
@@ -877,16 +895,27 @@ Please provide:
             'Cluster'
           )
 
-          // Send browser notification with deep link
-          if (rule.channels?.some(ch => ch.type === 'browser' && ch.enabled)) {
+          // Send browser notification only once per alert (not on every evaluation cycle).
+          // notifiedAlertKeysRef tracks which (ruleId, cluster) combos already sent a notification.
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          if (
+            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
+            !notifiedAlertKeysRef.current.has(notifKey)
+          ) {
+            notifiedAlertKeysRef.current.add(notifKey)
             sendNotificationWithDeepLink(
               `Disk Pressure: ${cluster.name}`,
               diskPressureIssue,
-              { card: 'cluster_health' }
+              // Deep link to the affected node drilldown (not cluster_health card)
+              affectedNode
+                ? { drilldown: 'node', cluster: cluster.name, node: affectedNode, issue: 'DiskPressure' }
+                : { drilldown: 'cluster', cluster: cluster.name, issue: 'DiskPressure' }
             )
           }
         } else {
-          // Auto-resolve if DiskPressure clears
+          // Auto-resolve if DiskPressure clears — also clear the notification dedup key
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          notifiedAlertKeysRef.current.delete(notifKey)
           setAlerts(prev => {
             const firingAlert = prev.find(
               a =>
@@ -1007,8 +1036,13 @@ Please provide:
             'WorkflowRun'
           )
 
-          // Send browser notification with deep link to nightly card
-          if (rule.channels?.some(ch => ch.type === 'browser' && ch.enabled)) {
+          // Send browser notification only once per failed run (not on every evaluation cycle)
+          const notifKey = `${rule.id}::${guide.acronym}::${run.runNumber}`
+          if (
+            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
+            !notifiedAlertKeysRef.current.has(notifKey)
+          ) {
+            notifiedAlertKeysRef.current.add(notifKey)
             sendNotificationWithDeepLink(
               `Nightly E2E Failed: ${guide.acronym} (${guide.platform})`,
               `Run #${run.runNumber} failed — ${guide.guide}`,
