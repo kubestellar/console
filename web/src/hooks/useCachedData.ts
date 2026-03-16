@@ -654,7 +654,8 @@ export function useCachedPodIssues(
         return sortIssues(issues)
       }
 
-      return []
+      // No data source available yet — throw so cache preserves existing data and retries
+      throw new Error('No data source available (agent connecting or backend not authenticated)')
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       // Try agent first
@@ -747,7 +748,7 @@ export function useCachedDeploymentIssues(
         return data.issues || []
       }
 
-      return []
+      throw new Error("No data source available")
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
@@ -833,7 +834,7 @@ export function useCachedDeployments(
         return await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace })
       }
 
-      return []
+      throw new Error("No data source available")
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
@@ -1751,7 +1752,7 @@ export function useCachedSecurityIssues(
         }
       }
 
-      return []
+      throw new Error("No data source available")
     },
     // Progressive loading: show results as each cluster completes
     progressiveFetcher: !cluster ? async (onProgress) => {
