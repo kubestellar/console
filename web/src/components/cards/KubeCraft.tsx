@@ -76,6 +76,11 @@ export function KubeCraft() {
   })
 
   const isMouseDownRef = useRef(false)
+  // Refs to avoid stale closures in memoized mouse handlers
+  const selectedBlockRef = useRef<BlockType>(selectedBlock)
+  selectedBlockRef.current = selectedBlock
+  const isErasingRef = useRef(isErasing)
+  isErasingRef.current = isErasing
 
   // Generate initial world with terrain
   function generateWorld(): Block[][] {
@@ -290,7 +295,7 @@ export function KubeCraft() {
     handleClick(e)
   }, [])
 
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -300,12 +305,14 @@ export function KubeCraft() {
 
     if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return
 
+    // Read from refs to avoid stale closure from memoized mouse handlers
+    const blockType = isErasingRef.current ? 'air' : selectedBlockRef.current
     setWorld(prev => {
       const newWorld = prev.map(row => row.map(block => ({ ...block })))
-      newWorld[y][x] = { type: isErasing ? 'air' : selectedBlock }
+      newWorld[y][x] = { type: blockType }
       return newWorld
     })
-  }
+  }, [])
 
   // Save world
   const saveWorld = useCallback(() => {
