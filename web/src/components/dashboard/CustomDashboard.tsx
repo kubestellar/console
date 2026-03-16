@@ -373,7 +373,7 @@ export function CustomDashboard() {
         showToast('Failed to delete card from backend', 'error')
       }
     }
-  }, [id, snapshot])
+  }, [id, snapshot, showToast])
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
