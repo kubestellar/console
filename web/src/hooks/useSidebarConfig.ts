@@ -58,6 +58,7 @@ const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'ai-ml', name: 'AI/ML', icon: 'Sparkles', href: '/ai-ml', type: 'link', order: 4 },
   { id: 'ai-agents', name: 'AI Agents', icon: 'Bot', href: '/ai-agents', type: 'link', order: 5 },
   { id: 'ci-cd', name: 'CI/CD', icon: 'GitMerge', href: '/ci-cd', type: 'link', order: 6 },
+  { id: 'multi-tenancy', name: 'Multi-Tenancy', icon: 'Shield', href: '/multi-tenancy', type: 'link', order: 6.5 },
   { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 7 },
   { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 8 },
 ]
@@ -78,7 +79,6 @@ export const DISCOVERABLE_DASHBOARDS: SidebarItem[] = [
   { id: 'helm', name: 'Helm', icon: 'Package', href: '/helm', type: 'link', order: 8 },
   { id: 'llm-d-benchmarks', name: 'llm-d Benchmarks', icon: 'TrendingUp', href: '/llm-d-benchmarks', type: 'link', order: 9 },
   { id: 'logs', name: 'Logs', icon: 'FileText', href: '/logs', type: 'link', order: 10 },
-  { id: 'multi-tenancy', name: 'Multi-Tenancy', icon: 'Shield', href: '/multi-tenancy', type: 'link' as const, order: 10.5, description: 'Tenant isolation with OVN, KubeFlex, K3s, KubeVirt' },
   { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 11 },
   { id: 'nodes', name: 'Nodes', icon: 'CircuitBoard', href: '/nodes', type: 'link', order: 12 },
   { id: 'operators', name: 'Operators', icon: 'Cog', href: '/operators', type: 'link', order: 13 },
