@@ -2,7 +2,6 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { CRIO_DEMO_DATA, type CrioStatusDemoData } from './demoData'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
-import { authFetch } from '../../../lib/api'
 import {
   buildRecentImagePulls,
   extractCrioVersion,
@@ -109,10 +108,6 @@ interface BackendEventInfo {
  * CRI-O nodes are identified by containerRuntime containing "cri-o".
  */
 async function fetchCrioStatus(): Promise<CrioStatus> {
-  const resp = await authFetch('/api/mcp/nodes', {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  })
   const [nodesResp, podsResp, eventsResp] = await Promise.all([
     fetch('/api/mcp/nodes', {
       headers: { Accept: 'application/json' },
