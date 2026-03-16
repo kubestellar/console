@@ -187,7 +187,14 @@ async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStat
       { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
     )
 
-    if (scanResult.exitCode === 0 && scanResult.output) {
+    if (scanResult.exitCode !== 0) {
+      return emptyStatus(
+        cluster, true,
+        scanResult.output?.trim() || 'Failed to fetch Kubescape scan data'
+      )
+    }
+
+    if (scanResult.output) {
       const data = JSON.parse(scanResult.output)
       const items = (data.items || []) as ConfigScanSummaryResource[]
 

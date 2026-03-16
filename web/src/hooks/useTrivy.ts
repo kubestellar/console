@@ -162,12 +162,21 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
       { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
     )
 
+    if (result.exitCode !== 0) {
+      return {
+        cluster, installed: true, loading: false,
+        error: result.output?.trim() || 'Failed to fetch vulnerability reports',
+        vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
+        totalReports: 0, scannedImages: 0, images: [],
+      }
+    }
+
     const summary: TrivyVulnSummary = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
     let totalReports = 0
     const imageSet = new Set<string>()
     const imageReports: TrivyImageReport[] = []
 
-    if (result.exitCode === 0 && result.output) {
+    if (result.output) {
       const data = JSON.parse(result.output)
       const items = (data.items || []) as VulnerabilityReportResource[]
       totalReports = items.length

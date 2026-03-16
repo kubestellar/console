@@ -200,7 +200,14 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
       { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
     )
 
-    if (cpResult.exitCode === 0 && cpResult.output) {
+    if (cpResult.exitCode !== 0) {
+      return emptyStatus(
+        cluster, true,
+        cpResult.output?.trim() || 'Failed to fetch Kyverno policies'
+      )
+    }
+
+    if (cpResult.output) {
       const data = JSON.parse(cpResult.output)
       for (const item of (data.items || []) as KyvernoPolicyResource[]) {
         const action = (item.spec.validationFailureAction || 'Audit').toLowerCase()
