@@ -140,7 +140,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
 export function TrivyScan({ config: _config }: CardConfig) {
   const { t } = useTranslation()
-  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, clustersChecked, totalClusters, refetch } = useTrivy()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, refetch } = useTrivy()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
@@ -226,8 +226,24 @@ Please proceed step by step.`,
         </div>
       )}
 
-      {/* Install prompt when not detected (only after scanning completes) */}
-      {!installed && !isLoading && !isRefreshing && (
+      {/* Error banner when fetch failed — distinct from "not installed" */}
+      {hasErrors && !installed && !isLoading && !isRefreshing && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-400 font-medium">Scanner Data Unavailable</p>
+            <p className="text-muted-foreground">
+              Could not fetch Trivy data — results below may be incomplete.{' '}
+              <button onClick={() => refetch()} className="text-red-400 hover:underline">
+                Retry →
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Install prompt when not detected (only after scanning completes, and no errors) */}
+      {!installed && !hasErrors && !isLoading && !isRefreshing && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
           <div>
@@ -340,7 +356,7 @@ Please proceed step by step.`,
 // ── Kubescape Security Posture ──────────────────────────────────────────
 
 export function KubescapeScan({ config: _config }: CardConfig) {
-  const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, clustersChecked, totalClusters, refetch } = useKubescape()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, refetch } = useKubescape()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
@@ -430,8 +446,24 @@ Please proceed step by step.`,
         </div>
       )}
 
-      {/* Install prompt when not detected (only after scanning completes) */}
-      {!installed && !isLoading && !isRefreshing && (
+      {/* Error banner when fetch failed — distinct from "not installed" */}
+      {hasErrors && !installed && !isLoading && !isRefreshing && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-400 font-medium">Scanner Data Unavailable</p>
+            <p className="text-muted-foreground">
+              Could not fetch Kubescape data — results below may be incomplete.{' '}
+              <button onClick={() => refetch()} className="text-red-400 hover:underline">
+                Retry →
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Install prompt when not detected (only after scanning completes, and no errors) */}
+      {!installed && !hasErrors && !isLoading && !isRefreshing && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
           <div>
@@ -594,7 +626,7 @@ Please proceed step by step.`,
 // ── Policy Violations Aggregated ────────────────────────────────────────
 
 export function PolicyViolations({ config: _config }: CardConfig) {
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal, refetch: kyvernoRefetch } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, hasErrors: kyvernoHasErrors, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal, refetch: kyvernoRefetch } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
@@ -695,6 +727,21 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     }
     return (
       <div className="space-y-3">
+        {/* Error banner when fetch failed — distinct from "no violations" */}
+        {kyvernoHasErrors && !kyvernoInstalled && (
+          <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-400 font-medium">Scanner Data Unavailable</p>
+              <p className="text-muted-foreground">
+                Could not fetch Kyverno data — violation counts may be incomplete.{' '}
+                <button onClick={() => kyvernoRefetch()} className="text-red-400 hover:underline">
+                  Retry →
+                </button>
+              </p>
+            </div>
+          </div>
+        )}
         {/* Degraded state: installed but no policies */}
         {isDegraded && (
           <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
@@ -710,11 +757,14 @@ export function PolicyViolations({ config: _config }: CardConfig) {
             </div>
           </div>
         )}
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
-          <Shield className="w-8 h-8 mb-2 opacity-50" />
-          <p className="text-sm">No policy violations detected</p>
-          <p className="text-xs mt-1">All resources comply with active policies</p>
-        </div>
+        {/* Only show clean-scan message when there are no errors */}
+        {!kyvernoHasErrors && (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+            <Shield className="w-8 h-8 mb-2 opacity-50" />
+            <p className="text-sm">No policy violations detected</p>
+            <p className="text-xs mt-1">All resources comply with active policies</p>
+          </div>
+        )}
       </div>
     )
   }
@@ -803,8 +853,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 // ── Compliance Score Gauge ──────────────────────────────────────────────
 
 export function ComplianceScore({ config: _config }: CardConfig) {
-  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
-  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal, refetch: ksRefetch } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal, refetch: kyRefetch } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
   const [showBreakdown, setShowBreakdown] = useState(false)
 
@@ -909,6 +959,22 @@ export function ComplianceScore({ config: _config }: CardConfig) {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" />
           <span>Checking clusters... {minChecked}/{totalChecking}</span>
+        </div>
+      )}
+
+      {/* Error banner when scanner data fetch failed */}
+      {(ksHasErrors || kyHasErrors) && !isLoading && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-400 font-medium">Scanner Data Unavailable</p>
+            <p className="text-muted-foreground">
+              Could not fetch data from {[ksHasErrors && 'Kubescape', kyHasErrors && 'Kyverno'].filter(Boolean).join(' and ')} — score may be incomplete.{' '}
+              <button onClick={() => { if (ksHasErrors) ksRefetch(); if (kyHasErrors) kyRefetch(); }} className="text-red-400 hover:underline">
+                Retry →
+              </button>
+            </p>
+          </div>
         </div>
       )}
 

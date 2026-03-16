@@ -429,12 +429,20 @@ export function useKyverno() {
   const isDemoData = isDemoMode
   const installed = Object.values(statuses).some(s => s.installed)
 
+  /** True when at least one cluster had a fetch error (distinct from "not installed") */
+  const hasErrors = useMemo(() =>
+    Object.values(statuses).some(s => !!s.error),
+    [statuses]
+  )
+
   return {
     statuses,
     isLoading,
     isRefreshing,
     lastRefresh,
     installed,
+    /** True when at least one cluster had a fetch error */
+    hasErrors,
     isDemoData,
     /** Number of clusters checked so far (for progressive UI) */
     clustersChecked,

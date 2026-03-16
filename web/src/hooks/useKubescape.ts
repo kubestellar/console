@@ -406,6 +406,12 @@ export function useKubescape() {
   const isDemoData = isDemoMode
   const installed = Object.values(statuses).some(s => s.installed)
 
+  /** True when at least one cluster had a fetch error (distinct from "not installed") */
+  const hasErrors = useMemo(() =>
+    Object.values(statuses).some(s => !!s.error),
+    [statuses]
+  )
+
   // Aggregate across all clusters
   const aggregated = useMemo(() => {
     const clusterStatuses = Object.values(statuses).filter(s => s.installed)
@@ -429,6 +435,8 @@ export function useKubescape() {
     isRefreshing,
     lastRefresh,
     installed,
+    /** True when at least one cluster had a fetch error */
+    hasErrors,
     isDemoData,
     /** Number of clusters checked so far (for progressive UI) */
     clustersChecked,

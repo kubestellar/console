@@ -337,6 +337,12 @@ export function useTrivy() {
   const isDemoData = isDemoMode
   const installed = Object.values(statuses).some(s => s.installed)
 
+  /** True when at least one cluster had a fetch error (distinct from "not installed") */
+  const hasErrors = useMemo(() =>
+    Object.values(statuses).some(s => !!s.error),
+    [statuses]
+  )
+
   // Aggregate across all clusters
   const aggregated = useMemo((): TrivyVulnSummary => {
     const agg: TrivyVulnSummary = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
@@ -358,6 +364,8 @@ export function useTrivy() {
     isRefreshing,
     lastRefresh,
     installed,
+    /** True when at least one cluster had a fetch error */
+    hasErrors,
     isDemoData,
     /** Number of clusters checked so far (for progressive UI) */
     clustersChecked,
