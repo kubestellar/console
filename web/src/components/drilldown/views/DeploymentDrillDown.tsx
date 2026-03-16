@@ -85,8 +85,18 @@ export function DeploymentDrillDown({ data }: Props) {
   const { drillToNamespace, drillToCluster, drillToPod, drillToReplicaSet } = useDrillDownActions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [replicas, setReplicas] = useState<number>((data.replicas as number) || 0)
-  const [readyReplicas, setReadyReplicas] = useState<number>((data.readyReplicas as number) || 0)
+  // data.replicas can be a number OR an object {ready, desired} from DeploymentProgress drill-down.
+  // Extract the numeric value safely to avoid rendering an object as a React child (error #300).
+  const [replicas, setReplicas] = useState<number>(() => {
+    const r = data.replicas
+    if (typeof r === 'number') return r
+    if (r && typeof r === 'object' && 'desired' in r) return Number((r as { desired: number }).desired) || 0
+    return Number(r) || 0
+  })
+  const [readyReplicas, setReadyReplicas] = useState<number>(() => {
+    const r = data.readyReplicas ?? (data.replicas && typeof data.replicas === 'object' && 'ready' in data.replicas ? (data.replicas as { ready: number }).ready : undefined)
+    return Number(r) || 0
+  })
   const [pods, setPods] = useState<Array<{ name: string; status: string; restarts: number }>>([])
   const [replicaSets, setReplicaSets] = useState<Array<{ name: string; replicas: number; ready: number }>>([])
   const [labels, setLabels] = useState<Record<string, string> | null>(null)

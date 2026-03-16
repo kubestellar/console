@@ -670,7 +670,9 @@ async function hashUserId(uid: string): Promise<string> {
 
   // crypto.subtle is only available in secure contexts (HTTPS / localhost).
   // Fall back to a simple FNV-1a-style hash so analytics still works over HTTP.
-  if (!crypto.subtle) {
+  // Guard both `crypto` and `crypto.subtle` — some browsers (Safari on HTTP)
+  // have `crypto` but `subtle` is undefined; others lack `crypto` entirely.
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
     const FNV_OFFSET_BASIS = 0x811c9dc5
     const FNV_PRIME = 0x01000193
     let h = FNV_OFFSET_BASIS
@@ -905,6 +907,35 @@ export function emitFeedbackSubmitted(type: string) {
 // Maximum length for error detail strings to avoid oversized payloads
 const ERROR_DETAIL_MAX_LEN = 100
 
+/**
+ * Dedup set for errors already reported by React error boundaries.
+ * When an error is caught by DynamicCardErrorBoundary or AppErrorBoundary,
+ * the error message is added here. The global window 'error' and
+ * 'unhandledrejection' listeners check this set and skip errors that
+ * were already reported — preventing the same error from being counted
+ * as both 'card_render' AND 'runtime', or 'uncaught_render' AND 'runtime'.
+ * Entries expire after 5 seconds to avoid unbounded growth.
+ */
+const DEDUP_EXPIRY_MS = 5_000
+const recentlyReportedErrors = new Map<string, number>()
+
+/** Mark an error message as already reported by an error boundary */
+export function markErrorReported(msg: string) {
+  recentlyReportedErrors.set(msg.slice(0, ERROR_DETAIL_MAX_LEN), Date.now())
+}
+
+/** Check if an error was already reported by an error boundary */
+function wasAlreadyReported(msg: string): boolean {
+  const key = msg.slice(0, ERROR_DETAIL_MAX_LEN)
+  const ts = recentlyReportedErrors.get(key)
+  if (!ts) return false
+  if (Date.now() - ts > DEDUP_EXPIRY_MS) {
+    recentlyReportedErrors.delete(key)
+    return false
+  }
+  return true
+}
+
 export function emitError(category: string, detail: string, cardId?: string) {
   send('ksc_error', {
     error_category: category,
@@ -952,7 +983,11 @@ const GLOBAL_RELOAD_THROTTLE_MS = 30_000 // 30 seconds
  */
 function tryChunkReloadRecovery(msg: string): boolean {
   if (!isChunkLoadMessage(msg)) return false
-  emitError('chunk_load', msg)
+  // Only emit chunk_load from the global handler if ChunkErrorBoundary
+  // hasn't already reported this same error message (prevents double-counting)
+  if (!wasAlreadyReported(msg)) {
+    emitError('chunk_load', msg)
+  }
   try {
     const lastReload = sessionStorage.getItem(CHUNK_RELOAD_TS_KEY)
     const now = Date.now()
@@ -986,6 +1021,8 @@ export function startGlobalErrorTracking() {
     isEmitting = true
     try {
       const msg = event.reason?.message || String(event.reason || 'unknown')
+      // Skip errors already reported by React error boundaries (prevents double-counting)
+      if (wasAlreadyReported(msg)) return
       // Stale chunks can surface as unhandled rejections from dynamic import()
       if (tryChunkReloadRecovery(msg)) return
       emitError('unhandled_rejection', msg)
@@ -1000,6 +1037,8 @@ export function startGlobalErrorTracking() {
     if (isEmitting) return
     isEmitting = true
     try {
+      // Skip errors already reported by React error boundaries (prevents double-counting)
+      if (wasAlreadyReported(event.message)) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
       emitError('runtime', event.message)

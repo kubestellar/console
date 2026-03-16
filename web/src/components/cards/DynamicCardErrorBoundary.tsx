@@ -1,6 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
-import { emitError } from '../../lib/analytics'
+import { emitError, markErrorReported } from '../../lib/analytics'
 import { isChunkLoadError } from '../../lib/chunkErrors'
 
 // Maximum number of retry attempts before disabling the retry button
@@ -50,6 +50,8 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
     }
 
     console.error(`[DynamicCard:${this.props.cardId}] Render error:`, error, errorInfo)
+    // Mark as reported so the global window 'error' handler skips it (prevents double-counting)
+    markErrorReported(error.message)
     emitError('card_render', `[${this.props.cardId}] ${error.message}`, this.props.cardId)
     this.props.onError?.(error, errorInfo)
     // Only increment retryCount when the error happens during a retry attempt,

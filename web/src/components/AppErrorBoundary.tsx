@@ -1,7 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import i18next from 'i18next'
-import { emitError } from '../lib/analytics'
+import { emitError, markErrorReported } from '../lib/analytics'
 
 interface Props {
   children: ReactNode
@@ -32,6 +32,8 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[AppErrorBoundary] Uncaught error:', error, errorInfo)
+    // Mark as reported so the global window 'error' handler skips it (prevents double-counting)
+    markErrorReported(error.message)
     emitError('uncaught_render', error.message)
   }
 

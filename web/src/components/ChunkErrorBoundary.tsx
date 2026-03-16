@@ -1,7 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import i18next from 'i18next'
-import { emitError, emitChunkReloadRecoveryFailed } from '../lib/analytics'
+import { emitError, emitChunkReloadRecoveryFailed, markErrorReported } from '../lib/analytics'
 import { isChunkLoadError, CHUNK_RELOAD_TS_KEY } from '../lib/chunkErrors'
 
 // Reload throttle interval in milliseconds to prevent infinite reload loops
@@ -43,6 +43,8 @@ export class ChunkErrorBoundary extends Component<Props, State> {
     }
 
     console.warn('[ChunkErrorBoundary] Stale chunk detected, will reload:', error.message)
+    // Mark as reported so the global handler's tryChunkReloadRecovery skips it (prevents double-counting)
+    markErrorReported(error.message)
     emitError('chunk_load', error.message)
 
     // Auto-reload once. Use sessionStorage to prevent infinite loops.
