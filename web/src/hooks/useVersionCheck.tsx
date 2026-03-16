@@ -9,6 +9,7 @@ import type {
   AutoUpdateStatus,
   UpdateProgress,
 } from '../types/updates'
+import { emitSessionContext } from '../lib/analytics'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
 import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import { useLocalAgent } from './useLocalAgent'
@@ -725,6 +726,13 @@ function useVersionCheckCore() {
       setInstallMethod(agentHealth.install_method as InstallMethod)
     }
   }, [agentHealth?.install_method])
+
+  // Send install method + update channel to GA4 as user properties once known
+  useEffect(() => {
+    if (installMethod !== 'unknown') {
+      emitSessionContext(installMethod, channel)
+    }
+  }, [installMethod, channel])
 
   // Auto-reset channel when it's no longer valid for the detected install method.
   // Example: localhost defaults to 'developer', but backend reports 'helm' install —

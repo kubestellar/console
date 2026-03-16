@@ -1443,6 +1443,35 @@ export function emitLinkedInShare(source: string) {
   send('ksc_linkedin_share', { source })
 }
 
+// ── Session Context ──────────────────────────────────────────────
+
+/**
+ * Set install method and update channel as GA4 user properties.
+ * Call this once the version-check hook has detected the install method.
+ * Also fires a ksc_session_start event so we can segment sessions by
+ * install method and channel in GA4 reports.
+ *
+ * Deduplicated per browser session — only fires once per tab lifecycle.
+ */
+const SESSION_START_KEY = '_ksc_session_start_sent'
+
+export function emitSessionContext(installMethod: string, updateChannel: string) {
+  // Set as persistent user properties — available on ALL future events
+  setAnalyticsUserProperties({
+    install_method: installMethod,
+    update_channel: updateChannel,
+  })
+
+  // Fire session start event once per page load
+  if (sessionStorage.getItem(SESSION_START_KEY)) return
+  sessionStorage.setItem(SESSION_START_KEY, '1')
+
+  send('ksc_session_start', {
+    install_method: installMethod,
+    update_channel: updateChannel,
+  })
+}
+
 // ── Settings: Update ──────────────────────────────────────────────
 
 /** Fired when user clicks "Check for Updates" in settings */
