@@ -47,6 +47,7 @@ import {
 } from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
 import { copyToClipboard } from '../../lib/clipboard'
+import { useToast } from '../ui/Toast'
 
 // ============================================================================
 // Types
@@ -116,6 +117,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const { clusterContext } = useClusterContext()
   const clusterContextRef = useRef(clusterContext)
   clusterContextRef.current = clusterContext
+  const { showToast } = useToast()
 
   // Navigation state
   const [searchQuery, setSearchQuery] = useState('')
@@ -1303,6 +1305,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         const updated = [...watchedRepos, val]
                         setWatchedRepos(updated)
                         saveWatchedRepos(updated)
+                        showToast(`Added repository "${val}"`, 'success')
                       }
                       setNewRepoValue('')
                       setAddingRepo(false)
@@ -1332,6 +1335,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         const updated = [...watchedPaths, val]
                         setWatchedPaths(updated)
                         saveWatchedPaths(updated)
+                        showToast(`Added path "${val}"`, 'success')
                       }
                       setNewPathValue('')
                       setAddingPath(false)
@@ -1370,6 +1374,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                           const updated = watchedRepos.filter(r => r !== child.path)
                           setWatchedRepos(updated)
                           saveWatchedRepos(updated)
+                          showToast(`Removed repository "${child.path}"`, 'info')
                         }}
                         className="p-2 min-h-11 min-w-11 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0"
                         title="Remove from watched"
@@ -1397,6 +1402,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                           const updated = watchedPaths.filter(p => p !== child.path)
                           setWatchedPaths(updated)
                           saveWatchedPaths(updated)
+                          showToast(`Removed path "${child.path}"`, 'info')
                         }}
                         className="p-2 min-h-11 min-w-11 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0"
                         title="Remove from watched"

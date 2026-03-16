@@ -28,6 +28,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { emitUserRoleChanged, emitUserRemoved } from '../../lib/analytics'
+import { ConfirmDialog } from '../../lib/modals'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -568,6 +569,7 @@ function ConsoleUsersTab({
   getRoleBadgeClass,
 }: ConsoleUsersTabProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<string | null>(null)
 
   // Only show spinner if loading AND no users to display
   if (isLoading && users.length === 0) {
@@ -679,7 +681,7 @@ function ConsoleUsersTab({
                   </div>
 
                   <button
-                    onClick={() => onDeleteUser(user.id)}
+                    onClick={() => setDeleteConfirmUserId(user.id)}
                     className="p-1.5 rounded text-red-400 hover:bg-red-500/10"
                     title={t('common:actions.delete')}
                   >
@@ -691,6 +693,22 @@ function ConsoleUsersTab({
           </div>
         )
       })}
+
+      <ConfirmDialog
+        isOpen={deleteConfirmUserId !== null}
+        onClose={() => setDeleteConfirmUserId(null)}
+        onConfirm={() => {
+          if (deleteConfirmUserId) {
+            onDeleteUser(deleteConfirmUserId)
+            setDeleteConfirmUserId(null)
+          }
+        }}
+        title={t('userManagement.deleteUser')}
+        message={t('userManagement.confirmDelete')}
+        confirmLabel={t('common:actions.delete')}
+        cancelLabel={t('common:actions.cancel')}
+        variant="danger"
+      />
     </div>
   )
 }
