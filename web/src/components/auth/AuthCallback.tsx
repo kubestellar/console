@@ -6,6 +6,7 @@ import { ROUTES, getLoginWithError } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
+import { emitGitHubConnected } from '../../lib/analytics'
 
 export function AuthCallback() {
   const { t } = useTranslation('common')
@@ -31,6 +32,7 @@ export function AuthCallback() {
 
     if (token) {
       setToken(token, true)
+      emitGitHubConnected()
       setStatus(t('authCallback.fetchingUserInfo'))
 
       // Check for a return-to URL saved by ProtectedRoute (deep-link through OAuth),

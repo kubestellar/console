@@ -5,6 +5,7 @@ import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/consta
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { CloudProviderIcon } from '../ui/CloudProviderIcon'
 import { StatusBadge } from '../ui/StatusBadge'
+import { emitClusterCreated } from '../../lib/analytics'
 
 interface AddClusterDialogProps {
   open: boolean
@@ -288,6 +289,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
         throw new Error(body.error || res.statusText)
       }
       setConnectState('done')
+      emitClusterCreated(clusterName, authType)
       clearTimeout(closeTimerRef.current)
       closeTimerRef.current = setTimeout(() => {
         resetConnectState()

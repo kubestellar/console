@@ -1305,6 +1305,20 @@ export function emitBenchmarkViewed(benchmarkType: string) {
   send('ksc_benchmark_viewed', { benchmark_type: benchmarkType })
 }
 
+// ── Cluster Lifecycle ───────────────────────────────────────────────
+
+/** Fired when a user successfully adds a cluster via the Add Cluster dialog */
+export function emitClusterCreated(clusterName: string, authType: string) {
+  send('ksc_cluster_created', { cluster_name: clusterName, auth_type: authType })
+}
+
+// ── GitHub OAuth ────────────────────────────────────────────────────
+
+/** Fired when a user completes GitHub OAuth login (token received) */
+export function emitGitHubConnected() {
+  send('ksc_github_connected')
+}
+
 // ── Cluster Admin ──────────────────────────────────────────────────
 
 export function emitClusterAction(action: string, clusterName: string) {
