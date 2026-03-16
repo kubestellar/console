@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import * as DashboardModule from './Dashboard'
-import * as DashboardHealthIndicatorModule from './DashboardHealthIndicator'
+import { Dashboard } from './Dashboard'
+import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 describe('Dashboard Component', () => {
   it('exports Dashboard component', () => {
-    expect(DashboardModule.Dashboard).toBeDefined()
-    expect(typeof DashboardModule.Dashboard).toBe('function')
+    expect(Dashboard).toBeDefined()
+    expect(typeof Dashboard).toBe('function')
   })
 
   it('has health indicator support', () => {
-    expect(DashboardHealthIndicatorModule.DashboardHealthIndicator).toBeDefined()
-    expect(typeof DashboardHealthIndicatorModule.DashboardHealthIndicator).toBe('function')
+    expect(DashboardHealthIndicator).toBeDefined()
+    expect(typeof DashboardHealthIndicator).toBe('function')
   })
 })

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import * as ClusterFilterDropdownModule from './ClusterFilterDropdown'
+import { ClusterFilterDropdown } from './ClusterFilterDropdown'
 
 describe('ClusterFilterDropdown Component', () => {
   it('exports ClusterFilterDropdown component', () => {
-    expect(ClusterFilterDropdownModule.ClusterFilterDropdown).toBeDefined()
-    expect(typeof ClusterFilterDropdownModule.ClusterFilterDropdown).toBe('function')
+    expect(ClusterFilterDropdown).toBeDefined()
+    expect(typeof ClusterFilterDropdown).toBe('function')
   })
 })
