@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Database, ExternalLink, AlertCircle } from 'lucide-react'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, useModalState } from '../../lib/modals'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useClusters, usePVCs, PVC } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -132,7 +132,7 @@ export function Storage() {
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // PVC List Modal state
-  const [showPVCModal, setShowPVCModal] = useState(false)
+  const { isOpen: showPVCModal, open: openPVCModal, close: closePVCModal } = useModalState()
   const [pvcModalFilter, setPVCModalFilter] = useState<'Bound' | 'Pending' | 'all'>('all')
 
   // Filter clusters based on global selection
@@ -212,21 +212,21 @@ export function Storage() {
         return {
           value: formatStatValue(stats?.totalPVCs || 0, hasDataToShow),
           sublabel: 'persistent volume claims',
-          onClick: () => { setPVCModalFilter('all'); setShowPVCModal(true) },
+          onClick: () => { setPVCModalFilter('all'); openPVCModal() },
           isClickable: hasDataToShow && (stats?.totalPVCs || 0) > 0
         }
       case 'bound':
         return {
           value: formatStatValue(stats?.boundPVCs || 0, hasDataToShow),
           sublabel: 'PVCs bound',
-          onClick: () => { setPVCModalFilter('Bound'); setShowPVCModal(true) },
+          onClick: () => { setPVCModalFilter('Bound'); openPVCModal() },
           isClickable: hasDataToShow && (stats?.boundPVCs || 0) > 0
         }
       case 'pending':
         return {
           value: formatStatValue(stats?.pendingPVCs || 0, hasDataToShow),
           sublabel: 'PVCs pending',
-          onClick: () => { setPVCModalFilter('Pending'); setShowPVCModal(true) },
+          onClick: () => { setPVCModalFilter('Pending'); openPVCModal() },
           isClickable: hasDataToShow && (stats?.pendingPVCs || 0) > 0
         }
       case 'storage_classes':
@@ -236,7 +236,7 @@ export function Storage() {
       default:
         return { value: '-', sublabel: '' }
     }
-  }, [stats, hasDataToShow, drillToResources, filteredPVCs])
+  }, [stats, hasDataToShow, drillToResources, filteredPVCs, openPVCModal])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
@@ -278,12 +278,12 @@ export function Storage() {
       {/* PVC List Modal */}
       <PVCListModal
         isOpen={showPVCModal}
-        onClose={() => setShowPVCModal(false)}
+        onClose={closePVCModal}
         pvcs={filteredPVCs}
         title={pvcModalFilter === 'all' ? 'All PVCs' : pvcModalFilter === 'Bound' ? 'Bound PVCs' : 'Pending PVCs'}
         statusFilter={pvcModalFilter}
         onSelectPVC={(cluster, namespace, name) => {
-          setShowPVCModal(false)
+          closePVCModal()
           drillToPVC(cluster, namespace, name)
         }}
       />

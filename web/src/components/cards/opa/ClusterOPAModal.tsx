@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Shield, AlertTriangle, CheckCircle, ExternalLink, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../ui/Button'
-import { BaseModal } from '../../../lib/modals'
+import { BaseModal, useModalState } from '../../../lib/modals'
 import { kubectlProxy } from '../../../lib/kubectlProxy'
 import { useToast } from '../../ui/Toast'
 import type { Policy, Violation, StartMissionFn } from './types'
@@ -33,7 +33,7 @@ export function ClusterOPAModal({
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<OPAModalTab>('policies')
   const [showCreateMenu, setShowCreateMenu] = useState(false)
-  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const { isOpen: showTemplateModal, open: openTemplateModal, close: closeTemplateModal } = useModalState()
   const [showYamlEditor, setShowYamlEditor] = useState(false)
   const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null)
   const [yamlContent, setYamlContent] = useState('')
@@ -103,7 +103,7 @@ Let's start by discussing what kind of policy I need.`,
   const handleUseTemplate = (template: typeof POLICY_TEMPLATES[0]) => {
     setYamlContent(template.template)
     setEditingPolicy(null)
-    setShowTemplateModal(false)
+    closeTemplateModal()
     setShowYamlEditor(true)
   }
 
@@ -281,7 +281,7 @@ Please proceed with applying this policy.`,
                     </div>
                   </button>
                   <button
-                    onClick={() => { setShowCreateMenu(false); setShowTemplateModal(true) }}
+                    onClick={() => { setShowCreateMenu(false); openTemplateModal() }}
                     className="w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center gap-2"
                   >
                     <LayoutTemplate className="w-4 h-4 text-blue-400" />
@@ -462,12 +462,12 @@ Please proceed with applying this policy.`,
       </BaseModal>
 
       {/* Template Selection Modal */}
-      <BaseModal isOpen={showTemplateModal} onClose={() => setShowTemplateModal(false)} size="md">
+      <BaseModal isOpen={showTemplateModal} onClose={closeTemplateModal} size="md">
         <BaseModal.Header
           title="Policy Templates"
           description="Choose a template to start with"
           icon={LayoutTemplate}
-          onClose={() => setShowTemplateModal(false)}
+          onClose={closeTemplateModal}
           showBack={false}
         />
         <BaseModal.Content className="max-h-[50vh]">

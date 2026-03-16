@@ -16,6 +16,7 @@ import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME
 import { PolicyDetailModal, ClusterOPAModal, CreatePolicyModal } from './opa'
 import type { Policy, GatekeeperStatus, OPAClusterItem } from './opa'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useModalState } from '../../lib/modals'
 
 /** Cache TTL: 5 minutes — short enough to pick up connectivity changes */
 const CACHE_TTL_MS = 5 * 60 * 1000
@@ -251,11 +252,11 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       }
     }
   }, [statuses])
-  const [showViolationsModal, setShowViolationsModal] = useState(false)
+  const { isOpen: showViolationsModal, open: openViolationsModal, close: closeViolationsModal } = useModalState()
   const [selectedClusterForViolations, setSelectedClusterForViolations] = useState<string>('')
-  const [showPolicyModal, setShowPolicyModal] = useState(false)
+  const { isOpen: showPolicyModal, open: openPolicyModal, close: closePolicyModal } = useModalState()
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null)
-  const [showCreatePolicyModal, setShowCreatePolicyModal] = useState(false)
+  const { isOpen: showCreatePolicyModal, open: openCreatePolicyModal, close: closeCreatePolicyModal } = useModalState()
 
   // Enrich cluster data with 'cluster' field for useCardData compatibility
   // Include reachable status so we can skip OPA checks for offline clusters
@@ -585,7 +586,7 @@ Please proceed step by step.`,
 
   const handleShowViolations = (clusterName: string) => {
     setSelectedClusterForViolations(clusterName)
-    setShowViolationsModal(true)
+    openViolationsModal()
   }
 
   const handleAddPolicy = (basedOnPolicy?: string) => {
@@ -676,7 +677,7 @@ Let's start by discussing what kind of policy I need.`,
           extra={
             <>
               <button
-                onClick={() => setShowCreatePolicyModal(true)}
+                onClick={() => openCreatePolicyModal()}
                 className="p-1 hover:bg-purple-500/10 rounded transition-colors text-muted-foreground hover:text-purple-400"
                 title="Create OPA Policy"
               >
@@ -860,7 +861,7 @@ Let's start by discussing what kind of policy I need.`,
                   key={policy.name}
                   onClick={() => {
                     setSelectedPolicy(policy)
-                    setShowPolicyModal(true)
+                    openPolicyModal()
                   }}
                   className="w-full flex items-center justify-between text-xs p-1.5 -mx-1.5 rounded hover:bg-secondary/50 transition-colors group"
                 >
@@ -888,7 +889,7 @@ Let's start by discussing what kind of policy I need.`,
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
         <button
-          onClick={() => setShowCreatePolicyModal(true)}
+          onClick={() => openCreatePolicyModal()}
           className="text-purple-400 hover:text-purple-300 transition-colors"
         >
           Create Policy
@@ -916,7 +917,7 @@ Let's start by discussing what kind of policy I need.`,
       {/* Cluster OPA Modal - Full CRUD */}
       <ClusterOPAModal
         isOpen={showViolationsModal}
-        onClose={() => setShowViolationsModal(false)}
+        onClose={closeViolationsModal}
         clusterName={selectedClusterForViolations}
         policies={statuses[selectedClusterForViolations]?.policies || []}
         violations={statuses[selectedClusterForViolations]?.violations || []}
@@ -929,7 +930,7 @@ Let's start by discussing what kind of policy I need.`,
         <PolicyDetailModal
           isOpen={showPolicyModal}
           onClose={() => {
-            setShowPolicyModal(false)
+            closePolicyModal()
             setSelectedPolicy(null)
           }}
           policy={selectedPolicy}
@@ -941,7 +942,7 @@ Let's start by discussing what kind of policy I need.`,
       {/* Create Policy Modal — AI-driven policy creation */}
       <CreatePolicyModal
         isOpen={showCreatePolicyModal}
-        onClose={() => setShowCreatePolicyModal(false)}
+        onClose={closeCreatePolicyModal}
         statuses={statuses}
         startMission={startMission}
       />

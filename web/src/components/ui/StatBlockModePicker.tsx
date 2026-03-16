@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Settings, Hash, TrendingUp, CircleDot, BarChart3, ArrowUpDown, Layers } from 'lucide-react'
 import type { StatDisplayMode } from './StatsBlockDefinitions'
+import { useModalState } from '../../lib/modals'
 
 /** Gap between trigger button and popover in pixels */
 const POPOVER_GAP_PX = 4
@@ -59,7 +60,7 @@ interface StatBlockModePickerProps {
 }
 
 export function StatBlockModePicker({ currentMode, availableModes, onModeChange }: StatBlockModePickerProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close, toggle } = useModalState()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
@@ -76,12 +77,12 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!isOpen) updatePosition()
-    setIsOpen(!isOpen)
+    toggle()
   }
 
   const handleSelect = (mode: StatDisplayMode) => {
     onModeChange(mode)
-    setIsOpen(false)
+    close()
   }
 
   // Close on click outside
@@ -92,11 +93,11 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
         popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
         triggerRef.current && !triggerRef.current.contains(e.target as Node)
       ) {
-        setIsOpen(false)
+        close()
       }
     }
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false)
+      if (e.key === 'Escape') close()
     }
     document.addEventListener('mousedown', handleClick)
     document.addEventListener('keydown', handleEsc)
@@ -104,7 +105,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
       document.removeEventListener('mousedown', handleClick)
       document.removeEventListener('keydown', handleEsc)
     }
-  }, [isOpen])
+  }, [isOpen, close])
 
   const availableSet = new Set(availableModes)
 

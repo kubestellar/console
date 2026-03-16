@@ -19,7 +19,7 @@ import {
 import { Button } from '../ui/Button'
 import { useClusters } from '../../hooks/useMCP'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, useModalState } from '../../lib/modals'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardHeader } from '../shared/DashboardHeader'
@@ -66,8 +66,8 @@ export function NamespaceManager() {
   const [selectedNamespace, setSelectedNamespace] = useState<NamespaceDetails | null>(null)
   const [accessEntries, setAccessEntries] = useState<NamespaceAccessEntry[]>([])
   const [accessLoading, setAccessLoading] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showGrantAccessModal, setShowGrantAccessModal] = useState(false)
+  const { isOpen: showCreateModal, open: openCreateModal, close: closeCreateModal } = useModalState()
+  const { isOpen: showGrantAccessModal, open: openGrantAccessModal, close: closeGrantAccessModal } = useModalState()
   const [namespaceToDelete, setNamespaceToDelete] = useState<NamespaceDetails | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Group by cluster by default for better organization
@@ -390,7 +390,7 @@ export function NamespaceManager() {
         rightExtra={
           <Button
             variant="primary"
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => openCreateModal()}
             icon={<Plus className="w-3.5 h-3.5" />}
           >
             Create
@@ -619,7 +619,7 @@ export function NamespaceManager() {
                 <p className="text-sm text-muted-foreground">Access Management</p>
               </div>
               <button
-                onClick={() => setShowGrantAccessModal(true)}
+                onClick={() => openGrantAccessModal()}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors text-sm"
               >
                 <UserPlus className="w-4 h-4" />
@@ -678,9 +678,9 @@ export function NamespaceManager() {
             const cluster = clusters.find(c => c.name === clusterName)
             return cluster?.reachable !== false
           })}
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => closeCreateModal()}
           onCreated={(cluster: string) => {
-            setShowCreateModal(false)
+            closeCreateModal()
             // Clear cache for this cluster and refresh
             namespaceCache.delete(cluster)
             fetchNamespaces(true)
@@ -693,9 +693,9 @@ export function NamespaceManager() {
         <GrantAccessModal
           namespace={selectedNamespace}
           existingAccess={accessEntries}
-          onClose={() => setShowGrantAccessModal(false)}
+          onClose={() => closeGrantAccessModal()}
           onGranted={() => {
-            setShowGrantAccessModal(false)
+            closeGrantAccessModal()
             fetchAccess(selectedNamespace)
           }}
         />

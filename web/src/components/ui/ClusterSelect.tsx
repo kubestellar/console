@@ -5,6 +5,7 @@ import { ClusterStatusDot, getClusterState, type ClusterState } from './ClusterS
 import type { ClusterErrorType } from '../../lib/errorClassifier'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
+import { useModalState } from '../../lib/modals'
 
 interface ClusterInfo {
   name: string
@@ -35,7 +36,7 @@ export function ClusterSelect({
   placeholder = 'Select cluster...',
   className,
 }: ClusterSelectProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close, toggle } = useModalState()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
@@ -67,12 +68,12 @@ export function ClusterSelect({
         buttonRef.current && !buttonRef.current.contains(target) &&
         (!dropdownRef.current || !dropdownRef.current.contains(target))
       ) {
-        setIsOpen(false)
+        close()
       }
     }
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsOpen(false)
+        close()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -81,7 +82,7 @@ export function ClusterSelect({
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [isOpen])
+  }, [isOpen, close])
 
   const selectedCluster = clusters.find(c => c.name === value)
   const selectedState: ClusterState | null = selectedCluster
@@ -99,7 +100,7 @@ export function ClusterSelect({
         size="md"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => !disabled && toggle()}
         disabled={disabled}
         className={cn(
           'rounded-md border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-left',
@@ -127,7 +128,7 @@ export function ClusterSelect({
               size="sm"
               role="option"
               aria-selected={!value}
-              onClick={() => { onChange(''); setIsOpen(false) }}
+              onClick={() => { onChange(''); close() }}
               className={cn(
                 'w-full justify-start px-2 py-1.5 text-xs',
                 !value ? 'bg-purple-900 text-purple-400' : 'text-muted-foreground',
@@ -158,7 +159,7 @@ export function ClusterSelect({
                   onClick={() => {
                     if (!isUnreachable) {
                       onChange(cluster.name)
-                      setIsOpen(false)
+                      close()
                     }
                   }}
                   disabled={isUnreachable}

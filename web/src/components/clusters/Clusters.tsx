@@ -51,6 +51,7 @@ import { ClusterCardSkeleton, StatsOverviewSkeleton } from '../ui/ClusterCardSke
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { useModalState } from '../../lib/modals'
 
 
 export function Clusters() {
@@ -121,7 +122,7 @@ export function Clusters() {
   // Additional UI state
   const [showStats, setShowStats] = useState(true) // Stats overview visible by default
   const [showClusterGrid, setShowClusterGrid] = useState(true) // Cluster cards visible by default
-  const [showGPUModal, setShowGPUModal] = useState(false)
+  const { isOpen: showGPUModal, open: openGPUModal, close: closeGPUModal } = useModalState()
   const [showAddCluster, setShowAddCluster] = useState(false)
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -423,7 +424,7 @@ export function Clusters() {
               onCPUClick={() => { emitClusterStatsDrillDown('cpu'); window.location.href = '/compute' }}
               onMemoryClick={() => { emitClusterStatsDrillDown('memory'); window.location.href = '/compute' }}
               onStorageClick={() => { emitClusterStatsDrillDown('storage'); window.location.href = '/storage' }}
-              onGPUClick={() => { emitClusterStatsDrillDown('gpu'); setShowGPUModal(true) }}
+              onGPUClick={() => { emitClusterStatsDrillDown('gpu'); openGPUModal() }}
               onNodesClick={() => { emitClusterStatsDrillDown('nodes'); window.location.href = '/compute' }}
               onPodsClick={() => { emitClusterStatsDrillDown('pods'); window.location.href = '/workloads' }}
             />
@@ -760,7 +761,7 @@ export function Clusters() {
           isLoading={gpuLoading}
           error={gpuError}
           onRefresh={gpuRefetch}
-          onClose={() => setShowGPUModal(false)}
+          onClose={closeGPUModal}
           operatorStatus={nvidiaOperators}
         />
       )}

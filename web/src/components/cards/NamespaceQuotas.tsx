@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Gauge, Cpu, HardDrive, Box, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, useModalState } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import {
   useClusters,
@@ -350,7 +350,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('quotas')
 
   // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useModalState()
   const [editingQuota, setEditingQuota] = useState<ResourceQuota | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
@@ -388,7 +388,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     try {
       await createOrUpdateResourceQuota(spec)
       refetchQuotas()
-      setIsModalOpen(false)
+      closeModal()
       setEditingQuota(null)
     } finally {
       setIsSaving(false)
@@ -410,7 +410,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   // Open edit modal for a quota
   const openEditModal = (quota: ResourceQuota) => {
     setEditingQuota(quota)
-    setIsModalOpen(true)
+    openModal()
   }
 
   // Transform ResourceQuotas to QuotaUsage format for display (pre-filter by selectors only)
@@ -615,7 +615,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
               <button
                 onClick={() => {
                   setEditingQuota(null)
-                  setIsModalOpen(true)
+                  openModal()
                 }}
                 className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
               >
@@ -716,7 +716,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                   <button
                     onClick={() => {
                       setEditingQuota(null)
-                      setIsModalOpen(true)
+                      openModal()
                     }}
                     className="mt-3 flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
                   >
@@ -879,7 +879,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       <QuotaModal
         isOpen={isModalOpen}
         onClose={() => {
-          setIsModalOpen(false)
+          closeModal()
           setEditingQuota(null)
         }}
         onSave={handleSaveQuota}

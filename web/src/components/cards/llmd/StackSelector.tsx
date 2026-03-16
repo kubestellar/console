@@ -11,6 +11,7 @@ import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { useModalState } from '../../../lib/modals'
 
 const STATUS_COLORS = {
   healthy: 'bg-green-500',
@@ -203,7 +204,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
 export function StackSelector() {
   const { t } = useTranslation()
   const stackContext = useOptionalStack()
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close: closeDropdown, toggle } = useModalState()
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -215,12 +216,12 @@ export function StackSelector() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        closeDropdown()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [closeDropdown])
 
   // Focus search input when dropdown opens
   useEffect(() => {
@@ -323,8 +324,8 @@ export function StackSelector() {
   // Memoize stack selection handler to prevent re-renders
   const handleSelectStack = useCallback((stackId: string) => {
     setSelectedStackId?.(stackId)
-    setIsOpen(false)
-  }, [setSelectedStackId])
+    closeDropdown()
+  }, [setSelectedStackId, closeDropdown])
 
   // If no context, show placeholder (after all hooks have been called)
   if (!stackContext) {
@@ -342,7 +343,7 @@ export function StackSelector() {
     <div className="relative" ref={dropdownRef}>
       {/* Trigger button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => toggle()}
         className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${
           isOpen
             ? 'bg-secondary border-border'

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { WifiOff, HardDrive, Server, CheckCircle2, XCircle, Cpu, MemoryStick, Layers, Zap, Box, Settings, Sparkles } from 'lucide-react'
 import { formatStat, formatMemoryStat } from '../../../lib/formatStats'
 import { StatsConfigModal, useStatsConfig } from '../../ui/StatsConfig'
@@ -7,6 +6,7 @@ import { isInClusterMode } from '../../../hooks/useBackendHealth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
+import { useModalState } from '../../../lib/modals'
 
 export interface ClusterStats {
   total: number
@@ -216,7 +216,7 @@ export function StatsOverview({
 }: StatsOverviewProps) {
   const { t: _t } = useTranslation()
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType, configKey)
-  const [isConfigOpen, setIsConfigOpen] = useState(false)
+  const { isOpen: isConfigOpen, open: openConfig, close: closeConfig } = useModalState()
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
 
@@ -272,7 +272,7 @@ export function StatsOverview({
       {/* Configure button */}
       {showConfigButton && (
         <button
-          onClick={() => setIsConfigOpen(true)}
+          onClick={() => openConfig()}
           className="absolute -top-8 right-0 p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
           title="Configure stats"
         >
@@ -312,7 +312,7 @@ export function StatsOverview({
       {/* Config modal */}
       <StatsConfigModal
         isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
+        onClose={closeConfig}
         blocks={blocks}
         onSave={saveBlocks}
         defaultBlocks={defaultBlocks}
