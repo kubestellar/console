@@ -146,6 +146,9 @@ async function fetchFromAllClusters<T>(
   onProgress?: (partial: T[]) => void
 ): Promise<T[]> {
   const clusters = await fetchClusters()
+  if (clusters.length === 0) {
+    throw new Error('No clusters available (agent connecting or backend not authenticated)')
+  }
   const accumulated: T[] = []
   let failedCount = 0
 
@@ -219,7 +222,7 @@ async function fetchViaGitOpsSSE<T>(
 ): Promise<T[]> {
   const token = getToken()
   if (!token || token === 'demo-token' || isBackendUnavailable()) {
-    return []
+    throw new Error('No data source available (backend not authenticated)')
   }
 
   const accumulated: T[] = []
