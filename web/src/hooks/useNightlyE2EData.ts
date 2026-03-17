@@ -87,50 +87,49 @@ export function useNightlyE2EData() {
           if (res.ok) {
             const data = await res.json()
             if (data.guides && data.guides.length > 0) {
-              const hasAnyRuns = data.guides.some(
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (g: any) => g.runs && g.runs.length > 0
-              )
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const guides: NightlyGuideStatus[] = data.guides.map((g: any) => ({
+                guide: g.guide,
+                acronym: g.acronym,
+                platform: g.platform,
+                repo: g.repo,
+                workflowFile: g.workflowFile,
+                runs: (g.runs ?? []).map(
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (r: any) => ({
+                    id: r.id,
+                    status: r.status,
+                    conclusion: r.conclusion,
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt,
+                    htmlUrl: r.htmlUrl,
+                    runNumber: r.runNumber,
+                    failureReason: r.failureReason || '',
+                    model: r.model ?? g.model ?? 'Unknown',
+                    gpuType: r.gpuType ?? g.gpuType ?? 'Unknown',
+                    gpuCount: r.gpuCount ?? g.gpuCount ?? 0,
+                    event: r.event ?? 'schedule',
+                    llmdImages: r.llmdImages,
+                    otherImages: r.otherImages,
+                  })
+                ),
+                passRate: g.passRate,
+                trend: g.trend,
+                latestConclusion: g.latestConclusion,
+                model: g.model ?? 'Unknown',
+                gpuType: g.gpuType ?? 'Unknown',
+                gpuCount: g.gpuCount ?? 0,
+                llmdImages: g.llmdImages,
+                otherImages: g.otherImages,
+              }))
+              const result = { guides, isDemo: false }
+              // Only cache to localStorage when at least one guide has runs,
+              // so the cached snapshot always has meaningful run history.
+              const hasAnyRuns = guides.some(g => g.runs.length > 0)
               if (hasAnyRuns) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const guides: NightlyGuideStatus[] = data.guides.map((g: any) => ({
-                  guide: g.guide,
-                  acronym: g.acronym,
-                  platform: g.platform,
-                  repo: g.repo,
-                  workflowFile: g.workflowFile,
-                  runs: (g.runs ?? []).map(
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (r: any) => ({
-                      id: r.id,
-                      status: r.status,
-                      conclusion: r.conclusion,
-                      createdAt: r.createdAt,
-                      updatedAt: r.updatedAt,
-                      htmlUrl: r.htmlUrl,
-                      runNumber: r.runNumber,
-                      failureReason: r.failureReason || '',
-                      model: r.model ?? g.model ?? 'Unknown',
-                      gpuType: r.gpuType ?? g.gpuType ?? 'Unknown',
-                      gpuCount: r.gpuCount ?? g.gpuCount ?? 0,
-                      event: r.event ?? 'schedule',
-                      llmdImages: r.llmdImages,
-                      otherImages: r.otherImages,
-                    })
-                  ),
-                  passRate: g.passRate,
-                  trend: g.trend,
-                  latestConclusion: g.latestConclusion,
-                  model: g.model ?? 'Unknown',
-                  gpuType: g.gpuType ?? 'Unknown',
-                  gpuCount: g.gpuCount ?? 0,
-                  llmdImages: g.llmdImages,
-                  otherImages: g.otherImages,
-                }))
-                const result = { guides, isDemo: false }
                 saveCachedData(result)
-                return result
               }
+              return result
             }
           }
         } catch {
@@ -138,9 +137,11 @@ export function useNightlyE2EData() {
         }
       }
 
-      // All endpoints failed or returned empty — throw so the cache treats
+      // All endpoints failed or returned no guides — throw so the cache treats
       // this as a failure (increments consecutiveFailures, retries with backoff)
       // instead of caching demo data as a "successful" result that sticks forever.
+      // Note: valid 200 responses with guides (even with empty runs) are returned
+      // above and never reach this point.
       throw new Error('No nightly E2E data available')
     },
   })
