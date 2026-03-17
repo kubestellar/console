@@ -20,10 +20,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
     if (isDemoMode()) {
-      const demoConfigMaps = getDemoConfigMaps().filter(cm =>
-        (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
-      )
-      setConfigMaps(demoConfigMaps)
+      setConfigMaps(filterDemoConfigMaps(cluster, namespace))
       setIsLoading(false)
       setError(null)
       return
@@ -87,11 +84,9 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       setConfigMaps(data.configmaps || [])
       setError(null)
     } catch {
-      const demoConfigMaps = getDemoConfigMaps().filter(cm =>
-        (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
-      )
-      setConfigMaps(demoConfigMaps)
-      // Don't show error - ConfigMaps are optional
+      // On REST failure, fall back to demo ConfigMaps and suppress the error
+      // because ConfigMaps are optional for the MCP UI.
+      setConfigMaps(filterDemoConfigMaps(cluster, namespace))
       setError(null)
     } finally {
       setIsLoading(false)
@@ -128,10 +123,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async () => {
     if (isDemoMode()) {
-      const demoSecrets = getDemoSecrets().filter(s =>
-        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
-      )
-      setSecrets(demoSecrets)
+      setSecrets(filterDemoSecrets(cluster, namespace))
       setIsLoading(false)
       setError(null)
       return
@@ -195,11 +187,8 @@ export function useSecrets(cluster?: string, namespace?: string) {
       setSecrets(data.secrets || [])
       setError(null)
     } catch {
-      const demoSecrets = getDemoSecrets().filter(s =>
-        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
-      )
-      setSecrets(demoSecrets)
-      // Don't show error - Secrets are optional
+      // REST failed; fall back to demo secrets and don't show an error since secrets are optional.
+      setSecrets(filterDemoSecrets(cluster, namespace))
       setError(null)
     } finally {
       setIsLoading(false)
@@ -236,10 +225,7 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async () => {
     if (isDemoMode()) {
-      const demoSAs = getDemoServiceAccounts().filter(sa =>
-        (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
-      )
-      setServiceAccounts(demoSAs)
+      setServiceAccounts(filterDemoServiceAccounts(cluster, namespace))
       setIsLoading(false)
       setError(null)
       return
@@ -277,11 +263,9 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
       setServiceAccounts(data.serviceAccounts || [])
       setError(null)
     } catch {
-      const demoSAs = getDemoServiceAccounts().filter(sa =>
-        (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
-      )
-      setServiceAccounts(demoSAs)
-      // Don't show error - ServiceAccounts are optional
+      // On REST failure, populate demo service accounts and suppress errors
+      // since ServiceAccounts are optional for the MCP UI.
+      setServiceAccounts(filterDemoServiceAccounts(cluster, namespace))
       setError(null)
     } finally {
       setIsLoading(false)
@@ -306,6 +290,24 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
   }, [demoMode, refetch])
 
   return { serviceAccounts, isLoading, error, refetch }
+}
+
+function filterDemoConfigMaps(cluster?: string, namespace?: string): ConfigMap[] {
+  return getDemoConfigMaps().filter(cm =>
+    (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
+  )
+}
+
+function filterDemoSecrets(cluster?: string, namespace?: string): Secret[] {
+  return getDemoSecrets().filter(s =>
+    (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+  )
+}
+
+function filterDemoServiceAccounts(cluster?: string, namespace?: string): ServiceAccount[] {
+  return getDemoServiceAccounts().filter(sa =>
+    (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
+  )
 }
 
 function getDemoConfigMaps(): ConfigMap[] {
