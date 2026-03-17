@@ -41,7 +41,7 @@ import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 
 export function MissionSidebar() {
   const { t } = useTranslation(['common'])
-  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission } = useMissions()
+  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission, openSidebar } = useMissions()
   const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
@@ -81,7 +81,7 @@ export function MissionSidebar() {
       : mission.type === 'deploy' ? 'deploy' as const
       : mission.type === 'upgrade' ? 'upgrade' as const
       : 'custom' as const
-    saveMission({
+    const missionId = saveMission({
       type: missionType,
       title: mission.title,
       description: mission.description || mission.title,
@@ -92,9 +92,13 @@ export function MissionSidebar() {
       initialPrompt: mission.resolution?.summary || mission.description,
     })
     setShowBrowser(false)
+    // Auto-open the sidebar and highlight the imported mission so the user
+    // immediately sees where it went and can act on it
+    openSidebar()
+    setActiveMission(missionId)
     setShowSavedToast(mission.title)
     setTimeout(() => setShowSavedToast(null), SAVED_TOAST_MS)
-  }, [saveMission])
+  }, [saveMission, openSidebar, setActiveMission])
 
   /** Convert a saved Mission to MissionExport for the detail view */
   const savedMissionToExport = useCallback((m: Mission): MissionExport => ({
@@ -408,15 +412,24 @@ export function MissionSidebar() {
         </div>
       )}
 
-      {/* Saved mission toast */}
+      {/* Saved mission toast — prominent success banner after import */}
       {showSavedToast && (
-        <div className="mx-3 mt-2 p-2.5 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-green-400 truncate">Saved to library</p>
-            <p className="text-2xs text-muted-foreground truncate">{showSavedToast}</p>
+        <div className="mx-3 mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+            <p className="text-sm font-medium text-green-400">Mission imported</p>
           </div>
-          <button type="button" onClick={() => { setActiveMission(null); setShowSavedToast(null) }} className="text-2xs text-green-400 hover:underline flex-shrink-0">{t('common.view')}</button>
+          <p className="text-xs text-muted-foreground truncate mb-2">{showSavedToast}</p>
+          <p className="text-2xs text-muted-foreground/70 mb-2">
+            Your mission is ready. Click <strong className="text-foreground">Run</strong> below to start, or view its steps first.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowSavedToast(null)}
+            className="text-2xs text-green-400/70 hover:text-green-400"
+          >
+            {t('common.dismiss', 'Dismiss')}
+          </button>
         </div>
       )}
 
