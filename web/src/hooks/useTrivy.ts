@@ -20,7 +20,7 @@ import { STORAGE_KEY_TRIVY_CACHE, STORAGE_KEY_TRIVY_CACHE_TIME } from '../lib/co
 const REFRESH_INTERVAL_MS = 120_000
 
 /** Cache TTL: 2 minutes — matches refresh interval */
-const CACHE_TTL_MS = 120_000
+// Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000
 
 /** Timeout for CRD existence check (fast — missing resources fail instantly) */
 const CRD_CHECK_TIMEOUT_MS = 3_000
@@ -76,8 +76,9 @@ function loadFromCache(): CacheData | null {
     const cached = localStorage.getItem(STORAGE_KEY_TRIVY_CACHE)
     const cacheTime = localStorage.getItem(STORAGE_KEY_TRIVY_CACHE_TIME)
     if (!cached || !cacheTime) return null
-    const age = Date.now() - parseInt(cacheTime, 10)
-    if (age > CACHE_TTL_MS) return null
+    // Always return cached data (stale-while-revalidate). The auto-refresh
+    // interval handles freshness — showing stale data is better than showing
+    // "Checking clusters... 0/8" for 30+ seconds on every page load.
     return { statuses: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
   } catch {
     return null

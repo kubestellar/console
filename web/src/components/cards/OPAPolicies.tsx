@@ -19,7 +19,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useModalState } from '../../lib/modals'
 
 /** Cache TTL: 5 minutes — short enough to pick up connectivity changes */
-const CACHE_TTL_MS = 5 * 60 * 1000
+// Unused: const CACHE_TTL_MS = 5 * 60 * 1000
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -222,8 +222,10 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       if (cached) {
         const parsed = JSON.parse(cached)
         const cacheTime = localStorage.getItem(STORAGE_KEY_OPA_CACHE_TIME)
-        const cacheAge = cacheTime ? Date.now() - parseInt(cacheTime, 10) : Infinity
-        if (cacheAge < CACHE_TTL_MS) {
+        // Stale-while-revalidate: always return cached data.
+        // Auto-refresh handles freshness — showing stale data is better than
+        // showing loading spinners for 30+ seconds.
+        if (cacheTime) {
           return parsed
         }
       }

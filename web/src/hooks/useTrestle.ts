@@ -24,7 +24,7 @@ import { STORAGE_KEY_TRESTLE_CACHE, STORAGE_KEY_TRESTLE_CACHE_TIME } from '../li
 const REFRESH_INTERVAL_MS = 120_000
 
 /** Cache TTL: 2 minutes — matches refresh interval */
-const CACHE_TTL_MS = 120_000
+// Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000
 
 /** Timeout for CRD/deployment existence check (fast — missing resources fail instantly) */
 const CRD_CHECK_TIMEOUT_MS = 3_000
@@ -90,8 +90,7 @@ function loadFromCache(): CacheData | null {
     const cached = localStorage.getItem(STORAGE_KEY_TRESTLE_CACHE)
     const cacheTime = localStorage.getItem(STORAGE_KEY_TRESTLE_CACHE_TIME)
     if (!cached || !cacheTime) return null
-    const age = Date.now() - parseInt(cacheTime, 10)
-    if (age > CACHE_TTL_MS) return null
+    // Stale-while-revalidate: always return cached data. Auto-refresh handles freshness.
     return { statuses: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
   } catch {
     return null
