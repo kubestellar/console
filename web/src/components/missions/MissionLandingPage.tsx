@@ -279,6 +279,18 @@ export function MissionLandingPage() {
   const visibleSteps = activeSteps.slice(0, MAX_PREVIEW_STEPS)
   const hiddenStepCount = Math.max(activeSteps.length - MAX_PREVIEW_STEPS, 0)
 
+  // Calculate the max visible steps across all tabs so the card height stays stable
+  const maxVisibleSteps = mission
+    ? Math.min(Math.max(...TABS.map((t) => t.getSteps(mission).length)), MAX_PREVIEW_STEPS)
+    : 0
+  /** Fixed height for the step list area based on the tallest tab's content.
+   *  Each step row is ~36px (text + gap), plus 24px for the "+N more" line. */
+  const STEP_ROW_HEIGHT_PX = 36
+  const STEP_OVERFLOW_LINE_PX = 24
+  const stepAreaMinHeight = maxVisibleSteps > 0
+    ? maxVisibleSteps * STEP_ROW_HEIGHT_PX + STEP_OVERFLOW_LINE_PX
+    : 120
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden">
       {/* Blurred dashboard mockup background — visual curiosity driver */}
@@ -405,7 +417,7 @@ export function MissionLandingPage() {
               </div>
 
               {/* Tab content — steps preview (fixed height to prevent layout shift on tab change) */}
-              <div className="p-6 pt-4 min-h-[200px]">
+              <div className="p-6 pt-4" style={{ minHeight: `${stepAreaMinHeight}px` }}>
                 {activeSteps.length > 0 ? (
                   <div className="space-y-2.5">
                     {visibleSteps.map((step, i) => (
