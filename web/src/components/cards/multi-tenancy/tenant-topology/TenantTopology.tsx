@@ -338,6 +338,9 @@ function buildConnections(
   const k3sLeftX = K3S_X
   const k3sLeftY = K3S_Y + K3S_H / 2
 
+  /** Waypoint X for routing K3s eth1 connection around the pod (in the gap between namespaces) */
+  const K3S_ETH1_ROUTE_X = NS1_X + NS1_W + 5
+
   /** K3s Server eth0 top-right (-> Default k8s Network -> KubeFlex) */
   const k3sTopX = K3S_X + K3S_W - 10
   const k3sTopY = K3S_Y
@@ -423,18 +426,20 @@ function buildConnections(
     },
     {
       // K3s Server eth1 -> L2 UDN (green, bidirectional)
+      // Route LEFT from the pod to the gap between namespaces, then UP to the UDN
+      // to avoid the connection cutting through the K3s Server Pod
       id: 'k3s-eth1-l2',
-      d: `M ${k3sLeftX} ${k3sLeftY} L ${L2_UDN_X + L2_UDN_W - 5} ${k3sLeftY} L ${L2_UDN_X + L2_UDN_W - 5} ${l2BottomY}`,
+      d: `M ${k3sLeftX} ${k3sLeftY} L ${K3S_ETH1_ROUTE_X} ${k3sLeftY} L ${K3S_ETH1_ROUTE_X} ${l2BottomY}`,
       color: L2_UDN_CONNECTION_COLOR,
       active: k3sDetected && ovnDetected,
       label: 'eth1',
       throughputBytesPerSec: rates.k3sEth1Rate,
       rxBytesPerSec: rates.k3sEth1Rx,
       txBytesPerSec: rates.k3sEth1Tx,
-      rxLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 2,
-      rxLabelY: k3sLeftY - 5,
-      txLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 2,
-      txLabelY: k3sLeftY + 1,
+      rxLabelX: K3S_ETH1_ROUTE_X + 2,
+      rxLabelY: (k3sLeftY + l2BottomY) / 2 - 4,
+      txLabelX: K3S_ETH1_ROUTE_X + 2,
+      txLabelY: (k3sLeftY + l2BottomY) / 2 + 1,
     },
     {
       // K3s Server eth0 -> Default k8s Network -> KubeFlex (dark blue, bidirectional)
