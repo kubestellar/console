@@ -250,6 +250,7 @@ export function AlertBadge() {
           stats.critical > 0 ? 'text-red-400' : stats.warning > 0 ? 'text-orange-400' : ''
         }`}
         title={stats.firing > 0 ? `${stats.firing} active alerts` : 'No active alerts'}
+        aria-label={stats.firing > 0 ? `${stats.firing} active alerts` : 'No active alerts'}
       >
         <Bell className="w-5 h-5" />
         {stats.firing > 0 && (
@@ -437,7 +438,7 @@ export function AlertBadge() {
                   aria-label={`View ${alert.severity} alert: ${alert.ruleName}`}
                   onClick={() => handleAlertClick(alert)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
                       e.preventDefault()
                       handleAlertClick(alert)
                     }
