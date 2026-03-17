@@ -123,6 +123,8 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
       {isOpen && createPortal(
         <div
           ref={popoverRef}
+          role="menu"
+          aria-label="Display mode"
           className="fixed z-[100] bg-card border border-border rounded-lg shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150"
           style={{ top: position.top, left: position.left, width: 160 }}
         >
@@ -135,6 +137,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
             return (
               <button
                 key={mode}
+                role="menuitem"
                 onClick={() => isAvailable && handleSelect(mode)}
                 disabled={!isAvailable}
                 className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded text-xs transition-colors ${

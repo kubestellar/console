@@ -279,6 +279,7 @@ Please proceed step by step.`,
             className="p-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
             onClick={() => setModalCluster(policy.cluster)}
             role="button"
+            aria-label={`View Kyverno policy: ${policy.name} on ${policy.cluster}`}
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalCluster(policy.cluster) } }}
           >

@@ -262,6 +262,7 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
                   className={`border-b border-border/20 cursor-pointer hover:bg-secondary/30 transition-colors ${row.discrepancies > 0 ? 'bg-yellow-500/5' : ''}`}
                   onClick={() => handleRowClick(row)}
                   role="button"
+                  aria-label={`View policy details: ${row.kind}/${row.name}`}
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(row) } }}
                 >

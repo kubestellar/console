@@ -310,6 +310,7 @@ Please proceed step by step.`,
           if (first) setModalCluster(first.cluster)
         }}
         role="button"
+        aria-label="View vulnerability scan details"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -529,6 +530,7 @@ Please proceed step by step.`,
           if (first) setModalCluster(first.cluster)
         }}
         role="button"
+        aria-label="View compliance scan details"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -815,6 +817,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
             className="group flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
             onClick={() => setSelectedViolation(v)}
             role="button"
+            aria-label={`View violation details for ${v.policy}`}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -1040,6 +1043,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
             className="flex items-center justify-center py-4 cursor-pointer group"
             onClick={() => setShowBreakdown(true)}
             role="button"
+            aria-label="View detailed compliance score breakdown"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
