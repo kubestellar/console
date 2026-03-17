@@ -100,8 +100,8 @@ export const DELETE_CONFIRM_TIMEOUT_MS = 3_000
 /** Duration to show restored/imported success banners */
 export const BANNER_DISMISS_MS = 5_000
 
-/** Duration to show saved-mission toast */
-export const SAVED_TOAST_MS = 4_000
+/** Duration to show saved-mission toast (60 seconds with countdown) */
+export const SAVED_TOAST_MS = 60_000
 
 // ============================================================================
 // UI Animation & Focus Delays

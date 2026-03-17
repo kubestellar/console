@@ -404,8 +404,8 @@ export function MissionLandingPage() {
                 </div>
               </div>
 
-              {/* Tab content — steps preview */}
-              <div className="p-6 pt-4">
+              {/* Tab content — steps preview (fixed height to prevent layout shift on tab change) */}
+              <div className="p-6 pt-4 min-h-[200px]">
                 {activeSteps.length > 0 ? (
                   <div className="space-y-2.5">
                     {visibleSteps.map((step, i) => (

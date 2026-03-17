@@ -49,6 +49,8 @@ export function MissionSidebar() {
   const [showBrowser, setShowBrowser] = useState(false)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const [showSavedToast, setShowSavedToast] = useState<string | null>(null)
+  /** Countdown seconds remaining for the saved-mission toast */
+  const [toastCountdown, setToastCountdown] = useState(0)
   const [viewingMission, setViewingMission] = useState<MissionExport | null>(null)
   const [viewingMissionRaw, setViewingMissionRaw] = useState(false)
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
@@ -140,8 +142,29 @@ export function MissionSidebar() {
     // immediately sees where it went and can act on it
     openSidebar()
     setActiveMission(missionId)
-    setShowSavedToast(mission.title)
-    setTimeout(() => setShowSavedToast(null), SAVED_TOAST_MS)
+
+    // Show extended help toast only on first import, short toast on subsequent imports
+    const hasImportedBefore = localStorage.getItem('ksc-has-imported')
+    if (!hasImportedBefore) {
+      localStorage.setItem('ksc-has-imported', new Date().toISOString())
+      setShowSavedToast(mission.title)
+      /** Countdown duration in seconds for first-import toast */
+      const FIRST_IMPORT_COUNTDOWN_S = 60
+      setToastCountdown(FIRST_IMPORT_COUNTDOWN_S)
+      const interval = setInterval(() => {
+        setToastCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval)
+            setShowSavedToast(null)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      setShowSavedToast(mission.title)
+      setTimeout(() => setShowSavedToast(null), SAVED_TOAST_MS)
+    }
   }, [saveMission, openSidebar, setActiveMission])
 
   /** Convert a saved Mission to MissionExport for the detail view */
@@ -280,7 +303,7 @@ export function MissionSidebar() {
           isMobile && isSidebarOpen && "translate-y-0",
           // Desktop: right sidebar
           !isMobile && isFullScreen && "inset-0 top-16 border-l-0 rounded-none",
-          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 w-[580px] border-l shadow-xl",
+          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 w-[680px] border-l shadow-xl",
           !isMobile && !isSidebarOpen && "translate-x-full pointer-events-none"
         )}
       >
@@ -462,14 +485,19 @@ export function MissionSidebar() {
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
             <p className="text-sm font-medium text-green-400">Mission imported</p>
+            {toastCountdown > 0 && (
+              <span className="text-2xs text-green-400/40 ml-auto">{toastCountdown}s</span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground truncate mb-2">{showSavedToast}</p>
-          <p className="text-2xs text-muted-foreground/70 mb-2">
-            Your mission is ready. Click <strong className="text-foreground">Run</strong> below to start, or view its steps first.
-          </p>
+          {toastCountdown > 0 && (
+            <p className="text-2xs text-muted-foreground/70 mb-2">
+              Your mission is ready. Click <strong className="text-foreground">Run</strong> below to start, or view its steps first.
+            </p>
+          )}
           <button
             type="button"
-            onClick={() => setShowSavedToast(null)}
+            onClick={() => { setShowSavedToast(null); setToastCountdown(0) }}
             className="text-2xs text-green-400/70 hover:text-green-400"
           >
             {t('common.dismiss', 'Dismiss')}
