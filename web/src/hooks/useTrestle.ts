@@ -27,10 +27,10 @@ const REFRESH_INTERVAL_MS = 120_000
 // Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000
 
 /** Timeout for CRD/deployment existence check (fast — missing resources fail instantly) */
-const CRD_CHECK_TIMEOUT_MS = 3_000
+const CRD_CHECK_TIMEOUT_MS = 8_000
 
 /** Timeout for data fetch */
-const DATA_FETCH_TIMEOUT_MS = 15_000
+const DATA_FETCH_TIMEOUT_MS = 30_000
 
 /** Demo overall compliance percentage */
 const DEMO_OVERALL_SCORE = 82
@@ -100,7 +100,7 @@ function loadFromCache(): CacheData | null {
 function saveToCache(statuses: Record<string, TrestleClusterStatus>): void {
   try {
     const completed = Object.fromEntries(
-      Object.entries(statuses).filter(([, s]) => !s.loading && !s.error)
+      Object.entries(statuses).filter(([, s]) => !s.loading)
     )
     if (Object.keys(completed).length > 0) {
       localStorage.setItem(STORAGE_KEY_TRESTLE_CACHE, JSON.stringify(completed))

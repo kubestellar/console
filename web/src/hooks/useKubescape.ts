@@ -23,7 +23,7 @@ const REFRESH_INTERVAL_MS = 120_000
 // Unused after stale-while-revalidate change: const CACHE_TTL_MS = 120_000
 
 /** Timeout for CRD/API existence check (fast — missing resources fail instantly) */
-const CRD_CHECK_TIMEOUT_MS = 3_000
+const CRD_CHECK_TIMEOUT_MS = 8_000
 
 /** Timeout for data fetch — large clusters (vllm-d has 4155 items, 6MB JSON)
  *  need extra time when queued behind other kubectl requests */
@@ -85,7 +85,7 @@ function loadFromCache(): CacheData | null {
 function saveToCache(statuses: Record<string, KubescapeClusterStatus>): void {
   try {
     const completed = Object.fromEntries(
-      Object.entries(statuses).filter(([, s]) => !s.loading && !s.error)
+      Object.entries(statuses).filter(([, s]) => !s.loading)
     )
     if (Object.keys(completed).length > 0) {
       localStorage.setItem(STORAGE_KEY_KUBESCAPE_CACHE, JSON.stringify(completed))
