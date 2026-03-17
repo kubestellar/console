@@ -110,7 +110,7 @@ function CopyButton({ text }: { text: string }) {
       setCopied(true)
       if (copiedTimeoutRef.current !== null) clearTimeout(copiedTimeoutRef.current)
       copiedTimeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
-    })
+    }).catch(() => { /* clipboard access may be denied in non-HTTPS contexts */ })
   }, [text])
 
   return (

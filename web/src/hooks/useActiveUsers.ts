@@ -72,7 +72,7 @@ function startHeartbeat() {
   heartbeatStarted = true
 
   // Send initial heartbeat immediately, then poll for count
-  sendHeartbeat().then(() => fetchActiveUsers())
+  sendHeartbeat().then(() => fetchActiveUsers()).catch(() => { /* best-effort */ })
 
   // Subsequent heartbeats with jitter to spread them out
   function scheduleNextHeartbeat() {

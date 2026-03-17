@@ -1084,7 +1084,7 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           if (distribution || namespaces) {
             updateSingleClusterInCache(cluster.name, { distribution, namespaces })
           }
-        })
+        }).catch(() => { /* non-critical — distribution detection is best-effort */ })
 
         updateSingleClusterInCache(cluster.name, {
           // If we have nodes, consider healthy based on actual node readiness

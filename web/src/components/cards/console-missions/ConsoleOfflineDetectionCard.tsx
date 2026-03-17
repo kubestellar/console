@@ -271,7 +271,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     fetchAllNodes().then(nodes => {
       setAllNodes(nodes)
       setNodesLoading(false)
-    })
+    }).catch(() => { /* fetchAllNodes always resolves — defensive catch */ })
 
     // Poll every 30 seconds
     const interval = setInterval(() => fetchAllNodes(), POLL_INTERVAL_MS)

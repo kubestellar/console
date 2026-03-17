@@ -75,7 +75,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
         } else {
           setTimeout(doCheck, OAUTH_RETRY_DELAY_MS)
         }
-      })
+      }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
     }
     doCheck()
     return () => { cancelled = true }
@@ -88,7 +88,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
         if (backendUp) {
           setOauthStatus({ checked: true, configured: oauthConfigured, backendUp: true })
         }
-      })
+      }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
     }
   }, [isOpen])
 

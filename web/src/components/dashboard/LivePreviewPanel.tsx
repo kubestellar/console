@@ -202,6 +202,10 @@ function T2Preview({ source }: { source?: string }) {
       }
       setCardComponent(() => componentResult.component)
       setCompiling(false)
+    }).catch((err: unknown) => {
+      if (cancelled) return
+      setError(err instanceof Error ? err.message : 'Compilation failed')
+      setCompiling(false)
     })
 
     return () => { cancelled = true }

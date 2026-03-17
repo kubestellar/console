@@ -402,7 +402,7 @@ export function useAuthorProfile(handle?: string, enabled = false): AuthorProfil
       } catch {
         // Non-critical
       }
-    })
+    }).catch(() => { /* fetchPRCount always resolves — defensive catch */ })
 
     return () => { cancelled = true }
   }, [handle, enabled])

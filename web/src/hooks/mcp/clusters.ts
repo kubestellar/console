@@ -95,7 +95,7 @@ export function useClusters() {
       // so isAgentUnavailable() returns false before data fetches run
       triggerAggressiveDetection().then(() => {
         fullFetchClusters()
-      })
+      }).catch(() => { /* ignore — fullFetchClusters has its own error handling */ })
     } else {
       // Switching TO demo mode: fetch demo data directly
       fullFetchClusters()

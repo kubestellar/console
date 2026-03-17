@@ -232,6 +232,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
       setIsLoadingDashboards(true)
       getAllDashboardsWithCards()
         .then(setDashboardsWithCards)
+        .catch(() => { /* getAllDashboardsWithCards always resolves — defensive catch */ })
         .finally(() => setIsLoadingDashboards(false))
     }
   }, [isOpen, getAllDashboardsWithCards])
@@ -351,7 +352,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
           updateItem(item.id, { icon: aiIcon })
         }
       }
-    })
+    }).catch(() => { /* suggestDashboardIcon always resolves — defensive catch */ })
   }
 
   const renderIcon = (iconName: string, className?: string) => {

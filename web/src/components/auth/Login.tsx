@@ -181,7 +181,7 @@ export function Login() {
       if (backendUp && !oauthConfigured) {
         emitLogin('auto-quickstart'); login()
       }
-    })
+    }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
   }, [isLoading, isAuthenticated, login, oauthError])
 
   // Show loading while checking auth status
