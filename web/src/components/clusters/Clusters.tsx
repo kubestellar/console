@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Check, WifiOff, ChevronRight, CheckCircle, AlertTriangle, ChevronDown, FolderOpen, Plus, Trash2, Server, Activity, LayoutGrid } from 'lucide-react'
+import { Check, WifiOff, ChevronRight, CheckCircle, AlertTriangle, ChevronDown, FolderOpen, Plus, Trash2, Server, Activity, LayoutGrid, Scissors } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -32,6 +32,9 @@ import {
 } from './components'
 import { isClusterUnreachable } from './utils'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { useMissions } from '../../hooks/useMissions'
+import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
+import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { getDefaultCards } from '../../config/dashboards'
 
@@ -65,6 +68,8 @@ export function Clusters() {
   const { isConnected, status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()
+  const { startMission } = useMissions()
+  const { showKeyPrompt: pruneShowKeyPrompt, checkKeyAndRun: pruneCheckKeyAndRun, goToSettings: pruneGoToSettings, dismissPrompt: pruneDismissPrompt } = useApiKeyCheck()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
   // Also show skeleton during mode switching for smooth transitions
@@ -334,6 +339,8 @@ export function Clusters() {
     // Note: Don't filter by "loading" state to avoid hiding clusters during refresh
     // Unreachable = reachable explicitly false or connection errors or no nodes
     const unreachable = globalFilteredClusters.filter(c => isClusterUnreachable(c)).length
+    // Stale contexts = never connected since console started (kubeconfig entries for deleted clusters)
+    const staleContexts = globalFilteredClusters.filter(c => (c as unknown as Record<string, unknown>).neverConnected === true).length
     // Helper: A cluster is healthy if it has nodes OR if healthy flag is explicitly true
     const isHealthy = (c: ClusterInfo) => (c.nodeCount && c.nodeCount > 0) || c.healthy === true
     // Healthy = not unreachable and (has nodes OR healthy flag)
@@ -356,6 +363,7 @@ export function Clusters() {
       healthy,
       unhealthy,
       unreachable,
+      staleContexts,
       totalNodes: globalFilteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
       totalCPUs: globalFilteredClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
       totalMemoryGB: globalFilteredClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
@@ -431,6 +439,37 @@ export function Clusters() {
           )
         )}
       </div>
+
+      {/* Stale Kubeconfig Contexts Banner */}
+      {stats.staleContexts > 0 && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20 text-yellow-300">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="text-sm flex-1">
+            {stats.staleContexts} kubeconfig context{stats.staleContexts > 1 ? 's' : ''} never connected — these may be deleted clusters.
+          </span>
+          <button
+            onClick={() => {
+              pruneCheckKeyAndRun(async () => {
+                const prompt = await loadMissionPrompt(
+                  'kubeconfig-prune',
+                  'Back up my kubeconfig to a timestamped file, test each context for reachability, show me which are stale, ask for confirmation, then remove the stale ones. Tell me the backup file path.',
+                )
+                startMission({
+                  title: 'Prune Stale Kubeconfig Contexts',
+                  description: 'Safely clean up kubeconfig by removing entries for clusters that no longer exist',
+                  type: 'repair',
+                  initialPrompt: prompt,
+                })
+              })
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-medium hover:bg-yellow-500/30 transition-colors whitespace-nowrap"
+          >
+            <Scissors className="w-3.5 h-3.5" />
+            Prune Kubeconfig
+          </button>
+        </div>
+      )}
+      <ApiKeyPromptModal isOpen={pruneShowKeyPrompt} onDismiss={pruneDismissPrompt} onGoToSettings={pruneGoToSettings} />
 
       {/* Cluster Info Cards - collapsible */}
       <div className="mb-6">

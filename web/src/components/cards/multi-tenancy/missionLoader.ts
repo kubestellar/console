@@ -12,11 +12,12 @@ import type { MissionExport } from '../../../lib/missions/types'
 /** Timeout for fetching a mission file from console-kb (ms) */
 const MISSION_FETCH_TIMEOUT_MS = 10_000
 
-/** Console-kb paths for each multi-tenancy technology */
+/** Console-kb paths for missions */
 export const MISSION_PATHS: Record<string, string> = {
   ovn: 'solutions/cncf-install/install-ovn-kubernetes.json',
   kubeflex: 'solutions/platform-install/platform-kubeflex.json',
   k3s: 'solutions/platform-install/platform-k3s.json',
+  'kubeconfig-prune': 'solutions/troubleshoot/kubeconfig-prune.json',
   kubevirt: 'solutions/cncf-install/install-kubevirt.json',
   'multi-tenancy': 'solutions/multi-cluster/multi-tenancy-setup.json',
 }

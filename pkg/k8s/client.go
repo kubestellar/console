@@ -148,17 +148,18 @@ func (m *MultiClusterClient) Reload() error {
 
 // ClusterInfo represents basic cluster information
 type ClusterInfo struct {
-	Name       string `json:"name"`
-	Context    string `json:"context"`
-	Server     string `json:"server,omitempty"`
-	User       string `json:"user,omitempty"`
-	Namespace  string `json:"namespace,omitempty"`
-	AuthMethod string `json:"authMethod,omitempty"` // exec, token, certificate, auth-provider, unknown
-	Healthy    bool   `json:"healthy"`
-	Source     string `json:"source,omitempty"`
-	NodeCount  int    `json:"nodeCount,omitempty"`
-	PodCount   int    `json:"podCount,omitempty"`
-	IsCurrent  bool   `json:"isCurrent,omitempty"`
+	Name           string `json:"name"`
+	Context        string `json:"context"`
+	Server         string `json:"server,omitempty"`
+	User           string `json:"user,omitempty"`
+	Namespace      string `json:"namespace,omitempty"`
+	AuthMethod     string `json:"authMethod,omitempty"` // exec, token, certificate, auth-provider, unknown
+	Healthy        bool   `json:"healthy"`
+	NeverConnected bool   `json:"neverConnected,omitempty"` // true if cluster failed every health probe since startup
+	Source         string `json:"source,omitempty"`
+	NodeCount      int    `json:"nodeCount,omitempty"`
+	PodCount       int    `json:"podCount,omitempty"`
+	IsCurrent      bool   `json:"isCurrent,omitempty"`
 }
 
 // ClusterHealth represents cluster health status
@@ -1124,6 +1125,7 @@ func (m *MultiClusterClient) HealthyClusters(ctx context.Context) (healthy []Clu
 	defer m.mu.RUnlock()
 	for _, cl := range all {
 		if h, ok := m.healthCache[cl.Context]; ok && !h.Reachable {
+			cl.NeverConnected = h.LastSeen == ""
 			offline = append(offline, cl)
 		} else {
 			// Reachable or unknown (no cache entry) — try it
