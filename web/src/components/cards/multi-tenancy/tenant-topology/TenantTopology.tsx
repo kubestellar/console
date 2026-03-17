@@ -194,8 +194,8 @@ const L3_UDN_CONNECTION_COLOR = '#60a5fa'
 const KUBEFLEX_FILL = 'rgba(20, 80, 120, 0.9)'
 const KUBEFLEX_STROKE = 'rgba(59, 130, 246, 0.6)'
 
-/** Default K8s network — dark blue theme (matches Braulio's diagram) */
-const DEFAULT_NET_CONNECTION_COLOR = '#1e4a6e'
+/** Default K8s network — medium blue theme (bright enough to read throughput labels) */
+const DEFAULT_NET_CONNECTION_COLOR = '#4a90c4'
 
 /** Component node fill */
 const NODE_FILL = 'rgba(30, 41, 59, 0.8)'
@@ -436,15 +436,15 @@ function buildConnections(
       throughputBytesPerSec: rates.k3sEth1Rate,
       rxBytesPerSec: rates.k3sEth1Rx,
       txBytesPerSec: rates.k3sEth1Tx,
-      rxLabelX: K3S_ETH1_ROUTE_X + 2,
+      rxLabelX: K3S_ETH1_ROUTE_X - THROUGHPUT_PILL_FULL_W - 2,
       rxLabelY: (k3sLeftY + l2BottomY) / 2 - 4,
-      txLabelX: K3S_ETH1_ROUTE_X + 2,
+      txLabelX: K3S_ETH1_ROUTE_X - THROUGHPUT_PILL_FULL_W - 2,
       txLabelY: (k3sLeftY + l2BottomY) / 2 + 1,
     },
     {
       // K3s Server eth0 -> Default k8s Network -> KubeFlex (dark blue, bidirectional)
       id: 'k3s-eth0-kf',
-      d: `M ${k3sTopX} ${k3sTopY} L ${k3sTopX} ${kfBotY + 15} L ${kfBotCx} ${kfBotY + 15} L ${kfBotCx} ${kfBotY}`,
+      d: `M ${k3sTopX} ${k3sTopY} L ${k3sTopX} ${L2_UDN_Y - 4} L ${kfBotCx} ${L2_UDN_Y - 4} L ${kfBotCx} ${kfBotY}`,
       color: DEFAULT_NET_CONNECTION_COLOR,
       active: k3sDetected && kubeflexDetected,
       label: 'eth0',
@@ -452,9 +452,9 @@ function buildConnections(
       rxBytesPerSec: rates.k3sEth0Rx,
       txBytesPerSec: rates.k3sEth0Tx,
       rxLabelX: k3sTopX + 2,
-      rxLabelY: kfBotY + 12,
+      rxLabelY: L2_UDN_Y - 9,
       txLabelX: kfBotCx + 3,
-      txLabelY: kfBotY + 12,
+      txLabelY: L2_UDN_Y - 9,
     },
   ]
 }
@@ -1109,8 +1109,8 @@ export function TenantTopology() {
           {/* eth1 badge at left side */}
           <InterfaceBadge x={K3S_X + 2} y={K3S_Y + K3S_H / 2 - BADGE_H / 2} label="eth1" isEth1 />
           <text
-            x={K3S_X + K3S_W / 2}
-            y={K3S_Y + 20}
+            x={K3S_X + K3S_W / 2 + 4}
+            y={K3S_Y + 26}
             textAnchor="middle"
             fill={data.k3sDetected ? TEXT_PRIMARY : TEXT_MUTED}
             fontSize={FONT_SIZE_TITLE}
