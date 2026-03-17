@@ -236,7 +236,7 @@ Please proceed step by step.`,
             <p className="text-purple-400 font-medium">No Policies Configured</p>
             <p className="text-muted-foreground">
               Kyverno is installed but has no policies.{' '}
-              <button onClick={handleDeploySamplePolicies} className="text-purple-400 hover:underline">
+              <button onClick={handleDeploySamplePolicies} disabled={isLoading} className="text-purple-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
                 Deploy sample audit policies with AI →
               </button>
             </p>

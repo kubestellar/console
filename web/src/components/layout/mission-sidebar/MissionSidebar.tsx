@@ -416,7 +416,7 @@ export function MissionSidebar() {
             <p className="text-xs font-medium text-green-400 truncate">Saved to library</p>
             <p className="text-2xs text-muted-foreground truncate">{showSavedToast}</p>
           </div>
-          <button onClick={() => { setActiveMission(null); setShowSavedToast(null) }} className="text-2xs text-green-400 hover:underline flex-shrink-0">{t('common.view')}</button>
+          <button type="button" onClick={() => { setActiveMission(null); setShowSavedToast(null) }} className="text-2xs text-green-400 hover:underline flex-shrink-0">{t('common.view')}</button>
         </div>
       )}
 

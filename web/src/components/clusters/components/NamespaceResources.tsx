@@ -337,7 +337,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
           <div className="border-l border-border/50 pl-2">
             {deployments.length > 0 && (
               <div className="mb-1">
-                <button onClick={() => toggleType('deployments')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
+                <button onClick={() => toggleType('deployments')} disabled={deploymentsLoading} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11 disabled:opacity-50 disabled:cursor-not-allowed">
                   {expandedTypes.has('deployments') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
                   <StatusBadge color="purple" icon={<Layers className="w-3 h-3" />}>Deploy</StatusBadge>
                   <span className="text-muted-foreground">({deployments.length})</span>

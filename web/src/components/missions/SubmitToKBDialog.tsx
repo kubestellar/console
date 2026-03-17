@@ -338,7 +338,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             <BookUp className="w-5 h-5 text-purple-400" />
             <h3 className="text-sm font-semibold text-foreground">Submit to Knowledge Base</h3>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onClose} disabled={scanning} className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             <X className="w-4 h-4" />
           </button>
         </div>
