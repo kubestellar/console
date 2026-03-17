@@ -111,7 +111,7 @@ function startGlobalStream(since: string) {
   })
     .then(async (res) => {
       if (!res.ok || !res.body) {
-        streamState = { ...streamState, isStreaming: false, error: `Stream error: ${res.status}` }
+        streamState = { ...streamState, isStreaming: false, isDone: true, error: `Stream error: ${res.status}` }
         notifySubscribers()
         return
       }
@@ -165,7 +165,7 @@ function startGlobalStream(since: string) {
                 streamState = { ...streamState, isDone: true, isStreaming: false, status: 'done' }
                 notifySubscribers()
               } else if (eventType === 'error') {
-                streamState = { ...streamState, error: rawData, isStreaming: false, status: 'error' }
+                streamState = { ...streamState, error: rawData, isStreaming: false, isDone: true, status: 'error' }
                 notifySubscribers()
               }
             }
@@ -180,7 +180,7 @@ function startGlobalStream(since: string) {
     })
     .catch((err) => {
       if (err.name !== 'AbortError') {
-        streamState = { ...streamState, error: err.message, isStreaming: false }
+        streamState = { ...streamState, error: err.message, isStreaming: false, isDone: true }
         notifySubscribers()
       }
     })
