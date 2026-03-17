@@ -25,8 +25,9 @@ const REFRESH_INTERVAL_MS = 120_000
 /** Timeout for CRD/API existence check (fast — missing resources fail instantly) */
 const CRD_CHECK_TIMEOUT_MS = 3_000
 
-/** Timeout for data fetch */
-const DATA_FETCH_TIMEOUT_MS = 15_000
+/** Timeout for data fetch — large clusters (vllm-d has 4155 items, 6MB JSON)
+ *  need extra time when queued behind other kubectl requests */
+const DATA_FETCH_TIMEOUT_MS = 30_000
 
 /** Default overall score for demo clusters */
 const DEMO_OVERALL_SCORE = 78
@@ -211,7 +212,7 @@ async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStat
     const frameworks: KubescapeFrameworkScore[] = []
     const controlResults = new Map<string, { name: string; passed: number; failed: number }>()
     const detailResult = await kubectlProxy.exec(
-      ['get', 'workloadconfigurationscans', '-A', '-o', 'json', '--limit=50'],
+      ['get', 'workloadconfigurationscans', '-A', '-o', 'json', '--chunk-size=50'],
       { context: cluster, timeout: DATA_FETCH_TIMEOUT_MS }
     )
 

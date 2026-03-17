@@ -518,6 +518,19 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     setStatuses(demoStatuses)
   }, [shouldUseDemoData, effectiveClusters])
 
+  // Clear demo statuses when transitioning from demo → live mode.
+  // Without this, fake violations from demo mode persist for clusters
+  // where Gatekeeper is not installed (e.g., konflux-ci, ks-docs-oci).
+  const prevDemoRef = useRef(shouldUseDemoData)
+  useEffect(() => {
+    if (prevDemoRef.current && !shouldUseDemoData) {
+      // Was demo, now live — clear all statuses so only real detection shows
+      setStatuses({})
+      setHasTriggeredInitialCheck(false)
+    }
+    prevDemoRef.current = shouldUseDemoData
+  }, [shouldUseDemoData])
+
   // Initial check - only check reachable clusters without cached data
   // Skip if we've already triggered a check this session
   useEffect(() => {
