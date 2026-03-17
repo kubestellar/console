@@ -25,6 +25,10 @@ async function setupDemoMode(page: Page) {
   })
 }
 
+async function waitForDashboardCards(page: Page) {
+  await expect(page.locator('[data-card-type]').first()).toBeVisible({ timeout: 10000 })
+}
+
 // Pages to audit for accessibility
 const pagesToAudit = [
   { name: 'Dashboard', path: '/' },
@@ -41,9 +45,7 @@ test.describe('Accessibility Audits', () => {
         await setupDemoMode(page)
         await page.goto(path)
         await page.waitForLoadState('networkidle', { timeout: 15000 })
-
-        // Wait for content to fully render
-        await page.waitForTimeout(1000)
+        await expect(page.locator('body')).toBeVisible()
 
         const results = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -270,7 +272,7 @@ test.describe('Accessibility Audits', () => {
       await setupDemoMode(page)
       await page.goto('/')
       await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(2000) // Wait for cards to load
+      await waitForDashboardCards(page)
 
       // Check that cards have aria-label (cards are divs, not regions)
       const cards = page.locator('[data-card-type]')
@@ -290,7 +292,7 @@ test.describe('Accessibility Audits', () => {
       await setupDemoMode(page)
       await page.goto('/')
       await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(2000)
+      await expect(page.locator('[data-testid="demo-badge"]').first()).toBeVisible({ timeout: 10000 })
 
       // Check for demo badges (visual indicators without aria-live to avoid announcement flood)
       const demoBadges = page.locator('[data-testid="demo-badge"]')
@@ -317,7 +319,7 @@ test.describe('Accessibility Audits', () => {
       await setupDemoMode(page)
       await page.goto('/')
       await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(2000)
+      await waitForDashboardCards(page)
 
       // Run axe-core to check for WCAG 2.5.3 compliance (Label in Name)
       const results = await new AxeBuilder({ page })
@@ -334,7 +336,7 @@ test.describe('Accessibility Audits', () => {
       await setupDemoMode(page)
       await page.goto('/')
       await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(2000)
+      await waitForDashboardCards(page)
 
       // Check for redundant roles (e.g., role="main" on <main>)
       const results = await new AxeBuilder({ page })
@@ -353,7 +355,7 @@ test.describe('Accessibility Audits', () => {
       await setupDemoMode(page)
       await page.goto('/')
       await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(2000)
+      await waitForDashboardCards(page)
 
       // Find interactive elements (buttons) within cards
       const cardButtons = page.locator('[data-card-type] button')
@@ -367,7 +369,7 @@ test.describe('Accessibility Audits', () => {
       await setupDemoMode(page)
       await page.goto('/')
       await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(2000)
+      await waitForDashboardCards(page)
 
       // Tab to first card
       await page.keyboard.press('Tab')

@@ -79,8 +79,7 @@ test.describe('Smoke Tests', () => {
         await page.goto(path)
         await page.waitForLoadState('networkidle', { timeout: 15000 })
 
-        // Allow time for any delayed errors
-        await page.waitForTimeout(1000)
+        await expect(page.locator('body')).toBeVisible()
 
         if (errors.length > 0) {
           console.log(`Console errors on ${path}:`, errors)
@@ -179,10 +178,10 @@ test.describe('Smoke Tests', () => {
       if (await themeToggle.first().isVisible({ timeout: 3000 })) {
         const htmlBefore = await page.locator('html').getAttribute('class')
         await themeToggle.first().click()
-        await page.waitForTimeout(500)
-        const htmlAfter = await page.locator('html').getAttribute('class')
-        // Theme class should change
-        expect(htmlBefore).not.toBe(htmlAfter)
+
+        await expect
+          .poll(async () => page.locator('html').getAttribute('class'))
+          .not.toBe(htmlBefore)
       }
     })
   })
