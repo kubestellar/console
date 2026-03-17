@@ -328,11 +328,11 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
             </div>
           </div>
           <div className="flex gap-2 mt-2">
-            <button className="flex items-center gap-1 text-xs px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors min-h-11 min-w-11">
+            <button className="flex items-center gap-2 text-xs px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors min-h-11 min-w-11">
               <ArrowUpRight className="h-3 w-3" />
               Scale
             </button>
-            <button className="flex items-center gap-1 text-xs px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors min-h-11 min-w-11">
+            <button className="flex items-center gap-2 text-xs px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors min-h-11 min-w-11">
               <Plus className="h-3 w-3" />
               Deploy to Cluster
             </button>
