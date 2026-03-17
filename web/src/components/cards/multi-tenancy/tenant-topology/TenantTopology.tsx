@@ -338,12 +338,15 @@ function buildConnections(
   const k3sLeftX = K3S_X
   const k3sLeftY = K3S_Y + K3S_H / 2
 
-  /** Waypoint X for routing K3s eth1 connection around the pod (in the gap between namespaces) */
-  const K3S_ETH1_ROUTE_X = NS1_X + NS1_W + 5
+  /** Waypoint X for routing K3s eth1 connection around the pod (midpoint of gap between namespaces) */
+  const K3S_ETH1_ROUTE_X = (NS1_X + NS1_W + NS2_X) / 2
 
   /** K3s Server eth0 top-right (-> Default k8s Network -> KubeFlex) */
   const k3sTopX = K3S_X + K3S_W - 10
   const k3sTopY = K3S_Y
+
+  /** X position for routing KubeFlex connection outside the L2 UDN right edge */
+  const KF_ROUTE_X = L2_UDN_X + L2_UDN_W + 5
 
   /** L2 UDN bottom edge */
   const l2BottomY = L2_UDN_Y + L2_UDN_H
@@ -436,25 +439,25 @@ function buildConnections(
       throughputBytesPerSec: rates.k3sEth1Rate,
       rxBytesPerSec: rates.k3sEth1Rx,
       txBytesPerSec: rates.k3sEth1Tx,
-      rxLabelX: K3S_ETH1_ROUTE_X - THROUGHPUT_PILL_FULL_W - 2,
-      rxLabelY: (k3sLeftY + l2BottomY) / 2 - 4,
-      txLabelX: K3S_ETH1_ROUTE_X - THROUGHPUT_PILL_FULL_W - 2,
-      txLabelY: (k3sLeftY + l2BottomY) / 2 + 1,
+      rxLabelX: K3S_ETH1_ROUTE_X + 2,
+      rxLabelY: l2BottomY + 1,
+      txLabelX: K3S_ETH1_ROUTE_X + 2,
+      txLabelY: l2BottomY + 6,
     },
     {
       // K3s Server eth0 -> Default k8s Network -> KubeFlex (dark blue, bidirectional)
       id: 'k3s-eth0-kf',
-      d: `M ${k3sTopX} ${k3sTopY} L ${k3sTopX} ${L2_UDN_Y - 4} L ${kfBotCx} ${L2_UDN_Y - 4} L ${kfBotCx} ${kfBotY}`,
+      d: `M ${k3sTopX} ${k3sTopY} L ${KF_ROUTE_X} ${k3sTopY} L ${KF_ROUTE_X} ${L2_UDN_Y - 4} L ${kfBotCx} ${L2_UDN_Y - 4} L ${kfBotCx} ${kfBotY}`,
       color: DEFAULT_NET_CONNECTION_COLOR,
       active: k3sDetected && kubeflexDetected,
       label: 'eth0',
       throughputBytesPerSec: rates.k3sEth0Rate,
       rxBytesPerSec: rates.k3sEth0Rx,
       txBytesPerSec: rates.k3sEth0Tx,
-      rxLabelX: k3sTopX + 2,
-      rxLabelY: L2_UDN_Y - 9,
-      txLabelX: kfBotCx + 3,
-      txLabelY: L2_UDN_Y - 9,
+      rxLabelX: KF_ROUTE_X + 2,
+      rxLabelY: (k3sTopY + L2_UDN_Y - 4) / 2 - 3,
+      txLabelX: KF_ROUTE_X + 2,
+      txLabelY: (k3sTopY + L2_UDN_Y - 4) / 2 + 2,
     },
   ]
 }
