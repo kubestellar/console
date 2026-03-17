@@ -91,7 +91,7 @@ export function CICD() {
       icon="GitPullRequest"
       storageKey={CICD_CARDS_KEY}
       defaultCards={DEFAULT_CICD_CARDS}
-      statsType="gitops"
+      statsType="ci-cd"
       getStatValue={getStatValue}
       onRefresh={refetch}
       isLoading={isLoading || prowLoading || deploymentsLoading}

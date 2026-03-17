@@ -196,6 +196,7 @@ const DASHBOARD_CATEGORIES: { type: DashboardStatsType; name: string; icon: stri
   { type: 'alerts', name: 'Alerts', icon: '🔴' },
   { type: 'operators', name: 'Operators', icon: '⚙️' },
   { type: 'dashboard', name: 'Main Dashboard', icon: '📊' },
+  { type: 'ci-cd', name: 'CI/CD', icon: '🔄' },
 ]
 
 /**
@@ -218,6 +219,7 @@ function getStatBlocksForDashboard(dashboardType: DashboardStatsType): StatBlock
     case 'alerts': return ALERTS_STAT_BLOCKS
     case 'dashboard': return DASHBOARD_STAT_BLOCKS
     case 'operators': return OPERATORS_STAT_BLOCKS
+    case 'ci-cd': return GITOPS_STAT_BLOCKS
     default: return []
   }
 }

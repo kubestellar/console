@@ -54,6 +54,7 @@ export type DashboardStatsType =
   | 'cluster-admin'
   | 'insights'
   | 'multi-tenancy'
+  | 'ci-cd'
 
 /**
  * Default stat blocks for the Clusters dashboard
@@ -431,6 +432,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return INSIGHTS_STAT_BLOCKS
     case 'multi-tenancy':
       return MULTI_TENANCY_STAT_BLOCKS
+    case 'ci-cd':
+      return GITOPS_STAT_BLOCKS
     default:
       return []
   }
