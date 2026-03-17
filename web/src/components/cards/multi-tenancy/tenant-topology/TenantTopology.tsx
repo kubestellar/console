@@ -439,10 +439,10 @@ function buildConnections(
       throughputBytesPerSec: rates.k3sEth1Rate,
       rxBytesPerSec: rates.k3sEth1Rx,
       txBytesPerSec: rates.k3sEth1Tx,
-      rxLabelX: K3S_ETH1_ROUTE_X + 2,
-      rxLabelY: l2BottomY + 1,
-      txLabelX: K3S_ETH1_ROUTE_X + 2,
-      txLabelY: l2BottomY + 6,
+      rxLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 1,
+      rxLabelY: k3sLeftY - 5,
+      txLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 1,
+      txLabelY: k3sLeftY + 1,
     },
     {
       // K3s Server eth0 -> Default k8s Network -> KubeFlex (dark blue, bidirectional)
