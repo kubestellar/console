@@ -15,11 +15,15 @@ import (
 const (
 	// githubProxyTimeout is the timeout for proxied GitHub API requests.
 	githubProxyTimeout = 15 * time.Second
-	// githubProxyAPIBase is the base URL for proxied GitHub API requests.
-	githubProxyAPIBase = "https://api.github.com"
+	// githubProxyAPIBaseDefault is the default base URL for GitHub API requests.
+	githubProxyAPIBaseDefault = "https://api.github.com"
 	// maxGitHubProxyPathLen is the maximum allowed path length to prevent abuse.
 	maxGitHubProxyPathLen = 512
 )
+
+// githubProxyAPIBase is the base URL for proxied GitHub API requests.
+// Configurable via GITHUB_API_BASE_URL env var to support GitHub Enterprise Server.
+var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
 
 var githubProxyClient = &http.Client{Timeout: githubProxyTimeout}
 
