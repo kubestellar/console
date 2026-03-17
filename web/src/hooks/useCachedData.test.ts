@@ -507,15 +507,14 @@ describe('useCachedDeploymentIssues', () => {
     expect(result).toEqual(mockIssues)
   })
 
-  it('fetcher returns empty array when both agent and backend unavailable', async () => {
+  it('fetcher throws when both agent and backend unavailable', async () => {
     mockClusterCacheRef.clusters = []
     mockIsBackendUnavailable.mockReturnValue(true)
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues(),
     )
-    const result = await capturedFetcher()
-    expect(result).toEqual([])
+    await expect(capturedFetcher()).rejects.toThrow('No data source available')
   })
 })
 
@@ -875,15 +874,14 @@ describe('useCachedPodIssues', () => {
     expect(result[0].name).toBe('broken-pod')
   })
 
-  it('fetcher returns empty when both agent and backend unavailable', async () => {
+  it('fetcher throws when both agent and backend unavailable', async () => {
     mockClusterCacheRef.clusters = []
     mockIsBackendUnavailable.mockReturnValue(true)
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPodIssues(),
     )
-    const result = await capturedFetcher()
-    expect(result).toEqual([])
+    await expect(capturedFetcher()).rejects.toThrow('No data source available')
   })
 })
 
@@ -1038,7 +1036,7 @@ describe('Multi-cluster fetching', () => {
     expect(result.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('falls back to empty when clusterCacheRef has no entries and backend fails', async () => {
+  it('throws when clusterCacheRef has no entries and backend returns empty clusters', async () => {
     mockClusterCacheRef.clusters = []
 
     // fetchClusters falls back to backend API which also returns empty
@@ -1051,8 +1049,7 @@ describe('Multi-cluster fetching', () => {
       () => useCachedPods(undefined, undefined, { limit: 100 }),
     )
 
-    const result = await capturedFetcher()
-    expect(result).toEqual([])
+    await expect(capturedFetcher()).rejects.toThrow('No clusters available')
   })
 })
 
@@ -1061,7 +1058,7 @@ describe('Multi-cluster fetching', () => {
 // ============================================================================
 
 describe('Backend/Agent unavailability', () => {
-  it('useCachedPodIssues fetcher skips backend when isBackendUnavailable returns true', async () => {
+  it('useCachedPodIssues fetcher throws and skips backend when isBackendUnavailable returns true', async () => {
     mockClusterCacheRef.clusters = []
     mockIsBackendUnavailable.mockReturnValue(true)
     globalThis.fetch = vi.fn()
@@ -1070,8 +1067,7 @@ describe('Backend/Agent unavailability', () => {
       () => useCachedPodIssues(),
     )
 
-    const result = await capturedFetcher()
-    expect(result).toEqual([])
+    await expect(capturedFetcher()).rejects.toThrow('No data source available')
     // fetch should not be called since backend is unavailable
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })

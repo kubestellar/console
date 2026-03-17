@@ -38,12 +38,13 @@ describe('validateMissionExport', () => {
     expect(result.errors[0].message).toContain('JSON object')
   })
 
-  it('errors when version field is missing', () => {
+  it('defaults version when field is missing', () => {
     const m = validMission() as Record<string, unknown>
     delete m.version
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.path === '.version')).toBe(true)
+    // Version now defaults to 'kc-mission-v1' instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.version).toBe('kc-mission-v1')
   })
 
   it('errors when title is missing', () => {
@@ -62,32 +63,31 @@ describe('validateMissionExport', () => {
     expect(result.errors.some((e) => e.message.includes('title'))).toBe(true)
   })
 
-  it('errors when description is missing', () => {
+  it('defaults description when missing', () => {
     const m = validMission() as Record<string, unknown>
     delete m.description
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.path === '.description')).toBe(true)
+    // Description now defaults to empty string instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.description).toBe('')
   })
 
-  it('errors on invalid type with valid options listed', () => {
+  it('defaults invalid type to custom', () => {
     const m = validMission() as Record<string, unknown>
     m.type = 'invalid-type'
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    const typeError = result.errors.find((e) => e.path === '.type')
-    expect(typeError).toBeDefined()
-    expect(typeError!.message).toContain('upgrade')
-    expect(typeError!.message).toContain('troubleshoot')
-    expect(typeError!.message).toContain('deploy')
+    // Invalid types now default to 'custom' instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.type).toBe('custom')
   })
 
-  it('errors when type is missing', () => {
+  it('defaults type to custom when missing', () => {
     const m = validMission() as Record<string, unknown>
     delete m.type
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.path === '.type')).toBe(true)
+    // Missing type now defaults to 'custom' instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.type).toBe('custom')
   })
 
   it('accepts all valid mission types', () => {
@@ -100,20 +100,22 @@ describe('validateMissionExport', () => {
     }
   })
 
-  it('errors when tags is not an array', () => {
+  it('defaults tags to empty array when not an array', () => {
     const m = validMission() as Record<string, unknown>
     m.tags = 'not-an-array'
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.path === '.tags')).toBe(true)
+    // Non-array tags now default to empty array instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.tags).toEqual([])
   })
 
-  it('errors when tags is missing', () => {
+  it('defaults tags to empty array when missing', () => {
     const m = validMission() as Record<string, unknown>
     delete m.tags
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.path === '.tags')).toBe(true)
+    // Missing tags now default to empty array instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.tags).toEqual([])
   })
 
   it('errors when steps is missing', () => {
@@ -132,20 +134,22 @@ describe('validateMissionExport', () => {
     expect(result.errors.some((e) => e.message.includes('non-empty'))).toBe(true)
   })
 
-  it('errors when a step is missing title', () => {
+  it('defaults step title when empty', () => {
     const m = validMission()
     m.steps = [{ title: '', description: 'desc' }]
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.path === '.steps[0].title')).toBe(true)
+    // Empty step titles now default to "Step N" instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.steps[0].title).toBe('Step 1')
   })
 
-  it('errors when a step is missing description', () => {
+  it('defaults step description when missing', () => {
     const m = validMission() as Record<string, unknown>
     m.steps = [{ title: 'Step' }]
     const result = validateMissionExport(m)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.path === '.steps[0].description')).toBe(true)
+    // Missing step description now defaults to empty string instead of erroring
+    expect(result.valid).toBe(true)
+    expect(result.data.steps[0].description).toBe('')
   })
 
   it('errors when a step is not an object', () => {

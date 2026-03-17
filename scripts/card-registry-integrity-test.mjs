@@ -161,6 +161,40 @@ function extractDeclarations(sourceFile) {
                         componentMap.set(varName, info)
                     }
                 }
+
+                // --- safeLazy declaration: const Foo = safeLazy(() => import('./path'), 'ExportName') ---
+                // or: const Foo = safeLazy(() => _bundleVar, 'ExportName')
+                if (ts.isCallExpression(decl.initializer) &&
+                    ts.isIdentifier(decl.initializer.expression) &&
+                    decl.initializer.expression.text === 'safeLazy') {
+                    const importArg = decl.initializer.arguments[0]  // () => import('./path') or () => _bundleVar
+                    const nameArg = decl.initializer.arguments[1]    // 'ExportName'
+                    if (!importArg || !nameArg) continue
+
+                    const exportName = getStringLiteral(nameArg)
+                    if (!exportName) continue
+
+                    // The first argument is an arrow function: () => import('./path') or () => _bundleVar
+                    if (ts.isArrowFunction(importArg)) {
+                        const body = importArg.body
+                        let importPath = null
+
+                        // Pattern 1: () => import('./path')
+                        if (ts.isCallExpression(body) && body.expression.kind === ts.SyntaxKind.ImportKeyword) {
+                            const arg = body.arguments?.[0]
+                            if (arg) importPath = getStringLiteral(arg)
+                        }
+
+                        // Pattern 2: () => _bundleVar
+                        if (ts.isIdentifier(body) && bundleMap.has(body.text)) {
+                            importPath = bundleMap.get(body.text)
+                        }
+
+                        if (importPath) {
+                            componentMap.set(varName, { importPath, exportName })
+                        }
+                    }
+                }
             }
         }
     })
@@ -389,10 +423,12 @@ function fileExportsSymbol(filePath, symbolName, visited = new Set()) {
             for (const spec of node.exportClause.elements) {
                 if (spec.name.text === symbolName) {
                     // Check if this is a re-export: `export { Foo } from './Foo'`
+                    // or `export { Bar as Foo } from './Bar'` — trace the original name
                     if (node.moduleSpecifier) {
+                        const originalName = spec.propertyName?.text || symbolName
                         const targetPath = traceBarrelExport(filePath, symbolName, node)
                         if (targetPath) {
-                            found = fileExportsSymbol(targetPath, symbolName, visited)
+                            found = fileExportsSymbol(targetPath, originalName, visited)
                         }
                     } else {
                         found = true

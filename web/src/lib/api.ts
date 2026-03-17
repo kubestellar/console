@@ -526,5 +526,8 @@ export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  return fetch(input, { ...init, headers })
+  // Use caller-provided signal if present, otherwise apply default timeout
+  const signal = init?.signal ?? AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
+
+  return fetch(input, { ...init, headers, signal })
 }

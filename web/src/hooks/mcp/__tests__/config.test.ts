@@ -164,15 +164,15 @@ describe('useConfigMaps', () => {
     expect(mockFetchSSE.mock.calls.length).toBe(callsBefore)
   })
 
-  it('falls back to demo config maps with error: null on SSE and REST failure', async () => {
-    // Both SSE and REST fail — hook falls back to demo config maps
+  it('returns empty config maps with error: null on SSE and REST failure', async () => {
+    // Both SSE and REST fail — hook silently swallows error (configmaps are optional)
     mockFetchSSE.mockRejectedValue(new Error('SSE error'))
     mockApiGet.mockRejectedValue(new Error('REST error'))
 
     const { result } = renderHook(() => useConfigMaps())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.configmaps.length).toBeGreaterThan(0)
+    expect(result.current.configmaps).toEqual([])
     expect(result.current.error).toBeNull()
   })
 
@@ -258,14 +258,15 @@ describe('useSecrets', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('falls back to demo secrets with error: null on SSE and REST failure', async () => {
+  it('returns empty secrets with error: null on SSE and REST failure', async () => {
+    // Both SSE and REST fail — hook silently swallows error (secrets are optional)
     mockFetchSSE.mockRejectedValue(new Error('SSE error'))
     mockApiGet.mockRejectedValue(new Error('REST error'))
 
     const { result } = renderHook(() => useSecrets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.secrets.length).toBeGreaterThan(0)
+    expect(result.current.secrets).toEqual([])
     expect(result.current.error).toBeNull()
   })
 
@@ -330,14 +331,15 @@ describe('useServiceAccounts', () => {
     await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
-  it('falls back to demo service accounts with error: null on failure', async () => {
+  it('returns empty service accounts with error: null on failure', async () => {
+    // Both SSE and REST fail — hook silently swallows error (service accounts are optional)
     mockFetchSSE.mockRejectedValue(new Error('SSE error'))
     mockApiGet.mockRejectedValue(new Error('REST error'))
 
     const { result } = renderHook(() => useServiceAccounts())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.serviceAccounts.length).toBeGreaterThan(0)
+    expect(result.current.serviceAccounts).toEqual([])
     expect(result.current.error).toBeNull()
   })
 
