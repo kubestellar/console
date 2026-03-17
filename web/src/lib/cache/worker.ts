@@ -43,12 +43,15 @@ async function initDatabase(): Promise<void> {
         const Ctor = oo1['OpfsDb'] as new (name: string) => DatabaseHandle
         db = new Ctor('/kc-cache.sqlite3')
       } else {
-        // No OPFS support — use in-memory database
-        db = new sqlite3.oo1.DB(':memory:') as unknown as DatabaseHandle
+        // No OPFS support — reject so main thread uses IndexedDB for persistence.
+        // In-memory SQLite loses all data on reload, making cache useless.
+        throw new Error('OPFS not available — falling back to IndexedDB')
       }
-    } catch {
-      // OPFS failed (e.g., not in secure context) — fall back to in-memory
-      db = new sqlite3.oo1.DB(':memory:') as unknown as DatabaseHandle
+    } catch (opfsErr) {
+      // OPFS failed (e.g., not in secure context, SAH pool exhausted).
+      // Reject so main thread uses IndexedDB for persistence instead of
+      // silently using in-memory SQLite that loses data on every reload.
+      throw opfsErr
     }
 
     // Create tables
