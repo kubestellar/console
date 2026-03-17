@@ -641,10 +641,18 @@ class CacheStore<T> {
       const hasData = this.state.data !== this.initialData || this.initialDataLoaded
       const reachedMaxFailures = newFailures >= MAX_FAILURES
 
+      // If a progressive fetcher pushed partial data via onProgress before
+      // throwing, the state.data has been updated but never saved to storage.
+      // Save it now so it survives page refresh.
+      if (hasData && this.persist) {
+        this.saveToStorage(this.state.data)
+        this.initialDataLoaded = true
+      }
+
       this.saveMeta({
         consecutiveFailures: newFailures,
         lastError: errorMessage,
-        lastSuccessfulRefresh: this.state.lastRefresh ?? undefined,
+        lastSuccessfulRefresh: hasData ? Date.now() : (this.state.lastRefresh ?? undefined),
       })
 
       this.setState({
@@ -654,8 +662,8 @@ class CacheStore<T> {
         isLoading: !hasData && !reachedMaxFailures,
         isRefreshing: false,
         error: null,
-        isFailed: reachedMaxFailures,
-        consecutiveFailures: newFailures,
+        isFailed: hasData ? false : reachedMaxFailures,
+        consecutiveFailures: hasData ? 0 : newFailures,
       })
     } finally {
       this.fetchingRef = false
