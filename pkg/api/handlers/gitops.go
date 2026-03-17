@@ -21,6 +21,14 @@ import (
 	"github.com/kubestellar/console/pkg/mcp"
 )
 
+// Maximum number of concurrent helm/kubectl subprocesses across all handlers.
+// Each helm ls or kubectl command can use 100-300MB; with 18 clusters running
+// unbounded, the process was OOM-killed at ~3.6GB.
+const maxConcurrentSubprocesses = 4
+
+// Semaphore channel to limit concurrent subprocess fan-outs
+var subprocessSem = make(chan struct{}, maxConcurrentSubprocesses)
+
 // GitOpsDrift represents a configuration drift between Git and cluster
 type GitOpsDrift struct {
 	Resource   string `json:"resource"`
@@ -184,6 +192,8 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				subprocessSem <- struct{}{}        // acquire
+				defer func() { <-subprocessSem }() // release
 				ctx, cancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
 				defer cancel()
 
@@ -274,6 +284,8 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				subprocessSem <- struct{}{}        // acquire
+				defer func() { <-subprocessSem }() // release
 				ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
 				defer cancel()
 
@@ -445,6 +457,8 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				subprocessSem <- struct{}{}        // acquire
+				defer func() { <-subprocessSem }() // release
 				ctx, cancel := context.WithTimeout(overallCtx, operatorPerClusterTimeout)
 				defer cancel()
 
@@ -524,6 +538,8 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				subprocessSem <- struct{}{}        // acquire
+				defer func() { <-subprocessSem }() // release
 				ctx, cancel := context.WithTimeout(context.Background(), operatorPerClusterTimeout)
 				defer cancel()
 
@@ -704,6 +720,8 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				subprocessSem <- struct{}{}        // acquire
+				defer func() { <-subprocessSem }() // release
 				ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
 				defer cancel()
 
@@ -781,6 +799,8 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				subprocessSem <- struct{}{}        // acquire
+				defer func() { <-subprocessSem }() // release
 				ctx, cancel := context.WithTimeout(context.Background(), subscriptionPerClusterTimeout)
 				defer cancel()
 
@@ -915,6 +935,8 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
+				subprocessSem <- struct{}{}        // acquire
+				defer func() { <-subprocessSem }() // release
 				ctx, cancel := context.WithTimeout(context.Background(), helmStreamPerClusterTimeout)
 				defer cancel()
 
