@@ -1006,6 +1006,17 @@ export function ComplianceScore({ config: _config }: CardConfig) {
         <span>{CARD_DESCRIPTIONS.compliance_score.description}</span>
       </div>
 
+      {/* Partial coverage warning — not all clusters are reporting */}
+      {!isDemoData && !usingFallback && allChecked && totalChecking > 0 && scoreClusters.length < totalChecking && (
+        <div className="flex items-center gap-1.5 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-md px-2 py-1.5">
+          <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+          <span>
+            Partial coverage — {scoreClusters.length} of {totalChecking} clusters reporting.
+            Score may not reflect full cluster state.
+          </span>
+        </div>
+      )}
+
       {/* No compliance tools installed — show install prompt instead of fake demo score */}
       {noToolsInstalled && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
