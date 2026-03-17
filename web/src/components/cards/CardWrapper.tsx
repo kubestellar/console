@@ -878,7 +878,7 @@ export function CardWrapper({
                       onKeyDown={(e) => {
                         if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                         e.preventDefault()
-                        const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])')
+                        const items = e.currentTarget.querySelectorAll<HTMLElement>('button[role="menuitem"]:not([disabled])')
                         const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
                         if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
                         else items[Math.max(idx - 1, 0)]?.focus()
@@ -936,7 +936,7 @@ export function CardWrapper({
                               onKeyDown={(e) => {
                                 if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                                 e.preventDefault()
-                                const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])')
+                                const items = e.currentTarget.querySelectorAll<HTMLElement>('button[role="menuitem"]:not([disabled])')
                                 const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
                                 if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
                                 else items[Math.max(idx - 1, 0)]?.focus()
