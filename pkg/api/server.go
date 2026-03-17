@@ -1080,6 +1080,15 @@ func LoadConfigFromEnv() Config {
 	// (This allows --dev flag to override env var for JWT secret default)
 	jwtSecret := os.Getenv("JWT_SECRET")
 
+	// Warn when feedback/rewards env vars are not set — forks and enterprise
+	// deployments should set these to avoid routing user actions to the
+	// upstream kubestellar repositories.  See #2826.
+	warnDefaultEnvVars(map[string]string{
+		"FEEDBACK_REPO_OWNER":  "kubestellar",
+		"FEEDBACK_REPO_NAME":   "console",
+		"REWARDS_GITHUB_ORGS":  "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb",
+	})
+
 	return Config{
 		Port:             port,
 		DevMode:          devMode,
@@ -1138,6 +1147,19 @@ func getEnvOrDefault(key, defaultVal string) string {
 		return v
 	}
 	return defaultVal
+}
+
+// warnDefaultEnvVars logs a warning for each env var that is not explicitly
+// set.  This helps fork and enterprise deployers notice that the defaults
+// point to the upstream kubestellar repositories so they can override them.
+func warnDefaultEnvVars(vars map[string]string) {
+	for envVar, defaultVal := range vars {
+		if os.Getenv(envVar) == "" {
+			log.Printf("WARNING: %s is not set, using default %q — "+
+				"set this env var for fork/enterprise deployments to avoid "+
+				"routing actions to the upstream repository", envVar, defaultVal)
+		}
+	}
 }
 
 func generateDevSecret() string {

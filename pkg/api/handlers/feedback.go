@@ -1748,6 +1748,22 @@ func LoadFeedbackConfig() FeedbackConfig {
 			githubToken = all.FeedbackGitHubToken
 		}
 	}
+
+	// Warn when feedback repo env vars are not set — forks and enterprise
+	// deployments should configure these to avoid routing feedback to the
+	// upstream kubestellar repositories.  See #2826.
+	feedbackEnvVars := map[string]string{
+		"FEEDBACK_REPO_OWNER": "kubestellar",
+		"FEEDBACK_REPO_NAME":  "console",
+	}
+	for envVar, defaultVal := range feedbackEnvVars {
+		if os.Getenv(envVar) == "" {
+			log.Printf("WARNING: %s is not set, using default %q — "+
+				"set this env var for fork/enterprise deployments to avoid "+
+				"routing feedback to the upstream repository", envVar, defaultVal)
+		}
+	}
+
 	return FeedbackConfig{
 		GitHubToken:   githubToken,
 		WebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
