@@ -31,6 +31,15 @@ export interface TenantTopologyData {
   k3sEth0Rate: number
   /** Combined rx+tx bytes/sec: K3s eth1 -> L2 UDN (control-plane) */
   k3sEth1Rate: number
+  /** Receive/transmit split for ingress/egress labels */
+  kvEth0Rx: number
+  kvEth0Tx: number
+  kvEth1Rx: number
+  kvEth1Tx: number
+  k3sEth0Rx: number
+  k3sEth0Tx: number
+  k3sEth1Rx: number
+  k3sEth1Tx: number
   isLoading: boolean
   isDemoData: boolean
 }
@@ -67,6 +76,14 @@ export function useTenantTopology(): TenantTopologyData {
       kvEth1Rate: netStats.kvEth1Rate,
       k3sEth0Rate: netStats.k3sEth0Rate,
       k3sEth1Rate: netStats.k3sEth1Rate,
+      kvEth0Rx: netStats.kvEth0Rx,
+      kvEth0Tx: netStats.kvEth0Tx,
+      kvEth1Rx: netStats.kvEth1Rx,
+      kvEth1Tx: netStats.kvEth1Tx,
+      k3sEth0Rx: netStats.k3sEth0Rx,
+      k3sEth0Tx: netStats.k3sEth0Tx,
+      k3sEth1Rx: netStats.k3sEth1Rx,
+      k3sEth1Tx: netStats.k3sEth1Tx,
       isLoading,
       isDemoData,
     }),
@@ -77,6 +94,10 @@ export function useTenantTopology(): TenantTopologyData {
       kubevirt.detected, kubevirt.health,
       netStats.kvEth0Rate, netStats.kvEth1Rate,
       netStats.k3sEth0Rate, netStats.k3sEth1Rate,
+      netStats.kvEth0Rx, netStats.kvEth0Tx,
+      netStats.kvEth1Rx, netStats.kvEth1Tx,
+      netStats.k3sEth0Rx, netStats.k3sEth0Tx,
+      netStats.k3sEth1Rx, netStats.k3sEth1Tx,
       isLoading, isDemoData,
     ],
   )

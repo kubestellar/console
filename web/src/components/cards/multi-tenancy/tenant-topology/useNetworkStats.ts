@@ -132,6 +132,22 @@ export interface UseNetworkStatsResult {
   k3sEth0Rate: number
   /** Combined rx+tx bytes/sec for K3s eth1 (control-plane to L2 UDN) */
   k3sEth1Rate: number
+  /** Receive bytes/sec for KubeVirt eth0 */
+  kvEth0Rx: number
+  /** Transmit bytes/sec for KubeVirt eth0 */
+  kvEth0Tx: number
+  /** Receive bytes/sec for KubeVirt eth1 */
+  kvEth1Rx: number
+  /** Transmit bytes/sec for KubeVirt eth1 */
+  kvEth1Tx: number
+  /** Receive bytes/sec for K3s eth0 */
+  k3sEth0Rx: number
+  /** Transmit bytes/sec for K3s eth0 */
+  k3sEth0Tx: number
+  /** Receive bytes/sec for K3s eth1 */
+  k3sEth1Rx: number
+  /** Transmit bytes/sec for K3s eth1 */
+  k3sEth1Tx: number
   /** Whether we are showing demo/fallback data */
   isDemoData: boolean
   /** Whether any real stats were returned */
@@ -161,11 +177,29 @@ export function useNetworkStats(): UseNetworkStatsResult {
     return iface ? iface.rxBytesPerSec + iface.txBytesPerSec : 0
   }
 
+  const getRx = (stats: PodNetworkStats | undefined, ifName: string): number => {
+    const iface = (stats?.interfaces || []).find((i) => i.name === ifName)
+    return iface ? iface.rxBytesPerSec : 0
+  }
+
+  const getTx = (stats: PodNetworkStats | undefined, ifName: string): number => {
+    const iface = (stats?.interfaces || []).find((i) => i.name === ifName)
+    return iface ? iface.txBytesPerSec : 0
+  }
+
   return {
     kvEth0Rate: getRate(kvStats, 'eth0'),
     kvEth1Rate: getRate(kvStats, 'eth1'),
     k3sEth0Rate: getRate(k3sStats, 'eth0'),
     k3sEth1Rate: getRate(k3sStats, 'eth1'),
+    kvEth0Rx: getRx(kvStats, 'eth0'),
+    kvEth0Tx: getTx(kvStats, 'eth0'),
+    kvEth1Rx: getRx(kvStats, 'eth1'),
+    kvEth1Tx: getTx(kvStats, 'eth1'),
+    k3sEth0Rx: getRx(k3sStats, 'eth0'),
+    k3sEth0Tx: getTx(k3sStats, 'eth0'),
+    k3sEth1Rx: getRx(k3sStats, 'eth1'),
+    k3sEth1Tx: getTx(k3sStats, 'eth1'),
     isDemoData: isDemoFallback && !isLoading,
     hasData: (data.stats || []).length > 0,
   }

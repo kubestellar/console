@@ -3,9 +3,16 @@
  *
  * Premium SVG topology card showing the KubeCon multi-tenancy architecture
  * diagram as a live, interactive visualization. Renders one tenant's complete
- * stack: KubeVirt pods, K3s server pods, Layer-2/Layer-3 UDN networks, and
- * the KubeFlex controller, with animated connection paths and live status
- * indicators driven by real hook data.
+ * stack: K3s Agent Pods (KubeVirt), K3s Server Pod, Layer-2/Layer-3 UDN networks,
+ * and the KubeFlex controller, with animated bidirectional connection paths and
+ * live status indicators driven by real hook data.
+ *
+ * Updated to match Braulio's architecture diagram:
+ * - Two K3s Agent Pods (KubeVirt) in namespace-1
+ * - K3s Server Pod in namespace-2
+ * - KubeFlex Controller at top-right (outside tenant boundary)
+ * - All network traffic is bidirectional
+ * - Default k8s Network between namespace-2 and KubeFlex
  *
  * Network throughput data drives:
  * - Particle animation speed (faster = higher throughput)
@@ -27,66 +34,70 @@ import { DEMO_TENANT_TOPOLOGY } from './demoData'
 // ============================================================================
 
 /** ViewBox dimensions for landscape topology */
-const VIEWBOX_WIDTH = 200
-const VIEWBOX_HEIGHT = 140
+const VIEWBOX_WIDTH = 240
+const VIEWBOX_HEIGHT = 160
 
 // ============================================================================
 // Node Position Constants (viewBox units)
 // ============================================================================
 
-/** Outer tenant boundary */
+/** Outer tenant boundary (dashed) */
 const TENANT_X = 3
-const TENANT_Y = 3
-const TENANT_W = 194
-const TENANT_H = 134
+const TENANT_Y = 12
+const TENANT_W = 185
+const TENANT_H = 145
 
-/** Layer-2 Cluster UDN (Secondary) — top zone */
-const L2_UDN_X = 30
-const L2_UDN_Y = 8
-const L2_UDN_W = 140
-const L2_UDN_H = 22
+/** Layer-2 Cluster UDN (Secondary) — top zone inside tenant */
+const L2_UDN_X = 20
+const L2_UDN_Y = 18
+const L2_UDN_W = 145
+const L2_UDN_H = 20
 
-/** Namespace-1 container (holds KubeVirt Pod) */
-const NS1_X = 15
-const NS1_Y = 35
-const NS1_W = 70
-const NS1_H = 55
+/** Namespace-1 container (holds two K3s Agent Pods) */
+const NS1_X = 10
+const NS1_Y = 44
+const NS1_W = 100
+const NS1_H = 70
 
 /** Namespace-2 container (holds K3s Server Pod) */
-const NS2_X = 115
-const NS2_Y = 35
-const NS2_W = 70
-const NS2_H = 55
+const NS2_X = 120
+const NS2_Y = 44
+const NS2_W = 60
+const NS2_H = 70
 
-/** KubeVirt Pod node */
-const KUBEVIRT_X = 25
-const KUBEVIRT_Y = 45
-const KUBEVIRT_W = 50
-const KUBEVIRT_H = 30
+/** K3s Agent Pod 1 (KubeVirt) — left pod in namespace-1 */
+const AGENT1_X = 17
+const AGENT1_Y = 58
+const AGENT1_W = 40
+const AGENT1_H = 40
 
-/** K3s Server Pod node */
-const K3S_X = 125
-const K3S_Y = 45
-const K3S_W = 50
-const K3S_H = 30
+/** K3s Agent Pod 2 (KubeVirt) — right pod in namespace-1 */
+const AGENT2_X = 63
+const AGENT2_Y = 58
+const AGENT2_W = 40
+const AGENT2_H = 40
 
-/** Layer-3 UDN (Primary) — bottom-left zone */
+/** K3s Server Pod — in namespace-2 */
+const K3S_X = 127
+const K3S_Y = 58
+const K3S_W = 46
+const K3S_H = 40
+
+/** Layer-3 UDN (Primary) — bottom zone */
 const L3_UDN_X = 10
-const L3_UDN_Y = 103
-const L3_UDN_W = 75
-const L3_UDN_H = 18
+const L3_UDN_Y = 125
+const L3_UDN_W = 100
+const L3_UDN_H = 16
 
-/** Default K8s Network label — bottom-center */
-const DEFAULT_NET_X = 100
-const DEFAULT_NET_Y = 103
-const DEFAULT_NET_W = 50
-const DEFAULT_NET_H = 18
+/** KubeFlex Controller node — top-right, outside tenant boundary */
+const KUBEFLEX_X = 193
+const KUBEFLEX_Y = 3
+const KUBEFLEX_W = 44
+const KUBEFLEX_H = 16
 
-/** KubeFlex Controller node — bottom-right */
-const KUBEFLEX_X = 120
-const KUBEFLEX_Y = 125
-const KUBEFLEX_W = 60
-const KUBEFLEX_H = 14
+/** "Default k8s Network" label — right side between namespace-2 and KubeFlex */
+const DEFAULT_NET_LABEL_X = 178
+const DEFAULT_NET_LABEL_Y = 48
 
 // ============================================================================
 // Styling Constants
@@ -115,17 +126,19 @@ const STATUS_DOT_OFFSET_X = 4
 const STATUS_DOT_OFFSET_Y = 4
 
 /** Font sizes in viewBox units */
-const FONT_SIZE_TITLE = 4
-const FONT_SIZE_LABEL = 3.2
-const FONT_SIZE_BADGE = 2.5
-const FONT_SIZE_LEGEND = 2.8
-const FONT_SIZE_TENANT = 5
+const FONT_SIZE_TITLE = 3.5
+const FONT_SIZE_LABEL = 3.0
+const FONT_SIZE_BADGE = 2.3
+const FONT_SIZE_LEGEND = 2.6
+const FONT_SIZE_TENANT = 4.5
 /** Font size for throughput labels on connections */
 const FONT_SIZE_THROUGHPUT = 2.2
+/** Font size for sub-labels (e.g., "(Kubevirt)") */
+const FONT_SIZE_SUBLABEL = 2.3
 
 /** Interface badge dimensions */
-const BADGE_W = 12
-const BADGE_H = 5
+const BADGE_W = 10
+const BADGE_H = 4.5
 const BADGE_CORNER_RADIUS = 1.5
 
 /** Animation duration for pulse effect (seconds) */
@@ -173,14 +186,12 @@ const L3_UDN_FILL = 'rgba(96, 165, 250, 0.08)'
 const L3_UDN_STROKE = 'rgba(96, 165, 250, 0.5)'
 const L3_UDN_CONNECTION_COLOR = '#60a5fa'
 
-/** KubeFlex controller — dark blue theme */
-const KUBEFLEX_FILL = 'rgba(59, 130, 246, 0.15)'
+/** KubeFlex controller — dark blue/teal theme */
+const KUBEFLEX_FILL = 'rgba(20, 80, 120, 0.9)'
 const KUBEFLEX_STROKE = 'rgba(59, 130, 246, 0.6)'
 
-/** Default K8s network — gray theme */
-const DEFAULT_NET_FILL = 'rgba(148, 163, 184, 0.08)'
-const DEFAULT_NET_STROKE = 'rgba(148, 163, 184, 0.4)'
-const DEFAULT_NET_CONNECTION_COLOR = '#94a3b8'
+/** Default K8s network — dark blue theme (matches Braulio's diagram) */
+const DEFAULT_NET_CONNECTION_COLOR = '#1e4a6e'
 
 /** Component node fill */
 const NODE_FILL = 'rgba(30, 41, 59, 0.8)'
@@ -193,7 +204,7 @@ const NS_FILL = 'rgba(148, 163, 184, 0.03)'
 const NS_STROKE = 'rgba(148, 163, 184, 0.2)'
 
 /** Tenant outer border */
-const TENANT_STROKE = 'rgba(148, 163, 184, 0.15)'
+const TENANT_STROKE = 'rgba(96, 165, 250, 0.4)'
 
 /** Status dot colors */
 const STATUS_HEALTHY = '#22c55e'
@@ -208,6 +219,11 @@ const TEXT_MUTED = 'rgba(148, 163, 184, 0.5)'
 /** Throughput label background */
 const THROUGHPUT_PILL_FILL = 'rgba(15, 23, 42, 0.85)'
 const THROUGHPUT_PILL_STROKE = 'rgba(100, 116, 139, 0.25)'
+
+/** Interface badge colors matching Braulio's diagram */
+const ETH0_BADGE_FILL = 'rgba(30, 41, 59, 0.9)'
+const ETH1_BADGE_FILL = 'rgba(34, 90, 50, 0.9)'
+const ETH1_BADGE_STROKE = 'rgba(74, 222, 128, 0.4)'
 
 // ============================================================================
 // Throughput Helpers
@@ -264,10 +280,18 @@ interface ConnectionDef {
   label: string
   /** Combined rx+tx throughput in bytes/sec */
   throughputBytesPerSec: number
-  /** Midpoint X for the throughput label placement */
-  labelX: number
-  /** Midpoint Y for the throughput label placement */
-  labelY: number
+  /** Receive bytes/sec (ingress) */
+  rxBytesPerSec: number
+  /** Transmit bytes/sec (egress) */
+  txBytesPerSec: number
+  /** X position for ingress label (near source end) */
+  rxLabelX: number
+  /** Y position for ingress label */
+  rxLabelY: number
+  /** X position for egress label (near destination end) */
+  txLabelX: number
+  /** Y position for egress label */
+  txLabelY: number
 }
 
 interface ThroughputRates {
@@ -275,6 +299,14 @@ interface ThroughputRates {
   kvEth1Rate: number
   k3sEth0Rate: number
   k3sEth1Rate: number
+  kvEth0Rx: number
+  kvEth0Tx: number
+  kvEth1Rx: number
+  kvEth1Tx: number
+  k3sEth0Rx: number
+  k3sEth0Tx: number
+  k3sEth1Rx: number
+  k3sEth1Tx: number
 }
 
 function buildConnections(
@@ -284,82 +316,136 @@ function buildConnections(
   kubevirtDetected: boolean,
   rates: ThroughputRates,
 ): ConnectionDef[] {
-  /** Center X of KubeVirt pod */
-  const kvCx = KUBEVIRT_X + KUBEVIRT_W / 2
-  /** Bottom Y of KubeVirt pod */
-  const kvBy = KUBEVIRT_Y + KUBEVIRT_H
-  /** Right X of KubeVirt pod */
-  const kvRx = KUBEVIRT_X + KUBEVIRT_W
+  /** Agent Pod 1 top center (eth1 -> L2 UDN) */
+  const a1TopCx = AGENT1_X + AGENT1_W / 2
+  const a1TopY = AGENT1_Y
+  /** Agent Pod 1 bottom center (eth0 -> L3 UDN) */
+  const a1BotCx = AGENT1_X + AGENT1_W / 2
+  const a1BotY = AGENT1_Y + AGENT1_H
 
-  /** Center X of K3s pod */
-  const k3sCx = K3S_X + K3S_W / 2
-  /** Bottom Y of K3s pod */
-  const k3sBy = K3S_Y + K3S_H
+  /** Agent Pod 2 top center (eth1 -> L2 UDN) */
+  const a2TopCx = AGENT2_X + AGENT2_W / 2
+  const a2TopY = AGENT2_Y
+  /** Agent Pod 2 bottom center (eth0 -> L3 UDN) */
+  const a2BotCx = AGENT2_X + AGENT2_W / 2
+  const a2BotY = AGENT2_Y + AGENT2_H
 
-  /** Center X of L3 UDN */
-  const l3Cx = L3_UDN_X + L3_UDN_W / 2
-  /** Top Y of L3 UDN */
-  const l3Ty = L3_UDN_Y
+  /** K3s Server eth1 left side (-> L2 UDN) */
+  const k3sLeftX = K3S_X
+  const k3sLeftY = K3S_Y + K3S_H / 2
 
-  /** Center X of L2 UDN */
-  const l2Cx = L2_UDN_X + L2_UDN_W / 2
-  /** Bottom Y of L2 UDN */
-  const l2By = L2_UDN_Y + L2_UDN_H
+  /** K3s Server eth0 top-right (-> Default k8s Network -> KubeFlex) */
+  const k3sTopX = K3S_X + K3S_W - 10
+  const k3sTopY = K3S_Y
 
-  /** Center X of default net */
-  const defCx = DEFAULT_NET_X + DEFAULT_NET_W / 2
-  /** Top Y of default net */
-  const defTy = DEFAULT_NET_Y
+  /** L2 UDN bottom edge */
+  const l2BottomY = L2_UDN_Y + L2_UDN_H
 
-  /** Center X of KubeFlex */
-  const kfCx = KUBEFLEX_X + KUBEFLEX_W / 2
-  /** Top Y of KubeFlex */
-  const kfTy = KUBEFLEX_Y
+  /** L3 UDN top edge */
+  const l3TopY = L3_UDN_Y
+
+  /** KubeFlex bottom center */
+  const kfBotCx = KUBEFLEX_X + KUBEFLEX_W / 2
+  const kfBotY = KUBEFLEX_Y + KUBEFLEX_H
+
+  /** Half the throughput for each agent pod (split equally) */
+  const AGENT_THROUGHPUT_SPLIT = 2
+  const halfKvEth0 = rates.kvEth0Rate / AGENT_THROUGHPUT_SPLIT
+  const halfKvEth1 = rates.kvEth1Rate / AGENT_THROUGHPUT_SPLIT
+
+  /** Offset for placing rx/tx labels on opposite sides of a vertical connection */
+  const RX_TX_LABEL_OFFSET_X = 10
 
   return [
     {
-      // KubeVirt eth0 -> L3 UDN (Primary) — data-plane traffic (blue)
-      id: 'kv-eth0-l3',
-      d: `M ${kvCx} ${kvBy} L ${kvCx} ${kvBy + 6} Q ${kvCx} ${l3Ty - 3} ${l3Cx} ${l3Ty}`,
-      color: L3_UDN_CONNECTION_COLOR,
-      active: kubevirtDetected && ovnDetected,
-      label: 'eth0',
-      throughputBytesPerSec: rates.kvEth0Rate,
-      labelX: (kvCx + l3Cx) / 2 - 2,
-      labelY: (kvBy + l3Ty) / 2 + 2,
-    },
-    {
-      // KubeVirt eth1 -> L2 UDN (Secondary) — control-plane traffic (green)
-      id: 'kv-eth1-l2',
-      d: `M ${kvRx + 2} ${KUBEVIRT_Y + KUBEVIRT_H / 2} L ${kvRx + 8} ${KUBEVIRT_Y + KUBEVIRT_H / 2} L ${kvRx + 8} ${l2By + 2} Q ${kvRx + 8} ${l2By} ${l2Cx - 25} ${l2By}`,
+      // Agent Pod 1 eth1 -> L2 UDN (green, bidirectional)
+      id: 'a1-eth1-l2',
+      d: `M ${a1TopCx} ${a1TopY} L ${a1TopCx} ${l2BottomY}`,
       color: L2_UDN_CONNECTION_COLOR,
       active: kubevirtDetected && ovnDetected,
       label: 'eth1',
-      throughputBytesPerSec: rates.kvEth1Rate,
-      labelX: kvRx + 9,
-      labelY: (KUBEVIRT_Y + KUBEVIRT_H / 2 + l2By) / 2,
+      throughputBytesPerSec: halfKvEth1,
+      rxBytesPerSec: rates.kvEth1Rx / AGENT_THROUGHPUT_SPLIT,
+      txBytesPerSec: rates.kvEth1Tx / AGENT_THROUGHPUT_SPLIT,
+      rxLabelX: a1TopCx + RX_TX_LABEL_OFFSET_X,
+      rxLabelY: (a1TopY + l2BottomY) / 2 - 4,
+      txLabelX: a1TopCx + RX_TX_LABEL_OFFSET_X,
+      txLabelY: (a1TopY + l2BottomY) / 2 + 1,
     },
     {
-      // K3s eth1 -> L2 UDN (Secondary) — control-plane traffic (green)
+      // Agent Pod 2 eth1 -> L2 UDN (green, bidirectional)
+      id: 'a2-eth1-l2',
+      d: `M ${a2TopCx} ${a2TopY} L ${a2TopCx} ${l2BottomY}`,
+      color: L2_UDN_CONNECTION_COLOR,
+      active: kubevirtDetected && ovnDetected,
+      label: 'eth1',
+      throughputBytesPerSec: halfKvEth1,
+      rxBytesPerSec: rates.kvEth1Rx / AGENT_THROUGHPUT_SPLIT,
+      txBytesPerSec: rates.kvEth1Tx / AGENT_THROUGHPUT_SPLIT,
+      rxLabelX: a2TopCx + RX_TX_LABEL_OFFSET_X,
+      rxLabelY: (a2TopY + l2BottomY) / 2 - 4,
+      txLabelX: a2TopCx + RX_TX_LABEL_OFFSET_X,
+      txLabelY: (a2TopY + l2BottomY) / 2 + 1,
+    },
+    {
+      // Agent Pod 1 eth0 -> L3 UDN (blue, bidirectional)
+      id: 'a1-eth0-l3',
+      d: `M ${a1BotCx} ${a1BotY} L ${a1BotCx} ${l3TopY}`,
+      color: L3_UDN_CONNECTION_COLOR,
+      active: kubevirtDetected && ovnDetected,
+      label: 'eth0',
+      throughputBytesPerSec: halfKvEth0,
+      rxBytesPerSec: rates.kvEth0Rx / AGENT_THROUGHPUT_SPLIT,
+      txBytesPerSec: rates.kvEth0Tx / AGENT_THROUGHPUT_SPLIT,
+      rxLabelX: a1BotCx + RX_TX_LABEL_OFFSET_X,
+      rxLabelY: (a1BotY + l3TopY) / 2 - 4,
+      txLabelX: a1BotCx + RX_TX_LABEL_OFFSET_X,
+      txLabelY: (a1BotY + l3TopY) / 2 + 1,
+    },
+    {
+      // Agent Pod 2 eth0 -> L3 UDN (blue, bidirectional)
+      id: 'a2-eth0-l3',
+      d: `M ${a2BotCx} ${a2BotY} L ${a2BotCx} ${l3TopY}`,
+      color: L3_UDN_CONNECTION_COLOR,
+      active: kubevirtDetected && ovnDetected,
+      label: 'eth0',
+      throughputBytesPerSec: halfKvEth0,
+      rxBytesPerSec: rates.kvEth0Rx / AGENT_THROUGHPUT_SPLIT,
+      txBytesPerSec: rates.kvEth0Tx / AGENT_THROUGHPUT_SPLIT,
+      rxLabelX: a2BotCx + RX_TX_LABEL_OFFSET_X,
+      rxLabelY: (a2BotY + l3TopY) / 2 - 4,
+      txLabelX: a2BotCx + RX_TX_LABEL_OFFSET_X,
+      txLabelY: (a2BotY + l3TopY) / 2 + 1,
+    },
+    {
+      // K3s Server eth1 -> L2 UDN (green, bidirectional)
       id: 'k3s-eth1-l2',
-      d: `M ${K3S_X - 2} ${K3S_Y + KUBEVIRT_H / 2} L ${K3S_X - 8} ${K3S_Y + KUBEVIRT_H / 2} L ${K3S_X - 8} ${l2By + 2} Q ${K3S_X - 8} ${l2By} ${l2Cx + 25} ${l2By}`,
+      d: `M ${k3sLeftX} ${k3sLeftY} L ${L2_UDN_X + L2_UDN_W - 5} ${k3sLeftY} L ${L2_UDN_X + L2_UDN_W - 5} ${l2BottomY}`,
       color: L2_UDN_CONNECTION_COLOR,
       active: k3sDetected && ovnDetected,
       label: 'eth1',
       throughputBytesPerSec: rates.k3sEth1Rate,
-      labelX: K3S_X - 9 - THROUGHPUT_PILL_W,
-      labelY: (K3S_Y + KUBEVIRT_H / 2 + l2By) / 2,
+      rxBytesPerSec: rates.k3sEth1Rx,
+      txBytesPerSec: rates.k3sEth1Tx,
+      rxLabelX: k3sLeftX - THROUGHPUT_PILL_W - 2,
+      rxLabelY: k3sLeftY - 5,
+      txLabelX: k3sLeftX - THROUGHPUT_PILL_W - 2,
+      txLabelY: k3sLeftY + 1,
     },
     {
-      // K3s eth0 -> Default K8s Network -> KubeFlex Controller
+      // K3s Server eth0 -> Default k8s Network -> KubeFlex (dark blue, bidirectional)
       id: 'k3s-eth0-kf',
-      d: `M ${k3sCx} ${k3sBy} L ${k3sCx} ${defTy - 2} L ${defCx} ${defTy} L ${defCx} ${defTy + DEFAULT_NET_H} L ${kfCx} ${kfTy}`,
+      d: `M ${k3sTopX} ${k3sTopY} L ${k3sTopX} ${kfBotY + 15} L ${kfBotCx} ${kfBotY + 15} L ${kfBotCx} ${kfBotY}`,
       color: DEFAULT_NET_CONNECTION_COLOR,
       active: k3sDetected && kubeflexDetected,
       label: 'eth0',
       throughputBytesPerSec: rates.k3sEth0Rate,
-      labelX: (k3sCx + defCx) / 2 + 2,
-      labelY: (k3sBy + defTy) / 2 - 1,
+      rxBytesPerSec: rates.k3sEth0Rx,
+      txBytesPerSec: rates.k3sEth0Tx,
+      rxLabelX: k3sTopX + 2,
+      rxLabelY: kfBotY + 12,
+      txLabelX: kfBotCx + 3,
+      txLabelY: kfBotY + 12,
     },
   ]
 }
@@ -382,59 +468,91 @@ function FlowParticle({
 }) {
   if (!active) return null
 
-  // When throughput is zero, show a slow default animation so the connection
-  // still looks alive.  Real throughput > 0 speeds the particle up.
   const duration = getFlowDuration(throughputBytesPerSec)
   const radius = getParticleRadius(throughputBytesPerSec)
 
   return (
-    <motion.circle
-      r={radius}
-      fill={color}
-      filter="url(#glow)"
-      initial={{ offsetDistance: '0%' }}
-      animate={{ offsetDistance: '100%' }}
-      transition={{
-        duration,
-        repeat: Infinity,
-        ease: 'linear',
-      }}
-      style={{
-        offsetPath: `url(#${pathId})`,
-      }}
-    >
-      <animate
-        attributeName="opacity"
-        values="0;1;1;0"
-        dur={`${duration}s`}
-        repeatCount="indefinite"
-      />
-    </motion.circle>
+    <>
+      {/* Forward particle */}
+      <motion.circle
+        r={radius}
+        fill={color}
+        filter="url(#glow)"
+        initial={{ offsetDistance: '0%' }}
+        animate={{ offsetDistance: '100%' }}
+        transition={{
+          duration,
+          repeat: Infinity,
+          ease: 'linear',
+        }}
+        style={{
+          offsetPath: `url(#${pathId})`,
+        }}
+      >
+        <animate
+          attributeName="opacity"
+          values="0;1;1;0"
+          dur={`${duration}s`}
+          repeatCount="indefinite"
+        />
+      </motion.circle>
+      {/* Reverse particle (bidirectional) */}
+      <motion.circle
+        r={radius}
+        fill={color}
+        filter="url(#glow)"
+        initial={{ offsetDistance: '100%' }}
+        animate={{ offsetDistance: '0%' }}
+        transition={{
+          duration: duration * 1.15,
+          repeat: Infinity,
+          ease: 'linear',
+          delay: duration * 0.4,
+        }}
+        style={{
+          offsetPath: `url(#${pathId})`,
+        }}
+      >
+        <animate
+          attributeName="opacity"
+          values="0;1;1;0"
+          dur={`${duration * 1.15}s`}
+          repeatCount="indefinite"
+        />
+      </motion.circle>
+    </>
   )
 }
 
-/** Throughput label pill displayed near a connection */
+/** Throughput label pill with rx/tx prefix displayed near a connection */
 function ThroughputLabel({
   x,
   y,
   bytesPerSec,
   color,
   active,
+  prefix,
 }: {
   x: number
   y: number
   bytesPerSec: number
   color: string
   active: boolean
+  prefix?: 'rx' | 'tx'
 }) {
   if (!active || bytesPerSec <= 0) return null
+
+  /** Extra width for the rx/tx prefix arrow */
+  const PILL_W_WITH_PREFIX = THROUGHPUT_PILL_W + 4
+  const arrow = prefix === 'rx' ? '\u2193' : '\u2191'
+  const label = `${arrow} ${formatBytesPerSec(bytesPerSec)}`
 
   return (
     <g>
       <rect
         x={x}
         y={y}
-        width={THROUGHPUT_PILL_W}
+        width={PILL_W_WITH_PREFIX}
         height={THROUGHPUT_PILL_H}
         rx={THROUGHPUT_PILL_RX}
         fill={THROUGHPUT_PILL_FILL}
@@ -442,7 +560,7 @@ function ThroughputLabel({
         strokeWidth={0.3}
       />
       <text
-        x={x + THROUGHPUT_PILL_W / 2}
+        x={x + PILL_W_WITH_PREFIX / 2}
         y={y + THROUGHPUT_PILL_H / 2 + 0.8}
         textAnchor="middle"
         fill={color}
@@ -450,7 +568,7 @@ function ThroughputLabel({
         fontFamily="monospace"
         opacity={0.9}
       >
-        {formatBytesPerSec(bytesPerSec)}
+        {label}
       </text>
     </g>
   )
@@ -480,7 +598,7 @@ function StatusDot({ x, y, detected, healthy }: { x: number; y: number; detected
 }
 
 /** Interface badge (eth0/eth1 labels on nodes) */
-function InterfaceBadge({ x, y, label }: { x: number; y: number; label: string }) {
+function InterfaceBadge({ x, y, label, isEth1 }: { x: number; y: number; label: string; isEth1?: boolean }) {
   return (
     <g>
       <rect
@@ -489,15 +607,15 @@ function InterfaceBadge({ x, y, label }: { x: number; y: number; label: string }
         width={BADGE_W}
         height={BADGE_H}
         rx={BADGE_CORNER_RADIUS}
-        fill="rgba(30, 41, 59, 0.9)"
-        stroke="rgba(100, 116, 139, 0.3)"
+        fill={isEth1 ? ETH1_BADGE_FILL : ETH0_BADGE_FILL}
+        stroke={isEth1 ? ETH1_BADGE_STROKE : 'rgba(100, 116, 139, 0.3)'}
         strokeWidth={0.4}
       />
       <text
         x={x + BADGE_W / 2}
-        y={y + BADGE_H / 2 + 1}
+        y={y + BADGE_H / 2 + 0.8}
         textAnchor="middle"
-        fill={TEXT_SECONDARY}
+        fill={isEth1 ? L2_UDN_CONNECTION_COLOR : TEXT_SECONDARY}
         fontSize={FONT_SIZE_BADGE}
         fontFamily="monospace"
       >
@@ -576,11 +694,21 @@ export function TenantTopology() {
           kvEth1Rate: data.kvEth1Rate,
           k3sEth0Rate: data.k3sEth0Rate,
           k3sEth1Rate: data.k3sEth1Rate,
+          kvEth0Rx: data.kvEth0Rx,
+          kvEth0Tx: data.kvEth0Tx,
+          kvEth1Rx: data.kvEth1Rx,
+          kvEth1Tx: data.kvEth1Tx,
+          k3sEth0Rx: data.k3sEth0Rx,
+          k3sEth0Tx: data.k3sEth0Tx,
+          k3sEth1Rx: data.k3sEth1Rx,
+          k3sEth1Tx: data.k3sEth1Tx,
         },
       ),
     [
       data.ovnDetected, data.kubeflexDetected, data.k3sDetected, data.kubevirtDetected,
       data.kvEth0Rate, data.kvEth1Rate, data.k3sEth0Rate, data.k3sEth1Rate,
+      data.kvEth0Rx, data.kvEth0Tx, data.kvEth1Rx, data.kvEth1Tx,
+      data.k3sEth0Rx, data.k3sEth0Tx, data.k3sEth1Rx, data.k3sEth1Tx,
     ],
   )
 
@@ -612,45 +740,31 @@ export function TenantTopology() {
             <path key={conn.id} id={conn.id} d={conn.d} fill="none" />
           ))}
 
-          {/* Arrowhead marker — blue */}
-          <marker
-            id="arrowBlue"
-            markerWidth="4"
-            markerHeight="4"
-            refX="3"
-            refY="2"
-            orient="auto"
-          >
+          {/* Arrowhead markers for bidirectional connections */}
+          <marker id="arrowBlue" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+            <path d="M 0 0 L 4 2 L 0 4 Z" fill={L3_UDN_CONNECTION_COLOR} opacity={0.7} />
+          </marker>
+          <marker id="arrowBlueReverse" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={L3_UDN_CONNECTION_COLOR} opacity={0.7} />
           </marker>
 
-          {/* Arrowhead marker — green */}
-          <marker
-            id="arrowGreen"
-            markerWidth="4"
-            markerHeight="4"
-            refX="3"
-            refY="2"
-            orient="auto"
-          >
+          <marker id="arrowGreen" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+            <path d="M 0 0 L 4 2 L 0 4 Z" fill={L2_UDN_CONNECTION_COLOR} opacity={0.7} />
+          </marker>
+          <marker id="arrowGreenReverse" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={L2_UDN_CONNECTION_COLOR} opacity={0.7} />
           </marker>
 
-          {/* Arrowhead marker — gray */}
-          <marker
-            id="arrowGray"
-            markerWidth="4"
-            markerHeight="4"
-            refX="3"
-            refY="2"
-            orient="auto"
-          >
+          <marker id="arrowDark" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+            <path d="M 0 0 L 4 2 L 0 4 Z" fill={DEFAULT_NET_CONNECTION_COLOR} opacity={0.7} />
+          </marker>
+          <marker id="arrowDarkReverse" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={DEFAULT_NET_CONNECTION_COLOR} opacity={0.7} />
           </marker>
         </defs>
 
         {/* ================================================================
-            Layer 0: Tenant outer boundary
+            Layer 0: Tenant outer boundary (blue dashed)
             ================================================================ */}
         <rect
           x={TENANT_X}
@@ -660,14 +774,14 @@ export function TenantTopology() {
           rx={ZONE_CORNER_RADIUS}
           fill="none"
           stroke={TENANT_STROKE}
-          strokeWidth={ZONE_STROKE_WIDTH}
+          strokeWidth={1}
           strokeDasharray="4,2"
         />
         {/* Tenant label with K8s icon */}
-        <K8sIcon x={TENANT_X + 3} y={TENANT_Y - 1} size={6} />
+        <K8sIcon x={TENANT_X + 3} y={TENANT_Y + 2} size={6} />
         <text
           x={TENANT_X + 11}
-          y={TENANT_Y + 4}
+          y={TENANT_Y + 6.5}
           fill={TEXT_PRIMARY}
           fontSize={FONT_SIZE_TENANT}
           fontWeight="600"
@@ -679,7 +793,7 @@ export function TenantTopology() {
             Layer 1: Zone backgrounds
             ================================================================ */}
 
-        {/* Layer-2 Cluster UDN (Secondary) */}
+        {/* Layer-2 Cluster UDN (Secondary) — green zone at top */}
         <motion.rect
           x={L2_UDN_X}
           y={L2_UDN_Y}
@@ -711,7 +825,7 @@ export function TenantTopology() {
           fill={TEXT_MUTED}
           fontSize={FONT_SIZE_BADGE}
         >
-          {t('tenantTopology.l2Namespaces', 'namespace-1 & namespace-2')}
+          {t('tenantTopology.l2Namespaces', '(namespace-1 & namespace-2)')}
         </text>
 
         {/* Namespace-1 container */}
@@ -724,14 +838,13 @@ export function TenantTopology() {
           fill={NS_FILL}
           stroke={NS_STROKE}
           strokeWidth={ZONE_STROKE_WIDTH}
-          strokeDasharray={DASHED_PATTERN}
         />
         <text
-          x={NS1_X + NS1_W / 2}
+          x={NS1_X + 4}
           y={NS1_Y + 5}
-          textAnchor="middle"
-          fill={TEXT_MUTED}
-          fontSize={FONT_SIZE_BADGE}
+          fill={TEXT_PRIMARY}
+          fontSize={FONT_SIZE_LABEL}
+          fontWeight="600"
         >
           {t('tenantTopology.namespace1', 'namespace-1')}
         </text>
@@ -746,19 +859,18 @@ export function TenantTopology() {
           fill={NS_FILL}
           stroke={NS_STROKE}
           strokeWidth={ZONE_STROKE_WIDTH}
-          strokeDasharray={DASHED_PATTERN}
         />
         <text
-          x={NS2_X + NS2_W / 2}
+          x={NS2_X + 4}
           y={NS2_Y + 5}
-          textAnchor="middle"
-          fill={TEXT_MUTED}
-          fontSize={FONT_SIZE_BADGE}
+          fill={TEXT_PRIMARY}
+          fontSize={FONT_SIZE_LABEL}
+          fontWeight="600"
         >
           {t('tenantTopology.namespace2', 'namespace-2')}
         </text>
 
-        {/* Layer-3 UDN (Primary) */}
+        {/* Layer-3 UDN (Primary) — blue zone at bottom */}
         <motion.rect
           x={L3_UDN_X}
           y={L3_UDN_Y}
@@ -775,7 +887,7 @@ export function TenantTopology() {
         />
         <text
           x={L3_UDN_X + L3_UDN_W / 2}
-          y={L3_UDN_Y + 7}
+          y={L3_UDN_Y + 10}
           textAnchor="middle"
           fill={data.ovnDetected ? L3_UDN_CONNECTION_COLOR : TEXT_MUTED}
           fontSize={FONT_SIZE_LABEL}
@@ -783,56 +895,26 @@ export function TenantTopology() {
         >
           {t('tenantTopology.l3Udn', 'Layer-3 UDN (Primary)')}
         </text>
-        <text
-          x={L3_UDN_X + L3_UDN_W / 2}
-          y={L3_UDN_Y + 13}
-          textAnchor="middle"
-          fill={TEXT_MUTED}
-          fontSize={FONT_SIZE_BADGE}
-        >
-          {t('tenantTopology.l3DataPlane', 'data-plane')}
-        </text>
 
-        {/* Default K8s Network */}
-        <rect
-          x={DEFAULT_NET_X}
-          y={DEFAULT_NET_Y}
-          width={DEFAULT_NET_W}
-          height={DEFAULT_NET_H}
-          rx={ZONE_CORNER_RADIUS}
-          fill={DEFAULT_NET_FILL}
-          stroke={DEFAULT_NET_STROKE}
-          strokeWidth={ZONE_STROKE_WIDTH}
-        />
+        {/* "Default k8s Network" label — right side */}
         <text
-          x={DEFAULT_NET_X + DEFAULT_NET_W / 2}
-          y={DEFAULT_NET_Y + 7}
-          textAnchor="middle"
-          fill={TEXT_SECONDARY}
+          x={DEFAULT_NET_LABEL_X}
+          y={DEFAULT_NET_LABEL_Y}
+          fill={DEFAULT_NET_CONNECTION_COLOR}
           fontSize={FONT_SIZE_LABEL}
+          fontStyle="italic"
         >
-          {t('tenantTopology.defaultNet', 'Default K8s')}
-        </text>
-        <text
-          x={DEFAULT_NET_X + DEFAULT_NET_W / 2}
-          y={DEFAULT_NET_Y + 13}
-          textAnchor="middle"
-          fill={TEXT_MUTED}
-          fontSize={FONT_SIZE_BADGE}
-        >
-          {t('tenantTopology.defaultNetLabel', 'Network')}
+          {t('tenantTopology.defaultNet', 'Default k8s Network')}
         </text>
 
         {/* ================================================================
-            Layer 2: Connection lines
+            Layer 2: Connection lines (all bidirectional)
             ================================================================ */}
         {(connections || []).map((conn) => {
-          const markerEnd =
-            conn.color === L2_UDN_CONNECTION_COLOR
-              ? 'url(#arrowGreen)'
-              : conn.color === L3_UDN_CONNECTION_COLOR
-                ? 'url(#arrowBlue)'
-                : 'url(#arrowGray)'
+          const isGreen = conn.color === L2_UDN_CONNECTION_COLOR
+          const isBlue = conn.color === L3_UDN_CONNECTION_COLOR
+          const markerEnd = isGreen ? 'url(#arrowGreen)' : isBlue ? 'url(#arrowBlue)' : 'url(#arrowDark)'
+          const markerStart = isGreen ? 'url(#arrowGreenReverse)' : isBlue ? 'url(#arrowBlueReverse)' : 'url(#arrowDarkReverse)'
 
           return (
             <motion.path
@@ -843,6 +925,7 @@ export function TenantTopology() {
               strokeWidth={CONNECTION_STROKE_WIDTH}
               strokeDasharray={conn.active ? 'none' : DASHED_PATTERN}
               markerEnd={conn.active ? markerEnd : undefined}
+              markerStart={conn.active ? markerStart : undefined}
               opacity={conn.active ? 0.6 : 0.25}
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: conn.active ? 0.6 : 0.25 }}
@@ -851,7 +934,7 @@ export function TenantTopology() {
           )
         })}
 
-        {/* Animated flow particles on active connections */}
+        {/* Animated bidirectional flow particles on active connections */}
         {(connections || []).map((conn) => (
           <FlowParticle
             key={`particle-${conn.id}`}
@@ -862,15 +945,29 @@ export function TenantTopology() {
           />
         ))}
 
-        {/* Throughput labels on active connections */}
+        {/* Ingress (rx) throughput labels */}
         {(connections || []).map((conn) => (
           <ThroughputLabel
-            key={`throughput-${conn.id}`}
-            x={conn.labelX}
-            y={conn.labelY}
-            bytesPerSec={conn.throughputBytesPerSec}
+            key={`rx-${conn.id}`}
+            x={conn.rxLabelX}
+            y={conn.rxLabelY}
+            bytesPerSec={conn.rxBytesPerSec}
             color={conn.color}
             active={conn.active}
+            prefix="rx"
+          />
+        ))}
+
+        {/* Egress (tx) throughput labels */}
+        {(connections || []).map((conn) => (
+          <ThroughputLabel
+            key={`tx-${conn.id}`}
+            x={conn.txLabelX}
+            y={conn.txLabelY}
+            bytesPerSec={conn.txBytesPerSec}
+            color={conn.color}
+            active={conn.active}
+            prefix="tx"
           />
         ))}
 
@@ -878,17 +975,17 @@ export function TenantTopology() {
             Layer 3: Component nodes
             ================================================================ */}
 
-        {/* KubeVirt Pod */}
+        {/* K3s Agent Pod 1 (KubeVirt) */}
         <motion.g
           initial={{ opacity: 0, y: 3 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <rect
-            x={KUBEVIRT_X}
-            y={KUBEVIRT_Y}
-            width={KUBEVIRT_W}
-            height={KUBEVIRT_H}
+            x={AGENT1_X}
+            y={AGENT1_Y}
+            width={AGENT1_W}
+            height={AGENT1_H}
             rx={NODE_CORNER_RADIUS}
             fill={data.kubevirtDetected ? NODE_FILL : NODE_FILL_INACTIVE}
             stroke={data.kubevirtDetected ? NODE_STROKE : NODE_STROKE_INACTIVE}
@@ -896,32 +993,82 @@ export function TenantTopology() {
             strokeDasharray={data.kubevirtDetected ? 'none' : DASHED_PATTERN}
             filter="url(#nodeShadow)"
           />
+          {/* eth1 badge at top */}
+          <InterfaceBadge x={AGENT1_X + AGENT1_W / 2 - BADGE_W / 2} y={AGENT1_Y + 2} label="eth1" isEth1 />
           <text
-            x={KUBEVIRT_X + KUBEVIRT_W / 2}
-            y={KUBEVIRT_Y + 10}
+            x={AGENT1_X + AGENT1_W / 2}
+            y={AGENT1_Y + 16}
             textAnchor="middle"
             fill={data.kubevirtDetected ? TEXT_PRIMARY : TEXT_MUTED}
             fontSize={FONT_SIZE_TITLE}
             fontWeight="600"
           >
-            {t('tenantTopology.kubevirtPod', 'KubeVirt Pod')}
+            K3s Agent Pod
           </text>
           <text
-            x={KUBEVIRT_X + KUBEVIRT_W / 2}
-            y={KUBEVIRT_Y + 16}
+            x={AGENT1_X + AGENT1_W / 2}
+            y={AGENT1_Y + 22}
             textAnchor="middle"
             fill={TEXT_MUTED}
-            fontSize={FONT_SIZE_BADGE}
+            fontSize={FONT_SIZE_SUBLABEL}
           >
-            {t('tenantTopology.kubevirtVm', 'VM Workload')}
+            (Kubevirt)
           </text>
-          {/* Interface badges — eth0 centered bottom, eth1 right side mid-height */}
-          <InterfaceBadge x={KUBEVIRT_X + KUBEVIRT_W / 2 - BADGE_W / 2} y={KUBEVIRT_Y + KUBEVIRT_H - 8} label="eth0" />
-          <InterfaceBadge x={KUBEVIRT_X + KUBEVIRT_W - BADGE_W + 2} y={KUBEVIRT_Y + KUBEVIRT_H / 2 - BADGE_H / 2} label="eth1" />
-          {/* Status dot */}
+          {/* eth0 badge at bottom */}
+          <InterfaceBadge x={AGENT1_X + AGENT1_W / 2 - BADGE_W / 2} y={AGENT1_Y + AGENT1_H - 8} label="eth0" />
           <StatusDot
-            x={KUBEVIRT_X + KUBEVIRT_W - STATUS_DOT_OFFSET_X}
-            y={KUBEVIRT_Y + STATUS_DOT_OFFSET_Y}
+            x={AGENT1_X + AGENT1_W - STATUS_DOT_OFFSET_X}
+            y={AGENT1_Y + STATUS_DOT_OFFSET_Y}
+            detected={data.kubevirtDetected}
+            healthy={data.kubevirtHealthy}
+          />
+        </motion.g>
+
+        {/* K3s Agent Pod 2 (KubeVirt) */}
+        <motion.g
+          initial={{ opacity: 0, y: 3 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+        >
+          <rect
+            x={AGENT2_X}
+            y={AGENT2_Y}
+            width={AGENT2_W}
+            height={AGENT2_H}
+            rx={NODE_CORNER_RADIUS}
+            fill={data.kubevirtDetected ? NODE_FILL : NODE_FILL_INACTIVE}
+            stroke={data.kubevirtDetected ? NODE_STROKE : NODE_STROKE_INACTIVE}
+            strokeWidth={NODE_STROKE_WIDTH}
+            strokeDasharray={data.kubevirtDetected ? 'none' : DASHED_PATTERN}
+            filter="url(#nodeShadow)"
+          />
+          {/* eth1 badge at top */}
+          <InterfaceBadge x={AGENT2_X + AGENT2_W / 2 - BADGE_W / 2} y={AGENT2_Y + 2} label="eth1" isEth1 />
+          <text
+            x={AGENT2_X + AGENT2_W / 2}
+            y={AGENT2_Y + 16}
+            textAnchor="middle"
+            fill={data.kubevirtDetected ? TEXT_PRIMARY : TEXT_MUTED}
+            fontSize={FONT_SIZE_TITLE}
+            fontWeight="600"
+          >
+            K3s Agent Pod
+          </text>
+          <text
+            x={AGENT2_X + AGENT2_W / 2}
+            y={AGENT2_Y + 22}
+            textAnchor="middle"
+            fill={TEXT_MUTED}
+            fontSize={FONT_SIZE_SUBLABEL}
+            fontWeight="600"
+          >
+            (KubeVirt)
+          </text>
+          {/* eth0 badge at bottom */}
+          <InterfaceBadge x={AGENT2_X + AGENT2_W / 2 - BADGE_W / 2} y={AGENT2_Y + AGENT2_H - 8} label="eth0" />
+          <StatusDot
+            x={AGENT2_X + AGENT2_W - STATUS_DOT_OFFSET_X}
+            y={AGENT2_Y + STATUS_DOT_OFFSET_Y}
             detected={data.kubevirtDetected}
             healthy={data.kubevirtHealthy}
           />
@@ -945,9 +1092,13 @@ export function TenantTopology() {
             strokeDasharray={data.k3sDetected ? 'none' : DASHED_PATTERN}
             filter="url(#nodeShadow)"
           />
+          {/* eth0 badge at top-right */}
+          <InterfaceBadge x={K3S_X + K3S_W - BADGE_W - 4} y={K3S_Y + 2} label="eth0" />
+          {/* eth1 badge at left side */}
+          <InterfaceBadge x={K3S_X + 2} y={K3S_Y + K3S_H / 2 - BADGE_H / 2} label="eth1" isEth1 />
           <text
             x={K3S_X + K3S_W / 2}
-            y={K3S_Y + 10}
+            y={K3S_Y + 20}
             textAnchor="middle"
             fill={data.k3sDetected ? TEXT_PRIMARY : TEXT_MUTED}
             fontSize={FONT_SIZE_TITLE}
@@ -955,19 +1106,6 @@ export function TenantTopology() {
           >
             {t('tenantTopology.k3sPod', 'K3s Server Pod')}
           </text>
-          <text
-            x={K3S_X + K3S_W / 2}
-            y={K3S_Y + 16}
-            textAnchor="middle"
-            fill={TEXT_MUTED}
-            fontSize={FONT_SIZE_BADGE}
-          >
-            {t('tenantTopology.k3sCluster', 'Control Plane')}
-          </text>
-          {/* Interface badges — eth0 centered bottom, eth1 left side mid-height */}
-          <InterfaceBadge x={K3S_X + K3S_W / 2 - BADGE_W / 2} y={K3S_Y + K3S_H - 8} label="eth0" />
-          <InterfaceBadge x={K3S_X - 2} y={K3S_Y + KUBEVIRT_H / 2 - BADGE_H / 2} label="eth1" />
-          {/* Status dot */}
           <StatusDot
             x={K3S_X + K3S_W - STATUS_DOT_OFFSET_X}
             y={K3S_Y + STATUS_DOT_OFFSET_Y}
@@ -976,7 +1114,7 @@ export function TenantTopology() {
           />
         </motion.g>
 
-        {/* KubeFlex Controller */}
+        {/* KubeFlex Controller (top-right, outside tenant) */}
         <motion.g
           initial={{ opacity: 0, y: 3 }}
           animate={{ opacity: 1, y: 0 }}
@@ -996,15 +1134,14 @@ export function TenantTopology() {
           />
           <text
             x={KUBEFLEX_X + KUBEFLEX_W / 2}
-            y={KUBEFLEX_Y + 9}
+            y={KUBEFLEX_Y + 10}
             textAnchor="middle"
             fill={data.kubeflexDetected ? TEXT_PRIMARY : TEXT_MUTED}
             fontSize={FONT_SIZE_TITLE}
-            fontWeight="600"
+            fontWeight="700"
           >
             {t('tenantTopology.kubeflexController', 'KubeFlex Controller')}
           </text>
-          {/* Status dot */}
           <StatusDot
             x={KUBEFLEX_X + KUBEFLEX_W - STATUS_DOT_OFFSET_X}
             y={KUBEFLEX_Y + STATUS_DOT_OFFSET_Y}
@@ -1030,39 +1167,39 @@ export function TenantTopology() {
         />
 
         {/* ================================================================
-            Layer 4: Legend (bottom-left)
+            Layer 4: Legend (bottom-right)
             ================================================================ */}
         <g>
           {/* Legend background */}
           <rect
-            x={TENANT_X + 3}
-            y={TENANT_Y + TENANT_H - 18}
-            width={55}
-            height={15}
+            x={L3_UDN_X + L3_UDN_W + 10}
+            y={L3_UDN_Y}
+            width={70}
+            height={16}
             rx={2}
             fill="rgba(15, 23, 42, 0.7)"
             stroke="rgba(100, 116, 139, 0.15)"
             strokeWidth={0.3}
           />
-          {/* Blue — Primary UDN */}
-          <circle cx={TENANT_X + 8} cy={TENANT_Y + TENANT_H - 11} r={1.5} fill={L3_UDN_CONNECTION_COLOR} />
+          {/* Blue — Primary UDN: data-plane traffic */}
+          <circle cx={L3_UDN_X + L3_UDN_W + 15} cy={L3_UDN_Y + 5} r={1.5} fill={L3_UDN_CONNECTION_COLOR} />
           <text
-            x={TENANT_X + 12}
-            y={TENANT_Y + TENANT_H - 9.5}
+            x={L3_UDN_X + L3_UDN_W + 19}
+            y={L3_UDN_Y + 6.5}
             fill={TEXT_SECONDARY}
             fontSize={FONT_SIZE_LEGEND}
           >
-            {t('tenantTopology.legendPrimary', 'Primary UDN: data-plane')}
+            {t('tenantTopology.legendPrimary', 'Primary UDN: data-plane traffic')}
           </text>
-          {/* Green — Secondary UDN */}
-          <circle cx={TENANT_X + 8} cy={TENANT_Y + TENANT_H - 6} r={1.5} fill={L2_UDN_CONNECTION_COLOR} />
+          {/* Green — Secondary UDN: control-plane traffic */}
+          <circle cx={L3_UDN_X + L3_UDN_W + 15} cy={L3_UDN_Y + 11} r={1.5} fill={L2_UDN_CONNECTION_COLOR} />
           <text
-            x={TENANT_X + 12}
-            y={TENANT_Y + TENANT_H - 4.5}
+            x={L3_UDN_X + L3_UDN_W + 19}
+            y={L3_UDN_Y + 12.5}
             fill={TEXT_SECONDARY}
             fontSize={FONT_SIZE_LEGEND}
           >
-            {t('tenantTopology.legendSecondary', 'Secondary UDN: control-plane')}
+            {t('tenantTopology.legendSecondary', 'Secondary UDN: control-plane traffic')}
           </text>
         </g>
       </svg>
