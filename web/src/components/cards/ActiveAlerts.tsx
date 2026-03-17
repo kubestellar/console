@@ -171,7 +171,7 @@ export function ActiveAlerts() {
       open({
         type: 'cluster',
         title: alert.cluster,
-        data: { name: alert.cluster, alert },
+        data: { cluster: alert.cluster, alert },
       })
     }
   }
