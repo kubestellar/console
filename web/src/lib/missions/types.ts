@@ -120,43 +120,92 @@ export interface ValidationResult {
 const MISSION_TYPES: string[] = ['upgrade', 'troubleshoot', 'analyze', 'deploy', 'repair', 'custom']
 
 /**
+ * Normalize a raw mission object into a flat MissionExport shape.
+ *
+ * Console-kb missions use a nested format where the actual content is inside
+ * a `mission` wrapper object:
+ *   { version, name, missionClass, mission: { title, type, steps, ... } }
+ *
+ * This function unwraps the nested format and merges top-level metadata
+ * (author, authorGithub, version, missionClass, name) with the inner
+ * mission content so the validator always sees a flat structure.
+ *
+ * Also applies lenient defaults for optional fields (tags, description, type)
+ * so that KB content with minor omissions still imports successfully.
+ */
+function normalizeMissionData(raw: Record<string, unknown>): Record<string, unknown> {
+  // If there's a nested `mission` object, unwrap it and merge with top-level metadata
+  if (raw.mission && typeof raw.mission === 'object' && !Array.isArray(raw.mission)) {
+    const inner = raw.mission as Record<string, unknown>
+    return {
+      // Top-level metadata
+      version: raw.version ?? inner.version ?? 'kc-mission-v1',
+      name: raw.name ?? inner.name,
+      missionClass: raw.missionClass ?? inner.missionClass,
+      author: raw.author ?? inner.author,
+      authorGithub: raw.authorGithub ?? inner.authorGithub,
+      // Inner mission content takes priority
+      ...inner,
+      // Ensure top-level version/missionClass aren't overwritten by undefined inner values
+      ...(raw.version ? { version: raw.version } : {}),
+      ...(raw.missionClass ? { missionClass: raw.missionClass } : {}),
+    }
+  }
+  return raw
+}
+
+/**
  * Validate that a parsed object conforms to the MissionExport schema.
+ *
+ * Lenient by design — applies defaults for missing optional fields so that
+ * console-kb content and community-contributed missions import successfully
+ * even if they don't include every field. Only truly fatal issues (no title
+ * AND no name, no steps at all) produce errors.
  */
 export function validateMissionExport(obj: unknown): ValidationResult {
   const errors: Array<{ message: string; path?: string }> = []
-  const data = obj as Record<string, unknown>
 
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
     return {
       valid: false,
       errors: [{ message: 'Mission must be a JSON object', path: '' }],
-      data: data as unknown as MissionExport,
+      data: obj as unknown as MissionExport,
     }
   }
 
+  // Normalize nested console-kb format into flat structure
+  const data = normalizeMissionData(obj as Record<string, unknown>)
+
+  // Version — default if missing
   if (typeof data.version !== 'string') {
-    errors.push({ message: 'Missing or invalid "version" field', path: '.version' })
+    data.version = 'kc-mission-v1'
   }
 
+  // Title — fall back to name field if title is missing
   if (typeof data.title !== 'string' || !data.title) {
-    errors.push({ message: 'Missing or empty "title" field', path: '.title' })
+    if (typeof data.name === 'string' && data.name) {
+      data.title = data.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+    } else {
+      errors.push({ message: 'Missing or empty "title" field', path: '.title' })
+    }
   }
 
+  // Description — default to empty string if missing
   if (typeof data.description !== 'string') {
-    errors.push({ message: 'Missing "description" field', path: '.description' })
+    data.description = ''
   }
 
+  // Type — default to 'custom' if missing or unrecognized
   if (typeof data.type !== 'string' || !MISSION_TYPES.includes(data.type)) {
-    errors.push({
-      message: `Invalid "type" — expected one of: ${MISSION_TYPES.join(', ')}`,
-      path: '.type',
-    })
+    data.type = 'custom'
   }
 
+  // Tags — default to empty array if missing
   if (!Array.isArray(data.tags)) {
-    errors.push({ message: '"tags" must be an array', path: '.tags' })
+    data.tags = []
   }
 
+  // Steps — this is the only hard requirement (but we're lenient about step content)
   if (!Array.isArray(data.steps) || data.steps.length === 0) {
     errors.push({ message: '"steps" must be a non-empty array', path: '.steps' })
   } else {
@@ -166,11 +215,13 @@ export function validateMissionExport(obj: unknown): ValidationResult {
         errors.push({ message: `Step ${i} is not an object`, path: `.steps[${i}]` })
         continue
       }
+      // Default step title from description or index if missing
       if (typeof step.title !== 'string' || !step.title) {
-        errors.push({ message: `Step ${i} missing "title"`, path: `.steps[${i}].title` })
+        step.title = `Step ${i + 1}`
       }
+      // Default step description to empty string if missing
       if (typeof step.description !== 'string') {
-        errors.push({ message: `Step ${i} missing "description"`, path: `.steps[${i}].description` })
+        step.description = ''
       }
     }
   }

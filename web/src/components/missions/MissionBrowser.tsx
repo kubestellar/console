@@ -19,6 +19,7 @@ import {
   emitSolutionBrowsed,
   emitSolutionViewed,
   emitSolutionImported,
+  emitSolutionImportError,
   emitSolutionGitHubLink,
   emitSolutionLinkCopied,
 } from '../../lib/analytics'
@@ -690,6 +691,14 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     }
     const validation = validateMissionExport(toValidate)
     if (!validation.valid) {
+      const missionTitle = (toValidate as Record<string, unknown>)?.title as string
+        ?? (toValidate as Record<string, unknown>)?.name as string
+        ?? 'unknown'
+      emitSolutionImportError(
+        missionTitle,
+        validation.errors.length,
+        validation.errors[0]?.message ?? 'unknown',
+      )
       setScanResult({
         valid: false,
         findings: validation.errors.map((e) => ({
