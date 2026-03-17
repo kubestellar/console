@@ -38,14 +38,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     disabled,
     className,
     children,
+    title,
+    'aria-label': ariaLabel,
     ...props
   },
   ref,
 ) {
+  // When no children are provided (icon-only buttons), fall back to title for aria-label
+  // so that assistive technologies can announce the button's purpose.
+  const effectiveAriaLabel = ariaLabel ?? (children == null ? title : undefined)
+
   return (
     <button
       ref={ref}
       disabled={disabled || loading}
+      title={title}
+      aria-label={effectiveAriaLabel}
       className={cn(
         'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
         'disabled:opacity-50 disabled:cursor-not-allowed',
