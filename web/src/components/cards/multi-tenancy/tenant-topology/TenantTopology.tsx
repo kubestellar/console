@@ -345,9 +345,6 @@ function buildConnections(
   const k3sTopX = K3S_X + K3S_W - 10
   const k3sTopY = K3S_Y
 
-  /** X position for routing KubeFlex connection outside the L2 UDN right edge */
-  const KF_ROUTE_X = L2_UDN_X + L2_UDN_W + 5
-
   /** L2 UDN bottom edge */
   const l2BottomY = L2_UDN_Y + L2_UDN_H
 
@@ -357,6 +354,9 @@ function buildConnections(
   /** KubeFlex bottom center */
   const kfBotCx = KUBEFLEX_X + KUBEFLEX_W / 2
   const kfBotY = KUBEFLEX_Y + KUBEFLEX_H
+
+  /** Midpoint Y for the vertical segment of the KubeFlex connection (between KubeFlex bottom and K3s top) */
+  const KF_MID_Y = (kfBotY + k3sTopY) / 2
 
   /** Half the throughput for each agent pod (split equally) */
   const AGENT_THROUGHPUT_SPLIT = 2
@@ -447,17 +447,17 @@ function buildConnections(
     {
       // K3s Server eth0 -> Default k8s Network -> KubeFlex (dark blue, bidirectional)
       id: 'k3s-eth0-kf',
-      d: `M ${k3sTopX} ${k3sTopY} L ${KF_ROUTE_X} ${k3sTopY} L ${KF_ROUTE_X} ${L2_UDN_Y - 4} L ${kfBotCx} ${L2_UDN_Y - 4} L ${kfBotCx} ${kfBotY}`,
+      d: `M ${k3sTopX} ${k3sTopY} L ${kfBotCx} ${k3sTopY} L ${kfBotCx} ${kfBotY}`,
       color: DEFAULT_NET_CONNECTION_COLOR,
       active: k3sDetected && kubeflexDetected,
       label: 'eth0',
       throughputBytesPerSec: rates.k3sEth0Rate,
       rxBytesPerSec: rates.k3sEth0Rx,
       txBytesPerSec: rates.k3sEth0Tx,
-      rxLabelX: KF_ROUTE_X + 2,
-      rxLabelY: (k3sTopY + L2_UDN_Y - 4) / 2 - 3,
-      txLabelX: KF_ROUTE_X + 2,
-      txLabelY: (k3sTopY + L2_UDN_Y - 4) / 2 + 2,
+      rxLabelX: kfBotCx + 3,
+      rxLabelY: KF_MID_Y - 3,
+      txLabelX: kfBotCx + 3,
+      txLabelY: KF_MID_Y + 2,
     },
   ]
 }
