@@ -41,11 +41,11 @@ const VIEWBOX_HEIGHT = 160
 // Node Position Constants (viewBox units)
 // ============================================================================
 
-/** Outer tenant boundary (dashed) */
+/** Outer tenant boundary (dashed) — y pushed up to fit "Tenant 1" label above L2 UDN */
 const TENANT_X = 3
-const TENANT_Y = 12
+const TENANT_Y = 4
 const TENANT_W = 185
-const TENANT_H = 145
+const TENANT_H = 153
 
 /** Layer-2 Cluster UDN (Secondary) — top zone inside tenant */
 const L2_UDN_X = 20
