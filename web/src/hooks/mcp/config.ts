@@ -87,6 +87,10 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       setConfigMaps(data.configmaps || [])
       setError(null)
     } catch {
+      const demoConfigMaps = getDemoConfigMaps().filter(cm =>
+        (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
+      )
+      setConfigMaps(demoConfigMaps)
       // Don't show error - ConfigMaps are optional
       setError(null)
     } finally {
@@ -191,6 +195,10 @@ export function useSecrets(cluster?: string, namespace?: string) {
       setSecrets(data.secrets || [])
       setError(null)
     } catch {
+      const demoSecrets = getDemoSecrets().filter(s =>
+        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+      )
+      setSecrets(demoSecrets)
       // Don't show error - Secrets are optional
       setError(null)
     } finally {
@@ -269,6 +277,10 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
       setServiceAccounts(data.serviceAccounts || [])
       setError(null)
     } catch {
+      const demoSAs = getDemoServiceAccounts().filter(sa =>
+        (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
+      )
+      setServiceAccounts(demoSAs)
       // Don't show error - ServiceAccounts are optional
       setError(null)
     } finally {
