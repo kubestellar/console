@@ -33,8 +33,10 @@ export const LOCAL_AGENT_WS_URL = _isNetlify ? '' : 'ws://127.0.0.1:8585/ws'
  */
 export const LOCAL_AGENT_HTTP_URL = _isNetlify ? '' : 'http://127.0.0.1:8585'
 
-/** Default backend URL (used as fallback when not configured) */
-export const BACKEND_DEFAULT_URL = 'http://localhost:8080'
+/** Default backend URL — empty string means same-origin relative URL.
+ * This ensures API requests work in deployed environments (custom domain,
+ * ingress, reverse proxy) without requiring VITE_API_BASE_URL to be set. */
+export const BACKEND_DEFAULT_URL = ''
 
 // ============================================================================
 // WebSocket Timeouts
