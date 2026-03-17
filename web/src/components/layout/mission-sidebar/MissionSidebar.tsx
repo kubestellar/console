@@ -56,20 +56,64 @@ export function MissionSidebar() {
   const [pendingRunMissionId, setPendingRunMissionId] = useState<string | null>(null)
 
   // Deep-link: open MissionBrowser via ?mission= (specific) or ?browse=missions (explorer)
+  // Direct import: ?import= fetches and imports mission directly (no browser popup)
   const [searchParams, setSearchParams] = useSearchParams()
   const deepLinkMission = searchParams.get('mission')
+  const directImportSlug = searchParams.get('import')
   const browseParam = searchParams.get('browse')
 
   useEffect(() => {
     if (deepLinkMission || browseParam === 'missions') {
       setShowBrowser(true)
-      // Clear the params from URL after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('mission')
       newParams.delete('browse')
       setSearchParams(newParams, { replace: true })
     }
   }, [deepLinkMission, browseParam, searchParams, setSearchParams])
+
+  // Direct import from landing page — fetch mission content and import it
+  // without opening the MissionBrowser dialog
+  useEffect(() => {
+    if (!directImportSlug) return
+
+    // Clear the param immediately to prevent re-triggering
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('import')
+    setSearchParams(newParams, { replace: true })
+
+    // Fetch and import the mission in the background
+    const paths = [
+      `solutions/security/${directImportSlug}.json`,
+      `solutions/cncf-generated/${directImportSlug}.json`,
+      `solutions/${directImportSlug}.json`,
+      `solutions/platform/${directImportSlug}.json`,
+      `solutions/install/${directImportSlug}.json`,
+    ]
+
+    const tryImport = async () => {
+      for (const path of paths) {
+        try {
+          const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`)
+          if (!res.ok) continue
+          const raw = await res.text()
+          const parsed = JSON.parse(raw)
+          const { validateMissionExport } = await import('../../../lib/missions/types')
+          const result = validateMissionExport(parsed)
+          if (result.valid) {
+            handleImportMission(result.data)
+            return
+          }
+        } catch {
+          continue
+        }
+      }
+      // Fallback: open the browser if direct import failed
+      setShowBrowser(true)
+    }
+
+    tryImport()
+  }, [directImportSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Split missions into saved (library) and active
   const savedMissions = missions.filter(m => m.status === 'saved')
