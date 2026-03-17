@@ -169,37 +169,38 @@ export function useNetworkStats(): UseNetworkStatsResult {
   // k3sEth0 = K3s eth0 (management to KubeFlex)
   // k3sEth1 = K3s eth1 (control-plane to L2 UDN)
 
-  const kvStats = (data.stats || []).find((s) => s.component === 'kubevirt')
-  const k3sStats = (data.stats || []).find((s) => s.component === 'k3s')
+  // Aggregate across all pods for each component (backend may return multiple
+  // matching pods from different namespaces or clusters)
+  const kvPods = (data.stats || []).filter((s) => s.component === 'kubevirt')
+  const k3sPods = (data.stats || []).filter((s) => s.component === 'k3s')
 
-  const getRate = (stats: PodNetworkStats | undefined, ifName: string): number => {
-    const iface = (stats?.interfaces || []).find((i) => i.name === ifName)
-    return iface ? iface.rxBytesPerSec + iface.txBytesPerSec : 0
-  }
+  /** Sum a metric across all pods for a given component and interface */
+  const sumField = (
+    pods: PodNetworkStats[],
+    ifName: string,
+    field: 'rxBytesPerSec' | 'txBytesPerSec',
+  ): number =>
+    pods.reduce((total, pod) => {
+      const iface = (pod.interfaces || []).find((i) => i.name === ifName)
+      return total + (iface ? iface[field] : 0)
+    }, 0)
 
-  const getRx = (stats: PodNetworkStats | undefined, ifName: string): number => {
-    const iface = (stats?.interfaces || []).find((i) => i.name === ifName)
-    return iface ? iface.rxBytesPerSec : 0
-  }
-
-  const getTx = (stats: PodNetworkStats | undefined, ifName: string): number => {
-    const iface = (stats?.interfaces || []).find((i) => i.name === ifName)
-    return iface ? iface.txBytesPerSec : 0
-  }
+  const getRate = (pods: PodNetworkStats[], ifName: string): number =>
+    sumField(pods, ifName, 'rxBytesPerSec') + sumField(pods, ifName, 'txBytesPerSec')
 
   return {
-    kvEth0Rate: getRate(kvStats, 'eth0'),
-    kvEth1Rate: getRate(kvStats, 'eth1'),
-    k3sEth0Rate: getRate(k3sStats, 'eth0'),
-    k3sEth1Rate: getRate(k3sStats, 'eth1'),
-    kvEth0Rx: getRx(kvStats, 'eth0'),
-    kvEth0Tx: getTx(kvStats, 'eth0'),
-    kvEth1Rx: getRx(kvStats, 'eth1'),
-    kvEth1Tx: getTx(kvStats, 'eth1'),
-    k3sEth0Rx: getRx(k3sStats, 'eth0'),
-    k3sEth0Tx: getTx(k3sStats, 'eth0'),
-    k3sEth1Rx: getRx(k3sStats, 'eth1'),
-    k3sEth1Tx: getTx(k3sStats, 'eth1'),
+    kvEth0Rate: getRate(kvPods, 'eth0'),
+    kvEth1Rate: getRate(kvPods, 'eth1'),
+    k3sEth0Rate: getRate(k3sPods, 'eth0'),
+    k3sEth1Rate: getRate(k3sPods, 'eth1'),
+    kvEth0Rx: sumField(kvPods, 'eth0', 'rxBytesPerSec'),
+    kvEth0Tx: sumField(kvPods, 'eth0', 'txBytesPerSec'),
+    kvEth1Rx: sumField(kvPods, 'eth1', 'rxBytesPerSec'),
+    kvEth1Tx: sumField(kvPods, 'eth1', 'txBytesPerSec'),
+    k3sEth0Rx: sumField(k3sPods, 'eth0', 'rxBytesPerSec'),
+    k3sEth0Tx: sumField(k3sPods, 'eth0', 'txBytesPerSec'),
+    k3sEth1Rx: sumField(k3sPods, 'eth1', 'rxBytesPerSec'),
+    k3sEth1Tx: sumField(k3sPods, 'eth1', 'txBytesPerSec'),
     isDemoData: isDemoFallback && !isLoading,
     hasData: (data.stats || []).length > 0,
   }

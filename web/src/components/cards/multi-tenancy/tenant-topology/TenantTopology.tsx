@@ -22,7 +22,7 @@
  * Follows the LLMdFlow.tsx SVG pattern: viewBox coordinates, framer-motion
  * animations, and named constants for all positions/sizes/colors.
  */
-import { useMemo } from 'react'
+import { useId, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../../CardDataContext'
@@ -133,7 +133,7 @@ const FONT_SIZE_LEGEND = 2.6
 const FONT_SIZE_TENANT = 4.5
 /** Font size for throughput labels on connections */
 const FONT_SIZE_THROUGHPUT = 2.2
-/** Font size for sub-labels (e.g., "(Kubevirt)") */
+/** Font size for sub-labels (e.g., "(KubeVirt)") */
 const FONT_SIZE_SUBLABEL = 2.3
 
 /** Interface badge dimensions */
@@ -167,8 +167,12 @@ const PARTICLE_RADIUS_MIN = 0.8
 /** Maximum particle radius (viewBox units) for high throughput */
 const PARTICLE_RADIUS_MAX = 2.0
 
-/** Throughput label pill dimensions */
+/** Throughput label pill base width (without rx/tx prefix) */
 const THROUGHPUT_PILL_W = 18
+/** Extra width added for the rx/tx arrow prefix */
+const THROUGHPUT_PREFIX_EXTRA_W = 4
+/** Full pill width when rendered with rx/tx prefix */
+const THROUGHPUT_PILL_FULL_W = THROUGHPUT_PILL_W + THROUGHPUT_PREFIX_EXTRA_W
 const THROUGHPUT_PILL_H = 4
 const THROUGHPUT_PILL_RX = 1.5
 
@@ -353,7 +357,7 @@ function buildConnections(
   const halfKvEth0 = rates.kvEth0Rate / AGENT_THROUGHPUT_SPLIT
   const halfKvEth1 = rates.kvEth1Rate / AGENT_THROUGHPUT_SPLIT
 
-  /** Offset for placing rx/tx labels on opposite sides of a vertical connection */
+  /** Offset for placing stacked rx/tx labels beside a vertical connection */
   const RX_TX_LABEL_OFFSET_X = 10
 
   return [
@@ -427,9 +431,9 @@ function buildConnections(
       throughputBytesPerSec: rates.k3sEth1Rate,
       rxBytesPerSec: rates.k3sEth1Rx,
       txBytesPerSec: rates.k3sEth1Tx,
-      rxLabelX: k3sLeftX - THROUGHPUT_PILL_W - 2,
+      rxLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 2,
       rxLabelY: k3sLeftY - 5,
-      txLabelX: k3sLeftX - THROUGHPUT_PILL_W - 2,
+      txLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 2,
       txLabelY: k3sLeftY + 1,
     },
     {
@@ -460,11 +464,13 @@ function FlowParticle({
   color,
   active,
   throughputBytesPerSec,
+  idPrefix,
 }: {
   pathId: string
   color: string
   active: boolean
   throughputBytesPerSec: number
+  idPrefix: string
 }) {
   if (!active) return null
 
@@ -477,7 +483,7 @@ function FlowParticle({
       <motion.circle
         r={radius}
         fill={color}
-        filter="url(#glow)"
+        filter={`url(#${idPrefix}-glow)`}
         initial={{ offsetDistance: '0%' }}
         animate={{ offsetDistance: '100%' }}
         transition={{
@@ -500,7 +506,7 @@ function FlowParticle({
       <motion.circle
         r={radius}
         fill={color}
-        filter="url(#glow)"
+        filter={`url(#${idPrefix}-glow)`}
         initial={{ offsetDistance: '100%' }}
         animate={{ offsetDistance: '0%' }}
         transition={{
@@ -538,12 +544,10 @@ function ThroughputLabel({
   bytesPerSec: number
   color: string
   active: boolean
-  prefix?: 'rx' | 'tx'
+  prefix: 'rx' | 'tx'
 }) {
   if (!active || bytesPerSec <= 0) return null
 
-  /** Extra width for the rx/tx prefix arrow */
-  const PILL_W_WITH_PREFIX = THROUGHPUT_PILL_W + 4
   const arrow = prefix === 'rx' ? '\u2193' : '\u2191'
   const label = `${arrow} ${formatBytesPerSec(bytesPerSec)}`
 
@@ -552,7 +556,7 @@ function ThroughputLabel({
       <rect
         x={x}
         y={y}
-        width={PILL_W_WITH_PREFIX}
+        width={THROUGHPUT_PILL_FULL_W}
         height={THROUGHPUT_PILL_H}
         rx={THROUGHPUT_PILL_RX}
         fill={THROUGHPUT_PILL_FILL}
@@ -560,7 +564,7 @@ function ThroughputLabel({
         strokeWidth={0.3}
       />
       <text
-        x={x + PILL_W_WITH_PREFIX / 2}
+        x={x + THROUGHPUT_PILL_FULL_W / 2}
         y={y + THROUGHPUT_PILL_H / 2 + 0.8}
         textAnchor="middle"
         fill={color}
@@ -667,6 +671,8 @@ function K8sIcon({ x, y, size }: { x: number; y: number; size: number }) {
 
 export function TenantTopology() {
   const { t } = useTranslation('cards')
+  /** Unique prefix for SVG defs IDs to prevent collisions with multiple instances */
+  const svgId = useId().replace(/:/g, '')
 
   const liveData = useTenantTopology()
 
@@ -722,7 +728,7 @@ export function TenantTopology() {
         {/* SVG Definitions: gradients, filters, path references */}
         <defs>
           {/* Glow filter for animated particles */}
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={`${svgId}-glow`} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="1.5" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
@@ -731,34 +737,34 @@ export function TenantTopology() {
           </filter>
 
           {/* Subtle shadow for nodes */}
-          <filter id="nodeShadow" x="-10%" y="-10%" width="120%" height="130%">
+          <filter id={`${svgId}-nodeShadow`} x="-10%" y="-10%" width="120%" height="130%">
             <feDropShadow dx="0" dy="0.5" stdDeviation="1" floodColor="rgba(0,0,0,0.3)" />
           </filter>
 
           {/* Connection path references for offset-path animation */}
           {(connections || []).map((conn) => (
-            <path key={conn.id} id={conn.id} d={conn.d} fill="none" />
+            <path key={conn.id} id={`${svgId}-${conn.id}`} d={conn.d} fill="none" />
           ))}
 
           {/* Arrowhead markers for bidirectional connections */}
-          <marker id="arrowBlue" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+          <marker id={`${svgId}-arrowBlue`} markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={L3_UDN_CONNECTION_COLOR} opacity={0.7} />
           </marker>
-          <marker id="arrowBlueReverse" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
+          <marker id={`${svgId}-arrowBlueReverse`} markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={L3_UDN_CONNECTION_COLOR} opacity={0.7} />
           </marker>
 
-          <marker id="arrowGreen" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+          <marker id={`${svgId}-arrowGreen`} markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={L2_UDN_CONNECTION_COLOR} opacity={0.7} />
           </marker>
-          <marker id="arrowGreenReverse" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
+          <marker id={`${svgId}-arrowGreenReverse`} markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={L2_UDN_CONNECTION_COLOR} opacity={0.7} />
           </marker>
 
-          <marker id="arrowDark" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+          <marker id={`${svgId}-arrowDark`} markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={DEFAULT_NET_CONNECTION_COLOR} opacity={0.7} />
           </marker>
-          <marker id="arrowDarkReverse" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
+          <marker id={`${svgId}-arrowDarkReverse`} markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto-start-reverse">
             <path d="M 0 0 L 4 2 L 0 4 Z" fill={DEFAULT_NET_CONNECTION_COLOR} opacity={0.7} />
           </marker>
         </defs>
@@ -913,8 +919,8 @@ export function TenantTopology() {
         {(connections || []).map((conn) => {
           const isGreen = conn.color === L2_UDN_CONNECTION_COLOR
           const isBlue = conn.color === L3_UDN_CONNECTION_COLOR
-          const markerEnd = isGreen ? 'url(#arrowGreen)' : isBlue ? 'url(#arrowBlue)' : 'url(#arrowDark)'
-          const markerStart = isGreen ? 'url(#arrowGreenReverse)' : isBlue ? 'url(#arrowBlueReverse)' : 'url(#arrowDarkReverse)'
+          const markerEnd = isGreen ? `url(#${svgId}-arrowGreen)` : isBlue ? `url(#${svgId}-arrowBlue)` : `url(#${svgId}-arrowDark)`
+          const markerStart = isGreen ? `url(#${svgId}-arrowGreenReverse)` : isBlue ? `url(#${svgId}-arrowBlueReverse)` : `url(#${svgId}-arrowDarkReverse)`
 
           return (
             <motion.path
@@ -938,10 +944,11 @@ export function TenantTopology() {
         {(connections || []).map((conn) => (
           <FlowParticle
             key={`particle-${conn.id}`}
-            pathId={conn.id}
+            pathId={`${svgId}-${conn.id}`}
             color={conn.color}
             active={conn.active}
             throughputBytesPerSec={conn.throughputBytesPerSec}
+            idPrefix={svgId}
           />
         ))}
 
@@ -991,7 +998,7 @@ export function TenantTopology() {
             stroke={data.kubevirtDetected ? NODE_STROKE : NODE_STROKE_INACTIVE}
             strokeWidth={NODE_STROKE_WIDTH}
             strokeDasharray={data.kubevirtDetected ? 'none' : DASHED_PATTERN}
-            filter="url(#nodeShadow)"
+            filter={`url(#${svgId}-nodeShadow)`}
           />
           {/* eth1 badge at top */}
           <InterfaceBadge x={AGENT1_X + AGENT1_W / 2 - BADGE_W / 2} y={AGENT1_Y + 2} label="eth1" isEth1 />
@@ -1003,7 +1010,7 @@ export function TenantTopology() {
             fontSize={FONT_SIZE_TITLE}
             fontWeight="600"
           >
-            K3s Agent Pod
+            {t('tenantTopology.agentPod', 'K3s Agent Pod')}
           </text>
           <text
             x={AGENT1_X + AGENT1_W / 2}
@@ -1012,7 +1019,7 @@ export function TenantTopology() {
             fill={TEXT_MUTED}
             fontSize={FONT_SIZE_SUBLABEL}
           >
-            (Kubevirt)
+            {t('tenantTopology.kubevirtLabel', '(KubeVirt)')}
           </text>
           {/* eth0 badge at bottom */}
           <InterfaceBadge x={AGENT1_X + AGENT1_W / 2 - BADGE_W / 2} y={AGENT1_Y + AGENT1_H - 8} label="eth0" />
@@ -1040,7 +1047,7 @@ export function TenantTopology() {
             stroke={data.kubevirtDetected ? NODE_STROKE : NODE_STROKE_INACTIVE}
             strokeWidth={NODE_STROKE_WIDTH}
             strokeDasharray={data.kubevirtDetected ? 'none' : DASHED_PATTERN}
-            filter="url(#nodeShadow)"
+            filter={`url(#${svgId}-nodeShadow)`}
           />
           {/* eth1 badge at top */}
           <InterfaceBadge x={AGENT2_X + AGENT2_W / 2 - BADGE_W / 2} y={AGENT2_Y + 2} label="eth1" isEth1 />
@@ -1052,7 +1059,7 @@ export function TenantTopology() {
             fontSize={FONT_SIZE_TITLE}
             fontWeight="600"
           >
-            K3s Agent Pod
+            {t('tenantTopology.agentPod', 'K3s Agent Pod')}
           </text>
           <text
             x={AGENT2_X + AGENT2_W / 2}
@@ -1062,7 +1069,7 @@ export function TenantTopology() {
             fontSize={FONT_SIZE_SUBLABEL}
             fontWeight="600"
           >
-            (KubeVirt)
+            {t('tenantTopology.kubevirtLabel', '(KubeVirt)')}
           </text>
           {/* eth0 badge at bottom */}
           <InterfaceBadge x={AGENT2_X + AGENT2_W / 2 - BADGE_W / 2} y={AGENT2_Y + AGENT2_H - 8} label="eth0" />
@@ -1090,7 +1097,7 @@ export function TenantTopology() {
             stroke={data.k3sDetected ? NODE_STROKE : NODE_STROKE_INACTIVE}
             strokeWidth={NODE_STROKE_WIDTH}
             strokeDasharray={data.k3sDetected ? 'none' : DASHED_PATTERN}
-            filter="url(#nodeShadow)"
+            filter={`url(#${svgId}-nodeShadow)`}
           />
           {/* eth0 badge at top-right */}
           <InterfaceBadge x={K3S_X + K3S_W - BADGE_W - 4} y={K3S_Y + 2} label="eth0" />
@@ -1130,7 +1137,7 @@ export function TenantTopology() {
             stroke={data.kubeflexDetected ? KUBEFLEX_STROKE : NODE_STROKE_INACTIVE}
             strokeWidth={NODE_STROKE_WIDTH}
             strokeDasharray={data.kubeflexDetected ? 'none' : DASHED_PATTERN}
-            filter="url(#nodeShadow)"
+            filter={`url(#${svgId}-nodeShadow)`}
           />
           <text
             x={KUBEFLEX_X + KUBEFLEX_W / 2}
