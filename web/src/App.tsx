@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
 import { AuthProvider, useAuth } from './lib/auth'
@@ -23,6 +23,7 @@ import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
 import { emitPageView, emitDashboardViewed } from './lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
+import { MissionLandingPage } from './components/missions/MissionLandingPage'
 
 // Lazy-load DrillDownModal — the drilldown views (~64 KB) are only needed
 // when a user clicks into a card detail, not on initial page render.
@@ -291,13 +292,7 @@ function MissionBrowseLink() {
   return <Navigate to={`/?${params.toString()}`} replace />
 }
 
-function MissionDeepLink() {
-  const { missionId } = useParams()
-  const [searchParams] = useSearchParams()
-  const params = new URLSearchParams(searchParams)
-  params.set('mission', encodeURIComponent(missionId || ''))
-  return <Navigate to={`/?${params.toString()}`} replace />
-}
+// MissionDeepLink removed — replaced by MissionLandingPage standalone component
 
 // Route-to-title map for GA4 page view granularity and browser tab labeling
 const ROUTE_TITLES: Record<string, string> = {
@@ -458,6 +453,13 @@ function App() {
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path="/widget" element={<MiniDashboard />} />
 
+        {/* Mission landing page — standalone page for deep-linked missions.
+            Loads instantly without the full dashboard SPA. Shows mission
+            preview with "Import & Open Console" CTA. Outside ProtectedRoute
+            so unauthenticated users can see the mission details. */}
+        <Route path="/missions/:missionId" element={<MissionLandingPage />} />
+        <Route path="/missions" element={<MissionBrowseLink />} />
+
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
             warm-nav is near-instant (no unmount/remount). */}
@@ -511,8 +513,7 @@ function App() {
           {/* Mission deep-link: /missions/install-prometheus → opens MissionBrowser.
               Must be inside ProtectedRoute so auth is verified before redirect,
               and the ?mission= param survives the OAuth round-trip. */}
-          <Route path="/missions" element={<MissionBrowseLink />} />
-          <Route path="/missions/:missionId" element={<MissionDeepLink />} />
+          {/* Mission routes moved outside ProtectedRoute for the landing page */}
           {/* /issue, /issues, /feedback open the feedback modal on the dashboard */}
           <Route path="/issue" element={<IssueRedirect />} />
           <Route path="/issues" element={<IssueRedirect />} />
