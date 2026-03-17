@@ -214,7 +214,15 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
               <ChevronDown className="w-3 h-3" />
             </button>
             {showComponentFilter && (
-              <div className="absolute top-full right-0 mt-1 w-40 rounded-lg bg-card border border-border shadow-lg z-50">
+              <div className="absolute top-full right-0 mt-1 w-40 rounded-lg bg-card border border-border shadow-lg z-50"
+                onKeyDown={(e) => {
+                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                  e.preventDefault()
+                  const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                  else items[Math.max(idx - 1, 0)]?.focus()
+                }}>
                 <div className="p-1">
                   {COMPONENT_FILTERS.map(opt => (
                     <button

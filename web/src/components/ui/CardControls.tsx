@@ -97,7 +97,16 @@ export function CardControls<T extends string = string>({
             Show: {currentLimitLabel}
           </Button>
           {limitOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1">
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1"
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                e.preventDefault()
+                const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                else items[Math.max(idx - 1, 0)]?.focus()
+              }}
+            >
               {LIMIT_OPTIONS.map(option => (
                 <Button
                   key={String(option.value)}
@@ -132,7 +141,16 @@ export function CardControls<T extends string = string>({
               Sort: {currentSortLabel}
             </Button>
             {sortOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[100px] py-1">
+              <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[100px] py-1"
+                onKeyDown={(e) => {
+                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                  e.preventDefault()
+                  const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                  else items[Math.max(idx - 1, 0)]?.focus()
+                }}
+              >
                 {sortOptions.map(option => (
                   <Button
                     key={option.value}
