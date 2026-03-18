@@ -167,13 +167,39 @@ export function LocalClustersSection() {
     await deleteVCluster(name, namespace)
   }
 
-  const handleInstallVCluster = () => {
+  // Client mission: install vCluster CLI locally
+  const handleInstallVClusterCLI = () => {
     checkKeyAndRun(() => {
       startMission({
         title: 'Install vCluster CLI',
-        description: 'Install the vCluster CLI for creating virtual Kubernetes clusters',
+        description: 'Install the vCluster CLI tool on this machine',
         type: 'deploy',
-        initialPrompt: 'Install the vCluster CLI tool. Try using homebrew first (brew install loft-sh/tap/vcluster), and if that is not available, use the official install script: curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-$(uname -s)-$(uname -m)" && sudo install -c -m 0755 vcluster /usr/local/bin && rm -f vcluster. Verify the installation by running vcluster --version.',
+        initialPrompt: 'Install the vCluster CLI tool on the local machine. Try using homebrew first (brew install loft-sh/tap/vcluster), and if that is not available, use the official install script: curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-$(uname -s)-$(uname -m)" && sudo install -c -m 0755 vcluster /usr/local/bin && rm -f vcluster. Verify the installation by running vcluster --version.',
+      })
+    })
+  }
+
+  // Cluster mission: deploy vCluster operator to a specific host cluster
+  const handleInstallVClusterOnCluster = (clusterContext: string) => {
+    const displayName = (healthyClusters || []).find(c => (c.context || c.name) === clusterContext)?.name || clusterContext
+    checkKeyAndRun(() => {
+      startMission({
+        title: `Deploy vCluster to ${displayName}`,
+        description: `Install the vCluster operator on ${displayName} using Helm`,
+        type: 'deploy',
+        cluster: clusterContext,
+        initialPrompt: `Deploy the vCluster operator to cluster "${displayName}" (context: ${clusterContext}) using Helm.
+
+IMPORTANT: All kubectl and helm commands MUST use --context=${clusterContext}
+
+Steps:
+1. Verify connectivity: kubectl --context=${clusterContext} cluster-info
+2. Add the Loft Helm repo: helm repo add loft-sh https://charts.loft.sh && helm repo update
+3. Install the vCluster Helm chart: helm upgrade --install vcluster loft-sh/vcluster --namespace vcluster --create-namespace --kube-context=${clusterContext}
+4. Wait for readiness: kubectl --context=${clusterContext} -n vcluster wait --for=condition=ready pod -l app=vcluster --timeout=120s
+5. Verify the installation: kubectl --context=${clusterContext} get pods -n vcluster
+
+After installation, the user can create virtual clusters on this host cluster from the console settings page.`,
       })
     })
   }
@@ -438,7 +464,7 @@ export function LocalClustersSection() {
                 <li><code className="px-1 bg-secondary rounded">curl -L -o vcluster https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-...</code></li>
               </ul>
               <button
-                onClick={handleInstallVCluster}
+                onClick={handleInstallVClusterCLI}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
               >
                 <Bot className="w-4 h-4" />
@@ -482,6 +508,17 @@ export function LocalClustersSection() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="flex flex-col gap-1 justify-end">
+                    <button
+                      onClick={() => handleInstallVClusterOnCluster(vclusterHostCluster || 'current')}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors"
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      Deploy vCluster to {vclusterHostCluster
+                        ? (healthyClusters || []).find(c => (c.context || c.name) === vclusterHostCluster)?.name || vclusterHostCluster
+                        : 'current cluster'}
+                    </button>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-muted-foreground font-medium">Namespace</label>
