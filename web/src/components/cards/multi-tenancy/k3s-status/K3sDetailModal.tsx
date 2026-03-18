@@ -107,7 +107,7 @@ export function K3sDetailModal({ isOpen, onClose, data, isDemoData }: K3sDetailM
   }, [serverPods, search])
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'border border-yellow-500/30 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'ring-2 ring-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.25)]' : ''}>
       <BaseModal.Header
         title={t('k3sStatus.detailTitle', 'K3s Details')}
         icon={Box}
