@@ -198,7 +198,7 @@ export const handlers = [
   http.all('https://www.google-analytics.com/*', () => passthrough()),
   http.all('https://analytics.google.com/*', () => passthrough()),
   http.all('https://www.googletagmanager.com/*', () => passthrough()),
-  http.all('https://*.google-analytics.com/*', () => passthrough()),
+  http.all(/^https:\/\/[^/]*google-analytics\.com\//, () => passthrough()),
 
   // Auth endpoints
   http.get('/api/auth/me', async () => {
