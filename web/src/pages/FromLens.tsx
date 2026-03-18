@@ -45,20 +45,20 @@ interface ComparisonRow {
 }
 
 const COMPARISON_DATA: ComparisonRow[] = [
-  { feature: 'Open Source', lens: false, console: true, consoleNote: 'Apache 2.0' },
-  { feature: 'Account Required', lens: true, console: false },
-  { feature: 'Price', lens: '$199/year', console: 'Free' },
+  { feature: 'Open Source', lens: 'Freemium', console: true, consoleNote: 'Apache 2.0' },
+  { feature: 'Account Required', lens: 'For Pro features', console: false },
   { feature: 'Multi-cluster', lens: true, console: true, consoleNote: '+ KubeStellar native' },
-  { feature: 'AI Assistance', lens: false, console: true, consoleNote: 'AI Missions' },
-  { feature: 'GPU Visibility', lens: false, console: true },
+  { feature: 'AI Assistance', lens: 'Lens AI (Pro)', console: true, consoleNote: 'AI Missions (free)' },
+  { feature: 'GPU Visibility', lens: false, console: true, consoleNote: 'Built-in' },
   { feature: 'Demo Mode', lens: false, console: true, consoleNote: 'Try without a cluster' },
-  { feature: 'Telemetry', lens: 'Required', console: 'Optional', consoleNote: 'Umami, self-hosted' },
+  { feature: 'Desktop App', lens: true, console: 'Web-based', consoleNote: 'Any browser' },
   { feature: 'Pod Logs', lens: true, console: true },
   { feature: 'Helm Management', lens: true, console: true },
   { feature: 'CRD Browser', lens: true, console: true },
-  { feature: 'Security Posture', lens: false, console: true, consoleNote: 'Built-in' },
+  { feature: 'Security Posture', lens: 'Via extensions', console: true, consoleNote: 'Built-in' },
   { feature: 'Cost Analytics', lens: false, console: true, consoleNote: 'Built-in (OpenCost)' },
   { feature: 'GitOps Status', lens: false, console: true, consoleNote: 'Built-in (ArgoCD/Flux)' },
+  { feature: 'CNCF Tool Cards', lens: false, console: true, consoleNote: 'KEDA, Strimzi, KubeVela, etc.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -218,7 +218,7 @@ function ComparisonCell({ value, note, isConsole }: { value: string | boolean; n
 
   return (
     <span className="inline-flex flex-col">
-      <span className={isConsole ? 'text-green-400 font-medium' : 'text-red-400/80'}>{value}</span>
+      <span className={isConsole ? 'text-green-400 font-medium' : 'text-slate-300'}>{value}</span>
       {note && <span className="text-xs text-muted-foreground">{note}</span>}
     </span>
   )
@@ -438,15 +438,19 @@ export function FromLens() {
           </div>
 
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
-            Switching from{' '}
+            Coming from{' '}
             <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
               Lens?
             </span>
           </h1>
 
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
-            KubeStellar Console is the open-source, AI-powered alternative.{' '}
-            <span className="text-white font-medium">No account required. No subscription.</span>
+          <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-6 leading-relaxed">
+            Lens is a solid Kubernetes IDE.{' '}
+            <span className="text-white font-medium">KubeStellar Console adds multi-cluster AI, GPU visibility, and built-in ops tools.</span>
+          </p>
+
+          <p className="text-sm text-slate-400 max-w-xl mx-auto mb-10">
+            Both tools work well for Kubernetes management. Console is fully open source and focused on teams that need cross-cluster observability and AI-powered troubleshooting.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -472,14 +476,37 @@ export function FromLens() {
         </div>
       </section>
 
+      {/* ---- Lens Acknowledgment ---- */}
+      <section className="max-w-5xl mx-auto px-6 py-12">
+        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-8 text-center">
+          <Monitor className="w-8 h-8 text-purple-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-3">Lens does a lot of things right</h3>
+          <p className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed">
+            Lens pioneered the desktop Kubernetes IDE experience with its Electron app, rich extension ecosystem, and clean resource browser.
+            If Lens works well for your team, keep using it! KubeStellar Console is designed for teams that need
+            AI-powered troubleshooting, multi-cluster management at scale, GPU/AI-ML workload visibility, and
+            built-in cost and security analytics — capabilities that complement what Lens provides.
+          </p>
+          <a
+            href="https://k8slens.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            Visit k8slens.dev
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </section>
+
       {/* ---- Feature Highlights ---- */}
       <section className="max-w-5xl mx-auto px-6 py-16">
         <h2 className="text-3xl font-bold text-center mb-4">
-          Everything Lens had.{' '}
-          <span className="text-purple-400">Plus everything it didn't.</span>
+          What Console{' '}
+          <span className="text-purple-400">adds to your toolkit</span>
         </h2>
         <p className="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
-          KubeStellar Console goes beyond basic cluster management with AI, security, cost, and GitOps built in.
+          Built-in capabilities that go beyond single-cluster resource browsing.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -500,7 +527,7 @@ export function FromLens() {
       <section className="max-w-5xl mx-auto px-6 py-16">
         <h2 className="text-3xl font-bold text-center mb-4">Side-by-side comparison</h2>
         <p className="text-slate-400 text-center mb-12">
-          See how KubeStellar Console stacks up against Lens Pro.
+          How the two tools compare across common workflows.
         </p>
 
         <div className="overflow-x-auto rounded-xl border border-slate-700/50">
@@ -508,7 +535,7 @@ export function FromLens() {
             <thead>
               <tr className="border-b border-slate-700/50 bg-slate-800/60">
                 <th className="px-6 py-4 text-sm font-semibold text-slate-300">Feature</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-400">Lens Pro</th>
+                <th className="px-6 py-4 text-sm font-semibold text-slate-400">Lens</th>
                 <th className="px-6 py-4 text-sm font-semibold text-purple-400">KubeStellar Console</th>
               </tr>
             </thead>
@@ -538,9 +565,9 @@ export function FromLens() {
       {/* ---- Footer CTA ---- */}
       <section className="border-t border-slate-700/50 bg-gradient-to-b from-slate-900/50 to-[#0f172a]">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
-          <h2 className="text-4xl font-bold mb-4">Ready to switch?</h2>
+          <h2 className="text-4xl font-bold mb-4">Ready to explore?</h2>
           <p className="text-slate-400 mb-10 text-lg">
-            Join the growing community of engineers who chose open source over lock-in.
+            Try Console alongside Lens. No accounts, no subscriptions — just open source.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
