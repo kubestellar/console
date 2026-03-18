@@ -259,7 +259,7 @@ export function NamespaceManager() {
   const fetchAccess = useCallback(async (namespace: NamespaceDetails) => {
     setAccessLoading(true)
     try {
-      const response = await api.get(`/namespaces/${namespace.name}/access?cluster=${namespace.cluster}`)
+      const response = await api.get(`/api/namespaces/${namespace.name}/access?cluster=${namespace.cluster}`)
       setAccessEntries(response.data?.bindings || [])
     } catch (err) {
       console.error('Failed to fetch access:', err)
@@ -320,7 +320,7 @@ export function NamespaceManager() {
     if (!namespaceToDelete) return
 
     try {
-      await api.delete(`/namespaces/${namespaceToDelete.name}?cluster=${namespaceToDelete.cluster}`)
+      await api.delete(`/api/namespaces/${namespaceToDelete.name}?cluster=${namespaceToDelete.cluster}`)
       // Clear cache for this cluster and refresh
       namespaceCache.delete(namespaceToDelete.cluster)
       fetchNamespaces(true)
@@ -343,7 +343,7 @@ export function NamespaceManager() {
     }
 
     try {
-      await api.delete(`/namespaces/${selectedNamespace.name}/access/${binding.bindingName}?cluster=${selectedNamespace.cluster}`)
+      await api.delete(`/api/namespaces/${selectedNamespace.name}/access/${binding.bindingName}?cluster=${selectedNamespace.cluster}`)
       fetchAccess(selectedNamespace)
     } catch (err) {
       console.error('Failed to revoke access:', err)
@@ -943,7 +943,7 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
         labels['team'] = teamLabel
       }
 
-      await api.post('/namespaces', {
+      await api.post('/api/namespaces', {
         cluster,
         name,
         labels: Object.keys(labels).length > 0 ? labels : undefined,
@@ -1256,7 +1256,7 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
     setError(null)
 
     try {
-      await api.post(`/namespaces/${namespace.name}/access`, {
+      await api.post(`/api/namespaces/${namespace.name}/access`, {
         cluster: namespace.cluster,
         subjectKind,
         subjectName,
