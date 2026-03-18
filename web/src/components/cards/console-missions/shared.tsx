@@ -63,7 +63,10 @@ export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings }: {
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onDismiss()
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onDismiss()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
