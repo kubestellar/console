@@ -98,18 +98,24 @@ export function MissionSidebar() {
     ]
 
     const tryImport = async () => {
-      // Fire all lookups in parallel — first valid result wins
+      // Race all lookups — resolve as soon as the first succeeds, cancel rest.
+      // This avoids waiting for 12 slow 404s when the mission is in cncf-install.
+      const controller = new AbortController()
       const results = await Promise.all(paths.map(async (path) => {
         try {
           const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, {
-            signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
+            signal: controller.signal,
           })
           if (!res.ok) return null
           const raw = await res.text()
           const parsed = JSON.parse(raw)
           const { validateMissionExport } = await import('../../../lib/missions/types')
           const result = validateMissionExport(parsed)
-          return result.valid ? result.data : null
+          if (result.valid) {
+            controller.abort() // cancel remaining in-flight requests
+            return result.data
+          }
+          return null
         } catch {
           return null
         }
