@@ -1,4 +1,4 @@
-import { http, HttpResponse, delay } from 'msw'
+import { http, HttpResponse, delay, passthrough } from 'msw'
 
 /**
  * MSW (Mock Service Worker) handlers for KubeStellar Console
@@ -191,6 +191,15 @@ const savedCards: Record<string, unknown> = {}
 const sharedDashboards: Record<string, unknown> = {}
 
 export const handlers = [
+  // ── Analytics passthrough ─────────────────────────────────────────
+  // Explicitly pass through GA4/analytics requests so the service worker
+  // does not intercept them. Without this, cross-origin passthrough fails
+  // in some browsers, breaking UTM campaign tracking (intern affiliate links).
+  http.all('https://www.google-analytics.com/*', () => passthrough()),
+  http.all('https://analytics.google.com/*', () => passthrough()),
+  http.all('https://www.googletagmanager.com/*', () => passthrough()),
+  http.all('https://*.google-analytics.com/*', () => passthrough()),
+
   // Auth endpoints
   http.get('/api/auth/me', async () => {
     await delay(100)
