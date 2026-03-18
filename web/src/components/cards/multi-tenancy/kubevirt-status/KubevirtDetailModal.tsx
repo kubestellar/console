@@ -149,7 +149,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
   }, [vms, search])
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'border border-yellow-500/30 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''}>
       <BaseModal.Header
         title={t('kubevirtStatus.detailTitle', 'KubeVirt Details')}
         icon={Monitor}

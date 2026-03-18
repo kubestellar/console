@@ -150,7 +150,7 @@ export function MultiTenancyDetailModal({ isOpen, onClose, data, isDemoData }: M
   const healthyCount = components.filter((c) => c.health === 'healthy').length
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'border border-yellow-500/30 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''}>
       <BaseModal.Header
         title={t('multiTenancy.detailTitle', 'Multi-Tenancy Overview Details')}
         icon={Shield}
