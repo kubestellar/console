@@ -20,6 +20,8 @@ const BADGE_MAX_COUNT = 99
 const MINS_PER_HOUR = 60
 /** Number of hours in a day, used for relative-time formatting */
 const HOURS_PER_DAY = 24
+/** Duration of the exit animation before swapping the counter value in milliseconds */
+const ANIMATION_EXIT_DELAY_MS = 150
 
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
@@ -39,7 +41,7 @@ export function AnimatedCounter({ value, className }: { value: number; className
         prevValueRef.current = value
         // Reset animation after enter completes
         setTimeout(() => setIsAnimating(false), TRANSITION_DELAY_MS)
-      }, 150)
+      }, ANIMATION_EXIT_DELAY_MS)
       return () => clearTimeout(timer)
     }
   }, [value])

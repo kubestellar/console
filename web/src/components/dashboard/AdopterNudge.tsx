@@ -27,6 +27,7 @@ const ADOPTERS_EDIT_URL =
 
 /** Number of days after first agent connection before showing the nudge */
 const ADOPTER_NUDGE_DELAY_DAYS = 3
+/** Milliseconds per day, used for time-since calculation */
 const MS_PER_DAY = 86_400_000
 
 export function AdopterNudge() {

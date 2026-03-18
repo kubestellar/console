@@ -18,6 +18,8 @@ interface Props {
 
 /** Seconds before the panel auto-collapses */
 const AUTO_COLLAPSE_SECONDS = 20
+/** Interval between each countdown tick in milliseconds (1 second) */
+const COUNTDOWN_TICK_MS = 1000
 
 /** Neutral card-gray styling for all priority levels */
 const CHIP_STYLE = {
@@ -59,7 +61,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
         }
         return prev - 1
       })
-    }, 1000)
+    }, COUNTDOWN_TICK_MS)
   }, [])
 
   // Manage countdown lifecycle based on minimized state
