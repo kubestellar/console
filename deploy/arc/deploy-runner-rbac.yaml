@@ -1,7 +1,4 @@
 ---
-# ServiceAccount for KubeStellar Console deploy runners.
-# This SA is used by ARC runner pods to deploy the console via Helm.
-# Must be applied to the cluster BEFORE the RunnerDeployment.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -12,9 +9,6 @@ metadata:
     app.kubernetes.io/component: deploy-runner
 
 ---
-# ClusterRole granting permissions needed to deploy the console via Helm.
-# Covers: namespace management, secrets, Helm releases, deployments,
-# services, routes, PVCs, RBAC for the deployed app.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -23,37 +17,35 @@ metadata:
     app.kubernetes.io/part-of: kubestellar-console
     app.kubernetes.io/component: deploy-runner
 rules:
-  # Namespace management
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list", "create", "update", "patch"]
-  # Core resources for Helm deployment
   - apiGroups: [""]
-    resources: ["secrets", "configmaps", "services", "serviceaccounts", "persistentvolumeclaims"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # Workload resources
+    resources: ["secrets", "configmaps", "services", "serviceaccounts", "persistentvolumeclaims", "pods", "pods/log"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["apps"]
-    resources: ["deployments", "statefulsets", "replicasets"]
+    resources: ["deployments", "deployments/status", "statefulsets", "replicasets"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # OpenShift routes
+  - apiGroups: ["batch"]
+    resources: ["cronjobs", "jobs"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
   - apiGroups: ["route.openshift.io"]
     resources: ["routes"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # RBAC for the deployed app's SA
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # Helm release tracking (stored as secrets in the release namespace)
-  - apiGroups: [""]
-    resources: ["pods", "pods/log"]
-    verbs: ["get", "list", "watch"]
-  # Rollout status
-  - apiGroups: ["apps"]
-    resources: ["deployments/status"]
-    verbs: ["get"]
 
 ---
-# Bind the ClusterRole to the deploy runner SA
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -65,6 +57,24 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: kc-deploy-runner
+subjects:
+  - kind: ServiceAccount
+    name: kc-deploy-runner
+    namespace: arc-systems
+
+---
+# OpenShift SCC: grant privileged SCC for Docker-in-Docker runner containers
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kc-deploy-runner-scc-privileged
+  labels:
+    app.kubernetes.io/part-of: kubestellar-console
+    app.kubernetes.io/component: deploy-runner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
 subjects:
   - kind: ServiceAccount
     name: kc-deploy-runner
