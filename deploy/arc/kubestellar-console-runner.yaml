@@ -23,6 +23,7 @@ spec:
   replicas: 2
   template:
     spec:
+      serviceAccountName: kc-deploy-runner
       repository: kubestellar/console
       githubAPICredentialsFrom:
         secretRef:

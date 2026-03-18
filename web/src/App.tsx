@@ -423,6 +423,14 @@ function DataPrefetchInit() {
   return null
 }
 
+// ⚠️ PERFORMANCE CRITICAL — DO NOT MOVE MISSION ROUTES INTO FullDashboardApp ⚠️
+//
+// Mission landing pages (/missions/:missionId) MUST stay in LightweightShell,
+// NOT inside the FullDashboardApp provider stack. The full stack loads 12
+// providers + 156 JS chunks (1.8MB) which caused 10-20s cold-cache load times.
+// LightweightShell loads only ~200KB. If you move mission routes back into
+// FullDashboardApp, the CNCF outreach links will be unusably slow.
+//
 /** Lightweight shell for standalone pages that don't need the full dashboard provider stack */
 function LightweightShell({ children }: { children: React.ReactNode }) {
   return (

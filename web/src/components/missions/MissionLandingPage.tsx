@@ -87,6 +87,21 @@ const TABS: TabDef[] = [
 // Helpers
 // ============================================================================
 
+// ⚠️ PERFORMANCE CRITICAL — DO NOT CHANGE WITHOUT TESTING WITH CHROME CDP ⚠️
+//
+// This section uses smart prefix routing to resolve mission slugs to file
+// paths with 1-2 requests instead of the previous 13-directory brute-force.
+// The old approach fired 13 parallel requests (12 returning 404) and took
+// 10-20 seconds on cold cache. The current approach resolves in <2s.
+//
+// The MissionLandingPage route is also intentionally OUTSIDE the heavy
+// dashboard provider stack (see App.tsx LightweightShell) to avoid loading
+// 1.8MB of dashboard JS. Changing the route structure in App.tsx will
+// regress this. Always verify with:
+//   1. Clear browser cache via CDP: Network.clearBrowserCache
+//   2. Navigate to /missions/install-karmada
+//   3. Check: jsChunks < 20, totalJsKB < 300, apiCalls <= 3, pageLoadMs < 3000
+
 /**
  * Get the most likely file paths for a mission slug based on its prefix.
  * install-* → cncf-install/ or platform-install/

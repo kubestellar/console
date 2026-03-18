@@ -126,8 +126,23 @@ jobs:
           kubectl config set-context deploy --cluster=in-cluster --user=sa-user
           kubectl config use-context deploy
           echo "KUBECONFIG=$KUBECONFIG" >> "$GITHUB_ENV"
-          echo "Verifying cluster access..."
-          kubectl get secrets -n kc --no-headers | head -3
+
+      - name: Verify RBAC permissions
+        run: |
+          echo "Checking deploy runner SA permissions..."
+          if ! kubectl auth can-i create namespaces 2>/dev/null; then
+            echo "::error::Runner SA lacks RBAC permissions to create namespaces."
+            echo "::error::Apply RBAC: kubectl apply -f deploy/arc/deploy-runner-rbac.yaml"
+            echo "::error::Then update RunnerDeployment: kubectl apply -f deploy/arc/kubestellar-console-runner.yaml"
+            exit 1
+          fi
+          if ! kubectl auth can-i create secrets -n kc 2>/dev/null; then
+            echo "::error::Runner SA lacks RBAC permissions to create secrets in kc namespace."
+            echo "::error::Apply RBAC: kubectl apply -f deploy/arc/deploy-runner-rbac.yaml"
+            exit 1
+          fi
+          echo "RBAC permissions verified."
+          kubectl get secrets -n kc --no-headers 2>/dev/null | head -3 || echo "Namespace kc does not exist yet (will be created)"
 
       - name: Create namespace if not exists
         run: |
@@ -167,6 +182,7 @@ jobs:
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --set clusterName=vllm-d \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+            --set persistence.storageClass=ocs-storagecluster-cephfs \
             --atomic \
             --wait \
             --timeout 5m
