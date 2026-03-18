@@ -38,6 +38,7 @@ import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
+import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
 
 export function MissionSidebar() {
   const { t } = useTranslation(['common'])
@@ -96,7 +97,9 @@ export function MissionSidebar() {
     const tryImport = async () => {
       for (const path of paths) {
         try {
-          const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`)
+          const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, {
+            signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
+          })
           if (!res.ok) continue
           const raw = await res.text()
           const parsed = JSON.parse(raw)

@@ -549,7 +549,7 @@ export function useCachedEvents(
             return events.map(e => ({ ...e, cluster: ci.name }))
           })
         )
-        for (const r of results) {
+        for (const r of (results || [])) {
           if (r.status === 'fulfilled') allEvents.push(...r.value)
         }
         return allEvents
@@ -573,7 +573,7 @@ export function useCachedEvents(
       if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         const clusters = getAgentClusters()
         const accumulated: ClusterEvent[] = []
-        for (const ci of clusters) {
+        for (const ci of (clusters || [])) {
           try {
             const ctx = ci.context || ci.name
             const events = await kubectlProxy.getEvents(ctx, namespace, limit)

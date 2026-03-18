@@ -50,7 +50,7 @@ export function useStatHistory(
 
     const sample = () => {
       const now = Date.now()
-      for (const blockId of visibleBlockIds) {
+      for (const blockId of (visibleBlockIds || [])) {
         const data = getStatValue(blockId)
         const numericValue = typeof data.value === 'number'
           ? data.value
