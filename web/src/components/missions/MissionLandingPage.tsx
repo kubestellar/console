@@ -88,60 +88,78 @@ const TABS: TabDef[] = [
 // ============================================================================
 
 /**
- * Resolve a mission slug to a file path in console-kb.
- * Tries common locations: security/, cncf-generated/, and root solutions/.
+ * Known subdirectories under solutions/ in console-kb.
+ * Used for fast direct lookups before falling back to the index.
+ */
+const KB_SOLUTION_DIRS = [
+  'cncf-install',
+  'cncf-generated',
+  'security',
+  'platform-install',
+  'llm-d',
+  'multi-cluster',
+  'troubleshoot',
+  'troubleshooting',
+  'cost-optimization',
+  'networking',
+  'observability',
+  'workloads',
+] as const
+
+/**
+ * Resolve a mission slug to candidate file paths in console-kb.
+ * Tries every known subdirectory plus the root solutions/ folder.
  */
 function buildMissionPaths(slug: string): string[] {
-  return [
-    `solutions/security/${slug}.json`,
-    `solutions/cncf-generated/${slug}.json`,
-    `solutions/${slug}.json`,
-    `solutions/platform/${slug}.json`,
-    `solutions/install/${slug}.json`,
-  ]
+  const paths = KB_SOLUTION_DIRS.map((dir) => `solutions/${dir}/${slug}.json`)
+  paths.push(`solutions/${slug}.json`)
+  return paths
 }
 
+/**
+ * Try fetching a single candidate path and return the validated mission if found.
+ */
+async function tryFetchMission(path: string): Promise<{ mission: MissionExport; raw: string } | null> {
+  try {
+    const url = `/api/missions/file?path=${encodeURIComponent(path)}`
+    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    if (!res.ok) return null
+
+    const raw = await res.text()
+    const parsed = JSON.parse(raw)
+    const result = validateMissionExport(parsed)
+    return result.valid ? { mission: result.data, raw } : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch a mission by slug. Fires all known-directory lookups in parallel for
+ * speed, then falls back to the full index.json which contains every mission
+ * path — catching missions in nested subdirectories like
+ * solutions/cncf-generated/projectname/slug.json.
+ */
 async function fetchMissionBySlug(slug: string): Promise<{ mission: MissionExport; raw: string } | null> {
   const paths = buildMissionPaths(slug)
+  const results = await Promise.all(paths.map(tryFetchMission))
+  const directHit = results.find((r) => r !== null) || null
+  if (directHit) return directHit
 
-  for (const path of paths) {
-    try {
-      const url = `/api/missions/file?path=${encodeURIComponent(path)}`
-      const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
-      if (!res.ok) continue
-
-      const raw = await res.text()
-      const parsed = JSON.parse(raw)
-      const result = validateMissionExport(parsed)
-      if (result.valid) {
-        return { mission: result.data, raw }
-      }
-    } catch {
-      continue
-    }
-  }
-
-  // Try the search index as fallback
+  // Fallback: search the full index.json for missions with a matching slug.
+  // Catches missions in nested subdirectories not listed in KB_SOLUTION_DIRS.
   try {
-    const res = await fetch('/api/missions/browse?path=solutions', {
+    const res = await fetch('/api/missions/file?path=solutions/index.json', {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
     if (res.ok) {
-      const entries = await res.json()
-      const match = (entries || []).find((e: { name: string }) =>
-        e.name.replace('.json', '') === slug
-      )
-      if (match) {
-        const fileRes = await fetch(`/api/missions/file?path=${encodeURIComponent(match.path)}`, {
-          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        })
-        if (fileRes.ok) {
-          const raw = await fileRes.text()
-          const parsed = JSON.parse(raw)
-          const result = validateMissionExport(parsed)
-          if (result.valid) return { mission: result.data, raw }
-        }
-      }
+      const index = await res.json() as { missions?: Array<{ path: string }> }
+      const missions = index.missions || []
+      const match = missions.find((m) => {
+        const filename = (m.path || '').split('/').pop() || ''
+        return filename.replace('.json', '') === slug
+      })
+      if (match) return tryFetchMission(match.path)
     }
   } catch {
     // Fallback exhausted
