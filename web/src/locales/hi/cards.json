@@ -481,7 +481,8 @@
     "namespaces": "Namespaces",
     "securityEvents": "Security & Events",
     "runtime": "Runtime",
-    "serverless": "Serverless"
+    "serverless": "Serverless",
+    "orchestration": "Orchestration"
   },
   "addCard": {
     "title": "Add Card",
@@ -2697,5 +2698,28 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "karmada": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Karmada Not Detected",
+    "notInstalledHint": "No Karmada controller pods found. Deploy Karmada to enable multi-cluster resource propagation.",
+    "fetchError": "Failed to fetch Karmada status",
+    "controllerPods": "pods",
+    "clusters": "Clusters",
+    "ready": "Ready",
+    "failed": "Failed",
+    "policies": "Policies",
+    "memberClusters": "Member Clusters",
+    "resourceBindings": "Resource Bindings",
+    "searchClusters": "Search clusters...",
+    "searchBindings": "Search bindings...",
+    "noMemberClusters": "Controller running",
+    "noMemberClustersHint": "Join member clusters to propagate resources.",
+    "noBindings": "No resource bindings",
+    "noBindingsHint": "Create PropagationPolicies to propagate resources to member clusters.",
+    "noSearchResults": "No matches found.",
+    "clusterPolicies": "ClusterPolicies",
+    "overridePolicies": "OverridePolicies"
   }
 }

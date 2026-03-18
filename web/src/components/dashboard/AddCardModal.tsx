@@ -295,6 +295,7 @@ const CARD_CATALOG = {
   'Orchestration': [
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela application delivery, component status, and workflow progress', visualization: 'status' },
+    { type: 'karmada_status', title: 'Karmada', description: 'Karmada multi-cluster resource propagation status, member clusters, and policy health', visualization: 'status' },
   ],
   'Serverless': [
     { type: 'cloudevents_status', title: 'CloudEvents', description: 'CloudEvents message flow, event source tracking, and delivery status', visualization: 'status' },

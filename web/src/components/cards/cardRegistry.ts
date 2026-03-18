@@ -208,6 +208,8 @@ const CloudEventsStatus = safeLazy(() => import('./cloudevents_status'), 'CloudE
 const StrimziStatus = safeLazy(() => import('./strimzi_status'), 'StrimziStatus')
 // KubeVela application delivery card
 const KubeVelaStatus = safeLazy(() => import('./kubevela_status'), 'KubeVelaStatus')
+// Karmada multi-cluster orchestration card
+const KarmadaStatus = safeLazy(() => import('./karmada_status'), 'KarmadaStatus')
 
 // Multi-tenancy cards — share one chunk via barrel import
 const _multiTenancyBundle = import('./multi-tenancy').catch(() => undefined as never)
@@ -488,6 +490,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   strimzi_status: StrimziStatus,
   // KubeVela application delivery
   kubevela_status: KubeVelaStatus,
+  // Karmada multi-cluster orchestration
+  karmada_status: KarmadaStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -846,6 +850,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   strimzi_status: () => import('./strimzi_status'),
   // KubeVela application delivery
   kubevela_status: () => import('./kubevela_status'),
+  // Karmada multi-cluster orchestration
+  karmada_status: () => import('./karmada_status'),
 }
 
 /**
