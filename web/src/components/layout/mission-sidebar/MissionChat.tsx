@@ -456,7 +456,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-xs text-muted-foreground flex-1">{mission.description}</p>
+          <p className="text-xs text-muted-foreground flex-1 line-clamp-2">{mission.description}</p>
           {mission.agent && (
             <AgentBadge
               provider={
@@ -559,7 +559,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       </div>
 
       {/* Input / Actions */}
-      <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0 overflow-hidden">
+      <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0">
         {mission.status === 'running' ? (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2 min-w-0">
