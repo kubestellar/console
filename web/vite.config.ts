@@ -70,6 +70,21 @@ export default defineConfig(({ mode }) => ({
     exclude: ['@sqlite.org/sqlite-wasm'],
   },
   build: {
+    // Filter modulepreload hints — Vite preloads ALL chunks by default, even
+    // lazy-loaded ones. This adds ~550KB of unnecessary downloads on first
+    // visit (three-vendor 195KB, charts-vendor 354KB, markdown-vendor, etc.)
+    // that are never used on the dashboard. Only preload the core chunks.
+    modulePreload: {
+      resolveDependencies: (_filename, deps) => {
+        return deps.filter(dep =>
+          !dep.includes('three-vendor') &&
+          !dep.includes('charts-vendor') &&
+          !dep.includes('markdown-vendor') &&
+          !dep.includes('sucrase-vendor') &&
+          !dep.includes('motion-vendor')
+        )
+      },
+    },
     // Enable minification optimizations
     minify: 'terser',
     terserOptions: {
