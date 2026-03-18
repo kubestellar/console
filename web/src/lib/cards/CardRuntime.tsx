@@ -247,6 +247,14 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     sorting,
   } = cardData
 
+  // Build sort options from columns (must be before any early returns to satisfy Rules of Hooks)
+  const sortOptions = useMemo(() => {
+    return (columns?.filter(c => c.sortable !== false) || []).map(c => ({
+      value: c.field,
+      label: c.header,
+    }))
+  }, [columns])
+
   // If the data hook was not registered, render an error after all hooks have been called
   if (hookMissing) {
     return (
@@ -259,14 +267,6 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawData.length === 0
   const displayTitle = title || defTitle
-
-  // Build sort options from columns
-  const sortOptions = useMemo(() => {
-    return (columns?.filter(c => c.sortable !== false) || []).map(c => ({
-      value: c.field,
-      label: c.header,
-    }))
-  }, [columns])
 
   // Handle drill-down click
   const handleItemClick = (item: Record<string, unknown>) => {
