@@ -14,14 +14,26 @@ import {
 
 export type KarmadaStatus = KarmadaDemoData
 
+/** Default count value when a field is missing or empty */
+const DEFAULT_COUNT = 0
+
+/** Arbitrary flag value representing an active/synced resource */
+const SYNCED_RESOURCE_FLAG = 1
+
+/** Base 10 radix for parseInt */
+const RADIX_BASE_10 = 10
+
+/** Expected number of parts when splitting pod readiness string (e.g. "1/1") */
+const EXPECTED_READY_PARTS = 2
+
 const INITIAL_DATA: KarmadaStatus = {
   health: 'not-installed',
-  controllerPods: { ready: 0, total: 0 },
+  controllerPods: { ready: DEFAULT_COUNT, total: DEFAULT_COUNT },
   memberClusters: [],
   propagationPolicies: [],
   resourceBindings: [],
-  clusterPoliciesCount: 0,
-  overridePoliciesCount: 0,
+  clusterPoliciesCount: DEFAULT_COUNT,
+  overridePoliciesCount: DEFAULT_COUNT,
   lastCheckTime: new Date().toISOString(),
 }
 
@@ -53,8 +65,21 @@ interface CRResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Pod helpers — Karmada controller manager detection
+// Helpers
 // ---------------------------------------------------------------------------
+
+/** Safely extracts a Record from unknown */
+function getRecord(val: unknown): Record<string, unknown> {
+  if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+    return val as Record<string, unknown>
+  }
+  return {}
+}
+
+/** Safely extracts an Array from unknown */
+function getArray(val: unknown): unknown[] {
+  return Array.isArray(val) ? val : []
+}
 
 function isKarmadaControllerPod(pod: BackendPodInfo): boolean {
   const labels = pod.labels ?? {}
@@ -73,8 +98,8 @@ function isPodReady(pod: BackendPodInfo): boolean {
   if (status !== 'running') return false
   const ready = pod.ready ?? ''
   const parts = ready.split('/')
-  if (parts.length !== 2) return false
-  return parts[0] === parts[1] && parseInt(parts[0], 10) > 0
+  if (parts.length !== EXPECTED_READY_PARTS) return false
+  return parts[0] === parts[1] && parseInt(parts[0], RADIX_BASE_10) > DEFAULT_COUNT
 }
 
 // ---------------------------------------------------------------------------
@@ -101,22 +126,22 @@ async function fetchCR(group: string, version: string, resource: string): Promis
 // ---------------------------------------------------------------------------
 
 function parseClusterStatus(raw: unknown): KarmadaClusterStatus {
-  const conditions = Array.isArray((raw as Record<string, unknown>)?.conditions)
-    ? ((raw as Record<string, unknown>).conditions as Array<Record<string, unknown>>)
-    : []
+  const statusObj = getRecord(raw)
+  const conditions = getArray(statusObj.conditions)
   for (const c of conditions) {
-    if (c.type === 'Ready' && c.status === 'True') return 'Ready'
-    if (c.type === 'Ready' && c.status === 'False') return 'NotReady'
+    const rawCond = getRecord(c)
+    if (rawCond.type === 'Ready' && rawCond.status === 'True') return 'Ready'
+    if (rawCond.type === 'Ready' && rawCond.status === 'False') return 'NotReady'
   }
   return 'Unknown'
 }
 
 function parseMemberCluster(item: CRItem): KarmadaMemberCluster {
-  const status = (item.status ?? {}) as Record<string, unknown>
+  const status = getRecord(item.status)
   const clusterStatus = parseClusterStatus(status)
-  const nodeCount = typeof status.nodeCount === 'number' ? status.nodeCount : 0
-  const kubernetesVersion = (status.kubernetesVersion as string) ?? ''
-  const syncedResources = (item.labels?.['karmada.io/cluster-resource-version'] ? 1 : 0)
+  const nodeCount = typeof status.nodeCount === 'number' ? status.nodeCount : DEFAULT_COUNT
+  const kubernetesVersion = typeof status.kubernetesVersion === 'string' ? status.kubernetesVersion : ''
+  const syncedResources = item.labels?.['karmada.io/cluster-resource-version'] ? SYNCED_RESOURCE_FLAG : DEFAULT_COUNT
 
   return {
     name: item.name,
@@ -129,23 +154,32 @@ function parseMemberCluster(item: CRItem): KarmadaMemberCluster {
 }
 
 function parsePropagationPolicy(item: CRItem): KarmadaPropagationPolicy {
-  const spec = (item.spec ?? {}) as Record<string, unknown>
-  const status = (item.status ?? {}) as Record<string, unknown>
+  const spec = getRecord(item.spec)
+  const status = getRecord(item.status)
 
   // Parse resource selectors from spec
-  const rawSelectors = Array.isArray(spec.resourceSelectors) ? spec.resourceSelectors : []
+  const rawSelectors = getArray(spec.resourceSelectors)
   const resourceSelectors = rawSelectors.map((s: unknown) => {
-    const sel = s as Record<string, string>
-    return `${sel.kind ?? ''}:${sel.name ?? '*'}`
+    const sel = getRecord(s)
+    const kind = typeof sel.kind === 'string' ? sel.kind : ''
+    const name = typeof sel.name === 'string' ? sel.name : '*'
+    return `${kind}:${name}`
   })
 
   // Parse target clusters from placement
-  const placement = (spec.placement ?? {}) as Record<string, unknown>
-  const rawClusters = Array.isArray(placement.clusterNames) ? (placement.clusterNames as string[]) : []
+  const placement = getRecord(spec.placement)
+  const rawClusters = getArray(placement.clusterNames)
+  const targetClusters = rawClusters.map(c => String(c))
 
   // Status-derived counts
-  const aggregatedStatus = (status.aggregatedStatus as Array<Record<string, unknown>>) ?? []
-  const readyCount = aggregatedStatus.filter(s => s.applied === true).length
+  const aggregatedStatus = getArray(status.aggregatedStatus)
+  let readyCount = DEFAULT_COUNT
+  for (const s of aggregatedStatus) {
+    const statusEntry = getRecord(s)
+    if (statusEntry.applied === true) {
+      readyCount += 1
+    }
+  }
   const bindingCount = aggregatedStatus.length
 
   return {
@@ -154,41 +188,48 @@ function parsePropagationPolicy(item: CRItem): KarmadaPropagationPolicy {
     bindingCount,
     readyCount,
     resourceSelectors,
-    targetClusters: rawClusters,
+    targetClusters,
   }
 }
 
 function parseBindingStatus(raw: unknown): KarmadaBindingStatus {
-  const known: KarmadaBindingStatus[] = ['Scheduled', 'Fullyscheduable', 'MismatchedSchedulerError', 'Binding', 'Bound', 'Failed']
+  const known: KarmadaBindingStatus[] = ['Scheduled', 'Fullyscheduable', 'Binding', 'Bound', 'Failed']
   const str = String(raw ?? '')
   return known.includes(str as KarmadaBindingStatus) ? (str as KarmadaBindingStatus) : 'Unknown'
 }
 
 function parseResourceBinding(item: CRItem): KarmadaResourceBinding {
-  const spec = (item.spec ?? {}) as Record<string, unknown>
-  const status = (item.status ?? {}) as Record<string, unknown>
+  const spec = getRecord(item.spec)
+  const status = getRecord(item.status)
+  
+  const resourceDef = getRecord(spec.resource)
+  const resourceKind = typeof resourceDef.kind === 'string' ? resourceDef.kind : ''
 
-  const resourceKind = (spec.resource as Record<string, string>)?.kind ?? ''
-
-  const conditions = Array.isArray(status.conditions) ? status.conditions as Array<Record<string, unknown>> : []
+  const conditions = getArray(status.conditions)
   let bindingStatus: KarmadaBindingStatus = 'Unknown'
+  
   for (const c of conditions) {
-    if (c.type === 'Scheduled') {
-      bindingStatus = c.status === 'True' ? 'Scheduled' : 'MismatchedSchedulerError'
+    const rawCond = getRecord(c)
+    if (rawCond.type === 'Scheduled') {
+      bindingStatus = rawCond.status === 'True' ? 'Scheduled' : 'Failed'
     }
-    if (c.type === 'Fullyscheduable' && c.status === 'True') {
+    if (rawCond.type === 'Fullyscheduable' && rawCond.status === 'True') {
       bindingStatus = 'Fullyscheduable'
     }
-    if (c.type === 'Applied' && c.status === 'True') {
+    if (rawCond.type === 'Applied' && rawCond.status === 'True') {
       bindingStatus = 'Bound'
     }
   }
-  if (conditions.length === 0 && spec.clusters) {
+  
+  const specClusters = getArray(spec.clusters)
+  if (conditions.length === 0 && specClusters.length > 0) {
     bindingStatus = parseBindingStatus('Binding')
   }
 
-  const rawClusters = Array.isArray(spec.clusters) ? spec.clusters as Array<Record<string, string>> : []
-  const boundClusters = rawClusters.map(c => c.name ?? '')
+  const boundClusters = specClusters.map(c => {
+    const clusterObj = getRecord(c)
+    return typeof clusterObj.name === 'string' ? clusterObj.name : ''
+  })
 
   return {
     name: item.name,

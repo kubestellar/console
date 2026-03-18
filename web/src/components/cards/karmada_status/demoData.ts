@@ -28,7 +28,7 @@ export type KarmadaHealth = 'healthy' | 'degraded' | 'not-installed'
 
 export type KarmadaClusterStatus = 'Ready' | 'NotReady' | 'Unknown'
 
-export type KarmadaBindingStatus = 'Scheduled' | 'Fullyscheduable' | 'MismatchedSchedulerError' | 'Binding' | 'Bound' | 'Failed' | 'Unknown'
+export type KarmadaBindingStatus = 'Scheduled' | 'Fullyscheduable' | 'Binding' | 'Bound' | 'Failed' | 'Unknown'
 
 export interface KarmadaMemberCluster {
   name: string

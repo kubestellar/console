@@ -44,8 +44,7 @@ function bindingStatusColor(status: KarmadaBindingStatus): string {
     case 'Scheduled':
     case 'Fullyscheduable': return 'text-blue-400'
     case 'Binding': return 'text-yellow-400'
-    case 'Failed':
-    case 'MismatchedSchedulerError': return 'text-red-400'
+    case 'Failed': return 'text-red-400'
     default: return 'text-muted-foreground'
   }
 }
@@ -139,7 +138,7 @@ export function KarmadaStatus() {
   const stats = useMemo(() => ({
     totalClusters: memberClusters.length,
     readyClusters: memberClusters.filter(c => c.status === 'Ready').length,
-    failedBindings: resourceBindings.filter(b => b.status === 'Failed' || b.status === 'MismatchedSchedulerError').length,
+    failedBindings: resourceBindings.filter(b => b.status === 'Failed').length,
     totalPolicies: propagationPolicies.length + data.clusterPoliciesCount,
   }), [memberClusters, resourceBindings, propagationPolicies, data.clusterPoliciesCount])
 
