@@ -688,7 +688,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
           // Clear active token tracking
           setActiveTokenCategory(null)
-          emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
+          if (m.status === 'running') {
+            emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
+          }
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
@@ -721,7 +723,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
         // Clear active token tracking and emit completion event
         setActiveTokenCategory(null)
-        emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
+        if (m.status === 'running') {
+          emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
+        }
 
         return {
           ...m,
