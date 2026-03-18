@@ -430,7 +430,21 @@
       "localClustersCount_one": "Local Clusters ({{count}})",
       "localClustersCount_other": "Local Clusters ({{count}})",
       "noClusters": "No local clusters found. Create one above to get started.",
-      "deleteConfirm": "Delete cluster \"{{name}}\"? This cannot be undone."
+      "deleteConfirm": "Delete cluster \"{{name}}\"? This cannot be undone.",
+      "vclusterSection": "Virtual Clusters",
+      "vclusterDesc": "Virtual clusters running inside host Kubernetes clusters",
+      "vclusterCount": "{{count}} virtual cluster(s)",
+      "vclusterNamespace": "Namespace",
+      "vclusterConnect": "Connect",
+      "vclusterDisconnect": "Disconnect",
+      "vclusterConnected": "Connected",
+      "vclusterPaused": "Paused",
+      "vclusterInstallTitle": "vCluster Not Detected",
+      "vclusterInstallDesc": "Install the vCluster CLI to create and manage virtual Kubernetes clusters",
+      "vclusterInstallWithAgent": "Install with AI Agent",
+      "vclusterCreateNew": "Create Virtual Cluster",
+      "vclusterDefaultNamespace": "vcluster",
+      "vclusterDeleteConfirm": "Delete virtual cluster \"{{name}}\" in namespace \"{{namespace}}\"? This cannot be undone."
     },
     "backup": {
       "title": "Backup & Sync",

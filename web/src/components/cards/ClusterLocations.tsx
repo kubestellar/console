@@ -198,7 +198,7 @@ function extractRegion(cluster: ClusterInfo): string | null {
   }
 
   // Local clusters
-  if (name.includes('kind') || name.includes('minikube') || name.includes('k3d') || name.includes('docker-desktop') || name.includes('rancher-desktop') || name.includes('colima')) {
+  if (name.includes('kind') || name.includes('minikube') || name.includes('k3d') || name.includes('docker-desktop') || name.includes('rancher-desktop') || name.includes('colima') || name.includes('vcluster')) {
     return 'local'
   }
 

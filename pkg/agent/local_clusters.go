@@ -2,10 +2,13 @@ package agent
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // Progress percentage constants for cluster creation/deletion phases
@@ -13,8 +16,17 @@ const (
 	progressValidating = 10  // Pre-flight checks (Docker daemon, tool availability)
 	progressCreating   = 30  // Cluster creation command dispatched
 	progressDeleting   = 30  // Cluster deletion command dispatched
+	progressConnecting = 50  // Connection/disconnect operation in progress
 	progressDone       = 100 // Operation completed successfully
 	progressFailed     = 0   // Operation failed
+)
+
+// vCluster CLI operation timeouts
+const (
+	vclusterListTimeout    = 15 * time.Second  // Timeout for listing vClusters
+	vclusterCreateTimeout  = 120 * time.Second // Timeout for creating a vCluster
+	vclusterConnectTimeout = 30 * time.Second  // Timeout for connecting/disconnecting a vCluster
+	vclusterDeleteTimeout  = 60 * time.Second  // Timeout for deleting a vCluster
 )
 
 var (
@@ -35,6 +47,24 @@ type LocalCluster struct {
 	Name   string `json:"name"`
 	Tool   string `json:"tool"`
 	Status string `json:"status"` // "running", "stopped", "unknown"
+}
+
+// VClusterInstance represents a vCluster instance
+type VClusterInstance struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Status    string `json:"status"`    // "Running", "Paused", etc.
+	Connected bool   `json:"connected"` // whether kubeconfig context exists
+	Context   string `json:"context"`   // kubeconfig context name if connected
+}
+
+// vclusterListEntry mirrors the JSON output from `vcluster list --output json`
+type vclusterListEntry struct {
+	Name      string `json:"Name"`
+	Namespace string `json:"Namespace"`
+	Status    string `json:"Status"`
+	Connected bool   `json:"Connected"`
+	Context   string `json:"Context"`
 }
 
 // LocalClusterManager handles local cluster operations
@@ -88,6 +118,11 @@ func (m *LocalClusterManager) DetectTools() []LocalClusterTool {
 
 	// Check minikube
 	if tool := m.detectMinikube(); tool != nil {
+		tools = append(tools, *tool)
+	}
+
+	// Check vcluster
+	if tool := m.detectVCluster(); tool != nil {
 		tools = append(tools, *tool)
 	}
 
@@ -377,4 +412,166 @@ func (m *LocalClusterManager) deleteMinikubeCluster(name string) error {
 		return fmt.Errorf("minikube delete failed: %s", stderr.String())
 	}
 	return nil
+}
+
+// detectVCluster checks if the vcluster CLI is installed and returns tool info
+func (m *LocalClusterManager) detectVCluster() *LocalClusterTool {
+	path, err := lookPath("vcluster")
+	if err != nil {
+		return nil
+	}
+
+	tool := &LocalClusterTool{
+		Name:      "vcluster",
+		Installed: true,
+		Path:      path,
+	}
+
+	// Get version
+	cmd := execCommand("vcluster", "version")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err == nil {
+		// Parse version output — typically "vcluster version 0.19.0" or just "0.19.0"
+		version := strings.TrimSpace(out.String())
+		re := regexp.MustCompile(`v?([\d.]+)`)
+		if matches := re.FindStringSubmatch(version); len(matches) > 1 {
+			tool.Version = matches[1]
+		}
+	}
+
+	return tool
+}
+
+// ListVClusters runs `vcluster list --output json` and returns parsed results
+func (m *LocalClusterManager) ListVClusters() ([]VClusterInstance, error) {
+	cmd := execCommand("vcluster", "list", "--output", "json")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := runWithTimeout(cmd, vclusterListTimeout); err != nil {
+		return nil, fmt.Errorf("vcluster list failed: %s", strings.TrimSpace(stderr.String()))
+	}
+
+	var entries []vclusterListEntry
+	if err := json.Unmarshal(stdout.Bytes(), &entries); err != nil {
+		return nil, fmt.Errorf("failed to parse vcluster list output: %w", err)
+	}
+
+	instances := make([]VClusterInstance, 0, len(entries))
+	for _, e := range entries {
+		instances = append(instances, VClusterInstance{
+			Name:      e.Name,
+			Namespace: e.Namespace,
+			Status:    e.Status,
+			Connected: e.Connected,
+			Context:   e.Context,
+		})
+	}
+
+	return instances, nil
+}
+
+// CreateVCluster creates a new vCluster with progress broadcasting
+func (m *LocalClusterManager) CreateVCluster(name, namespace string) error {
+	// Phase 1: Validating
+	m.broadcastProgress("vcluster", name, "validating", "Checking vcluster CLI...", progressValidating)
+
+	if _, err := lookPath("vcluster"); err != nil {
+		return fmt.Errorf("vcluster CLI is not installed")
+	}
+
+	// Phase 2: Creating
+	m.broadcastProgress("vcluster", name, "creating",
+		fmt.Sprintf("Creating vCluster '%s' in namespace '%s'...", name, namespace), progressCreating)
+
+	cmd := execCommand("vcluster", "create", name, "-n", namespace)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := runWithTimeout(cmd, vclusterCreateTimeout); err != nil {
+		return fmt.Errorf("vcluster create failed: %s", strings.TrimSpace(stderr.String()))
+	}
+
+	return nil
+}
+
+// ConnectVCluster connects to an existing vCluster by updating kubeconfig
+func (m *LocalClusterManager) ConnectVCluster(name, namespace string) error {
+	m.broadcastProgress("vcluster", name, "connecting",
+		fmt.Sprintf("Connecting to vCluster '%s' in namespace '%s'...", name, namespace), progressConnecting)
+
+	cmd := execCommand("vcluster", "connect", name, "-n", namespace, "--update-current=false")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := runWithTimeout(cmd, vclusterConnectTimeout); err != nil {
+		return fmt.Errorf("vcluster connect failed: %s", strings.TrimSpace(stderr.String()))
+	}
+
+	return nil
+}
+
+// DisconnectVCluster disconnects from a vCluster
+func (m *LocalClusterManager) DisconnectVCluster(name, namespace string) error {
+	m.broadcastProgress("vcluster", name, "disconnecting",
+		fmt.Sprintf("Disconnecting from vCluster '%s'...", name), progressConnecting)
+
+	cmd := execCommand("vcluster", "disconnect")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := runWithTimeout(cmd, vclusterConnectTimeout); err != nil {
+		return fmt.Errorf("vcluster disconnect failed: %s", strings.TrimSpace(stderr.String()))
+	}
+
+	return nil
+}
+
+// DeleteVCluster deletes a vCluster with progress broadcasting
+func (m *LocalClusterManager) DeleteVCluster(name, namespace string) error {
+	// Phase 1: Validating
+	m.broadcastProgress("vcluster", name, "validating",
+		fmt.Sprintf("Preparing to delete vCluster '%s'...", name), progressValidating)
+
+	// Phase 2: Deleting
+	m.broadcastProgress("vcluster", name, "deleting",
+		fmt.Sprintf("Deleting vCluster '%s' from namespace '%s'...", name, namespace), progressDeleting)
+
+	cmd := execCommand("vcluster", "delete", name, "-n", namespace)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := runWithTimeout(cmd, vclusterDeleteTimeout); err != nil {
+		return fmt.Errorf("vcluster delete failed: %s", strings.TrimSpace(stderr.String()))
+	}
+
+	return nil
+}
+
+// runWithTimeout runs a pre-built *exec.Cmd with a timeout context.
+// It kills the process if the timeout expires before the command finishes.
+func runWithTimeout(cmd *exec.Cmd, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		return fmt.Errorf("command timed out after %s", timeout)
+	}
 }

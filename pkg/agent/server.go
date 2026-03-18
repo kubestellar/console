@@ -349,6 +349,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
 	mux.HandleFunc("/local-clusters", s.handleLocalClusters)
 
+	// vCluster management endpoints
+	mux.HandleFunc("/vcluster/list", s.handleVClusterList)
+	mux.HandleFunc("/vcluster/create", s.handleVClusterCreate)
+	mux.HandleFunc("/vcluster/connect", s.handleVClusterConnect)
+	mux.HandleFunc("/vcluster/disconnect", s.handleVClusterDisconnect)
+	mux.HandleFunc("/vcluster/delete", s.handleVClusterDelete)
+
 	// Chat cancel endpoint — HTTP fallback when WebSocket is disconnected
 	mux.HandleFunc("/cancel-chat", s.handleCancelChatHTTP)
 
@@ -4239,6 +4246,267 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// handleVClusterList returns all vCluster instances
+func (s *Server) handleVClusterList(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	instances, err := s.localClusters.ListVClusters()
+	if err != nil {
+		log.Printf("[vCluster] Failed to list vclusters: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"vclusters": instances,
+	})
+}
+
+// handleVClusterCreate creates a new vCluster
+func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" || req.Namespace == "" {
+		http.Error(w, "name and namespace are required", http.StatusBadRequest)
+		return
+	}
+
+	// Create vCluster in background and return immediately
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[vCluster] recovered from panic creating vcluster %s: %v", req.Name, r)
+			}
+		}()
+		if err := s.localClusters.CreateVCluster(req.Name, req.Namespace); err != nil {
+			log.Printf("[vCluster] Failed to create vcluster %s: %v", req.Name, err)
+			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+				"tool":     "vcluster",
+				"name":     req.Name,
+				"status":   "failed",
+				"message":  "operation failed",
+				"progress": progressFailed,
+			})
+		} else {
+			log.Printf("[vCluster] Created vcluster %s in namespace %s", req.Name, req.Namespace)
+			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+				"tool":     "vcluster",
+				"name":     req.Name,
+				"status":   "done",
+				"message":  fmt.Sprintf("vCluster '%s' created successfully", req.Name),
+				"progress": progressDone,
+			})
+		}
+	}()
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "creating",
+		"name":      req.Name,
+		"namespace": req.Namespace,
+		"message":   "vCluster creation started. You will be notified when it completes.",
+	})
+}
+
+// handleVClusterConnect connects to an existing vCluster
+func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" || req.Namespace == "" {
+		http.Error(w, "name and namespace are required", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.localClusters.ConnectVCluster(req.Name, req.Namespace); err != nil {
+		log.Printf("[vCluster] Failed to connect to vcluster %s: %v", req.Name, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[vCluster] Connected to vcluster %s in namespace %s", req.Name, req.Namespace)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "connected",
+		"name":      req.Name,
+		"namespace": req.Namespace,
+		"message":   fmt.Sprintf("Connected to vCluster '%s'", req.Name),
+	})
+}
+
+// handleVClusterDisconnect disconnects from a vCluster
+func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" || req.Namespace == "" {
+		http.Error(w, "name and namespace are required", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.localClusters.DisconnectVCluster(req.Name, req.Namespace); err != nil {
+		log.Printf("[vCluster] Failed to disconnect from vcluster %s: %v", req.Name, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[vCluster] Disconnected from vcluster %s", req.Name)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "disconnected",
+		"name":      req.Name,
+		"namespace": req.Namespace,
+		"message":   fmt.Sprintf("Disconnected from vCluster '%s'", req.Name),
+	})
+}
+
+// handleVClusterDelete deletes a vCluster
+func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" || req.Namespace == "" {
+		http.Error(w, "name and namespace are required", http.StatusBadRequest)
+		return
+	}
+
+	// Delete vCluster in background and return immediately
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[vCluster] recovered from panic deleting vcluster %s: %v", req.Name, r)
+			}
+		}()
+		if err := s.localClusters.DeleteVCluster(req.Name, req.Namespace); err != nil {
+			log.Printf("[vCluster] Failed to delete vcluster %s: %v", req.Name, err)
+			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+				"tool":     "vcluster",
+				"name":     req.Name,
+				"status":   "failed",
+				"message":  "operation failed",
+				"progress": progressFailed,
+			})
+		} else {
+			log.Printf("[vCluster] Deleted vcluster %s from namespace %s", req.Name, req.Namespace)
+			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+				"tool":     "vcluster",
+				"name":     req.Name,
+				"status":   "done",
+				"message":  fmt.Sprintf("vCluster '%s' deleted successfully", req.Name),
+				"progress": progressDone,
+			})
+		}
+	}()
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "deleting",
+		"name":      req.Name,
+		"namespace": req.Namespace,
+		"message":   "vCluster deletion started. You will be notified when it completes.",
+	})
 }
 
 // handleInsightsEnrich accepts heuristic insight summaries and returns AI enrichments

@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Container, RefreshCw, Plus, Trash2, Check, AlertCircle, AlertTriangle, Loader2, X } from 'lucide-react'
+import { Container, RefreshCw, Plus, Trash2, Check, AlertCircle, AlertTriangle, Loader2, X, Plug, Unplug, Bot } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
 import { CLUSTER_PROGRESS_AUTO_DISMISS_MS } from '../../../hooks/useClusterProgress'
 import { emitLocalClusterCreated } from '../../../lib/analytics'
+import { useMissions } from '../../../hooks/useMissions'
+import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
 import type { ClusterProgress } from '../../../hooks/useClusterProgress'
+
+/** Default namespace for new vCluster instances */
+const VCLUSTER_DEFAULT_NAMESPACE = 'vcluster'
 
 // ------------------------------------------------------------------
 // ClusterProgressBanner — inline progress feedback for create/delete
@@ -101,10 +106,27 @@ export function LocalClustersSection() {
     createCluster,
     deleteCluster,
     refresh,
+    // vCluster state and actions
+    vclusterInstances,
+    isConnecting,
+    isDisconnecting,
+    createVCluster,
+    connectVCluster,
+    disconnectVCluster,
+    deleteVCluster,
   } = useLocalClusterTools()
+
+  const { startMission } = useMissions()
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   const [selectedTool, setSelectedTool] = useState<string>('')
   const [clusterName, setClusterName] = useState('')
+
+  // vCluster form state
+  const [vclusterName, setVclusterName] = useState('')
+  const [vclusterNamespace, setVclusterNamespace] = useState(VCLUSTER_DEFAULT_NAMESPACE)
+
+  const hasVClusterTool = installedTools.some(t => t.name === 'vcluster')
 
   const handleCreate = async () => {
     if (!selectedTool || !clusterName.trim()) return
@@ -123,6 +145,34 @@ export function LocalClustersSection() {
     await deleteCluster(tool, name)
   }
 
+  const handleCreateVCluster = async () => {
+    if (!vclusterName.trim()) return
+
+    const result = await createVCluster(vclusterName.trim(), vclusterNamespace.trim() || VCLUSTER_DEFAULT_NAMESPACE)
+    emitLocalClusterCreated('vcluster')
+
+    if (result.status === 'creating') {
+      setVclusterName('')
+      setVclusterNamespace(VCLUSTER_DEFAULT_NAMESPACE)
+    }
+  }
+
+  const handleDeleteVCluster = async (name: string, namespace: string) => {
+    if (!confirm(t('settings.localClusters.vclusterDeleteConfirm', { name, namespace }))) return
+    await deleteVCluster(name, namespace)
+  }
+
+  const handleInstallVCluster = () => {
+    checkKeyAndRun(() => {
+      startMission({
+        title: 'Install vCluster CLI',
+        description: 'Install the vCluster CLI for creating virtual Kubernetes clusters',
+        type: 'deploy',
+        initialPrompt: 'Install the vCluster CLI tool. Try using homebrew first (brew install loft-sh/tap/vcluster), and if that is not available, use the official install script: curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-$(uname -s)-$(uname -m)" && sudo install -c -m 0755 vcluster /usr/local/bin && rm -f vcluster. Verify the installation by running vcluster --version.',
+      })
+    })
+  }
+
   // Get icon for tool
   const getToolIcon = (tool: string) => {
     switch (tool) {
@@ -132,6 +182,8 @@ export function LocalClustersSection() {
         return '🚀'
       case 'minikube':
         return '📦'
+      case 'vcluster':
+        return '🔮'
       default:
         return '☸️'
     }
@@ -146,6 +198,8 @@ export function LocalClustersSection() {
         return 'k3s in Docker - lightweight Kubernetes'
       case 'minikube':
         return 'Local Kubernetes with multiple drivers'
+      case 'vcluster':
+        return 'Virtual clusters inside existing Kubernetes clusters'
       default:
         return 'Local Kubernetes cluster'
     }
@@ -360,6 +414,202 @@ export function LocalClustersSection() {
             )}
           </div>
 
+          {/* ------------------------------------------------------------------ */}
+          {/* vCluster Section                                                    */}
+          {/* ------------------------------------------------------------------ */}
+
+          {/* vCluster Install CTA — shown when vcluster CLI is not detected */}
+          {!hasVClusterTool && (
+            <div className="mt-6 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <div className="flex items-center gap-2 text-purple-400 mb-2">
+                <span className="text-xl">🔮</span>
+                <span className="font-medium">{t('settings.localClusters.vclusterInstallTitle')}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                {t('settings.localClusters.vclusterInstallDesc')}
+              </p>
+              <ul className="mb-3 space-y-1 text-sm text-muted-foreground">
+                <li><code className="px-1 bg-secondary rounded">brew install loft-sh/tap/vcluster</code></li>
+                <li><code className="px-1 bg-secondary rounded">curl -L -o vcluster https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-...</code></li>
+              </ul>
+              <button
+                onClick={handleInstallVCluster}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+              >
+                <Bot className="w-4 h-4" />
+                {t('settings.localClusters.vclusterInstallWithAgent')}
+              </button>
+            </div>
+          )}
+
+          {/* vCluster instances and create form — shown when vcluster CLI is detected */}
+          {hasVClusterTool && (
+            <div className="mt-6">
+              {/* Section header */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🔮</span>
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  {t('settings.localClusters.vclusterSection')}
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  — {t('settings.localClusters.vclusterDesc')}
+                </span>
+              </div>
+
+              {/* Create vCluster Form */}
+              <div className="mb-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <h3 className="text-sm font-medium text-purple-400 mb-3 flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  {t('settings.localClusters.vclusterCreateNew')}
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={vclusterName}
+                    onChange={(e) => setVclusterName(e.target.value)}
+                    placeholder="vCluster name"
+                    className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                  <input
+                    type="text"
+                    value={vclusterNamespace}
+                    onChange={(e) => setVclusterNamespace(e.target.value)}
+                    placeholder={t('settings.localClusters.vclusterDefaultNamespace')}
+                    className="sm:w-48 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                  <button
+                    onClick={handleCreateVCluster}
+                    disabled={!vclusterName.trim() || isCreating}
+                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {t('settings.localClusters.creating')}
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        {t('settings.localClusters.create')}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* vCluster Instances List */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                  {t('settings.localClusters.vclusterCount', { count: (vclusterInstances || []).length })}
+                </h3>
+                {(vclusterInstances || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground p-4 bg-secondary/30 rounded-lg">
+                    {t('settings.localClusters.noClusters')}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {(vclusterInstances || []).map((instance) => {
+                      const isRunning = instance.status === 'Running'
+                      const isPaused = instance.status === 'Paused'
+
+                      return (
+                        <div
+                          key={`vcluster-${instance.namespace}-${instance.name}`}
+                          className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">🔮</span>
+                            <div>
+                              <p className="font-medium text-foreground">{instance.name}</p>
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-muted-foreground">
+                                  {t('settings.localClusters.vclusterNamespace')}: {instance.namespace}
+                                </span>
+                                <span className="text-muted-foreground">•</span>
+                                <div className="flex items-center gap-1.5">
+                                  <div className={`w-1.5 h-1.5 rounded-full ${
+                                    isRunning ? 'bg-green-500' :
+                                    isPaused ? 'bg-yellow-500' :
+                                    'bg-orange-500'
+                                  }`} />
+                                  <span className={
+                                    isRunning ? 'text-green-400' :
+                                    isPaused ? 'text-yellow-400' :
+                                    'text-orange-400'
+                                  }>
+                                    {isPaused ? t('settings.localClusters.vclusterPaused') : instance.status}
+                                  </span>
+                                </div>
+                                {instance.connected && (
+                                  <>
+                                    <span className="text-muted-foreground">•</span>
+                                    <span className="text-green-400 flex items-center gap-1">
+                                      <Plug className="w-3 h-3" />
+                                      {t('settings.localClusters.vclusterConnected')}
+                                    </span>
+                                  </>
+                                )}
+                                {instance.connected && instance.context && (
+                                  <>
+                                    <span className="text-muted-foreground">•</span>
+                                    <code className="px-1 bg-secondary rounded text-muted-foreground">{instance.context}</code>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {/* Connect / Disconnect button */}
+                            {instance.connected ? (
+                              <button
+                                onClick={() => disconnectVCluster(instance.name, instance.namespace)}
+                                disabled={isDisconnecting === instance.name}
+                                className="p-2 rounded-lg text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 disabled:opacity-50"
+                                title={t('settings.localClusters.vclusterDisconnect')}
+                              >
+                                {isDisconnecting === instance.name ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Unplug className="w-4 h-4" />
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => connectVCluster(instance.name, instance.namespace)}
+                                disabled={isConnecting === instance.name}
+                                className="p-2 rounded-lg text-muted-foreground hover:text-green-400 hover:bg-green-500/10 disabled:opacity-50"
+                                title={t('settings.localClusters.vclusterConnect')}
+                              >
+                                {isConnecting === instance.name ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Plug className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                            {/* Delete button */}
+                            <button
+                              onClick={() => handleDeleteVCluster(instance.name, instance.namespace)}
+                              disabled={isDeleting === instance.name}
+                              className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                              title="Delete vCluster"
+                            >
+                              {isDeleting === instance.name ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Error Display */}
           {error && (
             <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -369,6 +619,13 @@ export function LocalClustersSection() {
           )}
         </>
       )}
+
+      {/* API Key Prompt Modal for vCluster install mission */}
+      <ApiKeyPromptModal
+        isOpen={showKeyPrompt}
+        onDismiss={dismissPrompt}
+        onGoToSettings={goToSettings}
+      />
     </div>
   )
 }
