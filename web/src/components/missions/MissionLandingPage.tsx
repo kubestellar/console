@@ -309,8 +309,13 @@ export function MissionLandingPage() {
 
   const handleImport = () => {
     // Navigate to the full console with the import param — the sidebar
-    // will detect it and directly import the mission (no browser popup)
-    navigate(`/?import=${missionId || ''}`, { replace: true })
+    // will detect it and directly import the mission (no browser popup).
+    // Pass the already-fetched mission via navigation state to skip
+    // the 13-directory race lookup on the receiving end (~2s saved).
+    navigate(`/?import=${missionId || ''}`, {
+      replace: true,
+      state: mission ? { prefetchedMission: mission } : undefined,
+    })
   }
 
   const handleBrowseAll = () => {

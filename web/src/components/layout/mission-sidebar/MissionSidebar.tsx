@@ -21,7 +21,7 @@ import {
   Eye,
   ShieldOff,
 } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -61,9 +61,12 @@ export function MissionSidebar() {
   // Deep-link: open MissionBrowser via ?mission= (specific) or ?browse=missions (explorer)
   // Direct import: ?import= fetches and imports mission directly (no browser popup)
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
   const deepLinkMission = searchParams.get('mission')
   const directImportSlug = searchParams.get('import')
   const browseParam = searchParams.get('browse')
+  /** Mission pre-fetched by MissionLandingPage and passed via navigation state */
+  const prefetchedMission = (location.state as { prefetchedMission?: MissionExport } | null)?.prefetchedMission
 
   useEffect(() => {
     if (deepLinkMission || browseParam === 'missions') {
@@ -85,8 +88,16 @@ export function MissionSidebar() {
     newParams.delete('import')
     setSearchParams(newParams, { replace: true })
 
-    // Fetch and import the mission in the background.
-    // Try all known console-kb subdirectories in parallel for speed.
+    // Fast path: if MissionLandingPage passed the already-fetched mission
+    // via navigation state, use it directly (skips ~2s of re-fetching).
+    if (prefetchedMission) {
+      handleImportMission(prefetchedMission)
+      // Clear navigation state to prevent stale data on refresh
+      window.history.replaceState({}, '')
+      return
+    }
+
+    // Slow path: fetch the mission by racing all known directories.
     const KB_DIRS = [
       'cncf-install', 'cncf-generated', 'security', 'platform-install',
       'llm-d', 'multi-cluster', 'troubleshoot', 'troubleshooting',
