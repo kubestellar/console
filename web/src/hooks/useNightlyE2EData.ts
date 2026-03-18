@@ -86,7 +86,7 @@ export function useNightlyE2EData() {
           })
           if (res.ok) {
             const data = await res.json()
-            if (data.guides && data.guides.length > 0) {
+            if (data.guides && Array.isArray(data.guides)) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const guides: NightlyGuideStatus[] = data.guides.map((g: any) => ({
                 guide: g.guide,
