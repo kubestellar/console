@@ -130,8 +130,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const [missionClassFilter, setMissionClassFilter] = useState<string>('All')
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All')
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [showFilters, setShowFilters] = useState(true)
+  // Default to list view and hide filters on mobile for better content visibility
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? 'list' : 'grid')
+  const [showFilters, setShowFilters] = useState(!isMobile)
 
   // Tree state
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([])
@@ -1035,9 +1037,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         </div>
       </div>
 
-      {/* Filter bar */}
+      {/* Filter bar — constrained height on mobile with scroll */}
       {showFilters && (
-        <div className="px-4 py-2.5 bg-card border-b border-border space-y-2">
+        <div className="px-4 py-2.5 bg-card border-b border-border space-y-2 max-h-[40vh] md:max-h-none overflow-y-auto">
           {/* Row 1: Clear all + Match % + Source + Category */}
           <div className="flex items-center gap-3 flex-wrap">
             {activeFilterCount > 0 && (
@@ -1229,7 +1231,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       {/* ================================================================== */}
       {/* Tab bar */}
       {/* ================================================================== */}
-      <div className="flex items-center gap-1 px-4 py-1.5 bg-card border-b border-border">
+      <div className="flex items-center gap-1 px-4 py-1.5 bg-card border-b border-border overflow-x-auto scrollbar-hide">
         {BROWSER_TABS.map(tab => (
           <button
             key={tab.id}
@@ -1264,9 +1266,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       {/* Main content: sidebar + panel */}
       {/* ================================================================== */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left sidebar — file tree */}
+        {/* Left sidebar — file tree (hidden on mobile, shown on md+) */}
         <div
-          className="flex flex-col border-r border-border bg-card overflow-y-auto"
+          className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
           style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
         >
           <div className="p-3 space-y-1">
