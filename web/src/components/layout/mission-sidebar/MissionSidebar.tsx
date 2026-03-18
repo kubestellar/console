@@ -679,7 +679,7 @@ export function MissionSidebar() {
                   <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full">{activeMissions.length}</span>
                 </div>
               )}
-              {[...activeMissions].reverse().map((mission) => (
+              {[...activeMissions].map((mission) => (
                 <MissionListItem
                   key={mission.id}
                   mission={mission}
