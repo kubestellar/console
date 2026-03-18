@@ -88,106 +88,75 @@ const TABS: TabDef[] = [
 // ============================================================================
 
 /**
- * Known subdirectories under solutions/ in console-kb.
- * Used for fast direct lookups before falling back to the index.
+ * Get the most likely file paths for a mission slug based on its prefix.
+ * install-* → cncf-install/ or platform-install/
+ * platform-* → platform-install/
+ * Others → try slug as a subdirectory hint in cncf-generated/
  */
-const KB_SOLUTION_DIRS = [
-  'cncf-install',
-  'cncf-generated',
-  'security',
-  'platform-install',
-  'llm-d',
-  'multi-cluster',
-  'troubleshoot',
-  'troubleshooting',
-  'cost-optimization',
-  'networking',
-  'observability',
-  'workloads',
-] as const
-
-/**
- * Resolve a mission slug to candidate file paths in console-kb.
- * Tries every known subdirectory plus the root solutions/ folder.
- */
-function buildMissionPaths(slug: string): string[] {
-  const paths = KB_SOLUTION_DIRS.map((dir) => `solutions/${dir}/${slug}.json`)
-  paths.push(`solutions/${slug}.json`)
-  return paths
+function getPreferredPaths(slug: string): string[] {
+  if (slug.startsWith('install-')) {
+    return [
+      `solutions/cncf-install/${slug}.json`,
+      `solutions/platform-install/${slug}.json`,
+    ]
+  }
+  if (slug.startsWith('platform-')) {
+    return [`solutions/platform-install/${slug}.json`]
+  }
+  // For cncf-generated missions, the slug often starts with the project name
+  // e.g., "karmada-1234-some-issue" → cncf-generated/karmada/karmada-1234-some-issue.json
+  const projectHint = slug.split('-')[0]
+  return [
+    `solutions/cncf-generated/${projectHint}/${slug}.json`,
+    `solutions/security/${slug}.json`,
+    `solutions/troubleshoot/${slug}.json`,
+    `solutions/llm-d/${slug}.json`,
+    `solutions/multi-cluster/${slug}.json`,
+  ]
 }
 
 /**
- * Try fetching a single candidate path and return the validated mission if found.
- */
-async function tryFetchMission(path: string): Promise<{ mission: MissionExport; raw: string } | null> {
-  try {
-    const url = `/api/missions/file?path=${encodeURIComponent(path)}`
-    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
-    if (!res.ok) return null
-
-    const raw = await res.text()
-    const parsed = JSON.parse(raw)
-    const result = validateMissionExport(parsed)
-    return result.valid ? { mission: result.data, raw } : null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Race all candidate paths — resolve as soon as the first one succeeds.
- * Uses Promise.any so we return the instant ANY path finds the mission,
- * without waiting for the remaining 404s to complete. AbortController
- * cancels in-flight requests once a winner is found.
- */
-async function raceForMission(
-  paths: string[],
-): Promise<{ mission: MissionExport; raw: string } | null> {
-  const controller = new AbortController()
-
-  const attempt = async (path: string): Promise<{ mission: MissionExport; raw: string }> => {
-    const url = `/api/missions/file?path=${encodeURIComponent(path)}`
-    const res = await fetch(url, { signal: controller.signal })
-    if (!res.ok) throw new Error('not found')
-    const raw = await res.text()
-    const parsed = JSON.parse(raw)
-    const result = validateMissionExport(parsed)
-    if (!result.valid) throw new Error('invalid')
-    controller.abort()
-    return { mission: result.data, raw }
-  }
-
-  try {
-    return await Promise.any(paths.map(attempt))
-  } catch {
-    return null
-  }
-}
-
-/**
- * Fetch a mission by slug. Races all known-directory lookups — resolves as
- * soon as the first succeeds (typically <300ms with warm cache). Falls back
- * to the full index.json for missions in nested subdirectories.
+ * Fetch a mission by slug. Tries the most likely paths first (1-2 requests),
+ * then falls back to server-side slug resolution via index.json.
  */
 async function fetchMissionBySlug(slug: string): Promise<{ mission: MissionExport; raw: string } | null> {
-  const paths = buildMissionPaths(slug)
-  const hit = await raceForMission(paths)
-  if (hit) return hit
+  // Fast path: try preferred directories based on slug prefix
+  for (const path of getPreferredPaths(slug)) {
+    try {
+      const url = `/api/missions/file?path=${encodeURIComponent(path)}`
+      const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+      if (!res.ok) continue
+      const raw = await res.text()
+      const parsed = JSON.parse(raw)
+      const result = validateMissionExport(parsed)
+      if (result.valid) return { mission: result.data, raw }
+    } catch {
+      continue
+    }
+  }
 
-  // Fallback: search the full index.json for missions with a matching slug.
-  // Catches missions in nested subdirectories not listed in KB_SOLUTION_DIRS.
+  // Fallback: search index.json for missions in unexpected directories
   try {
     const res = await fetch('/api/missions/file?path=solutions/index.json', {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
     if (res.ok) {
       const index = await res.json() as { missions?: Array<{ path: string }> }
-      const missions = index.missions || []
-      const match = missions.find((m) => {
+      const match = (index.missions || []).find((m) => {
         const filename = (m.path || '').split('/').pop() || ''
         return filename.replace('.json', '') === slug
       })
-      if (match) return tryFetchMission(match.path)
+      if (match) {
+        const fileRes = await fetch(`/api/missions/file?path=${encodeURIComponent(match.path)}`, {
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        })
+        if (fileRes.ok) {
+          const raw = await fileRes.text()
+          const parsed = JSON.parse(raw)
+          const result = validateMissionExport(parsed)
+          if (result.valid) return { mission: result.data, raw }
+        }
+      }
     }
   } catch {
     // Fallback exhausted
