@@ -42,6 +42,7 @@ export interface DeployRequest {
   namespace: string
   sourceCluster: string
   targetClusters: string[]
+  groupName?: string
   replicas?: number
 }
 

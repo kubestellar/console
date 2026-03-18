@@ -364,6 +364,7 @@ export function Deploy() {
         namespace,
         sourceCluster,
         targetClusters,
+        groupName,
       }, {
         onSuccess: (result) => {
           const resp = result as unknown as {
@@ -392,6 +393,16 @@ export function Deploy() {
       })
     } catch (err) {
       console.error('Deploy failed:', err)
+      publishCardEvent({
+        type: 'deploy:result',
+        payload: {
+          id: deployId,
+          success: false,
+          message: err instanceof Error ? err.message : 'Deploy failed',
+          deployedTo: [],
+          failedClusters: targetClusters,
+        },
+      })
     }
   }, [pendingDeploy, publishCardEvent, deployWorkload, shouldPersist, createManagedWorkload, createWorkloadDeployment, showToast])
 
