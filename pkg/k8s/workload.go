@@ -482,7 +482,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	}
 
 	// 3. Clean the workload manifest for cross-cluster apply
-	cleanedObj := cleanManifestForDeploy(sourceObj, opts)
+	cleanedObj := cleanManifestForDeploy(sourceObj, sourceCluster, opts)
 
 	// Override replicas if specified
 	if replicas > 0 {
@@ -698,7 +698,7 @@ func applyDependencies(
 }
 
 // cleanManifestForDeploy strips cluster-specific metadata and adds console labels
-func cleanManifestForDeploy(obj *unstructured.Unstructured, opts *DeployOptions) *unstructured.Unstructured {
+func cleanManifestForDeploy(obj *unstructured.Unstructured, sourceCluster string, opts *DeployOptions) *unstructured.Unstructured {
 	clean := obj.DeepCopy()
 
 	// Strip cluster-specific fields
@@ -735,7 +735,7 @@ func cleanManifestForDeploy(obj *unstructured.Unstructured, opts *DeployOptions)
 		annotations = make(map[string]string)
 	}
 	annotations["kubestellar.io/deploy-timestamp"] = time.Now().UTC().Format(time.RFC3339)
-	annotations["kubestellar.io/source-cluster"] = obj.GetNamespace()
+	annotations["kubestellar.io/source-cluster"] = sourceCluster
 	clean.SetAnnotations(annotations)
 
 	return clean

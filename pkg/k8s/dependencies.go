@@ -377,7 +377,7 @@ func (m *MultiClusterClient) ResolveDependencies(
 		}
 
 		// Clean the manifest for cross-cluster deploy
-		dep.Object = cleanManifestForDeploy(obj, opts)
+		dep.Object = cleanManifestForDeploy(obj, sourceCluster, opts)
 
 		// For Secrets: strip service-account-token type secrets (auto-generated, cluster-specific)
 		if dep.Kind == DepSecret {
