@@ -6,6 +6,7 @@
  * installation mission.
  */
 
+import { useState } from 'react'
 import { AlertTriangle, Box, CheckCircle, RefreshCw, Server, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../../ui/Skeleton'
@@ -15,6 +16,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared
 import { useK3sStatus } from './useK3sStatus'
 import { K3S_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
+import { K3sDetailModal } from './K3sDetailModal'
 
 // ============================================================================
 // Constants
@@ -60,6 +62,7 @@ export function K3sStatus() {
   const { data, error, showSkeleton, showEmptyState, isRefreshing } = useK3sStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   // ------ Loading ------
   if (showSkeleton) {
@@ -126,7 +129,8 @@ export function K3sStatus() {
       {/* Health badge + last check */}
       <div className="flex items-center justify-between">
         <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+          onClick={() => setIsDetailModalOpen(true)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
             isHealthy
               ? 'bg-green-500/15 text-green-400'
               : 'bg-orange-500/15 text-orange-400'
@@ -147,7 +151,7 @@ export function K3sStatus() {
       </div>
 
       {/* Top metrics */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" onClick={() => setIsDetailModalOpen(true)}>
         <MetricTile
           label={t('k3sStatus.totalPods')}
           value={data.podCount}
@@ -174,7 +178,7 @@ export function K3sStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('k3sStatus.serverPodList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {serverPods.map((pod) => (
-              <div key={pod.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30">
+              <div key={pod.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setIsDetailModalOpen(true)}>
                 <span className="text-foreground truncate flex-1" title={pod.name}>
                   {pod.name}
                 </span>
@@ -218,6 +222,12 @@ export function K3sStatus() {
           </svg>
         </a>
       </div>
+
+      <K3sDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        data={data}
+      />
     </div>
   )
 }

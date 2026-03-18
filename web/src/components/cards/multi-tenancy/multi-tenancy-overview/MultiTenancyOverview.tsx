@@ -6,12 +6,13 @@
  * indicators, overall score, and tenant count. Purely derived from
  * the 4 individual technology hooks (no direct fetch).
  */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Network, Layers, Box, Monitor, Shield, CheckCircle, XCircle, AlertTriangle, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMultiTenancyOverview } from './useMultiTenancyOverview'
 import { DEMO_MULTI_TENANCY_OVERVIEW } from './demoData'
 import { useCardLoadingState } from '../../CardDataContext'
+import { MultiTenancyDetailModal } from './MultiTenancyDetailModal'
 
 import type { ComponentStatus, IsolationLevel, IsolationStatus } from './useMultiTenancyOverview'
 
@@ -62,13 +63,13 @@ const ISOLATION_STATUS_COLORS: Record<IsolationStatus, string> = {
 }
 
 /** Single component badge in the 2x2 grid */
-function ComponentBadge({ component }: { component: ComponentStatus }) {
+function ComponentBadge({ component, onClick }: { component: ComponentStatus; onClick?: () => void }) {
   const IconComponent = ICON_MAP[component.icon] || Shield
   const healthColor = HEALTH_COLORS[component.health] || HEALTH_COLORS.unknown
   const healthBg = HEALTH_BG[component.health] || HEALTH_BG.unknown
 
   return (
-    <div className={`p-2.5 rounded-lg border ${healthBg} flex items-center gap-2`}>
+    <div className={`p-2.5 rounded-lg border ${healthBg} flex items-center gap-2 cursor-pointer hover:bg-secondary/50 transition-colors`} onClick={onClick}>
       <IconComponent className={`w-4 h-4 ${healthColor}`} />
       <div className="flex-1 min-w-0">
         <div className="text-xs font-medium text-foreground truncate">{component.name}</div>
@@ -82,9 +83,9 @@ function ComponentBadge({ component }: { component: ComponentStatus }) {
 }
 
 /** Single isolation level row */
-function IsolationRow({ level }: { level: IsolationLevel }) {
+function IsolationRow({ level, onClick }: { level: IsolationLevel; onClick?: () => void }) {
   return (
-    <div className="flex items-center justify-between py-1.5">
+    <div className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" onClick={onClick}>
       <div className="flex items-center gap-2">
         <IsolationStatusIcon status={level.status} />
         <span className="text-xs font-medium text-foreground">{level.type}</span>
@@ -102,6 +103,7 @@ function IsolationRow({ level }: { level: IsolationLevel }) {
 export function MultiTenancyOverview() {
   const { t } = useTranslation(['cards'])
   const liveData = useMultiTenancyOverview()
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   // Use demo data when all hooks return demo data
   const data = useMemo(
@@ -137,7 +139,7 @@ export function MultiTenancyOverview() {
   return (
     <div className="h-full flex flex-col gap-3">
       {/* Overall score header */}
-      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg">
+      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setIsDetailModalOpen(true)}>
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-cyan-400" />
           <span className="text-xs font-medium text-foreground">
@@ -160,7 +162,7 @@ export function MultiTenancyOverview() {
       {/* 2x2 component status grid */}
       <div className={`grid grid-cols-${COMPONENT_GRID_COLS} gap-2`}>
         {(data.components || []).map((component) => (
-          <ComponentBadge key={component.name} component={component} />
+          <ComponentBadge key={component.name} component={component} onClick={() => setIsDetailModalOpen(true)} />
         ))}
       </div>
 
@@ -171,10 +173,16 @@ export function MultiTenancyOverview() {
         </div>
         <div className="space-y-0.5 bg-secondary/20 rounded-lg px-3 py-2">
           {(data.isolationLevels || []).map((level) => (
-            <IsolationRow key={level.type} level={level} />
+            <IsolationRow key={level.type} level={level} onClick={() => setIsDetailModalOpen(true)} />
           ))}
         </div>
       </div>
+
+      <MultiTenancyDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        data={data}
+      />
     </div>
   )
 }

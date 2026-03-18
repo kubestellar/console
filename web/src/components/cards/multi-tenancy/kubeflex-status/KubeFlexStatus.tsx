@@ -6,6 +6,7 @@
  * installation mission.
  */
 
+import { useState } from 'react'
 import { AlertTriangle, CheckCircle, Layers, RefreshCw, Server, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../../ui/Skeleton'
@@ -15,6 +16,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared
 import { useKubeFlexStatus } from './useKubeflexStatus'
 import { KUBEFLEX_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
+import { KubeFlexDetailModal } from './KubeFlexDetailModal'
 
 // ============================================================================
 // Constants
@@ -57,6 +59,7 @@ export function KubeFlexStatus() {
   const { data, error, showSkeleton, showEmptyState, isRefreshing } = useKubeFlexStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   // ------ Loading ------
   if (showSkeleton) {
@@ -124,7 +127,8 @@ export function KubeFlexStatus() {
       {/* Health badge + last check */}
       <div className="flex items-center justify-between">
         <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+          onClick={() => setIsDetailModalOpen(true)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
             isHealthy
               ? 'bg-green-500/15 text-green-400'
               : 'bg-orange-500/15 text-orange-400'
@@ -145,7 +149,7 @@ export function KubeFlexStatus() {
       </div>
 
       {/* Metric tiles */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" onClick={() => setIsDetailModalOpen(true)}>
         <MetricTile
           label={t('kubeFlexStatus.controller')}
           value={data.controllerHealthy ? t('kubeFlexStatus.controllerUp') : t('kubeFlexStatus.controllerDown')}
@@ -172,7 +176,7 @@ export function KubeFlexStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('kubeFlexStatus.controlPlaneList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {(data.controlPlanes || []).map((cp) => (
-              <div key={cp.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30">
+              <div key={cp.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setIsDetailModalOpen(true)}>
                 <span className="text-foreground truncate flex-1" title={cp.name}>
                   {cp.name}
                 </span>
@@ -214,6 +218,12 @@ export function KubeFlexStatus() {
           </svg>
         </a>
       </div>
+
+      <KubeFlexDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        data={data}
+      />
     </div>
   )
 }

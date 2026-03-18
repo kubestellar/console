@@ -6,6 +6,7 @@
  * installation mission.
  */
 
+import { useState } from 'react'
 import { AlertTriangle, CheckCircle, Network, RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../../ui/Skeleton'
@@ -15,6 +16,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared
 import { useOvnStatus } from './useOvnStatus'
 import { OVN_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
+import { OvnDetailModal } from './OvnDetailModal'
 
 // ============================================================================
 // Constants
@@ -60,6 +62,7 @@ export function OvnStatus() {
   const { data, error, showSkeleton, showEmptyState, isRefreshing } = useOvnStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   // ------ Loading ------
   if (showSkeleton) {
@@ -127,7 +130,8 @@ export function OvnStatus() {
       {/* Health badge + last check */}
       <div className="flex items-center justify-between">
         <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+          onClick={() => setIsDetailModalOpen(true)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
             isHealthy
               ? 'bg-green-500/15 text-green-400'
               : 'bg-orange-500/15 text-orange-400'
@@ -148,7 +152,7 @@ export function OvnStatus() {
       </div>
 
       {/* Metric tiles */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" onClick={() => setIsDetailModalOpen(true)}>
         <MetricTile
           label={t('ovnStatus.ovnPods')}
           value={data.podCount}
@@ -170,7 +174,7 @@ export function OvnStatus() {
       </div>
 
       {/* UDN summary */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" onClick={() => setIsDetailModalOpen(true)}>
         <MetricTile
           label={t('ovnStatus.udnCount')}
           value={(data.udns || []).length}
@@ -197,7 +201,7 @@ export function OvnStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('ovnStatus.udnList')}</p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
             {(data.udns || []).map((udn) => (
-              <div key={udn.name} className="flex items-center justify-between text-xs gap-2">
+              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" onClick={() => setIsDetailModalOpen(true)}>
                 <span className="text-muted-foreground truncate flex-1" title={udn.name}>
                   {udn.name}
                 </span>
@@ -229,6 +233,12 @@ export function OvnStatus() {
           </svg>
         </a>
       </div>
+
+      <OvnDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        data={data}
+      />
     </div>
   )
 }
