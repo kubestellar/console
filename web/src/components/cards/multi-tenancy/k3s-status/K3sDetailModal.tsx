@@ -37,6 +37,7 @@ interface K3sDetailModalProps {
   isOpen: boolean
   onClose: () => void
   data: K3sStatus
+  isDemoData?: boolean
 }
 
 // ============================================================================
@@ -75,7 +76,7 @@ function ServerPodRow({ pod }: { pod: K3sServerPodInfo }) {
 // Component
 // ============================================================================
 
-export function K3sDetailModal({ isOpen, onClose, data }: K3sDetailModalProps) {
+export function K3sDetailModal({ isOpen, onClose, data, isDemoData }: K3sDetailModalProps) {
   const { t } = useTranslation('cards')
   const [search, setSearch] = useState('')
 
@@ -112,9 +113,12 @@ export function K3sDetailModal({ isOpen, onClose, data }: K3sDetailModalProps) {
         icon={Box}
         onClose={onClose}
         badges={
-          <StatusBadge color={isHealthy ? 'green' : 'orange'} size="sm">
-            {data.podCount} {t('k3sStatus.totalPods', 'pods')} · {serverPods.length} {t('k3sStatus.serverPods', 'servers')}
-          </StatusBadge>
+          <>
+            {isDemoData && <StatusBadge color="yellow" size="sm">{t('cards:cardWrapper.demo', 'Demo')}</StatusBadge>}
+            <StatusBadge color={isHealthy ? 'green' : 'orange'} size="sm">
+              {data.podCount} {t('k3sStatus.totalPods', 'pods')} · {serverPods.length} {t('k3sStatus.serverPods', 'servers')}
+            </StatusBadge>
+          </>
         }
       />
 

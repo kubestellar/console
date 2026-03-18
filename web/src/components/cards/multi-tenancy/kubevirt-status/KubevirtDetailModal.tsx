@@ -60,6 +60,7 @@ interface KubevirtDetailModalProps {
   isOpen: boolean
   onClose: () => void
   data: KubevirtStatus
+  isDemoData?: boolean
 }
 
 // ============================================================================
@@ -93,7 +94,7 @@ function VmRow({ vm }: { vm: VmInfo }) {
 // Component
 // ============================================================================
 
-export function KubevirtDetailModal({ isOpen, onClose, data }: KubevirtDetailModalProps) {
+export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: KubevirtDetailModalProps) {
   const { t } = useTranslation('cards')
   const [search, setSearch] = useState('')
 
@@ -154,9 +155,12 @@ export function KubevirtDetailModal({ isOpen, onClose, data }: KubevirtDetailMod
         icon={Monitor}
         onClose={onClose}
         badges={
-          <StatusBadge color={isHealthy ? 'green' : 'orange'} size="sm">
-            {vms.length} {t('kubevirtStatus.totalVMs', 'VMs')} · {data.tenantCount} {t('kubevirtStatus.tenants', 'tenants')}
-          </StatusBadge>
+          <>
+            {isDemoData && <StatusBadge color="yellow" size="sm">{t('cards:cardWrapper.demo', 'Demo')}</StatusBadge>}
+            <StatusBadge color={isHealthy ? 'green' : 'orange'} size="sm">
+              {vms.length} {t('kubevirtStatus.totalVMs', 'VMs')} · {data.tenantCount} {t('kubevirtStatus.tenants', 'tenants')}
+            </StatusBadge>
+          </>
         }
       />
 

@@ -182,6 +182,7 @@ export function MultiTenancyOverview() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         data={data}
+        isDemoData={liveData.isDemoData}
       />
     </div>
   )

@@ -59,7 +59,7 @@ function useFormatRelativeTime() {
 export function K3sStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useK3sStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useK3sStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -227,6 +227,7 @@ export function K3sStatus() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         data={data}
+        isDemoData={isDemoData}
       />
     </div>
   )

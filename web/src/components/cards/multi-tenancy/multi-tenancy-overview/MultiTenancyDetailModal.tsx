@@ -29,6 +29,7 @@ interface MultiTenancyDetailModalProps {
   isOpen: boolean
   onClose: () => void
   data: MultiTenancyOverviewData
+  isDemoData?: boolean
 }
 
 // ============================================================================
@@ -140,7 +141,7 @@ function IsolationLevelCard({ level }: { level: IsolationLevel }) {
 // Component
 // ============================================================================
 
-export function MultiTenancyDetailModal({ isOpen, onClose, data }: MultiTenancyDetailModalProps) {
+export function MultiTenancyDetailModal({ isOpen, onClose, data, isDemoData }: MultiTenancyDetailModalProps) {
   const { t } = useTranslation('cards')
 
   const components = data.components || []
@@ -155,12 +156,15 @@ export function MultiTenancyDetailModal({ isOpen, onClose, data }: MultiTenancyD
         icon={Shield}
         onClose={onClose}
         badges={
-          <StatusBadge
-            color={data.overallScore === data.totalLevels ? 'green' : data.overallScore > 0 ? 'orange' : 'red'}
-            size="sm"
-          >
-            {data.overallScore}/{data.totalLevels} {t('multiTenancy.isolationScore', 'Isolation Score')}
-          </StatusBadge>
+          <>
+            {isDemoData && <StatusBadge color="yellow" size="sm">{t('cards:cardWrapper.demo', 'Demo')}</StatusBadge>}
+            <StatusBadge
+              color={data.overallScore === data.totalLevels ? 'green' : data.overallScore > 0 ? 'orange' : 'red'}
+              size="sm"
+            >
+              {data.overallScore}/{data.totalLevels} {t('multiTenancy.isolationScore', 'Isolation Score')}
+            </StatusBadge>
+          </>
         }
       />
 

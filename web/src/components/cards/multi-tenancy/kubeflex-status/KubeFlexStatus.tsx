@@ -56,7 +56,7 @@ function useFormatRelativeTime() {
 export function KubeFlexStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useKubeFlexStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useKubeFlexStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -223,6 +223,7 @@ export function KubeFlexStatus() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         data={data}
+        isDemoData={isDemoData}
       />
     </div>
   )

@@ -75,7 +75,7 @@ function vmStateColorClass(state: string): string {
 export function KubevirtStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useKubevirtStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useKubevirtStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -272,6 +272,7 @@ export function KubevirtStatus() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         data={data}
+        isDemoData={isDemoData}
       />
     </div>
   )

@@ -34,6 +34,7 @@ interface OvnDetailModalProps {
   isOpen: boolean
   onClose: () => void
   data: OvnStatus
+  isDemoData?: boolean
 }
 
 type TabId = typeof TAB_UDNS | typeof TAB_PODS
@@ -84,7 +85,7 @@ function UdnRow({ udn }: { udn: UdnInfo }) {
 // Component
 // ============================================================================
 
-export function OvnDetailModal({ isOpen, onClose, data }: OvnDetailModalProps) {
+export function OvnDetailModal({ isOpen, onClose, data, isDemoData }: OvnDetailModalProps) {
   const { t } = useTranslation('cards')
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<TabId>(TAB_UDNS)
@@ -116,9 +117,12 @@ export function OvnDetailModal({ isOpen, onClose, data }: OvnDetailModalProps) {
         icon={Network}
         onClose={onClose}
         badges={
-          <StatusBadge color={isHealthy ? 'green' : 'orange'} size="sm">
-            {data.podCount} {t('ovnStatus.ovnPods', 'pods')} · {udns.length} {t('ovnStatus.udnCount', 'UDNs')}
-          </StatusBadge>
+          <>
+            {isDemoData && <StatusBadge color="yellow" size="sm">{t('cards:cardWrapper.demo', 'Demo')}</StatusBadge>}
+            <StatusBadge color={isHealthy ? 'green' : 'orange'} size="sm">
+              {data.podCount} {t('ovnStatus.ovnPods', 'pods')} · {udns.length} {t('ovnStatus.udnCount', 'UDNs')}
+            </StatusBadge>
+          </>
         }
       />
 

@@ -30,6 +30,7 @@ interface KubeFlexDetailModalProps {
   isOpen: boolean
   onClose: () => void
   data: KubeFlexStatus
+  isDemoData?: boolean
 }
 
 // ============================================================================
@@ -66,7 +67,7 @@ function ControlPlaneRow({ cp }: { cp: ControlPlaneInfo }) {
 // Component
 // ============================================================================
 
-export function KubeFlexDetailModal({ isOpen, onClose, data }: KubeFlexDetailModalProps) {
+export function KubeFlexDetailModal({ isOpen, onClose, data, isDemoData }: KubeFlexDetailModalProps) {
   const { t } = useTranslation('cards')
   const [search, setSearch] = useState('')
 
@@ -88,12 +89,15 @@ export function KubeFlexDetailModal({ isOpen, onClose, data }: KubeFlexDetailMod
         icon={Layers}
         onClose={onClose}
         badges={
-          <StatusBadge
-            color={data.controllerHealthy && unhealthyCPs === 0 ? 'green' : 'orange'}
-            size="sm"
-          >
-            {controlPlanes.length} {t('kubeFlexStatus.controlPlanes', 'control planes')} · {data.tenantCount} {t('kubeFlexStatus.tenants', 'tenants')}
-          </StatusBadge>
+          <>
+            {isDemoData && <StatusBadge color="yellow" size="sm">{t('cards:cardWrapper.demo', 'Demo')}</StatusBadge>}
+            <StatusBadge
+              color={data.controllerHealthy && unhealthyCPs === 0 ? 'green' : 'orange'}
+              size="sm"
+            >
+              {controlPlanes.length} {t('kubeFlexStatus.controlPlanes', 'control planes')} · {data.tenantCount} {t('kubeFlexStatus.tenants', 'tenants')}
+            </StatusBadge>
+          </>
         }
       />
 

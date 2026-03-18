@@ -59,7 +59,7 @@ function useFormatRelativeTime() {
 export function OvnStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useOvnStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useOvnStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -238,6 +238,7 @@ export function OvnStatus() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         data={data}
+        isDemoData={isDemoData}
       />
     </div>
   )
