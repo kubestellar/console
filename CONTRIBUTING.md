@@ -10,12 +10,20 @@ The fastest way to file an issue or feature request is by navigating to [`/issue
 
 Most code in this repo is written by coding agents — Claude Opus 4.5/4.6, Gemini, and Codex. PRs are generated, reviewed, and iterated on by these agents with human oversight.
 
-**Manual coding PRs are discouraged.** They take significantly longer to complete and review compared to agent-generated code. If you want to contribute code, use one of the supported agents:
+**Manual coding PRs are discouraged.** They take significantly longer to complete and review compared to agent-generated code. PRs that miss required patterns (isDemoData wiring, useCardLoadingState, locale strings, marketplace vs console) will be sent back — these are things coding agents catch automatically.
 
-- **Claude Code** (Claude Opus 4.5 or 4.6) — primary development tool
+If you want to contribute code, use one of the supported agents:
+
+- **Claude Code** (Claude Opus 4.5 or 4.6) — **strongly recommended**. Knows the full codebase, all CLAUDE.md rules, isDemoData wiring, card loading state patterns, and locale requirements. Install: `npm install -g @anthropic-ai/claude-code`
 - **GitHub Copilot** — used for automated PR fixes
 - **Google Gemini** — supported for code generation
 - **OpenAI Codex** — supported for code generation
+
+## New CNCF Project Cards
+
+New monitoring cards for CNCF projects (Karmada, Falco, KEDA, etc.) belong in [**kubestellar/console-marketplace**](https://github.com/kubestellar/console-marketplace), **not** in this repo. The marketplace loads cards on-demand so they don't bloat the core bundle for users who don't need them.
+
+PRs that add new card components to `web/src/components/cards/` will be redirected to console-marketplace.
 
 ## Test PRs Are Favored
 

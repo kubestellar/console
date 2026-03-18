@@ -1,5 +1,9 @@
 > **Adding or modifying a card/dashboard?** Read the [Card Development Guide](.github/CARD_DEVELOPMENT_GUIDE.md) first — it covers required patterns, common pitfalls, and the full file checklist.
 
+> **New CNCF project card?** New cards go in [kubestellar/console-marketplace](https://github.com/kubestellar/console-marketplace), not this repo. PRs adding new cards here will be redirected.
+
+> **Use a coding agent.** This repo is primarily developed with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (Opus 4.5/4.6). It knows all codebase patterns (isDemoData, useCardLoadingState, locale strings, DCO). Manual PRs that miss required patterns will be sent back.
+
 ### 📌 Fixes
 
 Fixes #<issue-number> (Use "Fixes", "Closes", or "Resolves" for automatic closing)
@@ -28,11 +32,13 @@ Fixes #<issue-number> (Use "Fixes", "Closes", or "Resolves" for automatic closin
 
 Please ensure the following before submitting your PR:
 
-- [ ] I have reviewed the project's contribution guidelines.
-- [ ] I have written unit tests for the changes (if applicable).
-- [ ] I have updated the documentation (if applicable).
-- [ ] I have tested the changes locally and ensured they work as expected.
-- [ ] My code follows the project's coding standards.
+- [ ] I used a coding agent (Claude Code, Copilot, Gemini, or Codex) to generate/review this code
+- [ ] I have reviewed the project's contribution guidelines
+- [ ] New cards target [console-marketplace](https://github.com/kubestellar/console-marketplace), not this repo
+- [ ] isDemoData is wired correctly (cards show Demo badge when using demo data)
+- [ ] I have written unit tests for the changes (if applicable)
+- [ ] I have tested the changes locally and ensured they work as expected
+- [ ] All commits are signed with DCO (`git commit -s`)
 
 ---
 
