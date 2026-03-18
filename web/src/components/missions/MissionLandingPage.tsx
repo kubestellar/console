@@ -282,7 +282,7 @@ export function MissionLandingPage() {
   const handleImport = () => {
     // Navigate to the full console with the import param — the sidebar
     // will detect it and directly import the mission (no browser popup)
-    navigate(`/?import=${encodeURIComponent(missionId || '')}`, { replace: true })
+    navigate(`/?import=${missionId || ''}`, { replace: true })
   }
 
   const handleBrowseAll = () => {
