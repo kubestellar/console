@@ -70,18 +70,14 @@ export default defineConfig(({ mode }) => ({
     exclude: ['@sqlite.org/sqlite-wasm'],
   },
   build: {
-    // Filter modulepreload hints — Vite preloads ALL chunks by default, even
-    // lazy-loaded ones. This adds ~550KB of unnecessary downloads on first
-    // visit (three-vendor 195KB, charts-vendor 354KB, markdown-vendor, etc.)
-    // that are never used on the dashboard. Only preload the core chunks.
+    // Filter modulepreload hints for chunks NEVER used on the dashboard.
+    // Keep charts-vendor (dashboard cards need it) and markdown-vendor.
+    // Only drop chunks used exclusively on non-dashboard pages.
     modulePreload: {
       resolveDependencies: (_filename, deps) => {
         return deps.filter(dep =>
-          !dep.includes('three-vendor') &&
-          !dep.includes('charts-vendor') &&
-          !dep.includes('markdown-vendor') &&
-          !dep.includes('sucrase-vendor') &&
-          !dep.includes('motion-vendor')
+          !dep.includes('three-vendor') &&   // arcade only (195KB)
+          !dep.includes('sucrase-vendor')    // dynamic card editor only
         )
       },
     },
