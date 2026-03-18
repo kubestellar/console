@@ -5,3 +5,4 @@ Listed below are organizations that have adopted, or benefitted from, KubeStella
 
 | Organization  | Description | Maturity Level | Further Information |
 | ------------- | ------------- | --- | --- |
+| Open Cluster Management | Guided install mission for OCM via KubeStellar Console | Sandbox | [Link](https://console.kubestellar.io/missions/install-open-cluster-management) |
