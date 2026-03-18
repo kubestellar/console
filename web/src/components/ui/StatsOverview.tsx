@@ -21,6 +21,7 @@ import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useStatHistory, MIN_SPARKLINE_POINTS } from '../../hooks/useStatHistory'
+import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -254,7 +255,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
       {/* Header: icon + name */}
       <div className="flex items-center gap-2 mb-2">
         <IconComponent className={`w-5 h-5 shrink-0 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
-        <span className="text-sm text-muted-foreground truncate">{block.name}</span>
+        <span className="text-sm text-muted-foreground truncate">{wrapAbbreviations(block.name)}</span>
       </div>
 
       {/* Mode-specific content */}

@@ -21,6 +21,7 @@ import { CARD_T1_SYSTEM_PROMPT, CARD_T2_SYSTEM_PROMPT, CARD_INLINE_ASSIST_PROMPT
 import { generateSampleData, detectFieldFormat } from '../../lib/ai/sampleData'
 import { useAIMode } from '../../hooks/useAIMode'
 import { StatusBadge } from '../ui/StatusBadge'
+import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 
 interface CardFactoryModalProps {
   isOpen: boolean
@@ -1093,7 +1094,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                   <div key={card.id} className="rounded-md bg-card/50 border border-border p-3 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground">{card.title}</span>
+                        <span className="text-sm font-medium text-foreground">{wrapAbbreviations(card.title)}</span>
                         <span className={cn(
                           'text-2xs px-1.5 py-0.5 rounded',
                           card.tier === 'tier1' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400',
@@ -1102,7 +1103,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                         </span>
                       </div>
                       {card.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{card.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{wrapAbbreviations(card.description)}</p>
                       )}
                       <p className="text-2xs text-muted-foreground/70 mt-1">
                         ID: {card.id} · Created: {new Date(card.createdAt).toLocaleDateString()}
@@ -1236,14 +1237,14 @@ function T1Preview({ result }: { result: AiCardT1Result }) {
         </StatusBadge>
       </div>
       {result.description && (
-        <p className="text-xs text-muted-foreground mb-3">{result.description}</p>
+        <p className="text-xs text-muted-foreground mb-3">{wrapAbbreviations(result.description)}</p>
       )}
       {result.columns && result.columns.length > 0 && (
         <div className="text-xs">
           <div className="flex gap-2 border-b border-border pb-1 mb-1">
             {result.columns.map(col => (
               <span key={col.field} className="flex-1 text-muted-foreground font-medium truncate">
-                {col.label}
+                {wrapAbbreviations(col.label)}
               </span>
             ))}
           </div>
@@ -1284,7 +1285,7 @@ function T2Preview({ result }: { result: AiCardT2Result }) {
         </StatusBadge>
       </div>
       {result.description && (
-        <p className="text-xs text-muted-foreground mb-2">{result.description}</p>
+        <p className="text-xs text-muted-foreground mb-2">{wrapAbbreviations(result.description)}</p>
       )}
       <pre className="text-2xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
         {result.sourceCode}
