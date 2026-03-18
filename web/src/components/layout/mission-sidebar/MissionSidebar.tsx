@@ -85,35 +85,74 @@ export function MissionSidebar() {
     newParams.delete('import')
     setSearchParams(newParams, { replace: true })
 
-    // Fetch and import the mission in the background
+    // Fetch and import the mission in the background.
+    // Try all known console-kb subdirectories in parallel for speed.
+    const KB_DIRS = [
+      'cncf-install', 'cncf-generated', 'security', 'platform-install',
+      'llm-d', 'multi-cluster', 'troubleshoot', 'troubleshooting',
+      'cost-optimization', 'networking', 'observability', 'workloads',
+    ]
     const paths = [
-      `solutions/security/${directImportSlug}.json`,
-      `solutions/cncf-generated/${directImportSlug}.json`,
+      ...KB_DIRS.map(dir => `solutions/${dir}/${directImportSlug}.json`),
       `solutions/${directImportSlug}.json`,
-      `solutions/platform/${directImportSlug}.json`,
-      `solutions/install/${directImportSlug}.json`,
     ]
 
     const tryImport = async () => {
-      for (const path of paths) {
+      // Fire all lookups in parallel — first valid result wins
+      const results = await Promise.all(paths.map(async (path) => {
         try {
           const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, {
             signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
           })
-          if (!res.ok) continue
+          if (!res.ok) return null
           const raw = await res.text()
           const parsed = JSON.parse(raw)
           const { validateMissionExport } = await import('../../../lib/missions/types')
           const result = validateMissionExport(parsed)
-          if (result.valid) {
-            handleImportMission(result.data)
-            return
-          }
+          return result.valid ? result.data : null
         } catch {
-          continue
+          return null
         }
+      }))
+
+      const found = results.find(r => r !== null)
+      if (found) {
+        handleImportMission(found)
+        return
       }
-      // Fallback: open the browser if direct import failed
+
+      // Fallback: search index.json for nested paths
+      try {
+        const res = await fetch('/api/missions/file?path=solutions/index.json', {
+          signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
+        })
+        if (res.ok) {
+          const index = await res.json() as { missions?: Array<{ path: string }> }
+          const match = (index.missions || []).find(m => {
+            const filename = (m.path || '').split('/').pop() || ''
+            return filename.replace('.json', '') === directImportSlug
+          })
+          if (match) {
+            const fileRes = await fetch(`/api/missions/file?path=${encodeURIComponent(match.path)}`, {
+              signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
+            })
+            if (fileRes.ok) {
+              const raw = await fileRes.text()
+              const parsed = JSON.parse(raw)
+              const { validateMissionExport } = await import('../../../lib/missions/types')
+              const result = validateMissionExport(parsed)
+              if (result.valid) {
+                handleImportMission(result.data)
+                return
+              }
+            }
+          }
+        }
+      } catch {
+        // Index fallback failed
+      }
+
+      // Last resort: open the browser if direct import failed
       setShowBrowser(true)
     }
 
