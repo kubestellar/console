@@ -70,17 +70,6 @@ export default defineConfig(({ mode }) => ({
     exclude: ['@sqlite.org/sqlite-wasm'],
   },
   build: {
-    // Filter modulepreload hints for chunks NEVER used on the dashboard.
-    // Keep charts-vendor (dashboard cards need it) and markdown-vendor.
-    // Only drop chunks used exclusively on non-dashboard pages.
-    modulePreload: {
-      resolveDependencies: (_filename, deps) => {
-        return deps.filter(dep =>
-          !dep.includes('three-vendor') &&   // arcade only (195KB)
-          !dep.includes('sucrase-vendor')    // dynamic card editor only
-        )
-      },
-    },
     // Enable minification optimizations
     minify: 'terser',
     terserOptions: {
