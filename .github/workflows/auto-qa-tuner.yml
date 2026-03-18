@@ -1,20 +1,22 @@
 name: Auto-QA Tuner
 
 # Learns from accepted/rejected Copilot PRs and CNCF landscape to tune auto-qa issue creation.
-# Three feedback loops:
-#   daily-feedback:    Tracks per-category acceptance rates from last 24h
-#   weekly-analysis:   Broader pattern analysis, creates summary report issue
-#   cncf-intelligence: Scans CNCF repos for improvement patterns
+# Four feedback loops:
+#   daily-feedback:      Tracks per-category acceptance rates from last 24h
+#   weekly-analysis:     Broader pattern analysis, creates summary report issue
+#   cncf-intelligence:   Scans CNCF repos for improvement patterns
+#   copilot-stall-check: Detects assigned issues where Copilot hasn't started work
 
 on:
   schedule:
     - cron: '0 3 * * *'    # Daily at 3am UTC
     - cron: '0 4 * * 0'    # Sunday at 4am UTC
     - cron: '0 5 * * 3'    # Wednesday at 5am UTC
+    - cron: '*/30 * * * *' # Every 30 min — copilot stall detection
   workflow_dispatch:
     inputs:
       job_override:
-        description: 'Which job to run (daily|weekly|cncf|all)'
+        description: 'Which job to run (daily|weekly|cncf|stall|all)'
         required: false
         default: 'all'
         type: string
@@ -778,3 +780,156 @@ jobs:
           git commit -m "chore: update auto-qa tuning config (CNCF intelligence)"
           git pull --rebase origin main || true
           git push
+
+  # ============================================================
+  # Job D: Copilot Stall Detection — find assigned issues with no activity
+  # ============================================================
+  copilot-stall-check:
+    if: >
+      github.event.schedule == '*/30 * * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (inputs.job_override == 'stall' || inputs.job_override == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      COPILOT_STALL_THRESHOLD_MINUTES: 20
+      COPILOT_STALL_ESCALATION_MINUTES: 60
+    steps:
+      - name: Detect stalled Copilot assignments
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const stallThresholdMs = parseInt(process.env.COPILOT_STALL_THRESHOLD_MINUTES) * 60 * 1000;
+            const escalationThresholdMs = parseInt(process.env.COPILOT_STALL_ESCALATION_MINUTES) * 60 * 1000;
+            const now = Date.now();
+
+            // Find issues assigned to Copilot with AI labels
+            const aiLabels = ['ai-awaiting-fix', 'ai-processing', 'ai-fix-requested'];
+            let stalledIssues = [];
+            let escalationNeeded = [];
+
+            for (const label of aiLabels) {
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner, repo,
+                state: 'open',
+                labels: label,
+                per_page: 20,
+              });
+
+              for (const issue of issues) {
+                // Skip issues that already have ai-stalled label
+                if ((issue.labels || []).some(l => l.name === 'ai-stalled')) continue;
+
+                // Check if Copilot is assigned
+                const copilotAssigned = (issue.assignees || []).some(a =>
+                  a.login === 'copilot-swe-agent[bot]' || a.login === 'Copilot'
+                );
+                if (!copilotAssigned) continue;
+
+                // Calculate time since last update
+                const updatedAt = new Date(issue.updated_at).getTime();
+                const stalledFor = now - updatedAt;
+
+                if (stalledFor < stallThresholdMs) continue;
+
+                // Check if Copilot has created a PR for this issue
+                const { data: prs } = await github.rest.pulls.list({
+                  owner, repo,
+                  state: 'open',
+                  per_page: 50,
+                });
+                const hasCopilotPR = prs.some(pr =>
+                  (pr.user?.login === 'copilot-swe-agent[bot]' || pr.user?.login === 'Copilot') &&
+                  (pr.body || '').includes(`#${issue.number}`)
+                );
+
+                if (hasCopilotPR) continue; // Copilot is working — PR exists
+
+                const stalledMinutes = Math.round(stalledFor / 60000);
+                stalledIssues.push({ number: issue.number, title: issue.title, stalledMinutes });
+
+                if (stalledFor >= escalationThresholdMs) {
+                  escalationNeeded.push({ number: issue.number, title: issue.title, stalledMinutes });
+                }
+
+                // Add ai-stalled label
+                try {
+                  await github.rest.issues.addLabels({
+                    owner, repo,
+                    issue_number: issue.number,
+                    labels: ['ai-stalled'],
+                  });
+                } catch (e) {
+                  core.warning(`Failed to add ai-stalled label to #${issue.number}: ${e.message}`);
+                }
+
+                // Comment on the issue (avoid duplicates)
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner, repo,
+                  issue_number: issue.number,
+                  per_page: 10,
+                });
+                const hasStallComment = comments.some(c => c.body.includes('Copilot Stall Detected'));
+                if (!hasStallComment) {
+                  await github.rest.issues.createComment({
+                    owner, repo,
+                    issue_number: issue.number,
+                    body: [
+                      '## Copilot Stall Detected',
+                      '',
+                      `Copilot was assigned ${stalledMinutes} minutes ago but hasn't created a PR.`,
+                      'This may indicate the assignment was silently dropped or rate-limited.',
+                      '',
+                      '**Next steps:**',
+                      '- If Copilot doesn\'t respond within 1 hour, the assignment will be escalated',
+                      '- You can manually re-assign by commenting `/assign-copilot`',
+                      '',
+                      '*Auto-detected by the Copilot stall monitor.*',
+                    ].join('\n'),
+                  });
+                }
+              }
+            }
+
+            // Escalation: create diagnostic issue if stalled > 1 hour
+            if (escalationNeeded.length > 0) {
+              const { data: existingDiag } = await github.rest.issues.listForRepo({
+                owner, repo, state: 'open',
+                labels: 'auto-qa,auto-qa:rate-limit',
+                per_page: 10,
+              });
+              const hasDiag = existingDiag.some(i => i.title.includes('stalled'));
+              if (!hasDiag) {
+                const issueList = escalationNeeded.map(i =>
+                  `- #${i.number}: ${i.title} (stalled ${i.stalledMinutes}m)`
+                ).join('\n');
+                await github.rest.issues.create({
+                  owner, repo,
+                  title: '[Auto-QA] Copilot assignments stalled — review config',
+                  body: [
+                    '## Stalled Copilot Assignments',
+                    '',
+                    `${escalationNeeded.length} issue(s) assigned to Copilot for 60+ minutes with no PR:`,
+                    '',
+                    issueList,
+                    '',
+                    '## Recommendation',
+                    'Copilot may be hitting rate limits or the assignment was silently dropped.',
+                    'Consider:',
+                    '- Increasing `COPILOT_ASSIGNMENT_DELAY_S` in auto-qa.yml',
+                    '- Decreasing `MAX_ISSUES_PER_RUN`',
+                    '- Manually re-assigning stalled issues',
+                    '',
+                    '---',
+                    '*Auto-created by the Copilot stall monitor.*',
+                  ].join('\n'),
+                  labels: ['auto-qa', 'auto-qa:rate-limit', 'triage/needed'],
+                });
+                core.warning(`Created escalation issue: ${escalationNeeded.length} stalled assignment(s)`);
+              }
+            }
+
+            core.info(`Stall check: ${stalledIssues.length} stalled, ${escalationNeeded.length} escalated`);

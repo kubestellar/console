@@ -4400,6 +4400,7 @@ jobs:
             };
 
             let created = 0;
+            const rejections = [];
 
             for (const check of checks) {
               if (created >= maxIssues) {
@@ -4451,6 +4452,7 @@ jobs:
                   ? ' — token may lack repo scope or Copilot agent is not enabled'
                   : '';
                 core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}${hint}`);
+                rejections.push({ issueNumber: issue.number, status: e.status || 'unknown', message: e.message });
               }
               created++;
 
@@ -4464,6 +4466,58 @@ jobs:
               }
 
               // Auto-triage is handled by including triage/accepted in the issue labels at creation
+            }
+
+            // If any Copilot assignments were rejected, create a diagnostic issue
+            // recommending rate limit config changes (deduplicated).
+            if (rejections.length > 0) {
+              const diagTitle = '[Auto-QA] Copilot assignment rejected — review rate limit config';
+              try {
+                const existingDiag = await github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'open',
+                  labels: 'auto-qa,auto-qa:rate-limit',
+                  per_page: 10,
+                });
+                const hasDiag = existingDiag.data.some(i => i.title.includes('Copilot assignment rejected'));
+                if (!hasDiag) {
+                  const currentDelay = process.env.COPILOT_ASSIGNMENT_DELAY_S || '120';
+                  const rejectionList = rejections.map(r =>
+                    `- Issue #${r.issueNumber}: HTTP ${r.status} — ${r.message}`
+                  ).join('\n');
+                  await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title: diagTitle,
+                    body: [
+                      '## Copilot Assignment Failures',
+                      '',
+                      `${rejections.length} assignment(s) were rejected during the auto-qa run:`,
+                      '',
+                      rejectionList,
+                      '',
+                      '## Current Config',
+                      `- \`COPILOT_ASSIGNMENT_DELAY_S\`: ${currentDelay}s`,
+                      `- \`MAX_ISSUES_PER_RUN\`: ${maxIssues}`,
+                      '',
+                      '## Recommendation',
+                      `Increase \`COPILOT_ASSIGNMENT_DELAY_S\` (currently ${currentDelay}s) or decrease \`MAX_ISSUES_PER_RUN\` to reduce Copilot rate limit pressure.`,
+                      '',
+                      'If the error is 401/403, check that the `CONSOLE_AUTO` PAT is valid and Copilot agent is enabled.',
+                      '',
+                      '---',
+                      '*Auto-created by the auto-qa workflow when Copilot assignments fail.*',
+                    ].join('\n'),
+                    labels: ['auto-qa', 'auto-qa:rate-limit', 'triage/needed'],
+                  });
+                  core.warning(`Created diagnostic issue: ${rejections.length} Copilot assignment(s) rejected`);
+                } else {
+                  core.info('Diagnostic issue for Copilot rejections already exists — skipping');
+                }
+              } catch (diagErr) {
+                core.warning(`Failed to create diagnostic issue: ${diagErr.message}`);
+              }
             }
 
             core.info(`Auto-QA complete (focus: ${focusArea}): ${created} issue(s) created, ${checks.length} finding(s) total.`);
