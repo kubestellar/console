@@ -89,7 +89,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     setIsRunningDiagnosis(true)
     runAIDiagnosis(alert.id)
     // The diagnosis runs async via missions
-    const timeoutId = setTimeout(() => setIsRunningDiagnosis(false), RETRY_DELAY_MS)
+    const timeoutId = window.setTimeout(() => setIsRunningDiagnosis(false), RETRY_DELAY_MS)
     timeoutsRef.current.push(timeoutId)
   }
 
@@ -98,7 +98,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     try {
       await sendNotification(alert, webhookId)
       setSlackSent(true)
-      const timeoutId = setTimeout(() => setSlackSent(false), TOAST_DISMISS_MS)
+      const timeoutId = window.setTimeout(() => setSlackSent(false), TOAST_DISMISS_MS)
       timeoutsRef.current.push(timeoutId)
     } catch (error) {
       console.error('Failed to send Slack notification:', error)

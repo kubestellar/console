@@ -29,10 +29,10 @@ export function CodeBlock({ children, language = 'text', fontSize = 'sm' }: Code
     if (ok) {
       setCopied(true)
       setCopyFailed(false)
-      timeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+      timeoutRef.current = window.setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
     } else {
       setCopyFailed(true)
-      timeoutRef.current = setTimeout(() => setCopyFailed(false), UI_FEEDBACK_TIMEOUT_MS)
+      timeoutRef.current = window.setTimeout(() => setCopyFailed(false), UI_FEEDBACK_TIMEOUT_MS)
     }
   }
 

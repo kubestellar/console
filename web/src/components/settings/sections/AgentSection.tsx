@@ -24,13 +24,13 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
   const copyInstallCommand = async () => {
     await copyToClipboard(INSTALL_COMMAND)
     setCopied(true)
-    timeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+    timeoutRef.current = window.setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const handleRefresh = () => {
     setIsRefreshing(true)
     refresh()
-    refreshTimerRef.current = setTimeout(() => setIsRefreshing(false), RETRY_DELAY_MS)
+    refreshTimerRef.current = window.setTimeout(() => setIsRefreshing(false), RETRY_DELAY_MS)
   }
 
   // Cleanup timeouts on unmount

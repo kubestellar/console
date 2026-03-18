@@ -326,7 +326,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
     if (blocks.filter(b => b.label.trim()).length === 0) {
       // Validation feedback should show immediately
       setSaveMessage('Add at least one stat block.')
-      const validationTimeoutId = setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
+      const validationTimeoutId = window.setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
       timeoutsRef.current.push(validationTimeoutId)
       return
     }
@@ -359,7 +359,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
     setSaveMessage(`Stats "${definition.title}" created!`)
     onStatsCreated?.(type)
 
-    const saveSuccessTimeoutId = setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
+    const saveSuccessTimeoutId = window.setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
     timeoutsRef.current.push(saveSuccessTimeoutId)
   }, [statsType, blocks, title, gridCols, onStatsCreated])
 
@@ -749,7 +749,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               // Execute parent callback and show success message immediately
               onStatsCreated?.(type)
               setSaveMessage(`Stats "${definition.title}" created with AI!`)
-              const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
+              const aiCreateTimeoutId = window.setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
               timeoutsRef.current.push(aiCreateTimeoutId)
             }}
             saveLabel="Create Stat Block"

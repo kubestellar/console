@@ -120,7 +120,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const copyInstallCommand = async () => {
     await copyToClipboard(INSTALL_COMMAND)
     setCopied(true)
-    timeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+    timeoutRef.current = window.setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   // Cleanup timeout on unmount

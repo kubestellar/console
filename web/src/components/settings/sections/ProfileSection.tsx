@@ -52,7 +52,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
       await refreshUser()
       setIsRefreshing(false)
       setProfileSaved(true)
-      timeoutRef.current = setTimeout(() => setProfileSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+      timeoutRef.current = window.setTimeout(() => setProfileSaved(false), UI_FEEDBACK_TIMEOUT_MS)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save profile'
       setError(message)
