@@ -10,6 +10,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
 import { TICK_INTERVAL_MS } from '../../lib/constants/network'
+import { safeGetJSON } from '../../lib/utils/localStorage'
 
 /** GiB per TiB — used for storage unit display in cost blocks */
 const GB_PER_TB = 1_024
@@ -45,20 +46,14 @@ export function Cost() {
   }
 
   // Read provider overrides from localStorage (same key as ClusterCosts card)
-  const [providerOverrides, setProviderOverrides] = useState<Record<string, CloudProvider>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES)
-      return saved ? JSON.parse(saved) : {}
-    } catch { return {} }
-  })
+  const [providerOverrides, setProviderOverrides] = useState<Record<string, CloudProvider>>(
+    () => safeGetJSON<Record<string, CloudProvider>>(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES) ?? {}
+  )
 
   // Listen for localStorage changes (when user changes provider in ClusterCosts card)
   useEffect(() => {
     const handleStorageChange = () => {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES)
-        setProviderOverrides(saved ? JSON.parse(saved) : {})
-      } catch { /* ignore */ }
+      setProviderOverrides(safeGetJSON<Record<string, CloudProvider>>(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES) ?? {})
     }
     window.addEventListener('storage', handleStorageChange)
     // Also poll for changes since storage event doesn't fire for same-tab changes

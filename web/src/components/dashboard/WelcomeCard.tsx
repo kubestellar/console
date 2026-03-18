@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Terminal, Globe, Rocket, X, ExternalLink, Copy, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { copyToClipboard } from '../../lib/clipboard'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 const DISMISSED_KEY = 'kc-welcome-dismissed'
 
@@ -14,13 +15,7 @@ const COPY_FEEDBACK_MS = 2000
 
 export function WelcomeCard() {
   const { t } = useTranslation()
-  const [dismissed, setDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(DISMISSED_KEY) === 'true'
-    } catch {
-      return false
-    }
-  })
+  const [dismissed, setDismissed] = useState(() => safeGetItem(DISMISSED_KEY) === 'true')
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -28,11 +23,7 @@ export function WelcomeCard() {
 
   const handleDismiss = () => {
     setDismissed(true)
-    try {
-      localStorage.setItem(DISMISSED_KEY, 'true')
-    } catch {
-      // Ignore storage errors (e.g. private browsing)
-    }
+    safeSetItem(DISMISSED_KEY, 'true')
   }
 
   const handleCopy = async () => {

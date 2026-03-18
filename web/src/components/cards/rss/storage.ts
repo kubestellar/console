@@ -1,5 +1,6 @@
 import type { FeedConfig, FeedItem } from './types'
 import { FEEDS_STORAGE_KEY, CACHE_KEY_PREFIX, CACHE_TTL_MS, PRESET_FEEDS } from './constants'
+import { safeGetJSON, safeSetJSON } from '../../../lib/utils/localStorage'
 
 // Simple hash function for cache keys (avoids btoa collision issues)
 export function hashUrl(url: string): string {
@@ -14,49 +15,35 @@ export function hashUrl(url: string): string {
 
 // Load saved feeds from localStorage
 export function loadSavedFeeds(): FeedConfig[] {
-  try {
-    const saved = localStorage.getItem(FEEDS_STORAGE_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch { /* ignore */ }
-  return [PRESET_FEEDS[0]] // Default to Hacker News
+  return safeGetJSON<FeedConfig[]>(FEEDS_STORAGE_KEY) ?? [PRESET_FEEDS[0]]
 }
 
 // Save feeds to localStorage
 export function saveFeeds(feeds: FeedConfig[]) {
-  try {
-    localStorage.setItem(FEEDS_STORAGE_KEY, JSON.stringify(feeds))
-  } catch { /* ignore quota/private browsing errors */ }
+  safeSetJSON(FEEDS_STORAGE_KEY, feeds)
 }
 
 // Get cached feed data
 export function getCachedFeed(url: string, ignoreExpiry = false): { items: FeedItem[], timestamp: number, isStale: boolean } | null {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY_PREFIX + hashUrl(url))
-    if (cached) {
-      const data = JSON.parse(cached)
-      const isStale = Date.now() - data.timestamp >= CACHE_TTL_MS
-      // Return cache if not expired, or if we want stale data
-      if (!isStale || ignoreExpiry) {
-        return {
-          items: data.items.map((item: FeedItem) => ({
-            ...item,
-            pubDate: item.pubDate ? new Date(item.pubDate) : undefined,
-          })),
-          timestamp: data.timestamp,
-          isStale,
-        }
+  const data = safeGetJSON<{ items: FeedItem[], timestamp: number }>(CACHE_KEY_PREFIX + hashUrl(url))
+  if (data) {
+    const isStale = Date.now() - data.timestamp >= CACHE_TTL_MS
+    // Return cache if not expired, or if we want stale data
+    if (!isStale || ignoreExpiry) {
+      return {
+        items: data.items.map((item: FeedItem) => ({
+          ...item,
+          pubDate: item.pubDate ? new Date(item.pubDate) : undefined,
+        })),
+        timestamp: data.timestamp,
+        isStale,
       }
     }
-  } catch { /* ignore */ }
+  }
   return null
 }
 
 // Cache feed data
 export function cacheFeed(url: string, items: FeedItem[]) {
-  try {
-    localStorage.setItem(
-      CACHE_KEY_PREFIX + hashUrl(url),
-      JSON.stringify({ items, timestamp: Date.now() })
-    )
-  } catch { /* ignore quota errors */ }
+  safeSetJSON(CACHE_KEY_PREFIX + hashUrl(url), { items, timestamp: Date.now() })
 }

@@ -22,6 +22,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useStatHistory, MIN_SPARKLINE_POINTS } from '../../hooks/useStatHistory'
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
+import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -470,23 +471,12 @@ export function StatsOverview({
 
   // Manage collapsed state with localStorage persistence
   const storageKey = collapsedStorageKey || `kubestellar-${dashboardType}-stats-collapsed`
-  const [isExpanded, setIsExpanded] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey)
-      return saved !== null ? JSON.parse(saved) : defaultExpanded
-    } catch {
-      return defaultExpanded
-    }
-  })
+  const [isExpanded, setIsExpanded] = useState(() => safeGetJSON<boolean>(storageKey) ?? defaultExpanded)
 
   const toggleExpanded = () => {
     const newValue = !isExpanded
     setIsExpanded(newValue)
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(newValue))
-    } catch {
-      // Ignore storage errors
-    }
+    safeSetJSON(storageKey, newValue)
   }
 
   // Dynamic grid columns based on visible blocks

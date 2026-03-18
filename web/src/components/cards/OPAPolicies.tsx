@@ -13,6 +13,7 @@ import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
+import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
 import { PolicyDetailModal, ClusterOPAModal, CreatePolicyModal } from './opa'
 import type { Policy, GatekeeperStatus, OPAClusterItem } from './opa'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -217,20 +218,12 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   // skeleton state (the chunk load time + useEffect timing can cause 25s+ delays).
   const [statuses, setStatuses] = useState<Record<string, GatekeeperStatus>>(() => {
     if (checkIsDemoMode()) return generateDemoStatuses()
-    try {
-      const cached = localStorage.getItem(STORAGE_KEY_OPA_CACHE)
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        const cacheTime = localStorage.getItem(STORAGE_KEY_OPA_CACHE_TIME)
-        // Stale-while-revalidate: always return cached data.
-        // Auto-refresh handles freshness — showing stale data is better than
-        // showing loading spinners for 30+ seconds.
-        if (cacheTime) {
-          return parsed
-        }
-      }
-    } catch (e) {
-      console.error('[OPA] Failed to load cached statuses:', e)
+    const cached = safeGetJSON<Record<string, GatekeeperStatus>>(STORAGE_KEY_OPA_CACHE)
+    if (cached && safeGetItem(STORAGE_KEY_OPA_CACHE_TIME)) {
+      // Stale-while-revalidate: always return cached data.
+      // Auto-refresh handles freshness — showing stale data is better than
+      // showing loading spinners for 30+ seconds.
+      return cached
     }
     return {}
   })
@@ -246,12 +239,8 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       Object.entries(statuses).filter(([_, s]) => !s.loading && !s.error)
     )
     if (Object.keys(completedStatuses).length > 0) {
-      try {
-        localStorage.setItem(STORAGE_KEY_OPA_CACHE, JSON.stringify(completedStatuses))
-        localStorage.setItem(STORAGE_KEY_OPA_CACHE_TIME, Date.now().toString())
-      } catch (e) {
-        console.error('[OPA] Failed to cache statuses:', e)
-      }
+      safeSetJSON(STORAGE_KEY_OPA_CACHE, completedStatuses)
+      safeSetItem(STORAGE_KEY_OPA_CACHE_TIME, Date.now().toString())
     }
   }, [statuses])
   const { isOpen: showViolationsModal, open: openViolationsModal, close: closeViolationsModal } = useModalState()

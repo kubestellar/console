@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Sparkles, X } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
-import { safeGetItem } from '../../lib/utils/localStorage'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { STORAGE_KEY_HINTS_SUPPRESSED } from '../../lib/constants/storage'
 
 const DISMISSED_KEY = 'kc-mission-cta-dismissed'
@@ -12,13 +12,7 @@ const DISMISSED_KEY = 'kc-mission-cta-dismissed'
  */
 export function MissionCTA() {
   const { missions, openSidebar } = useMissions()
-  const [dismissed, setDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(DISMISSED_KEY) === 'true'
-    } catch {
-      return false
-    }
-  })
+  const [dismissed, setDismissed] = useState(() => safeGetItem(DISMISSED_KEY) === 'true')
 
   // Use the missions context instead of reading localStorage directly
   const hasMissions = missions && missions.length > 0
@@ -30,9 +24,7 @@ export function MissionCTA() {
 
   const handleDismiss = () => {
     setDismissed(true)
-    try {
-      localStorage.setItem(DISMISSED_KEY, 'true')
-    } catch { /* ignore */ }
+    safeSetItem(DISMISSED_KEY, 'true')
   }
 
   return (
