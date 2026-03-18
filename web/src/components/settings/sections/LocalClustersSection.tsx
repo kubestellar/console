@@ -7,6 +7,7 @@ import { CLUSTER_PROGRESS_AUTO_DISMISS_MS } from '../../../hooks/useClusterProgr
 import { emitLocalClusterCreated } from '../../../lib/analytics'
 import { useMissions } from '../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
+import { useClusters } from '../../../hooks/mcp/clusters'
 import type { ClusterProgress } from '../../../hooks/useClusterProgress'
 
 /** Default namespace for new vCluster instances */
@@ -125,6 +126,10 @@ export function LocalClustersSection() {
   // vCluster form state
   const [vclusterName, setVclusterName] = useState('')
   const [vclusterNamespace, setVclusterNamespace] = useState(VCLUSTER_DEFAULT_NAMESPACE)
+  const [vclusterHostCluster, setVclusterHostCluster] = useState('')
+
+  const { clusters: connectedClusters } = useClusters()
+  const healthyClusters = (connectedClusters || []).filter(c => c.healthy !== false)
 
   const hasVClusterTool = installedTools.some(t => t.name === 'vcluster')
 
@@ -462,38 +467,61 @@ export function LocalClustersSection() {
                   <Plus className="w-4 h-4" />
                   {t('settings.localClusters.vclusterCreateNew')}
                 </h3>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    value={vclusterName}
-                    onChange={(e) => setVclusterName(e.target.value)}
-                    placeholder="vCluster name"
-                    className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
-                  <input
-                    type="text"
-                    value={vclusterNamespace}
-                    onChange={(e) => setVclusterNamespace(e.target.value)}
-                    placeholder={t('settings.localClusters.vclusterDefaultNamespace')}
-                    className="sm:w-48 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
-                  <button
-                    onClick={handleCreateVCluster}
-                    disabled={!vclusterName.trim() || isCreating}
-                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        {t('settings.localClusters.creating')}
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        {t('settings.localClusters.create')}
-                      </>
-                    )}
-                  </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground font-medium">Host Cluster</label>
+                    <select
+                      value={vclusterHostCluster}
+                      onChange={(e) => setVclusterHostCluster(e.target.value)}
+                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    >
+                      <option value="">Current context</option>
+                      {(healthyClusters || []).map(c => (
+                        <option key={c.context || c.name} value={c.context || c.name}>
+                          {c.name}{c.context && c.context !== c.name ? ` (${c.context})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground font-medium">Namespace</label>
+                    <input
+                      type="text"
+                      value={vclusterNamespace}
+                      onChange={(e) => setVclusterNamespace(e.target.value)}
+                      placeholder={t('settings.localClusters.vclusterDefaultNamespace')}
+                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground font-medium">vCluster Name</label>
+                    <input
+                      type="text"
+                      value={vclusterName}
+                      onChange={(e) => setVclusterName(e.target.value)}
+                      placeholder="my-vcluster"
+                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleCreateVCluster}
+                      disabled={!vclusterName.trim() || isCreating}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {t('settings.localClusters.creating')}
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          {t('settings.localClusters.create')}
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
