@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from 'react'
 import { Sparkles, Shield, ChevronRight, CheckCircle2, AlertTriangle, Zap, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { ProgressRing } from '../ui/ProgressRing'
 import { useCardLoadingState } from './CardDataContext'
 import { useKyverno } from '../../hooks/useKyverno'
@@ -255,6 +256,7 @@ Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
 // ─── Component ──────────────────────────────────────────────────────
 
 function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
+  const { t } = useTranslation('cards')
   const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, installed: kyvernoInstalled, isDemoData: kyvernoDemoData, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
   const { isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, installed: kubescapeInstalled, isDemoData: kubescapeDemoData, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
   const { isLoading: trivyLoading, isRefreshing: trivyRefreshing, installed: trivyInstalled, isDemoData: trivyDemoData, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
@@ -467,7 +469,7 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
       {!allChecked && (isLoading || isRefreshing) && totalChecking > 0 && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <ProgressRing progress={minChecked / totalChecking} size={14} strokeWidth={1.5} />
-          <span>Scanning clusters...</span>
+          <span>{t('recommendedPolicies.scanningClusters')}</span>
         </div>
       )}
 

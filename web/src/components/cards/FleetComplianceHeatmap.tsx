@@ -347,7 +347,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
-        <span>Each cell shows tool health per cluster. Click any cell for details. Gray cells mean the tool is not installed.</span>
+        <span>{t('fleetCompliance.contextDescription')}</span>
       </div>
 
       {/* Refresh indicator + inline progress */}
@@ -355,7 +355,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
         {(isLoading || isRefreshing) && totalChecking > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ProgressRing progress={minChecked / totalChecking} size={14} strokeWidth={1.5} />
-            <span>Scanning...</span>
+            <span>{t('fleetCompliance.scanning')}</span>
           </div>
         )}
         <div className="ml-auto">

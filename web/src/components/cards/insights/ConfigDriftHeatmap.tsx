@@ -164,11 +164,11 @@ export function ConfigDriftHeatmap() {
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-yellow-500/25" />
-          <span>Medium</span>
+          <span>{t('configDrift.medium')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-red-500/30" />
-          <span>High</span>
+          <span>{t('configDrift.high')}</span>
         </div>
       </div>
 

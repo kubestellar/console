@@ -64,7 +64,7 @@ const COLORS = {
 const KART_NAMES = ['Pod Racer', 'Node Runner', 'Cluster Cruiser', 'Service Sprinter']
 
 export function KubeKart() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('cards')
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -591,9 +591,9 @@ export function KubeKart() {
               <h3 className="text-2xl font-bold text-blue-400 mb-2">Kube Kart</h3>
               <p className="text-sm text-muted-foreground mb-4">Arrow keys or WASD to drive</p>
               <div className="flex gap-2 mb-4 text-xs">
-                <StatusBadge color="cyan" size="md">Boost</StatusBadge>
-                <StatusBadge color="purple" size="md">Shield</StatusBadge>
-                <StatusBadge color="orange" size="md">Slow Others</StatusBadge>
+                <StatusBadge color="cyan" size="md">{t('kubeKart.boost')}</StatusBadge>
+                <StatusBadge color="purple" size="md">{t('kubeKart.shield')}</StatusBadge>
+                <StatusBadge color="orange" size="md">{t('kubeKart.slowOthers')}</StatusBadge>
               </div>
               <button
                 onClick={startGame}

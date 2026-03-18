@@ -78,11 +78,11 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'loaded':
-        return <StatusBadge color="green">Loaded</StatusBadge>
+        return <StatusBadge color="green">{t('llmModels.loaded')}</StatusBadge>
       case 'downloading':
         return <StatusBadge color="blue" icon={<RefreshCw className="w-2.5 h-2.5 animate-spin" />}>Downloading</StatusBadge>
       case 'stopped':
-        return <StatusBadge color="gray">Stopped</StatusBadge>
+        return <StatusBadge color="gray">{t('llmModels.stopped')}</StatusBadge>
       case 'error':
         return <StatusBadge color="red">{t('common:common.error')}</StatusBadge>
       default:

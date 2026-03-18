@@ -199,7 +199,7 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
-        <span>Compares Kyverno policy deployment across clusters. Missing policies (gray) mean inconsistent enforcement.</span>
+        <span>{t('crossClusterPolicy.contextDescription')}</span>
       </div>
 
       {/* Refresh indicator + inline progress */}
@@ -207,7 +207,7 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
         {(isLoading || isRefreshing) && totalClusters > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ProgressRing progress={clustersChecked / totalClusters} size={14} strokeWidth={1.5} />
-            <span>Scanning...</span>
+            <span>{t('crossClusterPolicy.scanning')}</span>
           </div>
         )}
         <div className="ml-auto">

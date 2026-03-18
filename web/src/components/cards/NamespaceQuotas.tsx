@@ -652,7 +652,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
           onChange={(e) => setSelectedNamespace(e.target.value)}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="all">All Namespaces</option>
+          <option value="all">{t('namespaceQuotas.allNamespaces')}</option>
           {selectedCluster !== 'all' && namespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}

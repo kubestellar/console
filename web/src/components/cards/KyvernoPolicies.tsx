@@ -26,7 +26,7 @@ interface KyvernoPoliciesProps {
 }
 
 function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { statuses, isLoading, isRefreshing, lastRefresh, installed, hasErrors, isDemoData, refetch, clustersChecked, totalClusters } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -176,7 +176,7 @@ Please proceed step by step.`,
           ) : (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           )}
-          <span>Scanning clusters...</span>
+          <span>{t('kyvernoPolicies.scanningClusters')}</span>
         </div>
       )}
 
@@ -264,7 +264,7 @@ Please proceed step by step.`,
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common.searchPolicies')}
+        placeholder={t('common:common.searchPolicies')}
       />
 
       {/* Policies list */}

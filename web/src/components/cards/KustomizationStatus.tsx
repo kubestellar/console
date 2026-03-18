@@ -297,7 +297,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
-          <option value="">Select cluster...</option>
+          <option value="">{t('kustomizationStatus.selectCluster')}</option>
           {clusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -308,7 +308,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           disabled={!selectedCluster}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
-          <option value="">All namespaces</option>
+          <option value="">{t('kustomizationStatus.allNamespaces')}</option>
           {namespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}

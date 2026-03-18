@@ -2752,37 +2752,53 @@
   },
   "fleetCompliance": {
     "scanningClusters": "Scanning clusters...",
-    "noClusters": "No clusters available"
+    "noClusters": "No clusters available",
+    "contextDescription": "Each cell shows tool health per cluster. Click any cell for details. Gray cells mean the tool is not installed.",
+    "scanning": "Scanning..."
   },
   "crossClusterPolicy": {
     "scanningKyverno": "Scanning clusters for Kyverno...",
-    "noKyvernoClusters": "No clusters with Kyverno detected"
+    "noKyvernoClusters": "No clusters with Kyverno detected",
+    "contextDescription": "Compares Kyverno policy deployment across clusters. Missing policies (gray) mean inconsistent enforcement.",
+    "scanning": "Scanning..."
   },
   "llmModels": {
     "inferencePoolDetection": "InferencePool Detection",
-    "noInferencePools": "No InferencePools found"
+    "noInferencePools": "No InferencePools found",
+    "loaded": "Loaded",
+    "stopped": "Stopped"
   },
   "mlNotebooks": {
     "notebookDetection": "Notebook Detection",
-    "notebookDetectionDescription": "Scans for JupyterHub and standalone notebook servers."
+    "notebookDetectionDescription": "Scans for JupyterHub and standalone notebook servers.",
+    "idle": "Idle",
+    "stopped": "Stopped"
   },
   "configDrift": {
     "noDriftDetected": "No config drift detected",
     "consistentConfig": "Shared workloads have consistent configuration",
     "inSync": "In sync",
-    "lowDrift": "Low drift"
+    "lowDrift": "Low drift",
+    "medium": "Medium",
+    "high": "High"
   },
   "kagentiTopology": {
     "noAgentsOrTools": "No agents or tools to visualize",
-    "mcpTool": "MCP Tool"
+    "mcpTool": "MCP Tool",
+    "agent": "Agent",
+    "connection": "Connection"
   },
   "kustomizationStatus": {
     "noKustomizations": "No Kustomizations",
-    "failing": "Failing"
+    "failing": "Failing",
+    "selectCluster": "Select cluster...",
+    "allNamespaces": "All namespaces"
   },
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",
-    "savingsRecommendations": "Savings Recommendations"
+    "savingsRecommendations": "Savings Recommendations",
+    "poweredBy": "Powered by Kubecost",
+    "docs": "Docs"
   },
   "keda": {
     "healthy": "Healthy",
@@ -2952,5 +2968,24 @@
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
     "syncedDaysAgo": "{{count}}d ago"
+  },
+  "kyvernoPolicies": {
+    "scanningClusters": "Scanning clusters..."
+  },
+  "recommendedPolicies": {
+    "scanningClusters": "Scanning clusters..."
+  },
+  "kubeKart": {
+    "boost": "Boost",
+    "shield": "Shield",
+    "slowOthers": "Slow Others"
+  },
+  "containerTetris": {
+    "hardDrop": "Space Hard drop"
+  },
+  "podSweeper": {
+    "easyMode": "Easy (8x8)",
+    "mediumMode": "Medium (12x12)",
+    "hardMode": "Hard (16x16)"
   }
 }

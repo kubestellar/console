@@ -145,14 +145,14 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
 
       {/* Footer */}
       <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
-        <span>Powered by Kubecost</span>
+        <span>{t('kubecostOverview.poweredBy')}</span>
         <a
           href="https://docs.kubecost.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
         >
-          <span>Docs</span>
+          <span>{t('kubecostOverview.docs')}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>

@@ -146,7 +146,7 @@ const NUMBER_COLORS = [
 ]
 
 export function PodSweeper(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('cards')
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
 
@@ -269,9 +269,9 @@ export function PodSweeper(_props: CardComponentProps) {
             onChange={(e) => newGame(e.target.value as Difficulty)}
             className="text-xs bg-secondary border border-border rounded px-1.5 py-1"
           >
-            <option value="easy">Easy (8x8)</option>
-            <option value="medium">Medium (12x12)</option>
-            <option value="hard">Hard (16x16)</option>
+            <option value="easy">{t('podSweeper.easyMode')}</option>
+            <option value="medium">{t('podSweeper.mediumMode')}</option>
+            <option value="hard">{t('podSweeper.hardMode')}</option>
           </select>
           <button
             onClick={() => newGame()}

@@ -118,7 +118,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
       <div className="flex items-center gap-4 px-3 pt-2 pb-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-400" />
-          <span>Agent</span>
+          <span>{t('kagentiTopology.agent')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded bg-muted-foreground/50" />
@@ -126,7 +126,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
         </div>
         <div className="flex items-center gap-1">
           <div className="w-6 h-0 border-t border-dashed border-muted-foreground/50" />
-          <span>Connection</span>
+          <span>{t('kagentiTopology.connection')}</span>
         </div>
       </div>
 

@@ -57,9 +57,9 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
       case 'running':
         return <StatusBadge color="green">{t('common:common.active')}</StatusBadge>
       case 'idle':
-        return <StatusBadge color="yellow">Idle</StatusBadge>
+        return <StatusBadge color="yellow">{t('mlNotebooks.idle')}</StatusBadge>
       case 'stopped':
-        return <StatusBadge color="gray">Stopped</StatusBadge>
+        return <StatusBadge color="gray">{t('mlNotebooks.stopped')}</StatusBadge>
       default:
         return <StatusBadge color="gray">{status}</StatusBadge>
     }
