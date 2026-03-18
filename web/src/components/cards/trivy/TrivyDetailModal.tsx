@@ -135,7 +135,7 @@ Please proceed step by step.`,
   }, [status.images, critical, clusterName, startMission, openSidebar, onClose])
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
       <BaseModal.Header
         title={`Trivy Scan — ${clusterName}`}
         icon={Shield}

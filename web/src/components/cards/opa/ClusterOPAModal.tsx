@@ -224,7 +224,7 @@ Please proceed with applying this policy.`,
 
   return (
     <>
-      <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnEscape={!hasChildModalOpen}>
+      <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnEscape={!hasChildModalOpen} closeOnBackdrop={false}>
         <BaseModal.Header
           title="OPA Gatekeeper"
           description={clusterName}

@@ -101,7 +101,7 @@ Please proceed step by step.`,
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
         title={`${releaseName} — Rev ${entry.revision}`}
         icon={RotateCcw}

@@ -261,7 +261,7 @@ After I approve, help me execute the repairs step by step.`,
 
   // Show modal immediately with loading state for data - don't block on isLoading
   return (
-    <BaseModal isOpen={true} onClose={onClose} size="xl">
+    <BaseModal isOpen={true} onClose={onClose} size="xl" closeOnBackdrop={false}>
       <div className="p-6 h-[90vh] overflow-y-auto">
         {/* Header with status icons */}
         <div className="flex items-center justify-between mb-6">

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Bot } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useTranslation } from 'react-i18next'
@@ -60,6 +60,15 @@ export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings }: {
   onDismiss: () => void
   onGoToSettings: () => void
 }) {
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onDismiss()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onDismiss])
+
   if (!isOpen) return null
 
   return (

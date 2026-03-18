@@ -52,7 +52,7 @@ export function KubescapeDetailModal({
   }, [status.controls, search])
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
       <BaseModal.Header
         title={`Kubescape — ${clusterName}`}
         icon={Shield}
