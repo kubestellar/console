@@ -183,7 +183,8 @@ export function DeploymentStatus() {
     drillToDeployment(clusterName, deployment.namespace, deployment.name, {
       status: deployment.status,
       version: extractVersion(deployment.image),
-      replicas: { ready: deployment.readyReplicas, desired: deployment.replicas },
+      replicas: deployment.replicas,
+      readyReplicas: deployment.readyReplicas,
       progress: deployment.progress,
     })
   }

@@ -1049,6 +1049,8 @@ export function startGlobalErrorTracking() {
     try {
       // Skip errors already reported by React error boundaries (prevents double-counting)
       if (wasAlreadyReported(event.message)) return
+      // Skip clipboard API errors — expected on non-HTTPS and in restricted contexts
+      if (event.message.includes('writeText') || event.message.includes('clipboard') || event.message.includes('copy')) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
       emitError('runtime', event.message)

@@ -112,7 +112,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   // Check result cache — if fresh, replay cached data via callbacks and resolve
   const cached = resultCache.get(cacheKey)
   if (cached && Date.now() - cached.at < RESULT_CACHE_TTL_MS) {
-    const items = cached.data as T[]
+    const items = (cached.data as T[]) || []
     // Replay per-cluster grouping for onClusterData callbacks
     const byCluster = new Map<string, T[]>()
     for (const item of items) {
