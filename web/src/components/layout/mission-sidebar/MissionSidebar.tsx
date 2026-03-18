@@ -101,27 +101,24 @@ export function MissionSidebar() {
       // Race all lookups — resolve as soon as the first succeeds, cancel rest.
       // This avoids waiting for 12 slow 404s when the mission is in cncf-install.
       const controller = new AbortController()
-      const results = await Promise.all(paths.map(async (path) => {
-        try {
+      let found: MissionExport | null = null
+      try {
+        found = await Promise.any(paths.map(async (path) => {
           const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, {
             signal: controller.signal,
           })
-          if (!res.ok) return null
+          if (!res.ok) throw new Error('not found')
           const raw = await res.text()
           const parsed = JSON.parse(raw)
           const { validateMissionExport } = await import('../../../lib/missions/types')
           const result = validateMissionExport(parsed)
-          if (result.valid) {
-            controller.abort() // cancel remaining in-flight requests
-            return result.data
-          }
-          return null
-        } catch {
-          return null
-        }
-      }))
-
-      const found = results.find(r => r !== null)
+          if (!result.valid) throw new Error('invalid')
+          controller.abort()
+          return result.data
+        }))
+      } catch {
+        found = null
+      }
       if (found) {
         handleImportMission(found)
         return

@@ -136,35 +136,32 @@ async function tryFetchMission(path: string): Promise<{ mission: MissionExport; 
 
 /**
  * Race all candidate paths — resolve as soon as the first one succeeds.
- * Unlike Promise.all (which waits for every request), this returns the
- * instant ANY path finds the mission, cancelling the rest via AbortController.
- * With warm CDN cache this resolves in ~150ms instead of waiting for 13 404s.
+ * Uses Promise.any so we return the instant ANY path finds the mission,
+ * without waiting for the remaining 404s to complete. AbortController
+ * cancels in-flight requests once a winner is found.
  */
 async function raceForMission(
   paths: string[],
 ): Promise<{ mission: MissionExport; raw: string } | null> {
   const controller = new AbortController()
 
-  const attempt = async (path: string): Promise<{ mission: MissionExport; raw: string } | null> => {
-    try {
-      const url = `/api/missions/file?path=${encodeURIComponent(path)}`
-      const res = await fetch(url, { signal: controller.signal })
-      if (!res.ok) return null
-      const raw = await res.text()
-      const parsed = JSON.parse(raw)
-      const result = validateMissionExport(parsed)
-      if (result.valid) {
-        controller.abort() // cancel remaining in-flight requests
-        return { mission: result.data, raw }
-      }
-      return null
-    } catch {
-      return null
-    }
+  const attempt = async (path: string): Promise<{ mission: MissionExport; raw: string }> => {
+    const url = `/api/missions/file?path=${encodeURIComponent(path)}`
+    const res = await fetch(url, { signal: controller.signal })
+    if (!res.ok) throw new Error('not found')
+    const raw = await res.text()
+    const parsed = JSON.parse(raw)
+    const result = validateMissionExport(parsed)
+    if (!result.valid) throw new Error('invalid')
+    controller.abort()
+    return { mission: result.data, raw }
   }
 
-  const results = await Promise.all(paths.map(attempt))
-  return results.find((r) => r !== null) || null
+  try {
+    return await Promise.any(paths.map(attempt))
+  } catch {
+    return null
+  }
 }
 
 /**
