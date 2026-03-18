@@ -95,7 +95,11 @@ export function ClusterMetrics() {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved) as { data: MetricPoint[]; timestamp: number }
-        if (Date.now() - parsed.timestamp < MAX_AGE_MS) {
+        // Guard: validate parsed.data is an array before using it.
+        // Malformed or legacy localStorage data could return a non-array
+        // value (e.g. undefined, null, or an object), which would cause
+        // history.filter() to throw a TypeError during render.
+        if (Date.now() - parsed.timestamp < MAX_AGE_MS && Array.isArray(parsed.data)) {
           return parsed.data
         }
       }

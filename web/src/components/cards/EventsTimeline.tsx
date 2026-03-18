@@ -111,6 +111,7 @@ function EventsTimelineInternal() {
     isLoading: hookLoading,
     isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: events.length > 0,
+    isRefreshing,
   })
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
@@ -184,7 +185,7 @@ function EventsTimelineInternal() {
   // Calculate totals
   const totalWarnings = timeSeriesData.reduce((sum, d) => sum + d.warnings, 0)
   const totalNormal = timeSeriesData.reduce((sum, d) => sum + d.normal, 0)
-  const peakEvents = Math.max(...timeSeriesData.map(d => d.total))
+  const peakEvents = Math.max(0, ...timeSeriesData.map(d => d.total))
 
   if (showSkeleton) {
     return (

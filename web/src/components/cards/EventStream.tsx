@@ -43,6 +43,7 @@ function EventStreamInternal() {
     hasAnyData: rawEvents.length > 0,
     isFailed: !!error && rawEvents.length === 0,
     consecutiveFailures: error ? 1 : 0,
+    isRefreshing,
   })
 
   // Use shared card data hook for filtering, sorting, and pagination
