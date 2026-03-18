@@ -38,6 +38,7 @@ on:
 env:
   BUNDLE_SIZE_LIMIT_KB: 5120
   MAX_ISSUES_PER_RUN: 3
+  COPILOT_ASSIGNMENT_DELAY_S: 120  # Seconds between Copilot assignments to avoid rate limiting
   ISSUE_PREFIX: "[Auto-QA]"
   NODE_VERSION: "20"
   GO_VERSION: "1.23"
@@ -4452,6 +4453,15 @@ jobs:
                 core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}${hint}`);
               }
               created++;
+
+              // Throttle Copilot assignments to avoid rate limiting.
+              // Copilot's coding agent has concurrency limits — rapid-fire
+              // assignments cause silent failures or queuing issues.
+              const delaySeconds = parseInt(process.env.COPILOT_ASSIGNMENT_DELAY_S || '120');
+              if (created < maxIssues && delaySeconds > 0) {
+                core.info(`Waiting ${delaySeconds}s before next Copilot assignment to avoid rate limits...`);
+                await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+              }
 
               // Auto-triage is handled by including triage/accepted in the issue labels at creation
             }
