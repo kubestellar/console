@@ -107,7 +107,7 @@
     Cache-Control = "no-cache"
 
 # Versioned JS/CSS assets have content-hashed filenames — safe to cache forever.
-# This rule appears after /* so Netlify uses this value (last match wins) for /assets/*.
+# Netlify uses the most specific matching path, so /assets/* takes precedence over /*.
 [[headers]]
   for = "/assets/*"
   [headers.values]
