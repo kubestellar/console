@@ -111,9 +111,8 @@ export function Navbar() {
           <FeatureRequestButton />
         </div>
 
-        {/* Optional desktop items: xl+ (1280px) */}
-        <div className="hidden xl:flex items-center gap-2">
-          {/* Tour trigger */}
+        {/* Tour trigger - icon always visible, text shows at xl+ */}
+        <div className="flex items-center gap-2">
           <TourTrigger />
         </div>
 

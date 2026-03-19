@@ -443,7 +443,7 @@ export function TourTrigger() {
       title="Take a tour"
     >
       <LogoWithStar className="w-5 h-5" />
-      {!hasCompletedTour && <span>Take the tour</span>}
+      {!hasCompletedTour && <span className="hidden xl:inline">Take the tour</span>}
     </button>
   )
 }
