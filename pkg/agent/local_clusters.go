@@ -575,3 +575,103 @@ func runWithTimeout(cmd *exec.Cmd, timeout time.Duration) error {
 		return fmt.Errorf("command timed out after %s", timeout)
 	}
 }
+
+// VClusterClusterStatus represents vCluster status on a specific host cluster
+type VClusterClusterStatus struct {
+	Context    string `json:"context"`
+	Name       string `json:"name"`
+	HasCRD     bool   `json:"hasCRD"`
+	Version    string `json:"version,omitempty"`
+	Instances  int    `json:"instances"`
+	VClusters  []VClusterInstance `json:"vclusters,omitempty"`
+}
+
+/** Timeout for CRD check operations */
+const vclusterCRDCheckTimeout = 10 * time.Second
+
+// CheckVClusterOnCluster checks if vCluster CRDs are installed on a specific cluster
+// and lists any existing vCluster instances
+func (m *LocalClusterManager) CheckVClusterOnCluster(context string) (*VClusterClusterStatus, error) {
+	status := &VClusterClusterStatus{
+		Context: context,
+		Name:    context,
+	}
+
+	// Check for vCluster CRD
+	cmd := execCommand("kubectl", "--context", context, "get", "crd", "virtualclusters.storage.loft.sh", "-o", "jsonpath={.metadata.name}")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil && strings.TrimSpace(stdout.String()) != "" {
+		status.HasCRD = true
+	}
+
+	// If CRD exists, get version from the CRD labels and list instances
+	if status.HasCRD {
+		// Get version from Helm release
+		cmd = execCommand("kubectl", "--context", context, "get", "pods", "-n", "vcluster", "-l", "app=vcluster", "-o", "jsonpath={.items[0].metadata.labels.chart}")
+		var verOut bytes.Buffer
+		cmd.Stdout = &verOut
+		if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil {
+			ver := strings.TrimSpace(verOut.String())
+			re := regexp.MustCompile(`v?([\d.]+)`)
+			if matches := re.FindStringSubmatch(ver); len(matches) > 1 {
+				status.Version = matches[1]
+			}
+		}
+
+		// List vCluster instances via kubectl
+		cmd = execCommand("kubectl", "--context", context, "get", "virtualclusters.storage.loft.sh", "-A", "-o", "jsonpath={range .items[*]}{.metadata.name},{.metadata.namespace},{.status.phase}{\"\\n\"}{end}")
+		var listOut bytes.Buffer
+		cmd.Stdout = &listOut
+		if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil {
+			lines := strings.Split(strings.TrimSpace(listOut.String()), "\n")
+			for _, line := range lines {
+				parts := strings.SplitN(line, ",", 3)
+				if len(parts) >= 2 && parts[0] != "" {
+					inst := VClusterInstance{
+						Name:      parts[0],
+						Namespace: parts[1],
+						Status:    "Running",
+					}
+					if len(parts) >= 3 && parts[2] != "" {
+						inst.Status = parts[2]
+					}
+					status.VClusters = append(status.VClusters, inst)
+				}
+			}
+			status.Instances = len(status.VClusters)
+		}
+	}
+
+	return status, nil
+}
+
+// CheckVClusterOnAllClusters checks vCluster status across all kubeconfig contexts
+func (m *LocalClusterManager) CheckVClusterOnAllClusters() ([]VClusterClusterStatus, error) {
+	cmd := execCommand("kubectl", "config", "get-contexts", "-o", "name")
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to list contexts: %w", err)
+	}
+
+	contexts := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+	var results []VClusterClusterStatus
+
+	for _, ctx := range contexts {
+		if ctx == "" {
+			continue
+		}
+		status, err := m.CheckVClusterOnCluster(ctx)
+		if err != nil {
+			continue
+		}
+		if status.HasCRD {
+			results = append(results, *status)
+		}
+	}
+
+	return results, nil
+}

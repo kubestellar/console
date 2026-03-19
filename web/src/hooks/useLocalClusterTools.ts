@@ -27,6 +27,16 @@ export interface VClusterInstance {
   context?: string
 }
 
+/** Status of vCluster on a specific host cluster */
+export interface VClusterClusterStatus {
+  context: string
+  name: string
+  hasCRD: boolean
+  version?: string
+  instances: number
+  vclusters?: VClusterInstance[]
+}
+
 export interface LocalCluster {
   name: string
   tool: string
@@ -71,6 +81,7 @@ export function useLocalClusterTools() {
 
   // vCluster state
   const [vclusterInstances, setVclusterInstances] = useState<VClusterInstance[]>([])
+  const [vclusterClusterStatus, setVclusterClusterStatus] = useState<VClusterClusterStatus[]>([])
   const [isConnecting, setIsConnecting] = useState<string | null>(null) // vcluster name being connected
   const [isDisconnecting, setIsDisconnecting] = useState<string | null>(null) // vcluster name being disconnected
 
@@ -261,6 +272,26 @@ export function useLocalClusterTools() {
       setError('Failed to fetch vCluster instances')
     }
   }, [isConnected, isDemoMode])
+
+  // Check which clusters have vCluster CRDs installed
+  const fetchVClusterClusterStatus = useCallback(async () => {
+    if (!isConnected) {
+      setVclusterClusterStatus([])
+      return
+    }
+
+    try {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/check`, {
+        signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setVclusterClusterStatus(data.clusters || [])
+      }
+    } catch (err) {
+      console.error('Failed to check vCluster cluster status:', err)
+    }
+  }, [isConnected])
 
   // Create a new vCluster
   const createVCluster = useCallback(async (name: string, namespace: string): Promise<CreateClusterResult> => {
@@ -455,7 +486,8 @@ export function useLocalClusterTools() {
     fetchTools()
     fetchClusters()
     fetchVClusters()
-  }, [fetchTools, fetchClusters, fetchVClusters])
+    fetchVClusterClusterStatus()
+  }, [fetchTools, fetchClusters, fetchVClusters, fetchVClusterClusterStatus])
 
   // Initial fetch when connected or in demo mode
   useEffect(() => {
@@ -498,6 +530,7 @@ export function useLocalClusterTools() {
     refresh,
     // vCluster state and actions
     vclusterInstances,
+    vclusterClusterStatus,
     isConnecting,
     isDisconnecting,
     createVCluster,

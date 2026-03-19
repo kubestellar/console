@@ -355,6 +355,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/vcluster/connect", s.handleVClusterConnect)
 	mux.HandleFunc("/vcluster/disconnect", s.handleVClusterDisconnect)
 	mux.HandleFunc("/vcluster/delete", s.handleVClusterDelete)
+	mux.HandleFunc("/vcluster/check", s.handleVClusterCheck)
 
 	// Chat cancel endpoint — HTTP fallback when WebSocket is disconnected
 	mux.HandleFunc("/cancel-chat", s.handleCancelChatHTTP)
@@ -4588,4 +4589,43 @@ func (s *Server) handleInsightsAI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(s.insightWorker.GetEnrichments())
+}
+
+// handleVClusterCheck checks vCluster CRD presence on clusters
+func (s *Server) handleVClusterCheck(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Optional: check a specific cluster context via query param
+	context := r.URL.Query().Get("context")
+	if context != "" {
+		status, err := s.localClusters.CheckVClusterOnCluster(context)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(status)
+		return
+	}
+
+	// Check all clusters
+	results, err := s.localClusters.CheckVClusterOnAllClusters()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"clusters": results,
+	})
 }

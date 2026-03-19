@@ -109,6 +109,7 @@ export function LocalClustersSection() {
     refresh,
     // vCluster state and actions
     vclusterInstances,
+    vclusterClusterStatus,
     isConnecting,
     isDisconnecting,
     createVCluster,
@@ -503,12 +504,13 @@ After installation, the user can create virtual clusters on this host cluster fr
                       onChange={(e) => setVclusterHostCluster(e.target.value)}
                       className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     >
-                      <option value="">Current context</option>
+                      <option value="" disabled>Select a host cluster...</option>
                       {(healthyClusters || []).map(c => {
-                        const hasVCluster = (c.namespaces || []).includes('vcluster')
+                        const vcStatus = (vclusterClusterStatus || []).find(s => s.context === (c.context || c.name))
+                        const hasVC = vcStatus?.hasCRD
                         return (
                           <option key={c.context || c.name} value={c.context || c.name}>
-                            {hasVCluster ? '✅ ' : ''}{c.name}{hasVCluster ? ' (vCluster ready)' : ''}{c.context && c.context !== c.name ? ` — ${c.context}` : ''}
+                            {hasVC ? '✅ ' : ''}{c.name}{hasVC ? ` (vCluster v${vcStatus?.version || '?'}, ${vcStatus?.instances || 0} instances)` : ''}{c.context && c.context !== c.name ? ` — ${c.context}` : ''}
                           </option>
                         )
                       })}
@@ -516,20 +518,23 @@ After installation, the user can create virtual clusters on this host cluster fr
                   </div>
                   <div className="flex flex-col gap-1 justify-end">
                     {(() => {
-                      const selectedCluster = (healthyClusters || []).find(c => (c.context || c.name) === vclusterHostCluster)
-                      const alreadyInstalled = selectedCluster && (selectedCluster.namespaces || []).includes('vcluster')
-                      const displayName = selectedCluster?.name || vclusterHostCluster || 'current cluster'
-                      return alreadyInstalled ? (
-                        <span className="flex items-center gap-2 px-3 py-2 text-xs text-green-400">
-                          ✅ vCluster ready on {displayName}
-                        </span>
-                      ) : (
+                      const vcStatus = (vclusterClusterStatus || []).find(s => s.context === vclusterHostCluster)
+                      const displayName = (healthyClusters || []).find(c => (c.context || c.name) === vclusterHostCluster)?.name || vclusterHostCluster
+                      if (vcStatus?.hasCRD) {
+                        return (
+                          <span className="flex items-center gap-2 px-3 py-2 text-xs text-green-400 font-medium">
+                            ✅ vCluster v{vcStatus.version || '?'} ready ({vcStatus.instances} instance{vcStatus.instances !== 1 ? 's' : ''})
+                          </span>
+                        )
+                      }
+                      return (
                         <button
-                          onClick={() => handleInstallVClusterOnCluster(vclusterHostCluster || 'current')}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors"
+                          onClick={() => handleInstallVClusterOnCluster(vclusterHostCluster)}
+                          disabled={!vclusterHostCluster}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Bot className="w-3.5 h-3.5" />
-                          Deploy vCluster to {displayName}
+                          {vclusterHostCluster ? `Deploy vCluster to ${displayName}` : 'Select a cluster first'}
                         </button>
                       )
                     })()}
@@ -557,7 +562,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                   <div className="flex items-end">
                     <button
                       onClick={handleCreateVCluster}
-                      disabled={!vclusterName.trim() || isCreating}
+                      disabled={!vclusterName.trim() || !vclusterHostCluster || isCreating}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isCreating ? (
