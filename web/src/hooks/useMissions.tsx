@@ -728,12 +728,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         }
 
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
-        const lastMsg = m.messages[m.messages.length - 1]
-        const DEDUP_PREFIX_LEN = 100
-        // Skip adding result message if the content was already received via streaming
-        const alreadyStreamed = lastMsg?.role === 'assistant' &&
+        // Check ALL assistant messages since the last user message for streamed content
+        // (streaming may split into multiple bubbles due to tool-use gaps)
+        const lastUserIdx = m.messages.map(msg => msg.role).lastIndexOf('user')
+        const streamedSinceUser = m.messages
+          .slice(lastUserIdx + 1)
+          .filter(msg => msg.role === 'assistant')
+          .map(msg => msg.content)
+          .join('')
+        // Skip adding result message if content was already received via streaming
+        const alreadyStreamed = streamedSinceUser.length > 0 &&
           resultContent.length > 0 &&
-          lastMsg.content.includes(resultContent.slice(0, DEDUP_PREFIX_LEN))
+          streamedSinceUser.startsWith(resultContent.slice(0, Math.min(resultContent.length, streamedSinceUser.length)))
 
         return {
           ...m,

@@ -271,6 +271,63 @@ describe('startMission', () => {
     expect(emitMissionCompleted).toHaveBeenCalled()
   })
 
+  it('does not duplicate response when stream is followed by result with same content', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { requestId } = await startMissionWithConnection(result)
+
+    // Simulate streaming chunks
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'stream',
+        payload: { content: 'vCluster CLI is installed and upgraded successfully.' },
+      })
+    })
+
+    // Stream done
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'stream',
+        payload: { content: '', done: true },
+      })
+    })
+
+    const messagesAfterStream = result.current.missions[0].messages.filter(m => m.role === 'assistant')
+    expect(messagesAfterStream).toHaveLength(1)
+
+    // Now simulate the result message with the same content
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'result',
+        payload: { content: 'vCluster CLI is installed and upgraded successfully.' },
+      })
+    })
+
+    const messagesAfterResult = result.current.missions[0].messages.filter(m => m.role === 'assistant')
+    // Should still be 1 assistant message, not 2
+    expect(messagesAfterResult).toHaveLength(1)
+  })
+
+  it('adds result message when no prior streaming occurred', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { requestId } = await startMissionWithConnection(result)
+
+    // Result without prior streaming
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'result',
+        payload: { content: 'Task completed.' },
+      })
+    })
+
+    const assistantMessages = result.current.missions[0].messages.filter(m => m.role === 'assistant')
+    expect(assistantMessages).toHaveLength(1)
+    expect(assistantMessages[0].content).toBe('Task completed.')
+  })
+
   it('transitions mission to failed on error message', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { requestId } = await startMissionWithConnection(result)
