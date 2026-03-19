@@ -152,7 +152,7 @@ export function OvnStatus() {
       </div>
 
       {/* Metric tiles */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" onClick={() => setIsDetailModalOpen(true)}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
         <MetricTile
           label={t('ovnStatus.ovnPods')}
           value={data.podCount}
@@ -174,7 +174,7 @@ export function OvnStatus() {
       </div>
 
       {/* UDN summary */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" onClick={() => setIsDetailModalOpen(true)}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
         <MetricTile
           label={t('ovnStatus.udnCount')}
           value={(data.udns || []).length}
@@ -201,7 +201,7 @@ export function OvnStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('ovnStatus.udnList')}</p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
             {(data.udns || []).map((udn) => (
-              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" onClick={() => setIsDetailModalOpen(true)}>
+              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
                 <span className="text-muted-foreground truncate flex-1" title={udn.name}>
                   {udn.name}
                 </span>

@@ -69,7 +69,7 @@ function ComponentBadge({ component, onClick }: { component: ComponentStatus; on
   const healthBg = HEALTH_BG[component.health] || HEALTH_BG.unknown
 
   return (
-    <div className={`p-2.5 rounded-lg border ${healthBg} flex items-center gap-2 cursor-pointer hover:bg-secondary/50 transition-colors`} onClick={onClick}>
+    <div className={`p-2.5 rounded-lg border ${healthBg} flex items-center gap-2 cursor-pointer hover:bg-secondary/50 transition-colors`} role="button" tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } }}>
       <IconComponent className={`w-4 h-4 ${healthColor}`} />
       <div className="flex-1 min-w-0">
         <div className="text-xs font-medium text-foreground truncate">{component.name}</div>
@@ -85,7 +85,7 @@ function ComponentBadge({ component, onClick }: { component: ComponentStatus; on
 /** Single isolation level row */
 function IsolationRow({ level, onClick }: { level: IsolationLevel; onClick?: () => void }) {
   return (
-    <div className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" onClick={onClick}>
+    <div className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } }}>
       <div className="flex items-center gap-2">
         <IsolationStatusIcon status={level.status} />
         <span className="text-xs font-medium text-foreground">{level.type}</span>
@@ -139,7 +139,7 @@ export function MultiTenancyOverview() {
   return (
     <div className="h-full flex flex-col gap-3">
       {/* Overall score header */}
-      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setIsDetailModalOpen(true)}>
+      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-cyan-400" />
           <span className="text-xs font-medium text-foreground">
