@@ -49,7 +49,9 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
           })
         }
       } catch {
-        // Use defaults — branding is non-critical
+        // Intentionally silent — branding is non-critical.
+        // Falls back to DEFAULT_BRANDING which provides all required values.
+        // No error state needed since the component always has valid branding.
       }
     }
 

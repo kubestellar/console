@@ -675,7 +675,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           }
         } else if (payload.done) {
           // Stream complete - mark as unread
-          pendingRequests.current.delete(message.id)
+          // NOTE: Do NOT delete from pendingRequests here. The backend sends a
+          // 'result' message after streaming completes. If we delete the request
+          // ID now, the result handler (which handles status transition and token
+          // tracking) silently drops the message, leaving the mission stuck in
+          // 'running' state until the 5-minute client timeout fires (#2973, #2974).
           markMissionAsUnread(missionId)
 
           // Track token delta for category usage when stream completes with usage data

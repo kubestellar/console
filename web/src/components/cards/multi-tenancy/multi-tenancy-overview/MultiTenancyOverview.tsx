@@ -132,6 +132,12 @@ export function MultiTenancyOverview() {
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
         <p className="text-sm">{t('cards:multiTenancy.noData', 'No multi-tenancy data')}</p>
         <p className="text-xs mt-1">{t('cards:multiTenancy.connectClusters', 'Connect to clusters to detect components')}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-2 text-xs text-primary hover:underline"
+        >
+          {t('cards:common.retry', 'Retry')}
+        </button>
       </div>
     )
   }
