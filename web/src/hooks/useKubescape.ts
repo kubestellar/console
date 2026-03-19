@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { useDemoMode } from './useDemoMode'
+import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_KUBESCAPE_CACHE, STORAGE_KEY_KUBESCAPE_CACHE_TIME } from '../lib/constants/storage'
 
 /** Refresh interval for automatic polling (2 minutes) */
@@ -91,6 +92,16 @@ function saveToCache(statuses: Record<string, KubescapeClusterStatus>): void {
       localStorage.setItem(STORAGE_KEY_KUBESCAPE_CACHE, JSON.stringify(completed))
       localStorage.setItem(STORAGE_KEY_KUBESCAPE_CACHE_TIME, Date.now().toString())
     }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/** Clear localStorage cache so stale data doesn't persist across mode transitions */
+function clearCache(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY_KUBESCAPE_CACHE)
+    localStorage.removeItem(STORAGE_KEY_KUBESCAPE_CACHE_TIME)
   } catch {
     // Ignore storage errors
   }
@@ -400,6 +411,28 @@ export function useKubescape() {
       setIsLoading(false)
     }
   }, [clusters.length, isDemoMode, clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Register with unified mode transition system so skeleton/refetch works
+  // in sync with all other cards when demo mode is toggled
+  useEffect(() => {
+    registerCacheReset('kubescape', () => {
+      clearCache()
+      setStatuses({})
+      setIsLoading(true)
+      setLastRefresh(null)
+      setClustersChecked(0)
+      initialLoadDone.current = false
+    })
+
+    const unregisterRefetch = registerRefetch('kubescape', () => {
+      refetch(false)
+    })
+
+    return () => {
+      unregisterCacheReset('kubescape')
+      unregisterRefetch()
+    }
+  }, [refetch])
 
   // Auto-refresh — always poll when clusters exist so we detect tools
   // that get installed later or clusters that become reachable

@@ -18,6 +18,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { useDemoMode } from './useDemoMode'
+import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_TRESTLE_CACHE, STORAGE_KEY_TRESTLE_CACHE_TIME } from '../lib/constants/storage'
 
 /** Refresh interval for automatic polling (2 minutes) */
@@ -106,6 +107,16 @@ function saveToCache(statuses: Record<string, TrestleClusterStatus>): void {
       localStorage.setItem(STORAGE_KEY_TRESTLE_CACHE, JSON.stringify(completed))
       localStorage.setItem(STORAGE_KEY_TRESTLE_CACHE_TIME, Date.now().toString())
     }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/** Clear localStorage cache so stale data doesn't persist across mode transitions */
+function clearCache(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY_TRESTLE_CACHE)
+    localStorage.removeItem(STORAGE_KEY_TRESTLE_CACHE_TIME)
   } catch {
     // Ignore storage errors
   }
@@ -423,6 +434,27 @@ export function useTrestle() {
     intervalRef.current = setInterval(() => fetchData(true), REFRESH_INTERVAL_MS)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [fetchData])
+
+  // Register with unified mode transition system so skeleton/refetch works
+  // in sync with all other cards when demo mode is toggled
+  useEffect(() => {
+    registerCacheReset('trestle', () => {
+      clearCache()
+      setStatuses({})
+      setIsLoading(true)
+      setLastRefresh(null)
+      setClustersChecked(0)
+    })
+
+    const unregisterRefetch = registerRefetch('trestle', () => {
+      fetchData(false)
+    })
+
+    return () => {
+      unregisterCacheReset('trestle')
+      unregisterRefetch()
     }
   }, [fetchData])
 
