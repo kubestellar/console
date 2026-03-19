@@ -10,6 +10,30 @@ import { useCardData, commonComparators } from '../cards/cardHooks'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 
+/** Minimum allowed interval for setInterval in dynamic cards (ms) */
+const MIN_INTERVAL_MS = 1_000
+
+/** Safe setTimeout wrapper — delegates to the real window.setTimeout */
+function safeSetTimeout(callback: TimerHandler, delay?: number, ...args: unknown[]): number {
+  return window.setTimeout(callback, delay, ...args)
+}
+
+/** Safe clearTimeout wrapper */
+function safeClearTimeout(id: number | undefined): void {
+  window.clearTimeout(id)
+}
+
+/** Safe setInterval wrapper — enforces MIN_INTERVAL_MS minimum to prevent tight loops */
+function safeSetInterval(callback: TimerHandler, delay?: number, ...args: unknown[]): number {
+  const clamped = Math.max(delay ?? 0, MIN_INTERVAL_MS)
+  return window.setInterval(callback, clamped, ...args)
+}
+
+/** Safe clearInterval wrapper */
+function safeClearInterval(id: number | undefined): void {
+  window.clearInterval(id)
+}
+
 /**
  * The sandboxed scope of libraries available to Tier 2 dynamic cards.
  *
@@ -41,5 +65,11 @@ export function getDynamicScope(): Record<string, unknown> {
     // UI components
     Skeleton,
     Pagination,
+
+    // Safe timer APIs (setInterval clamped to MIN_INTERVAL_MS minimum)
+    setTimeout: safeSetTimeout,
+    clearTimeout: safeClearTimeout,
+    setInterval: safeSetInterval,
+    clearInterval: safeClearInterval,
   }
 }

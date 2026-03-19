@@ -13,7 +13,9 @@ const BLOCKED_GLOBALS = [
   'eval', 'Function', 'importScripts',
   'localStorage', 'sessionStorage', 'indexedDB', 'caches',
   'navigator', 'location', 'history',
-  'setTimeout', 'setInterval', 'requestAnimationFrame',
+  // setTimeout/setInterval/clearTimeout/clearInterval are provided as safe
+  // wrappers via getDynamicScope() — NOT blocked here.
+  'requestAnimationFrame',
   'postMessage', 'crypto',
 ] as const
 
