@@ -9,12 +9,12 @@ import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import {
-  useCardData, commonComparators,
   CardSkeleton, CardEmptyState, CardSearchInput,
   CardControlsRow, CardListItem, CardPaginationFooter,
   CardAIActions,
-} from '../../lib/cards'
+} from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'cluster'

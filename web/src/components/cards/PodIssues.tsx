@@ -6,12 +6,13 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { getStatusColors } from '../../lib/cards/statusColors'
 import {
-  useCardData, commonComparators, getStatusColors,
   CardSkeleton, CardEmptyState, CardSearchInput,
   CardControlsRow, CardListItem, CardPaginationFooter,
   CardAIActions,
-} from '../../lib/cards'
+} from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'restarts' | 'cluster'

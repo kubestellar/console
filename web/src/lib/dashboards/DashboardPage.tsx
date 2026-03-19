@@ -11,8 +11,8 @@ import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
-import { useDashboard, DashboardCard } from './index'
-import { DashboardCardPlacement } from './types'
+import { useDashboard } from './dashboardHooks'
+import type { DashboardCard, DashboardCardPlacement } from './types'
 import { SortableDashboardCard, DragPreviewCard } from './DashboardComponents'
 import { AddCardModal } from '../../components/dashboard/AddCardModal'
 import { TemplatesModal } from '../../components/dashboard/TemplatesModal'
