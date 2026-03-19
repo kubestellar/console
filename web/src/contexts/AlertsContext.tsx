@@ -166,9 +166,13 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   rulesRef.current = rules
 
   // Track which alert dedup keys have already triggered a browser notification.
-  // Prevents the same alert from sending repeated macOS notifications on every
-  // evaluation cycle. Keys are cleared when the alert resolves.
-  const notifiedAlertKeysRef = useRef<Set<string>>(new Set())
+  // Maps dedup key → timestamp (ms) of last notification. Prevents the same alert
+  // from sending repeated macOS notifications on every evaluation cycle.
+  // Keys are NOT cleared on resolve — a cooldown period prevents re-notification
+  // when clusters flap between reachable/unreachable states.
+  /** Minimum time (ms) between repeat notifications for the same alert */
+  const NOTIFICATION_COOLDOWN_MS = 300_000 // 5 minutes
+  const notifiedAlertKeysRef = useRef<Map<string, number>>(new Map())
 
   // CronJob health results cache — fetched async, read synchronously by evaluator
   const cronJobResultsRef = useRef<Record<string, GPUHealthCheckResult[]>>({})
@@ -821,9 +825,9 @@ Please provide:
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
           if (
             rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            !notifiedAlertKeysRef.current.has(notifKey)
+            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
           ) {
-            notifiedAlertKeysRef.current.add(notifKey)
+            notifiedAlertKeysRef.current.set(notifKey, Date.now())
             const firstNode = failedNodes[0]
             sendNotificationWithDeepLink(
               `GPU Health Alert: ${cluster.name}`,
@@ -836,9 +840,6 @@ Please provide:
             )
           }
         } else {
-          // Auto-resolve — clear the notification dedup key
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          notifiedAlertKeysRef.current.delete(notifKey)
           // Auto-resolve if all nodes are healthy
           setAlerts(prev => {
             const firingAlert = prev.find(
@@ -900,9 +901,9 @@ Please provide:
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
           if (
             rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            !notifiedAlertKeysRef.current.has(notifKey)
+            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
           ) {
-            notifiedAlertKeysRef.current.add(notifKey)
+            notifiedAlertKeysRef.current.set(notifKey, Date.now())
             sendNotificationWithDeepLink(
               `Disk Pressure: ${cluster.name}`,
               diskPressureIssue,
@@ -914,8 +915,6 @@ Please provide:
           }
         } else {
           // Auto-resolve if DiskPressure clears — also clear the notification dedup key
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          notifiedAlertKeysRef.current.delete(notifKey)
           setAlerts(prev => {
             const firingAlert = prev.find(
               a =>
@@ -1028,9 +1027,9 @@ Please provide:
         const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster)
         if (
           rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-          !notifiedAlertKeysRef.current.has(notifKey)
+          (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
         ) {
-          notifiedAlertKeysRef.current.add(notifKey)
+          notifiedAlertKeysRef.current.set(notifKey, Date.now())
           sendNotificationWithDeepLink(
             `DNS Failure: ${cluster}`,
             `${pods.length} CoreDNS pod(s) unhealthy — ${issues || 'check pod status'}`,
@@ -1043,8 +1042,6 @@ Please provide:
       const clustersWithIssues = new Set(clusterDNSIssues.keys())
       setAlerts(prev => prev.map(a => {
         if (a.ruleId === rule.id && a.status === 'firing' && a.cluster && !clustersWithIssues.has(a.cluster)) {
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, a.cluster)
-          notifiedAlertKeysRef.current.delete(notifKey)
           return { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
         }
         return a
@@ -1081,9 +1078,9 @@ Please provide:
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
           if (
             rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            !notifiedAlertKeysRef.current.has(notifKey)
+            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
           ) {
-            notifiedAlertKeysRef.current.add(notifKey)
+            notifiedAlertKeysRef.current.set(notifKey, Date.now())
             sendNotificationWithDeepLink(
               `Certificate Error: ${cluster.name}`,
               cluster.errorMessage || 'TLS certificate validation failed',
@@ -1092,8 +1089,6 @@ Please provide:
           }
         } else {
           // Auto-resolve if cert error clears
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          notifiedAlertKeysRef.current.delete(notifKey)
           setAlerts(prev => {
             const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
             if (firingAlert) {
@@ -1141,9 +1136,9 @@ Please provide:
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
           if (
             rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            !notifiedAlertKeysRef.current.has(notifKey)
+            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
           ) {
-            notifiedAlertKeysRef.current.add(notifKey)
+            notifiedAlertKeysRef.current.set(notifKey, Date.now())
             sendNotificationWithDeepLink(
               `Cluster Unreachable: ${cluster.name}`,
               `${errorLabel}${cluster.lastSeen ? ` — last seen ${cluster.lastSeen}` : ''}`,
@@ -1152,8 +1147,6 @@ Please provide:
           }
         } else if (cluster.reachable !== false) {
           // Auto-resolve when cluster becomes reachable again
-          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
-          notifiedAlertKeysRef.current.delete(notifKey)
           setAlerts(prev => {
             const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
             if (firingAlert) {
@@ -1219,9 +1212,9 @@ Please provide:
           const notifKey = `${rule.id}::${guide.acronym}::${run.runNumber}`
           if (
             rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            !notifiedAlertKeysRef.current.has(notifKey)
+            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
           ) {
-            notifiedAlertKeysRef.current.add(notifKey)
+            notifiedAlertKeysRef.current.set(notifKey, Date.now())
             sendNotificationWithDeepLink(
               `Nightly E2E Failed: ${guide.acronym} (${guide.platform})`,
               `Run #${run.runNumber} failed — ${guide.guide}`,
