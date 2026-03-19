@@ -132,6 +132,8 @@ export function LocalClustersSection() {
   const healthyClusters = (connectedClusters || []).filter(c => c.healthy !== false)
 
   const hasVClusterTool = installedTools.some(t => t.name === 'vcluster')
+  /** Local cluster tools excluding vcluster (vcluster has its own section) */
+  const localClusterTools = installedTools.filter(t => t.name !== 'vcluster')
 
   const handleCreate = async () => {
     if (!selectedTool || !clusterName.trim()) return
@@ -312,7 +314,7 @@ After installation, the user can create virtual clusters on this host cluster fr
           <div className="mb-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('settings.localClusters.detectedTools')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {installedTools.map((tool) => (
+              {localClusterTools.map((tool) => (
                 <div
                   key={tool.name}
                   className="p-3 rounded-lg bg-secondary/30 border border-border"
@@ -342,7 +344,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                 className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               >
                 <option value="">{t('settings.localClusters.selectTool')}</option>
-                {installedTools.map((tool) => (
+                {localClusterTools.map((tool) => (
                   <option key={tool.name} value={tool.name}>
                     {getToolIcon(tool.name)} {tool.name} - {getToolDescription(tool.name)}
                   </option>
@@ -502,23 +504,35 @@ After installation, the user can create virtual clusters on this host cluster fr
                       className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     >
                       <option value="">Current context</option>
-                      {(healthyClusters || []).map(c => (
-                        <option key={c.context || c.name} value={c.context || c.name}>
-                          {c.name}{c.context && c.context !== c.name ? ` (${c.context})` : ''}
-                        </option>
-                      ))}
+                      {(healthyClusters || []).map(c => {
+                        const hasVCluster = (c.namespaces || []).includes('vcluster')
+                        return (
+                          <option key={c.context || c.name} value={c.context || c.name}>
+                            {hasVCluster ? '✅ ' : ''}{c.name}{hasVCluster ? ' (vCluster ready)' : ''}{c.context && c.context !== c.name ? ` — ${c.context}` : ''}
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1 justify-end">
-                    <button
-                      onClick={() => handleInstallVClusterOnCluster(vclusterHostCluster || 'current')}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors"
-                    >
-                      <Bot className="w-3.5 h-3.5" />
-                      Deploy vCluster to {vclusterHostCluster
-                        ? (healthyClusters || []).find(c => (c.context || c.name) === vclusterHostCluster)?.name || vclusterHostCluster
-                        : 'current cluster'}
-                    </button>
+                    {(() => {
+                      const selectedCluster = (healthyClusters || []).find(c => (c.context || c.name) === vclusterHostCluster)
+                      const alreadyInstalled = selectedCluster && (selectedCluster.namespaces || []).includes('vcluster')
+                      const displayName = selectedCluster?.name || vclusterHostCluster || 'current cluster'
+                      return alreadyInstalled ? (
+                        <span className="flex items-center gap-2 px-3 py-2 text-xs text-green-400">
+                          ✅ vCluster ready on {displayName}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleInstallVClusterOnCluster(vclusterHostCluster || 'current')}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors"
+                        >
+                          <Bot className="w-3.5 h-3.5" />
+                          Deploy vCluster to {displayName}
+                        </button>
+                      )
+                    })()}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-muted-foreground font-medium">Namespace</label>
