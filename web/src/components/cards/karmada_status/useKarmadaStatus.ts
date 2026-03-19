@@ -20,9 +20,6 @@ const DEFAULT_COUNT = 0
 /** Arbitrary flag value representing an active/synced resource */
 const SYNCED_RESOURCE_FLAG = 1
 
-/** Base 10 radix for parseInt */
-const RADIX_BASE_10 = 10
-
 /** Expected number of parts when splitting pod readiness string (e.g. "1/1") */
 const EXPECTED_READY_PARTS = 2
 
@@ -99,7 +96,7 @@ function isPodReady(pod: BackendPodInfo): boolean {
   const ready = pod.ready ?? ''
   const parts = ready.split('/')
   if (parts.length !== EXPECTED_READY_PARTS) return false
-  return parts[0] === parts[1] && parseInt(parts[0], RADIX_BASE_10) > DEFAULT_COUNT
+  return parts[0] === parts[1] && Number(parts[0]) > DEFAULT_COUNT;
 }
 
 // ---------------------------------------------------------------------------
@@ -269,7 +266,7 @@ async function fetchKarmadaStatus(): Promise<KarmadaStatus> {
   )
   const karmadaPods = labeledPods.length > 0
     ? labeledPods.filter(isKarmadaControllerPod)
-    : (await fetchPods('/api/mcp/pods')).filter(isKarmadaControllerPod)
+    : (await fetchPods('/api/mcp/pods?namespace=karmada-system')).filter(isKarmadaControllerPod)
 
   if (karmadaPods.length === 0) {
     return {
@@ -344,17 +341,17 @@ export function useKarmadaStatus(): UseKarmadaStatusResult {
 
   const effectiveIsDemoData = isDemoFallback && !isLoading
 
-  const hasAnyData = data.health !== 'not-installed'
-    ? true
-    : (data.memberClusters || []).length > 0
+  // Treat "not-installed" as valid data so the card can render its own hint message.
+  const hasAnyData = true;
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,
     isDemoData: effectiveIsDemoData,
-  })
+  });
 
   return {
     data,

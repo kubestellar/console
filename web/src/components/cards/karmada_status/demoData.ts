@@ -16,14 +16,6 @@
 const DEMO_LAST_CHECK_OFFSET_MS = 30_000
 
 /** Number of demo member cluster entries */
-const DEMO_CLUSTER_COUNT = 4
-
-/** Number of demo propagation policy entries */
-const DEMO_POLICY_COUNT = 3
-
-/** Number of demo resource binding entries */
-const DEMO_BINDING_COUNT = 5
-
 export type KarmadaHealth = 'healthy' | 'degraded' | 'not-installed'
 
 export type KarmadaClusterStatus = 'Ready' | 'NotReady' | 'Unknown'
@@ -82,12 +74,8 @@ export interface KarmadaDemoData {
 }
 
 // ---------------------------------------------------------------------------
-// Demo entries (constants used to avoid magic numbers)
+// Demo entries
 // ---------------------------------------------------------------------------
-
-void DEMO_CLUSTER_COUNT   // used below via spread items length
-void DEMO_POLICY_COUNT    // used below
-void DEMO_BINDING_COUNT   // used below
 
 export const KARMADA_DEMO_DATA: KarmadaDemoData = {
   health: 'degraded',
@@ -99,7 +87,7 @@ export const KARMADA_DEMO_DATA: KarmadaDemoData = {
       kubernetesVersion: 'v1.29.2',
       nodeCount: 8,
       labels: { region: 'us-east-1', tier: 'production' },
-      syncedResources: 42,
+      syncedResources: 1,
     },
     {
       name: 'member-eu-west',
@@ -107,7 +95,7 @@ export const KARMADA_DEMO_DATA: KarmadaDemoData = {
       kubernetesVersion: 'v1.28.6',
       nodeCount: 6,
       labels: { region: 'eu-west-1', tier: 'production' },
-      syncedResources: 38,
+      syncedResources: 1,
     },
     {
       name: 'member-ap-south',
@@ -123,7 +111,7 @@ export const KARMADA_DEMO_DATA: KarmadaDemoData = {
       kubernetesVersion: 'v1.29.1',
       nodeCount: 5,
       labels: { region: 'us-west-2', tier: 'staging' },
-      syncedResources: 21,
+      syncedResources: 1,
     },
   ],
   propagationPolicies: [
