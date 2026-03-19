@@ -80,7 +80,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
       case 'loaded':
         return <StatusBadge color="green">{t('llmModels.loaded')}</StatusBadge>
       case 'downloading':
-        return <StatusBadge color="blue" icon={<RefreshCw className="w-2.5 h-2.5 animate-spin" />}>Downloading</StatusBadge>
+        return <StatusBadge color="blue" icon={<RefreshCw className="w-2.5 h-2.5 animate-spin" />}>{t('llmModels.downloading')}</StatusBadge>
       case 'stopped':
         return <StatusBadge color="gray">{t('llmModels.stopped')}</StatusBadge>
       case 'error':

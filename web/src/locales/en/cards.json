@@ -2766,6 +2766,7 @@
     "inferencePoolDetection": "InferencePool Detection",
     "noInferencePools": "No InferencePools found",
     "loaded": "Loaded",
+    "downloading": "Downloading",
     "stopped": "Stopped"
   },
   "mlNotebooks": {
@@ -2981,7 +2982,11 @@
     "slowOthers": "Slow Others"
   },
   "containerTetris": {
-    "hardDrop": "Space Hard drop"
+    "moveControl": "← → Move",
+    "softDrop": "↓ Soft drop",
+    "rotate": "↑ Rotate",
+    "hardDrop": "Space Hard drop",
+    "pause": "P Pause"
   },
   "podSweeper": {
     "easyMode": "Easy (8x8)",

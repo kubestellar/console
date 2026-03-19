@@ -434,11 +434,11 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
           {/* Controls hint */}
           {isExpanded && (
             <div className="text-xs text-muted-foreground space-y-1">
-              <div>← → Move</div>
-              <div>↓ Soft drop</div>
-              <div>↑ Rotate</div>
+              <div>{t('containerTetris.moveControl')}</div>
+              <div>{t('containerTetris.softDrop')}</div>
+              <div>{t('containerTetris.rotate')}</div>
               <div>{t('containerTetris.hardDrop')}</div>
-              <div>P Pause</div>
+              <div>{t('containerTetris.pause')}</div>
             </div>
           )}
         </div>
