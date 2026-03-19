@@ -470,6 +470,7 @@ export function CustomDashboard() {
       setCards(prev => {
         const oldIndex = prev.findIndex(c => c.id === active.id)
         const newIndex = prev.findIndex(c => c.id === over.id)
+        if (oldIndex === -1 || newIndex === -1) return prev
         return arrayMove(prev, oldIndex, newIndex)
       })
     }
@@ -600,9 +601,14 @@ export function CustomDashboard() {
 
           <DragOverlay>
             {activeId ? (
-              <div className="opacity-80 rotate-3 scale-105">
-                <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
-              </div>
+              (() => {
+                const dragCard = cards.find(c => c.id === activeId)
+                return dragCard ? (
+                  <div className="opacity-80 rotate-3 scale-105">
+                    <DragPreviewCard card={dragCard} />
+                  </div>
+                ) : null
+              })()
             ) : null}
           </DragOverlay>
         </DndContext>
