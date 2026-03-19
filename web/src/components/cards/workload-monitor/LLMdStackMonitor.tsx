@@ -8,7 +8,7 @@ import {
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
-import { CardSearchInput, CardAIActions } from '../../../lib/cards'
+import { CardSearchInput, CardAIActions } from '../../../lib/cards/CardComponents'
 import { useCachedLLMdServers, useCachedGPUNodes } from '../../../hooks/useCachedData'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'

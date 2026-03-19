@@ -4,7 +4,7 @@ import {
   FileText, FileKey, Clock, Container, RefreshCw, Plus, Minus,
   AlertTriangle, Eye, X, Activity
 } from 'lucide-react'
-import { CardSearchInput } from '../../lib/cards'
+import { CardSearchInput } from '../../lib/cards/CardComponents'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedNamespaces, useCachedDeployments, useCachedServices, useCachedPVCs, useCachedPods, useCachedConfigMaps, useCachedSecrets, useCachedJobs } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'

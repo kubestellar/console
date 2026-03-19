@@ -1,6 +1,7 @@
 import { CheckCircle, RefreshCw, AlertTriangle, ExternalLink, AlertCircle, Server } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
-import { useChartFilters, CardClusterFilter } from '../../lib/cards'
+import { CardClusterFilter } from '../../lib/cards/CardComponents'
+import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useArgoCDSyncStatus } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'

@@ -1,12 +1,8 @@
 import { useMemo } from 'react'
 import { CheckCircle2, Clock, XCircle, HelpCircle, AlertCircle, ExternalLink, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import {
-  useCardData,
-  commonComparators,
-  CardSearchInput, CardControlsRow, CardPaginationFooter,
-  CardAIActions,
-} from '../../lib/cards'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { Skeleton } from '../ui/Skeleton'
 import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceExport, ServiceExportStatus } from '../../types/mcs'

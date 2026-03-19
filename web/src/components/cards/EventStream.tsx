@@ -6,11 +6,8 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
-import {
-  useCardData, commonComparators,
-  CardSkeleton, CardSearchInput,
-  CardControlsRow, CardPaginationFooter,
-} from '../../lib/cards'
+import { CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'

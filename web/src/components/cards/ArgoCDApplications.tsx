@@ -6,11 +6,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDApplications, useArgoCDTriggerSync, type ArgoApplication } from '../../hooks/useArgoCD'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
-import {
-  useCardData,
-  commonComparators,
-  type SortDirection,
-} from '../../lib/cards'
+import { useCardData, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import {
   CardSearchInput,
   CardControlsRow,

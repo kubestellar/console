@@ -5,14 +5,8 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
-import {
-  useCardData,
-  commonComparators,
-  CardSearchInput,
-  CardControlsRow,
-  CardPaginationFooter,
-  CardAIActions,
-} from '../../lib/cards'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'clusters'

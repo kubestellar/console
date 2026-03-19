@@ -8,12 +8,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
-import {
-  useCardData,
-  useCardFilters,
-  commonComparators,
-  type SortDirection,
-} from '../../lib/cards'
+import { useCardData, useCardFilters, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import {
   CardSearchInput,
   CardControlsRow,

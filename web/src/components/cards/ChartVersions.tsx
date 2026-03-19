@@ -3,10 +3,8 @@ import { Package } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHelmReleases } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import {
-  useCardData, commonComparators,
-  CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
-} from '../../lib/cards'
+import { CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 

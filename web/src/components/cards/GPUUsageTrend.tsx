@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { TrendingUp, Cpu, Server, Clock } from 'lucide-react'
-import { CardClusterFilter } from '../../lib/cards'
+import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import {
   AreaChart,
   Area,

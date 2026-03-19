@@ -10,7 +10,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
-import { useChartFilters } from '../../lib/cards'
+import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 

@@ -8,7 +8,7 @@ import {
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { Button } from '../ui/Button'
-import { CardAIActions } from '../../lib/cards'
+import { CardAIActions } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { Mission } from '../../hooks/useMissions'

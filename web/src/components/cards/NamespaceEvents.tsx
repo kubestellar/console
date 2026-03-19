@@ -5,10 +5,8 @@ import { useCachedWarningEvents, useCachedNamespaces } from '../../hooks/useCach
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
-import {
-  useCardData, useCascadingSelection, commonComparators,
-  CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
-} from '../../lib/cards'
+import { CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData, useCascadingSelection, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'

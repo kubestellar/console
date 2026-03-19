@@ -13,7 +13,7 @@ import {
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
-import { CardClusterFilter } from '../../lib/cards'
+import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import {
   CHART_HEIGHT_STANDARD,

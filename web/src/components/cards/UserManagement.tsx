@@ -13,13 +13,8 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useAuth } from '../../lib/auth'
 import { cn } from '../../lib/cn'
-import {
-  useCardData,
-  commonComparators,
-  CardSearchInput,
-  CardControlsRow,
-  CardPaginationFooter,
-} from '../../lib/cards'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'

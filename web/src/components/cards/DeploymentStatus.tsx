@@ -8,16 +8,8 @@ import { CardControls } from '../ui/CardControls'
 import { Skeleton } from '../ui/Skeleton'
 import type { Deployment } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
-import {
-  useCardData,
-  useCardFilters,
-  useStatusFilter,
-  commonComparators,
-  CardClusterFilter,
-  CardSearchInput,
-  CardAIActions,
-  type SortDirection,
-} from '../../lib/cards'
+import { CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards/CardComponents'
+import { useCardData, useCardFilters, useStatusFilter, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'

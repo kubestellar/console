@@ -9,7 +9,7 @@
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck, Sparkles, Loader2 } from 'lucide-react'
 import { ProgressRing } from '../ui/ProgressRing'
-import { CardSearchInput } from '../../lib/cards'
+import { CardSearchInput } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'

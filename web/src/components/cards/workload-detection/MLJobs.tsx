@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CardClusterFilter, CardSearchInput } from '../../../lib/cards'
+import { CardClusterFilter, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
 import { useCardData } from '../../../lib/cards/cardHooks'

@@ -3,7 +3,7 @@ import {
   ExternalLink, Cpu, Layers, AlertCircle, Play, Pause, RefreshCw,
   ChevronDown, Server, Activity, Network, Box
 } from 'lucide-react'
-import { CardClusterFilter, CardSearchInput } from '../../../lib/cards'
+import { CardClusterFilter, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'

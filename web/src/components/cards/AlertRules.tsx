@@ -12,13 +12,8 @@ import type { AlertRule, AlertSeverity } from '../../types/alerts'
 import { Button } from '../ui/Button'
 import { AlertRuleEditor } from '../alerts/AlertRuleEditor'
 import { StatusBadge } from '../ui/StatusBadge'
-import {
-  useCardData,
-  commonComparators,
-  CardSearchInput,
-  CardControlsRow,
-  CardPaginationFooter,
-} from '../../lib/cards'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'

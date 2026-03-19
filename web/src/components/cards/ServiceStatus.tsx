@@ -5,10 +5,8 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
-import {
-  useCardData,
-  CardSearchInput, CardControlsRow, CardPaginationFooter,
-} from '../../lib/cards'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'type' | 'name' | 'namespace' | 'ports'

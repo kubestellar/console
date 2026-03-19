@@ -18,14 +18,8 @@ import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import {
-  useCardData,
-  commonComparators,
-  CardSearchInput,
-  CardControlsRow,
-  CardPaginationFooter,
-  type SortDirection,
-} from '../../lib/cards'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 

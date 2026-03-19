@@ -4,12 +4,8 @@ import {
   ChevronDown, ChevronRight, Search as SearchIcon,
   Star, X, Loader2
 } from 'lucide-react'
-import {
-  useCardData,
-  commonComparators,
-  CardControlsRow,
-  CardPaginationFooter,
-} from '../../lib/cards'
+import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'

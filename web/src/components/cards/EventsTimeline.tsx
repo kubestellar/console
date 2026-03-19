@@ -16,7 +16,7 @@ import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { CardClusterFilter } from '../../lib/cards'
+import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {

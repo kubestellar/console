@@ -7,12 +7,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
-import {
-  useCardData,
-  useCardFilters,
-  commonComparators,
-  type SortDirection,
-} from '../../lib/cards'
+import { useCardData, useCardFilters, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import {
   CardSearchInput,
   CardControlsRow,

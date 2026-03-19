@@ -83,14 +83,15 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           if (!id.includes('node_modules')) return
-          // React ecosystem must stay together (shared hooks/context internals)
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/')) {
+          // React ecosystem must stay together (shared hooks/context internals).
+          // react-reconciler is a React internal used by @react-three — keep it
+          // here to avoid circular dep between vendor ↔ three-vendor.
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/') || id.includes('/react-reconciler/')) {
             return 'react-vendor'
           }
-          // 3D engine + its deps (only used by globe animation + KubeCraft)
-          if (id.includes('/three/') || id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/its-fine/') || id.includes('/react-reconciler/') || id.includes('/react-use-measure/') || id.includes('/suspend-react/')) {
-            return 'three-vendor'
-          }
+          // 3D engine — no longer in a separate chunk because shared deps
+          // (zustand, react-reconciler) create circular deps with vendor.
+          // Falls through to the vendor chunk instead.
           // Charting libraries
           if (id.includes('/echarts/') || id.includes('/echarts-for-react/') || id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
             return 'charts-vendor'
@@ -104,7 +105,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) {
             return 'ui-vendor'
           }
-          // Markdown rendering — only loaded when the AI mission sidebar is open
+          // Markdown rendering — only loaded when the AI mission sidebar is open.
+          // Includes the full unified/remark/rehype ecosystem to avoid circular
+          // deps with the vendor chunk.
           if (
             id.includes('/react-markdown/') ||
             id.includes('/remark-') ||
@@ -113,12 +116,21 @@ export default defineConfig(({ mode }) => ({
             id.includes('/mdast-') ||
             id.includes('/hast-') ||
             id.includes('/unist-') ||
+            id.includes('/unified/') ||
+            id.includes('/bail/') ||
+            id.includes('/is-plain-obj/') ||
+            id.includes('/trough/') ||
             id.includes('/vfile') ||
             id.includes('/property-information') ||
             id.includes('/zwitch') ||
             id.includes('/stringify-entities') ||
             id.includes('/ccount') ||
-            id.includes('/character-entities')
+            id.includes('/character-entities') ||
+            id.includes('/comma-separated-tokens') ||
+            id.includes('/space-separated-tokens') ||
+            id.includes('/decode-named-character-reference') ||
+            id.includes('/devlop') ||
+            id.includes('/estree-')
           ) {
             return 'markdown-vendor'
           }

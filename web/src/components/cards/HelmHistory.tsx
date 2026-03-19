@@ -8,10 +8,8 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
-import {
-  useCardData,
-  CardSearchInput, CardControlsRow, CardPaginationFooter,
-} from '../../lib/cards'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { HelmHistoryDetailModal } from './deploy/HelmHistoryDetailModal'
 
