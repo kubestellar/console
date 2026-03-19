@@ -3,7 +3,7 @@ import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
 
 export interface ResolvedDependency {
   kind: string
@@ -28,7 +28,7 @@ function authHeaders(): Record<string, string> {
 }
 
 /** Fetch a JSON endpoint from the local agent with timeout. */
-async function agentFetch(path: string, timeout = 15000): Promise<Record<string, unknown>> {
+async function agentFetch(path: string, timeout = MCP_HOOK_TIMEOUT_MS): Promise<Record<string, unknown>> {
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), timeout)
   try {
@@ -62,14 +62,19 @@ async function resolveViaAgent(
 
   const params = `cluster=${encodeURIComponent(context)}&namespace=${encodeURIComponent(namespace)}`
 
-  // Fetch namespace resources in parallel
-  const [configmaps, secrets, serviceaccounts, services, pvcs, hpas] = await Promise.allSettled([
+  // Fetch namespace resources in parallel — includes all agent-supported kinds
+  const [
+    configmaps, secrets, serviceaccounts, services, pvcs, hpas,
+    ingresses, networkpolicies,
+  ] = await Promise.allSettled([
     agentFetch(`/configmaps?${params}`),
     agentFetch(`/secrets?${params}`),
     agentFetch(`/serviceaccounts?${params}`),
     agentFetch(`/services?${params}`),
     agentFetch(`/pvcs?${params}`),
     agentFetch(`/hpas?${params}`),
+    agentFetch(`/ingresses?${params}`),
+    agentFetch(`/networkpolicies?${params}`),
   ])
 
   const deps: ResolvedDependency[] = []
@@ -100,6 +105,8 @@ async function resolveViaAgent(
   extract(services, 'services', 'Service')
   extract(pvcs, 'pvcs', 'PersistentVolumeClaim')
   extract(hpas, 'hpas', 'HorizontalPodAutoscaler')
+  extract(ingresses, 'ingresses', 'Ingress')
+  extract(networkpolicies, 'networkpolicies', 'NetworkPolicy')
 
   return {
     workload: name,
@@ -144,6 +151,10 @@ export function useResolveDependencies() {
           { kind: 'Service', name: name, namespace, optional: false, order: 3 },
           { kind: 'HorizontalPodAutoscaler', name: `${name}-hpa`, namespace, optional: true, order: 4 },
           { kind: 'PersistentVolumeClaim', name: `${name}-data`, namespace, optional: true, order: 5 },
+          { kind: 'NetworkPolicy', name: `${name}-netpol`, namespace, optional: true, order: 6 },
+          { kind: 'StorageClass', name: 'fast-ssd', namespace, optional: true, order: 7 },
+          { kind: 'ResourceQuota', name: `${namespace}-quota`, namespace, optional: true, order: 8 },
+          { kind: 'PriorityClass', name: 'high-priority', namespace, optional: true, order: 9 },
         ],
         warnings: [],
       }

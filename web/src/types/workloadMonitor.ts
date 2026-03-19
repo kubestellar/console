@@ -23,6 +23,9 @@ export type ResourceCategory =
   | 'storage'
   | 'crd'
   | 'admission'
+  | 'governance'
+  | 'scheduling'
+  | 'observability'
   | 'other'
 
 /** A Kubernetes resource being monitored with its health status */

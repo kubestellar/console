@@ -19,6 +19,10 @@ import {
   Server,
   Blocks,
   ShieldAlert,
+  Database,
+  Scale,
+  ArrowUpDown,
+  Activity,
 } from 'lucide-react'
 import type { ResourceCategory } from '../types/workloadMonitor'
 
@@ -43,7 +47,10 @@ export const DEP_CATEGORIES: DependencyCategory[] = [
   { label: 'Configuration', kinds: ['ConfigMap', 'Secret'], icon: FileText, category: 'config' },
   { label: 'Networking', kinds: ['Service', 'Ingress', 'NetworkPolicy'], icon: Network, category: 'networking' },
   { label: 'Scaling & Availability', kinds: ['HorizontalPodAutoscaler', 'PodDisruptionBudget'], icon: Gauge, category: 'scaling' },
-  { label: 'Storage', kinds: ['PersistentVolumeClaim'], icon: HardDrive, category: 'storage' },
+  { label: 'Storage', kinds: ['PersistentVolumeClaim', 'StorageClass'], icon: HardDrive, category: 'storage' },
+  { label: 'Governance', kinds: ['ResourceQuota', 'LimitRange'], icon: Scale, category: 'governance' },
+  { label: 'Scheduling', kinds: ['PriorityClass'], icon: ArrowUpDown, category: 'scheduling' },
+  { label: 'Observability', kinds: ['ServiceMonitor', 'PodMonitor', 'PrometheusRule'], icon: Activity, category: 'observability' },
   { label: 'Custom Resources', kinds: ['CustomResourceDefinition'], icon: Blocks, category: 'crd' },
   { label: 'Admission Control', kinds: ['ValidatingWebhookConfiguration', 'MutatingWebhookConfiguration'], icon: ShieldAlert, category: 'admission' },
 ]
@@ -67,6 +74,13 @@ export const KIND_ICONS: Record<string, LucideIcon> = {
   HorizontalPodAutoscaler: Gauge,
   PodDisruptionBudget: Shield,
   PersistentVolumeClaim: HardDrive,
+  StorageClass: Database,
+  ResourceQuota: Scale,
+  LimitRange: Scale,
+  PriorityClass: ArrowUpDown,
+  ServiceMonitor: Activity,
+  PodMonitor: Activity,
+  PrometheusRule: Activity,
   CustomResourceDefinition: Blocks,
   ValidatingWebhookConfiguration: ShieldAlert,
   MutatingWebhookConfiguration: ShieldAlert,
