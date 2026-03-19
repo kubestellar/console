@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   Search, X, Upload, Filter, Grid3X3, List, Sparkles, CheckCircle,
-  Loader2, Plus, Trash2, ExternalLink, RefreshCw,
+  Loader2, Plus, ExternalLink, RefreshCw,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
@@ -1283,6 +1283,17 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                       selectedPath={selectedPath}
                       onToggle={toggleNode}
                       onSelect={selectNode}
+                      onRemove={node.id === 'github' ? (child) => {
+                        const updated = watchedRepos.filter(r => r !== child.path)
+                        setWatchedRepos(updated)
+                        saveWatchedRepos(updated)
+                        showToast(`Removed repository "${child.path}"`, 'info')
+                      } : node.id === 'local' ? (child) => {
+                        const updated = watchedPaths.filter(p => p !== child.path)
+                        setWatchedPaths(updated)
+                        saveWatchedPaths(updated)
+                        showToast(`Removed path "${child.path}"`, 'info')
+                      } : undefined}
                     />
                   </div>
                   {/* Add button for repos and local */}
@@ -1365,64 +1376,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     </form>
                   </div>
                 )}
-
-                {/* Remove buttons for watched children */}
-                {node.id === 'github' && expandedNodes.has('github') && node.children?.map((child) => (
-                  watchedRepos.includes(child.path) ? (
-                    <div key={`remove-${child.id}`} className="flex items-center ml-6">
-                      <div className="flex-1 min-w-0">
-                        <TreeNodeItem
-                          node={child}
-                          depth={1}
-                          expandedNodes={expandedNodes}
-                          selectedPath={selectedPath}
-                          onToggle={toggleNode}
-                          onSelect={selectNode}
-                        />
-                      </div>
-                      <button
-                        onClick={() => {
-                          const updated = watchedRepos.filter(r => r !== child.path)
-                          setWatchedRepos(updated)
-                          saveWatchedRepos(updated)
-                          showToast(`Removed repository "${child.path}"`, 'info')
-                        }}
-                        className="p-2 min-h-11 min-w-11 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0"
-                        title="Remove from watched"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : null
-                ))}
-                {node.id === 'local' && expandedNodes.has('local') && node.children?.map((child) => (
-                  watchedPaths.includes(child.path) ? (
-                    <div key={`remove-${child.id}`} className="flex items-center ml-6">
-                      <div className="flex-1 min-w-0">
-                        <TreeNodeItem
-                          node={child}
-                          depth={1}
-                          expandedNodes={expandedNodes}
-                          selectedPath={selectedPath}
-                          onToggle={toggleNode}
-                          onSelect={selectNode}
-                        />
-                      </div>
-                      <button
-                        onClick={() => {
-                          const updated = watchedPaths.filter(p => p !== child.path)
-                          setWatchedPaths(updated)
-                          saveWatchedPaths(updated)
-                          showToast(`Removed path "${child.path}"`, 'info')
-                        }}
-                        className="p-2 min-h-11 min-w-11 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0"
-                        title="Remove from watched"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : null
-                ))}
               </div>
             ))}
           </div>
