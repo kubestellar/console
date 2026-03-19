@@ -511,7 +511,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                         const hasVC = vcStatus?.hasCRD
                         return (
                           <option key={c.context || c.name} value={c.context || c.name}>
-                            {hasVC ? '🔮 ' : ''}{c.name}{hasVC ? ` (🔮 v${vcStatus?.version || '?'}, ${vcStatus?.instances || 0} instances)` : ''}{c.context && c.context !== c.name ? ` — ${c.context}` : ''}
+                            {c.name}{hasVC ? ` (🔮 v${vcStatus?.version || '?'}, ${vcStatus?.instances || 0} instances)` : ''}{c.context && c.context !== c.name ? ` — ${c.context}` : ''}
                           </option>
                         )
                       })}
