@@ -495,12 +495,14 @@ export function useLocalClusterTools() {
       fetchTools()
       fetchClusters()
       fetchVClusters()
+      fetchVClusterClusterStatus()
     } else {
       setTools([])
       setClusters([])
       setVclusterInstances([])
+      setVclusterClusterStatus([])
     }
-  }, [isConnected, isDemoMode, fetchTools, fetchClusters, fetchVClusters])
+  }, [isConnected, isDemoMode, fetchTools, fetchClusters, fetchVClusters, fetchVClusterClusterStatus])
 
   // Auto-refresh cluster list when a create/delete operation completes
   useEffect(() => {

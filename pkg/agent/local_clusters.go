@@ -597,32 +597,43 @@ func (m *LocalClusterManager) CheckVClusterOnCluster(context string) (*VClusterC
 		Name:    context,
 	}
 
-	// Check for vCluster CRD
-	cmd := execCommand("kubectl", "--context", context, "get", "crd", "virtualclusters.storage.loft.sh", "-o", "jsonpath={.metadata.name}")
+	// Check for vCluster by looking for vcluster pods (works with v0.20+ which
+	// doesn't use CRDs) and also check for legacy CRDs (vCluster Platform)
+	cmd := execCommand("kubectl", "--context", context, "get", "statefulset", "-n", "vcluster", "-l", "app=vcluster", "-o", "jsonpath={.items[*].metadata.name}")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil && strings.TrimSpace(stdout.String()) != "" {
-		status.HasCRD = true
+		status.HasCRD = true // reusing field name — means "vCluster is installed"
 	}
 
-	// If CRD exists, get version from the CRD labels and list instances
+	// Also check for legacy CRD (vCluster Platform)
+	if !status.HasCRD {
+		cmd = execCommand("kubectl", "--context", context, "get", "crd", "virtualclusters.storage.loft.sh", "-o", "jsonpath={.metadata.name}")
+		var crdOut bytes.Buffer
+		cmd.Stdout = &crdOut
+		if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil && strings.TrimSpace(crdOut.String()) != "" {
+			status.HasCRD = true
+		}
+	}
+
 	if status.HasCRD {
-		// Get version from Helm release
-		cmd = execCommand("kubectl", "--context", context, "get", "pods", "-n", "vcluster", "-l", "app=vcluster", "-o", "jsonpath={.items[0].metadata.labels.chart}")
+		// Get version from vcluster pod image tag
+		cmd = execCommand("kubectl", "--context", context, "get", "pods", "-n", "vcluster", "-l", "app=vcluster", "-o", "jsonpath={.items[0].spec.containers[0].image}")
 		var verOut bytes.Buffer
 		cmd.Stdout = &verOut
 		if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil {
-			ver := strings.TrimSpace(verOut.String())
-			re := regexp.MustCompile(`v?([\d.]+)`)
-			if matches := re.FindStringSubmatch(ver); len(matches) > 1 {
+			image := strings.TrimSpace(verOut.String())
+			// Extract version from image tag (e.g., "ghcr.io/loft-sh/vcluster:0.23.0")
+			re := regexp.MustCompile(`v?([\d]+\.[\d]+\.[\d]+)`)
+			if matches := re.FindStringSubmatch(image); len(matches) > 1 {
 				status.Version = matches[1]
 			}
 		}
 
-		// List vCluster instances via kubectl
-		cmd = execCommand("kubectl", "--context", context, "get", "virtualclusters.storage.loft.sh", "-A", "-o", "jsonpath={range .items[*]}{.metadata.name},{.metadata.namespace},{.status.phase}{\"\\n\"}{end}")
+		// List vCluster instances by finding StatefulSets with app=vcluster
+		cmd = execCommand("kubectl", "--context", context, "get", "statefulset", "-A", "-l", "app=vcluster", "-o", "jsonpath={range .items[*]}{.metadata.name},{.metadata.namespace},{.status.readyReplicas}/{.status.replicas}{\"\\n\"}{end}")
 		var listOut bytes.Buffer
 		cmd.Stdout = &listOut
 		if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil {
