@@ -273,25 +273,32 @@ export function useLocalClusterTools() {
     }
   }, [isConnected, isDemoMode])
 
-  // Check which clusters have vCluster CRDs installed
-  const fetchVClusterClusterStatus = useCallback(async () => {
-    if (!isConnected) {
-      setVclusterClusterStatus([])
-      return
-    }
+  // Check if a specific cluster has vCluster installed (on-demand per cluster)
+  const checkVClusterOnCluster = useCallback(async (context: string) => {
+    if (!isConnected || !context) return
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/check`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/check?context=${encodeURIComponent(context)}`, {
         signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS),
       })
       if (response.ok) {
         const data = await response.json()
-        setVclusterClusterStatus(data.clusters || [])
+        setVclusterClusterStatus(prev => {
+          // Replace or add the status for this context
+          const filtered = (prev || []).filter(s => s.context !== context)
+          return [...filtered, data]
+        })
       }
     } catch (err) {
-      console.error('Failed to check vCluster cluster status:', err)
+      console.error(`Failed to check vCluster on ${context}:`, err)
     }
   }, [isConnected])
+
+  // Backwards-compatible: scan all healthy clusters (but one at a time, non-blocking)
+  const fetchVClusterClusterStatus = useCallback(async () => {
+    // No-op: individual checks happen on-demand via checkVClusterOnCluster
+    // This prevents the slow sequential scan of all contexts
+  }, [])
 
   // Create a new vCluster
   const createVCluster = useCallback(async (name: string, namespace: string): Promise<CreateClusterResult> => {
@@ -533,6 +540,7 @@ export function useLocalClusterTools() {
     // vCluster state and actions
     vclusterInstances,
     vclusterClusterStatus,
+    checkVClusterOnCluster,
     isConnecting,
     isDisconnecting,
     createVCluster,

@@ -110,6 +110,7 @@ export function LocalClustersSection() {
     // vCluster state and actions
     vclusterInstances,
     vclusterClusterStatus,
+    checkVClusterOnCluster,
     isConnecting,
     isDisconnecting,
     createVCluster,
@@ -501,7 +502,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                     <label className="text-xs text-muted-foreground font-medium">Host Cluster</label>
                     <select
                       value={vclusterHostCluster}
-                      onChange={(e) => setVclusterHostCluster(e.target.value)}
+                      onChange={(e) => { setVclusterHostCluster(e.target.value); if (e.target.value) checkVClusterOnCluster(e.target.value) }}
                       className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     >
                       <option value="" disabled>Select a host cluster...</option>
