@@ -727,6 +727,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
         }
 
+        const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
+        const lastMsg = m.messages[m.messages.length - 1]
+        const DEDUP_PREFIX_LEN = 100
+        // Skip adding result message if the content was already received via streaming
+        const alreadyStreamed = lastMsg?.role === 'assistant' &&
+          resultContent.length > 0 &&
+          lastMsg.content.includes(resultContent.slice(0, DEDUP_PREFIX_LEN))
+
         return {
           ...m,
           status: 'waiting_input' as MissionStatus,
@@ -734,12 +742,12 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           updatedAt: new Date(),
           agent: chatPayload.agent || m.agent,
           tokenUsage,
-          messages: [
+          messages: alreadyStreamed ? m.messages : [
             ...m.messages,
             {
               id: `msg-${Date.now()}`,
               role: 'assistant' as const,
-              content: chatPayload.content || (payload as { output?: string }).output || 'Task completed.',
+              content: resultContent,
               timestamp: new Date(),
               agent: chatPayload.agent || m.agent,
             }
