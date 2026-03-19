@@ -88,7 +88,12 @@
   status = 200
   force = false
 
-# Headers for security and caching
+# Headers for security and caching.
+# Cache-Control: no-cache is set here for all routes so that SPA paths like
+# /clusters (served as index.html via the /* rewrite) are always revalidated
+# after a deploy. Netlify matches headers against the request path, not the
+# served file, so the /*.html rule below does NOT cover /clusters etc.
+# The /assets/* rule (below) overrides this with immutable for hashed bundles.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -99,7 +104,10 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     X-XSS-Protection = "1; mode=block"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.google-analytics.com https://*.googleapis.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io wss:; frame-ancestors 'none'"
+    Cache-Control = "no-cache"
 
+# Versioned JS/CSS assets have content-hashed filenames — safe to cache forever.
+# This rule appears after /* so Netlify uses this value (last match wins) for /assets/*.
 [[headers]]
   for = "/assets/*"
   [headers.values]
