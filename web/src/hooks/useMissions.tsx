@@ -5,6 +5,7 @@ import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved'
 
@@ -993,6 +994,36 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   const runSavedMission = useCallback((missionId: string, cluster?: string) => {
     const mission = missions.find(m => m.id === missionId)
     if (!mission || mission.status !== 'saved') return
+
+    // Re-validate imported mission content before execution to catch
+    // malicious payloads that may have been modified after initial import scan
+    if (mission.importedFrom?.steps) {
+      const syntheticExport = {
+        version: 'kc-mission-v1',
+        title: mission.importedFrom.title || mission.title,
+        description: mission.importedFrom.description || mission.description,
+        type: mission.type,
+        tags: mission.importedFrom.tags || [],
+        steps: mission.importedFrom.steps.map(s => ({
+          title: s.title,
+          description: s.description,
+        })),
+      }
+      const findings = scanForMaliciousContent(syntheticExport)
+      if (findings.length > 0) {
+        setMissions(prev => prev.map(m => m.id === missionId ? {
+          ...m,
+          status: 'failed' as const,
+          messages: [...m.messages, {
+            id: `msg-${Date.now()}`,
+            role: 'system' as const,
+            content: `**Mission blocked:** Imported mission contains potentially unsafe content:\n\n${findings.map(f => `- ${f.message}: \`${f.match}\` (in ${f.location})`).join('\n')}\n\nPlease review and edit the mission before running.`,
+            timestamp: new Date(),
+          }]
+        } : m))
+        return
+      }
+    }
 
     const basePrompt = mission.importedFrom?.steps
       ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n')}`
