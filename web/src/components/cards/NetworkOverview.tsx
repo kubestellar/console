@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next'
 export function NetworkOverview() {
   const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { services, isLoading: servicesLoading, isDemoFallback, consecutiveFailures, isFailed } = useCachedServices()
+  const { services, isLoading: servicesLoading, isRefreshing, isDemoFallback, consecutiveFailures, isFailed } = useCachedServices()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
@@ -21,6 +21,7 @@ export function NetworkOverview() {
   const combinedLoading = isLoading || servicesLoading
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: combinedLoading,
+    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: services.length > 0,
     isFailed,
