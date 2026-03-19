@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Loader2, Database } from 'lucide-react'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
@@ -287,6 +287,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
   const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
   const [compiling, setCompiling] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const cleanupRef = useRef<(() => void) | undefined>()
 
   useEffect(() => {
     let cancelled = false
@@ -325,12 +326,17 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
         return
       }
 
+      cleanupRef.current = componentResult.cleanup
       setCardComponent(() => componentResult.component)
       setCompiling(false)
     }
 
     compile()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      // Clean up any timers the card created
+      cleanupRef.current?.()
+    }
   }, [definition.sourceCode, definition.compiledCode])
 
   if (compiling) {

@@ -114,4 +114,6 @@ export interface DynamicComponentResult {
   component: ComponentType<CardComponentProps> | null
   /** Error message (if compilation or evaluation failed) */
   error: string | null
+  /** Cleanup function to clear sandboxed timers on unmount */
+  cleanup?: () => void
 }

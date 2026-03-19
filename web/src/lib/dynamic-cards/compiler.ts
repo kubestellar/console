@@ -13,8 +13,10 @@ const BLOCKED_GLOBALS = [
   'eval', 'Function', 'importScripts',
   'localStorage', 'sessionStorage', 'indexedDB', 'caches',
   'navigator', 'location', 'history',
-  // setTimeout/setInterval/clearTimeout/clearInterval are provided as safe
-  // wrappers via getDynamicScope() — NOT blocked here.
+  // Timer APIs: listed for fail-closed safety. Safe wrappers in getDynamicScope()
+  // override these via the `if (!(name in scope))` guard in the merge loop below.
+  // If the wrappers are ever removed from scope, these fall back to blocking.
+  'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
   'requestAnimationFrame',
   'postMessage', 'crypto',
 ] as const
@@ -51,6 +53,10 @@ export async function compileCardCode(tsx: string): Promise<CompileResult> {
 export function createCardComponent(compiledCode: string): DynamicComponentResult {
   try {
     const scope = getDynamicScope()
+
+    // Extract the timer cleanup function before freezing
+    const timerCleanup = scope.__timerCleanup as (() => void) | undefined
+    delete scope.__timerCleanup
 
     // Freeze each scope value that is an object to prevent prototype pollution
     // (shallow freeze — we freeze the scope map itself, not deep internals of React)
@@ -89,7 +95,7 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
       }
     }
 
-    return { component, error: null }
+    return { component, error: null, cleanup: timerCleanup }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { component: null, error: `Runtime error: ${message}` }
