@@ -511,7 +511,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                         const hasVC = vcStatus?.hasCRD
                         return (
                           <option key={c.context || c.name} value={c.context || c.name}>
-                            {hasVC ? '✅ ' : ''}{c.name}{hasVC ? ` (vCluster v${vcStatus?.version || '?'}, ${vcStatus?.instances || 0} instances)` : ''}{c.context && c.context !== c.name ? ` — ${c.context}` : ''}
+                            {hasVC ? '🔮 ' : ''}{c.name}{hasVC ? ` (🔮 v${vcStatus?.version || '?'}, ${vcStatus?.instances || 0} instances)` : ''}{c.context && c.context !== c.name ? ` — ${c.context}` : ''}
                           </option>
                         )
                       })}
@@ -523,8 +523,8 @@ After installation, the user can create virtual clusters on this host cluster fr
                       const displayName = (healthyClusters || []).find(c => (c.context || c.name) === vclusterHostCluster)?.name || vclusterHostCluster
                       if (vcStatus?.hasCRD) {
                         return (
-                          <span className="flex items-center gap-2 px-3 py-2 text-xs text-green-400 font-medium">
-                            ✅ vCluster v{vcStatus.version || '?'} ready ({vcStatus.instances} instance{vcStatus.instances !== 1 ? 's' : ''})
+                          <span className="flex items-center gap-2 px-3 py-2 text-xs text-purple-400 font-medium">
+                            🔮 vCluster v{vcStatus.version || '?'} ready ({vcStatus.instances} instance{vcStatus.instances !== 1 ? 's' : ''})
                           </span>
                         )
                       }
