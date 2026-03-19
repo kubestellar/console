@@ -13,7 +13,7 @@
  * block it, in which case the custom proxy fallback kicks in.
  */
 
-import { STORAGE_KEY_ANALYTICS_OPT_OUT } from './constants'
+import { STORAGE_KEY_ANALYTICS_OPT_OUT, STORAGE_KEY_ANONYMOUS_USER_ID } from './constants'
 import { CHUNK_RELOAD_TS_KEY, isChunkLoadMessage } from './chunkErrors'
 import { isDemoMode } from './demoMode'
 
@@ -689,9 +689,29 @@ async function hashUserId(uid: string): Promise<string> {
     .join('')
 }
 
+/**
+ * Get or create a persistent anonymous user ID for demo/unauthenticated users.
+ * Stored in localStorage so the same browser always gets the same ID.
+ * This ensures GA4 receives a unique user_id for every user — mixing
+ * identified and anonymous sessions causes GA4 to delete data.
+ */
+function getOrCreateAnonymousId(): string {
+  let anonId = localStorage.getItem(STORAGE_KEY_ANONYMOUS_USER_ID)
+  if (!anonId) {
+    anonId = crypto.randomUUID()
+    localStorage.setItem(STORAGE_KEY_ANONYMOUS_USER_ID, anonId)
+  }
+  return anonId
+}
+
 export async function setAnalyticsUserId(uid: string) {
-  if (!uid || uid === 'demo-user') return
-  userId = await hashUserId(uid)
+  // For demo/anonymous users, assign a persistent random ID so GA4 sees
+  // consistent user_id on every session. Without this, GA4's mixed
+  // identified/anonymous user model triggers data deletion.
+  const effectiveUid = (!uid || uid === 'demo-user')
+    ? getOrCreateAnonymousId()
+    : uid
+  userId = await hashUserId(effectiveUid)
   // Propagate to gtag if available
   if (gtagAvailable && window.gtag && realMeasurementId) {
     window.gtag('config', realMeasurementId, { user_id: userId })

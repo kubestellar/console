@@ -169,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(demoUser)
     cacheUser(demoUser)
+    setAnalyticsUserId(demoUser.id)
     setAnalyticsUserProperties({ auth_mode: 'demo' })
     // Sync the global demoMode singleton so Layout banners and useDemoMode() hook
     // reflect demo state immediately — without this, the in-cluster banner won't
