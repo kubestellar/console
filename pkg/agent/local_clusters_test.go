@@ -37,15 +37,21 @@ func TestLocalClusterManager(t *testing.T) {
 		if name == "minikube" && arg[1] == "profile" && arg[2] == "list" {
 			return exec.Command("echo", `{"valid": [{"Name": "minikube"}]}`)
 		}
+		if name == "vcluster" && arg[0] == "version" {
+			return exec.Command("echo", "vcluster version 0.19.0")
+		}
 		return exec.Command("echo", "ok")
 	}
+
+	// expectedToolCount covers kind, k3d, minikube, and vcluster
+	const expectedToolCount = 4
 
 	m := NewLocalClusterManager(nil)
 
 	// 2. Test DetectTools
 	tools := m.DetectTools()
-	if len(tools) != 3 {
-		t.Errorf("Expected 3 tools, got %d", len(tools))
+	if len(tools) != expectedToolCount {
+		t.Errorf("Expected %d tools, got %d", expectedToolCount, len(tools))
 	}
 
 	// 3. Test ListClusters
