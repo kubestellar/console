@@ -73,6 +73,11 @@ const ALERTS_KEY = 'kc_alerts'
 /** Minimum time (ms) between repeat notifications for the same alert */
 const NOTIFICATION_COOLDOWN_MS = 300_000 // 5 minutes
 
+/** Condition types that represent persistent cluster-level errors.
+ *  These fire only once and suppress until the cluster recovers —
+ *  no 5-minute cooldown repeat for ongoing connectivity failures. */
+const PERSISTENT_CLUSTER_CONDITIONS = new Set(['certificate_error', 'cluster_unreachable'])
+
 /** Maximum age (ms) for dedup entries — evict stale entries older than this */
 const NOTIFICATION_DEDUP_MAX_AGE_MS = 86_400_000 // 24 hours
 
@@ -1106,9 +1111,14 @@ Please provide:
           )
 
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          const isPersistent = PERSISTENT_CLUSTER_CONDITIONS.has(rule.condition.type)
+          const alreadyNotified = notifiedAlertKeysRef.current.has(notifKey)
+          const cooldownExpired = !alreadyNotified || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS
+          // Persistent cluster errors: notify once, suppress until recovery.
+          // Transient alerts: use the standard 5-minute cooldown.
+          const shouldNotify = isPersistent ? !alreadyNotified : cooldownExpired
           if (
-            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
+            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) && shouldNotify
           ) {
             notifiedAlertKeysRef.current.set(notifKey, Date.now())
             sendNotificationWithDeepLink(
@@ -1118,7 +1128,9 @@ Please provide:
             )
           }
         } else {
-          // Auto-resolve if cert error clears
+          // Auto-resolve if cert error clears — also clear dedup so next failure re-notifies
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          notifiedAlertKeysRef.current.delete(notifKey)
           setAlerts(prev => {
             const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
             if (firingAlert) {
@@ -1164,9 +1176,12 @@ Please provide:
           )
 
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          const isPersistent = PERSISTENT_CLUSTER_CONDITIONS.has(rule.condition.type)
+          const alreadyNotified = notifiedAlertKeysRef.current.has(notifKey)
+          const cooldownExpired = !alreadyNotified || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS
+          const shouldNotify = isPersistent ? !alreadyNotified : cooldownExpired
           if (
-            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) &&
-            (!notifiedAlertKeysRef.current.has(notifKey) || (Date.now() - (notifiedAlertKeysRef.current.get(notifKey) ?? 0)) > NOTIFICATION_COOLDOWN_MS)
+            rule.channels?.some(ch => ch.type === 'browser' && ch.enabled) && shouldNotify
           ) {
             notifiedAlertKeysRef.current.set(notifKey, Date.now())
             sendNotificationWithDeepLink(
@@ -1176,7 +1191,9 @@ Please provide:
             )
           }
         } else if (cluster.reachable !== false) {
-          // Auto-resolve when cluster becomes reachable again
+          // Auto-resolve when cluster becomes reachable — clear dedup so next failure re-notifies
+          const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
+          notifiedAlertKeysRef.current.delete(notifKey)
           setAlerts(prev => {
             const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
             if (firingAlert) {
