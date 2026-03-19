@@ -193,7 +193,7 @@ function parsePropagationPolicy(item: CRItem): KarmadaPropagationPolicy {
 }
 
 function parseBindingStatus(raw: unknown): KarmadaBindingStatus {
-  const known: KarmadaBindingStatus[] = ['Scheduled', 'Fullyscheduable', 'Binding', 'Bound', 'Failed']
+  const known: KarmadaBindingStatus[] = ['Scheduled', 'FullySchedulable', 'Binding', 'Bound', 'Failed']
   const str = String(raw ?? '')
   return known.includes(str as KarmadaBindingStatus) ? (str as KarmadaBindingStatus) : 'Unknown'
 }
@@ -213,8 +213,8 @@ function parseResourceBinding(item: CRItem): KarmadaResourceBinding {
     if (rawCond.type === 'Scheduled') {
       bindingStatus = rawCond.status === 'True' ? 'Scheduled' : 'Failed'
     }
-    if (rawCond.type === 'Fullyscheduable' && rawCond.status === 'True') {
-      bindingStatus = 'Fullyscheduable'
+    if (rawCond.type === 'FullySchedulable' && rawCond.status === 'True') {
+      bindingStatus = 'FullySchedulable'
     }
     if (rawCond.type === 'Applied' && rawCond.status === 'True') {
       bindingStatus = 'Bound'

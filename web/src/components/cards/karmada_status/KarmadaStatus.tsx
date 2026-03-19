@@ -42,7 +42,7 @@ function bindingStatusColor(status: KarmadaBindingStatus): string {
   switch (status) {
     case 'Bound': return 'text-green-400'
     case 'Scheduled':
-    case 'Fullyscheduable': return 'text-blue-400'
+    case 'FullySchedulable': return 'text-blue-400'
     case 'Binding': return 'text-yellow-400'
     case 'Failed': return 'text-red-400'
     default: return 'text-muted-foreground'
