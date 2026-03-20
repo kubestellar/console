@@ -218,7 +218,7 @@ ${wrapOpen}
           <span style={{...styles.statusDot, backgroundColor: failing > 0 ? '#ef4444' : '#22c55e'}} />
           Nightly E2E Status
         </div>
-        <div style={{display: 'flex', gap: '16px', marginBottom: '10px'}}>
+        <div style={{display: 'flex', gap: '16px', marginBottom: '8px'}}>
           <div>
             <div style={{fontSize: '20px', fontWeight: 700, color: '#a855f7'}}>{passRate}%</div>
             <div style={{fontSize: '10px', color: '#9ca3af'}}>Pass Rate</div>
@@ -236,8 +236,8 @@ ${wrapOpen}
           const platGuides = guides.filter(g => g.platform === platform);
           if (platGuides.length === 0) return null;
           return (
-            <div key={platform} style={{marginBottom: '6px'}}>
-              <div style={{color: platformColors[platform], fontWeight: 600, fontSize: '10px', marginBottom: '2px'}}>{platform}</div>
+            <div key={platform} style={{marginBottom: '8px'}}>
+              <div style={{color: platformColors[platform], fontWeight: 600, fontSize: '10px', marginBottom: '4px'}}>{platform}</div>
               {platGuides.map(g => {
                 const workflowUrl = 'https://github.com/' + g.repo + '/actions/workflows/' + g.workflowFile;
                 const runs = (g.runs || []).slice(0, 7);
@@ -260,7 +260,7 @@ ${wrapOpen}
                   (failed > 0 ? 'Failed: ' + failed + '\\n' : '') +
                   (lastRun ? 'Last run: ' + (lastRun.conclusion || lastRun.status) + ' ' + timeAgo(lastRun.updatedAt || lastRun.createdAt) : '');
                 return (
-                <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}}>
+                <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px'}}>
                   <span className="tip-wrap" style={{width: '28px', fontSize: '10px', fontWeight: 600, color: '#94a3b8', cursor: 'pointer'}} onClick={() => run(\`open "\${workflowUrl}"\`)}>
                     <span className="tip">{tooltip}</span>
                     {g.acronym}
