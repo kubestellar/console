@@ -773,12 +773,33 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         let errorContent = payload.message || 'Unknown error'
         if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
           errorContent = `${payload.message}\n\n[Configure API Keys →](/settings)\n\nAdd your API key for Claude, OpenAI, or Gemini to use AI missions.`
+        } else if (payload.code === 'authentication_error') {
+          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Run `/login` in your Claude Code terminal to refresh your OAuth token, or update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
         } else if (payload.code === 'mission_timeout') {
           errorContent = `**Mission Timed Out**\n\n${payload.message}\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
         }
 
-        // Detect rate limit / quota errors from the AI provider (HTTP 429)
+        // Pattern-match common API provider errors for user-friendly messages
         const combinedErrorText = `${payload.code || ''} ${payload.message || ''}`.toLowerCase()
+
+        // Detect authentication / token expiry errors (HTTP 401/403)
+        const isAuthError =
+          combinedErrorText.includes('401') ||
+          combinedErrorText.includes('403') ||
+          combinedErrorText.includes('authentication_error') ||
+          combinedErrorText.includes('permission_error') ||
+          combinedErrorText.includes('oauth token') ||
+          combinedErrorText.includes('token has expired') ||
+          combinedErrorText.includes('invalid x-api-key') ||
+          combinedErrorText.includes('invalid_api_key') ||
+          combinedErrorText.includes('unauthorized') ||
+          combinedErrorText.includes('failed to authenticate')
+
+        if (isAuthError) {
+          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Run `/login` in your Claude Code terminal to refresh your OAuth token, or update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
+        }
+
+        // Detect rate limit / quota errors from the AI provider (HTTP 429)
         const isRateLimit =
           combinedErrorText.includes('429') ||
           combinedErrorText.includes('rate limit') ||

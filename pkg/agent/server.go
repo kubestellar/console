@@ -2212,7 +2212,8 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 				return
 			}
 			log.Printf("[Chat] streaming execution error for %s: %v", agentName, err)
-			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName)))
+			code, msg2 := classifyProviderError(err)
+			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
 			return
 		}
 
@@ -2236,7 +2237,8 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 				return
 			}
 			log.Printf("[Chat] execution error for %s: %v", agentName, err)
-			safeWrite(ctx, s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName)))
+			code, msg2 := classifyProviderError(err)
+			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
 			return
 		}
 	}
@@ -2553,6 +2555,37 @@ func (s *Server) errorResponse(id, code, message string) protocol.Message {
 			Message: message,
 		},
 	}
+}
+
+// classifyProviderError inspects an AI provider error and returns a
+// specific error code + user-friendly message.  This lets the frontend
+// show targeted guidance (e.g. "run /login") instead of a raw JSON blob.
+func classifyProviderError(err error) (code, message string) {
+	errText := strings.ToLower(err.Error())
+
+	// Authentication / token expiry (HTTP 401 / 403)
+	if strings.Contains(errText, "status 401") ||
+		strings.Contains(errText, "status 403") ||
+		strings.Contains(errText, "authentication_error") ||
+		strings.Contains(errText, "permission_error") ||
+		strings.Contains(errText, "oauth token") ||
+		strings.Contains(errText, "token has expired") ||
+		strings.Contains(errText, "invalid x-api-key") ||
+		strings.Contains(errText, "invalid_api_key") ||
+		strings.Contains(errText, "unauthorized") {
+		return "authentication_error", "Failed to authenticate. API Error: " + err.Error()
+	}
+
+	// Rate limit (HTTP 429)
+	if strings.Contains(errText, "status 429") ||
+		strings.Contains(errText, "rate_limit") ||
+		strings.Contains(errText, "rate limit") ||
+		strings.Contains(errText, "too many requests") ||
+		strings.Contains(errText, "resource_exhausted") {
+		return "rate_limit", "Rate limit exceeded. " + err.Error()
+	}
+
+	return "execution_error", "Failed to get response from AI provider. " + err.Error()
 }
 
 // handleMixedModeChat orchestrates a dual-agent chat:
