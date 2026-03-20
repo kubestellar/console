@@ -884,6 +884,15 @@ func (s *Server) setupRoutes() {
 			c.Set("Cache-Control", "public, max-age=0, must-revalidate")
 			return c.SendFile("./web/dist/index.html")
 		})
+	} else {
+		// In dev mode the frontend is served by the Vite dev server on a separate port.
+		// Redirect any SPA route that lands on the API port so developers get the real UI
+		// instead of a confusing Fiber 404.
+		devFrontend := s.config.FrontendURL
+		s.app.Get("/*", func(c *fiber.Ctx) error {
+			target := devFrontend + c.OriginalURL()
+			return c.Redirect(target, fiber.StatusTemporaryRedirect)
+		})
 	}
 }
 
