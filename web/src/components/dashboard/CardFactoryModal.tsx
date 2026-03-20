@@ -32,6 +32,7 @@ interface CardFactoryModalProps {
 type Tab = 'declarative' | 'code' | 'ai' | 'manage'
 
 const SAVE_MESSAGE_TIMEOUT_MS = 3000 // Duration to display save/error messages before auto-clearing
+const COPY_FEEDBACK_TIMEOUT_MS = 2000 // Duration to show "copied" feedback before resetting
 
 const EXAMPLE_TSX = `// Example: Simple counter card
 export default function MyCard({ config }) {
@@ -572,7 +573,7 @@ const T2_TEMPLATES: T2Template[] = [
     try {
       navigator?.clipboard?.writeText?.(getCommand(f))
       setCopied(f.id)
-      setTimeout(() => setCopied(null), 2000)
+      setTimeout(() => setCopied(null), ${COPY_FEEDBACK_TIMEOUT_MS})
     } catch {}
   }
 
