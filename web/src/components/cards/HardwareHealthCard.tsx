@@ -12,15 +12,27 @@ import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeD
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 
-// Sort field options
-type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType'
+// Sort field options — separated by view so only applicable fields are shown
+type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType' | 'totalDevices'
 
-const SORT_OPTIONS: { value: SortField; label: string }[] = [
+/** Sort options applicable to the Alerts view */
+const ALERTS_SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'severity', label: 'Severity' },
   { value: 'nodeName', label: 'Node' },
   { value: 'cluster', label: 'Cluster' },
   { value: 'deviceType', label: 'Device' },
 ]
+
+/** Sort options applicable to the Inventory view (no severity/device — those are alert-only concepts) */
+const INVENTORY_SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'nodeName', label: 'Node' },
+  { value: 'cluster', label: 'Cluster' },
+  { value: 'totalDevices', label: 'Total Devices' },
+]
+
+/** Default sort field for each view */
+const DEFAULT_ALERTS_SORT: SortField = 'severity'
+const DEFAULT_INVENTORY_SORT: SortField = 'totalDevices'
 
 // Get icon for device type
 function DeviceIcon({ deviceType, className }: { deviceType: string; className?: string }) {
@@ -107,7 +119,7 @@ export function HardwareHealthCard() {
   const [search, setSearch] = useState('')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const [sortField, setSortField] = useState<SortField>('severity')
+  const [sortField, setSortField] = useState<SortField>(DEFAULT_INVENTORY_SORT)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
@@ -246,6 +258,19 @@ export function HardwareHealthCard() {
     }
   }, [activeAlertCount])
 
+  // Select sort options applicable to the current view
+  const currentSortOptions = viewMode === 'alerts' ? ALERTS_SORT_OPTIONS : INVENTORY_SORT_OPTIONS
+
+  // Reset sort field to the view-appropriate default when switching views
+  useEffect(() => {
+    const defaultSort = viewMode === 'alerts' ? DEFAULT_ALERTS_SORT : DEFAULT_INVENTORY_SORT
+    const validFields = (viewMode === 'alerts' ? ALERTS_SORT_OPTIONS : INVENTORY_SORT_OPTIONS).map(o => o.value)
+    // If current sort field is not valid for the new view, reset to default
+    if (!validFields.includes(sortField)) {
+      setSortField(defaultSort)
+    }
+  }, [viewMode]) // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only reacts to viewMode changes
+
   // Get IDs of visible alerts for "Snooze All"
   const visibleAlertIds = useMemo(() => {
     return filteredAlerts.filter(a => !isSnoozed(a.id)).map(a => a.id)
@@ -345,6 +370,8 @@ export function HardwareHealthCard() {
   }
 
   // Sort inventory
+  /** Weight multiplier so GPU-heavy nodes sort above nodes with only other device types */
+  const GPU_SORT_WEIGHT = 100
   const sortedInventory = useMemo(() => {
     return [...filteredInventory].sort((a, b) => {
       let cmp = 0
@@ -355,12 +382,11 @@ export function HardwareHealthCard() {
         case 'cluster':
           cmp = a.cluster.localeCompare(b.cluster)
           break
-        case 'deviceType':
-        case 'severity':
+        case 'totalDevices':
         default: {
-          // Sort by total device count for inventory (GPUs prioritized, then other devices)
-          const aTotal = getTotalDevices(a.devices) + (a.devices.gpuCount * 100) // Weight GPUs higher
-          const bTotal = getTotalDevices(b.devices) + (b.devices.gpuCount * 100)
+          // Sort by total device count for inventory (GPUs prioritized via weight)
+          const aTotal = getTotalDevices(a.devices) + (a.devices.gpuCount * GPU_SORT_WEIGHT)
+          const bTotal = getTotalDevices(b.devices) + (b.devices.gpuCount * GPU_SORT_WEIGHT)
           cmp = aTotal - bTotal
           break
         }
@@ -567,7 +593,7 @@ export function HardwareHealthCard() {
           limit: itemsPerPage,
           onLimitChange: setItemsPerPage,
           sortBy: sortField,
-          sortOptions: SORT_OPTIONS,
+          sortOptions: currentSortOptions,
           onSortChange: (s) => setSortField(s as SortField),
           sortDirection,
           onSortDirectionChange: setSortDirection,

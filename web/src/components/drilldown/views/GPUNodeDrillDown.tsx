@@ -31,23 +31,30 @@ function podStatusToIndicator(status: string): Status {
   return 'unknown'
 }
 
+/** Utilization percentage at or above which the indicator turns red */
+const HIGH_UTILIZATION_THRESHOLD_PCT = 90
+/** Utilization percentage at or above which the indicator turns yellow */
+const MODERATE_UTILIZATION_THRESHOLD_PCT = 50
+/** Multiplier to convert a ratio to a percentage */
+const PERCENT_MULTIPLIER = 100
+
 export function GPUNodeDrillDown({ data }: Props) {
   const { t } = useTranslation()
-  const cluster = data.cluster as string
-  const nodeName = data.node as string
-  const gpuType = data.gpuType as string
+  const cluster = (data.cluster as string) || ''
+  const nodeName = (data.node as string) || ''
+  const gpuType = (data.gpuType as string) || ''
   const gpuCount = (data.gpuCount as number) || 0
   const gpuAllocated = (data.gpuAllocated as number) || 0
   const { drillToEvents, drillToPod, drillToCluster } = useDrillDownActions()
   const clusterShort = cluster.split('/').pop() || cluster
 
-  const utilizationPercent = gpuCount > 0 ? Math.round((gpuAllocated / gpuCount) * 100) : 0
+  const utilizationPercent = gpuCount > 0 ? Math.round((gpuAllocated / gpuCount) * PERCENT_MULTIPLIER) : 0
 
   // Find GPU pods on this node
   const { pods: allPods } = useAllPods()
   const gpuPodsOnNode = useMemo(() => {
     const normalizedCluster = normalizeClusterName(cluster)
-    return allPods.filter(pod => {
+    return (allPods || []).filter(pod => {
       if (!pod.cluster || !pod.node) return false
       if (normalizeClusterName(pod.cluster) !== normalizedCluster) return false
       if (pod.node !== nodeName) return false
@@ -81,7 +88,7 @@ export function GPUNodeDrillDown({ data }: Props) {
             <div className="text-right">
               <div className="text-3xl font-bold text-foreground">{gpuAllocated}/{gpuCount}</div>
               <div className="text-sm text-muted-foreground">GPUs Allocated</div>
-              <div className={`text-sm ${utilizationPercent >= 90 ? 'text-red-400' : utilizationPercent >= 50 ? 'text-yellow-400' : 'text-green-400'}`}>
+              <div className={`text-sm ${utilizationPercent >= HIGH_UTILIZATION_THRESHOLD_PCT ? 'text-red-400' : utilizationPercent >= MODERATE_UTILIZATION_THRESHOLD_PCT ? 'text-yellow-400' : 'text-green-400'}`}>
                 {utilizationPercent}% utilization
               </div>
             </div>
@@ -105,7 +112,7 @@ export function GPUNodeDrillDown({ data }: Props) {
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="text-sm text-muted-foreground mb-2">GPU Type</div>
-          <div className="text-lg font-bold text-foreground truncate">{gpuType.split('-').slice(1, 2).join('')}</div>
+          <div className="text-lg font-bold text-foreground truncate">{gpuType || 'Unknown'}</div>
         </div>
       </div>
 
