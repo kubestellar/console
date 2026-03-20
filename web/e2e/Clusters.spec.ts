@@ -158,4 +158,95 @@ test.describe('Clusters Page', () => {
       await expect(page.getByRole('heading', { name: /clusters/i })).toBeVisible()
     })
   })
+
+  test.describe('Stats and Filter consistency', () => {
+    test('Healthy stat count matches clusters shown after clicking Healthy tab', async ({ page }) => {
+      // Regression test for #3045: cluster with nodeCount>0 and healthy:false was
+      // counted in Healthy stats but disappeared when the Healthy filter tab was clicked.
+      // Both stats and filter now use the same shared isClusterHealthy helper.
+      await page.route('**/api/mcp/**', (route) => {
+        const url = route.request().url()
+        if (url.includes('/clusters')) {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              clusters: [
+                // nodeCount>0 + healthy:false → isClusterHealthy returns true (has reporting nodes)
+                { name: 'node-healthy-flag-false', context: 'ctx-a', healthy: false, reachable: true, nodeCount: 3, podCount: 10, version: '1.28.0' },
+                // nodeCount:0 + healthy:true → isClusterHealthy returns true (healthy flag)
+                { name: 'flag-healthy-no-nodes', context: 'ctx-b', healthy: true, reachable: true, nodeCount: 0, podCount: 0, version: '1.28.0' },
+                // nodeCount:0 + healthy:false → isClusterHealthy returns false (unhealthy)
+                { name: 'truly-unhealthy', context: 'ctx-c', healthy: false, reachable: true, nodeCount: 0, podCount: 0, version: '1.28.0' },
+              ],
+            }),
+          })
+        } else {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+          })
+        }
+      })
+
+      await page.reload()
+      await page.waitForLoadState('domcontentloaded')
+      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
+
+      // The Healthy filter button should show count 2 (both node-healthy-flag-false and flag-healthy-no-nodes)
+      const healthyTab = page.getByRole('button', { name: /Healthy \(2\)/ })
+      await expect(healthyTab).toBeVisible({ timeout: 5000 })
+
+      // Click the Healthy filter
+      await healthyTab.click()
+
+      // Both healthy clusters must be visible — the one with nodeCount>0 but healthy:false MUST appear
+      await expect(page.getByText('node-healthy-flag-false')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByText('flag-healthy-no-nodes')).toBeVisible({ timeout: 5000 })
+
+      // The unhealthy cluster must NOT appear in the Healthy tab
+      await expect(page.getByText('truly-unhealthy')).not.toBeVisible()
+    })
+
+    test('Unhealthy stat count matches clusters shown after clicking Unhealthy tab', async ({ page }) => {
+      await page.route('**/api/mcp/**', (route) => {
+        const url = route.request().url()
+        if (url.includes('/clusters')) {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              clusters: [
+                { name: 'healthy-cluster', context: 'ctx-a', healthy: true, reachable: true, nodeCount: 3, podCount: 10, version: '1.28.0' },
+                // nodeCount:0 + healthy:false → isClusterHealthy returns false (unhealthy)
+                { name: 'unhealthy-no-nodes', context: 'ctx-b', healthy: false, reachable: true, nodeCount: 0, podCount: 0, version: '1.28.0' },
+              ],
+            }),
+          })
+        } else {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+          })
+        }
+      })
+
+      await page.reload()
+      await page.waitForLoadState('domcontentloaded')
+      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
+
+      // The Unhealthy tab must show count 1
+      const unhealthyTab = page.getByRole('button', { name: /Unhealthy \(1\)/ })
+      await expect(unhealthyTab).toBeVisible({ timeout: 5000 })
+
+      // Click the Unhealthy filter
+      await unhealthyTab.click()
+
+      // Only the truly unhealthy cluster should appear
+      await expect(page.getByText('unhealthy-no-nodes')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByText('healthy-cluster')).not.toBeVisible()
+    })
+  })
 })

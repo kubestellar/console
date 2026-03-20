@@ -3,7 +3,7 @@ import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshC
 import { FlashingValue } from '../../ui/FlashingValue'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { StatusIndicator } from '../../charts/StatusIndicator'
-import { isClusterUnreachable, isClusterLoading } from '../utils'
+import { isClusterUnreachable, isClusterLoading, isClusterHealthy } from '../utils'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getProviderColor, getConsoleUrl } from '../../ui/CloudProviderIcon'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -41,23 +41,6 @@ function useMinSpin(refreshing: boolean, minDurationMs = 1000): boolean {
   }, [])
 
   return spinning
-}
-
-// Helper to derive health status from cluster data
-// If we have node data and the cluster is reachable, consider it healthy
-// This prevents false "unhealthy" states during health check delays
-function isClusterHealthy(cluster: ClusterInfo): boolean {
-  // If unreachable, not healthy
-  if (cluster.reachable === false) {
-    return false
-  }
-  // If we have nodes (cluster is working), consider healthy
-  // The health check may take time to update, so be optimistic with working clusters
-  if (cluster.nodeCount !== undefined && cluster.nodeCount > 0) {
-    return true
-  }
-  // No node data yet - use healthy flag
-  return cluster.healthy === true
 }
 
 // Helper to detect token/auth expiration errors

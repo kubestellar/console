@@ -888,7 +888,7 @@ func (s *Server) setupRoutes() {
 		// In dev mode the frontend is served by the Vite dev server on a separate port.
 		// Redirect any SPA route that lands on the API port so developers get the real UI
 		// instead of a confusing Fiber 404.
-		devFrontend := s.config.FrontendURL
+		devFrontend := strings.TrimRight(s.config.FrontendURL, "/")
 		s.app.Get("/*", func(c *fiber.Ctx) error {
 			target := devFrontend + c.OriginalURL()
 			return c.Redirect(target, fiber.StatusTemporaryRedirect)
