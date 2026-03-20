@@ -1,24 +1,51 @@
-import { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink, Server } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink, Server, Loader2 } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useMissions } from '../../../hooks/useMissions'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { useCachedNodes } from '../../../hooks/useCachedData'
 
 interface Props {
   data: Record<string, unknown>
 }
 
+/**
+ * NodeDrillDown - Displays detailed node information in a drill-down modal.
+ *
+ * When the caller (e.g. HardwareHealthCard inventory view) does not pass
+ * full node data (status, roles, unschedulable), this component fetches
+ * the actual node information via useCachedNodes instead of showing
+ * fallback values like "Unknown" status and "worker" role (#3028).
+ */
 export function NodeDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
   const nodeName = data.node as string
-  const status = data.status as string | undefined
-  const unschedulable = data.unschedulable as boolean | undefined
+
+  // Data that may or may not have been passed by the caller
+  const passedStatus = data.status as string | undefined
+  const passedUnschedulable = data.unschedulable as boolean | undefined
+  const passedRoles = data.roles as string[] | undefined
   const issue = data.issue as string | undefined
-  const roles = data.roles as string[] | undefined
+
+  // Fetch node data from cache to fill in missing fields (#3028)
+  const { nodes, isLoading: isLoadingNodes } = useCachedNodes(cluster || undefined)
+
+  // Look up this specific node from the cached data
+  const cachedNode = useMemo(() => {
+    if (!nodeName || !nodes) return null
+    return (nodes || []).find(
+      (n) => n.name === nodeName && (!cluster || n.cluster === cluster),
+    ) ?? null
+  }, [nodes, nodeName, cluster])
+
+  // Merge passed data with fetched data: prefer passed if available, fall back to cached
+  const status = passedStatus || cachedNode?.status || undefined
+  const unschedulable = passedUnschedulable !== undefined ? passedUnschedulable : cachedNode?.unschedulable
+  const roles = passedRoles || cachedNode?.roles || undefined
 
   const { drillToEvents, drillToCluster } = useDrillDownActions()
   const { close: closeDialog } = useDrillDown()
@@ -32,6 +59,9 @@ export function NodeDrillDown({ data }: Props) {
 
   const isOffline = status === 'Cordoned' || status === 'NotReady' || unschedulable
   const clusterShort = cluster.split('/').pop() || cluster
+
+  /** Whether we are still loading node data and have no usable status yet */
+  const isResolvingNode = !status && isLoadingNodes
 
   const copyCommand = (cmd: string, label: string) => {
     copyToClipboard(cmd)
@@ -53,7 +83,7 @@ export function NodeDrillDown({ data }: Props) {
 - Cluster: ${clusterShort}
 - Status: ${status || 'Unknown'}
 - Cordoned/Unschedulable: ${unschedulable ? 'Yes' : 'No'}
-- Roles: ${(roles ?? []).join(', ') || 'worker'}
+- Roles: ${(roles ?? []).join(', ') || 'unknown'}
 - Issue: ${issue || 'Node is not healthy'}
 
 Please help me:
@@ -97,6 +127,15 @@ Start by checking node events and conditions.`,
       {/* Node Info */}
       <div className="p-4 rounded-lg bg-card/50 border border-border">
         <h3 className="text-lg font-semibold text-foreground mb-4">Node: {nodeName}</h3>
+
+        {/* Loading indicator while resolving node data */}
+        {isResolvingNode && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Loading node details...</span>
+          </div>
+        )}
+
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <dt className="text-muted-foreground">{t('common.cluster')}</dt>
@@ -104,20 +143,50 @@ Start by checking node events and conditions.`,
           </div>
           <div>
             <dt className="text-muted-foreground">{t('common.status')}</dt>
-            <dd className={`font-medium ${isOffline ? 'text-red-400' : 'text-green-400'}`}>
-              {status || 'Unknown'}
+            <dd className={`font-medium ${isOffline ? 'text-red-400' : status ? 'text-green-400' : 'text-muted-foreground'}`}>
+              {status || (isResolvingNode ? 'Loading...' : 'Unknown')}
             </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">{t('common.roles')}</dt>
-            <dd className="font-mono text-foreground">{(roles ?? []).join(', ') || 'worker'}</dd>
+            <dd className="font-mono text-foreground">
+              {(roles ?? []).length > 0 ? (roles ?? []).join(', ') : (isResolvingNode ? 'Loading...' : 'unknown')}
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">{t('drilldown.node.schedulable')}</dt>
-            <dd className={`font-medium ${unschedulable ? 'text-red-400' : 'text-green-400'}`}>
-              {unschedulable ? 'No (Cordoned)' : 'Yes'}
+            <dd className={`font-medium ${unschedulable ? 'text-red-400' : unschedulable === undefined && isResolvingNode ? 'text-muted-foreground' : 'text-green-400'}`}>
+              {unschedulable !== undefined
+                ? (unschedulable ? 'No (Cordoned)' : 'Yes')
+                : (isResolvingNode ? 'Loading...' : 'Unknown')}
             </dd>
           </div>
+
+          {/* Show additional info from cached node data if available */}
+          {cachedNode?.kubeletVersion && (
+            <div>
+              <dt className="text-muted-foreground">Kubelet Version</dt>
+              <dd className="font-mono text-foreground">{cachedNode.kubeletVersion}</dd>
+            </div>
+          )}
+          {cachedNode?.cpuCapacity && (
+            <div>
+              <dt className="text-muted-foreground">CPU Capacity</dt>
+              <dd className="font-mono text-foreground">{cachedNode.cpuCapacity}</dd>
+            </div>
+          )}
+          {cachedNode?.memoryCapacity && (
+            <div>
+              <dt className="text-muted-foreground">Memory Capacity</dt>
+              <dd className="font-mono text-foreground">{cachedNode.memoryCapacity}</dd>
+            </div>
+          )}
+          {cachedNode?.podCapacity && (
+            <div>
+              <dt className="text-muted-foreground">Pod Capacity</dt>
+              <dd className="font-mono text-foreground">{cachedNode.podCapacity}</dd>
+            </div>
+          )}
         </dl>
       </div>
 
@@ -270,7 +339,7 @@ Provide the specific kubectl commands for cluster context "${clusterShort}".`,
             {/* Info cards */}
             <div className="text-sm space-y-2 mt-3">
               <div className="p-2 rounded bg-muted/30 text-xs text-muted-foreground">
-                <strong>Tip:</strong> Use "Investigate" to understand why the node was cordoned before uncordoning.
+                <strong>Tip:</strong> Use &quot;Investigate&quot; to understand why the node was cordoned before uncordoning.
                 Nodes may be cordoned for maintenance, upgrades, or due to detected issues.
               </div>
             </div>
