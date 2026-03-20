@@ -13,6 +13,7 @@ vi.mock('../../hooks/useMissions', () => ({
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetItem: vi.fn(() => null),
+  safeSetItem: vi.fn(() => true),
 }))
 
 describe('MissionCTA Component', () => {
