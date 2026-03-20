@@ -144,9 +144,17 @@ download_binary() {
     tar xzf "/tmp/${name}.tar.gz" -C "$tmp_extract_dir"
     rm -f "/tmp/${name}.tar.gz"
 
-    # Atomically move the binary into the install directory
+    # Move the binary into the install directory
     chmod +x "$tmp_extract_dir/${name}" 2>/dev/null || true
     mv -f "$tmp_extract_dir/${name}" "$INSTALL_DIR/${name}"
+
+    # Move web/dist/ if present (console tarball includes the built frontend)
+    if [ -d "$tmp_extract_dir/web/dist" ]; then
+        rm -rf "$INSTALL_DIR/web/dist"
+        mkdir -p "$INSTALL_DIR/web"
+        mv -f "$tmp_extract_dir/web/dist" "$INSTALL_DIR/web/dist"
+    fi
+
     rm -rf "$tmp_extract_dir"
     return 0
 }
@@ -312,7 +320,10 @@ echo "Waiting for console to start..."
 MAX_WAIT=60
 WAITED=0
 while [ $WAITED -lt $MAX_WAIT ]; do
-    HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${PORT}" 2>/dev/null || echo "000")
+    # Poll the root path — returns 200 only when Fiber is fully started and
+    # serving the SPA frontend (web/dist/index.html). The warmup phase may
+    # start a temporary listener that returns 404 for / before Fiber is ready.
+    HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${PORT}/" 2>/dev/null || echo "000")
     if [ "$HTTP_CODE" = "200" ]; then
         break
     fi
