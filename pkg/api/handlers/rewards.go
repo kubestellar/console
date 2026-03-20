@@ -237,7 +237,9 @@ type searchResponse struct {
 // searchItems queries GitHub Search API with pagination.
 // itemType is "issue" or "pr".
 func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchItem, error) {
-	query := fmt.Sprintf("author:%s %s type:%s", login, h.orgs, itemType)
+	// Scope to current year only — matches the leaderboard at kubestellar.io/leaderboard
+	yearStart := fmt.Sprintf("%d-01-01", time.Now().Year())
+	query := fmt.Sprintf("author:%s %s type:%s created:>=%s", login, h.orgs, itemType, yearStart)
 	allItems := make([]searchItem, 0)
 
 	for page := 1; page <= rewardsMaxPages; page++ {
