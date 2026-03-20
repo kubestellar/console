@@ -14,6 +14,7 @@ function generateId(): string {
 export const test = base.extend({
   page: async ({ page }, use) => {
     // Start collecting coverage
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture, not a React hook
     await use(page)
 
     // After test, collect coverage if available

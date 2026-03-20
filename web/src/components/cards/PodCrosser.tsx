@@ -502,7 +502,7 @@ export function PodCrosser(_props: CardComponentProps) {
       switch (e.key) {
         case 'ArrowUp':
         case 'w':
-        case 'W':
+        case 'W': {
           newTargetY = Math.max(0, targetY - CELL_SIZE)
           // Score for forward progress
           const newRow = Math.floor(newTargetY / CELL_SIZE)
@@ -511,6 +511,7 @@ export function PodCrosser(_props: CardComponentProps) {
             setHighestRow(newRow)
           }
           break
+        }
         case 'ArrowDown':
         case 's':
         case 'S':

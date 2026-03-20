@@ -259,7 +259,7 @@ export function NamespaceManager() {
   const fetchAccess = useCallback(async (namespace: NamespaceDetails) => {
     setAccessLoading(true)
     try {
-      const response = await api.get(`/api/namespaces/${namespace.name}/access?cluster=${namespace.cluster}`)
+      const response = await api.get<{ bindings: typeof accessEntries }>(`/api/namespaces/${namespace.name}/access?cluster=${namespace.cluster}`)
       setAccessEntries(response.data?.bindings || [])
     } catch (err) {
       console.error('Failed to fetch access:', err)

@@ -138,7 +138,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
   return { namespaces, isLoading, error, refetch }
 }
 
-// @ts-ignore - kept for demo mode reference
+// @ts-expect-error - kept for demo mode reference
 function __getDemoNamespaces(): string[] {
   return ['default', 'kube-system', 'kube-public', 'monitoring', 'production', 'staging', 'batch', 'data', 'web', 'ingress']
 }

@@ -759,12 +759,13 @@ Please provide:
             message = 'Severe storm warning in effect'
             details.description = 'Thunderstorm with possible hail and strong winds'
             break
-          case 'extreme_heat':
+          case 'extreme_heat': {
             const temp = rule.condition.temperatureThreshold || 100
             message = `Extreme heat alert - Temperature expected to exceed ${temp}°F`
             details.temperature = temp + 5
             details.threshold = temp
             break
+          }
           case 'heavy_rain':
             message = 'Heavy rain warning - Flooding possible'
             details.rainfall = '2-3 inches'
@@ -773,12 +774,13 @@ Please provide:
             message = 'Winter storm warning - Heavy snow expected'
             details.snowfall = '6-12 inches'
             break
-          case 'high_wind':
+          case 'high_wind': {
             const windSpeed = rule.condition.windSpeedThreshold || 40
             message = `High wind warning - Gusts up to ${windSpeed + 10} mph expected`
             details.windSpeed = windSpeed + 10
             details.threshold = windSpeed
             break
+          }
         }
 
         createAlert(

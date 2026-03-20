@@ -309,7 +309,7 @@ export function KubeMan(_props: CardComponentProps) {
         // Blinky (red) - Direct chase, always targets player's position
         return { ...playerPos }
 
-      case 'Pinky':
+      case 'Pinky': {
         // Pinky (pink) - Ambusher, targets 4 tiles ahead of player
         const ahead: Record<Direction, Position> = {
           up: { x: playerPos.x, y: playerPos.y - 4 },
@@ -318,8 +318,9 @@ export function KubeMan(_props: CardComponentProps) {
           right: { x: playerPos.x + 4, y: playerPos.y },
         }
         return ahead[playerDir]
+      }
 
-      case 'Inky':
+      case 'Inky': {
         // Inky (cyan) - Unpredictable, uses vector from Blinky to 2 ahead of player, doubled
         const twoAhead: Record<Direction, Position> = {
           up: { x: playerPos.x, y: playerPos.y - 2 },
@@ -333,8 +334,9 @@ export function KubeMan(_props: CardComponentProps) {
           return { x: Math.floor(Math.random() * MAZE_WIDTH), y: Math.floor(Math.random() * MAZE_HEIGHT) }
         }
         return target
+      }
 
-      case 'Clyde':
+      case 'Clyde': {
         // Clyde (orange) - Shy, chases when far, runs to corner when close
         const distance = Math.abs(ghost.pos.x - playerPos.x) + Math.abs(ghost.pos.y - playerPos.y)
         if (distance < 8) {
@@ -342,6 +344,7 @@ export function KubeMan(_props: CardComponentProps) {
           return { x: 1, y: MAZE_HEIGHT - 2 }
         }
         return { ...playerPos }
+      }
 
       default:
         return { ...playerPos }

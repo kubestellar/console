@@ -323,7 +323,7 @@ class ApiClient {
     return { controller, timeoutId }
   }
 
-  async get<T = any>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean }): Promise<{ data: T }> {
+  async get<T = unknown>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean }): Promise<{ data: T }> {
     // Skip API calls to protected endpoints when not authenticated
     const isPublicPath = PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
     if (options?.requiresAuth !== false && !isPublicPath && !this.hasToken()) {
@@ -376,7 +376,7 @@ class ApiClient {
     }
   }
 
-  async post<T = any>(path: string, body?: any, options?: { timeout?: number }): Promise<{ data: T }> {
+  async post<T = unknown>(path: string, body?: unknown, options?: { timeout?: number }): Promise<{ data: T }> {
     // Check backend availability
     const available = await checkBackendAvailability()
     if (!available) {
@@ -421,7 +421,7 @@ class ApiClient {
     }
   }
 
-  async put<T = any>(path: string, body?: any, options?: { timeout?: number }): Promise<{ data: T }> {
+  async put<T = unknown>(path: string, body?: unknown, options?: { timeout?: number }): Promise<{ data: T }> {
     // Check backend availability
     const available = await checkBackendAvailability()
     if (!available) {

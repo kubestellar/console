@@ -62,7 +62,7 @@ export function AIML() {
           isClickable: false,
           isDemo: mlWorkloadCount === 0 && !llmLoading
         }
-      case 'loaded_models':
+      case 'loaded_models': {
         const loadedCount = llmModels.filter(m => m.status === 'loaded').length
         return {
           value: loadedCount,
@@ -70,6 +70,7 @@ export function AIML() {
           isClickable: false,
           isDemo: llmModels.length === 0 && !llmLoading
         }
+      }
       default:
         return { value: '-' }
     }

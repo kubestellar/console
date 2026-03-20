@@ -150,27 +150,17 @@ export function useConsoleUsers() {
   }, [fetchUsers])
 
   const updateUserRole = useCallback(async (userId: string, role: UserRole) => {
-    try {
-      await api.put(`/api/users/${userId}/role`, { role })
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role } : u))
-      )
-      return true
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    await api.put(`/api/users/${userId}/role`, { role })
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, role } : u))
+    )
+    return true
   }, [])
 
   const deleteUser = useCallback(async (userId: string) => {
-    try {
-      await api.delete(`/api/users/${userId}`)
-      setUsers((prev) => prev.filter((u) => u.id !== userId))
-      return true
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    await api.delete(`/api/users/${userId}`)
+    setUsers((prev) => prev.filter((u) => u.id !== userId))
+    return true
   }, [])
 
   return {
@@ -501,14 +491,9 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
   }, [fetchServiceAccounts])
 
   const createServiceAccount = useCallback(async (req: CreateServiceAccountRequest) => {
-    try {
-      const { data } = await api.post<K8sServiceAccount>('/api/rbac/service-accounts', req)
-      setServiceAccounts((prev) => [...prev, data])
-      return data
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    const { data } = await api.post<K8sServiceAccount>('/api/rbac/service-accounts', req)
+    setServiceAccounts((prev) => [...prev, data])
+    return data
   }, [])
 
   return {
@@ -656,14 +641,9 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
   }, [fetchBindings])
 
   const createRoleBinding = useCallback(async (req: CreateRoleBindingRequest) => {
-    try {
-      await api.post('/api/rbac/bindings', req)
-      await fetchBindings()
-      return true
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    await api.post('/api/rbac/bindings', req)
+    await fetchBindings()
+    return true
   }, [fetchBindings])
 
   return {

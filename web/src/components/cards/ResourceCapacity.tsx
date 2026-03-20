@@ -188,11 +188,12 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         case 'requested':
           compare = a.requested - b.requested
           break
-        case 'percent':
+        case 'percent': {
           const pctA = a.capacity > 0 ? (a.requested / a.capacity) * 100 : 0
           const pctB = b.capacity > 0 ? (b.requested / b.capacity) * 100 : 0
           compare = pctA - pctB
           break
+        }
       }
       return sortDirection === 'asc' ? compare : -compare
     })

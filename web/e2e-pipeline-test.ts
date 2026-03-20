@@ -22,13 +22,14 @@ function gh(cmd: string): string {
       encoding: 'utf-8',
       timeout: 30000
     }).trim()
-  } catch (e: any) {
-    console.error(`gh command failed: ${e.stderr?.substring(0, 200) || e.message}`)
+  } catch (e: unknown) {
+    const err = e as { stderr?: string; message?: string }
+    console.error(`gh command failed: ${err.stderr?.substring(0, 200) || err.message}`)
     return ''
   }
 }
 
-async function screenshot(page: any, name: string) {
+async function screenshot(page: { screenshot: (opts: { path: string; fullPage: boolean }) => Promise<void>; url: () => string }, name: string) {
   const path = `${SCREENSHOT_DIR}/${name}.png`
   await page.screenshot({ path, fullPage: false })
   console.log(`  Screenshot: ${path}`)
@@ -192,8 +193,8 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
 
     try {
       const issue = JSON.parse(json)
-      const labels = issue.labels?.map((l: any) => l.name) || []
-      const assignees = issue.assignees?.map((a: any) => a.login) || []
+      const labels = issue.labels?.map((l: { name: string }) => l.name) || []
+      const assignees = issue.assignees?.map((a: { login: string }) => a.login) || []
 
       console.log(`  [${new Date().toLocaleTimeString()}] Check ${i + 1}/12: Labels=[${labels.join(', ')}] Assignees=[${assignees.join(', ')}]`)
 
@@ -226,7 +227,7 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
     try {
       const prs = JSON.parse(prSearch)
       // Find copilot PRs created recently
-      const copilotPR = prs.find((p: any) =>
+      const copilotPR = prs.find((p: { author?: { login?: string }; title?: string }) =>
         p.author?.login?.toLowerCase().includes('copilot') ||
         p.author?.login?.includes('[bot]') ||
         p.title?.includes(`#${issueNumber}`)

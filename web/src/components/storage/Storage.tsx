@@ -229,10 +229,11 @@ export function Storage() {
           onClick: () => { setPVCModalFilter('Pending'); openPVCModal() },
           isClickable: hasDataToShow && (stats?.pendingPVCs || 0) > 0
         }
-      case 'storage_classes':
+      case 'storage_classes': {
         // Count unique storage classes from PVCs (shows storage classes in use)
         const uniqueStorageClasses = new Set(filteredPVCs.map(p => p.storageClass).filter(Boolean))
         return { value: uniqueStorageClasses.size, sublabel: 'classes in use', isClickable: false }
+      }
       default:
         return { value: '-', sublabel: '' }
     }

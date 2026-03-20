@@ -968,6 +968,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
           return
         }
       } catch {
+        // Agent unavailable — fall through to kubectl proxy
       }
     }
 
@@ -1001,6 +1002,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
           return
         }
       } catch {
+        // kubectl proxy unavailable — fall through to REST API
       }
     }
 

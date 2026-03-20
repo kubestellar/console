@@ -29,9 +29,10 @@ export function AIAgents() {
         return { value: summary.buildCount, sublabel: `${summary.activeBuilds} active`, isClickable: false, isDemo: isDemoData }
       case 'clusters':
         return { value: summary.clusterBreakdown.length, sublabel: 'with kagenti', isClickable: false, isDemo: isDemoData }
-      case 'spiffe':
+      case 'spiffe': {
         const pct = summary.spiffeTotal > 0 ? Math.round((summary.spiffeBound / summary.spiffeTotal) * 100) : 0
         return { value: `${pct}%`, sublabel: 'SPIFFE coverage', isClickable: false, isDemo: isDemoData }
+      }
       default:
         return { value: '-' }
     }

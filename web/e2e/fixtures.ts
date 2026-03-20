@@ -29,6 +29,7 @@ export const test = base.extend<{
 }>({
   // AI mode fixture
   aiMode: async ({ page }, use) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture, not a React hook
     await use({
       setLow: async () => {
         await page.evaluate(() => {
@@ -50,6 +51,7 @@ export const test = base.extend<{
 
   // API mocking fixture
   mockAPI: async ({ page }, use) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture, not a React hook
     await use({
       mockClusters: async (clusters) => {
         await page.route('**/api/mcp/clusters', (route) =>

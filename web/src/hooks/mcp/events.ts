@@ -180,12 +180,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         setError('Failed to fetch events')
       }
     } finally {
-      if (!isMountedRef.current) return
-      setIsLoading(false)
-      if (!silent) {
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-      } else {
-        setIsRefreshing(false)
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        if (!silent) {
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+        }
       }
     }
   }, [cluster, namespace, limit, cacheKey])

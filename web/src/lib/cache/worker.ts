@@ -47,11 +47,11 @@ async function initDatabase(): Promise<void> {
         // In-memory SQLite loses all data on reload, making cache useless.
         throw new Error('OPFS not available — falling back to IndexedDB')
       }
-    } catch (opfsErr) {
+    } catch {
       // OPFS failed (e.g., not in secure context, SAH pool exhausted).
       // Reject so main thread uses IndexedDB for persistence instead of
       // silently using in-memory SQLite that loses data on every reload.
-      throw opfsErr
+      throw new Error('OPFS initialization failed — falling back to IndexedDB')
     }
 
     // Create tables

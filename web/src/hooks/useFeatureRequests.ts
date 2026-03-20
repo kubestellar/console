@@ -204,7 +204,7 @@ function getDemoNotifications(): Notification[] {
   return demoNotificationsState
 }
 
-// @ts-ignore Reserved for future use
+// @ts-expect-error Reserved for future use
 function _updateDemoNotifications(updater: (prev: Notification[]) => Notification[]): Notification[] {
   demoNotificationsState = updater(getDemoNotifications())
   return demoNotificationsState
@@ -304,56 +304,33 @@ export function useFeatureRequests(currentUserId?: string) {
       const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input)
       setRequests(prev => [data, ...prev])
       return data
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
     } finally {
       setIsSubmitting(false)
     }
   }, [])
 
   const getRequest = useCallback(async (id: string) => {
-    try {
-      const { data } = await api.get<FeatureRequest>(`/api/feedback/requests/${id}`)
-      return data
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    const { data } = await api.get<FeatureRequest>(`/api/feedback/requests/${id}`)
+    return data
   }, [])
 
   const submitFeedback = useCallback(async (requestId: string, input: SubmitFeedbackInput) => {
-    try {
-      const { data } = await api.post<PRFeedback>(`/api/feedback/requests/${requestId}/feedback`, input)
-      return data
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    const { data } = await api.post<PRFeedback>(`/api/feedback/requests/${requestId}/feedback`, input)
+    return data
   }, [])
 
   const requestUpdate = useCallback(async (requestId: string) => {
-    try {
-      const { data } = await api.post<FeatureRequest>(`/api/feedback/requests/${requestId}/request-update`)
-      // Refresh the request in the list
-      setRequests(prev => prev.map(r => r.id === requestId ? data : r))
-      return data
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    const { data } = await api.post<FeatureRequest>(`/api/feedback/requests/${requestId}/request-update`)
+    // Refresh the request in the list
+    setRequests(prev => prev.map(r => r.id === requestId ? data : r))
+    return data
   }, [])
 
   const closeRequest = useCallback(async (requestId: string) => {
-    try {
-      const { data } = await api.post<FeatureRequest>(`/api/feedback/requests/${requestId}/close`)
-      // Update the request in the list
-      setRequests(prev => prev.map(r => r.id === requestId ? data : r))
-      return data
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    const { data } = await api.post<FeatureRequest>(`/api/feedback/requests/${requestId}/close`)
+    // Update the request in the list
+    setRequests(prev => prev.map(r => r.id === requestId ? data : r))
+    return data
   }, [])
 
   return {
@@ -407,18 +384,13 @@ export function useNotifications() {
     }
 
     // Mark each notification as read
-    try {
-      await Promise.all(unreadForRequest.map(n =>
-        api.post(`/api/notifications/${n.id}/read`)
-      ))
-      setNotifications(prev =>
-        prev.map(n => n.feature_request_id === featureRequestId ? { ...n, read: true } : n)
-      )
-      setUnreadCount(prev => Math.max(0, prev - unreadForRequest.length))
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    await Promise.all(unreadForRequest.map(n =>
+      api.post(`/api/notifications/${n.id}/read`)
+    ))
+    setNotifications(prev =>
+      prev.map(n => n.feature_request_id === featureRequestId ? { ...n, read: true } : n)
+    )
+    setUnreadCount(prev => Math.max(0, prev - unreadForRequest.length))
   }, [notifications])
 
   const loadNotifications = useCallback(async () => {
@@ -484,16 +456,11 @@ export function useNotifications() {
       setUnreadCount(prev => Math.max(0, prev - 1))
       return
     }
-    try {
-      await api.post(`/api/notifications/${id}/read`)
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, read: true } : n))
-      )
-      setUnreadCount(prev => Math.max(0, prev - 1))
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    await api.post(`/api/notifications/${id}/read`)
+    setNotifications(prev =>
+      prev.map(n => (n.id === id ? { ...n, read: true } : n))
+    )
+    setUnreadCount(prev => Math.max(0, prev - 1))
   }, [])
 
   const markAllAsRead = useCallback(async () => {
@@ -503,14 +470,9 @@ export function useNotifications() {
       setUnreadCount(0)
       return
     }
-    try {
-      await api.post('/api/notifications/read-all')
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-      setUnreadCount(0)
-    } catch (err) {
-      // Silently fail - backend may be unavailable
-      throw err
-    }
+    await api.post('/api/notifications/read-all')
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    setUnreadCount(0)
   }, [])
 
   // Refresh function with loading indicator (minimum 500ms to show animation)

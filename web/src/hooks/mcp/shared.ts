@@ -788,7 +788,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
       // Report successful data fetch - can recover from degraded state
       reportAgentDataSuccess()
       // Transform agent response to ClusterInfo format - mark as "checking" initially
-      return (data.clusters || []).map((c: any) => ({
+      return (data.clusters || []).map((c: { name: string; context?: string; server: string; user: string; isCurrent?: boolean; authMethod?: string }) => ({
         name: c.name,
         context: c.context || c.name,
         server: c.server,

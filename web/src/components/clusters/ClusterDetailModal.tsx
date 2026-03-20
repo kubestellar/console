@@ -26,7 +26,7 @@ function getConsoleUrlForProvider(provider: string, clusterName: string, apiServ
     case 'openshift': {
       // OpenShift: api.xxx -> console-openshift-console.apps.xxx
       // Handle URLs with or without protocol prefix
-      const apiMatch = apiServerUrl?.match(/(?:https?:\/\/)?api\.([^:\/]+)/)
+      const apiMatch = apiServerUrl?.match(/(?:https?:\/\/)?api\.([^:/]+)/)
       if (apiMatch) {
         return `https://console-openshift-console.apps.${apiMatch[1]}`
       }

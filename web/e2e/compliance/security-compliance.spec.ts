@@ -522,9 +522,9 @@ test('security compliance — frontend security audit', async ({ page }, testInf
   const docWriteUsed = await page.evaluate(() => {
     let called = false
     const original = document.write
-    document.write = function () {
+    document.write = function (...args: [string]) {
       called = true
-      return original.apply(document, arguments as unknown as [string])
+      return original.apply(document, args)
     }
     return called
   })

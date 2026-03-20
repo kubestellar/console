@@ -1,14 +1,19 @@
 /// <reference types='@testing-library/jest-dom/vitest' />
+import type React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import '../../test/utils/setupMocks'
 
 vi.mock('../../lib/modals', () => {
-  const BaseModal: any = ({ children }: any) => <div data-testid='mock-base-modal'>{children}</div>
-  BaseModal.Header = ({ title }: any) => <div>{title}</div>
-  BaseModal.Content = ({ children }: any) => <div>{children}</div>
-  BaseModal.Footer = ({ children }: any) => <div>{children}</div>
+  const BaseModal = Object.assign(
+    ({ children }: { children: React.ReactNode }) => <div data-testid='mock-base-modal'>{children}</div>,
+    {
+      Header: ({ title }: { title: string }) => <div>{title}</div>,
+      Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+      Footer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    }
+  )
   return { BaseModal }
 })
 

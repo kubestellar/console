@@ -38,7 +38,7 @@ function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUr
     case 'aks':
       return 'https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.ContainerService%2FmanagedClusters'
     case 'openshift': {
-      const apiMatch = apiServerUrl?.match(/https?:\/\/api\.([^:\/]+)/)
+      const apiMatch = apiServerUrl?.match(/https?:\/\/api\.([^:/]+)/)
       if (apiMatch) {
         return `https://console-openshift-console.apps.${apiMatch[1]}`
       }

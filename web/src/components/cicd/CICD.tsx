@@ -59,7 +59,7 @@ export function CICD() {
           isClickable: false,
           isDemo: prowJobs.length === 0 && !prowLoading
         }
-      case 'success_rate':
+      case 'success_rate': {
         const successRate = prowStatus?.successRate || 0
         return {
           value: `${Math.round(successRate)}%`,
@@ -67,6 +67,7 @@ export function CICD() {
           isClickable: false,
           isDemo: prowJobs.length === 0 && !prowLoading
         }
+      }
       case 'deployments':
         return {
           value: deploymentsToday,

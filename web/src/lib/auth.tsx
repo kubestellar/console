@@ -226,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await api.get('/api/me', {
+      const response = await api.get<User>('/api/me', {
         headers: { Authorization: `Bearer ${effectiveToken}` }
       })
       setUser(response.data)
