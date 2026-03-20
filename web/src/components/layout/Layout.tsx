@@ -110,6 +110,7 @@ export function Layout({ children }: LayoutProps) {
     window.addEventListener('open-install', handler)
     return () => window.removeEventListener('open-install', handler)
   }, [])
+
   const [restartState, setRestartState] = useState<'idle' | 'restarting' | 'waiting' | 'copied'>('idle')
   const [restartError, setRestartError] = useState<string | null>(null)
 
