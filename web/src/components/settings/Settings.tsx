@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
-  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container, HardDrive,
+  Palette, Eye, Plug, Github, LayoutGrid, Download, Database, Container, HardDrive,
   CheckCircle, Loader2, AlertCircle, WifiOff, BarChart3, X,
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
@@ -23,7 +23,6 @@ import {
   ProfileSection,
   AgentSection,
   GitHubTokenSection,
-  APIKeysSection,
   TokenUsageSection,
   ThemeSection,
   AccessibilitySection,
@@ -56,7 +55,6 @@ const SETTINGS_NAV = [
       { id: 'ai-mode-settings', labelKey: 'settings.nav.aiMode' as const, icon: Cpu },
       { id: 'prediction-settings', labelKey: 'settings.nav.predictions' as const, icon: TrendingUp },
       { id: 'agent-settings', labelKey: 'settings.nav.localAgent' as const, icon: Plug },
-      { id: 'api-keys-settings', labelKey: 'settings.nav.apiKeys' as const, icon: Key },
       { id: 'token-usage-settings', labelKey: 'settings.nav.tokenUsage' as const, icon: Coins },
     ],
   },
@@ -376,7 +374,6 @@ export function Settings() {
               resetSettings={resetPredictionSettings}
             />
             <AgentSection isConnected={isConnected} health={health} refresh={refresh} />
-            <APIKeysSection />
             <TokenUsageSection usage={usage} updateSettings={updateSettings} resetUsage={resetUsage} isDemoData={isDemoData} />
           </div>
         </div>

@@ -238,24 +238,11 @@ func InitializeProviders() error {
 	registry.Register(NewAntigravityProvider())
 	registry.Register(NewGHCopilotProvider())
 
-	// Register API-only agents (can generate text / used for missions, not execute commands)
-	registry.Register(NewClaudeProvider())
-	registry.Register(NewOpenAIProvider())
-	registry.Register(NewGeminiProvider())
-
-	// Register IDE/app-based agents (API chat, each with own key)
-	registry.Register(NewClaudeDesktopProvider())
-	registry.Register(NewCursorProvider())
-	registry.Register(NewVSCodeProvider())
-	registry.Register(NewWindsurfProvider())
-	registry.Register(NewClineProvider())
-	registry.Register(NewJetBrainsProvider())
-	registry.Register(NewZedProvider())
-	registry.Register(NewContinueProvider())
-	registry.Register(NewRaycastProvider())
-
-	// Register HTTP API-based agents
-	registry.Register(NewOpenWebUIProvider())
+	// NOTE: API-only agents (Claude API, OpenAI, Gemini) and IDE-based agents
+	// (Cursor, Windsurf, Cline, etc.) are intentionally not registered.
+	// They cannot execute commands to diagnose/repair clusters, which is the
+	// primary value of AI Missions. Only CLI-based agents that can take action
+	// are registered above.
 
 	// Set default agent based on environment or availability
 	if defaultAgent := os.Getenv("DEFAULT_AGENT"); defaultAgent != "" {

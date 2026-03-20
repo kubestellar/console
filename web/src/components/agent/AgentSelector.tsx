@@ -1,10 +1,9 @@
 import { useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Check, Loader2, Settings, Sparkles } from 'lucide-react'
+import { ChevronDown, Check, Loader2, Sparkles } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, getDemoMode } from '../../hooks/useDemoMode'
 import { AgentIcon } from './AgentIcon'
-import { APIKeySettings } from './APIKeySettings'
 import type { AgentInfo } from '../../types/agent'
 import { cn } from '../../lib/cn'
 import { useModalState } from '../../lib/modals'
@@ -22,19 +21,15 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Synchronous fallback prevents flash during React transitions
   const isDemoMode = isDemoModeHook || getDemoMode()
   const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState()
-  const { isOpen: isSettingsOpen, open: openSettings, close: closeSettings } = useModalState()
   const PREV_AGENT_KEY = 'kc_previous_agent'
   const previousAgentRef = useRef<string | null>(
     typeof window !== 'undefined' ? safeGetItem(PREV_AGENT_KEY) : null
   )
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // CLI-based agents (bob, claude-code) should be hidden when not available
-  // API-based agents (claude, openai, gemini) should still show so users can configure them
-  const CLI_BASED_PROVIDERS = ['bob']
-  const visibleAgents = agents.filter(a =>
-    a.available || !CLI_BASED_PROVIDERS.includes(a.provider)
-  )
+  // Only show agents that are available (installed CLI-based agents).
+  // API-key-driven agents are hidden — they can't execute commands to diagnose/repair clusters.
+  const visibleAgents = agents.filter(a => a.available)
 
   // Sort: selected agent first, then available agents, then unavailable
   const sortedAgents = useMemo(() => {
@@ -247,9 +242,6 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                       )}
                     </div>
                     <p className={cn('text-xs truncate', agent.available ? 'text-muted-foreground' : 'text-muted-foreground/60')}>{agent.description}</p>
-                    {!agent.available && (
-                      <p className="text-xs text-destructive/70 mt-0.5">API key not configured</p>
-                    )}
                   </div>
                 </div>
               ))}
@@ -275,23 +267,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
               )}
             </div>
           )}
-          {/* Settings footer inside dropdown */}
-          <div className="border-t border-border">
-            <button
-              onClick={() => {
-                openSettings()
-                closeDropdown()
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              API Key Settings
-            </button>
-          </div>
         </div>
       )}
     </div>
-    {!isDemoMode && <APIKeySettings isOpen={isSettingsOpen} onClose={closeSettings} />}
     </>
   )
 }

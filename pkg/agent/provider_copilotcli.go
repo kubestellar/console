@@ -117,7 +117,9 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	// --silent: only output agent response (no usage stats)
 	// --no-ask-user: disable interactive prompts that would block
 	// --no-color: disable ANSI color codes
-	cmd := exec.CommandContext(ctx, c.cliPath, "-p", prompt, "--silent", "--no-ask-user", "--no-color")
+	// --allow-all-tools: allow tool execution without confirmation (required for non-interactive mode)
+	// --allow-all-paths: allow access to any file path for kubectl/helm operations
+	cmd := exec.CommandContext(ctx, c.cliPath, "-p", prompt, "--silent", "--no-ask-user", "--no-color", "--allow-all-tools", "--allow-all-paths")
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
 
 	stdout, err := cmd.StdoutPipe()

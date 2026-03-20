@@ -189,12 +189,11 @@ func (b *BobProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse
 	// Build prompt with history for context
 	fullPrompt := b.buildPromptWithHistory(req)
 
-	// Build command: bob "prompt" --chat-mode ask -o json
-	// --chat-mode ask: forces analysis mode (no tool execution), so Bob provides
-	// detailed diagnostic responses instead of lazy summaries like "Listed 17 item(s)."
+	// Build command: bob "prompt" --yolo -o json
+	// --yolo: auto-approve all tool actions so Bob can execute commands non-interactively
 	args := []string{
 		fullPrompt,
-		"--chat-mode", "ask",
+		"--yolo",
 		"-o", "json",
 	}
 

@@ -101,7 +101,9 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(execCtx, c.cliPath, "--quiet", prompt)
+	// exec subcommand: non-interactive mode for codex
+	// --full-auto: allow tool execution without confirmation
+	cmd := exec.CommandContext(execCtx, c.cliPath, "exec", "--full-auto", prompt)
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
 
 	stdout, err := cmd.StdoutPipe()

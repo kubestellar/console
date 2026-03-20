@@ -3274,26 +3274,11 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 		displayName string
 	}
 
-	// Base API providers always shown
-	providers := []providerDef{
-		{"claude", "Claude.ai (Anthropic)"},
-		{"openai", "ChatGPT (OpenAI)"},
-		{"gemini", "Gemini (Google)"},
-	}
-
-	// Add all registered providers that have API key support
-	apiProviders := []providerDef{
-		{"cursor", "Cursor (Anysphere)"},
-		{"vscode", "VS Code (Microsoft)"},
-		{"windsurf", "Windsurf (Codeium)"},
-		{"cline", "Cline"},
-		{"jetbrains", "JetBrains IDEs"},
-		{"zed", "Zed"},
-		{"continue", "Continue.dev"},
-		{"raycast", "Raycast"},
-		{"open-webui", "Open WebUI"},
-	}
-	providers = append(providers, apiProviders...)
+	// Only show CLI-based agents — API-key-driven agents are hidden because
+	// they cannot execute commands to diagnose/repair clusters.
+	// This list is intentionally empty; the keys endpoint remains functional
+	// for any future API providers but currently returns no keys.
+	providers := []providerDef{}
 
 	keys := make([]KeyStatus, 0, len(providers))
 	for _, p := range providers {

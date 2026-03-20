@@ -68,7 +68,9 @@ func (a *AntigravityProvider) IsAvailable() bool {
 	return a.cliPath != ""
 }
 func (a *AntigravityProvider) Capabilities() ProviderCapability {
-	return CapabilityChat | CapabilityToolExec
+	// Antigravity is a VS Code-based IDE, not a standalone CLI agent.
+	// It cannot run commands headlessly via -p flag like Claude Code or Copilot CLI.
+	return CapabilityChat
 }
 
 func (a *AntigravityProvider) Refresh() {
