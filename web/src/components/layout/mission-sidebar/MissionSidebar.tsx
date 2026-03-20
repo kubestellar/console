@@ -592,7 +592,7 @@ export function MissionSidebar() {
         </div>
       ) : activeMission ? (
         <div className={cn(
-          "flex-1 flex min-h-0",
+          "flex-1 flex min-h-0 min-w-0 overflow-hidden",
           isFullScreen && "w-full"
         )}>
           {/* Fullscreen: show saved missions panel on left */}
@@ -651,7 +651,7 @@ export function MissionSidebar() {
               </div>
             </div>
           )}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
             {/* Back to list if multiple missions */}
             {missions.length > 1 && (
               <button
