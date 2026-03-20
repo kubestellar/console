@@ -10,7 +10,7 @@ import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
-import { useClusters, useGPUNodes, useNVIDIAOperators, ClusterInfo, refreshSingleCluster } from '../../hooks/useMCP'
+import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
@@ -245,9 +245,9 @@ export function Clusters() {
     }
 
     // Apply local health filter
-    // Unreachable = no nodes (can't connect)
-    // Healthy = has nodes and healthy flag is true
-    // Unhealthy = has nodes but healthy flag is false
+    // Healthy = not unreachable and (healthy flag OR has reporting nodes) — uses shared isClusterHealthy
+    // Unhealthy = not unreachable and not healthy (healthy flag false AND no reporting nodes)
+    // Unreachable = reachable explicitly false, or confirmed connection error (timeout/network/cert/auth)
     if (filter === 'healthy') {
       result = result.filter(c => !isClusterUnreachable(c) && isClusterHealthy(c))
     } else if (filter === 'unhealthy') {
