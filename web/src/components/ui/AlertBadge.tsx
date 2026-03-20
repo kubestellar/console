@@ -24,25 +24,39 @@ const HOURS_PER_DAY = 24
 const ANIMATION_EXIT_DELAY_MS = 150
 
 // Animated counter component for the badge - exported for future use
+interface AnimationState {
+  isAnimating: boolean
+  direction: 'up' | 'down'
+}
+
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
   const { t: _t } = useTranslation()
   const [displayValue, setDisplayValue] = useState(value)
-  const [isAnimating, setIsAnimating] = useState(false)
-  const [direction, setDirection] = useState<'up' | 'down'>('up')
+  const [animState, setAnimState] = useState<AnimationState>({ isAnimating: false, direction: 'up' })
   const prevValueRef = useRef(value)
+  const enterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (value !== prevValueRef.current) {
-      setDirection(value > prevValueRef.current ? 'up' : 'down')
-      setIsAnimating(true)
+      // Batch direction + isAnimating into a single state update
+      setAnimState({ isAnimating: true, direction: value > prevValueRef.current ? 'up' : 'down' })
       // Wait for exit animation, then update value
-      const timer = setTimeout(() => {
+      const exitTimer = setTimeout(() => {
         setDisplayValue(value)
         prevValueRef.current = value
         // Reset animation after enter completes
-        setTimeout(() => setIsAnimating(false), TRANSITION_DELAY_MS)
+        enterTimerRef.current = setTimeout(() => {
+          setAnimState(prev => ({ ...prev, isAnimating: false }))
+          enterTimerRef.current = null
+        }, TRANSITION_DELAY_MS)
       }, ANIMATION_EXIT_DELAY_MS)
-      return () => clearTimeout(timer)
+      return () => {
+        clearTimeout(exitTimer)
+        if (enterTimerRef.current !== null) {
+          clearTimeout(enterTimerRef.current)
+          enterTimerRef.current = null
+        }
+      }
     }
   }, [value])
 
@@ -51,8 +65,8 @@ export function AnimatedCounter({ value, className }: { value: number; className
   return (
     <span
       className={`inline-block transition-all duration-200 ${className} ${
-        isAnimating
-          ? direction === 'up'
+        animState.isAnimating
+          ? animState.direction === 'up'
             ? 'animate-roll-up'
             : 'animate-roll-down'
           : ''

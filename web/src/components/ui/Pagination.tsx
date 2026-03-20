@@ -1,12 +1,36 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useCallback, useReducer, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from './Button'
 
+interface PaginationPageState {
+  currentPage: number
+  itemsPerPage: number
+}
+
+type PaginationAction =
+  | { type: 'SET_PAGE'; page: number }
+  | { type: 'SET_PER_PAGE'; perPage: number }
+
+function paginationReducer(state: PaginationPageState, action: PaginationAction): PaginationPageState {
+  switch (action.type) {
+    case 'SET_PAGE':
+      return { ...state, currentPage: action.page }
+    case 'SET_PER_PAGE':
+      return { currentPage: 1, itemsPerPage: action.perPage }
+    default: {
+      const _exhaustive: never = action
+      return _exhaustive
+    }
+  }
+}
+
 // Hook for managing pagination state
 export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOnFilterChange: boolean = true) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(defaultPerPage)
+  const [{ currentPage, itemsPerPage }, dispatch] = useReducer(paginationReducer, {
+    currentPage: 1,
+    itemsPerPage: defaultPerPage,
+  })
   const prevDefaultPerPage = useRef(defaultPerPage)
   const prevItemsLength = useRef(items.length)
 
@@ -14,8 +38,7 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
   useEffect(() => {
     if (prevDefaultPerPage.current !== defaultPerPage) {
       prevDefaultPerPage.current = defaultPerPage
-      setItemsPerPage(defaultPerPage)
-      setCurrentPage(1)
+      dispatch({ type: 'SET_PER_PAGE', perPage: defaultPerPage })
     }
   }, [defaultPerPage])
 
@@ -23,7 +46,7 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
   useEffect(() => {
     if (resetOnFilterChange && prevItemsLength.current !== items.length) {
       if (currentPage > 1) {
-        setCurrentPage(1)
+        dispatch({ type: 'SET_PAGE', page: 1 })
       }
       prevItemsLength.current = items.length
     }
@@ -38,7 +61,7 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
   // Sync currentPage back when out of bounds, but via effect not during render
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages)
+      dispatch({ type: 'SET_PAGE', page: totalPages })
     }
   }, [currentPage, totalPages])
 
@@ -52,12 +75,11 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
   totalPagesRef.current = totalPages
 
   const goToPage = useCallback((page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPagesRef.current)))
+    dispatch({ type: 'SET_PAGE', page: Math.max(1, Math.min(page, totalPagesRef.current)) })
   }, [])
 
   const setPerPage = useCallback((perPage: number) => {
-    setItemsPerPage(perPage)
-    setCurrentPage(1)
+    dispatch({ type: 'SET_PER_PAGE', perPage })
   }, [])
 
   return {

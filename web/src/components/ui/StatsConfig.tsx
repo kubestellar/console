@@ -287,6 +287,12 @@ function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onTog
   )
 }
 
+interface PanelState {
+  showAddPanel: boolean
+  searchQuery: string
+  expandedCategories: Set<string>
+}
+
 interface StatsConfigModalProps {
   isOpen: boolean
   onClose: () => void
@@ -306,28 +312,26 @@ export function StatsConfigModal({
 }: StatsConfigModalProps) {
   const { t: _t } = useTranslation()
   const [localBlocks, setLocalBlocks] = useState<StatBlockConfig[]>(blocks)
-  const [showAddPanel, setShowAddPanel] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [panelState, setPanelState] = useState<PanelState>({ showAddPanel: false, searchQuery: '', expandedCategories: new Set<string>() })
+  const { showAddPanel, searchQuery, expandedCategories } = panelState
 
   useEffect(() => {
     if (isOpen) {
+      // Batch all panel resets into a single state update to avoid flicker
       setLocalBlocks(blocks)
-      setShowAddPanel(false)
-      setSearchQuery('')
-      setExpandedCategories(new Set())
+      setPanelState({ showAddPanel: false, searchQuery: '', expandedCategories: new Set() })
     }
   }, [isOpen, blocks])
 
   const toggleCategory = (type: string) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev)
+    setPanelState(prev => {
+      const next = new Set(prev.expandedCategories)
       if (next.has(type)) {
         next.delete(type)
       } else {
         next.add(type)
       }
-      return next
+      return { ...prev, expandedCategories: next }
     })
   }
 
@@ -370,7 +374,7 @@ export function StatsConfigModal({
   useEffect(() => {
     if (searchQuery.trim()) {
       // Expand all categories that have matching results
-      setExpandedCategories(new Set(availableStatsByCategory.keys()))
+      setPanelState(prev => ({ ...prev, expandedCategories: new Set(availableStatsByCategory.keys()) }))
     }
   }, [searchQuery, availableStatsByCategory])
 
@@ -449,7 +453,7 @@ export function StatsConfigModal({
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={e => setPanelState(prev => ({ ...prev, searchQuery: e.target.value }))}
                   placeholder="Search all available stats..."
                   className="w-full pl-9 pr-3 py-2 bg-secondary/30 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   autoFocus
@@ -458,7 +462,7 @@ export function StatsConfigModal({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowAddPanel(false)}
+                onClick={() => setPanelState(prev => ({ ...prev, showAddPanel: false }))}
               >
                 Done
               </Button>
@@ -490,7 +494,7 @@ export function StatsConfigModal({
           <Button
             variant="ghost"
             size="md"
-            onClick={() => setShowAddPanel(true)}
+            onClick={() => setPanelState(prev => ({ ...prev, showAddPanel: true }))}
             className="mt-4 w-full border border-dashed border-border hover:border-purple-500/50"
             icon={<Plus className="w-4 h-4" />}
             fullWidth
